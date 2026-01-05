@@ -73,6 +73,8 @@ import { applyBrowserDefaultsFromConfig } from '../src/cli/browserDefaults.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
+import { launch } from 'chrome-launcher';
+import { connectToChrome } from '../src/browser/chromeLifecycle.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -542,7 +544,7 @@ program
       target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
 
     const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
-    if (process.platform === 'win32' || isWsl()) {
+    if (isWsl()) {
       const winChromePath = toWindowsPath(chromePath);
       const winArgs = args.map(toWindowsPath);
       const argList = winArgs.map(quotePowerShellLiteral).join(', ');
@@ -555,6 +557,21 @@ program
         windowsVerbatimArguments: true,
       });
       loginProcess.unref();
+    } else if (process.platform === 'win32') {
+      const chrome = await launch({
+        chromePath: winChromePath(chromePath),
+        chromeFlags: ['--new-window', `--profile-directory=${profileDir}`],
+        userDataDir,
+        handleSIGINT: false,
+      });
+      const logger = (message: string) => {
+        if (commandOptions.verbose) {
+          console.log(message);
+        }
+      };
+      const client = await connectToChrome(chrome.port, logger);
+      await client.Target.createTarget({ url });
+      await client.close();
     } else {
       const loginProcess = spawn(chromePath, args, {
         detached: true,
@@ -1460,6 +1477,13 @@ function isWsl(): boolean {
     return true;
   }
   return os.release().toLowerCase().includes('microsoft');
+}
+
+function winChromePath(value: string): string {
+  if (process.platform !== 'win32') {
+    return value;
+  }
+  return value.replace(/\//g, '\\');
 }
 
 function toWindowsPath(value: string): string {
