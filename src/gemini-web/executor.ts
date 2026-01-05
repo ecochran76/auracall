@@ -199,13 +199,13 @@ async function loadGeminiCookies(
 ): Promise<Record<string, string>> {
   const inlineMap = await loadGeminiCookiesFromInline(browserConfig, log);
   const hasInlineRequired = hasRequiredGeminiCookies(inlineMap);
-  if (hasInlineRequired && browserConfig?.cookieSync === false) {
+  const cookieSyncDisabled = browserConfig?.cookieSync === false;
+  if (hasInlineRequired && cookieSyncDisabled) {
     return inlineMap;
   }
 
-  if (browserConfig?.cookieSync === false && !hasInlineRequired) {
-    log?.('[gemini-web] Cookie sync disabled and inline cookies missing Gemini auth tokens.');
-    return inlineMap;
+  if (cookieSyncDisabled && !hasInlineRequired) {
+    log?.('[gemini-web] Cookie sync disabled but Gemini requires cookies; attempting Chrome cookie load.');
   }
 
   const chromeMap = await loadGeminiCookiesFromChrome(browserConfig, log);
