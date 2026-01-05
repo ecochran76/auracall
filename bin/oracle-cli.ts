@@ -74,7 +74,6 @@ import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
 import { launch } from 'chrome-launcher';
-import { connectToChrome } from '../src/browser/chromeLifecycle.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -558,20 +557,13 @@ program
       });
       loginProcess.unref();
     } else if (process.platform === 'win32') {
-      const chrome = await launch({
+      await launch({
         chromePath: winChromePath(chromePath),
         chromeFlags: ['--new-window', `--profile-directory=${profileDir}`],
         userDataDir,
+        startingUrl: url,
         handleSIGINT: false,
       });
-      const logger = (message: string) => {
-        if (commandOptions.verbose) {
-          console.log(message);
-        }
-      };
-      const client = await connectToChrome(chrome.port, logger);
-      await client.Target.createTarget({ url });
-      await client.close();
     } else {
       const loginProcess = spawn(chromePath, args, {
         detached: true,
