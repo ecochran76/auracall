@@ -73,7 +73,6 @@ import { applyBrowserDefaultsFromConfig } from '../src/cli/browserDefaults.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
-import { launch } from 'chrome-launcher';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -557,13 +556,12 @@ program
       });
       loginProcess.unref();
     } else if (process.platform === 'win32') {
-      await launch({
-        chromePath: winChromePath(chromePath),
-        chromeFlags: ['--new-window', `--profile-directory=${profileDir}`],
-        userDataDir,
-        startingUrl: url,
-        handleSIGINT: false,
+      const winArgs = args.map(winChromePath);
+      const loginProcess = spawn(winChromePath(chromePath), winArgs, {
+        detached: true,
+        stdio: 'ignore',
       });
+      loginProcess.unref();
     } else {
       const loginProcess = spawn(chromePath, args, {
         detached: true,
