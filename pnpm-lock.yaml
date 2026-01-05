@@ -9,7 +9,7 @@ overrides:
 
 patchedDependencies:
   '@cdktf/node-pty-prebuilt-multiarch@0.10.2':
-    hash: 8835132d44b31c0b454fa9f0a832f16fb2cfabdd50a0bfacd89e8c253b28803a
+    hash: fae9b8b9f9134cd243cc9cefa1375a2b02a3dbc5caabb43f8ff417643bdc0e85
     path: patches/@cdktf__node-pty-prebuilt-multiarch@0.10.2.patch
 
 importers:
@@ -94,7 +94,7 @@ importers:
         version: 2.3.11
       '@cdktf/node-pty-prebuilt-multiarch':
         specifier: 0.10.2
-        version: 0.10.2(patch_hash=8835132d44b31c0b454fa9f0a832f16fb2cfabdd50a0bfacd89e8c253b28803a)
+        version: 0.10.2(patch_hash=fae9b8b9f9134cd243cc9cefa1375a2b02a3dbc5caabb43f8ff417643bdc0e85)
       '@types/chrome-remote-interface':
         specifier: ^0.33.0
         version: 0.33.0
@@ -2492,7 +2492,7 @@ snapshots:
   '@biomejs/cli-win32-x64@2.3.11':
     optional: true
 
-  '@cdktf/node-pty-prebuilt-multiarch@0.10.2(patch_hash=8835132d44b31c0b454fa9f0a832f16fb2cfabdd50a0bfacd89e8c253b28803a)':
+  '@cdktf/node-pty-prebuilt-multiarch@0.10.2(patch_hash=fae9b8b9f9134cd243cc9cefa1375a2b02a3dbc5caabb43f8ff417643bdc0e85)':
     dependencies:
       nan: 2.24.0
       prebuild-install: 7.1.3
