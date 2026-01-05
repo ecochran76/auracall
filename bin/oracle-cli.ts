@@ -83,6 +83,8 @@ interface CliOptions extends OptionValues {
   render?: boolean;
   model: string;
   models?: string[];
+  chatgpt?: boolean;
+  gemini?: boolean;
   force?: boolean;
   slug?: string;
   filesReport?: boolean;
@@ -253,6 +255,18 @@ program
     )
       .argParser(collectModelList)
       .default([]),
+  )
+  .addOption(
+    new Option(
+      '--chatgpt',
+      'Use ChatGPT browser automation (shorthand for --engine browser --model gpt-5.2).',
+    ),
+  )
+  .addOption(
+    new Option(
+      '--gemini',
+      'Use Gemini web automation (shorthand for --engine browser --model gemini-3-pro).',
+    ),
   )
   .addOption(
     new Option(
@@ -751,6 +765,30 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   }
   if (optionUsesDefault('model') && userConfig.model) {
     options.model = userConfig.model;
+  }
+  const hasChatgptFlag = options.chatgpt === true;
+  const hasGeminiFlag = options.gemini === true;
+  if (hasChatgptFlag && hasGeminiFlag) {
+    throw new Error('--chatgpt cannot be combined with --gemini.');
+  }
+  if ((hasChatgptFlag || hasGeminiFlag) && multiModelProvided) {
+    throw new Error('--chatgpt/--gemini cannot be combined with --models.');
+  }
+  const modelExplicit = !optionUsesDefault('model');
+  if ((hasChatgptFlag || hasGeminiFlag) && modelExplicit) {
+    throw new Error('--chatgpt/--gemini cannot be combined with --model.');
+  }
+  const engineExplicit = !optionUsesDefault('engine');
+  if ((hasChatgptFlag || hasGeminiFlag) && engineExplicit && options.engine !== 'browser') {
+    throw new Error('--chatgpt/--gemini requires --engine browser.');
+  }
+  const configBrowserTarget = userConfig.browser?.target;
+  const effectiveTarget = hasChatgptFlag ? 'chatgpt' : hasGeminiFlag ? 'gemini' : configBrowserTarget;
+  if (effectiveTarget && !modelExplicit) {
+    options.model = effectiveTarget === 'gemini' ? 'gemini-3-pro' : 'gpt-5.2';
+    if (!engineExplicit) {
+      engine = 'browser';
+    }
   }
   if (optionUsesDefault('search') && userConfig.search) {
     options.search = userConfig.search === 'on';

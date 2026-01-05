@@ -17,6 +17,7 @@ export interface BrowserConfigDefaults {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  target?: 'chatgpt' | 'gemini';
   chatgptUrl?: string | null;
   url?: string;
   timeoutMs?: number;
