@@ -541,12 +541,14 @@ program
     const profileDir =
       target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
 
-    const args = [`--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
+    const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
     if (process.platform === 'win32' || isWsl()) {
       const winChromePath = toWindowsPath(chromePath);
       const winArgs = args.map(toWindowsPath);
       const argList = winArgs.map(quotePowerShellLiteral).join(', ');
-      const psCommand = `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} -ArgumentList @(${argList})`;
+      const psCommand =
+        `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
+        `-ArgumentList @(${argList}) -WindowStyle Normal`;
       const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
         detached: true,
         stdio: 'ignore',
