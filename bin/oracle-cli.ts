@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import 'dotenv/config';
 import { spawn } from 'node:child_process';
+import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
+import net from 'node:net';
 import { Command, Option } from 'commander';
 import type { OptionValues } from 'commander';
 // Allow `npx @steipete/oracle oracle-mcp` to resolve the MCP server even though npx runs the default binary.
@@ -48,6 +50,7 @@ import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browser
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
+import type { CookieParam } from '../src/browser/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -73,6 +76,9 @@ import { applyBrowserDefaultsFromConfig } from '../src/cli/browserDefaults.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
+import CDP from 'chrome-remote-interface';
+import { launch } from 'chrome-launcher';
+import { getOracleHomeDir } from '../src/oracleHome.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -501,6 +507,7 @@ program
   .option('--target <chatgpt|gemini>', 'Choose which site to open (chatgpt or gemini).')
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
   .option('--gemini-url <url>', 'Override the Gemini URL for login.')
+  .option('--export-cookies', 'Export Gemini cookies to ~/.oracle/cookies.json while you sign in.')
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
   .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
@@ -540,6 +547,72 @@ program
       target === 'chatgpt' ? manualLoginDir : inferred?.userDataDir ?? manualLoginDir;
     const profileDir =
       target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
+
+    const exportCookies = Boolean(commandOptions.exportCookies);
+    if (exportCookies && target !== 'gemini') {
+      throw new Error('Cookie export currently supports Gemini login only.');
+    }
+
+    if (exportCookies) {
+      const args = [
+        '--new-window',
+        `--user-data-dir=${userDataDir}`,
+        `--profile-directory=${profileDir}`,
+        '--remote-allow-origins=*',
+        url,
+      ];
+      const cookieUrls = ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'];
+      const requiredCookies = ['__Secure-1PSID', '__Secure-1PSIDTS'];
+      const oracleHome = getOracleHomeDir();
+      const cookieOutput = path.join(oracleHome, 'cookies.json');
+      const timeoutMs = 120_000;
+
+      let debugPort: number | null = null;
+      if (isWsl()) {
+        debugPort = await pickOpenPort();
+        const winChromePath = toWindowsPath(chromePath);
+        const argsWithDebug = [
+          ...args.slice(0, -1),
+          `--remote-debugging-port=${debugPort}`,
+          args[args.length - 1],
+        ];
+        const winArgs = argsWithDebug.map(toWindowsPath);
+        const argList = winArgs.map(quotePowerShellLiteral).join(', ');
+        const psCommand =
+          `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
+          `-ArgumentList @(${argList}) -WindowStyle Normal`;
+        const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
+          detached: true,
+          stdio: 'ignore',
+          windowsVerbatimArguments: true,
+        });
+        loginProcess.unref();
+        await waitForPortOpen(debugPort, timeoutMs);
+      } else {
+        const chrome = await launch({
+          chromePath,
+          chromeFlags: args,
+        });
+        chrome.process?.unref();
+        debugPort = chrome.port;
+      }
+
+      console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
+      console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
+      console.log(chalk.dim(`URL: ${url}`));
+      console.log(chalk.dim('Waiting for Gemini cookies...'));
+
+      const cookies = await exportCookiesFromCdp({
+        port: debugPort,
+        requiredNames: requiredCookies,
+        urls: cookieUrls,
+        timeoutMs,
+      });
+      await fs.mkdir(oracleHome, { recursive: true });
+      await fs.writeFile(cookieOutput, JSON.stringify(cookies, null, 2), 'utf8');
+      console.log(chalk.green(`Saved Gemini cookies to ${cookieOutput}`));
+      return;
+    }
 
     const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
     if (isWsl()) {
@@ -1432,6 +1505,111 @@ function resolveWaitFlag({
   if (waitFlag === true) return true;
   if (noWaitFlag === true) return false;
   return defaultWaitPreference(model, engine);
+}
+
+async function pickOpenPort(): Promise<number> {
+  return await new Promise((resolve, reject) => {
+    const server = net.createServer();
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => {
+      const address = server.address();
+      if (!address || typeof address !== 'object') {
+        server.close(() => reject(new Error('Unable to allocate a debug port.')));
+        return;
+      }
+      const port = address.port;
+      server.close((err) => {
+        if (err) reject(err);
+        else resolve(port);
+      });
+    });
+  });
+}
+
+async function waitForPortOpen(port: number, timeoutMs: number): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const socket = net.connect(port, '127.0.0.1');
+        socket.once('connect', () => {
+          socket.destroy();
+          resolve();
+        });
+        socket.once('error', (err) => {
+          socket.destroy();
+          reject(err);
+        });
+      });
+      return;
+    } catch {
+      await delay(200);
+    }
+  }
+  throw new Error(`Timed out waiting for Chrome debug port ${port}.`);
+}
+
+function mapCookieToParam(cookie: {
+  name: string;
+  value: string;
+  domain?: string;
+  path?: string;
+  expires?: number;
+  httpOnly?: boolean;
+  secure?: boolean;
+  sameSite?: 'Strict' | 'Lax' | 'None';
+  priority?: 'Low' | 'Medium' | 'High';
+  sameParty?: boolean;
+}): CookieParam {
+  const param: CookieParam = {
+    name: cookie.name,
+    value: cookie.value,
+  };
+  if (cookie.domain) param.domain = cookie.domain;
+  if (cookie.path) param.path = cookie.path;
+  if (typeof cookie.expires === 'number') param.expires = cookie.expires;
+  if (typeof cookie.httpOnly === 'boolean') param.httpOnly = cookie.httpOnly;
+  if (typeof cookie.secure === 'boolean') param.secure = cookie.secure;
+  if (cookie.sameSite) param.sameSite = cookie.sameSite;
+  if (cookie.priority) param.priority = cookie.priority;
+  if (typeof cookie.sameParty === 'boolean') param.sameParty = cookie.sameParty;
+  return param;
+}
+
+async function exportCookiesFromCdp({
+  port,
+  requiredNames,
+  urls,
+  timeoutMs,
+}: {
+  port: number | null;
+  requiredNames: string[];
+  urls: string[];
+  timeoutMs: number;
+}): Promise<CookieParam[]> {
+  if (!port) {
+    throw new Error('Missing Chrome debug port for cookie export.');
+  }
+  const client = await CDP({ port });
+  try {
+    await client.Network.enable();
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const { cookies } = await client.Network.getCookies({ urls });
+      const hasRequired = requiredNames.every((name) => cookies.some((cookie) => cookie.name === name));
+      if (hasRequired) {
+        return cookies.map(mapCookieToParam);
+      }
+      await delay(2_000);
+    }
+    throw new Error(`Timed out waiting for cookies: ${requiredNames.join(', ')}`);
+  } finally {
+    await client.close();
+  }
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function inferProfileFromCookiePath(cookiePath: string): { userDataDir: string; profileDir: string } | null {

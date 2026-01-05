@@ -86,6 +86,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const desiredModelOverride = options.browserModelLabel?.trim();
   const normalizedOverride = desiredModelOverride?.toLowerCase() ?? '';
   const baseModel = options.model.toLowerCase();
+  const isGeminiModel = baseModel.startsWith('gemini-');
   const isChatGptModel = baseModel.startsWith('gpt-') && !baseModel.includes('codex');
   const shouldUseOverride = !isChatGptModel && normalizedOverride.length > 0 && normalizedOverride !== baseModel;
   const modelStrategy =
@@ -98,7 +99,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     envFile: process.env.ORACLE_BROWSER_COOKIES_FILE,
     cwd: process.cwd(),
   });
-  if (inline?.source?.startsWith('home:') && options.browserNoCookieSync !== true) {
+  if (inline?.source?.startsWith('home:') && options.browserNoCookieSync !== true && !isGeminiModel) {
     inline = undefined;
   }
 

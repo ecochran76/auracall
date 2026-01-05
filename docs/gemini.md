@@ -30,6 +30,7 @@ Prereqs:
 - Signed into `gemini.google.com` in the Chrome profile Oracle uses (default: `Default` profile).
 - Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
 - If cookies are missing, run `oracle login --target gemini` to open the same profile for sign-in.
+- If Chrome cookies are locked (common on Windows), run `oracle login --target gemini --export-cookies` to save cookies to `~/.oracle/cookies.json`.
 
 Examples:
 ```bash
