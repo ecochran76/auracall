@@ -27,6 +27,7 @@ const GEMINI_COOKIE_NAMES = [
 ] as const;
 
 const GEMINI_REQUIRED_COOKIES = ['__Secure-1PSID', '__Secure-1PSIDTS'] as const;
+const GEMINI_DEFAULT_URL = 'https://gemini.google.com/app';
 
 function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
@@ -37,6 +38,21 @@ function resolveInvocationPath(value: string | undefined): string | undefined {
   const trimmed = value.trim();
   if (!trimmed) return undefined;
   return path.isAbsolute(trimmed) ? trimmed : path.resolve(process.cwd(), trimmed);
+}
+
+function normalizeGeminiUrl(value: string | null | undefined): string {
+  const raw = typeof value === 'string' ? value.trim() : '';
+  if (!raw) return GEMINI_DEFAULT_URL;
+  try {
+    const url = new URL(raw);
+    if (url.protocol !== 'https:' || url.hostname !== 'gemini.google.com') {
+      throw new Error('Gemini URL must be https://gemini.google.com/...');
+    }
+    return url.toString();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error ?? 'Invalid Gemini URL.');
+    throw new Error(`Invalid Gemini URL: ${message}`);
+  }
 }
 
 function resolveGeminiWebModel(
@@ -232,6 +248,7 @@ export function createGeminiWebExecutor(
     const editImagePath = resolveInvocationPath(geminiOptions.editImage);
     const outputPath = resolveInvocationPath(geminiOptions.outputPath);
     const attachmentPaths = (runOptions.attachments ?? []).map((attachment) => attachment.path);
+    const geminiUrl = normalizeGeminiUrl(geminiOptions.geminiUrl ?? runOptions.config?.geminiUrl);
 
     let prompt = runOptions.prompt;
     if (geminiOptions.aspectRatio && (generateImagePath || editImagePath)) {
@@ -255,6 +272,7 @@ export function createGeminiWebExecutor(
           model,
           cookieMap,
           chatMetadata: null,
+          geminiUrl,
           signal: controller.signal,
         });
         const editPrompt = `Use image generation tool to ${prompt}`;
@@ -264,6 +282,7 @@ export function createGeminiWebExecutor(
           model,
           cookieMap,
           chatMetadata: intro.metadata,
+          geminiUrl,
           signal: controller.signal,
         });
         response = {
@@ -287,6 +306,7 @@ export function createGeminiWebExecutor(
           model,
           cookieMap,
           chatMetadata: null,
+          geminiUrl,
           signal: controller.signal,
         });
         response = {
@@ -308,6 +328,7 @@ export function createGeminiWebExecutor(
           model,
           cookieMap,
           chatMetadata: null,
+          geminiUrl,
           signal: controller.signal,
         });
         response = {

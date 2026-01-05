@@ -6,6 +6,7 @@ import type { BrowserModelStrategy } from '../browser/types.js';
 export interface BrowserDefaultsOptions {
   chatgptUrl?: string;
   browserUrl?: string;
+  geminiUrl?: string;
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
@@ -51,6 +52,9 @@ export function applyBrowserDefaultsFromConfig(
   }
   if (isUnset('browserCookiePath') && browser.chromeCookiePath !== undefined) {
     options.browserCookiePath = browser.chromeCookiePath ?? undefined;
+  }
+  if (isUnset('geminiUrl') && browser.geminiUrl !== undefined) {
+    options.geminiUrl = browser.geminiUrl ?? undefined;
   }
   if (isUnset('browserUrl') && options.browserUrl === undefined && browser.url !== undefined) {
     options.browserUrl = browser.url;

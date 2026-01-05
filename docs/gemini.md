@@ -28,6 +28,7 @@ Gemini web mode is a cookie-based client for `gemini.google.com`. It does **not*
 Prereqs:
 - Chrome installed.
 - Signed into `gemini.google.com` in the Chrome profile Oracle uses (default: `Default` profile).
+- Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
 
 Examples:
 ```bash

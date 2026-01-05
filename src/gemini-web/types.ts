@@ -5,6 +5,7 @@ export interface GeminiWebOptions {
   outputPath?: string;
   showThoughts?: boolean;
   aspectRatio?: string;
+  geminiUrl?: string;
 }
 
 export interface GeminiWebResponse {

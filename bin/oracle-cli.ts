@@ -108,6 +108,7 @@ interface CliOptions extends OptionValues {
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
+  geminiUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
   browserTimeout?: string;
@@ -352,6 +353,7 @@ program
   .addOption(
     new Option('--browser-cookie-path <path>', 'Explicit Chrome/Chromium cookie DB path for session reuse.'),
   )
+  .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
   .addOption(
     new Option(
       '--chatgpt-url <url>',
@@ -796,6 +798,9 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   if (optionUsesDefault('filesReport') && userConfig.filesReport != null) {
     options.filesReport = Boolean(userConfig.filesReport);
   }
+  if (optionUsesDefault('geminiUrl') && userConfig.browser?.geminiUrl) {
+    options.geminiUrl = userConfig.browser.geminiUrl ?? undefined;
+  }
   if (optionUsesDefault('heartbeat') && typeof userConfig.heartbeatSeconds === 'number') {
     options.heartbeat = userConfig.heartbeatSeconds;
   }
@@ -1076,6 +1081,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
         outputPath: options.output,
         aspectRatio: options.aspect,
         showThoughts: options.geminiShowThoughts,
+        geminiUrl: options.geminiUrl ?? userConfig.browser?.geminiUrl ?? undefined,
       }),
     };
     console.log(chalk.dim('Using Gemini web client for browser automation'));
@@ -1305,6 +1311,7 @@ function printDebugHelp(cliName: string): void {
   console.log(chalk.bold('Browser Options'));
   printDebugOptionGroup([
     ['--chatgpt-url <url>', 'Override the ChatGPT web URL (workspace/folder targets).'],
+    ['--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'],
     ['--browser-chrome-profile <name>', 'Reuse cookies from a specific Chrome profile.'],
     ['--browser-chrome-path <path>', 'Point to a custom Chrome/Chromium binary.'],
     ['--browser-cookie-path <path>', 'Use a specific Chrome/Chromium cookie store file.'],

@@ -9,6 +9,7 @@ export interface GeminiWebRunInput {
   model: GeminiWebModelId;
   cookieMap: Record<string, string>;
   chatMetadata?: unknown;
+  geminiUrl?: string;
   signal?: AbortSignal;
 }
 
@@ -69,10 +70,11 @@ function buildCookieHeader(cookieMap: Record<string, string>): string {
 
 export async function fetchGeminiAccessToken(
   cookieMap: Record<string, string>,
+  appUrl: string,
   signal?: AbortSignal,
 ): Promise<string> {
   const cookieHeader = buildCookieHeader(cookieMap);
-  const res = await fetch(GEMINI_APP_URL, {
+  const res = await fetch(appUrl, {
     redirect: 'follow',
     signal,
     headers: {
@@ -306,7 +308,9 @@ export function isGeminiModelUnavailable(errorCode: number | undefined): boolean
 
 export async function runGeminiWebOnce(input: GeminiWebRunInput): Promise<GeminiWebRunOutput> {
   const cookieHeader = buildCookieHeader(input.cookieMap);
-  const at = await fetchGeminiAccessToken(input.cookieMap, input.signal);
+  const appUrl = input.geminiUrl ?? GEMINI_APP_URL;
+  const appOrigin = new URL(appUrl).origin;
+  const at = await fetchGeminiAccessToken(input.cookieMap, appUrl, input.signal);
 
   const uploaded: Array<{ id: string; name: string }> = [];
   for (const file of input.files ?? []) {
@@ -327,8 +331,8 @@ export async function runGeminiWebOnce(input: GeminiWebRunInput): Promise<Gemini
     signal: input.signal,
     headers: {
       'content-type': 'application/x-www-form-urlencoded;charset=utf-8',
-      origin: 'https://gemini.google.com',
-      referer: 'https://gemini.google.com/',
+      origin: appOrigin,
+      referer: appUrl,
       'x-same-domain': '1',
       'user-agent': USER_AGENT,
       cookie: cookieHeader,

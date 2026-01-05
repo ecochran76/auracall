@@ -52,6 +52,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--engine browser`: enables browser mode (legacy `--browser` remains as an alias for now). Without `--engine`, Oracle chooses API when `OPENAI_API_KEY` exists, otherwise browser.
 - `--chatgpt`: shorthand for `--engine browser --model gpt-5.2` (ChatGPT automation).
 - `--gemini`: shorthand for `--engine browser --model gemini-3-pro` (Gemini web mode).
+- `--gemini-url`: override the Gemini web URL (e.g., a specific Gem).
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).
 - `--browser-cookie-path`: explicit path to the Chrome/Chromium/Edge `Cookies` SQLite DB. Handy when you launch a fork via `--browser-chrome-path` and want to copy its session cookies; see [docs/chromium-forks.md](chromium-forks.md) for examples.
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.

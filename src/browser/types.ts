@@ -22,6 +22,7 @@ export interface BrowserAutomationConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  geminiUrl?: string | null;
   url?: string;
   chatgptUrl?: string | null;
   timeoutMs?: number;
