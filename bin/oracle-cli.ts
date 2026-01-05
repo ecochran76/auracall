@@ -71,6 +71,8 @@ import {
 import { loadUserConfig, type UserConfig } from '../src/config.js';
 import { applyBrowserDefaultsFromConfig } from '../src/cli/browserDefaults.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
+import os from 'node:os';
+import path from 'node:path';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -491,6 +493,68 @@ program
       port: commandOptions.port,
       token: commandOptions.token,
     });
+  });
+
+program
+  .command('login')
+  .description('Launch the configured browser profile for ChatGPT or Gemini sign-in.')
+  .option('--target <chatgpt|gemini>', 'Choose which site to open (chatgpt or gemini).')
+  .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
+  .option('--gemini-url <url>', 'Override the Gemini URL for login.')
+  .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
+  .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
+  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
+  .action(async (commandOptions) => {
+    const { config: userConfig } = await loadUserConfig();
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini';
+    if (target !== 'chatgpt' && target !== 'gemini') {
+      throw new Error(`Invalid login target "${target}". Use "chatgpt" or "gemini".`);
+    }
+
+    const chromePath =
+      commandOptions.browserChromePath ?? userConfig.browser?.chromePath ?? undefined;
+    if (!chromePath) {
+      throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');
+    }
+
+    const url =
+      target === 'gemini'
+        ? commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app'
+        : commandOptions.chatgptUrl ??
+          userConfig.browser?.chatgptUrl ??
+          userConfig.browser?.url ??
+          CHATGPT_URL;
+
+    const manualLoginDir =
+      commandOptions.browserManualLoginProfileDir ??
+      userConfig.browser?.manualLoginProfileDir ??
+      path.join(os.homedir(), '.oracle', 'browser-profile');
+    const chromeProfile =
+      commandOptions.browserChromeProfile ?? userConfig.browser?.chromeProfile ?? 'Default';
+    const cookiePath =
+      commandOptions.browserCookiePath ?? userConfig.browser?.chromeCookiePath ?? undefined;
+
+    const inferred = cookiePath ? inferProfileFromCookiePath(cookiePath) : null;
+    const userDataDir =
+      target === 'chatgpt' ? manualLoginDir : inferred?.userDataDir ?? manualLoginDir;
+    const profileDir =
+      target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
+
+    const args = [
+      `--user-data-dir=${userDataDir}`,
+      `--profile-directory=${profileDir}`,
+      url,
+    ];
+    const loginProcess = spawn(chromePath, args, {
+      detached: true,
+      stdio: 'ignore',
+      shell: process.platform === 'win32',
+    });
+    loginProcess.unref();
+    console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
+    console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
+    console.log(chalk.dim(`URL: ${url}`));
   });
 
 program
@@ -1351,6 +1415,31 @@ function resolveWaitFlag({
   if (waitFlag === true) return true;
   if (noWaitFlag === true) return false;
   return defaultWaitPreference(model, engine);
+}
+
+function inferProfileFromCookiePath(cookiePath: string): { userDataDir: string; profileDir: string } | null {
+  const normalized = path.normalize(cookiePath);
+  const parts = normalized.split(path.sep);
+  const userDataIndex = parts.findIndex((part) => part.toLowerCase() === 'user data');
+  if (userDataIndex !== -1 && userDataIndex + 1 < parts.length) {
+    const userDataDir = parts.slice(0, userDataIndex + 1).join(path.sep);
+    const profileDir = parts[userDataIndex + 1];
+    if (profileDir) {
+      return { userDataDir, profileDir };
+    }
+  }
+
+  // Fallback for paths like <profile>/Network/Cookies
+  const networkIndex = parts.findIndex((part) => part.toLowerCase() === 'network');
+  if (networkIndex > 0 && parts[networkIndex + 1]?.toLowerCase() === 'cookies') {
+    const profileDir = parts[networkIndex - 1];
+    const userDataDir = parts.slice(0, networkIndex - 1).join(path.sep);
+    if (profileDir && userDataDir) {
+      return { userDataDir, profileDir };
+    }
+  }
+
+  return null;
 }
 
 program.action(async function (this: Command) {
