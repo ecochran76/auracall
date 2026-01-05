@@ -545,8 +545,9 @@ program
     if (process.platform === 'win32' || isWsl()) {
       const winChromePath = toWindowsPath(chromePath);
       const winArgs = args.map(toWindowsPath);
-      const quoted = [winChromePath, ...winArgs].map(quoteCmdArg);
-      const loginProcess = spawn('cmd.exe', ['/c', 'start', '', ...quoted], {
+      const argList = winArgs.map(quotePowerShellLiteral).join(', ');
+      const psCommand = `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} -ArgumentList @(${argList})`;
+      const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
         detached: true,
         stdio: 'ignore',
         windowsVerbatimArguments: true,
@@ -1473,9 +1474,9 @@ function toWindowsPath(value: string): string {
   return value;
 }
 
-function quoteCmdArg(value: string): string {
-  const escaped = value.replace(/"/g, '""');
-  return `"${escaped}"`;
+function quotePowerShellLiteral(value: string): string {
+  const escaped = value.replace(/'/g, "''");
+  return `'${escaped}'`;
 }
 
 program.action(async function (this: Command) {
