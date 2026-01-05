@@ -541,17 +541,21 @@ program
     const profileDir =
       target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
 
-    const args = [
-      `--user-data-dir=${userDataDir}`,
-      `--profile-directory=${profileDir}`,
-      url,
-    ];
-    const loginProcess = spawn(chromePath, args, {
-      detached: true,
-      stdio: 'ignore',
-      shell: process.platform === 'win32',
-    });
-    loginProcess.unref();
+    const args = [`--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
+    if (process.platform === 'win32') {
+      const loginProcess = spawn('cmd.exe', ['/c', 'start', '', chromePath, ...args], {
+        detached: true,
+        stdio: 'ignore',
+        windowsVerbatimArguments: true,
+      });
+      loginProcess.unref();
+    } else {
+      const loginProcess = spawn(chromePath, args, {
+        detached: true,
+        stdio: 'ignore',
+      });
+      loginProcess.unref();
+    }
     console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
     console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
     console.log(chalk.dim(`URL: ${url}`));
