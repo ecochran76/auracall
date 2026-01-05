@@ -542,8 +542,11 @@ program
       target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
 
     const args = [`--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
-    if (process.platform === 'win32') {
-      const loginProcess = spawn('cmd.exe', ['/c', 'start', '', chromePath, ...args], {
+    if (process.platform === 'win32' || isWsl()) {
+      const winChromePath = toWindowsPath(chromePath);
+      const winArgs = args.map(toWindowsPath);
+      const quoted = [winChromePath, ...winArgs].map(quoteCmdArg);
+      const loginProcess = spawn('cmd.exe', ['/c', 'start', '', ...quoted], {
         detached: true,
         stdio: 'ignore',
         windowsVerbatimArguments: true,
@@ -1444,6 +1447,35 @@ function inferProfileFromCookiePath(cookiePath: string): { userDataDir: string; 
   }
 
   return null;
+}
+
+function isWsl(): boolean {
+  if (process.platform !== 'linux') {
+    return false;
+  }
+  if (process.env.WSL_DISTRO_NAME) {
+    return true;
+  }
+  return os.release().toLowerCase().includes('microsoft');
+}
+
+function toWindowsPath(value: string): string {
+  if (!isWsl()) {
+    return value;
+  }
+  const normalized = value.replace(/\\/g, '/');
+  const match = normalized.match(/^\/mnt\/([a-z])\/(.*)$/i);
+  if (match) {
+    const drive = match[1].toUpperCase();
+    const rest = match[2].replace(/\//g, '\\');
+    return `${drive}:\\${rest}`;
+  }
+  return value;
+}
+
+function quoteCmdArg(value: string): string {
+  const escaped = value.replace(/"/g, '""');
+  return `"${escaped}"`;
 }
 
 program.action(async function (this: Command) {
