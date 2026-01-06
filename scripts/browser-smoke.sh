@@ -6,7 +6,7 @@ CMD=(node "$ROOT/dist/bin/oracle-cli.js" --engine browser --wait --heartbeat 0 -
 FAST_MODEL="gpt-5.2"
 PRO_MODEL="gpt-5.2-pro"
 
-tmpfile="$(mktemp -t oracle-browser-smoke)"
+tmpfile="$(mktemp -t oracle-browser-smoke.XXXXXX)"
 echo "smoke-attachment" >"$tmpfile"
 
 echo "[browser-smoke] fast upload attachment (non-inline)"
@@ -24,7 +24,7 @@ echo "[browser-smoke] pro standard markdown check"
 echo "[browser-smoke] reattach flow after controller loss"
 slug="browser-reattach-smoke"
 meta="$HOME/.oracle/sessions/$slug/meta.json"
-logfile="$(mktemp -t oracle-browser-reattach)"
+logfile="$(mktemp -t oracle-browser-reattach.XXXXXX)"
 
 # Start a browser run in the background and wait for runtime hints to appear.
 "${CMD[@]}" --model "$PRO_MODEL" --prompt "Return exactly 'reattach-ok'." --slug "$slug" --browser-keep-browser --heartbeat 0 --timeout 900 --force >"$logfile" 2>&1 &
@@ -53,7 +53,7 @@ sleep 30
 kill "$runner_pid" 2>/dev/null || true
 wait "$runner_pid" 2>/dev/null || true
 
-reattach_log="$(mktemp -t oracle-browser-reattach-log)"
+reattach_log="$(mktemp -t oracle-browser-reattach-log.XXXXXX)"
 if ! node "$ROOT/dist/bin/oracle-cli.js" session "$slug" --render-plain >"$reattach_log" 2>&1; then
   echo "[browser-smoke] reattach: session command failed"
   cat "$reattach_log"

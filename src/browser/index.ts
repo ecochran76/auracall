@@ -42,7 +42,7 @@ import {
   uploadGrokAttachments,
   selectGrokMode,
 } from './actions/grok.js';
-import { ensureThinkingTime } from './actions/thinkingTime.js';
+import { ensureThinkingTimeIfAvailable } from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
@@ -456,9 +456,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
-    if (thinkingTime) {
+    if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
       await raceWithDisconnect(
-        withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
+        withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
           retries: 2,
           delayMs: 300,
           onRetry: (attempt, error) => {
@@ -1086,8 +1086,8 @@ async function runRemoteBrowserMode(
     }
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
-    if (thinkingTime) {
-      await withRetries(() => ensureThinkingTime(Runtime, thinkingTime, logger), {
+    if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
+      await withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
         retries: 2,
         delayMs: 300,
         onRetry: (attempt, error) => {
@@ -1383,6 +1383,11 @@ function isWebSocketClosureError(error: Error): boolean {
     message.includes('websocket error') ||
     message.includes('target closed')
   );
+}
+
+function shouldApplyThinkingTime(desiredModel: string | null | undefined): boolean {
+  if (!desiredModel) return false;
+  return /\b(thinking|pro)\b/i.test(desiredModel);
 }
 
 export function formatThinkingLog(startedAt: number, now: number, message: string, locatorSuffix: string): string {
