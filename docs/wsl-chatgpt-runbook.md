@@ -8,6 +8,12 @@ Goal: Run ChatGPT browser automation from WSL using a Linux Chrome install, avoi
 - Manual-login mode reuses a persistent profile (`~/.oracle/browser-profile`) so you only sign in once.
 
 ## Recommended setup
+0) Quick bootstrap (installs Node 22 + Chrome + repo deps):
+
+```bash
+./scripts/bootstrap-wsl.sh
+```
+
 1) Install Chrome in WSL (one-time):
 
 ```bash
