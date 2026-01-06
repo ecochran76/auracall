@@ -2,10 +2,27 @@ import path from 'node:path';
 import type { ChromeClient, BrowserLogger, BrowserAttachment } from '../types.js';
 import { delay } from '../utils.js';
 
-const GROK_INPUT_SELECTOR = 'div.ProseMirror[contenteditable="true"]';
-const GROK_SEND_SELECTOR = 'button[aria-label="Submit"][type="submit"]';
-const GROK_MODEL_BUTTON_SELECTOR = 'button[aria-label="Model select"]';
-const GROK_MENU_ITEM_SELECTOR = '[role="menuitem"]';
+const GROK_INPUT_SELECTORS = [
+  'div.ProseMirror[contenteditable="true"]',
+  'div[contenteditable="true"][role="textbox"]',
+  'div.ProseMirror[contenteditable="true"][aria-label]',
+  'div.ProseMirror',
+];
+const GROK_SEND_SELECTORS = [
+  'button[aria-label="Submit"][type="submit"]',
+  'button[type="submit"][aria-label*="Submit"]',
+  'button[type="submit"]',
+];
+const GROK_MODEL_BUTTON_SELECTORS = [
+  'button[aria-label="Model select"]',
+  'button[aria-label*="Model"]',
+  'button[aria-haspopup="menu"][aria-label*="Model"]',
+];
+const GROK_MENU_ITEM_SELECTORS = [
+  '[role="menuitem"]',
+  '[role="menuitemradio"]',
+  'button[role="menuitem"]',
+];
 
 export async function navigateToGrok(
   Page: ChromeClient['Page'],
@@ -35,7 +52,8 @@ export async function ensureGrokPromptReady(
   while (Date.now() < deadline) {
     const ready = await Runtime.evaluate({
       expression: `(() => {
-        const el = document.querySelector('${GROK_INPUT_SELECTOR}');
+        const selectors = ${JSON.stringify(GROK_INPUT_SELECTORS)};
+        const el = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
         if (!el) return false;
         const r = el.getBoundingClientRect();
         return r.width > 0 && r.height > 0;
@@ -54,7 +72,8 @@ export async function ensureGrokPromptReady(
 export async function setGrokPrompt(Runtime: ChromeClient['Runtime'], prompt: string): Promise<void> {
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const el = document.querySelector('${GROK_INPUT_SELECTOR}');
+      const selectors = ${JSON.stringify(GROK_INPUT_SELECTORS)};
+      const el = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
       if (!el) return false;
       el.focus();
       document.execCommand('selectAll', false, null);
@@ -72,7 +91,8 @@ export async function setGrokPrompt(Runtime: ChromeClient['Runtime'], prompt: st
 export async function submitGrokPrompt(Runtime: ChromeClient['Runtime']): Promise<void> {
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const btn = document.querySelector('${GROK_SEND_SELECTOR}');
+      const selectors = ${JSON.stringify(GROK_SEND_SELECTORS)};
+      const btn = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
       if (!btn) return false;
       btn.click();
       return true;
@@ -97,7 +117,8 @@ export async function selectGrokMode(
   }
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const items = Array.from(document.querySelectorAll('${GROK_MENU_ITEM_SELECTOR}'));
+      const selectors = ${JSON.stringify(GROK_MENU_ITEM_SELECTORS)};
+      const items = selectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)));
       const target = items.find((el) => (el.textContent || '').replace(/\\s+/g, ' ').trim().startsWith(${JSON.stringify(label)}));
       if (!target) return false;
       target.click();
@@ -184,10 +205,13 @@ async function waitForAttachmentName(
 async function readAssistantSnapshot(Runtime: ChromeClient['Runtime']): Promise<{ count: number; lastText: string }> {
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const bubbles = Array.from(document.querySelectorAll('main .message-bubble'))
-        .filter((b) => b.className.includes('w-full') && b.className.includes('max-w-none'));
-      const last = bubbles[bubbles.length - 1];
-      return { count: bubbles.length, lastText: last ? (last.textContent || '').trim() : '' };
+      const bubbles = Array.from(document.querySelectorAll('main .message-bubble'));
+      const assistant = bubbles.filter((b) => b.className.includes('w-full') && b.className.includes('max-w-none'));
+      const candidates = assistant.length > 0
+        ? assistant
+        : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
+      const last = candidates[candidates.length - 1];
+      return { count: candidates.length, lastText: last ? (last.textContent || '').trim() : '' };
     })()`,
     returnByValue: true,
   });
@@ -226,7 +250,8 @@ async function openGrokModelMenu(
 ): Promise<boolean> {
   const clicked = await Runtime.evaluate({
     expression: `(() => {
-      const btn = document.querySelector('${GROK_MODEL_BUTTON_SELECTOR}');
+      const selectors = ${JSON.stringify(GROK_MODEL_BUTTON_SELECTORS)};
+      const btn = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
       if (!btn) return false;
       btn.click();
       return true;
@@ -239,7 +264,8 @@ async function openGrokModelMenu(
 
   await Runtime.evaluate({
     expression: `(() => {
-      const editor = document.querySelector('${GROK_INPUT_SELECTOR}');
+      const selectors = ${JSON.stringify(GROK_INPUT_SELECTORS)};
+      const editor = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
       editor?.focus();
     })()`,
   });
@@ -256,7 +282,10 @@ async function waitForMenuItems(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const outcome = await Runtime.evaluate({
-      expression: `(() => document.querySelector('${GROK_MENU_ITEM_SELECTOR}') !== null)()`,
+      expression: `(() => {
+        const selectors = ${JSON.stringify(GROK_MENU_ITEM_SELECTORS)};
+        return selectors.some((selector) => document.querySelector(selector));
+      })()`,
       returnByValue: true,
     });
     if (outcome.result?.value) return true;
