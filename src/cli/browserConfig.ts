@@ -129,7 +129,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     );
   }
 
-  const target = options.browserTarget ?? (isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : 'chatgpt');
+  const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
 
   return {
     chromeProfile: options.browserChromeProfile ?? DEFAULT_CHROME_PROFILE,

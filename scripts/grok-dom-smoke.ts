@@ -1,0 +1,106 @@
+#!/usr/bin/env tsx
+import puppeteer from 'puppeteer-core';
+
+const DEFAULT_PORT = 9222;
+const DEFAULT_URL = 'https://grok.com/';
+const DEFAULT_MODE = 'Grok 4.1 Thinking';
+
+const PROMPT_SELECTOR = 'div.ProseMirror[contenteditable="true"]';
+const SEND_SELECTOR = 'button[aria-label="Submit"][type="submit"]';
+const MODEL_SELECTOR = 'button[aria-label="Model select"]';
+const ATTACH_SELECTOR = 'button[aria-label="Attach"]';
+const FILE_INPUT_SELECTOR = 'input[type="file"]';
+const MENU_ITEM_SELECTOR = '[role="menuitem"]';
+
+function resolvePort(): number {
+  const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
+  if (!raw) return DEFAULT_PORT;
+  const parsed = Number.parseInt(raw, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_PORT;
+}
+
+function resolveUrl(): string {
+  return process.env.ORACLE_GROK_URL ?? process.env.GROK_URL ?? process.argv[2] ?? DEFAULT_URL;
+}
+
+function resolveMode(): string {
+  return process.env.ORACLE_GROK_MODE ?? process.argv[3] ?? DEFAULT_MODE;
+}
+
+async function main() {
+  const port = resolvePort();
+  const url = resolveUrl();
+  const mode = resolveMode();
+  const browserURL = `http://127.0.0.1:${port}`;
+
+  const browser = await puppeteer.connect({ browserURL, defaultViewport: null });
+  let page = (await browser.pages()).at(-1);
+  if (!page) {
+    page = await browser.newPage();
+  }
+
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
+
+  const currentUrl = page.url();
+  if (currentUrl.includes('accounts.x.ai') || currentUrl.includes('sign-in')) {
+    throw new Error(`Grok login required; redirected to ${currentUrl}`);
+  }
+
+  const prompt = await page.waitForSelector(PROMPT_SELECTOR, { timeout: 15000 });
+  if (!prompt) throw new Error('Prompt selector not found.');
+
+  const sendButton = await page.$(SEND_SELECTOR);
+  if (!sendButton) throw new Error('Send button selector not found.');
+
+  const modelButton = await page.$(MODEL_SELECTOR);
+  if (!modelButton) throw new Error('Model selector button not found.');
+
+  const attachButton = await page.$(ATTACH_SELECTOR);
+  if (!attachButton) throw new Error('Attach button selector not found.');
+
+  const fileInput = await page.$(FILE_INPUT_SELECTOR);
+  if (!fileInput) throw new Error('File input selector not found.');
+
+  await prompt.focus();
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Tab');
+  await page.keyboard.press('Space');
+  await page.waitForSelector(MENU_ITEM_SELECTOR, { timeout: 5000 });
+
+  const labels = await page.$$eval(MENU_ITEM_SELECTOR, (items) =>
+    items.map((item) => item.textContent?.trim() ?? '').filter(Boolean),
+  );
+
+  const normalizedMode = mode.trim().toLowerCase();
+  const clicked = await page.evaluate((selector, target) => {
+    const items = Array.from(document.querySelectorAll(selector));
+    for (const item of items) {
+      const text = item.textContent?.trim().toLowerCase() ?? '';
+      if (text === target || text.startsWith(target)) {
+        (item as HTMLElement).click();
+        return true;
+      }
+    }
+    return false;
+  }, MENU_ITEM_SELECTOR, normalizedMode);
+
+  if (!clicked) {
+    throw new Error(`Model menu item not found for "${mode}". Items: ${labels.join(', ')}`);
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, 500));
+  const buttonLabel = await page.$eval(MODEL_SELECTOR, (el) => el.textContent?.trim() ?? '');
+  if (!buttonLabel.toLowerCase().includes(normalizedMode)) {
+    throw new Error(`Model selector did not update (got "${buttonLabel}", expected "${mode}").`);
+  }
+
+  console.log(`[grok-smoke] PASS: selectors + model switch OK`);
+  console.log(`[grok-smoke] URL: ${currentUrl}`);
+  console.log(`[grok-smoke] Mode: ${buttonLabel}`);
+  await browser.disconnect();
+}
+
+main().catch((error) => {
+  console.error('[grok-smoke] FAIL:', error instanceof Error ? error.message : String(error));
+  process.exit(1);
+});

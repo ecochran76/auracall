@@ -18,11 +18,12 @@ Oracle reads an optional per-user config from `~/.oracle/config.json`. The file 
   },
 
   browser: {
-    target: "chatgpt", // chatgpt | gemini (sets default browser target + model)
+    target: "chatgpt", // chatgpt | gemini | grok (sets default browser target + model)
     chromeProfile: "Default",
     chromePath: null,
     chromeCookiePath: null,
     geminiUrl: "https://gemini.google.com/app",
+    grokUrl: "https://grok.com/",
     chatgptUrl: "https://chatgpt.com/", // root is fine; folder URLs also work
     url: null, // alias for chatgptUrl (kept for back-compat)
     debugPort: null,          // fixed DevTools port (env: ORACLE_BROWSER_PORT / ORACLE_BROWSER_DEBUG_PORT)
@@ -73,7 +74,8 @@ CLI flags → `config.json` → environment → built-in defaults.
 - `sessionRetentionHours` controls the default value for `--retain-hours`. When unset, `ORACLE_RETAIN_HOURS` (if present) becomes the fallback, and the CLI flag still wins over both.
 - `browser.chatgptUrl` accepts either the root ChatGPT URL (`https://chatgpt.com/`) or a folder/workspace URL (e.g., `https://chatgpt.com/g/.../project`); `browser.url` remains as a legacy alias.
 - `browser.geminiUrl` overrides the Gemini web destination (e.g., a specific Gem URL).
-- `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`.
+- `browser.grokUrl` overrides the Grok web destination (e.g., a project URL).
+- `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`, `grok` uses `grok-4.1`.
 - Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir`, and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
 
 If the config is missing or invalid, Oracle falls back to defaults and prints a warning for parse errors.

@@ -65,7 +65,8 @@ Programmatic opening strategy (reliable):
 
 ## Docs/tests
 - Add `docs/grok.md` or extend `docs/browser-mode.md` with setup + login.
-- Optional: minimal smoke test to verify prompt->response on Grok.
+- Add `--grok-url` for targeting specific Grok projects from the CLI.
+- Minimal smoke test: `scripts/grok-dom-smoke.ts` validates selectors + model switch against a live Grok tab.
 
 ## Risks/notes
 - Grok/X likely uses stronger anti-bot and dynamic selectors.

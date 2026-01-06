@@ -1,9 +1,10 @@
 # Browser Mode
 
-Oracle’s `--engine browser` supports two different execution paths:
+Oracle’s `--engine browser` supports three different execution paths:
 
 - **ChatGPT automation** (GPT-* models): drives the ChatGPT web UI with Chrome automation.
 - **Gemini web mode** (Gemini models): talks directly to `gemini.google.com` using your signed-in Chrome cookies (no ChatGPT automation).
+- **Grok automation** (Grok models): drives the Grok web UI with Chrome automation.
 
 If you’re running Gemini, also see `docs/gemini.md`.
 If you’re running ChatGPT browser automation from WSL, see `docs/wsl-chatgpt-runbook.md` for the WSL Chrome setup and DevTools host override.
@@ -54,7 +55,9 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--chatgpt`: shorthand for `--engine browser --model gpt-5.2` (ChatGPT automation).
 - `--gemini`: shorthand for `--engine browser --model gemini-3-pro` (Gemini web mode).
 - `--gemini-url`: override the Gemini web URL (e.g., a specific Gem).
+- `--grok-url`: override the Grok web URL (e.g., a project link like `https://grok.com/project/<id>`).
 - `oracle login --target gemini`: opens the configured browser profile for Gemini sign-in (useful when cookies are missing).
+- `oracle login --target grok`: opens the configured browser profile for Grok sign-in.
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).
 - `--browser-cookie-path`: explicit path to the Chrome/Chromium/Edge `Cookies` SQLite DB. Handy when you launch a fork via `--browser-chrome-path` and want to copy its session cookies; see [docs/chromium-forks.md](chromium-forks.md) for examples.
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.
@@ -68,7 +71,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-inline-files`: alias for `--browser-attachments never` (forces inline paste; never uploads attachments).
 - `--browser-bundle-files`: bundle all resolved attachments into a single temp file before uploading (only used when uploads are enabled/selected).
 - sqlite bindings: automatic rebuilds now require `ORACLE_ALLOW_SQLITE_REBUILD=1`. Without it, the CLI logs instructions instead of running `pnpm rebuild` on your behalf.
-- `--model`: the same flag used for API runs is accepted, but the ChatGPT automation path only supports **GPT-5.2** variants (Auto/Thinking/Instant/Pro). Use `gpt-5.2`, `gpt-5.2-thinking`, `gpt-5.2-instant`, or `gpt-5.2-pro`. Other GPT families still require API mode.
+- `--model`: the same flag used for API runs is accepted. ChatGPT automation supports **GPT-5.2** variants (Auto/Thinking/Instant/Pro): use `gpt-5.2`, `gpt-5.2-thinking`, `gpt-5.2-instant`, or `gpt-5.2-pro`. Grok automation supports `grok-4.1` (uses the Grok model picker). Other GPT families still require API mode.
 - Cookie sync is mandatory—if we can’t copy cookies from Chrome, the run exits early. Use the hidden `--browser-allow-cookie-errors` flag only when you’re intentionally running logged out (it skips the early exit but still warns).
 - Experimental cookie controls (hidden flags/env):
   - `--browser-cookie-names <comma-list>` or `ORACLE_BROWSER_COOKIE_NAMES`: allowlist which cookies to sync. Useful for “only NextAuth/Cloudflare, drop the rest.”

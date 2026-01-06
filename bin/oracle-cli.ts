@@ -22,6 +22,7 @@ import { DEFAULT_MODEL, MODEL_CONFIGS, runOracle, readFiles, estimateRequestToke
 import { isKnownModel } from '../src/oracle/modelResolver.js';
 import type { ModelName, PreviewMode, RunOracleOptions } from '../src/oracle.js';
 import { CHATGPT_URL, normalizeChatgptUrl } from '../src/browserMode.js';
+import { GROK_URL } from '../src/browser/constants.js';
 import { createRemoteBrowserExecutor } from '../src/remote/client.js';
 import { createGeminiWebExecutor } from '../src/gemini-web/index.js';
 import { applyHelpStyling } from '../src/cli/help.js';
@@ -364,6 +365,7 @@ program
     new Option('--browser-cookie-path <path>', 'Explicit Chrome/Chromium cookie DB path for session reuse.'),
   )
   .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
+  .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
   .addOption(
     new Option(
       '--chatgpt-url <url>',
@@ -505,10 +507,11 @@ program
 
 program
   .command('login')
-  .description('Launch the configured browser profile for ChatGPT or Gemini sign-in.')
-  .option('--target <chatgpt|gemini>', 'Choose which site to open (chatgpt or gemini).')
+  .description('Launch the configured browser profile for ChatGPT, Gemini, or Grok sign-in.')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which site to open (chatgpt, gemini, or grok).')
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
   .option('--gemini-url <url>', 'Override the Gemini URL for login.')
+  .option('--grok-url <url>', 'Override the Grok URL for login.')
   .option('--export-cookies', 'Export Gemini cookies to ~/.oracle/cookies.json while you sign in.')
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
@@ -516,9 +519,9 @@ program
   .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini';
-    if (target !== 'chatgpt' && target !== 'gemini') {
-      throw new Error(`Invalid login target "${target}". Use "chatgpt" or "gemini".`);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid login target "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
 
     const chromePath =
@@ -530,10 +533,12 @@ program
     const url =
       target === 'gemini'
         ? commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app'
-        : commandOptions.chatgptUrl ??
-          userConfig.browser?.chatgptUrl ??
-          userConfig.browser?.url ??
-          CHATGPT_URL;
+        : target === 'grok'
+          ? commandOptions.grokUrl ?? userConfig.browser?.grokUrl ?? GROK_URL
+          : commandOptions.chatgptUrl ??
+            userConfig.browser?.chatgptUrl ??
+            userConfig.browser?.url ??
+            CHATGPT_URL;
 
     const manualLoginDir =
       commandOptions.browserManualLoginProfileDir ??
@@ -1019,10 +1024,12 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       : resolveApiModel(cliModelArg || DEFAULT_MODEL);
   const primaryModelCandidate = normalizedMultiModels[0] ?? resolvedModelCandidate;
   const isGemini = primaryModelCandidate.startsWith('gemini');
+  const isGrok = primaryModelCandidate.startsWith('grok');
   const isCodex = primaryModelCandidate.startsWith('gpt-5.1-codex');
   const isClaude = primaryModelCandidate.startsWith('claude');
   const userForcedBrowser = options.browser || options.engine === 'browser';
-  const isBrowserCompatible = (model: string) => model.startsWith('gpt-') || model.startsWith('gemini');
+  const isBrowserCompatible = (model: string) =>
+    model.startsWith('gpt-') || model.startsWith('gemini') || model.startsWith('grok');
   const hasNonBrowserCompatibleTarget =
     (engine === 'browser' || userForcedBrowser) &&
     (normalizedMultiModels.length > 0
@@ -1030,7 +1037,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       : !isBrowserCompatible(resolvedModelCandidate));
   if (hasNonBrowserCompatibleTarget) {
     throw new Error(
-      'Browser engine only supports GPT and Gemini models. Re-run with --engine api for Grok, Claude, or other models.'
+      'Browser engine only supports GPT, Gemini, and Grok models. Re-run with --engine api for Claude or other models.'
     );
   }
   if (isClaude && engine === 'browser') {
@@ -1055,7 +1062,8 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       ? MODEL_CONFIGS[resolvedModel].apiModel ?? resolvedModel
       : resolvedModel;
   const resolvedBaseUrl = normalizeBaseUrl(
-    options.baseUrl ?? (isClaude ? process.env.ANTHROPIC_BASE_URL : process.env.OPENAI_BASE_URL),
+    options.baseUrl ??
+      (isClaude ? process.env.ANTHROPIC_BASE_URL : isGrok ? process.env.XAI_BASE_URL : process.env.OPENAI_BASE_URL),
   );
   const { models: _rawModels, ...optionsWithoutModels } = options;
   const resolvedOptions: ResolvedCliOptions = { ...optionsWithoutModels, model: resolvedModel };
@@ -1485,6 +1493,7 @@ function printDebugHelp(cliName: string): void {
   printDebugOptionGroup([
     ['--chatgpt-url <url>', 'Override the ChatGPT web URL (workspace/folder targets).'],
     ['--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'],
+    ['--grok-url <url>', 'Override the Grok web URL (e.g., https://grok.com/project/<id>).'],
     ['--browser-chrome-profile <name>', 'Reuse cookies from a specific Chrome profile.'],
     ['--browser-chrome-path <path>', 'Point to a custom Chrome/Chromium binary.'],
     ['--browser-cookie-path <path>', 'Use a specific Chrome/Chromium cookie store file.'],

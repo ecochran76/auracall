@@ -12,4 +12,5 @@ Owner: Oracle CLI
 
 Notes:
 - If you supply `--base-url`, it overrides the default xAI endpoint.
-- Browser engine is not supported for Grok; Oracle coerces `--engine browser` to `api`.
+- Browser engine is supported for Grok via the Grok web UI. Use `--engine browser --model grok-4.1` and optionally `--grok-url` to point at a specific project.
+- Browser selector smoke test (with Chrome running on a DevTools port): `ORACLE_BROWSER_PORT=9222 pnpm tsx scripts/grok-dom-smoke.ts`.
