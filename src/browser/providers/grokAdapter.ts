@@ -59,6 +59,10 @@ export function createGrokAdapter(): Pick<
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
       const projectUrl = projectId ? `https://grok.com/project/${projectId}` : undefined;
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, projectUrl);
+      if (projectUrl) {
+        await navigateToProject(client, projectUrl);
+        await openConversationList(client);
+      }
       try {
         const openConversations = await listOpenConversations(host, port, projectId);
         const { result } = await client.Runtime.evaluate({
@@ -187,6 +191,41 @@ function resolvePortFromEnv(): number | null {
   const parsed = Number.parseInt(raw, 10);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+async function navigateToProject(client: ChromeClient, url: string): Promise<void> {
+  await client.Page.navigate({ url });
+  const deadline = Date.now() + 15_000;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: 'document.readyState',
+      returnByValue: true,
+    });
+    if (result?.value === 'complete' || result?.value === 'interactive') {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
+async function openConversationList(client: ChromeClient): Promise<void> {
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const candidates = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
+      const labels = ['history', 'chat', 'conversations', 'messages'];
+      for (const node of candidates) {
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+        if (!label) continue;
+        if (labels.some((word) => label.includes(word))) {
+          node.click();
+          return true;
+        }
+      }
+      return false;
+    })()`,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 750));
 }
 
 async function listOpenConversations(
