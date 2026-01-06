@@ -6,6 +6,7 @@ Oracle’s `--engine browser` supports two different execution paths:
 - **Gemini web mode** (Gemini models): talks directly to `gemini.google.com` using your signed-in Chrome cookies (no ChatGPT automation).
 
 If you’re running Gemini, also see `docs/gemini.md`.
+If you’re running ChatGPT browser automation from WSL, see `docs/wsl-chatgpt-runbook.md` for the WSL Chrome setup and DevTools host override.
 
 `oracle --engine browser` routes the assembled prompt bundle through the ChatGPT web UI instead of the Responses API. (Legacy `--browser` still maps to `--engine browser`, but it will be removed.) If you omit `--engine`, Oracle first honors any `engine` value in `~/.oracle/config.json`, then auto-picks API when `OPENAI_API_KEY` is available and falls back to browser otherwise. The CLI writes the same session metadata/logs as API runs, and by default pastes the payload into ChatGPT via a temporary Chrome profile (manual-login mode can reuse a persistent automation profile).
 
