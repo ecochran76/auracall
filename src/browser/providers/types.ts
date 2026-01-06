@@ -26,14 +26,20 @@ export interface BrowserProviderCapabilities {
   files?: boolean;
 }
 
+export interface BrowserProviderListOptions {
+  host?: string;
+  port?: number;
+  configuredUrl?: string | null;
+}
+
 export interface BrowserProvider {
   id: BrowserProviderConfig['id'];
   config: BrowserProviderConfig;
   capabilities?: BrowserProviderCapabilities;
   resolveProjectUrl?: (projectId: string) => string;
   resolveConversationUrl?: (conversationId: string, projectId?: string) => string;
-  listProjects?: () => Promise<unknown>;
-  listConversations?: (projectId?: string) => Promise<unknown>;
+  listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
+  listConversations?: (projectId?: string, options?: BrowserProviderListOptions) => Promise<unknown>;
   openConversation?: (conversationId: string) => Promise<void>;
   readConversationContext?: (conversationId: string) => Promise<unknown>;
   updateProjectInstructions?: (projectId: string, content: string) => Promise<void>;

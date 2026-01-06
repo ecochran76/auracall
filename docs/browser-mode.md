@@ -94,7 +94,7 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 ### Provider discovery (experimental)
 
 - `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
-- `oracle conversations [--project-id <id>]`: list conversations for a provider (scaffolding only).
+- `oracle conversations [--project-id <id>]`: list conversations for a provider (requires a running browser with DevTools; uses `ORACLE_BROWSER_PORT` or config `browser.debugPort`).
 
 ### Manual login mode (persistent profile, no cookie copy)
 

@@ -529,10 +529,14 @@ program
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
     const provider = getProvider(target);
+    const listOptions = {
+      port: resolveBrowserListPort(userConfig),
+      configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+    };
     if (!provider.listProjects) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
-        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        configuredUrl: listOptions.configuredUrl,
         projectId: userConfig.browser?.projectId ?? null,
       });
       if (fallback.length === 0) {
@@ -542,7 +546,18 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const projects = await provider.listProjects();
+    const projects = await provider.listProjects(listOptions);
+    if (Array.isArray(projects) && projects.length === 0) {
+      const fallback = deriveProjectsFromConfig({
+        provider: target,
+        configuredUrl: listOptions.configuredUrl,
+        projectId: userConfig.browser?.projectId ?? null,
+      });
+      if (fallback.length > 0) {
+        console.log(JSON.stringify(fallback, null, 2));
+        return;
+      }
+    }
     console.log(JSON.stringify(projects, null, 2));
   });
 
@@ -558,10 +573,14 @@ program
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
     const provider = getProvider(target);
+    const listOptions = {
+      port: resolveBrowserListPort(userConfig),
+      configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+    };
     if (!provider.listConversations) {
       const fallback = deriveConversationsFromConfig({
         provider: target,
-        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        configuredUrl: listOptions.configuredUrl,
         projectId: commandOptions.projectId ?? userConfig.browser?.projectId ?? null,
         conversationId: userConfig.browser?.conversationId ?? null,
       });
@@ -572,7 +591,19 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const conversations = await provider.listConversations(commandOptions.projectId);
+    const conversations = await provider.listConversations(commandOptions.projectId, listOptions);
+    if (Array.isArray(conversations) && conversations.length === 0) {
+      const fallback = deriveConversationsFromConfig({
+        provider: target,
+        configuredUrl: listOptions.configuredUrl,
+        projectId: commandOptions.projectId ?? userConfig.browser?.projectId ?? null,
+        conversationId: userConfig.browser?.conversationId ?? null,
+      });
+      if (fallback.length > 0) {
+        console.log(JSON.stringify(fallback, null, 2));
+        return;
+      }
+    }
     console.log(JSON.stringify(conversations, null, 2));
   });
 
@@ -1624,6 +1655,19 @@ async function pickOpenPort(): Promise<number> {
       });
     });
   });
+}
+
+function resolveBrowserListPort(userConfig: UserConfig): number | undefined {
+  const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
+  if (raw) {
+    const parsed = Number.parseInt(raw, 10);
+    if (Number.isFinite(parsed) && parsed > 0) return parsed;
+  }
+  const fromConfig = userConfig.browser?.debugPort;
+  if (typeof fromConfig === 'number' && Number.isFinite(fromConfig) && fromConfig > 0) {
+    return fromConfig;
+  }
+  return undefined;
 }
 
 async function waitForPortOpen(port: number, timeoutMs: number): Promise<void> {
