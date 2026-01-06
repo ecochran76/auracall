@@ -541,6 +541,7 @@ program
       commandOptions.browserChromeProfile ?? userConfig.browser?.chromeProfile ?? 'Default';
     const cookiePath =
       commandOptions.browserCookiePath ?? userConfig.browser?.chromeCookiePath ?? undefined;
+    const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
 
     const inferred = cookiePath ? inferProfileFromCookiePath(cookiePath) : null;
     const userDataDir =
@@ -554,6 +555,13 @@ program
     }
 
     if (exportCookies) {
+      if (process.platform !== 'win32' || isWsl()) {
+        console.log(
+          chalk.yellow(
+            'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
+          ),
+        );
+      }
       const args = [
         '--new-window',
         `--user-data-dir=${userDataDir}`,
@@ -568,7 +576,6 @@ program
       const timeoutMs = 120_000;
 
       let debugPort: number | null = null;
-      const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
       if (wslWindowsChrome) {
         debugPort = await pickOpenPort();
         const winChromePath = toWindowsPath(chromePath);
@@ -615,8 +622,14 @@ program
       return;
     }
 
+    if (process.platform !== 'win32' || isWsl()) {
+      console.log(
+        chalk.yellow(
+          'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
+        ),
+      );
+    }
     const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
-    const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
     if (wslWindowsChrome) {
       const winChromePath = toWindowsPath(chromePath);
       const winArgs = args.map(toWindowsPath);
