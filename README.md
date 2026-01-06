@@ -49,6 +49,8 @@ npx -y @steipete/oracle tui
 
 Engine auto-picks API when `OPENAI_API_KEY` is set, otherwise browser; browser is stable on macOS and works on Linux and Windows. On Linux pass `--browser-chrome-path/--browser-cookie-path` if detection fails; on Windows prefer `--browser-manual-login` or inline cookies if decryption is blocked.
 
+WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup.
+
 ## Integration
 
 **CLI**
