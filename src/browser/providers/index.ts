@@ -1,5 +1,6 @@
 import { CHATGPT_PROVIDER } from './chatgpt.js';
 import { GROK_PROVIDER } from './grok.js';
+import { createGrokAdapter } from './grokAdapter.js';
 import type { BrowserProvider } from './types.js';
 
 export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
@@ -15,6 +16,7 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     resolveProjectUrl: (projectId) => `https://grok.com/project/${projectId}`,
     resolveConversationUrl: (conversationId, projectId) =>
       projectId ? `https://grok.com/project/${projectId}?chat=${conversationId}` : `https://grok.com/?chat=${conversationId}`,
+    ...createGrokAdapter(),
   },
 };
 
