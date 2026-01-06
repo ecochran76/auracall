@@ -121,6 +121,8 @@ interface CliOptions extends OptionValues {
   grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
+  projectId?: string;
+  conversationId?: string;
   browserTimeout?: string;
   browserInputTimeout?: string;
   browserCookieWait?: string;
@@ -366,6 +368,8 @@ program
   )
   .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
+  .addOption(new Option('--project-id <id>', 'Override the provider project scope for browser runs.').hideHelp())
+  .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
   .addOption(
     new Option(
       '--chatgpt-url <url>',

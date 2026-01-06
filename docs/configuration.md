@@ -22,6 +22,8 @@ Oracle reads an optional per-user config from `~/.oracle/config.json`. The file 
     chromeProfile: "Default",
     chromePath: null,
     chromeCookiePath: null,
+    projectId: null, // optional project scope for browser runs
+    conversationId: null, // optional conversation scope for browser runs
     geminiUrl: "https://gemini.google.com/app",
     grokUrl: "https://grok.com/",
     chatgptUrl: "https://chatgpt.com/", // root is fine; folder URLs also work

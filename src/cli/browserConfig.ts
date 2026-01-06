@@ -31,6 +31,8 @@ export interface BrowserFlagOptions {
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
+  projectId?: string;
+  conversationId?: string;
   geminiUrl?: string;
   grokUrl?: string;
   chatgptUrl?: string;
@@ -138,6 +140,8 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     target,
     geminiUrl: options.geminiUrl ?? null,
     grokUrl: grokUrl ?? null,
+    projectId: options.projectId ?? null,
+    conversationId: options.conversationId ?? null,
     url,
     debugPort: selectBrowserPort(options),
     timeoutMs: options.browserTimeout ? parseDuration(options.browserTimeout, DEFAULT_BROWSER_TIMEOUT_MS) : undefined,
