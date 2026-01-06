@@ -54,3 +54,4 @@ oracle --gemini -p "Say hello from Brave"
 ## Notes
 - Gemini runs use inline cookies first; the fallback to Chrome cookie DB on Windows can fail if Brave is locked. `--export-cookies` is the reliable path.
 - To use a Linux browser instead, set `browser.chromePath` to the Linux Chrome/Brave binary in WSL and sign in there; cookies will come from that Linux profile.
+- Linux desktop (non-WSL) may require `libsecret-tools` so `secret-tool` can decrypt Chrome cookies; if that fails, use `--export-cookies` and `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json`.

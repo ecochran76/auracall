@@ -30,7 +30,7 @@ Prereqs:
 - Signed into `gemini.google.com` in the Chrome profile Oracle uses (default: `Default` profile).
 - Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
 - If cookies are missing, run `oracle login --target gemini` to open the same profile for sign-in.
-- If Chrome cookies are locked (common on Windows), run `oracle login --target gemini --export-cookies` to save cookies to `~/.oracle/cookies.json`.
+- If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `oracle login --target gemini --export-cookies` to save cookies to `~/.oracle/cookies.json`.
 
 Examples:
 ```bash
@@ -52,6 +52,7 @@ Notes:
 - If your logged-in Gemini account can’t access “Pro”, Oracle will auto-fallback to a supported model for web runs (and logs the fallback in verbose mode).
 - This path runs fully in Node/TypeScript (no Python/venv dependency).
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.
+- Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or pass inline cookies with `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json`.
 
 ## Implementation details
 

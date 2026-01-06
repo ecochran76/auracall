@@ -143,7 +143,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
   const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
-  const chrome =
+  let chrome =
     reusedChrome ??
     (await launchChrome(
       {
@@ -153,24 +153,16 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       userDataDir,
       logger,
     ));
-  const chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
+  let chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
   // Persist profile state so future manual-login runs can reuse this Chrome.
-  if (manualLogin && chrome.port) {
+  const persistManualLoginState = async (): Promise<void> => {
+    if (!manualLogin || !chrome.port) return;
     await writeDevToolsActivePort(userDataDir, chrome.port);
     if (!reusedChrome && chrome.pid) {
       await writeChromePid(userDataDir, chrome.pid);
     }
-  }
-  let removeTerminationHooks: (() => void) | null = null;
-  try {
-    removeTerminationHooks = registerTerminationHooks(chrome, userDataDir, effectiveKeepBrowser, logger, {
-      isInFlight: () => runStatus !== 'complete',
-      emitRuntimeHint,
-      preserveUserDataDir: manualLogin,
-    });
-  } catch {
-    // ignore failure; cleanup still happens below
-  }
+  };
+  await persistManualLoginState();
 
   let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
   const startedAt = Date.now();
@@ -182,16 +174,53 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let stopThinkingMonitor: (() => void) | null = null;
   let removeDialogHandler: (() => void) | null = null;
   let appliedCookies = 0;
+  let removeTerminationHooks: (() => void) | null = null;
 
   try {
     try {
-      client = await connectToChrome(chrome.port, logger, chromeHost);
+      try {
+        client = await connectToChrome(chrome.port, logger, chromeHost);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        if (!manualLogin) {
+          throw error;
+        }
+        logger(
+          `DevTools connection failed (${message}); clearing stale profile state and relaunching Chrome.`,
+        );
+        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+        try {
+          await chrome.kill();
+        } catch {
+          // ignore cleanup errors
+        }
+        chrome = await launchChrome(
+          {
+            ...config,
+            remoteChrome: config.remoteChrome,
+          },
+          userDataDir,
+          logger,
+        );
+        chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
+        await persistManualLoginState();
+        client = await connectToChrome(chrome.port, logger, chromeHost);
+      }
     } catch (error) {
       const hint = describeDevtoolsFirewallHint(chromeHost, chrome.port);
       if (hint) {
         logger(hint);
       }
       throw error;
+    }
+    try {
+      removeTerminationHooks = registerTerminationHooks(chrome, userDataDir, effectiveKeepBrowser, logger, {
+        isInFlight: () => runStatus !== 'complete',
+        emitRuntimeHint,
+        preserveUserDataDir: manualLogin,
+      });
+    } catch {
+      // ignore failure; cleanup still happens below
     }
     const disconnectPromise = new Promise<never>((_, reject) => {
       client?.on('disconnect', () => {
