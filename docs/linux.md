@@ -12,3 +12,4 @@
 - If Gemini still can’t read cookies, export them from a logged-in Chrome tab and pass them inline:
   - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts cookies --port <PORT> > ~/.oracle/cookies.json`
   - Run with `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json` (or set `browser.inlineCookiesFile` in `~/.oracle/config.json`).
+- If install scripts fail with `spawn node-gyp ENOENT` (often on newer Node versions without prebuilt binaries), install `node-gyp` and rebuild the native dependency: `pnpm add -D node-gyp --ignore-scripts && PATH=$(pwd)/node_modules/.bin:$PATH npm_config_node_gyp=$(pwd)/node_modules/.bin/node-gyp pnpm rebuild @cdktf/node-pty-prebuilt-multiarch`.
