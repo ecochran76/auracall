@@ -14,31 +14,31 @@
 
 ## Grok-specific flow (selectors + logic)
 Needs concrete selectors for:
-- **URL**: likely `https://x.com/i/grok` (confirm).
-- **Composer input**: Grok prompt area selector(s).
-- **Send button**: submit control selector(s).
-- **Assistant response**: response container selector(s).
-- **Login/blocked UI detection**: login CTA, Cloudflare interstitial, etc.
+- **URL**: `https://grok.com/project/ef52c821-cc28-4166-9e27-2e61b40a2a81` (current target)
+- **Composer input**: `div.ProseMirror[contenteditable="true"]` (tiptap editor)
+- **Send button**: `button[aria-label="Submit"][type="submit"]`
+- **Assistant response**: `main .message-bubble.w-full.max-w-none` (assistant bubbles fill width; user bubble has `bg-surface-l1`)
+- **Login/blocked UI detection**: redirect to `https://accounts.x.ai/sign-in?redirect=grok-com` indicates not logged in
 
-Inputs to confirm:
-1) Exact Grok URL target
-2) Whether X/Grok is already logged in for the manual profile
-3) DOM sniff from DevTools to lock selectors
+Selectors found via DevTools (port 9222):
+- Input: `div.ProseMirror[contenteditable="true"]`
+- Submit: `button[aria-label="Submit"][type="submit"]`
+- Response: `main .message-bubble` (assistant vs user discriminated by class: assistant has `w-full max-w-none`, user has `bg-surface-l1`)
 
 ## Code changes (sketch)
 - Add Grok constants in `src/browser/constants.ts` or new `src/browser/grok/constants.ts`:
-  - `GROK_URL`, `GROK_INPUT_SELECTORS`, `GROK_SEND_BUTTON_SELECTORS`, `GROK_ANSWER_SELECTORS`, etc.
+  - `GROK_URL`, `GROK_INPUT_SELECTORS`, `GROK_SEND_BUTTON_SELECTORS`, `GROK_ANSWER_SELECTORS`
 - Add Grok actions module(s):
-  - `navigateToGrok`, `ensurePromptReadyGrok`, `ensureLoggedInGrok`, `readGrokAnswer`.
+  - `navigateToGrok`, `ensurePromptReadyGrok`, `ensureLoggedInGrok`, `readGrokAnswer`
 - Provider abstraction (minimal):
-  - `BrowserProvider { navigate, ensureReady, ensureLoggedIn, sendPrompt, readAnswer, selectors }`.
-  - Default provider: ChatGPT; new provider: Grok.
+  - `BrowserProvider { navigate, ensureReady, ensureLoggedIn, sendPrompt, readAnswer, selectors }`
+  - Default provider: ChatGPT; new provider: Grok
 - Routing:
-  - Use Grok provider when `browser.target: "grok"` or `--model grok-*` is set.
+  - Use Grok provider when `browser.target: "grok"` or `--model grok-*` is set
 
 ## Docs/tests
-- Add `docs/grok.md` or extend `docs/browser-mode.md` with setup + login.
-- Optional: minimal smoke test to verify prompt->response on Grok.
+- Add `docs/grok.md` or extend `docs/browser-mode.md` with setup + login
+- Optional: minimal smoke test to verify prompt->response on Grok
 
 ## Risks/notes
 - Grok/X likely uses stronger anti-bot and dynamic selectors.
