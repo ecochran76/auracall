@@ -36,24 +36,21 @@ Login/blocked detection:
 ## Model selector (Auto / Fast / Expert / Grok 4.1 Thinking / Heavy)
 - **Toggle button**: `button[aria-label="Model select"]` (shows current label text).
 - **Menu items**: `[role="menuitem"]` with text starting with: `Auto`, `Fast`, `Expert`, `Grok 4.1 Thinking`, `Heavy`.
-- Verified toggling works when the menu is already open:
-  - Click menu item → button text updates.
+- Confirmed programmatic switching works via keyboard navigation:
+  - Focus prompt (`div.ProseMirror[contenteditable="true"]`).
+  - Press `Tab` twice to focus the model selector.
+  - Press `Space` to open the menu.
+  - Click `[role=menuitem]` for the target label.
+  - Verified switching to `Fast` and back to `Auto`, and to `Grok 4.1 Thinking`.
 
-Programmatic opening challenge:
-- Menu closes immediately when opened via `page.evaluate()`.
-- Works reliably when user opens it (Tab twice from prompt, then Space).
+Programmatic opening strategy (reliable):
+- Use keyboard navigation (Tab/Space) rather than `page.evaluate()` clicks; the menu closes too quickly with pure DOM clicks.
 
-Possible automation strategies:
-1) **Keyboard-driven open**:
-   - Focus prompt (`div.ProseMirror[contenteditable="true"]`).
-   - Send `Tab` twice to focus the model selector.
-   - Send `Space` to open the menu.
-   - Select `[role=menuitem]` by label.
-2) **Mouse-driven open with delay**:
-   - Click the model button via `Input.dispatchMouseEvent` (CDP), then wait 200–400ms before querying items.
-3) **Puppeteer click + waitForSelector**:
-   - Use `page.click('button[aria-label="Model select"]')` then `page.waitForSelector('[role=menuitem]')`.
-4) **Fallback**: if menu cannot be opened programmatically, allow “leave current mode” and skip switching.
+## Project URL + session tracking
+- The Grok project URL is a dedicated Oracle project.
+- Session management should capture the **chat ID** from the URL for reattach.
+  - Example base URL: `https://grok.com/project/<project-id>`
+  - Expected chat URL to capture (confirm on send): `https://grok.com/project/<project-id>/chat/<chat-id>` (or similar)
 
 ## Code changes (sketch)
 - Add Grok constants in `src/browser/constants.ts` or new `src/browser/grok/constants.ts`:
