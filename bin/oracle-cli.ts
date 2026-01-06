@@ -1680,6 +1680,9 @@ function toWindowsPath(value: string): string {
     const rest = match[2].replace(/\//g, '\\');
     return `${drive}:\\${rest}`;
   }
+  if (normalized.startsWith('/')) {
+    return `\\\\wsl.localhost\\${process.env.WSL_DISTRO_NAME ?? 'Ubuntu'}${normalized.replace(/\//g, '\\')}`;
+  }
   return value;
 }
 

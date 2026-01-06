@@ -343,7 +343,7 @@ function resolveUserDataDirFlag(userDataDir: string, chromePath?: string): strin
   if (!isWsl()) {
     return userDataDir;
   }
-  const windowsChrome = Boolean(chromePath && /^([a-zA-Z]:\\|\/mnt\/)/.test(chromePath));
+  const windowsChrome = Boolean(chromePath && /^([a-zA-Z]:[\\/]|\/mnt\/)/.test(chromePath));
   if (!windowsChrome) {
     return userDataDir;
   }
@@ -353,6 +353,9 @@ function resolveUserDataDirFlag(userDataDir: string, chromePath?: string): strin
 function toWin32Path(value: string): string {
   if (/^[a-zA-Z]:\\/.test(value)) {
     return value;
+  }
+  if (/^[a-zA-Z]:\//.test(value)) {
+    return value.replace(/\//g, '\\');
   }
   if (value.startsWith('/mnt/')) {
     const drive = value[5]?.toLowerCase();
