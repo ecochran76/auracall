@@ -56,10 +56,11 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   const isWindows = process.platform === 'win32';
   const manualLogin = config?.manualLogin ?? (isWindows ? true : DEFAULT_BROWSER_CONFIG.manualLogin);
   const cookieSyncDefault = isWindows ? false : DEFAULT_BROWSER_CONFIG.cookieSync;
-  const resolvedProfileDir =
+  const resolvedProfileDir = normalizeManualLoginProfileDir(
     config?.manualLoginProfileDir ??
-    process.env.ORACLE_BROWSER_PROFILE_DIR ??
-    path.join(os.homedir(), '.oracle', 'browser-profile');
+      process.env.ORACLE_BROWSER_PROFILE_DIR ??
+      path.join(os.homedir(), '.oracle', 'browser-profile'),
+  );
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
@@ -89,6 +90,36 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     manualLoginProfileDir: manualLogin ? resolvedProfileDir : null,
     manualLoginCookieSync: config?.manualLoginCookieSync ?? DEFAULT_BROWSER_CONFIG.manualLoginCookieSync,
   };
+}
+
+function normalizeManualLoginProfileDir(value: string): string {
+  if (!isWsl()) {
+    return value;
+  }
+  const trimmed = value.trim();
+  const uncMatch = trimmed.match(/^\\\\wsl\.localhost\\[^\\]+\\(.+)$/);
+  if (uncMatch?.[1]) {
+    return `/${uncMatch[1].replace(/\\/g, '/')}`;
+  }
+  const uncSlashMatch = trimmed.match(/^\/\/wsl\.localhost\/[^/]+\/(.+)$/);
+  if (uncSlashMatch?.[1]) {
+    return `/${uncSlashMatch[1].replace(/\//g, '/')}`;
+  }
+  const driveMatch = trimmed.match(/^([a-zA-Z]):\\(.+)$/);
+  if (driveMatch) {
+    return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2].replace(/\\/g, '/')}`;
+  }
+  return value;
+}
+
+function isWsl(): boolean {
+  if (process.platform !== 'linux') {
+    return false;
+  }
+  if (process.env.WSL_DISTRO_NAME) {
+    return true;
+  }
+  return os.release().toLowerCase().includes('microsoft');
 }
 
 function parseDebugPort(raw?: string | null): number | null {
