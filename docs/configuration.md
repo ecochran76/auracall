@@ -77,6 +77,7 @@ CLI flags → `config.json` → environment → built-in defaults.
 - `browser.chatgptUrl` accepts either the root ChatGPT URL (`https://chatgpt.com/`) or a folder/workspace URL (e.g., `https://chatgpt.com/g/.../project`); `browser.url` remains as a legacy alias.
 - `browser.geminiUrl` overrides the Gemini web destination (e.g., a specific Gem URL).
 - `browser.grokUrl` overrides the Grok web destination (e.g., a project URL).
+- `browser.projectId` / `browser.conversationId` let you scope browser runs to a specific project or conversation without changing the default URL (conversation wins if both are set).
 - `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`, `grok` uses `grok-4.1`.
 - Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir`, and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
 

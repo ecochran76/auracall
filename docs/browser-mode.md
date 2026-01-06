@@ -57,7 +57,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--gemini-url`: override the Gemini web URL (e.g., a specific Gem).
 - `--grok-url`: override the Grok web URL (e.g., a project link like `https://grok.com/project/<id>`).
 - `--browser-target`: force the browser automation target (`chatgpt`, `gemini`, or `grok`) regardless of the model shorthand.
-- `--project-id` / `--conversation-id`: override the browser run scope without changing the configured default URL.
+- `--project-id` / `--conversation-id`: override the browser run scope without changing the configured default URL. Conversation takes precedence over project; both are optional.
 - `oracle login --target gemini`: opens the configured browser profile for Gemini sign-in (useful when cookies are missing).
 - `oracle login --target grok`: opens the configured browser profile for Grok sign-in.
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).

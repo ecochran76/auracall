@@ -110,3 +110,7 @@ Phase 4: Harden + Docs
   - File transfer workflows (upload + download).
 - Test harness should add:
   - Provider capability checks and light smoke coverage for listing + file ops.
+
+## Scope Resolution (Backward Compatibility)
+- Resolve browser URL in this order: conversation → project → configured URL.
+- Preserve existing behavior when no IDs are provided (config URL stays the default).
