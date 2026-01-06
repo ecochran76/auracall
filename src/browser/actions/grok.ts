@@ -90,16 +90,11 @@ export async function selectGrokMode(
   label: string,
   logger: BrowserLogger,
 ): Promise<void> {
-  await Runtime.evaluate({
-    expression: `(() => {
-      const editor = document.querySelector('${GROK_INPUT_SELECTOR}');
-      editor?.focus();
-    })()`,
-  });
-  await pressKey(Input, 'Tab', 'Tab');
-  await pressKey(Input, 'Tab', 'Tab');
-  await pressKey(Input, ' ', 'Space');
-  await delay(200);
+  const menuOpened = await openGrokModelMenu(Runtime, Input);
+  if (!menuOpened) {
+    logger('Unable to open Grok model menu via click or keyboard.');
+    return;
+  }
   const outcome = await Runtime.evaluate({
     expression: `(() => {
       const items = Array.from(document.querySelectorAll('${GROK_MENU_ITEM_SELECTOR}'));
@@ -223,6 +218,51 @@ async function readLocationHref(Runtime: ChromeClient['Runtime']): Promise<strin
     returnByValue: true,
   });
   return typeof result?.value === 'string' ? result.value : '';
+}
+
+async function openGrokModelMenu(
+  Runtime: ChromeClient['Runtime'],
+  Input: ChromeClient['Input'],
+): Promise<boolean> {
+  const clicked = await Runtime.evaluate({
+    expression: `(() => {
+      const btn = document.querySelector('${GROK_MODEL_BUTTON_SELECTOR}');
+      if (!btn) return false;
+      btn.click();
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  if (clicked.result?.value && (await waitForMenuItems(Runtime, 800))) {
+    return true;
+  }
+
+  await Runtime.evaluate({
+    expression: `(() => {
+      const editor = document.querySelector('${GROK_INPUT_SELECTOR}');
+      editor?.focus();
+    })()`,
+  });
+  await pressKey(Input, 'Tab', 'Tab');
+  await pressKey(Input, 'Tab', 'Tab');
+  await pressKey(Input, ' ', 'Space');
+  return await waitForMenuItems(Runtime, 1000);
+}
+
+async function waitForMenuItems(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const outcome = await Runtime.evaluate({
+      expression: `(() => document.querySelector('${GROK_MENU_ITEM_SELECTOR}') !== null)()`,
+      returnByValue: true,
+    });
+    if (outcome.result?.value) return true;
+    await delay(100);
+  }
+  return false;
 }
 
 async function pressKey(Input: ChromeClient['Input'], key: string, code: string): Promise<void> {
