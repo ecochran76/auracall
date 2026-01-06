@@ -2,7 +2,7 @@ import type { ChromeClient, BrowserLogger, BrowserModelStrategy } from '../types
 import {
   MENU_CONTAINER_SELECTOR,
   MENU_ITEM_SELECTOR,
-  MODEL_BUTTON_SELECTOR,
+  MODEL_BUTTON_SELECTORS,
 } from '../constants.js';
 import { logDomFailure } from '../domDebug.js';
 import { buildClickDispatcher } from './domEvents.js';
@@ -65,10 +65,11 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
   const strategyLiteral = JSON.stringify(strategy);
   const menuContainerLiteral = JSON.stringify(MENU_CONTAINER_SELECTOR);
   const menuItemLiteral = JSON.stringify(MENU_ITEM_SELECTOR);
+  const buttonSelectorsLiteral = JSON.stringify(MODEL_BUTTON_SELECTORS);
   return `(() => {
     ${buildClickDispatcher()}
     // Capture the selectors and matcher literals up front so the browser expression stays pure.
-    const BUTTON_SELECTOR = '${MODEL_BUTTON_SELECTOR}';
+    const BUTTON_SELECTORS = ${buttonSelectorsLiteral};
     const LABEL_TOKENS = ${labelLiteral};
     const TEST_IDS = ${idLiteral};
     const PRIMARY_LABEL = ${primaryLabelLiteral};
@@ -103,7 +104,9 @@ function buildModelSelectionExpression(targetModel: string, strategy: BrowserMod
     const wantsInstant = normalizedTarget.includes('instant');
     const wantsThinking = normalizedTarget.includes('thinking');
 
-    const button = document.querySelector(BUTTON_SELECTOR);
+    const button = BUTTON_SELECTORS
+      .map((selector) => document.querySelector(selector))
+      .find((node) => node);
     if (!button) {
       return { status: 'button-missing' };
     }

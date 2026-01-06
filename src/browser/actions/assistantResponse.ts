@@ -3,7 +3,7 @@ import {
   ANSWER_SELECTORS,
   ASSISTANT_ROLE_SELECTOR,
   CONVERSATION_TURN_SELECTOR,
-  COPY_BUTTON_SELECTOR,
+  COPY_BUTTON_SELECTORS,
   FINISHED_ACTIONS_SELECTOR,
   STOP_BUTTON_SELECTOR,
 } from '../constants.js';
@@ -886,14 +886,18 @@ function buildMarkdownFallbackExtractor(minTurnLiteral?: string): string {
 function buildCopyExpression(meta: { messageId?: string | null; turnId?: string | null }): string {
   return `(() => {
     ${buildClickDispatcher()}
-    const BUTTON_SELECTOR = '${COPY_BUTTON_SELECTOR}';
+    const BUTTON_SELECTORS = ${JSON.stringify(COPY_BUTTON_SELECTORS)};
     const TIMEOUT_MS = 10000;
+    const queryButtons = (node) => {
+      if (!node) return [];
+      return BUTTON_SELECTORS.flatMap((selector) => Array.from(node.querySelectorAll(selector)));
+    };
 
     const locateButton = () => {
       const hint = ${JSON.stringify(meta ?? {})};
       if (hint?.messageId) {
         const node = document.querySelector('[data-message-id="' + hint.messageId + '"]');
-        const buttons = node ? Array.from(node.querySelectorAll('${COPY_BUTTON_SELECTOR}')) : [];
+        const buttons = queryButtons(node);
         const button = buttons.at(-1) ?? null;
         if (button) {
           return button;
@@ -901,7 +905,7 @@ function buildCopyExpression(meta: { messageId?: string | null; turnId?: string 
       }
       if (hint?.turnId) {
         const node = document.querySelector('[data-testid="' + hint.turnId + '"]');
-        const buttons = node ? Array.from(node.querySelectorAll('${COPY_BUTTON_SELECTOR}')) : [];
+        const buttons = queryButtons(node);
         const button = buttons.at(-1) ?? null;
         if (button) {
           return button;
@@ -923,12 +927,12 @@ function buildCopyExpression(meta: { messageId?: string | null; turnId?: string 
       for (let i = turns.length - 1; i >= 0; i -= 1) {
         const turn = turns[i];
         if (!isAssistantTurn(turn)) continue;
-        const button = turn.querySelector(BUTTON_SELECTOR);
+        const button = queryButtons(turn)[0] ?? null;
         if (button) {
           return button;
         }
       }
-      const all = Array.from(document.querySelectorAll(BUTTON_SELECTOR));
+      const all = queryButtons(document);
       for (let i = all.length - 1; i >= 0; i -= 1) {
         const button = all[i];
         const turn = button?.closest?.(CONVERSATION_SELECTOR);
