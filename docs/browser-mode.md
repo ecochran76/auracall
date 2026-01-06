@@ -91,6 +91,11 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 
 All options are persisted with the session so reruns (`oracle exec <id>`) reuse the same automation settings.
 
+### Provider discovery (experimental)
+
+- `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
+- `oracle conversations [--project-id <id>]`: list conversations for a provider (scaffolding only).
+
 ### Manual login mode (persistent profile, no cookie copy)
 
 Use `--browser-manual-login` when cookie decrypt is blocked (e.g., Windows app-bound cookies) or you prefer to sign in explicitly. You can also make it the default via `browser.manualLogin` in `~/.oracle/config.json`.

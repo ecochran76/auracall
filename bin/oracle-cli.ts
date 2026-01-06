@@ -80,6 +80,7 @@ import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import { launch } from 'chrome-launcher';
 import { getOracleHomeDir } from '../src/oracleHome.js';
+import { getProvider } from '../src/browser/providers/index.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -514,6 +515,45 @@ program
       port: commandOptions.port,
       token: commandOptions.token,
     });
+  });
+
+program
+  .command('projects')
+  .description('List available projects/workspaces for the active browser provider.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (commandOptions) => {
+    const { config: userConfig } = await loadUserConfig();
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const provider = getProvider(target);
+    if (!provider.listProjects) {
+      console.log(chalk.yellow(`Project listing is not implemented yet for ${target}.`));
+      return;
+    }
+    const projects = await provider.listProjects();
+    console.log(projects);
+  });
+
+program
+  .command('conversations')
+  .description('List conversations for the active browser provider.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
+  .action(async (commandOptions) => {
+    const { config: userConfig } = await loadUserConfig();
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const provider = getProvider(target);
+    if (!provider.listConversations) {
+      console.log(chalk.yellow(`Conversation listing is not implemented yet for ${target}.`));
+      return;
+    }
+    const conversations = await provider.listConversations(commandOptions.projectId);
+    console.log(conversations);
   });
 
 program
