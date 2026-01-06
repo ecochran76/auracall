@@ -384,6 +384,13 @@ program
     ).hideHelp(),
   )
   .addOption(
+    new Option('--browser-target <chatgpt|gemini|grok>', 'Override the browser automation target.').choices([
+      'chatgpt',
+      'gemini',
+      'grok',
+    ]),
+  )
+  .addOption(
     new Option('--browser-port <port>', 'Use a fixed Chrome DevTools port (helpful on WSL firewalls).')
       .argParser(parseIntOption),
   )
@@ -1494,6 +1501,7 @@ function printDebugHelp(cliName: string): void {
     ['--chatgpt-url <url>', 'Override the ChatGPT web URL (workspace/folder targets).'],
     ['--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'],
     ['--grok-url <url>', 'Override the Grok web URL (e.g., https://grok.com/project/<id>).'],
+    ['--browser-target <chatgpt|gemini|grok>', 'Override the browser automation target.'],
     ['--browser-chrome-profile <name>', 'Reuse cookies from a specific Chrome profile.'],
     ['--browser-chrome-path <path>', 'Point to a custom Chrome/Chromium binary.'],
     ['--browser-cookie-path <path>', 'Use a specific Chrome/Chromium cookie store file.'],
