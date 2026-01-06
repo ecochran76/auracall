@@ -568,7 +568,8 @@ program
       const timeoutMs = 120_000;
 
       let debugPort: number | null = null;
-      if (isWsl()) {
+      const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
+      if (wslWindowsChrome) {
         debugPort = await pickOpenPort();
         const winChromePath = toWindowsPath(chromePath);
         const argsWithDebug = [
@@ -615,7 +616,8 @@ program
     }
 
     const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
-    if (isWsl()) {
+    const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
+    if (wslWindowsChrome) {
       const winChromePath = toWindowsPath(chromePath);
       const winArgs = args.map(toWindowsPath);
       const argList = winArgs.map(quotePowerShellLiteral).join(', ');
@@ -1666,6 +1668,18 @@ function toWindowsPath(value: string): string {
     return `${drive}:\\${rest}`;
   }
   return value;
+}
+
+function isWindowsChromePath(value: string): boolean {
+  const trimmed = value.trim();
+  if (/^[a-zA-Z]:[\\/]/.test(trimmed)) {
+    return true;
+  }
+  if (trimmed.startsWith('\\\\') || trimmed.startsWith('//')) {
+    return true;
+  }
+  const normalized = trimmed.replace(/\\/g, '/');
+  return normalized.startsWith('/mnt/');
 }
 
 function quotePowerShellLiteral(value: string): string {
