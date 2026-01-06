@@ -16,19 +16,26 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   const debugBindAddress = connectHost && connectHost !== '127.0.0.1' ? '0.0.0.0' : connectHost;
   const debugPort = config.debugPort ?? parseDebugPortEnv();
   const chromeFlags = buildChromeFlags(config.headless ?? false, debugBindAddress);
+  const bypassUserDataDir = shouldBypassLauncherUserDataDir(config.chromePath ?? undefined);
+  const userDataDirFlag = `--user-data-dir=${resolveUserDataDirFlag(userDataDir, config.chromePath ?? undefined)}`;
+  const effectiveChromeFlags =
+    bypassUserDataDir && !chromeFlags.some((flag) => flag.startsWith('--user-data-dir='))
+      ? [...chromeFlags, userDataDirFlag]
+      : chromeFlags;
+  const launcherUserDataDir = bypassUserDataDir ? false : userDataDir;
   const usePatchedLauncher = Boolean(connectHost && connectHost !== '127.0.0.1');
   const launcher = usePatchedLauncher
     ? await launchWithCustomHost({
-        chromeFlags,
+        chromeFlags: effectiveChromeFlags,
         chromePath: config.chromePath ?? undefined,
-        userDataDir,
+        userDataDir: launcherUserDataDir,
         host: connectHost ?? '127.0.0.1',
         requestedPort: debugPort ?? undefined,
       })
     : await launch({
         chromePath: config.chromePath ?? undefined,
-        chromeFlags,
-        userDataDir,
+        chromeFlags: effectiveChromeFlags,
+        userDataDir: launcherUserDataDir,
         handleSIGINT: false,
         port: debugPort ?? undefined,
       });
@@ -276,7 +283,7 @@ async function launchWithCustomHost({
 }: {
   chromeFlags: string[];
   chromePath?: string | null;
-  userDataDir: string;
+  userDataDir: string | boolean;
   host: string | null;
   requestedPort?: number;
 }): Promise<LaunchedChrome & { host?: string }> {
@@ -326,4 +333,35 @@ async function launchWithCustomHost({
     host: host ?? undefined,
     remoteDebuggingPipes: launcher.remoteDebuggingPipes,
   } as unknown as LaunchedChrome & { host?: string };
+}
+
+function shouldBypassLauncherUserDataDir(chromePath?: string): boolean {
+  return isWsl();
+}
+
+function resolveUserDataDirFlag(userDataDir: string, chromePath?: string): string {
+  if (!isWsl()) {
+    return userDataDir;
+  }
+  const windowsChrome = Boolean(chromePath && /^([a-zA-Z]:\\|\/mnt\/)/.test(chromePath));
+  if (!windowsChrome) {
+    return userDataDir;
+  }
+  return toWin32Path(userDataDir);
+}
+
+function toWin32Path(value: string): string {
+  if (/^[a-zA-Z]:\\/.test(value)) {
+    return value;
+  }
+  if (value.startsWith('/mnt/')) {
+    const drive = value[5]?.toLowerCase();
+    if (drive && value[6] === '/') {
+      return `${drive.toUpperCase()}:\\${value.slice(7).replace(/\//g, '\\')}`;
+    }
+  }
+  if (value.startsWith('/')) {
+    return `\\\\wsl.localhost\\${process.env.WSL_DISTRO_NAME ?? 'Ubuntu'}${value.replace(/\//g, '\\')}`;
+  }
+  return value;
 }
