@@ -30,6 +30,8 @@ export interface BrowserProvider {
   id: BrowserProviderConfig['id'];
   config: BrowserProviderConfig;
   capabilities?: BrowserProviderCapabilities;
+  resolveProjectUrl?: (projectId: string) => string;
+  resolveConversationUrl?: (conversationId: string, projectId?: string) => string;
   listProjects?: () => Promise<unknown>;
   listConversations?: (projectId?: string) => Promise<unknown>;
   openConversation?: (conversationId: string) => Promise<void>;
