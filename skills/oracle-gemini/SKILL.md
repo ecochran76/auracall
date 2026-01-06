@@ -27,6 +27,9 @@ oracle --gemini -p "Say hello from Brave"
 
 ## WSL note
 - When `browser.chromePath` points to a Windows path, WSL launches the Windows browser.
+- Prefer a WSL-installed Chrome for Gemini web runs:
+  - `browser.chromePath: "/usr/bin/google-chrome"`
+  - `browser.chromeCookiePath: "/home/<you>/.config/google-chrome/Default/Cookies"`
 - Cookie export writes to `~/.oracle/cookies.json` inside WSL. If you exported on Windows, copy it:
 ```bash
 cp /mnt/c/Users/<You>/.oracle/cookies.json ~/.oracle/cookies.json
