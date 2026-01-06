@@ -55,7 +55,8 @@ export function resolveRunOptionsFromConfig({
     normalizedRequestedModels.length > 0
       ? Array.from(new Set(normalizedRequestedModels.map((entry) => resolveApiModel(entry))))
       : [resolvedModel];
-  const isBrowserCompatible = (m: string) => m.startsWith('gpt-') || m.startsWith('gemini');
+  const isBrowserCompatible = (m: string) =>
+    m.startsWith('gpt-') || m.startsWith('gemini') || m.startsWith('grok');
   const hasNonBrowserCompatibleTarget = (browserRequested || browserConfigured) && allModels.some((m) => !isBrowserCompatible(m));
   if (hasNonBrowserCompatibleTarget) {
     throw new PromptValidationError(
@@ -64,9 +65,12 @@ export function resolveRunOptionsFromConfig({
     );
   }
 
-  const engineCoercedToApi = engineWasBrowser && (isCodex || isClaude || isGrok);
+  const allowGrokBrowser = browserRequested || browserConfigured;
+  const engineCoercedToApi = engineWasBrowser && (isCodex || isClaude);
   const fixedEngine: EngineMode =
-    isCodex || isClaude || isGrok || normalizedRequestedModels.length > 0 ? 'api' : resolvedEngine;
+    isCodex || isClaude || (isGrok && !allowGrokBrowser) || normalizedRequestedModels.length > 0
+      ? 'api'
+      : resolvedEngine;
 
   const promptWithSuffix =
     userConfig?.promptSuffix && userConfig.promptSuffix.trim().length > 0

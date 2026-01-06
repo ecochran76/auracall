@@ -32,6 +32,16 @@ import {
   readAssistantSnapshot,
 } from './pageActions.js';
 import { uploadAttachmentViaDataTransfer } from './actions/remoteFileTransfer.js';
+import {
+  navigateToGrok,
+  ensureGrokLoggedIn,
+  ensureGrokPromptReady,
+  setGrokPrompt,
+  submitGrokPrompt,
+  waitForGrokAssistantResponse,
+  uploadGrokAttachments,
+  selectGrokMode,
+} from './actions/grok.js';
 import { ensureThinkingTime } from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
@@ -71,6 +81,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     logger.sessionLog = options.log.sessionLog;
   }
   const runtimeHintCb = options.runtimeHintCb;
+  const target = config.target ?? 'chatgpt';
   let lastTargetId: string | undefined;
   let lastUrl: string | undefined;
   const emitRuntimeHint = async (): Promise<void> => {
@@ -162,6 +173,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       await writeChromePid(userDataDir, chrome.pid);
     }
   };
+
+  if (target === 'grok') {
+    return runGrokBrowserMode({
+      promptText,
+      attachments,
+      config,
+      logger,
+      emitRuntimeHint,
+      setLastUrl: (url) => {
+        lastUrl = url;
+      },
+    });
+  }
   await persistManualLoginState();
 
   let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
@@ -732,11 +756,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     const durationMs = Date.now() - startedAt;
     const answerChars = answerText.length;
     const answerTokens = estimateTokenCount(answerMarkdown);
-    return {
-      answerText,
-      answerMarkdown,
-      answerHtml: answerHtml.length > 0 ? answerHtml : undefined,
-      tookMs: durationMs,
+  return {
+    answerText,
+    answerMarkdown,
+    answerHtml: answerHtml.length > 0 ? answerHtml : undefined,
+    tookMs: durationMs,
       answerTokens,
       answerChars,
       chromePid: chrome.pid,
@@ -1498,6 +1522,183 @@ function startThinkingStatusMonitor(
   };
 }
 
+async function runGrokBrowserMode({
+  promptText,
+  attachments,
+  config,
+  logger,
+  emitRuntimeHint,
+  setLastUrl,
+}: {
+  promptText: string;
+  attachments: BrowserAttachment[];
+  config: ReturnType<typeof resolveBrowserConfig>;
+  logger: BrowserLogger;
+  emitRuntimeHint: () => Promise<void>;
+  setLastUrl: (url: string) => void;
+}): Promise<BrowserRunResult> {
+  let chrome: LaunchedChrome | null = null;
+  let chromeHost = '127.0.0.1';
+  let answerText = '';
+  let answerMarkdown = '';
+  let answerHtml = '';
+  let runStatus: 'attempted' | 'complete' = 'attempted';
+  let connectionClosedUnexpectedly = false;
+  let removeTerminationHooks: (() => void) | null = null;
+  const startedAt = Date.now();
+  const manualLogin = Boolean(config.manualLogin);
+  const manualProfileDir = config.manualLoginProfileDir
+    ? path.resolve(config.manualLoginProfileDir)
+    : path.join(os.homedir(), '.oracle', 'browser-profile');
+  const userDataDir = manualLogin
+    ? manualProfileDir
+    : await mkdtemp(path.join(await resolveUserDataBaseDir(), 'oracle-browser-'));
+  if (manualLogin) {
+    await mkdir(userDataDir, { recursive: true });
+    logger(`Manual login mode enabled; reusing persistent profile at ${userDataDir}`);
+  } else {
+    logger(`Created temporary Chrome profile at ${userDataDir}`);
+  }
+
+  const effectiveKeepBrowser = Boolean(config.keepBrowser);
+  const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
+  chrome =
+    reusedChrome ??
+    (await launchChrome(
+      {
+        ...config,
+        remoteChrome: config.remoteChrome,
+      },
+      userDataDir,
+      logger,
+    ));
+  chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
+  if (manualLogin && chrome.port) {
+    await writeDevToolsActivePort(userDataDir, chrome.port);
+    if (!reusedChrome && chrome.pid) {
+      await writeChromePid(userDataDir, chrome.pid);
+    }
+  }
+
+  try {
+    removeTerminationHooks = registerTerminationHooks(chrome, userDataDir, effectiveKeepBrowser, logger, {
+      isInFlight: () => runStatus !== 'complete',
+      emitRuntimeHint,
+      preserveUserDataDir: manualLogin,
+    });
+  } catch {
+    // ignore
+  }
+
+  let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
+  try {
+    client = await connectToChrome(chrome.port, logger, chromeHost);
+    const disconnectPromise = new Promise<never>((_, reject) => {
+      client?.on('disconnect', () => {
+        connectionClosedUnexpectedly = true;
+        logger('Chrome window closed; attempting to abort run.');
+        reject(new Error('Chrome window closed before oracle finished. Please keep it open until completion.'));
+      });
+    });
+    const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
+      Promise.race([promise, disconnectPromise]);
+
+    const { Network, Page, Runtime, Input, DOM } = client;
+    const domainEnablers = [Network.enable({}), Page.enable(), Runtime.enable()];
+    if (DOM && typeof DOM.enable === 'function') {
+      domainEnablers.push(DOM.enable());
+    }
+    await Promise.all(domainEnablers);
+    installJavaScriptDialogAutoDismissal(Page, logger);
+    if (!config.headless && config.hideWindow) {
+      await hideChromeWindow(chrome, logger);
+    }
+
+    await raceWithDisconnect(navigateToGrok(Page, Runtime, config.grokUrl ?? config.url, logger));
+    await raceWithDisconnect(ensureNotBlocked(Runtime, config.headless, logger));
+    await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger));
+    await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
+
+    if (config.desiredModel && config.modelStrategy !== 'ignore') {
+      await raceWithDisconnect(selectGrokMode(Input, Runtime, config.desiredModel, logger));
+    }
+
+    if (attachments.length > 0) {
+      if (!DOM) {
+        throw new Error('Unable to upload attachments (DOM domain unavailable).');
+      }
+      await raceWithDisconnect(uploadGrokAttachments(DOM, Runtime, attachments, logger));
+    }
+
+    await raceWithDisconnect(setGrokPrompt(Runtime, promptText));
+    await raceWithDisconnect(submitGrokPrompt(Runtime));
+    await delay(500);
+    const href = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
+    const currentUrl = typeof href.result?.value === 'string' ? href.result.value : '';
+    if (currentUrl) {
+      setLastUrl(currentUrl);
+      await emitRuntimeHint();
+    }
+
+    answerText = await raceWithDisconnect(
+      waitForGrokAssistantResponse(Runtime, config.timeoutMs, logger),
+    );
+    answerMarkdown = answerText;
+    answerHtml = '';
+    if (connectionClosedUnexpectedly) {
+      throw new Error('Chrome disconnected before completion');
+    }
+    runStatus = 'complete';
+    const durationMs = Date.now() - startedAt;
+    const answerTokens = estimateTokenCount(answerMarkdown);
+    return {
+      answerText,
+      answerMarkdown,
+      answerHtml: answerHtml.length > 0 ? answerHtml : undefined,
+      tookMs: durationMs,
+      answerTokens,
+      answerChars: answerText.length,
+      chromePid: chrome.pid ?? undefined,
+      chromePort: chrome.port,
+      chromeHost,
+      userDataDir,
+      chromeTargetId: undefined,
+      tabUrl: currentUrl,
+      controllerPid: chrome.process?.pid,
+    };
+  } catch (error) {
+    if (error instanceof BrowserAutomationError) {
+      throw error;
+    }
+    const message = error instanceof Error ? error.message : 'Grok browser automation failed.';
+    throw new BrowserAutomationError(message, { stage: 'execute-browser' }, error);
+  } finally {
+    if (!effectiveKeepBrowser && chrome) {
+      try {
+        await chrome.kill();
+      } catch {
+        // ignore
+      }
+    }
+    if (manualLogin) {
+      const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
+        connectionClosedUnexpectedly,
+      });
+      if (shouldCleanup) {
+        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+      }
+    } else {
+      await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+    }
+    removeTerminationHooks?.();
+    try {
+      await client?.close?.();
+    } catch {
+      // ignore
+    }
+  }
+}
+
 async function readThinkingStatus(Runtime: ChromeClient['Runtime']): Promise<string | null> {
   const expression = buildThinkingStatusExpression();
   try {
@@ -1542,6 +1743,15 @@ function isWsl(): boolean {
 }
 
 function extractConversationIdFromUrl(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    const chatId = parsed.searchParams.get('chat');
+    if (chatId) {
+      return chatId;
+    }
+  } catch {
+    // ignore parse errors
+  }
   const match = url.match(/\/c\/([a-zA-Z0-9-]+)/);
   return match?.[1];
 }

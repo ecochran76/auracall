@@ -32,6 +32,7 @@ export interface BrowserFlagOptions {
   browserChromePath?: string;
   browserCookiePath?: string;
   geminiUrl?: string;
+  grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
   browserTimeout?: string;
@@ -51,6 +52,7 @@ export interface BrowserFlagOptions {
   browserModelLabel?: string;
   browserModelStrategy?: BrowserModelStrategy;
   browserAllowCookieErrors?: boolean;
+  browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   remoteChrome?: string;
   browserPort?: number;
   browserDebugPort?: number;
@@ -87,6 +89,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const normalizedOverride = desiredModelOverride?.toLowerCase() ?? '';
   const baseModel = options.model.toLowerCase();
   const isGeminiModel = baseModel.startsWith('gemini-');
+  const isGrokModel = baseModel.startsWith('grok-');
   const isChatGptModel = baseModel.startsWith('gpt-') && !baseModel.includes('codex');
   const shouldUseOverride = !isChatGptModel && normalizedOverride.length > 0 && normalizedOverride !== baseModel;
   const modelStrategy =
@@ -109,12 +112,15 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   }
   const rawUrl = options.chatgptUrl ?? options.browserUrl;
   const url = rawUrl ? normalizeChatgptUrl(rawUrl, CHATGPT_URL) : undefined;
+  const grokUrl = options.grokUrl ?? undefined;
 
-  const desiredModel = isChatGptModel
-    ? mapModelToBrowserLabel(options.model)
-    : shouldUseOverride
-      ? desiredModelOverride
-      : mapModelToBrowserLabel(options.model);
+  const desiredModel = isGrokModel
+    ? resolveGrokModeLabel(desiredModelOverride, options.model)
+    : isChatGptModel
+      ? mapModelToBrowserLabel(options.model)
+      : shouldUseOverride
+        ? desiredModelOverride
+        : mapModelToBrowserLabel(options.model);
 
   if (modelStrategy === 'select' && url && isTemporaryChatUrl(url) && /\bpro\b/i.test(desiredModel ?? '')) {
     throw new Error(
@@ -123,11 +129,15 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     );
   }
 
+  const target = options.browserTarget ?? (isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : 'chatgpt');
+
   return {
     chromeProfile: options.browserChromeProfile ?? DEFAULT_CHROME_PROFILE,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,
+    target,
     geminiUrl: options.geminiUrl ?? null,
+    grokUrl: grokUrl ?? null,
     url,
     debugPort: selectBrowserPort(options),
     timeoutMs: options.browserTimeout ? parseDuration(options.browserTimeout, DEFAULT_BROWSER_TIMEOUT_MS) : undefined,
@@ -184,6 +194,16 @@ export function resolveBrowserModelLabel(input: string | undefined, model: Model
     return mapModelToBrowserLabel(model);
   }
   return trimmed;
+}
+
+function resolveGrokModeLabel(override: string | undefined, model: ModelName): string {
+  if (override && override.trim().length > 0) {
+    return override.trim();
+  }
+  if (model.toLowerCase().startsWith('grok-4.1')) {
+    return 'Grok 4.1 Thinking';
+  }
+  return 'Auto';
 }
 
 function parseRemoteChromeTarget(raw: string): { host: string; port: number } {

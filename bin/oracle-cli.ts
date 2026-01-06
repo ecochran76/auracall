@@ -117,6 +117,7 @@ interface CliOptions extends OptionValues {
   browserChromePath?: string;
   browserCookiePath?: string;
   geminiUrl?: string;
+  grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
   browserTimeout?: string;
@@ -132,6 +133,7 @@ interface CliOptions extends OptionValues {
   browserModelStrategy?: 'select' | 'current' | 'ignore';
   browserManualLogin?: boolean;
   browserManualLoginProfileDir?: string;
+  browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
   browserAllowCookieErrors?: boolean;
   browserAttachments?: string;
@@ -1225,7 +1227,9 @@ async function runRootCommand(options: CliOptions): Promise<void> {
 
   const sessionMode: SessionMode = engine === 'browser' ? 'browser' : 'api';
   const browserModelLabelOverride =
-    sessionMode === 'browser' ? resolveBrowserModelLabel(cliModelArg, resolvedModel) : undefined;
+    sessionMode === 'browser' && !resolvedModel.startsWith('grok')
+      ? resolveBrowserModelLabel(cliModelArg, resolvedModel)
+      : undefined;
   const browserConfig =
     sessionMode === 'browser'
       ? await buildBrowserConfig({

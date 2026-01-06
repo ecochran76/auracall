@@ -1,4 +1,4 @@
-import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
+import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, GROK_URL } from './constants.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
@@ -9,7 +9,9 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chromeProfile: null,
   chromePath: null,
   chromeCookiePath: null,
+  target: 'chatgpt',
   geminiUrl: null,
+  grokUrl: null,
   url: CHATGPT_URL,
   chatgptUrl: CHATGPT_URL,
   timeoutMs: 1_200_000,
@@ -40,8 +42,15 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   const envAllowCookieErrors =
     (process.env.ORACLE_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim().toLowerCase() === 'true' ||
     (process.env.ORACLE_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim() === '1';
-  const rawUrl = config?.chatgptUrl ?? config?.url ?? DEFAULT_BROWSER_CONFIG.url;
-  const normalizedUrl = normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
+  const target = config?.target ?? DEFAULT_BROWSER_CONFIG.target;
+  const rawUrl =
+    target === 'grok'
+      ? config?.grokUrl ?? config?.url ?? GROK_URL
+      : config?.chatgptUrl ?? config?.url ?? DEFAULT_BROWSER_CONFIG.url;
+  const normalizedUrl =
+    target === 'grok'
+      ? (rawUrl ?? GROK_URL)
+      : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
   const desiredModel = config?.desiredModel ?? DEFAULT_BROWSER_CONFIG.desiredModel ?? DEFAULT_MODEL_TARGET;
   const modelStrategy =
     normalizeBrowserModelStrategy(config?.modelStrategy) ??
@@ -64,8 +73,9 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
+    target,
     url: normalizedUrl,
-    chatgptUrl: normalizedUrl,
+    chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
     timeoutMs: config?.timeoutMs ?? DEFAULT_BROWSER_CONFIG.timeoutMs,
     debugPort: config?.debugPort ?? debugPortEnv ?? DEFAULT_BROWSER_CONFIG.debugPort,
     inputTimeoutMs: config?.inputTimeoutMs ?? DEFAULT_BROWSER_CONFIG.inputTimeoutMs,
@@ -83,6 +93,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     chromePath: config?.chromePath ?? DEFAULT_BROWSER_CONFIG.chromePath,
     chromeCookiePath: config?.chromeCookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath,
     geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
+    grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
     debug: config?.debug ?? DEFAULT_BROWSER_CONFIG.debug,
     allowCookieErrors: config?.allowCookieErrors ?? envAllowCookieErrors ?? DEFAULT_BROWSER_CONFIG.allowCookieErrors,
     thinkingTime: config?.thinkingTime,

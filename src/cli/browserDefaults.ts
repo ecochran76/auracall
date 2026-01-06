@@ -7,6 +7,7 @@ export interface BrowserDefaultsOptions {
   chatgptUrl?: string;
   browserUrl?: string;
   geminiUrl?: string;
+  grokUrl?: string;
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
@@ -21,6 +22,7 @@ export interface BrowserDefaultsOptions {
   browserThinkingTime?: ThinkingTimeLevel;
   browserManualLogin?: boolean;
   browserManualLoginProfileDir?: string | null;
+  browserTarget?: 'chatgpt' | 'gemini' | 'grok';
 }
 
 type SourceGetter = (key: keyof BrowserDefaultsOptions) => string | undefined;
@@ -55,6 +57,9 @@ export function applyBrowserDefaultsFromConfig(
   }
   if (isUnset('geminiUrl') && browser.geminiUrl !== undefined) {
     options.geminiUrl = browser.geminiUrl ?? undefined;
+  }
+  if (isUnset('grokUrl') && browser.grokUrl !== undefined) {
+    options.grokUrl = browser.grokUrl ?? undefined;
   }
   if (isUnset('browserUrl') && options.browserUrl === undefined && browser.url !== undefined) {
     options.browserUrl = browser.url;
@@ -91,5 +96,8 @@ export function applyBrowserDefaultsFromConfig(
   }
   if (isUnset('browserManualLoginProfileDir') && browser.manualLoginProfileDir !== undefined) {
     options.browserManualLoginProfileDir = browser.manualLoginProfileDir;
+  }
+  if (isUnset('browserTarget') && browser.target !== undefined) {
+    options.browserTarget = browser.target;
   }
 }

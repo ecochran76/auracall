@@ -15,7 +15,9 @@ export interface BrowserSessionConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  target?: 'chatgpt' | 'gemini' | 'grok';
   geminiUrl?: string | null;
+  grokUrl?: string | null;
   chatgptUrl?: string | null;
   url?: string;
   timeoutMs?: number;
