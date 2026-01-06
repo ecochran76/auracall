@@ -87,3 +87,26 @@ Phase 4: Harden + Docs
 - Grok and ChatGPT browser smokes pass.
 - Selector changes are centralized in provider configs.
 - Docs reflect new selector architecture and test guidance.
+
+## Forward-Looking Features (to align abstractions)
+- List Projects/Gems (provider APIs or UI-driven discovery).
+- List conversations and attach to a conversation by ID.
+- Pull conversation context (assistant/user turns) in a structured form.
+- Edit project instructions (system/pinned context) where supported.
+- Pull/push files (project storage or workspace files) and attach to conversations.
+- Pull files from conversations (attachments/downloads).
+
+## Implications for the Architecture
+- Provider interface should include:
+  - `listProjects()` / `listGems()` (or `listWorkspaces()`) where applicable.
+  - `listConversations(projectId?)`, `openConversation(conversationId)`.
+  - `readConversationContext(conversationId, opts)`.
+  - `updateProjectInstructions(projectId, content)`.
+  - `listProjectFiles(projectId)`, `uploadProjectFile(projectId, file)`, `downloadProjectFile(projectId, fileId)`.
+  - `listConversationFiles(conversationId)`, `downloadConversationFile(conversationId, fileId)`.
+- Shared helpers should support:
+  - Navigation to project scopes and conversation URLs.
+  - Extracting structured metadata (IDs, titles, timestamps).
+  - File transfer workflows (upload + download).
+- Test harness should add:
+  - Provider capability checks and light smoke coverage for listing + file ops.
