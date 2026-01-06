@@ -46,11 +46,11 @@ Login/blocked detection:
 Programmatic opening strategy (reliable):
 - Use keyboard navigation (Tab/Space) rather than `page.evaluate()` clicks; the menu closes too quickly with pure DOM clicks.
 
-## Project URL + session tracking
+## Project URL + session tracking (confirmed)
 - The Grok project URL is a dedicated Oracle project.
-- Session management should capture the **chat ID** from the URL for reattach.
-  - Example base URL: `https://grok.com/project/<project-id>`
-  - Expected chat URL to capture (confirm on send): `https://grok.com/project/<project-id>/chat/<chat-id>` (or similar)
+- **Chat ID is in the query string** after sending:
+  - Example: `https://grok.com/project/<project-id>?chat=<chat-id>&rid=<request-id>`
+- Session management should parse `chat` from the query params, not a `/chat/` path.
 
 ## Code changes (sketch)
 - Add Grok constants in `src/browser/constants.ts` or new `src/browser/grok/constants.ts`:
