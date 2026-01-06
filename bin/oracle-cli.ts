@@ -81,6 +81,7 @@ import CDP from 'chrome-remote-interface';
 import { launch } from 'chrome-launcher';
 import { getOracleHomeDir } from '../src/oracleHome.js';
 import { getProvider } from '../src/browser/providers/index.js';
+import { deriveProjectsFromConfig, deriveConversationsFromConfig } from '../src/browser/providers/service.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -529,11 +530,20 @@ program
     }
     const provider = getProvider(target);
     if (!provider.listProjects) {
-      console.log(chalk.yellow(`Project listing is not implemented yet for ${target}.`));
+      const fallback = deriveProjectsFromConfig({
+        provider: target,
+        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        projectId: userConfig.browser?.projectId ?? null,
+      });
+      if (fallback.length === 0) {
+        console.log(chalk.yellow(`Project listing is not implemented yet for ${target}.`));
+        return;
+      }
+      console.log(JSON.stringify(fallback, null, 2));
       return;
     }
     const projects = await provider.listProjects();
-    console.log(projects);
+    console.log(JSON.stringify(projects, null, 2));
   });
 
 program
@@ -549,11 +559,21 @@ program
     }
     const provider = getProvider(target);
     if (!provider.listConversations) {
-      console.log(chalk.yellow(`Conversation listing is not implemented yet for ${target}.`));
+      const fallback = deriveConversationsFromConfig({
+        provider: target,
+        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        projectId: commandOptions.projectId ?? userConfig.browser?.projectId ?? null,
+        conversationId: userConfig.browser?.conversationId ?? null,
+      });
+      if (fallback.length === 0) {
+        console.log(chalk.yellow(`Conversation listing is not implemented yet for ${target}.`));
+        return;
+      }
+      console.log(JSON.stringify(fallback, null, 2));
       return;
     }
     const conversations = await provider.listConversations(commandOptions.projectId);
-    console.log(conversations);
+    console.log(JSON.stringify(conversations, null, 2));
   });
 
 program
