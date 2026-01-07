@@ -31,6 +31,8 @@ export interface BrowserProviderListOptions {
   port?: number;
   configuredUrl?: string | null;
   includeHistory?: boolean;
+  historyLimit?: number;
+  historySince?: string;
 }
 
 export interface BrowserProvider {

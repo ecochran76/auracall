@@ -595,6 +595,9 @@ program
   .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
   .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
   .option('--include-history', 'Include the History dialog results when listing conversations.')
+  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
+  .option('--filter <text>', 'Filter conversations by title/id substring (case-insensitive).')
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
@@ -606,11 +609,25 @@ program
         ? commandOptions.projectId.trim()
         : userConfig.browser?.projectId ?? undefined;
     const provider = getProvider(target);
-    const listOptions = {
+    let listOptions = {
       port: resolveBrowserListPort(userConfig),
       configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
       includeHistory: Boolean(commandOptions.includeHistory),
+      historyLimit: commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined,
+      historySince:
+        typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+          ? commandOptions.historySince.trim()
+          : undefined,
     };
+    if (!projectId && listOptions.includeHistory && listOptions.configuredUrl?.includes('/project/')) {
+      listOptions = { ...listOptions, configuredUrl: null };
+    }
+    if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
+      throw new Error('history-limit must be a positive number.');
+    }
+    if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
+      throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
+    }
     const cacheContext = { provider: target, userConfig, listOptions };
     const projectName =
       typeof commandOptions.projectName === 'string' ? commandOptions.projectName.trim() : '';
@@ -634,7 +651,7 @@ program
       }
     }
     if (!provider.listConversations) {
-      const fallback = deriveConversationsFromConfig({
+      let fallback = deriveConversationsFromConfig({
         provider: target,
         configuredUrl: listOptions.configuredUrl,
         projectId: projectId ?? null,
@@ -649,11 +666,13 @@ program
       } catch (error) {
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
+      fallback = filterConversationsByQuery(fallback, commandOptions.filter);
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
     const conversations = await provider.listConversations(projectId, listOptions);
-    if (Array.isArray(conversations) && conversations.length === 0) {
+    let resolved = conversations;
+    if (Array.isArray(resolved) && resolved.length === 0) {
       const fallback = deriveConversationsFromConfig({
         provider: target,
         configuredUrl: listOptions.configuredUrl,
@@ -666,19 +685,38 @@ program
         } catch (error) {
           console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
         }
-        console.log(JSON.stringify(fallback, null, 2));
+        const filtered = filterConversationsByQuery(fallback, commandOptions.filter);
+        console.log(JSON.stringify(filtered, null, 2));
         return;
       }
     }
-    if (Array.isArray(conversations)) {
+    if (Array.isArray(resolved)) {
       try {
-        await writeConversationCache(cacheContext, conversations);
+        await writeConversationCache(cacheContext, resolved);
       } catch (error) {
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    console.log(JSON.stringify(conversations, null, 2));
+    const filtered = filterConversationsByQuery(resolved, commandOptions.filter);
+    console.log(JSON.stringify(filtered, null, 2));
   });
+
+function filterConversationsByQuery<T extends Array<{ id?: string; title?: string }>>(
+  conversations: T,
+  rawFilter: unknown,
+): T;
+function filterConversationsByQuery(conversations: unknown, rawFilter: unknown): unknown;
+function filterConversationsByQuery(conversations: unknown, rawFilter: unknown): unknown {
+  if (!Array.isArray(conversations)) return conversations;
+  const filter = typeof rawFilter === 'string' ? rawFilter.trim().toLowerCase() : '';
+  if (!filter) return conversations;
+  return conversations.filter((entry) => {
+    const value = entry as { id?: string; title?: string } | null;
+    const title = String(value?.title ?? '').toLowerCase();
+    const id = String(value?.id ?? '').toLowerCase();
+    return title.includes(filter) || id.includes(filter);
+  });
+}
 
 program
   .command('login')

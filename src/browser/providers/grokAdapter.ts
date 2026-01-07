@@ -73,14 +73,40 @@ export function createGrokAdapter(): Pick<
         await closeHistoryDialog(client);
       }
       try {
+        const includeHistory = Boolean(options?.includeHistory);
         const openConversations = resolvedProjectId
           ? []
           : await listOpenConversations(host, port, resolvedProjectId);
-        const history =
-          resolvedProjectId || !options?.includeHistory
-            ? []
-            : await listHistoryConversations(client, resolvedProjectId);
-        const clicked = resolvedProjectId ? [] : await listConversationsByClick(client, resolvedProjectId);
+        let history: Conversation[] = [];
+        if (!resolvedProjectId && includeHistory) {
+          if (options?.configuredUrl?.includes('/project/')) {
+            const historyConnection = await connectToGrokTab(
+              { ...options, configuredUrl: 'https://grok.com/' },
+              'https://grok.com/',
+            );
+            try {
+              history = await listHistoryConversations(
+                historyConnection.client,
+                resolvedProjectId,
+                { ...options, configuredUrl: 'https://grok.com/' },
+              );
+            } finally {
+              await historyConnection.client.close();
+              if (historyConnection.shouldClose && historyConnection.targetId) {
+                await CDP.Close({
+                  host: historyConnection.host,
+                  port: historyConnection.port,
+                  id: historyConnection.targetId,
+                }).catch(() => undefined);
+              }
+            }
+          } else {
+            history = await listHistoryConversations(client, resolvedProjectId, options);
+          }
+        }
+        const clicked = resolvedProjectId
+          ? []
+          : await listConversationsByClick(client, resolvedProjectId);
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
             const projectId = ${JSON.stringify(resolvedProjectId ?? null)};
@@ -349,67 +375,207 @@ async function openConversationList(client: ChromeClient): Promise<void> {
 
 async function listHistoryConversations(
   client: ChromeClient,
-  projectId?: string,
+  projectId: string | undefined,
+  options?: BrowserProviderListOptions,
 ): Promise<Conversation[]> {
-  const opened = await openHistoryDialog(client);
+  let opened = await openHistoryDialog(client);
+  if (!opened) {
+    const fallbackUrl = options?.configuredUrl?.includes('/project/') ? 'https://grok.com/' : undefined;
+    if (fallbackUrl) {
+      await navigateToProject(client, fallbackUrl);
+    }
+    opened = await openHistoryDialog(client);
+  }
   if (!opened) return [];
   try {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
-        const projectId = ${JSON.stringify(projectId ?? null)};
-        const dialog =
-          document.querySelector('[role="dialog"]') ||
-          document.querySelector('dialog') ||
-          document.querySelector('[aria-modal="true"]');
-        if (!dialog) return [];
-        const items = Array.from(
-          dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
-        );
-        const conversations = [];
-        for (const node of items) {
-          const href =
-            node.getAttribute('href') ||
-            node.getAttribute('data-href') ||
-            node.getAttribute('data-url') ||
-            node.dataset?.href ||
-            node.dataset?.url ||
-            '';
-          if (!href) continue;
-          let url = '';
-          let chatId = '';
-          try {
-            url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-            const parsed = new URL(url);
-            chatId = parsed.searchParams.get('chat') || '';
-            if (!chatId) {
-              const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-              chatId = match?.[1] || '';
+    await expandHistoryDialog(client);
+    const maxItems = Math.max(1, options?.historyLimit ?? 200);
+    const cutoffMs = options?.historySince ? Date.parse(options.historySince) : NaN;
+    const entries = new Map<string, { id: string; title: string; url?: string; timestamp?: number | null }>();
+    let idleCount = 0;
+    let lastCount = 0;
+    let lastScrollTop = -1;
+    while (entries.size < maxItems && idleCount < 4) {
+      const { result } = await client.Runtime.evaluate({
+        expression: `(() => {
+          const projectId = ${JSON.stringify(projectId ?? null)};
+          const dialog =
+            document.querySelector('[role="dialog"]') ||
+            document.querySelector('dialog') ||
+            document.querySelector('[aria-modal="true"]');
+          if (!dialog) return { items: [], canScroll: false, atBottom: true, scrollTop: 0, scrollHeight: 0, oldest: null };
+          const now = Date.now();
+          const parseRelative = (value) => {
+            const text = String(value || '').toLowerCase().trim();
+            if (!text) return null;
+            if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
+            const match = text.match(/(\\d+)\\s+(minute|hour|day|week|month|year)s?\\s+ago/);
+            if (match) {
+              const amount = Number.parseInt(match[1], 10);
+              if (!Number.isFinite(amount)) return null;
+              const unit = match[2];
+              const ms =
+                unit === 'minute'
+                  ? amount * 60 * 1000
+                  : unit === 'hour'
+                    ? amount * 60 * 60 * 1000
+                    : unit === 'day'
+                      ? amount * 24 * 60 * 60 * 1000
+                      : unit === 'week'
+                        ? amount * 7 * 24 * 60 * 60 * 1000
+                        : unit === 'month'
+                          ? amount * 30 * 24 * 60 * 60 * 1000
+                          : amount * 365 * 24 * 60 * 60 * 1000;
+              return now - ms;
             }
-          } catch {
-            // ignore URL parse
+            const parsed = Date.parse(text);
+            return Number.isFinite(parsed) ? parsed : null;
+          };
+          const readTimestamp = (node) => {
+            const timeEl = node.querySelector?.('time');
+            const candidates = [
+              timeEl?.getAttribute?.('datetime'),
+              timeEl?.getAttribute?.('title'),
+              timeEl?.getAttribute?.('aria-label'),
+              timeEl?.textContent,
+              node.getAttribute?.('title'),
+              node.getAttribute?.('aria-label'),
+            ];
+            for (const candidate of candidates) {
+              const parsed = parseRelative(candidate);
+              if (parsed) return parsed;
+              const absolute = Date.parse(String(candidate || ''));
+              if (Number.isFinite(absolute)) return absolute;
+            }
+            return null;
+          };
+          const items = Array.from(
+            dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
+          );
+          const conversations = [];
+          let oldest = null;
+          for (const node of items) {
+            const href =
+              node.getAttribute('href') ||
+              node.getAttribute('data-href') ||
+              node.getAttribute('data-url') ||
+              node.dataset?.href ||
+              node.dataset?.url ||
+              '';
+            if (!href) continue;
+            let url = '';
+            let chatId = '';
+            try {
+              url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+              const parsed = new URL(url);
+              chatId = parsed.searchParams.get('chat') || '';
+              if (!chatId) {
+                const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+                chatId = match?.[1] || '';
+              }
+            } catch {
+              // ignore URL parse
+            }
+            if (!chatId) continue;
+            if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
+              continue;
+            }
+            const row = node.closest('div,li') || node;
+            const timestamp = readTimestamp(row);
+            if (typeof timestamp === 'number') {
+              oldest = oldest === null ? timestamp : Math.min(oldest, timestamp);
+            }
+            const text = (row.textContent || node.textContent || '').trim();
+            conversations.push({ id: chatId, title: text || chatId, url, timestamp });
           }
-          if (!chatId) continue;
-          if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
-            continue;
+          const scrollables = Array.from(dialog.querySelectorAll('*')).filter((el) => {
+            const element = el;
+            return element.scrollHeight > element.clientHeight + 24;
+          });
+          const scrollable =
+            scrollables.sort((a, b) => b.scrollHeight - a.scrollHeight)[0] || dialog;
+          const canScroll = scrollable.scrollHeight > scrollable.clientHeight + 24;
+          const scrollTop = scrollable.scrollTop;
+          const atBottom = scrollTop + scrollable.clientHeight >= scrollable.scrollHeight - 5;
+          if (canScroll && !atBottom) {
+            scrollable.scrollTop = scrollable.scrollHeight;
           }
-          const text = (node.textContent || '').trim();
-          conversations.push({ id: chatId, title: text || chatId, url });
+          return {
+            items: conversations,
+            canScroll,
+            atBottom,
+            scrollTop,
+            scrollHeight: scrollable.scrollHeight,
+            oldest,
+          };
+        })()`,
+        returnByValue: true,
+      });
+      const payload = result?.value as {
+        items: Array<{ id: string; title: string; url?: string; timestamp?: number | null }>;
+        canScroll: boolean;
+        atBottom: boolean;
+        scrollTop: number;
+        scrollHeight: number;
+        oldest: number | null;
+      };
+      for (const entry of payload.items ?? []) {
+        if (!entries.has(entry.id)) {
+          entries.set(entry.id, entry);
         }
-        return conversations;
-      })()`,
-      returnByValue: true,
-    });
-    const raw = (result?.value ?? []) as Array<{ id: string; title: string; url?: string }>;
-    return raw.map((entry) => ({
-      id: entry.id,
-      title: entry.title,
-      provider: 'grok',
-      projectId,
-      url: entry.url,
-    }));
+      }
+      const oldestTimestamp = payload.oldest;
+      if (Number.isFinite(cutoffMs) && typeof oldestTimestamp === 'number' && oldestTimestamp <= cutoffMs) {
+        break;
+      }
+      if (!payload.canScroll || payload.atBottom) {
+        break;
+      }
+      if (entries.size === lastCount && payload.scrollTop === lastScrollTop) {
+        idleCount += 1;
+      } else {
+        idleCount = 0;
+      }
+      lastCount = entries.size;
+      lastScrollTop = payload.scrollTop;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+    return Array.from(entries.values())
+      .slice(0, maxItems)
+      .map((entry) => ({
+        id: entry.id,
+        title: entry.title,
+        provider: 'grok',
+        projectId,
+        url: entry.url,
+      }));
   } finally {
     await closeHistoryDialog(client);
   }
+}
+
+async function expandHistoryDialog(client: ChromeClient): Promise<void> {
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('dialog') ||
+        document.querySelector('[aria-modal="true"]');
+      if (!dialog) return false;
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const nodes = Array.from(dialog.querySelectorAll('button,a,[role="button"],[role="link"]'));
+      for (const node of nodes) {
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+        if (label.includes('show all')) {
+          node.click();
+          return true;
+        }
+      }
+      return false;
+    })()`,
+    returnByValue: true,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 400));
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
