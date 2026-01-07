@@ -95,6 +95,7 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 
 - `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
 - `oracle conversations [--project-id <id>]`: list conversations for a provider (requires a running browser with DevTools; uses `ORACLE_BROWSER_PORT` or config `browser.debugPort`).
+- Grok conversation listing reads the `/c/<id>` links in the project Conversations panel. If the History dialog opens during scraping, Oracle auto-closes it; if the UI still looks blocked, click the backdrop once to dismiss.
 
 ### Manual login mode (persistent profile, no cookie copy)
 

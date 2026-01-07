@@ -10,7 +10,7 @@ and run the live API suite before shipping major transport changes.
 - macOS with Chrome installed (default profile signed in to ChatGPT Pro).
 - Node 22+ and `pnpm install` already completed.
 - Headful display access (no `--browser-headless`).
-- When debugging, add `--browser-keep-browser` so Chrome stays open after Oracle exits, then connect with `pnpm exec tsx scripts/browser-tools.ts ...` (screenshot, eval, DOM picker, etc.).
+- When debugging, add `--browser-keep-browser` so Chrome stays open after Oracle exits, then connect with `pnpm exec tsx scripts/browser-tools.ts ...` (screenshot, eval, DOM picker, etc.). The `pick` command is the general-purpose DOM inspector we use for browser automation selectors.
 - Ensure no Chrome instances are force-terminated mid-run; let Oracle clean up once you’re done capturing state.
 - Clipboard checks (`browser-tools.ts eval "navigator.clipboard.readText()"`) trigger a permission dialog in Chrome—approve it for debugging, but remember that we can’t rely on readText in unattended runs.
 
