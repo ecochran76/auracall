@@ -65,6 +65,8 @@ export function createGrokAdapter(): Pick<
       }
       try {
         const openConversations = await listOpenConversations(host, port, projectId);
+        const history = await listHistoryConversations(client, projectId);
+        const clicked = await listConversationsByClick(client, projectId);
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
             const projectId = ${JSON.stringify(projectId ?? null)};
@@ -79,11 +81,36 @@ export function createGrokAdapter(): Pick<
             try {
               const currentUrl = new URL(current);
               const currentChat = currentUrl.searchParams.get('chat');
-              if (currentChat) {
-                add(currentChat, document.title || currentChat, current);
+              const currentMatch = currentUrl.pathname.match(/\\/c\\/([^/?#]+)/);
+              const chatId = currentChat || currentMatch?.[1] || '';
+              if (chatId) {
+                add(chatId, document.title || chatId, current);
               }
             } catch {
               // ignore URL parse
+            }
+            const panel =
+              document.querySelector('[role="tabpanel"]') ||
+              document.querySelector('[id*="content-conversations"]') ||
+              document.querySelector('main');
+            if (panel) {
+              const anchors = Array.from(panel.querySelectorAll('a[href*="/c/"]'));
+              for (const anchor of anchors) {
+                const href = anchor.getAttribute('href') || '';
+                if (!href.includes('/c/')) continue;
+                const url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+                const match = url.match(/\\/c\\/([^/?#]+)/);
+                const chatId = match?.[1] || '';
+                if (!chatId) continue;
+                const row =
+                  anchor.closest('div.max-h-11') ||
+                  anchor.closest('div[class*="rounded"]') ||
+                  anchor.closest('div[class*="grid"]') ||
+                  anchor.parentElement;
+                const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row;
+                const title = (titleNode?.textContent || '').trim();
+                add(chatId, title, url);
+              }
             }
             const candidates = Array.from(
               document.querySelectorAll(
@@ -110,7 +137,12 @@ export function createGrokAdapter(): Pick<
                 try {
                   const resolved = href.startsWith('http') ? href : new URL(href, location.origin).toString();
                   url = resolved;
-                  chatFromUrl = new URL(resolved).searchParams.get('chat') || '';
+                  const parsed = new URL(resolved);
+                  chatFromUrl = parsed.searchParams.get('chat') || '';
+                  if (!chatFromUrl) {
+                    const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+                    chatFromUrl = match?.[1] || '';
+                  }
                 } catch {
                   // ignore URL parse
                 }
@@ -137,6 +169,16 @@ export function createGrokAdapter(): Pick<
             projectId: projectId ?? undefined,
             url: entry.url ?? undefined,
           });
+        }
+        for (const entry of history) {
+          if (!merged.has(entry.id)) {
+            merged.set(entry.id, entry);
+          }
+        }
+        for (const entry of clicked) {
+          if (!merged.has(entry.id)) {
+            merged.set(entry.id, entry);
+          }
         }
         for (const entry of openConversations) {
           if (!merged.has(entry.id)) {
@@ -228,6 +270,171 @@ async function openConversationList(client: ChromeClient): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, 750));
 }
 
+async function listHistoryConversations(
+  client: ChromeClient,
+  projectId?: string,
+): Promise<Conversation[]> {
+  const opened = await openHistoryDialog(client);
+  if (!opened) return [];
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const projectId = ${JSON.stringify(projectId ?? null)};
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('dialog') ||
+        document.querySelector('[aria-modal="true"]');
+      if (!dialog) return [];
+      const items = Array.from(
+        dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
+      );
+      const conversations = [];
+      for (const node of items) {
+        const href =
+          node.getAttribute('href') ||
+          node.getAttribute('data-href') ||
+          node.getAttribute('data-url') ||
+          node.dataset?.href ||
+          node.dataset?.url ||
+          '';
+        if (!href) continue;
+        let url = '';
+        let chatId = '';
+        try {
+          url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+          const parsed = new URL(url);
+          chatId = parsed.searchParams.get('chat') || '';
+          if (!chatId) {
+            const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+            chatId = match?.[1] || '';
+          }
+        } catch {
+          // ignore URL parse
+        }
+        if (!chatId) continue;
+        if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
+          continue;
+        }
+        const text = (node.textContent || '').trim();
+        conversations.push({ id: chatId, title: text || chatId, url });
+      }
+      return conversations;
+    })()`,
+    returnByValue: true,
+  });
+  const raw = (result?.value ?? []) as Array<{ id: string; title: string; url?: string }>;
+  return raw.map((entry) => ({
+    id: entry.id,
+    title: entry.title,
+    provider: 'grok',
+    projectId,
+    url: entry.url,
+  }));
+}
+
+async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
+  const clicked = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const nodes = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
+      for (const node of nodes) {
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+        if (label === 'history' || label.endsWith(' history') || label.includes('history')) {
+          node.click();
+          return true;
+        }
+      }
+      return false;
+    })()`,
+    returnByValue: true,
+  });
+  if (!clicked.result?.value) {
+    return false;
+  }
+  const deadline = Date.now() + 5000;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => Boolean(document.querySelector('[role="dialog"],dialog,[aria-modal="true"]')) )()`,
+      returnByValue: true,
+    });
+    if (result?.value) return true;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+async function listConversationsByClick(
+  client: ChromeClient,
+  projectId?: string,
+): Promise<Conversation[]> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const panel = document.querySelector('[role="tabpanel"]');
+      if (!panel) return [];
+      const items = Array.from(panel.querySelectorAll('[class*="cursor-pointer"]'));
+      let index = 0;
+      const entries = [];
+      for (const node of items) {
+        const titleNode = node.querySelector('[class*="truncate"]') || node;
+        const title = (titleNode.textContent || '').trim();
+        node.setAttribute('data-oracle-conv-index', String(index));
+        entries.push({ index, title });
+        index += 1;
+      }
+      return entries;
+    })()`,
+    returnByValue: true,
+  });
+  const entries = (result?.value ?? []) as Array<{ index: number; title: string }>;
+  const output: Conversation[] = [];
+  for (const entry of entries.slice(0, 30)) {
+    const clicked = await client.Runtime.evaluate({
+      expression: `(() => {
+        const node = document.querySelector('[data-oracle-conv-index="${entry.index}"]');
+        if (!node) return false;
+        node.click();
+        return true;
+      })()`,
+      returnByValue: true,
+    });
+    if (!clicked.result?.value) continue;
+    const chatId = await waitForChatId(client, 4000);
+    if (!chatId) continue;
+    output.push({
+      id: chatId,
+      title: entry.title || chatId,
+      provider: 'grok',
+      projectId,
+      url: `https://grok.com/c/${chatId}`,
+    });
+  }
+  return output;
+}
+
+async function waitForChatId(client: ChromeClient, timeoutMs: number): Promise<string | null> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        try {
+          const url = new URL(location.href);
+          const chat = url.searchParams.get('chat');
+          if (chat) return chat;
+          const match = url.pathname.match(/\\/c\\/([^/?#]+)/);
+          return match?.[1] || null;
+        } catch {
+          return null;
+        }
+      })()`,
+      returnByValue: true,
+    });
+    if (typeof result?.value === 'string' && result.value.length > 0) {
+      return result.value;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
 async function listOpenConversations(
   host: string,
   port: number,
@@ -238,15 +445,9 @@ async function listOpenConversations(
   for (const target of targets) {
     const url = target.url ?? '';
     if (!url.includes('grok.com')) continue;
-    let chatId = '';
-    try {
-      const parsed = new URL(url);
-      chatId = parsed.searchParams.get('chat') ?? '';
-    } catch {
-      chatId = '';
-    }
+    const chatId = extractChatIdFromUrl(url) ?? '';
     if (!chatId) continue;
-    if (projectId && !url.includes(`/project/${projectId}`)) {
+    if (projectId && url.includes('/project/') && !url.includes(`/project/${projectId}`)) {
       continue;
     }
     entries.push({
@@ -258,4 +459,17 @@ async function listOpenConversations(
     });
   }
   return entries;
+}
+
+function extractChatIdFromUrl(rawUrl: string): string | null {
+  try {
+    const parsed = new URL(rawUrl, 'https://grok.com');
+    const chat = parsed.searchParams.get('chat');
+    if (chat) return chat;
+    const match = parsed.pathname.match(/\/c\/([^/?#]+)/);
+    return match?.[1] ?? null;
+  } catch {
+    const match = rawUrl.match(/\/c\/([^/?#]+)/);
+    return match?.[1] ?? null;
+  }
 }
