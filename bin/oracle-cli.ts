@@ -52,6 +52,7 @@ import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
 import type { CookieParam } from '../src/browser/types.js';
+import type { BrowserProviderListOptions } from '../src/browser/providers/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -722,6 +723,10 @@ program
   .command('cache')
   .description('Show cached browser project/conversation lists.')
   .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
+  .option('--refresh', 'Refresh cache entries for the active provider.')
+  .option('--include-history', 'Include the History dialog results when refreshing conversations.')
+  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .action(async (commandOptions) => {
     const providers = new Set(['chatgpt', 'grok']);
     const filter =
@@ -730,6 +735,30 @@ program
         : null;
     if (filter && !providers.has(filter)) {
       throw new Error(`Invalid provider "${filter}". Use "chatgpt" or "grok".`);
+    }
+    const { config: userConfig } = await loadUserConfig();
+    if (commandOptions.refresh) {
+      const target = (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+      if (!providers.has(target)) {
+        throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+      }
+      const listOptions = {
+        port: resolveBrowserListPort(userConfig),
+        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        includeHistory: Boolean(commandOptions.includeHistory),
+        historyLimit: commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined,
+        historySince:
+          typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined,
+      };
+      if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
+        throw new Error('history-limit must be a positive number.');
+      }
+      if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
+        throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
+      }
+      await refreshProviderCache(target, userConfig, listOptions);
     }
     const cacheRoot = path.join(getOracleHomeDir(), 'cache', 'providers');
     const output: Array<{
@@ -791,6 +820,27 @@ program
     }
     console.log(JSON.stringify(output, null, 2));
   });
+
+async function refreshProviderCache(
+  providerId: 'chatgpt' | 'grok',
+  userConfig: UserConfig,
+  listOptions: BrowserProviderListOptions,
+): Promise<void> {
+  const provider = getProvider(providerId);
+  const cacheContext = { provider: providerId, userConfig, listOptions };
+  if (provider.listProjects) {
+    const projects = await provider.listProjects(listOptions);
+    if (Array.isArray(projects)) {
+      await writeProjectCache(cacheContext, projects);
+    }
+  }
+  if (provider.listConversations) {
+    const conversations = await provider.listConversations(undefined, listOptions);
+    if (Array.isArray(conversations)) {
+      await writeConversationCache(cacheContext, conversations);
+    }
+  }
+}
 
 function filterConversationsByQuery<T extends Array<{ id?: string; title?: string }>>(
   conversations: T,
