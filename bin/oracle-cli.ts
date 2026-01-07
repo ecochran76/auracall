@@ -1220,6 +1220,8 @@ const sessionCommand = program
   .option('--render', 'Render completed session output as markdown (rich TTY only).', false)
   .option('--render-markdown', 'Alias for --render.', false)
   .option('--open-conversation', 'Open the provider conversation linked to this session.', false)
+  .option('--print-url', 'Print the linked conversation URL instead of opening it.', false)
+  .option('--browser-path <path>', 'Override the browser binary to open the conversation URL.')
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())

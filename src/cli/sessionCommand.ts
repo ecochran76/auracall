@@ -19,6 +19,8 @@ export interface StatusOptions extends OptionValues {
   hidePrompt?: boolean;
   model?: string;
   openConversation?: boolean;
+  printUrl?: boolean;
+  browserPath?: string;
 }
 
 interface SessionCommandDependencies {
@@ -48,6 +50,8 @@ const SESSION_OPTION_KEYS = new Set([
   'path',
   'model',
   'openConversation',
+  'printUrl',
+  'browserPath',
 ]);
 
 export async function handleSessionCommand(
@@ -66,6 +70,11 @@ export async function handleSessionCommand(
   const pathRequested = Boolean(sessionOptions.path);
   const clearRequested = Boolean(sessionOptions.clear || sessionOptions.clean);
   const openConversationRequested = Boolean(sessionOptions.openConversation);
+  const printUrlRequested = Boolean(sessionOptions.printUrl);
+  const browserPathOverride =
+    typeof sessionOptions.browserPath === 'string' && sessionOptions.browserPath.trim().length > 0
+      ? sessionOptions.browserPath.trim()
+      : null;
   if (clearRequested) {
     if (sessionId) {
       console.error('Cannot combine a session ID with --clear. Remove the ID to delete cached sessions.');
@@ -123,7 +132,11 @@ export async function handleSessionCommand(
       process.exitCode = 1;
       return;
     }
-    const opened = openConversationUrl(url, metadata);
+    if (printUrlRequested) {
+      console.log(url);
+      return;
+    }
+    const opened = openConversationUrl(url, metadata, browserPathOverride);
     if (!opened) {
       console.log(url);
     }
@@ -190,8 +203,9 @@ function openConversationUrl(
       runtime?: { userDataDir?: string | null };
     };
   },
+  browserPathOverride: string | null,
 ): boolean {
-  const chromePath = metadata.browser?.config?.chromePath ?? null;
+  const chromePath = browserPathOverride ?? metadata.browser?.config?.chromePath ?? null;
   const profileDir = metadata.browser?.config?.chromeProfile ?? 'Default';
   const userDataDir =
     metadata.browser?.runtime?.userDataDir ?? metadata.browser?.config?.manualLoginProfileDir ?? null;
