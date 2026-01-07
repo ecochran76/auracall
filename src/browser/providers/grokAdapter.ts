@@ -276,59 +276,63 @@ async function listHistoryConversations(
 ): Promise<Conversation[]> {
   const opened = await openHistoryDialog(client);
   if (!opened) return [];
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
-      const projectId = ${JSON.stringify(projectId ?? null)};
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('dialog') ||
-        document.querySelector('[aria-modal="true"]');
-      if (!dialog) return [];
-      const items = Array.from(
-        dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
-      );
-      const conversations = [];
-      for (const node of items) {
-        const href =
-          node.getAttribute('href') ||
-          node.getAttribute('data-href') ||
-          node.getAttribute('data-url') ||
-          node.dataset?.href ||
-          node.dataset?.url ||
-          '';
-        if (!href) continue;
-        let url = '';
-        let chatId = '';
-        try {
-          url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-          const parsed = new URL(url);
-          chatId = parsed.searchParams.get('chat') || '';
-          if (!chatId) {
-            const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-            chatId = match?.[1] || '';
+  try {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const projectId = ${JSON.stringify(projectId ?? null)};
+        const dialog =
+          document.querySelector('[role="dialog"]') ||
+          document.querySelector('dialog') ||
+          document.querySelector('[aria-modal="true"]');
+        if (!dialog) return [];
+        const items = Array.from(
+          dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
+        );
+        const conversations = [];
+        for (const node of items) {
+          const href =
+            node.getAttribute('href') ||
+            node.getAttribute('data-href') ||
+            node.getAttribute('data-url') ||
+            node.dataset?.href ||
+            node.dataset?.url ||
+            '';
+          if (!href) continue;
+          let url = '';
+          let chatId = '';
+          try {
+            url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+            const parsed = new URL(url);
+            chatId = parsed.searchParams.get('chat') || '';
+            if (!chatId) {
+              const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+              chatId = match?.[1] || '';
+            }
+          } catch {
+            // ignore URL parse
           }
-        } catch {
-          // ignore URL parse
+          if (!chatId) continue;
+          if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
+            continue;
+          }
+          const text = (node.textContent || '').trim();
+          conversations.push({ id: chatId, title: text || chatId, url });
         }
-        if (!chatId) continue;
-        if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
-          continue;
-        }
-        const text = (node.textContent || '').trim();
-        conversations.push({ id: chatId, title: text || chatId, url });
-      }
-      return conversations;
-    })()`,
-    returnByValue: true,
-  });
-  const raw = (result?.value ?? []) as Array<{ id: string; title: string; url?: string }>;
-  return raw.map((entry) => ({
-    id: entry.id,
-    title: entry.title,
-    provider: 'grok',
-    projectId,
-    url: entry.url,
-  }));
+        return conversations;
+      })()`,
+      returnByValue: true,
+    });
+    const raw = (result?.value ?? []) as Array<{ id: string; title: string; url?: string }>;
+    return raw.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      provider: 'grok',
+      projectId,
+      url: entry.url,
+    }));
+  } finally {
+    await closeHistoryDialog(client);
+  }
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
@@ -360,6 +364,31 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
   return false;
+}
+
+async function closeHistoryDialog(client: ChromeClient): Promise<void> {
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('dialog') ||
+        document.querySelector('[aria-modal="true"]');
+      if (!dialog) return false;
+      const backdrop =
+        dialog.parentElement?.querySelector?.('[data-state="open"]') ||
+        document.querySelector('[data-state="open"][data-radix-portal]') ||
+        document.querySelector('[data-radix-portal] [data-state="open"]');
+      if (backdrop) {
+        backdrop.click();
+        return true;
+      }
+      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
+      document.dispatchEvent(event);
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 200));
 }
 
 async function listConversationsByClick(
