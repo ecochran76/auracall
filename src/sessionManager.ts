@@ -57,9 +57,20 @@ export interface BrowserRuntimeMetadata {
   controllerPid?: number;
 }
 
+export interface BrowserContextMetadata {
+  provider?: 'chatgpt' | 'gemini' | 'grok';
+  projectId?: string | null;
+  projectName?: string | null;
+  conversationId?: string | null;
+  conversationName?: string | null;
+  configuredUrl?: string | null;
+  cacheKey?: string | null;
+}
+
 export interface BrowserMetadata {
   config?: BrowserSessionConfig;
   runtime?: BrowserRuntimeMetadata;
+  context?: BrowserContextMetadata;
 }
 
 export interface SessionResponseMetadata {

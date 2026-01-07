@@ -3,6 +3,8 @@ import type { Command, OptionValues } from 'commander';
 import { usesDefaultStatusFilters } from './options.js';
 import { attachSession, showStatus, type AttachSessionOptions, type ShowStatusOptions } from './sessionDisplay.js';
 import { sessionStore } from '../sessionStore.js';
+import { getProvider } from '../browser/providers/index.js';
+import { spawn } from 'node:child_process';
 
 export interface StatusOptions extends OptionValues {
   hours: number;
@@ -16,6 +18,7 @@ export interface StatusOptions extends OptionValues {
   verboseRender?: boolean;
   hidePrompt?: boolean;
   model?: string;
+  openConversation?: boolean;
 }
 
 interface SessionCommandDependencies {
@@ -34,7 +37,18 @@ const defaultDependencies: SessionCommandDependencies = {
   getSessionPaths: (sessionId) => sessionStore.getPaths(sessionId),
 };
 
-const SESSION_OPTION_KEYS = new Set(['hours', 'limit', 'all', 'clear', 'clean', 'render', 'renderMarkdown', 'path', 'model']);
+const SESSION_OPTION_KEYS = new Set([
+  'hours',
+  'limit',
+  'all',
+  'clear',
+  'clean',
+  'render',
+  'renderMarkdown',
+  'path',
+  'model',
+  'openConversation',
+]);
 
 export async function handleSessionCommand(
   sessionId: string | undefined,
@@ -51,6 +65,7 @@ export async function handleSessionCommand(
   const autoRender = !renderExplicit && process.stdout.isTTY;
   const pathRequested = Boolean(sessionOptions.path);
   const clearRequested = Boolean(sessionOptions.clear || sessionOptions.clean);
+  const openConversationRequested = Boolean(sessionOptions.openConversation);
   if (clearRequested) {
     if (sessionId) {
       console.error('Cannot combine a session ID with --clear. Remove the ID to delete cached sessions.');
@@ -90,6 +105,30 @@ export async function handleSessionCommand(
     }
     return;
   }
+  if (openConversationRequested) {
+    if (!sessionId) {
+      console.error('The --open-conversation flag requires a session ID.');
+      process.exitCode = 1;
+      return;
+    }
+    const metadata = await sessionStore.readSession(sessionId);
+    if (!metadata) {
+      console.error(`Session ${sessionId} was not found.`);
+      process.exitCode = 1;
+      return;
+    }
+    const url = resolveConversationUrl(metadata);
+    if (!url) {
+      console.error('No conversation URL found in this session.');
+      process.exitCode = 1;
+      return;
+    }
+    const opened = openConversationUrl(url, metadata);
+    if (!opened) {
+      console.log(url);
+    }
+    return;
+  }
   if (!sessionId) {
     const showExamples = deps.usesDefaultStatusFilters(command);
     await deps.showStatus({
@@ -112,6 +151,73 @@ export async function handleSessionCommand(
     renderPrompt: !sessionOptions.hidePrompt,
     model: sessionOptions.model,
   });
+}
+
+function resolveConversationUrl(metadata: { browser?: { config?: { target?: string | null; projectId?: string | null; conversationId?: string | null }; runtime?: { tabUrl?: string | null; conversationId?: string | null }; context?: { provider?: string | null; projectId?: string | null; conversationId?: string | null } } }): string | null {
+  const runtimeUrl = metadata.browser?.runtime?.tabUrl ?? null;
+  if (runtimeUrl && hasConversationMarker(runtimeUrl)) {
+    return runtimeUrl;
+  }
+  const conversationId =
+    metadata.browser?.context?.conversationId ??
+    metadata.browser?.config?.conversationId ??
+    metadata.browser?.runtime?.conversationId ??
+    null;
+  if (!conversationId) {
+    return runtimeUrl && hasConversationMarker(runtimeUrl) ? runtimeUrl : null;
+  }
+  const providerId =
+    (metadata.browser?.context?.provider as 'chatgpt' | 'grok' | 'gemini' | null) ??
+    (metadata.browser?.config?.target as 'chatgpt' | 'grok' | 'gemini' | null) ??
+    'chatgpt';
+  if (providerId === 'gemini') {
+    return runtimeUrl && hasConversationMarker(runtimeUrl) ? runtimeUrl : null;
+  }
+  const projectId = metadata.browser?.context?.projectId ?? metadata.browser?.config?.projectId ?? null;
+  const provider = getProvider(providerId === 'grok' ? 'grok' : 'chatgpt');
+  return provider.resolveConversationUrl?.(conversationId, projectId ?? undefined) ?? runtimeUrl ?? null;
+}
+
+function hasConversationMarker(url: string): boolean {
+  return url.includes('/c/') || url.includes('chat=');
+}
+
+function openConversationUrl(
+  url: string,
+  metadata: {
+    browser?: {
+      config?: { chromePath?: string | null; chromeProfile?: string | null; manualLoginProfileDir?: string | null };
+      runtime?: { userDataDir?: string | null };
+    };
+  },
+): boolean {
+  const chromePath = metadata.browser?.config?.chromePath ?? null;
+  const profileDir = metadata.browser?.config?.chromeProfile ?? 'Default';
+  const userDataDir =
+    metadata.browser?.runtime?.userDataDir ?? metadata.browser?.config?.manualLoginProfileDir ?? null;
+  if (chromePath) {
+    const args = ['--new-window', url];
+    if (userDataDir) {
+      args.unshift(`--profile-directory=${profileDir}`);
+      args.unshift(`--user-data-dir=${userDataDir}`);
+    }
+    const proc = spawn(chromePath, args, { detached: true, stdio: 'ignore' });
+    proc.unref();
+    return true;
+  }
+  if (process.platform === 'darwin') {
+    const proc = spawn('open', [url], { detached: true, stdio: 'ignore' });
+    proc.unref();
+    return true;
+  }
+  if (process.platform === 'win32') {
+    const proc = spawn('cmd', ['/c', 'start', '', url], { detached: true, stdio: 'ignore' });
+    proc.unref();
+    return true;
+  }
+  const proc = spawn('xdg-open', [url], { detached: true, stdio: 'ignore' });
+  proc.unref();
+  return true;
 }
 
 export function formatSessionCleanupMessage(

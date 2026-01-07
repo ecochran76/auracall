@@ -112,6 +112,7 @@ export type {
   SessionMetadata,
   SessionMode,
   BrowserSessionConfig,
+  BrowserContextMetadata,
   BrowserRuntimeMetadata,
   SessionTransportMetadata,
   SessionUserErrorMetadata,

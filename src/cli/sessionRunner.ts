@@ -73,11 +73,12 @@ export async function performSessionRun({
     write(chunk);
     return muteStdout ? true : process.stdout.write(chunk);
   };
+  const browserContext = sessionMeta.browser?.context;
   await sessionStore.updateSession(sessionMeta.id, {
     status: 'running',
     startedAt: new Date().toISOString(),
     mode,
-    ...(browserConfig ? { browser: { config: browserConfig } } : {}),
+    ...(browserConfig ? { browser: { config: browserConfig, context: browserContext } } : {}),
   });
   const notificationSettings = notifications ?? deriveNotificationSettingsFromMetadata(sessionMeta, process.env);
   const modelForStatus = runOptions.model ?? sessionMeta.model;
@@ -97,7 +98,7 @@ export async function performSessionRun({
         persistRuntimeHint: async (runtime: BrowserRuntimeMetadata) => {
           await sessionStore.updateSession(sessionMeta.id, {
             status: 'running',
-            browser: { config: browserConfig, runtime },
+            browser: { config: browserConfig, runtime, context: browserContext },
           });
         },
       };
@@ -117,6 +118,7 @@ export async function performSessionRun({
         browser: {
           config: browserConfig,
           runtime: result.runtime,
+          context: browserContext,
         },
         response: undefined,
         transport: undefined,

@@ -16,7 +16,12 @@ if (process.argv[2] === 'oracle-mcp') {
 import { resolveEngine, type EngineMode, defaultWaitPreference } from '../src/cli/engine.js';
 import { shouldRequirePrompt } from '../src/cli/promptRequirement.js';
 import chalk from 'chalk';
-import type { SessionMetadata, SessionMode, BrowserSessionConfig } from '../src/sessionStore.js';
+import type {
+  SessionMetadata,
+  SessionMode,
+  BrowserSessionConfig,
+  BrowserContextMetadata,
+} from '../src/sessionStore.js';
 import { sessionStore, pruneOldSessions } from '../src/sessionStore.js';
 import { DEFAULT_MODEL, MODEL_CONFIGS, runOracle, readFiles, estimateRequestTokens, buildRequestBody } from '../src/oracle.js';
 import { isKnownModel } from '../src/oracle/modelResolver.js';
@@ -92,6 +97,7 @@ import {
   readConversationCache,
   PROVIDER_CACHE_TTL_MS,
   readProjectCache,
+  resolveProviderCacheKey,
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
@@ -909,6 +915,46 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
   }
 }
 
+function buildBrowserContext({
+  options,
+  userConfig,
+  browserConfig,
+  model,
+}: {
+  options: CliOptions;
+  userConfig: UserConfig;
+  browserConfig?: BrowserSessionConfig;
+  model: string;
+}): BrowserContextMetadata | null {
+  if (!browserConfig) {
+    return null;
+  }
+  const target = browserConfig.target ?? (model.toLowerCase().startsWith('grok') ? 'grok' : 'chatgpt');
+  if (target === 'gemini') {
+    return null;
+  }
+  const configuredUrl =
+    target === 'grok'
+      ? browserConfig.grokUrl ?? userConfig.browser?.grokUrl ?? null
+      : browserConfig.chatgptUrl ?? browserConfig.url ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
+  const projectName = options.projectName ? options.projectName.trim() : null;
+  const conversationName = options.conversationName ? options.conversationName.trim() : null;
+  const listOptions = {
+    configuredUrl,
+    port: resolveBrowserListPort(userConfig),
+  };
+  const cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions });
+  return {
+    provider: target,
+    projectId: browserConfig.projectId ?? null,
+    projectName: projectName?.length ? projectName : null,
+    conversationId: browserConfig.conversationId ?? null,
+    conversationName: conversationName?.length ? conversationName : null,
+    configuredUrl,
+    cacheKey,
+  };
+}
+
 async function resolveProjectIdByName({
   projectName,
   cacheContext,
@@ -1173,6 +1219,7 @@ const sessionCommand = program
   .option('--hide-prompt', 'Hide stored prompt when displaying a session.', false)
   .option('--render', 'Render completed session output as markdown (rich TTY only).', false)
   .option('--render-markdown', 'Alias for --render.', false)
+  .option('--open-conversation', 'Open the provider conversation linked to this session.', false)
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
@@ -1733,6 +1780,12 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           browserModelLabel: browserModelLabelOverride,
         })
       : undefined;
+  const browserContext = buildBrowserContext({
+    options,
+    userConfig,
+    browserConfig,
+    model: resolvedModel,
+  });
 
   let browserDeps: BrowserSessionRunnerDeps | undefined;
   if (browserConfig && remoteHost) {
@@ -1791,7 +1844,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     console.log(chalk.dim('Note: search is not available in browser engine; ignoring search=false.'));
     baseRunOptions.search = undefined;
   }
-  const sessionMeta = await sessionStore.createSession(
+  let sessionMeta = await sessionStore.createSession(
     {
       ...baseRunOptions,
       mode: sessionMode,
@@ -1800,6 +1853,11 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     process.cwd(),
     notifications,
   );
+  if (browserContext && sessionMode === 'browser') {
+    sessionMeta = await sessionStore.updateSession(sessionMeta.id, {
+      browser: { config: browserConfig, context: browserContext },
+    });
+  }
   const liveRunOptions: RunOracleOptions = {
     ...baseRunOptions,
     sessionId: sessionMeta.id,

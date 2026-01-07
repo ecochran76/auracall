@@ -46,7 +46,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
    - Immediately probes `/backend-api/me` in the ChatGPT tab to verify the session is authenticated; if the endpoint returns 401/403 we abort early with a login-specific error instead of timing out waiting for the composer.
    - When `--file` inputs would push the pasted composer content over ~60k characters, we switch to uploading attachments (optionally bundled) and wait for ChatGPT to re-enable the send button before submitting the combined system+user prompt.
    - Cleans up the temporary profile unless `--browser-keep-browser` is passed.
-3. **Session integration** – browser sessions use the normal log writer, add `mode: "browser"` plus `browser.config/runtime` metadata, and log the Chrome PID/port so `oracle session <id>` (or `oracle status <id>`) shows a marker for the background Chrome process.
+3. **Session integration** – browser sessions use the normal log writer, add `mode: "browser"` plus `browser.config/runtime/context` metadata, and log the Chrome PID/port so `oracle session <id>` (or `oracle status <id>`) shows a marker for the background Chrome process. The context records provider/project/conversation IDs plus any resolved names and cache profile key.
 4. **Usage accounting** – we estimate input tokens with the same tokenizer used for API runs and estimate output tokens via `estimateTokenCount`. `oracle status` therefore shows comparable cost/timing info even though the call ran through the browser.
 
 ### CLI Options
@@ -61,7 +61,8 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `oracle login --target gemini`: opens the configured browser profile for Gemini sign-in (useful when cookies are missing).
 - `oracle login --target grok`: opens the configured browser profile for Grok sign-in.
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).
-- `--browser-cookie-path`: explicit path to the Chrome/Chromium/Edge `Cookies` SQLite DB. Handy when you launch a fork via `--browser-chrome-path` and want to copy its session cookies; see [docs/chromium-forks.md](chromium-forks.md) for examples.
+  - `--browser-cookie-path`: explicit path to the Chrome/Chromium/Edge `Cookies` SQLite DB. Handy when you launch a fork via `--browser-chrome-path` and want to copy its session cookies; see [docs/chromium-forks.md](chromium-forks.md) for examples.
+  - `--project-name` / `--conversation-name`: resolve browser project/conversation by cached name before starting a run.
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.
 - `--browser-timeout`, `--browser-input-timeout`: `1200s (20m)`/`30s` defaults. Durations accept `ms`, `s`, `m`, or `h` and can be chained (`1h2m10s`).
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)
@@ -96,6 +97,7 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 - `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
 - `oracle projects [--refresh]`: list browser projects/workspaces (use `--refresh` to force a cache update).
 - `oracle cache [--provider <chatgpt|grok>] [--refresh] [--include-history] [--history-limit <count>] [--history-since <date>]`: show cached project/conversation lists with timestamps and stale status; `--refresh` updates the cache for the active provider.
+- `oracle session <id> --open-conversation`: open the provider conversation linked to a stored session (uses the saved context, not the cache).
 - `oracle conversations [--project-id <id>] [--project-name <name>] [--conversation-name <name>] [--include-history] [--history-limit <count>] [--history-since <date>] [--filter <text>] [--refresh]`: list conversations for a provider (requires a running browser with DevTools; uses `ORACLE_BROWSER_PORT` or config `browser.debugPort`). Use `--include-history` if you want the History dialog opened to pull older conversations; use `--history-limit` (default 200) and/or `--history-since` to scroll deeper; use `--filter` to match title/id text; use `--refresh` to force cache updates.
 - Browser project/conversation lists are cached under `~/.oracle/cache/providers/<provider>/<profile>/` (stale after ~6h or when the configured URL changes). Use `oracle projects` to refresh the cache before resolving by name.
 - Grok conversation listing reads the `/c/<id>` links in the project Conversations panel. If the History dialog opens during scraping, Oracle auto-closes it; if the UI still looks blocked, click the backdrop once to dismiss.
