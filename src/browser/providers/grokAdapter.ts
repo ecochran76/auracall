@@ -57,26 +57,36 @@ export function createGrokAdapter(): Pick<
       }
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
-      const projectUrl = projectId ? `https://grok.com/project/${projectId}` : undefined;
+      const resolvedProjectId = projectId?.trim() || undefined;
+      const projectUrl = resolvedProjectId ? `https://grok.com/project/${resolvedProjectId}` : undefined;
       const connection = projectUrl
-        ? await connectToGrokProjectTab(options, projectId ?? null, projectUrl)
+        ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
         : await connectToGrokTab(options, projectUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       if (projectUrl) {
         if (!usedExisting) {
           await navigateToProject(client, projectUrl);
-          await ensureProjectPage(client, projectId);
         }
+        await ensureProjectPage(client, resolvedProjectId);
         await closeHistoryDialog(client);
         await openConversationList(client);
+        await closeHistoryDialog(client);
       }
       try {
-        const openConversations = projectId ? [] : await listOpenConversations(host, port, projectId);
-        const history = projectId ? [] : await listHistoryConversations(client, projectId);
-        const clicked = projectId ? [] : await listConversationsByClick(client, projectId);
+        const openConversations = resolvedProjectId
+          ? []
+          : await listOpenConversations(host, port, resolvedProjectId);
+        const history =
+          resolvedProjectId || !options?.includeHistory
+            ? []
+            : await listHistoryConversations(client, resolvedProjectId);
+        const clicked = resolvedProjectId ? [] : await listConversationsByClick(client, resolvedProjectId);
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
-            const projectId = ${JSON.stringify(projectId ?? null)};
+            const projectId = ${JSON.stringify(resolvedProjectId ?? null)};
+            if (projectId && !location.pathname.includes('/project/' + projectId)) {
+              return [];
+            }
             const conversations = new Map();
             const add = (id, title, url) => {
               if (!id) return;
@@ -125,7 +135,7 @@ export function createGrokAdapter(): Pick<
             id: entry.id,
             title: entry.title,
             provider: 'grok',
-            projectId: projectId ?? undefined,
+            projectId: resolvedProjectId ?? undefined,
             url: entry.url ?? undefined,
           });
         }

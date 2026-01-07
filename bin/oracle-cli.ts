@@ -81,7 +81,16 @@ import CDP from 'chrome-remote-interface';
 import { launch } from 'chrome-launcher';
 import { getOracleHomeDir } from '../src/oracleHome.js';
 import { getProvider } from '../src/browser/providers/index.js';
-import { deriveProjectsFromConfig, deriveConversationsFromConfig } from '../src/browser/providers/service.js';
+import {
+  deriveProjectsFromConfig,
+  deriveConversationsFromConfig,
+} from '../src/browser/providers/service.js';
+import {
+  matchProjectByName,
+  readProjectCache,
+  writeConversationCache,
+  writeProjectCache,
+} from '../src/browser/providers/cache.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -533,6 +542,7 @@ program
       port: resolveBrowserListPort(userConfig),
       configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
     };
+    const cacheContext = { provider: target, userConfig, listOptions };
     if (!provider.listProjects) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
@@ -542,6 +552,11 @@ program
       if (fallback.length === 0) {
         console.log(chalk.yellow(`Project listing is not implemented yet for ${target}.`));
         return;
+      }
+      try {
+        await writeProjectCache(cacheContext, fallback);
+      } catch (error) {
+        console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
       }
       console.log(JSON.stringify(fallback, null, 2));
       return;
@@ -554,8 +569,20 @@ program
         projectId: userConfig.browser?.projectId ?? null,
       });
       if (fallback.length > 0) {
+        try {
+          await writeProjectCache(cacheContext, fallback);
+        } catch (error) {
+          console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
+        }
         console.log(JSON.stringify(fallback, null, 2));
         return;
+      }
+    }
+    if (Array.isArray(projects)) {
+      try {
+        await writeProjectCache(cacheContext, projects);
+      } catch (error) {
+        console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     console.log(JSON.stringify(projects, null, 2));
@@ -566,42 +593,88 @@ program
   .description('List conversations for the active browser provider.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
+  .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
+  .option('--include-history', 'Include the History dialog results when listing conversations.')
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
+    let projectId =
+      typeof commandOptions.projectId === 'string' && commandOptions.projectId.trim().length > 0
+        ? commandOptions.projectId.trim()
+        : userConfig.browser?.projectId ?? undefined;
     const provider = getProvider(target);
     const listOptions = {
       port: resolveBrowserListPort(userConfig),
       configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+      includeHistory: Boolean(commandOptions.includeHistory),
     };
+    const cacheContext = { provider: target, userConfig, listOptions };
+    const projectName =
+      typeof commandOptions.projectName === 'string' ? commandOptions.projectName.trim() : '';
+    if (!projectId && projectName) {
+      let cached = await readProjectCache(cacheContext);
+      if (cached.stale && provider.listProjects) {
+        const refreshed = await provider.listProjects(listOptions);
+        if (Array.isArray(refreshed)) {
+          await writeProjectCache(cacheContext, refreshed);
+          cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+        }
+      }
+      const { match, candidates } = matchProjectByName(cached.items, projectName);
+      if (match) {
+        projectId = match.id;
+      } else if (candidates.length > 1) {
+        const names = candidates.map((item) => item.name || item.id).join(', ');
+        throw new Error(`Project name "${projectName}" is ambiguous. Matches: ${names}`);
+      } else {
+        throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
+      }
+    }
     if (!provider.listConversations) {
       const fallback = deriveConversationsFromConfig({
         provider: target,
         configuredUrl: listOptions.configuredUrl,
-        projectId: commandOptions.projectId ?? userConfig.browser?.projectId ?? null,
+        projectId: projectId ?? null,
         conversationId: userConfig.browser?.conversationId ?? null,
       });
       if (fallback.length === 0) {
         console.log(chalk.yellow(`Conversation listing is not implemented yet for ${target}.`));
         return;
       }
+      try {
+        await writeConversationCache(cacheContext, fallback);
+      } catch (error) {
+        console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
+      }
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const conversations = await provider.listConversations(commandOptions.projectId, listOptions);
+    const conversations = await provider.listConversations(projectId, listOptions);
     if (Array.isArray(conversations) && conversations.length === 0) {
       const fallback = deriveConversationsFromConfig({
         provider: target,
         configuredUrl: listOptions.configuredUrl,
-        projectId: commandOptions.projectId ?? userConfig.browser?.projectId ?? null,
+        projectId: projectId ?? null,
         conversationId: userConfig.browser?.conversationId ?? null,
       });
       if (fallback.length > 0) {
+        try {
+          await writeConversationCache(cacheContext, fallback);
+        } catch (error) {
+          console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
+        }
         console.log(JSON.stringify(fallback, null, 2));
         return;
+      }
+    }
+    if (Array.isArray(conversations)) {
+      try {
+        await writeConversationCache(cacheContext, conversations);
+      } catch (error) {
+        console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
     console.log(JSON.stringify(conversations, null, 2));

@@ -94,8 +94,10 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 ### Provider discovery (experimental)
 
 - `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
-- `oracle conversations [--project-id <id>]`: list conversations for a provider (requires a running browser with DevTools; uses `ORACLE_BROWSER_PORT` or config `browser.debugPort`).
+- `oracle conversations [--project-id <id>] [--project-name <name>] [--include-history]`: list conversations for a provider (requires a running browser with DevTools; uses `ORACLE_BROWSER_PORT` or config `browser.debugPort`). Use `--include-history` if you want the History dialog opened to pull older conversations.
+- Browser project/conversation lists are cached under `~/.oracle/cache/providers/<provider>/<profile>/` (stale after ~6h or when the configured URL changes). Use `oracle projects` to refresh the cache before resolving by name.
 - Grok conversation listing reads the `/c/<id>` links in the project Conversations panel. If the History dialog opens during scraping, Oracle auto-closes it; if the UI still looks blocked, click the backdrop once to dismiss.
+- When listing conversations with `--project-id`, Oracle prefers an already-open Grok project tab (to avoid History bleed-through) and verifies the URL matches the requested project before scraping.
 
 ### Manual login mode (persistent profile, no cookie copy)
 

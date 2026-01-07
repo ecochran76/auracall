@@ -30,6 +30,7 @@ export interface BrowserProviderListOptions {
   host?: string;
   port?: number;
   configuredUrl?: string | null;
+  includeHistory?: boolean;
 }
 
 export interface BrowserProvider {
