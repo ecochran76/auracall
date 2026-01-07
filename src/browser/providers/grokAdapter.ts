@@ -58,15 +58,22 @@ export function createGrokAdapter(): Pick<
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
       const projectUrl = projectId ? `https://grok.com/project/${projectId}` : undefined;
-      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, projectUrl);
+      const connection = projectUrl
+        ? await connectToGrokProjectTab(options, projectId ?? null, projectUrl)
+        : await connectToGrokTab(options, projectUrl);
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       if (projectUrl) {
-        await navigateToProject(client, projectUrl);
+        if (!usedExisting) {
+          await navigateToProject(client, projectUrl);
+          await ensureProjectPage(client, projectId);
+        }
+        await closeHistoryDialog(client);
         await openConversationList(client);
       }
       try {
-        const openConversations = await listOpenConversations(host, port, projectId);
-        const history = await listHistoryConversations(client, projectId);
-        const clicked = await listConversationsByClick(client, projectId);
+        const openConversations = projectId ? [] : await listOpenConversations(host, port, projectId);
+        const history = projectId ? [] : await listHistoryConversations(client, projectId);
+        const clicked = projectId ? [] : await listConversationsByClick(client, projectId);
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
             const projectId = ${JSON.stringify(projectId ?? null)};
@@ -77,22 +84,16 @@ export function createGrokAdapter(): Pick<
                 conversations.set(id, { id, title: title || id, url: url || null });
               }
             };
-            const current = location.href;
-            try {
-              const currentUrl = new URL(current);
-              const currentChat = currentUrl.searchParams.get('chat');
-              const currentMatch = currentUrl.pathname.match(/\\/c\\/([^/?#]+)/);
-              const chatId = currentChat || currentMatch?.[1] || '';
-              if (chatId) {
-                add(chatId, document.title || chatId, current);
-              }
-            } catch {
-              // ignore URL parse
-            }
+            const root = document.querySelector('main') || document.body;
+            const panels = Array.from(root.querySelectorAll('[id*="content-conversations"]'));
             const panel =
-              document.querySelector('[role="tabpanel"]') ||
-              document.querySelector('[id*="content-conversations"]') ||
-              document.querySelector('main');
+              panels.find((node) => {
+                const state = node.getAttribute('data-state') || '';
+                const hidden = node.getAttribute('aria-hidden');
+                if (state === 'active') return true;
+                if (hidden === 'false') return true;
+                return (node as HTMLElement).offsetParent !== null;
+              }) ?? panels[0];
             if (panel) {
               const anchors = Array.from(panel.querySelectorAll('a[href*="/c/"]'));
               for (const anchor of anchors) {
@@ -109,51 +110,9 @@ export function createGrokAdapter(): Pick<
                   anchor.parentElement;
                 const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row;
                 const title = (titleNode?.textContent || '').trim();
+                if (!title) continue;
                 add(chatId, title, url);
               }
-            }
-            const candidates = Array.from(
-              document.querySelectorAll(
-                'a,button,[role="link"],[role="button"],[data-href],[data-url],[data-chat-id],[data-conversation-id]'
-              )
-            );
-            for (const node of candidates) {
-              const href =
-                node.getAttribute('href') ||
-                node.getAttribute('data-href') ||
-                node.getAttribute('data-url') ||
-                node.dataset?.href ||
-                node.dataset?.url ||
-                '';
-              const chatId =
-                node.getAttribute('data-chat-id') ||
-                node.getAttribute('data-conversation-id') ||
-                node.dataset?.chatId ||
-                node.dataset?.conversationId ||
-                null;
-              let url = '';
-              let chatFromUrl = '';
-              if (href) {
-                try {
-                  const resolved = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                  url = resolved;
-                  const parsed = new URL(resolved);
-                  chatFromUrl = parsed.searchParams.get('chat') || '';
-                  if (!chatFromUrl) {
-                    const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-                    chatFromUrl = match?.[1] || '';
-                  }
-                } catch {
-                  // ignore URL parse
-                }
-              }
-              const finalChatId = chatId || chatFromUrl;
-              if (!finalChatId) continue;
-              if (projectId && url && !url.includes('/project/' + projectId)) {
-                continue;
-              }
-              const text = (node.textContent || '').trim();
-              add(finalChatId, text, url || null);
             }
             return Array.from(conversations.values());
           })()`,
@@ -199,7 +158,14 @@ export function createGrokAdapter(): Pick<
 async function connectToGrokTab(
   options?: BrowserProviderListOptions,
   urlOverride?: string,
-): Promise<{ client: ChromeClient; targetId?: string; shouldClose: boolean; host: string; port: number }> {
+): Promise<{
+  client: ChromeClient;
+  targetId?: string;
+  shouldClose: boolean;
+  host: string;
+  port: number;
+  usedExisting: boolean;
+}> {
   const host = options?.host ?? '127.0.0.1';
   const port = options?.port ?? resolvePortFromEnv();
   if (!port) {
@@ -211,20 +177,68 @@ async function connectToGrokTab(
   const preferred = preferredUrl
     ? candidates.find((target) => target.url?.includes(preferredUrl ?? ''))
     : undefined;
-  let targetId = preferred?.id ?? candidates[0]?.id;
+  let targetId = preferred?.id;
   let shouldClose = false;
+  let usedExisting = Boolean(targetId);
+  if (!targetId && preferredUrl) {
+    const created = await CDP.New({ host, port, url: preferredUrl });
+    targetId = created.id;
+    shouldClose = true;
+    usedExisting = false;
+  } else if (!targetId) {
+    targetId = candidates[0]?.id;
+    usedExisting = Boolean(targetId);
+  }
   if (!targetId) {
     const fallbackUrl = preferredUrl ?? 'https://grok.com/';
     const created = await CDP.New({ host, port, url: fallbackUrl });
     targetId = created.id;
     shouldClose = true;
+    usedExisting = false;
   }
   if (!targetId) {
     throw new Error('No grok.com tab found. Launch a Grok browser session and retry.');
   }
   const client = await CDP({ host, port, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  return { client, targetId, shouldClose, host, port };
+  return { client, targetId, shouldClose, host, port, usedExisting };
+}
+
+async function connectToGrokProjectTab(
+  options: BrowserProviderListOptions | undefined,
+  projectId: string | null,
+  projectUrl: string,
+): Promise<{
+  client: ChromeClient;
+  targetId?: string;
+  shouldClose: boolean;
+  host: string;
+  port: number;
+  usedExisting: boolean;
+}> {
+  const host = options?.host ?? '127.0.0.1';
+  const port = options?.port ?? resolvePortFromEnv();
+  if (!port) {
+    throw new Error('Missing DevTools port. Set ORACLE_BROWSER_PORT or browser.debugPort.');
+  }
+  const targets = await CDP.List({ host, port });
+  const match = projectId
+    ? targets.find(
+        (target) => target.type === 'page' && target.url?.includes(`/project/${projectId}`),
+      )
+    : undefined;
+  let targetId = match?.id;
+  let shouldClose = false;
+  let usedExisting = Boolean(targetId);
+  if (!targetId) {
+    const created = await CDP.New({ host, port, url: projectUrl });
+    targetId = created.id;
+    shouldClose = true;
+    usedExisting = false;
+  }
+  const client = await CDP({ host, port, target: targetId });
+  await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  return { client, targetId, shouldClose, host, port, usedExisting };
 }
 
 function resolvePortFromEnv(): number | null {
@@ -250,18 +264,71 @@ async function navigateToProject(client: ChromeClient, url: string): Promise<voi
   }
 }
 
+async function ensureProjectPage(client: ChromeClient, projectId?: string): Promise<void> {
+  if (!projectId) return;
+  const expected = `/project/${projectId}`;
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: 'location.href',
+      returnByValue: true,
+    });
+    if (typeof result?.value === 'string' && result.value.includes(expected)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const link = document.querySelector('a[href*="/project/${projectId}"]');
+      if (link) {
+        link.click();
+        return true;
+      }
+      return false;
+    })()`,
+    returnByValue: true,
+  });
+  const clickDeadline = Date.now() + 10_000;
+  while (Date.now() < clickDeadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: 'location.href',
+      returnByValue: true,
+    });
+    if (typeof result?.value === 'string' && result.value.includes(expected)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  const fallbackUrl = `https://grok.com/project/${projectId}?tab=conversations`;
+  await client.Page.navigate({ url: fallbackUrl });
+  const secondaryDeadline = Date.now() + 10_000;
+  while (Date.now() < secondaryDeadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: 'location.href',
+      returnByValue: true,
+    });
+    if (typeof result?.value === 'string' && result.value.includes(expected)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+}
+
 async function openConversationList(client: ChromeClient): Promise<void> {
   await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const candidates = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
-      const labels = ['history', 'chat', 'conversations', 'messages'];
-      for (const node of candidates) {
-        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        if (!label) continue;
-        if (labels.some((word) => label.includes(word))) {
-          node.click();
-          return true;
+      const tablist = document.querySelector('[role="tablist"]');
+      if (tablist) {
+        const tabs = Array.from(tablist.querySelectorAll('a,button,[role="tab"],[role="button"],[role="link"]'));
+        for (const node of tabs) {
+          const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+          if (!label) continue;
+          if (label.includes('conversations')) {
+            node.click();
+            return true;
+          }
         }
       }
       return false;
@@ -399,11 +466,16 @@ async function listConversationsByClick(
     expression: `(() => {
       const panel = document.querySelector('[role="tabpanel"]');
       if (!panel) return [];
-      const items = Array.from(panel.querySelectorAll('[class*="cursor-pointer"]'));
+      const items = Array.from(panel.querySelectorAll('a[href*="/c/"]'));
       let index = 0;
       const entries = [];
       for (const node of items) {
-        const titleNode = node.querySelector('[class*="truncate"]') || node;
+        const row =
+          node.closest('div.max-h-11') ||
+          node.closest('div[class*="rounded"]') ||
+          node.closest('div[class*="grid"]') ||
+          node.parentElement;
+        const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row || node;
         const title = (titleNode.textContent || '').trim();
         node.setAttribute('data-oracle-conv-index', String(index));
         entries.push({ index, title });
