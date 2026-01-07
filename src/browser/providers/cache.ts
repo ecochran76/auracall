@@ -6,7 +6,7 @@ import type { BrowserProviderListOptions } from './types.js';
 import type { Conversation, Project, ProviderId } from './domain.js';
 import type { UserConfig } from '../../config.js';
 
-const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
+export const PROVIDER_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
 interface ProviderCache<T> {
   fetchedAt: string;
@@ -129,7 +129,7 @@ async function readProviderCache<T>(
     const parsed = JSON.parse(raw) as ProviderCache<T>;
     const fetchedAt = parsed?.fetchedAt ? Date.parse(parsed.fetchedAt) : NaN;
     const now = Date.now();
-    const tooOld = Number.isFinite(fetchedAt) ? now - fetchedAt > CACHE_TTL_MS : true;
+    const tooOld = Number.isFinite(fetchedAt) ? now - fetchedAt > PROVIDER_CACHE_TTL_MS : true;
     const urlMismatch =
       typeof configuredUrl === 'string' &&
       configuredUrl.length > 0 &&

@@ -89,6 +89,7 @@ import {
   matchProjectByName,
   matchConversationByTitle,
   readConversationCache,
+  PROVIDER_CACHE_TTL_MS,
   readProjectCache,
   writeConversationCache,
   writeProjectCache,
@@ -385,8 +386,8 @@ program
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
   .addOption(new Option('--project-id <id>', 'Override the provider project scope for browser runs.').hideHelp())
   .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
-  .addOption(new Option('--project-name <name>', 'Resolve browser project by cached name.').hideHelp())
-  .addOption(new Option('--conversation-name <name>', 'Resolve browser conversation by cached title.').hideHelp())
+  .addOption(new Option('--project-name <name>', 'Resolve browser project by cached name.'))
+  .addOption(new Option('--conversation-name <name>', 'Resolve browser conversation by cached title.'))
   .addOption(
     new Option(
       '--chatgpt-url <url>',
@@ -715,6 +716,80 @@ program
     }
     const filtered = filterConversationsByQuery(resolved, commandOptions.filter);
     console.log(JSON.stringify(filtered, null, 2));
+  });
+
+program
+  .command('cache')
+  .description('Show cached browser project/conversation lists.')
+  .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
+  .action(async (commandOptions) => {
+    const providers = new Set(['chatgpt', 'grok']);
+    const filter =
+      typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+        ? commandOptions.provider.trim()
+        : null;
+    if (filter && !providers.has(filter)) {
+      throw new Error(`Invalid provider "${filter}". Use "chatgpt" or "grok".`);
+    }
+    const cacheRoot = path.join(getOracleHomeDir(), 'cache', 'providers');
+    const output: Array<{
+      provider: string;
+      profileKey: string;
+      kind: 'projects' | 'conversations';
+      fetchedAt: string | null;
+      ageHours: number | null;
+      stale: boolean;
+      sourceUrl?: string | null;
+    }> = [];
+    let providerEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
+    try {
+      providerEntries = await fs.readdir(cacheRoot, { withFileTypes: true });
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code === 'ENOENT') {
+        console.log(JSON.stringify([], null, 2));
+        return;
+      }
+      throw error;
+    }
+    for (const providerEntry of providerEntries) {
+      if (!providerEntry.isDirectory()) continue;
+      if (filter && providerEntry.name !== filter) continue;
+      const providerDir = path.join(cacheRoot, providerEntry.name);
+      const profileEntries = await fs.readdir(providerDir, { withFileTypes: true });
+      for (const profileEntry of profileEntries) {
+        if (!profileEntry.isDirectory()) continue;
+        const profileDir = path.join(providerDir, profileEntry.name);
+        const files = await fs.readdir(profileDir, { withFileTypes: true });
+        for (const file of files) {
+          if (!file.isFile()) continue;
+          if (file.name !== 'projects.json' && file.name !== 'conversations.json') continue;
+          const kind = file.name === 'projects.json' ? 'projects' : 'conversations';
+          const fullPath = path.join(profileDir, file.name);
+          try {
+            const raw = await fs.readFile(fullPath, 'utf8');
+            const parsed = JSON.parse(raw) as { fetchedAt?: string; sourceUrl?: string | null };
+            const fetchedAt = parsed?.fetchedAt ?? null;
+            const fetchedMs = fetchedAt ? Date.parse(fetchedAt) : NaN;
+            const ageMs = Number.isFinite(fetchedMs) ? Date.now() - fetchedMs : NaN;
+            const ageHours = Number.isFinite(ageMs) ? Math.round((ageMs / 3600000) * 10) / 10 : null;
+            const stale = !Number.isFinite(fetchedMs) || ageMs > PROVIDER_CACHE_TTL_MS;
+            output.push({
+              provider: providerEntry.name,
+              profileKey: profileEntry.name,
+              kind,
+              fetchedAt,
+              ageHours,
+              stale,
+              sourceUrl: parsed?.sourceUrl ?? null,
+            });
+          } catch (error) {
+            console.warn(`Failed to read cache file ${fullPath}: ${error instanceof Error ? error.message : String(error)}`);
+          }
+        }
+      }
+    }
+    console.log(JSON.stringify(output, null, 2));
   });
 
 function filterConversationsByQuery<T extends Array<{ id?: string; title?: string }>>(
