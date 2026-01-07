@@ -105,7 +105,14 @@ function matchByName<T>(
   if (candidates.length > 1) {
     return { match: null, candidates };
   }
-  const fuzzy = items.filter((item) => normalize(getName(item)).includes(name));
+  const tokens = name.split(' ').filter((token) => token.length >= 3);
+  if (tokens.length === 0) {
+    return { match: null, candidates: [] };
+  }
+  const fuzzy = items.filter((item) => {
+    const haystack = normalize(getName(item));
+    return tokens.every((token) => haystack.includes(token));
+  });
   if (fuzzy.length === 1) {
     return { match: fuzzy[0], candidates: [] };
   }

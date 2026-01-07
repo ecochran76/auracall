@@ -431,24 +431,50 @@ async function listHistoryConversations(
             const parsed = Date.parse(text);
             return Number.isFinite(parsed) ? parsed : null;
           };
-          const readTimestamp = (node) => {
-            const timeEl = node.querySelector?.('time');
-            const candidates = [
-              timeEl?.getAttribute?.('datetime'),
-              timeEl?.getAttribute?.('title'),
-              timeEl?.getAttribute?.('aria-label'),
-              timeEl?.textContent,
-              node.getAttribute?.('title'),
-              node.getAttribute?.('aria-label'),
-            ];
-            for (const candidate of candidates) {
-              const parsed = parseRelative(candidate);
-              if (parsed) return parsed;
-              const absolute = Date.parse(String(candidate || ''));
-              if (Number.isFinite(absolute)) return absolute;
-            }
-            return null;
-          };
+            const readTimestamp = (node) => {
+              const timeEl = node.querySelector?.('time');
+              const candidates = [
+                timeEl?.getAttribute?.('datetime'),
+                timeEl?.getAttribute?.('title'),
+                timeEl?.getAttribute?.('aria-label'),
+                timeEl?.textContent,
+                node.getAttribute?.('title'),
+                node.getAttribute?.('aria-label'),
+              ];
+              for (const candidate of candidates) {
+                const parsed = parseRelative(candidate);
+                if (parsed) return { ts: parsed, label: String(candidate || '').trim() };
+                const absolute = Date.parse(String(candidate || ''));
+                if (Number.isFinite(absolute)) return { ts: absolute, label: String(candidate || '').trim() };
+              }
+              return { ts: null, label: '' };
+            };
+            const extractTitle = (node, timeLabel) => {
+              const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+                acceptNode: (textNode) => {
+                  const parent = textNode.parentElement;
+                  if (!parent) return NodeFilter.FILTER_REJECT;
+                  if (parent.closest('time')) return NodeFilter.FILTER_REJECT;
+                  return NodeFilter.FILTER_ACCEPT;
+                },
+              });
+              let text = '';
+              while (walker.nextNode()) {
+                text += ' ' + (walker.currentNode.nodeValue || '');
+              }
+              let title = text.replace(/\\s+/g, ' ').trim();
+              if (timeLabel) {
+                const escaped = timeLabel.replace(/[.*+?^$()|[\\]\\\\]/g, '\\\\$&');
+                title = title.replace(new RegExp(escaped, 'i'), '').trim();
+              }
+              title = title
+                .replace(/\\b\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago\\b/gi, '')
+                .replace(/\\b(yesterday|today)\\b/gi, '')
+                .replace(/\\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+\\d{1,2}\\b/gi, '')
+                .replace(/\\s+/g, ' ')
+                .trim();
+              return title;
+            };
           const items = Array.from(
             dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
           );
@@ -481,12 +507,12 @@ async function listHistoryConversations(
               continue;
             }
             const row = node.closest('div,li') || node;
-            const timestamp = readTimestamp(row);
-            if (typeof timestamp === 'number') {
-              oldest = oldest === null ? timestamp : Math.min(oldest, timestamp);
+            const { ts, label } = readTimestamp(row);
+            if (typeof ts === 'number') {
+              oldest = oldest === null ? ts : Math.min(oldest, ts);
             }
-            const text = (row.textContent || node.textContent || '').trim();
-            conversations.push({ id: chatId, title: text || chatId, url, timestamp });
+            const text = extractTitle(row, label) || (row.textContent || node.textContent || '').trim();
+            conversations.push({ id: chatId, title: text || chatId, url, timestamp: ts ?? null });
           }
           const scrollables = Array.from(dialog.querySelectorAll('*')).filter((el) => {
             const element = el;

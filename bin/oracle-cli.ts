@@ -87,6 +87,8 @@ import {
 } from '../src/browser/providers/service.js';
 import {
   matchProjectByName,
+  matchConversationByTitle,
+  readConversationCache,
   readProjectCache,
   writeConversationCache,
   writeProjectCache,
@@ -133,7 +135,9 @@ interface CliOptions extends OptionValues {
   chatgptUrl?: string;
   browserUrl?: string;
   projectId?: string;
+  projectName?: string;
   conversationId?: string;
+  conversationName?: string;
   browserTimeout?: string;
   browserInputTimeout?: string;
   browserCookieWait?: string;
@@ -381,6 +385,8 @@ program
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
   .addOption(new Option('--project-id <id>', 'Override the provider project scope for browser runs.').hideHelp())
   .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
+  .addOption(new Option('--project-name <name>', 'Resolve browser project by cached name.').hideHelp())
+  .addOption(new Option('--conversation-name <name>', 'Resolve browser conversation by cached title.').hideHelp())
   .addOption(
     new Option(
       '--chatgpt-url <url>',
@@ -531,6 +537,7 @@ program
   .command('projects')
   .description('List available projects/workspaces for the active browser provider.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--refresh', 'Force refresh of cached project data.')
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
@@ -594,11 +601,14 @@ program
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
   .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
+  .option('--conversation-name <name>', 'Resolve a conversation by cached title.')
   .option('--include-history', 'Include the History dialog results when listing conversations.')
   .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .option('--filter <text>', 'Filter conversations by title/id substring (case-insensitive).')
-  .action(async (commandOptions) => {
+  .option('--refresh', 'Force refresh of cached project/conversation data.')
+  .action(async (commandOptions, command) => {
+    const parentOptions = command.parent?.opts?.() ?? {};
     const { config: userConfig } = await loadUserConfig();
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
@@ -630,25 +640,31 @@ program
     }
     const cacheContext = { provider: target, userConfig, listOptions };
     const projectName =
-      typeof commandOptions.projectName === 'string' ? commandOptions.projectName.trim() : '';
+      typeof commandOptions.projectName === 'string'
+        ? commandOptions.projectName.trim()
+        : typeof parentOptions.projectName === 'string'
+          ? parentOptions.projectName.trim()
+          : '';
+    const forceRefresh = Boolean(commandOptions.refresh);
     if (!projectId && projectName) {
-      let cached = await readProjectCache(cacheContext);
-      if (cached.stale && provider.listProjects) {
-        const refreshed = await provider.listProjects(listOptions);
-        if (Array.isArray(refreshed)) {
-          await writeProjectCache(cacheContext, refreshed);
-          cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
-        }
-      }
-      const { match, candidates } = matchProjectByName(cached.items, projectName);
-      if (match) {
-        projectId = match.id;
-      } else if (candidates.length > 1) {
-        const names = candidates.map((item) => item.name || item.id).join(', ');
-        throw new Error(`Project name "${projectName}" is ambiguous. Matches: ${names}`);
-      } else {
-        throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
-      }
+      projectId = await resolveProjectIdByName({ projectName, cacheContext, provider, forceRefresh });
+    }
+    const conversationName =
+      typeof commandOptions.conversationName === 'string'
+        ? commandOptions.conversationName.trim()
+        : typeof parentOptions.conversationName === 'string'
+          ? parentOptions.conversationName.trim()
+          : '';
+    if (conversationName) {
+      const conversationMatch = await resolveConversationByName({
+        conversationName,
+        cacheContext,
+        provider,
+        projectId,
+        forceRefresh,
+      });
+      console.log(JSON.stringify([conversationMatch], null, 2));
+      return;
     }
     if (!provider.listConversations) {
       let fallback = deriveConversationsFromConfig({
@@ -716,6 +732,138 @@ function filterConversationsByQuery(conversations: unknown, rawFilter: unknown):
     const id = String(value?.id ?? '').toLowerCase();
     return title.includes(filter) || id.includes(filter);
   });
+}
+
+async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConfig): Promise<void> {
+  const projectName = typeof options.projectName === 'string' ? options.projectName.trim() : '';
+  const conversationName = typeof options.conversationName === 'string' ? options.conversationName.trim() : '';
+  if (!projectName && !conversationName) {
+    return;
+  }
+  const modelName = (options.model ?? '').toLowerCase();
+  const target = modelName.startsWith('grok')
+    ? 'grok'
+    : modelName.startsWith('gemini')
+      ? 'gemini'
+      : options.browserTarget ?? userConfig.browser?.target ?? 'chatgpt';
+  if (target === 'gemini') {
+    return;
+  }
+  const configuredUrl =
+    target === 'grok'
+      ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
+      : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
+  const listOptions = {
+    port: resolveBrowserListPort(userConfig),
+    configuredUrl,
+    includeHistory: true,
+    historyLimit: 200,
+  };
+  const cacheContext = { provider: target, userConfig, listOptions };
+  const provider = getProvider(target);
+
+  if (!options.projectId && projectName) {
+    options.projectId = await resolveProjectIdByName({
+      projectName,
+      cacheContext,
+      provider,
+      forceRefresh: false,
+    });
+  }
+  if (!options.conversationId && conversationName) {
+    const match = await resolveConversationByName({
+      conversationName,
+      cacheContext,
+      provider,
+      projectId: options.projectId ?? undefined,
+      forceRefresh: false,
+    });
+    if (match) {
+      options.conversationId = match.id;
+    }
+  }
+}
+
+async function resolveProjectIdByName({
+  projectName,
+  cacheContext,
+  provider,
+  forceRefresh,
+}: {
+  projectName: string;
+  cacheContext: {
+    provider: 'chatgpt' | 'grok';
+    userConfig: UserConfig;
+    listOptions: { configuredUrl: string | null; port?: number };
+  };
+  provider: ReturnType<typeof getProvider>;
+  forceRefresh: boolean;
+}): Promise<string> {
+  let cached = await readProjectCache(cacheContext);
+  if ((forceRefresh || cached.stale) && provider.listProjects) {
+    const refreshed = await provider.listProjects(cacheContext.listOptions);
+    if (Array.isArray(refreshed)) {
+      await writeProjectCache(cacheContext, refreshed);
+      cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+    }
+  } else if (forceRefresh && !provider.listProjects) {
+    console.warn('Project refresh requested, but this provider does not support project listing.');
+  }
+  const { match, candidates } = matchProjectByName(cached.items, projectName);
+  if (match) {
+    return match.id;
+  }
+  if (candidates.length > 1) {
+    const names = candidates.map((item) => item.name || item.id).join(', ');
+    throw new Error(`Project name "${projectName}" is ambiguous. Matches: ${names}`);
+  }
+  throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
+}
+
+async function resolveConversationByName({
+  conversationName,
+  cacheContext,
+  provider,
+  projectId,
+  forceRefresh,
+}: {
+  conversationName: string;
+  cacheContext: {
+    provider: 'chatgpt' | 'grok';
+    userConfig: UserConfig;
+    listOptions: {
+      configuredUrl: string | null;
+      includeHistory?: boolean;
+      historyLimit?: number;
+      port?: number;
+    };
+  };
+  provider: ReturnType<typeof getProvider>;
+  projectId?: string;
+  forceRefresh: boolean;
+}): Promise<{ id: string; title?: string; url?: string } | null> {
+  let cached = await readConversationCache(cacheContext);
+  if ((forceRefresh || cached.stale) && provider.listConversations) {
+    const listOptions = cacheContext.listOptions.configuredUrl?.includes('/project/') && !projectId
+      ? { ...cacheContext.listOptions, configuredUrl: null }
+      : cacheContext.listOptions;
+    const refreshed = await provider.listConversations(projectId, listOptions);
+    if (Array.isArray(refreshed)) {
+      await writeConversationCache({ ...cacheContext, listOptions }, refreshed);
+      cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+    }
+  } else if (forceRefresh && !provider.listConversations) {
+    console.warn('Conversation refresh requested, but this provider does not support listing conversations.');
+  }
+  const { match, candidates } = matchConversationByTitle(cached.items, conversationName);
+  if (match) {
+    return match;
+  }
+  if (candidates.length > 1) {
+    const names = candidates.map((item) => item.title || item.id).join(', ');
+    throw new Error(`Conversation name "${conversationName}" is ambiguous. Matches: ${names}`);
+  }
+  throw new Error(`No cached conversation named "${conversationName}". Run "oracle conversations" to refresh.`);
 }
 
 program
@@ -1438,6 +1586,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
 
   const getSource = (key: keyof CliOptions) => program.getOptionValueSource?.(key as string) ?? undefined;
   applyBrowserDefaultsFromConfig(options, userConfig, getSource);
+  await resolveBrowserNameHints(options, userConfig);
 
   const notifications = resolveNotificationSettings({
     cliNotify: options.notify,
