@@ -1,4 +1,5 @@
 import { mkdtemp, rm, mkdir } from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import net from 'node:net';
@@ -1707,6 +1708,20 @@ async function runGrokBrowserMode({
     }
     await Promise.all(domainEnablers);
     installJavaScriptDialogAutoDismissal(Page, logger);
+
+    if (!manualLogin) {
+      const cookieFile = findCookieFile(manualProfileDir);
+      if (cookieFile) {
+        logger(`Syncing cookies from manual login profile: ${cookieFile}`);
+        await syncCookies(Network, config.url, undefined, logger, {
+          cookiePath: cookieFile,
+          waitMs: 500, // Short wait to ensure file is readable
+        });
+      } else {
+        logger(`No manual login cookies found at ${manualProfileDir}; session may not persist.`);
+      }
+    }
+
     if (!headless && launchConfig.hideWindow) {
       await hideChromeWindow(chrome, logger);
     }
@@ -1989,4 +2004,19 @@ function buildThinkingStatusExpression(): string {
     }
     return null;
   })()`;
+}
+
+function findCookieFile(profileDir: string): string | null {
+  const candidates = [
+    path.join(profileDir, 'Default', 'Network', 'Cookies'),
+    path.join(profileDir, 'Default', 'Cookies'),
+    path.join(profileDir, 'Network', 'Cookies'),
+    path.join(profileDir, 'Cookies'),
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return null;
 }
