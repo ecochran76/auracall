@@ -1804,6 +1804,7 @@ async function runGrokBrowserMode({
       userDataDir,
       chromeTargetId: undefined,
       tabUrl: currentUrl,
+      conversationId: extractConversationIdFromUrl(currentUrl),
       controllerPid: chrome.process?.pid,
     };
   } catch (error) {
