@@ -1,4 +1,4 @@
-import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -7,10 +7,29 @@ import { setOracleHomeDirOverrideForTest } from '../src/oracleHome.js';
 
 describe('loadUserConfig', () => {
   let tempDir: string;
+  let previousUserConfigPath: string | undefined;
+  let previousSystemConfigPath: string | undefined;
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-config-'));
     setOracleHomeDirOverrideForTest(tempDir);
+    previousUserConfigPath = process.env.ORACLE_CONFIG_PATH;
+    previousSystemConfigPath = process.env.ORACLE_SYSTEM_CONFIG_PATH;
+    process.env.ORACLE_CONFIG_PATH = path.join(tempDir, 'config.json');
+    process.env.ORACLE_SYSTEM_CONFIG_PATH = path.join(tempDir, 'system.json');
+  });
+
+  afterEach(() => {
+    if (previousUserConfigPath === undefined) {
+      delete process.env.ORACLE_CONFIG_PATH;
+    } else {
+      process.env.ORACLE_CONFIG_PATH = previousUserConfigPath;
+    }
+    if (previousSystemConfigPath === undefined) {
+      delete process.env.ORACLE_SYSTEM_CONFIG_PATH;
+    } else {
+      process.env.ORACLE_SYSTEM_CONFIG_PATH = previousSystemConfigPath;
+    }
   });
 
   it('parses JSON5 config with comments', async () => {
@@ -26,7 +45,7 @@ describe('loadUserConfig', () => {
       'utf8',
     );
 
-    const result = await loadUserConfig();
+    const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
     expect(result.config.engine).toBe('browser');
     expect(result.config.notify?.sound).toBe(true);
@@ -46,14 +65,14 @@ describe('loadUserConfig', () => {
       'utf8',
     );
 
-    const result = await loadUserConfig();
+    const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
     expect(result.config.remoteHost).toBe('alias:9999');
     expect(result.config.remoteToken).toBe('secret');
   });
 
   it('returns empty config when file is missing', async () => {
-    const result = await loadUserConfig();
+    const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(false);
     expect(result.config).toEqual({});
   });
