@@ -4,7 +4,7 @@ import { formatUSD, formatNumber } from '../oracle/format.js';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { estimateUsdCost } from 'tokentally';
 import type { SessionMode, SessionMetadata } from '../sessionStore.js';
-import type { NotifyConfig } from '../config.js';
+import type { UserConfig } from '../config.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -36,7 +36,7 @@ export function resolveNotificationSettings(
     cliNotifySound,
     env,
     config,
-  }: { cliNotify?: boolean; cliNotifySound?: boolean; env: NodeJS.ProcessEnv; config?: NotifyConfig },
+  }: { cliNotify?: boolean; cliNotifySound?: boolean; env: NodeJS.ProcessEnv; config?: UserConfig['notify'] },
 ): NotificationSettings {
   const defaultEnabled = !(bool(env.CI) || bool(env.SSH_CONNECTION) || muteByConfig(env, config));
   const envNotify = parseToggle(env.ORACLE_NOTIFY);
@@ -51,7 +51,7 @@ export function resolveNotificationSettings(
 export function deriveNotificationSettingsFromMetadata(
   metadata: SessionMetadata | null,
   env: NodeJS.ProcessEnv,
-  config?: NotifyConfig,
+  config?: UserConfig['notify'],
 ): NotificationSettings {
   if (metadata?.notifications) {
     return metadata.notifications;
@@ -338,7 +338,7 @@ function macNativeNotifierPath(): string | null {
   return null;
 }
 
-function muteByConfig(env: NodeJS.ProcessEnv, config?: NotifyConfig): boolean {
+function muteByConfig(env: NodeJS.ProcessEnv, config?: UserConfig['notify']): boolean {
   if (!config?.muteIn) return false;
   return (
     (config.muteIn.includes('CI') && bool(env.CI)) ||

@@ -5,7 +5,7 @@ import * as configModule from '../../src/config.js';
 describe('Config Resolver', () => {
   it('should resolve default values when no config/cli provided', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
-      config: {},
+      config: {} as any,
       path: '/tmp/config.json',
       loaded: false
     });

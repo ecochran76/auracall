@@ -145,6 +145,7 @@ export const ConfigSchema = z.object({
   apiBaseUrl: z.string().optional(),
   sessionRetentionHours: z.number().optional(),
   background: z.boolean().optional(),
+  heartbeatSeconds: z.number().optional(),
   
   // Nested
   browser: BrowserConfigSchema.default({}),

@@ -14,7 +14,7 @@ export interface ResolveRunOptionsInput {
   model?: string;
   models?: string[];
   engine?: EngineMode;
-  userConfig?: UserConfig;
+  userConfig?: Partial<UserConfig>;
   env?: NodeJS.ProcessEnv;
 }
 

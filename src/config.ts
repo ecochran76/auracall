@@ -2,93 +2,9 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import JSON5 from 'json5';
 import { getOracleHomeDir } from './oracleHome.js';
-import type { BrowserModelStrategy } from './browser/types.js';
-import type { ThinkingTimeLevel } from './oracle/types.js';
+import { ConfigSchema, type OracleConfig } from './schema/types.js';
 
-export type EnginePreference = 'api' | 'browser';
-
-export interface NotifyConfig {
-  enabled?: boolean;
-  sound?: boolean;
-  muteIn?: Array<'CI' | 'SSH'>;
-}
-
-export interface BrowserConfigDefaults {
-  chromeProfile?: string | null;
-  chromePath?: string | null;
-  chromeCookiePath?: string | null;
-  target?: 'chatgpt' | 'gemini' | 'grok';
-  projectId?: string | null;
-  projectName?: string | null;
-  conversationId?: string | null;
-  conversationName?: string | null;
-  geminiUrl?: string | null;
-  grokUrl?: string | null;
-  chatgptUrl?: string | null;
-  url?: string;
-  list?: {
-    includeHistory?: boolean;
-    historyLimit?: number | null;
-    historySince?: string | null;
-    filter?: string | null;
-    refresh?: boolean;
-  };
-  cache?: {
-    refresh?: boolean;
-    includeHistory?: boolean;
-    historyLimit?: number | null;
-    historySince?: string | null;
-  };
-  sessionOpen?: {
-    openConversation?: boolean;
-    printUrl?: boolean;
-    browserPath?: string | null;
-    browserProfile?: string | null;
-  };
-  timeoutMs?: number;
-  debugPort?: number | null;
-  inputTimeoutMs?: number;
-  cookieSyncWaitMs?: number;
-  headless?: boolean;
-  hideWindow?: boolean;
-  keepBrowser?: boolean;
-  modelStrategy?: BrowserModelStrategy;
-  /** Thinking time intensity (ChatGPT Thinking/Pro models): 'light', 'standard', 'extended', 'heavy' */
-  thinkingTime?: ThinkingTimeLevel;
-  /** Skip cookie sync and reuse a persistent automation profile (waits for manual ChatGPT login). */
-  manualLogin?: boolean;
-  /** Manual-login profile directory override (also available via ORACLE_BROWSER_PROFILE_DIR). */
-  manualLoginProfileDir?: string | null;
-}
-
-export interface AzureConfig {
-  endpoint?: string;
-  deployment?: string;
-  apiVersion?: string;
-}
-
-export interface RemoteServiceConfig {
-  host?: string;
-  token?: string;
-}
-
-export interface UserConfig {
-  engine?: EnginePreference;
-  model?: string;
-  search?: 'on' | 'off';
-  notify?: NotifyConfig;
-  browser?: BrowserConfigDefaults;
-  heartbeatSeconds?: number;
-  filesReport?: boolean;
-  background?: boolean;
-  promptSuffix?: string;
-  apiBaseUrl?: string;
-  azure?: AzureConfig;
-  sessionRetentionHours?: number;
-  remote?: RemoteServiceConfig;
-  remoteHost?: string;
-  remoteToken?: string;
-}
+export type UserConfig = OracleConfig;
 
 function resolveUserConfigPath(): string {
   return process.env.ORACLE_CONFIG_PATH ?? path.join(getOracleHomeDir(), 'config.json');
@@ -149,7 +65,7 @@ export async function loadUserConfig(
   }
   projectConfigs.reverse();
   configs.push(...projectConfigs);
-  const merged = configs.reduce<UserConfig>((acc, next) => mergeConfig(acc, next.config), {});
+  const merged = configs.reduce<UserConfig>((acc, next) => mergeConfig(acc, next.config), {} as UserConfig);
   const loaded = configs.length > 0;
   return {
     config: merged,
@@ -169,8 +85,10 @@ export function configPath(): string {
 async function readConfigFile(configPath: string): Promise<{ path: string; config: UserConfig } | null> {
   try {
     const raw = await fs.readFile(configPath, 'utf8');
-    const parsed = JSON5.parse(raw) as UserConfig;
-    return { path: configPath, config: parsed ?? {} };
+    const parsed = JSON5.parse(raw);
+    // Note: We don't strict-validate here because config files are partial.
+    // Validation happens in resolver.ts after merge.
+    return { path: configPath, config: parsed as UserConfig };
   } catch (error) {
     const code = (error as { code?: string }).code;
     if (code === 'ENOENT') {
@@ -182,20 +100,20 @@ async function readConfigFile(configPath: string): Promise<{ path: string; confi
 }
 
 function mergeConfig(base: UserConfig, override: UserConfig): UserConfig {
-  const merged: UserConfig = { ...base };
+  const merged: any = { ...base };
   for (const [key, value] of Object.entries(override)) {
     if (value === undefined) continue;
-    const existing = (merged as Record<string, unknown>)[key];
+    const existing = merged[key];
     if (isPlainObject(existing) && isPlainObject(value)) {
-      (merged as Record<string, unknown>)[key] = mergeConfig(
+      merged[key] = mergeConfig(
         existing as UserConfig,
         value as UserConfig,
       );
     } else {
-      (merged as Record<string, unknown>)[key] = value;
+      merged[key] = value;
     }
   }
-  return merged;
+  return merged as UserConfig;
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

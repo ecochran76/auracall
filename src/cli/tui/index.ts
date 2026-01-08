@@ -322,7 +322,7 @@ interface WizardAnswers {
   mode?: SessionMode;
 }
 
-async function askOracleFlow(version: string, userConfig: UserConfig): Promise<void> {
+export async function askOracleFlow(version: string, userConfig: Partial<UserConfig> = {}): Promise<void> {
   const modelChoices = Object.keys(MODEL_CONFIGS) as ModelName[];
   const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
   const initialMode: SessionMode = hasApiKey ? 'api' : 'browser';
@@ -567,5 +567,5 @@ async function readStoredPrompt(sessionId: string): Promise<string | null> {
 }
 
 // Exported for testing
-export { askOracleFlow, showSessionDetail };
+export { showSessionDetail };
 export { resolveSessionCost as resolveCost } from '../sessionTable.js';

@@ -83,7 +83,7 @@ describe('askOracleFlow', () => {
     });
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
 
-    const config: UserConfig = {};
+    const config: Partial<UserConfig> = {};
     await tui.askOracleFlow('0.4.1', config);
 
     expect(logSpy).toHaveBeenCalledWith(expect.stringContaining('Cancelled'));
@@ -99,7 +99,7 @@ describe('askOracleFlow', () => {
       models: [],
     });
 
-    const config: UserConfig = {};
+    const config: Partial<UserConfig> = {};
     await tui.askOracleFlow('0.4.1', config);
 
     expect(ensureSessionStorageMock).toHaveBeenCalled();
@@ -121,7 +121,7 @@ describe('askOracleFlow', () => {
       files: [],
     });
 
-    const config: UserConfig = {};
+    const config: Partial<UserConfig> = {};
     await tui.askOracleFlow('0.4.1', config);
 
     const creationArgs = initializeSessionMock.mock.calls[0]?.[0] as RunOracleOptions & { models?: string[] };
