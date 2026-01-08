@@ -151,6 +151,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   } else {
     logger(`Created temporary Chrome profile at ${userDataDir}`);
   }
+  logger(`Browser profile selection: ${userDataDir}`);
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
   const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
@@ -1564,6 +1565,7 @@ async function runGrokBrowserMode({
   } else {
     logger(`Created temporary Chrome profile at ${userDataDir}`);
   }
+  logger(`Browser profile selection: ${userDataDir}`);
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
   const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
