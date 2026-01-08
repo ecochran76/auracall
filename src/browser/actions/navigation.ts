@@ -182,7 +182,7 @@ export async function ensureNotBlocked(Runtime: ChromeClient['Runtime'], headles
       logger('Cloudflare anti-bot page detected');
       throw new Error(message);
     }
-    logger('Cloudflare anti-bot page detected; waiting for the challenge to clear in the open browser.');
+    logger('Cloudflare anti-bot page detected; check the open browser window to complete the challenge.');
     const deadline = Date.now() + 10 * 60_000;
     let lastNotice = 0;
     while (Date.now() < deadline) {
