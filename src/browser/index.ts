@@ -1706,8 +1706,36 @@ async function runGrokBrowserMode({
       await hideChromeWindow(chrome, logger);
     }
 
-    await raceWithDisconnect(navigateToGrok(Page, Runtime, config.grokUrl ?? config.url, logger));
+    const grokTargetUrl = config.grokUrl ?? config.url;
+    await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
     await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
+    const projectLookup = await Runtime.evaluate({
+      expression: `(() => {
+        const text = (document.body?.innerText || '').toLowerCase();
+        const hasMissingProject = text.includes('issue finding id') || text.includes('link does not exist');
+        const homeLink = Array.from(document.querySelectorAll('a,button')).find((el) =>
+          (el.textContent || '').toLowerCase().includes('return home'),
+        );
+        return { hasMissingProject, canGoHome: Boolean(homeLink) };
+      })()`,
+      returnByValue: true,
+    });
+    if (projectLookup.result?.value?.hasMissingProject && projectLookup.result?.value?.canGoHome) {
+      logger('Grok project link not found; returning home to refresh session and retrying.');
+      await Runtime.evaluate({
+        expression: `(() => {
+          const homeLink = Array.from(document.querySelectorAll('a,button')).find((el) =>
+            (el.textContent || '').toLowerCase().includes('return home'),
+          );
+          if (!homeLink) return false;
+          homeLink.click();
+          return true;
+        })()`,
+        returnByValue: true,
+      });
+      await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
+      await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
+    }
     await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger));
     await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
 
