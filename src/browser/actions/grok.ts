@@ -27,30 +27,59 @@ export async function navigateToGrok(
   await waitForDocumentReady(Runtime, 45_000);
 }
 
-export async function ensureGrokLoggedIn(Runtime: ChromeClient['Runtime'], logger: BrowserLogger): Promise<void> {
-  const href = await readLocationHref(Runtime);
-  if (GROK_PROVIDER.loginUrlHints?.some((hint) => href.includes(hint))) {
+export async function ensureGrokLoggedIn(
+  Runtime: ChromeClient['Runtime'],
+  logger: BrowserLogger,
+  options: { headless: boolean; timeoutMs?: number } = { headless: false },
+): Promise<void> {
+  const checkLogin = async (): Promise<boolean> => {
+    const href = await readLocationHref(Runtime);
+    if (GROK_PROVIDER.loginUrlHints?.some((hint) => href.includes(hint))) {
+      return false;
+    }
+    const probe = await Runtime.evaluate({
+      expression: `(() => {
+        const text = (document.body?.innerText || '').toLowerCase();
+        const authPattern = /(sign in|log in|login|create account|sign up)/i;
+        const hasAuthCta = Array.from(document.querySelectorAll('a,button')).some((el) =>
+          authPattern.test((el.textContent || '').trim()),
+        );
+        const hasNotFound =
+          text.includes("link doesn't exist") ||
+          text.includes('link does not exist') ||
+          text.includes('page not found') ||
+          text.includes('issue finding id');
+        return { hasAuthCta, hasNotFound };
+      })()`,
+      returnByValue: true,
+    });
+    return !(probe.result?.value?.hasAuthCta || probe.result?.value?.hasNotFound);
+  };
+
+  if (await checkLogin()) {
+    logger('Login check passed');
+    return;
+  }
+
+  if (options.headless) {
     throw new Error('Grok login required; please sign in to accounts.x.ai and retry.');
   }
-  const probe = await Runtime.evaluate({
-    expression: `(() => {
-      const text = (document.body?.innerText || '').toLowerCase();
-      const authPattern = /(sign in|log in|login|create account|sign up)/i;
-      const hasAuthCta = Array.from(document.querySelectorAll('a,button')).some((el) =>
-        authPattern.test((el.textContent || '').trim()),
-      );
-      const hasNotFound =
-        text.includes("link doesn't exist") ||
-        text.includes('link does not exist') ||
-        text.includes('page not found');
-      return { hasAuthCta, hasNotFound };
-    })()`,
-    returnByValue: true,
-  });
-  if (probe.result?.value?.hasAuthCta || probe.result?.value?.hasNotFound) {
-    throw new Error('Grok login required; open the profile in a browser and sign in.');
+
+  const deadline = Date.now() + Math.min(options.timeoutMs ?? 1_200_000, 10 * 60_000);
+  let lastNotice = 0;
+  while (Date.now() < deadline) {
+    if (await checkLogin()) {
+      logger('Login check passed');
+      return;
+    }
+    const now = Date.now();
+    if (now - lastNotice > 5000) {
+      logger('Waiting for Grok login to complete in the open browser...');
+      lastNotice = now;
+    }
+    await delay(1000);
   }
-  logger('Login check passed');
+  throw new Error('Grok login required; timed out waiting for sign-in.');
 }
 
 export async function ensureGrokPromptReady(

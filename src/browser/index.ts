@@ -1736,7 +1736,7 @@ async function runGrokBrowserMode({
       await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
       await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
     }
-    await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger));
+    await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger, { headless, timeoutMs: config.timeoutMs }));
     await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
 
     if (config.desiredModel && config.modelStrategy !== 'ignore') {
