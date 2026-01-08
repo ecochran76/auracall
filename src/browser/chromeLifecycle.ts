@@ -43,6 +43,10 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
       ? [...chromeFlags, userDataDirFlag]
       : chromeFlags;
   const launcherUserDataDir = bypassUserDataDir ? false : userDataDir;
+  logger(
+    `[browser] chrome flags (${minimalFlags ? 'minimal' : 'default'}): ` +
+      `${effectiveChromeFlags.join(' ')}`,
+  );
   const usePatchedLauncher = Boolean(connectHost && connectHost !== '127.0.0.1');
   const launcher = usePatchedLauncher
     ? await launchWithCustomHost({
@@ -248,7 +252,7 @@ function buildChromeFlags(
     flags.push(`--profile-directory=${chromeProfile}`);
   }
 
-  if (process.platform !== 'win32' && !isWsl()) {
+  if (!options.minimal && process.platform !== 'win32' && !isWsl()) {
     flags.push('--password-store=basic');
     if (process.platform === 'darwin') {
       flags.push('--use-mock-keychain');

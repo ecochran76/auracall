@@ -1247,6 +1247,7 @@ program
     console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
     console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
     console.log(chalk.dim(`URL: ${url}`));
+    console.log(chalk.dim(`Args: ${args.join(' ')}`));
   });
 
 program
