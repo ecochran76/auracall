@@ -53,7 +53,11 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
       logger('Chrome binary not found; falling back to chrome-launcher.');
     } else {
       const launchPort = debugPort ?? (await findAvailablePort());
-      const args = [...effectiveChromeFlags, `--remote-debugging-port=${launchPort}`];
+      const args = [...effectiveChromeFlags];
+      if (!args.some((flag) => flag.startsWith('--user-data-dir='))) {
+        args.push(userDataDirFlag);
+      }
+      args.push(`--remote-debugging-port=${launchPort}`);
       logger(`[browser] spawn chrome: ${chromePath} ${args.join(' ')}`);
       const proc = spawn(chromePath, args, { detached: true, stdio: 'ignore' });
       const kill = async () => {
