@@ -1567,12 +1567,13 @@ async function runGrokBrowserMode({
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
   const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
+  let effectiveConfig = config;
   chrome =
     reusedChrome ??
     (await launchChrome(
       {
-        ...config,
-        remoteChrome: config.remoteChrome,
+        ...effectiveConfig,
+        remoteChrome: effectiveConfig.remoteChrome,
       },
       userDataDir,
       logger,
@@ -1584,6 +1585,48 @@ async function runGrokBrowserMode({
       await writeChromePid(userDataDir, chrome.pid);
     }
   }
+  const ensureDevToolsReady = async (): Promise<void> => {
+    if (!chrome?.port) {
+      throw new Error('Chrome DevTools port unavailable after launch.');
+    }
+    const probe = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
+    if (probe.ok) {
+      return;
+    }
+    const fallbackPort = await findEphemeralPort();
+    logger(
+      `DevTools port ${chrome.port} unreachable (${probe.error}); relaunching Chrome on ${fallbackPort}.`,
+    );
+    try {
+      await chrome.kill();
+    } catch {
+      // ignore cleanup errors
+    }
+    if (manualLogin) {
+      await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+    }
+    effectiveConfig = { ...effectiveConfig, debugPort: fallbackPort };
+    chrome = await launchChrome(
+      {
+        ...effectiveConfig,
+        remoteChrome: effectiveConfig.remoteChrome,
+      },
+      userDataDir,
+      logger,
+    );
+    chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
+    if (manualLogin && chrome.port) {
+      await writeDevToolsActivePort(userDataDir, chrome.port);
+      if (chrome.pid) {
+        await writeChromePid(userDataDir, chrome.pid);
+      }
+    }
+    const retryProbe = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
+    if (!retryProbe.ok) {
+      throw new Error(`DevTools port ${chrome.port} unreachable (${retryProbe.error}).`);
+    }
+  };
+  await ensureDevToolsReady();
 
   try {
     removeTerminationHooks = registerTerminationHooks(chrome, userDataDir, effectiveKeepBrowser, logger, {
@@ -1597,7 +1640,41 @@ async function runGrokBrowserMode({
 
   let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
   try {
-    client = await connectToChrome(chrome.port, logger, chromeHost);
+    try {
+      client = await connectToChrome(chrome.port, logger, chromeHost);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      const reachable = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 4, timeoutMs: 2000 });
+      if (reachable.ok) {
+        client = await connectToChrome(chrome.port, logger, chromeHost);
+      } else if (manualLogin) {
+        logger(`DevTools connection failed (${message}); clearing stale profile state and relaunching Chrome.`);
+        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+        try {
+          await chrome.kill();
+        } catch {
+          // ignore cleanup errors
+        }
+        chrome = await launchChrome(
+          {
+            ...config,
+            remoteChrome: config.remoteChrome,
+          },
+          userDataDir,
+          logger,
+        );
+        chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
+        if (chrome.port) {
+          await writeDevToolsActivePort(userDataDir, chrome.port);
+          if (chrome.pid) {
+            await writeChromePid(userDataDir, chrome.pid);
+          }
+        }
+        client = await connectToChrome(chrome.port, logger, chromeHost);
+      } else {
+        throw error;
+      }
+    }
     const disconnectPromise = new Promise<never>((_, reject) => {
       client?.on('disconnect', () => {
         connectionClosedUnexpectedly = true;

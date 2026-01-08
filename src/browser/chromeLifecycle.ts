@@ -12,6 +12,10 @@ import { cleanupStaleProfileState } from './profileState.js';
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
+  if (!config.headless && process.platform === 'linux' && !process.env.DISPLAY) {
+    process.env.DISPLAY = ':0.0';
+    logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
+  }
   const connectHost = resolveRemoteDebugHost();
   const debugBindAddress = connectHost && connectHost !== '127.0.0.1' ? '0.0.0.0' : connectHost;
   const debugPort = config.debugPort ?? parseDebugPortEnv();

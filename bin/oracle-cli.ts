@@ -1540,7 +1540,12 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   const configBrowserTarget = userConfig.browser?.target;
   const effectiveTarget = hasChatgptFlag ? 'chatgpt' : hasGeminiFlag ? 'gemini' : configBrowserTarget;
   if (effectiveTarget && !modelExplicit) {
-    options.model = effectiveTarget === 'gemini' ? 'gemini-3-pro' : 'gpt-5.2';
+    options.model =
+      effectiveTarget === 'gemini'
+        ? 'gemini-3-pro'
+        : effectiveTarget === 'grok'
+          ? 'grok-4.1'
+          : 'gpt-5.2';
     if (!engineExplicit) {
       engine = 'browser';
     }
