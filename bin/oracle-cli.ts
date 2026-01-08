@@ -627,15 +627,37 @@ program
         ? commandOptions.projectId.trim()
         : userConfig.browser?.projectId ?? undefined;
     const provider = getProvider(target);
+    const listDefaults = userConfig.browser?.list;
+    const includeHistory =
+      (command.getOptionValueSource?.('includeHistory') === 'cli')
+        ? Boolean(commandOptions.includeHistory)
+        : Boolean(listDefaults?.includeHistory ?? commandOptions.includeHistory);
+    const historyLimit =
+      (command.getOptionValueSource?.('historyLimit') === 'cli')
+        ? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined)
+        : listDefaults?.historyLimit ?? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined);
+    const historySince =
+      (command.getOptionValueSource?.('historySince') === 'cli')
+        ? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined)
+        : listDefaults?.historySince ?? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined);
+    const filterText =
+      (command.getOptionValueSource?.('filter') === 'cli')
+        ? commandOptions.filter
+        : listDefaults?.filter ?? commandOptions.filter;
+    const refreshFlag =
+      (command.getOptionValueSource?.('refresh') === 'cli')
+        ? Boolean(commandOptions.refresh)
+        : Boolean(listDefaults?.refresh ?? commandOptions.refresh);
     let listOptions = {
       port: resolveBrowserListPort(userConfig),
       configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
-      includeHistory: Boolean(commandOptions.includeHistory),
-      historyLimit: commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined,
-      historySince:
-        typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
-          ? commandOptions.historySince.trim()
-          : undefined,
+      includeHistory,
+      historyLimit,
+      historySince,
     };
     if (!projectId && listOptions.includeHistory && listOptions.configuredUrl?.includes('/project/')) {
       listOptions = { ...listOptions, configuredUrl: null };
@@ -653,7 +675,7 @@ program
         : typeof parentOptions.projectName === 'string'
           ? parentOptions.projectName.trim()
           : '';
-    const forceRefresh = Boolean(commandOptions.refresh);
+    const forceRefresh = refreshFlag;
     if (!projectId && projectName) {
       projectId = await resolveProjectIdByName({ projectName, cacheContext, provider, forceRefresh });
     }
@@ -690,7 +712,7 @@ program
       } catch (error) {
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
-      fallback = filterConversationsByQuery(fallback, commandOptions.filter);
+      fallback = filterConversationsByQuery(fallback, filterText);
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
@@ -709,7 +731,7 @@ program
         } catch (error) {
           console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
         }
-        const filtered = filterConversationsByQuery(fallback, commandOptions.filter);
+        const filtered = filterConversationsByQuery(fallback, filterText);
         console.log(JSON.stringify(filtered, null, 2));
         return;
       }
@@ -721,7 +743,7 @@ program
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    const filtered = filterConversationsByQuery(resolved, commandOptions.filter);
+    const filtered = filterConversationsByQuery(resolved, filterText);
     console.log(JSON.stringify(filtered, null, 2));
   });
 
@@ -733,7 +755,7 @@ program
   .option('--include-history', 'Include the History dialog results when refreshing conversations.')
   .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
-  .action(async (commandOptions) => {
+  .action(async (commandOptions, command) => {
     const providers = new Set(['chatgpt', 'grok']);
     const filter =
       typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
@@ -743,7 +765,28 @@ program
       throw new Error(`Invalid provider "${filter}". Use "chatgpt" or "grok".`);
     }
     const { config: userConfig } = await loadUserConfig();
-    if (commandOptions.refresh) {
+    const cacheDefaults = userConfig.browser?.cache;
+    const includeHistory =
+      (command.getOptionValueSource?.('includeHistory') === 'cli')
+        ? Boolean(commandOptions.includeHistory)
+        : Boolean(cacheDefaults?.includeHistory ?? commandOptions.includeHistory);
+    const historyLimit =
+      (command.getOptionValueSource?.('historyLimit') === 'cli')
+        ? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined)
+        : cacheDefaults?.historyLimit ?? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined);
+    const historySince =
+      (command.getOptionValueSource?.('historySince') === 'cli')
+        ? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined)
+        : cacheDefaults?.historySince ?? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined);
+    const refreshFlag =
+      (command.getOptionValueSource?.('refresh') === 'cli')
+        ? Boolean(commandOptions.refresh)
+        : Boolean(cacheDefaults?.refresh ?? commandOptions.refresh);
+    if (refreshFlag) {
       const target = (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
       if (!providers.has(target)) {
         throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
@@ -751,12 +794,9 @@ program
       const listOptions = {
         port: resolveBrowserListPort(userConfig),
         configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
-        includeHistory: Boolean(commandOptions.includeHistory),
-        historyLimit: commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined,
-        historySince:
-          typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
-            ? commandOptions.historySince.trim()
-            : undefined,
+        includeHistory,
+        historyLimit,
+        historySince,
       };
       if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
         throw new Error('history-limit must be a positive number.');
@@ -1227,7 +1267,8 @@ const sessionCommand = program
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId, _options: StatusOptions, cmd: Command) => {
-    await handleSessionCommand(sessionId, cmd);
+    const { config: userConfig } = await loadUserConfig();
+    await handleSessionCommand(sessionId, cmd, undefined, userConfig);
   });
 
 const statusCommand = program

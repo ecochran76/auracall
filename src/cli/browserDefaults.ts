@@ -9,7 +9,9 @@ export interface BrowserDefaultsOptions {
   geminiUrl?: string;
   grokUrl?: string;
   projectId?: string;
+  projectName?: string;
   conversationId?: string;
+  conversationName?: string;
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
@@ -66,8 +68,14 @@ export function applyBrowserDefaultsFromConfig(
   if (isUnset('projectId') && browser.projectId !== undefined) {
     options.projectId = browser.projectId ?? undefined;
   }
+  if (isUnset('projectName') && browser.projectName !== undefined) {
+    options.projectName = browser.projectName ?? undefined;
+  }
   if (isUnset('conversationId') && browser.conversationId !== undefined) {
     options.conversationId = browser.conversationId ?? undefined;
+  }
+  if (isUnset('conversationName') && browser.conversationName !== undefined) {
+    options.conversationName = browser.conversationName ?? undefined;
   }
   if (isUnset('browserUrl') && options.browserUrl === undefined && browser.url !== undefined) {
     options.browserUrl = browser.url;

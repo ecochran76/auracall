@@ -3,6 +3,7 @@ import type { Command, OptionValues } from 'commander';
 import { usesDefaultStatusFilters } from './options.js';
 import { attachSession, showStatus, type AttachSessionOptions, type ShowStatusOptions } from './sessionDisplay.js';
 import { sessionStore } from '../sessionStore.js';
+import type { UserConfig } from '../config.js';
 import { getProvider } from '../browser/providers/index.js';
 import { spawn } from 'node:child_process';
 
@@ -60,6 +61,7 @@ export async function handleSessionCommand(
   sessionId: string | undefined,
   command: Command,
   deps: SessionCommandDependencies = defaultDependencies,
+  userConfig?: UserConfig,
 ): Promise<void> {
   const sessionOptions = command.opts<StatusOptions>();
   if (sessionOptions.verboseRender) {
@@ -71,16 +73,26 @@ export async function handleSessionCommand(
   const autoRender = !renderExplicit && process.stdout.isTTY;
   const pathRequested = Boolean(sessionOptions.path);
   const clearRequested = Boolean(sessionOptions.clear || sessionOptions.clean);
-  const openConversationRequested = Boolean(sessionOptions.openConversation);
-  const printUrlRequested = Boolean(sessionOptions.printUrl);
+  const openConversationRequested =
+    (command.getOptionValueSource?.('openConversation') === 'cli')
+      ? Boolean(sessionOptions.openConversation)
+      : Boolean(userConfig?.browser?.sessionOpen?.openConversation ?? sessionOptions.openConversation);
+  const printUrlRequested =
+    (command.getOptionValueSource?.('printUrl') === 'cli')
+      ? Boolean(sessionOptions.printUrl)
+      : Boolean(userConfig?.browser?.sessionOpen?.printUrl ?? sessionOptions.printUrl);
   const browserPathOverride =
-    typeof sessionOptions.browserPath === 'string' && sessionOptions.browserPath.trim().length > 0
-      ? sessionOptions.browserPath.trim()
-      : null;
+    (command.getOptionValueSource?.('browserPath') === 'cli')
+      ? (typeof sessionOptions.browserPath === 'string' && sessionOptions.browserPath.trim().length > 0
+          ? sessionOptions.browserPath.trim()
+          : null)
+      : (userConfig?.browser?.sessionOpen?.browserPath ?? null);
   const browserProfileOverride =
-    typeof sessionOptions.browserProfile === 'string' && sessionOptions.browserProfile.trim().length > 0
-      ? sessionOptions.browserProfile.trim()
-      : null;
+    (command.getOptionValueSource?.('browserProfile') === 'cli')
+      ? (typeof sessionOptions.browserProfile === 'string' && sessionOptions.browserProfile.trim().length > 0
+          ? sessionOptions.browserProfile.trim()
+          : null)
+      : (userConfig?.browser?.sessionOpen?.browserProfile ?? null);
   if (clearRequested) {
     if (sessionId) {
       console.error('Cannot combine a session ID with --clear. Remove the ID to delete cached sessions.');

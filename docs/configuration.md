@@ -1,6 +1,6 @@
 # Local configuration (JSON5)
 
-Oracle reads an optional per-user config from `~/.oracle/config.json`. The file uses JSON5 parsing, so trailing commas and comments are allowed.
+Oracle reads layered config files (system → user → project tree). Files use JSON5 parsing, so trailing commas and comments are allowed.
 
 ## Example (`~/.oracle/config.json`)
 
@@ -23,7 +23,9 @@ Oracle reads an optional per-user config from `~/.oracle/config.json`. The file 
     chromePath: null,
     chromeCookiePath: null,
     projectId: null, // optional project scope for browser runs
+    projectName: null, // optional project name (resolved via cache)
     conversationId: null, // optional conversation scope for browser runs
+    conversationName: null, // optional conversation title (resolved via cache)
     geminiUrl: "https://gemini.google.com/app",
     grokUrl: "https://grok.com/",
     chatgptUrl: "https://chatgpt.com/", // root is fine; folder URLs also work
@@ -40,6 +42,25 @@ Oracle reads an optional per-user config from `~/.oracle/config.json`. The file 
     hideWindow: false,
     keepBrowser: false,
     manualLoginCookieSync: false, // allow cookie sync even in manual-login mode
+    list: {
+      includeHistory: false,
+      historyLimit: 200,
+      historySince: null,
+      filter: null,
+      refresh: false,
+    },
+    cache: {
+      refresh: false,
+      includeHistory: false,
+      historyLimit: 200,
+      historySince: null,
+    },
+    sessionOpen: {
+      openConversation: false,
+      printUrl: false,
+      browserPath: null,
+      browserProfile: null,
+    },
   },
 
   // Default target for `oracle serve` remote browser runs
@@ -64,11 +85,19 @@ Oracle reads an optional per-user config from `~/.oracle/config.json`. The file 
 }
 ```
 
-## Precedence
+## Layered config + precedence
 
-CLI flags → `config.json` → environment → built-in defaults.
+Config layers are merged in this order (later wins):
 
-- `engine`, `model`, `search`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in `config.json` override the auto-detected values unless explicitly set on the CLI.
+1. System config (`/etc/oracle/config.json` on Linux/macOS, `%ProgramData%\\oracle\\config.json` on Windows, or `ORACLE_SYSTEM_CONFIG_PATH`)
+2. User config (`~/.oracle/config.json` or `ORACLE_CONFIG_PATH`)
+3. Project configs found while walking up from the working directory:
+   - `./.oracle/config.json`
+   - `./oracle.config.json`
+
+Within each file, later CLI flags still override config, and environment variables continue to override defaults where documented.
+
+- `engine`, `model`, `search`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Oracle reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.
 - Remote browser defaults follow the same order: `--remote-host/--remote-token` win, then `remote.host` / `remote.token` (or `remoteHost` / `remoteToken`) in the config, then `ORACLE_REMOTE_HOST` / `ORACLE_REMOTE_TOKEN` if still unset.
 - `OPENAI_API_KEY` only influences engine selection when neither the CLI nor `config.json` specify an engine (API when present, otherwise browser).
@@ -77,7 +106,10 @@ CLI flags → `config.json` → environment → built-in defaults.
 - `browser.chatgptUrl` accepts either the root ChatGPT URL (`https://chatgpt.com/`) or a folder/workspace URL (e.g., `https://chatgpt.com/g/.../project`); `browser.url` remains as a legacy alias.
 - `browser.geminiUrl` overrides the Gemini web destination (e.g., a specific Gem URL).
 - `browser.grokUrl` overrides the Grok web destination (e.g., a project URL).
-- `browser.projectId` / `browser.conversationId` let you scope browser runs to a specific project or conversation without changing the default URL (conversation wins if both are set).
+- `browser.projectId` / `browser.projectName` / `browser.conversationId` / `browser.conversationName` let you scope browser runs to a specific project or conversation without changing the default URL (conversation wins if both are set).
+- `browser.list.*` sets defaults for `oracle conversations` (history + filter + refresh).
+- `browser.cache.*` sets defaults for `oracle cache --refresh`.
+- `browser.sessionOpen.*` sets defaults for `oracle session <id> --open-conversation` (URL printing and browser overrides).
 - `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`, `grok` uses `grok-4.1`.
 - Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir`, and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
 
