@@ -21,6 +21,7 @@ export interface StatusOptions extends OptionValues {
   openConversation?: boolean;
   printUrl?: boolean;
   browserPath?: string;
+  browserProfile?: string;
 }
 
 interface SessionCommandDependencies {
@@ -52,6 +53,7 @@ const SESSION_OPTION_KEYS = new Set([
   'openConversation',
   'printUrl',
   'browserPath',
+  'browserProfile',
 ]);
 
 export async function handleSessionCommand(
@@ -74,6 +76,10 @@ export async function handleSessionCommand(
   const browserPathOverride =
     typeof sessionOptions.browserPath === 'string' && sessionOptions.browserPath.trim().length > 0
       ? sessionOptions.browserPath.trim()
+      : null;
+  const browserProfileOverride =
+    typeof sessionOptions.browserProfile === 'string' && sessionOptions.browserProfile.trim().length > 0
+      ? sessionOptions.browserProfile.trim()
       : null;
   if (clearRequested) {
     if (sessionId) {
@@ -136,7 +142,7 @@ export async function handleSessionCommand(
       console.log(url);
       return;
     }
-    const opened = openConversationUrl(url, metadata, browserPathOverride);
+    const opened = openConversationUrl(url, metadata, browserPathOverride, browserProfileOverride);
     if (!opened) {
       console.log(url);
     }
@@ -204,9 +210,10 @@ function openConversationUrl(
     };
   },
   browserPathOverride: string | null,
+  browserProfileOverride: string | null,
 ): boolean {
   const chromePath = browserPathOverride ?? metadata.browser?.config?.chromePath ?? null;
-  const profileDir = metadata.browser?.config?.chromeProfile ?? 'Default';
+  const profileDir = browserProfileOverride ?? metadata.browser?.config?.chromeProfile ?? 'Default';
   const userDataDir =
     metadata.browser?.runtime?.userDataDir ?? metadata.browser?.config?.manualLoginProfileDir ?? null;
   if (chromePath) {
