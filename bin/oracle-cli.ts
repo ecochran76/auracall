@@ -26,7 +26,7 @@ import { sessionStore, pruneOldSessions } from '../src/sessionStore.js';
 import { DEFAULT_MODEL, MODEL_CONFIGS, runOracle, readFiles, estimateRequestTokens, buildRequestBody } from '../src/oracle.js';
 import { isKnownModel } from '../src/oracle/modelResolver.js';
 import type { ModelName, PreviewMode, RunOracleOptions } from '../src/oracle.js';
-import { CHATGPT_URL, normalizeChatgptUrl } from '../src/browserMode.js';
+import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, normalizeChatgptUrl } from '../src/browserMode.js';
 import { GROK_URL } from '../src/browser/constants.js';
 import { createRemoteBrowserExecutor } from '../src/remote/client.js';
 import { createGeminiWebExecutor } from '../src/gemini-web/index.js';
@@ -443,16 +443,22 @@ program
   .addOption(new Option('--browser-headless', 'Launch Chrome in headless mode.').hideHelp())
   .addOption(new Option('--browser-hide-window', 'Hide the Chrome window after launch (macOS headful only).').hideHelp())
   .addOption(new Option('--browser-keep-browser', 'Keep Chrome running after completion.').hideHelp())
-  .addOption(
-    new Option(
-      '--browser-model-strategy <mode>',
-      'ChatGPT model picker strategy: select (default) switches to the requested model, current keeps the active model, ignore skips the picker entirely.',
-    ).choices(['select', 'current', 'ignore']),
+  .option(
+    '--browser-model-strategy <strategy>',
+    'Strategy for selecting the model in the browser (select | current | ignore).',
+    DEFAULT_MODEL_STRATEGY,
   )
   .addOption(
-    new Option('--browser-thinking-time <level>', 'Thinking time intensity for Thinking/Pro models: light, standard, extended, heavy.')
-      .choices(['light', 'standard', 'extended', 'heavy'])
-      .hideHelp(),
+    new Option(
+      '--browser-model-label <label>',
+      'Fuzzy label for selecting a model from the browser UI picker (ChatGPT/Grok). Defaults to the --model label.',
+    ).hideHelp(),
+  )
+  .addOption(
+    new Option(
+      '--browser-thinking-time <level>',
+      "ChatGPT 'thinking' time level (light | standard | extended | heavy).",
+    ).hideHelp(),
   )
   .addOption(
     new Option('--browser-allow-cookie-errors', 'Continue even if Chrome cookies cannot be copied.').hideHelp(),
@@ -1827,8 +1833,8 @@ async function runRootCommand(options: CliOptions): Promise<void> {
 
   const sessionMode: SessionMode = engine === 'browser' ? 'browser' : 'api';
   const browserModelLabelOverride =
-    sessionMode === 'browser' && !resolvedModel.startsWith('grok')
-      ? resolveBrowserModelLabel(cliModelArg, resolvedModel)
+    sessionMode === 'browser'
+      ? resolveBrowserModelLabel(options.browserModelLabel ?? cliModelArg, resolvedModel)
       : undefined;
   const browserConfig =
     sessionMode === 'browser'
