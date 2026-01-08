@@ -79,7 +79,6 @@ import {
   type NotificationSettings,
 } from '../src/cli/notifier.js';
 import { loadUserConfig, type UserConfig } from '../src/config.js';
-import { applyBrowserDefaultsFromConfig } from '../src/cli/browserDefaults.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -101,6 +100,8 @@ import {
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
+import { diagnoseProvider } from '../src/inspector/doctor.js';
+import { resolveConfig } from '../src/schema/resolver.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -632,11 +633,12 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    let projectId =
-      typeof commandOptions.projectId === 'string' && commandOptions.projectId.trim().length > 0
-        ? commandOptions.projectId.trim()
-        : userConfig.browser?.projectId ?? undefined;
     const provider = getProvider(target);
+    let projectId =
+      (commandOptions.projectId?.trim() ||
+       parentOptions.projectId?.trim() ||
+       userConfig.browser?.projectId ||
+       undefined);
     const listDefaults = userConfig.browser?.list;
     const includeHistory =
       (command.getOptionValueSource?.('includeHistory') === 'cli')
@@ -879,6 +881,73 @@ program
       }
     }
     console.log(JSON.stringify(output, null, 2));
+  });
+
+program
+  .command('doctor')
+  .description('Verify that the browser UI matches the expected selectors.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to inspect (chatgpt or grok).')
+  .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
+  .action(async (commandOptions) => {
+    const { config: userConfig } = await loadUserConfig();
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const provider = getProvider(target);
+    const port = resolveBrowserListPort(userConfig);
+    if (!port) {
+      console.error('No DevTools port configured. Ensure ORACLE_BROWSER_PORT is set or browser.debugPort is in config.');
+      process.exit(1);
+    }
+    console.log(`Connecting to ${target} via port ${port}...`);
+    try {
+      const client = await CDP({ port });
+      await Promise.all([client.Runtime.enable(), client.DOM.enable()]);
+      
+      // If forced snapshot is requested, pass cwd even if checks pass? 
+      // diagnoseProvider only snapshots on failure if basePath is provided.
+      // We can hack it by passing basePath always, but checking return.
+      const report = await diagnoseProvider(client, provider.config, process.cwd());
+      
+      console.log(`\nDiagnosis for ${report.url}:`);
+      const tableData = report.checks.map((c) => ({
+        Component: c.name,
+        Status: c.matched ? '✅ PASS' : '❌ FAIL',
+        Matches: c.matchCount,
+        Selector: c.matchedSelector || c.selectors[0],
+      }));
+      
+      if (process.stdout.isTTY) {
+        console.table(tableData);
+      } else {
+        console.log(JSON.stringify(tableData, null, 2));
+      }
+
+      if (!report.allPassed && report.snapshotPath) {
+        console.log(`\nSnapshot saved to: ${report.snapshotPath}`);
+      } else if (commandOptions.saveSnapshot) {
+         const { CRAWLER_SCRIPT } = await import('../src/inspector/crawler.js');
+         const { result } = await client.Runtime.evaluate({
+           expression: CRAWLER_SCRIPT,
+           returnByValue: true
+         });
+         if (result.value) {
+           const dumpPath = path.join(process.cwd(), `oracle-snapshot-${target}-${Date.now()}.json`);
+           await fs.writeFile(dumpPath, JSON.stringify(result.value, null, 2));
+           console.log(`\nSnapshot saved to: ${dumpPath}`);
+         }
+      }
+      
+      await client.close();
+      if (!report.allPassed) {
+        console.error('\nSome selectors failed to match. The UI structure may have changed.');
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`Failed to connect or diagnose: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
   });
 
 async function refreshProviderCache(
@@ -1453,20 +1522,20 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     await launchTui({ version: VERSION, printIntro: false });
     return;
   }
-  const userConfig = (await loadUserConfig()).config;
+  const config = await resolveConfig(options, process.cwd(), process.env);
+  const userConfig = config; // Keep reference for existing code usage
+
   const helpRequested = rawCliArgs.some((arg: string) => arg === '--help' || arg === '-h');
   const multiModelProvided = Array.isArray(options.models) && options.models.length > 0;
-  if (multiModelProvided) {
-    const modelFromConfigOrCli = normalizeModelOption(options.model ?? userConfig.model ?? '');
-    if (modelFromConfigOrCli) {
-      throw new Error('--models cannot be combined with --model.');
-    }
-  }
+  
   const optionUsesDefault = (name: string): boolean => {
-    // Commander reports undefined for untouched options, so treat undefined/default the same
     const source = program.getOptionValueSource?.(name);
     return source == null || source === 'default';
   };
+
+  const userForcedBrowser = options.browser || options.engine === 'browser';
+  const cliModelArg = normalizeModelOption(options.model);
+
   if (helpRequested) {
     if (options.verbose) {
       console.log('');
@@ -1536,57 +1605,12 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     throw new Error('--dry-run cannot be combined with --render-markdown.');
   }
 
-  const preferredEngine = options.engine ?? userConfig.engine;
-  let engine: EngineMode = resolveEngine({ engine: preferredEngine, browserFlag: options.browser, env: process.env });
+  let engine = config.engine || 'api';
+  const resolvedModel = config.model;
+  const resolvedBaseUrl = config.apiBaseUrl;
+  
   if (options.browser) {
     console.log(chalk.yellow('`--browser` is deprecated; use `--engine browser` instead.'));
-  }
-  if (optionUsesDefault('model') && userConfig.model) {
-    options.model = userConfig.model;
-  }
-  const hasChatgptFlag = options.chatgpt === true;
-  const hasGeminiFlag = options.gemini === true;
-  if (hasChatgptFlag && hasGeminiFlag) {
-    throw new Error('--chatgpt cannot be combined with --gemini.');
-  }
-  if ((hasChatgptFlag || hasGeminiFlag) && multiModelProvided) {
-    throw new Error('--chatgpt/--gemini cannot be combined with --models.');
-  }
-  const modelExplicit = !optionUsesDefault('model');
-  if ((hasChatgptFlag || hasGeminiFlag) && modelExplicit) {
-    throw new Error('--chatgpt/--gemini cannot be combined with --model.');
-  }
-  const engineExplicit = !optionUsesDefault('engine');
-  if ((hasChatgptFlag || hasGeminiFlag) && engineExplicit && options.engine !== 'browser') {
-    throw new Error('--chatgpt/--gemini requires --engine browser.');
-  }
-  const configBrowserTarget = userConfig.browser?.target;
-  const effectiveTarget = hasChatgptFlag ? 'chatgpt' : hasGeminiFlag ? 'gemini' : configBrowserTarget;
-  if (effectiveTarget && !modelExplicit) {
-    options.model =
-      effectiveTarget === 'gemini'
-        ? 'gemini-3-pro'
-        : effectiveTarget === 'grok'
-          ? 'grok-4.1'
-          : 'gpt-5.2';
-    if (!engineExplicit) {
-      engine = 'browser';
-    }
-  }
-  if (optionUsesDefault('search') && userConfig.search) {
-    options.search = userConfig.search === 'on';
-  }
-  if (optionUsesDefault('filesReport') && userConfig.filesReport != null) {
-    options.filesReport = Boolean(userConfig.filesReport);
-  }
-  if (optionUsesDefault('geminiUrl') && userConfig.browser?.geminiUrl) {
-    options.geminiUrl = userConfig.browser.geminiUrl ?? undefined;
-  }
-  if (optionUsesDefault('heartbeat') && typeof userConfig.heartbeatSeconds === 'number') {
-    options.heartbeat = userConfig.heartbeatSeconds;
-  }
-  if (optionUsesDefault('baseUrl') && userConfig.apiBaseUrl) {
-    options.baseUrl = userConfig.apiBaseUrl;
   }
 
   if (remoteHost && engine !== 'browser') {
@@ -1596,80 +1620,16 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     throw new Error('--remote-host cannot be combined with --remote-chrome.');
   }
 
-  if (optionUsesDefault('azureEndpoint')) {
-    if (process.env.AZURE_OPENAI_ENDPOINT) {
-      options.azureEndpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    } else if (userConfig.azure?.endpoint) {
-      options.azureEndpoint = userConfig.azure.endpoint;
-    }
-  }
-  if (optionUsesDefault('azureDeployment')) {
-    if (process.env.AZURE_OPENAI_DEPLOYMENT) {
-      options.azureDeployment = process.env.AZURE_OPENAI_DEPLOYMENT;
-    } else if (userConfig.azure?.deployment) {
-      options.azureDeployment = userConfig.azure.deployment;
-    }
-  }
-  if (optionUsesDefault('azureApiVersion')) {
-    if (process.env.AZURE_OPENAI_API_VERSION) {
-      options.azureApiVersion = process.env.AZURE_OPENAI_API_VERSION;
-    } else if (userConfig.azure?.apiVersion) {
-      options.azureApiVersion = userConfig.azure.apiVersion;
-    }
-  }
-
   const normalizedMultiModels: ModelName[] = multiModelProvided
     ? Array.from(new Set(options.models!.map((entry) => resolveApiModel(entry))))
     : [];
-  const cliModelArg = normalizeModelOption(options.model) || (multiModelProvided ? '' : DEFAULT_MODEL);
-  const resolvedModelCandidate: ModelName = multiModelProvided
-    ? normalizedMultiModels[0]
-    : engine === 'browser'
-      ? inferModelFromLabel(cliModelArg || DEFAULT_MODEL)
-      : resolveApiModel(cliModelArg || DEFAULT_MODEL);
-  const primaryModelCandidate = normalizedMultiModels[0] ?? resolvedModelCandidate;
-  const isGemini = primaryModelCandidate.startsWith('gemini');
-  const isGrok = primaryModelCandidate.startsWith('grok');
-  const isCodex = primaryModelCandidate.startsWith('gpt-5.1-codex');
-  const isClaude = primaryModelCandidate.startsWith('claude');
-  const userForcedBrowser = options.browser || options.engine === 'browser';
-  const isBrowserCompatible = (model: string) =>
-    model.startsWith('gpt-') || model.startsWith('gemini') || model.startsWith('grok');
-  const hasNonBrowserCompatibleTarget =
-    (engine === 'browser' || userForcedBrowser) &&
-    (normalizedMultiModels.length > 0
-      ? normalizedMultiModels.some((model) => !isBrowserCompatible(model))
-      : !isBrowserCompatible(resolvedModelCandidate));
-  if (hasNonBrowserCompatibleTarget) {
-    throw new Error(
-      'Browser engine only supports GPT, Gemini, and Grok models. Re-run with --engine api for Claude or other models.'
-    );
-  }
-  if (isClaude && engine === 'browser') {
-    console.log(chalk.dim('Browser engine is not supported for Claude models; switching to API.'));
-    engine = 'api';
-  }
-  if (isCodex && engine === 'browser') {
-    console.log(chalk.dim('Browser engine is not supported for gpt-5.1-codex; switching to API.'));
-    engine = 'api';
-  }
-  if (normalizedMultiModels.length > 0) {
-    engine = 'api';
-  }
-  if (remoteHost && normalizedMultiModels.length > 0) {
-    throw new Error('--remote-host does not support --models yet. Use API engine locally instead.');
-  }
-  const resolvedModel: ModelName =
-    normalizedMultiModels[0] ?? (isGemini ? resolveApiModel(cliModelArg) : resolvedModelCandidate);
+
   const effectiveModelId = resolvedModel.startsWith('gemini')
     ? resolveGeminiModelId(resolvedModel)
     : isKnownModel(resolvedModel)
       ? MODEL_CONFIGS[resolvedModel].apiModel ?? resolvedModel
       : resolvedModel;
-  const resolvedBaseUrl = normalizeBaseUrl(
-    options.baseUrl ??
-      (isClaude ? process.env.ANTHROPIC_BASE_URL : isGrok ? process.env.XAI_BASE_URL : process.env.OPENAI_BASE_URL),
-  );
+  
   const { models: _rawModels, ...optionsWithoutModels } = options;
   const resolvedOptions: ResolvedCliOptions = { ...optionsWithoutModels, model: resolvedModel };
   if (normalizedMultiModels.length > 0) {
@@ -1680,8 +1640,6 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   resolvedOptions.writeOutputPath = resolveOutputPath(options.writeOutput, process.cwd());
 
   // Decide whether to block until completion:
-  // - explicit --wait / --no-wait wins
-  // - otherwise block for fast models (gpt-5.1, browser) and detach by default for pro API runs
   let waitPreference = resolveWaitFlag({
     waitFlag: options.wait,
     noWaitFlag: options.noWait,
@@ -1829,8 +1787,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   }
 
   const getSource = (key: keyof CliOptions) => program.getOptionValueSource?.(key as string) ?? undefined;
-  applyBrowserDefaultsFromConfig(options, userConfig, getSource);
-  await resolveBrowserNameHints(options, userConfig);
+  await resolveBrowserNameHints(options, userConfig as any);
 
   const notifications = resolveNotificationSettings({
     cliNotify: options.notify,
@@ -1842,7 +1799,9 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   const sessionMode: SessionMode = engine === 'browser' ? 'browser' : 'api';
   const browserModelLabelOverride =
     sessionMode === 'browser'
-      ? resolveBrowserModelLabel(options.browserModelLabel ?? cliModelArg, resolvedModel)
+      ? (options.browserModelLabel || !resolvedModel.startsWith('grok')
+          ? resolveBrowserModelLabel(options.browserModelLabel ?? cliModelArg, resolvedModel)
+          : undefined)
       : undefined;
   const browserConfig =
     sessionMode === 'browser'

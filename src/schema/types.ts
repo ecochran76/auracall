@@ -1,14 +1,11 @@
 import { z } from 'zod';
+import { parseDuration } from '../browser/utils.js';
 
-// Helper for loose duration parsing (string "1h" or number ms)
+// Helper for duration parsing (string "1h" or number ms)
 const DurationMs = z.union([z.number(), z.string()])
   .transform((val) => {
     if (typeof val === 'number') return val;
-    // We'll rely on a runtime helper for actual parsing if z.string is passed, 
-    // or we can implement a simple parser here.
-    // For schema definition, keeping it as union is fine, but result should be number or undefined.
-    // The actual parser logic in oracle uses `parseDuration` utility.
-    return val; 
+    return parseDuration(val, 0);
   });
 
 export const NotifyConfigSchema = z.object({
@@ -110,13 +107,19 @@ export const ConfigSchema = z.object({
   engine: z.enum(['api', 'browser']).optional(),
   model: z.string().default('gpt-5.2-pro'),
   prompt: z.string().optional(),
+  promptSuffix: z.string().optional(),
   
   // Files
   file: z.array(z.string()).optional(),
   filesReport: z.boolean().optional(),
   
   // Search
-  search: z.enum(['on', 'off']).optional().or(z.boolean().optional()),
+  search: z.union([z.enum(['on', 'off']), z.boolean()])
+    .transform((val) => {
+      if (typeof val === 'boolean') return val ? 'on' : 'off';
+      return val;
+    })
+    .optional(),
   
   // Output
   writeOutput: z.string().optional(), // overwrite
@@ -133,10 +136,15 @@ export const ConfigSchema = z.object({
   
   // Remote
   remote: RemoteServiceConfigSchema.optional(),
+  remoteHost: z.string().optional(),
+  remoteToken: z.string().optional(),
   
   // Misc
   verbose: z.boolean().optional(),
   timeout: DurationMs.optional(), // CLI --timeout
+  apiBaseUrl: z.string().optional(),
+  sessionRetentionHours: z.number().optional(),
+  background: z.boolean().optional(),
   
   // Nested
   browser: BrowserConfigSchema.default({}),
