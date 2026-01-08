@@ -1080,6 +1080,9 @@ async function resolveConversationByName({
 program
   .command('login')
   .description('Launch the configured browser profile for ChatGPT, Gemini, or Grok sign-in.')
+  .option('--chatgpt', 'Alias for --target chatgpt.')
+  .option('--gemini', 'Alias for --target gemini.')
+  .option('--grok', 'Alias for --target grok.')
   .option('--target <chatgpt|gemini|grok>', 'Choose which site to open (chatgpt, gemini, or grok).')
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
   .option('--gemini-url <url>', 'Override the Gemini URL for login.')
@@ -1091,7 +1094,12 @@ program
   .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+    const explicitTarget = commandOptions.target;
+    const aliasTarget = commandOptions.grok ? 'grok' : commandOptions.gemini ? 'gemini' : commandOptions.chatgpt ? 'chatgpt' : undefined;
+    if (explicitTarget && aliasTarget && explicitTarget !== aliasTarget) {
+      throw new Error('Do not combine --target with --chatgpt/--gemini/--grok.');
+    }
+    const target = (explicitTarget ?? aliasTarget ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
     if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
       throw new Error(`Invalid login target "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
