@@ -51,6 +51,7 @@ import { BrowserAutomationError } from '../oracle/errors.js';
 import { alignPromptEchoPair, buildPromptEchoMatcher } from './reattachHelpers.js';
 import {
   cleanupStaleProfileState,
+  isProcessAlive,
   readChromePid,
   readDevToolsPort,
   shouldCleanupManualLoginProfileState,
@@ -818,7 +819,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     if (!effectiveKeepBrowser) {
       if (!connectionClosedUnexpectedly) {
         try {
-          await chrome.kill();
+          if (manualLogin) {
+            await gracefulShutdownChrome(chrome, client ?? null, logger);
+          } else {
+            await chrome.kill();
+          }
         } catch {
           // ignore kill failures
         }
@@ -1795,7 +1800,11 @@ async function runGrokBrowserMode({
   } finally {
     if (!effectiveKeepBrowser && chrome) {
       try {
-        await chrome.kill();
+        if (manualLogin) {
+          await gracefulShutdownChrome(chrome, client ?? null, logger);
+        } else {
+          await chrome.kill();
+        }
       } catch {
         // ignore
       }
@@ -1841,6 +1850,43 @@ function sanitizeThinkingText(raw: string): string {
     return trimmed.replace(prefixPattern, '').trim();
   }
   return trimmed;
+}
+
+async function gracefulShutdownChrome(
+  chrome: LaunchedChrome,
+  client: Awaited<ReturnType<typeof connectToChrome>> | null,
+  logger: BrowserLogger,
+): Promise<void> {
+  let requested = false;
+  if (client?.Browser?.close) {
+    try {
+      await client.Browser.close();
+      requested = true;
+      logger('Requested Chrome shutdown via DevTools.');
+    } catch {
+      // ignore and fall back
+    }
+  }
+  if (!requested && chrome.process?.pid) {
+    try {
+      chrome.process.kill('SIGTERM');
+      requested = true;
+      logger(`Requested Chrome shutdown via SIGTERM (pid ${chrome.process.pid}).`);
+    } catch {
+      // ignore
+    }
+  }
+  if (requested && chrome.process?.pid) {
+    const pid = chrome.process.pid;
+    const deadline = Date.now() + 3000;
+    while (Date.now() < deadline) {
+      if (!isProcessAlive(pid)) {
+        return;
+      }
+      await delay(100);
+    }
+  }
+  await chrome.kill();
 }
 
 function describeDevtoolsFirewallHint(host: string, port: number): string | null {
