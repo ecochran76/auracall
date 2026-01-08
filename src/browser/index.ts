@@ -221,8 +221,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         }
         chrome = await launchChrome(
           {
-            ...config,
-            remoteChrome: config.remoteChrome,
+            ...effectiveConfig,
+            remoteChrome: effectiveConfig.remoteChrome,
           },
           userDataDir,
           logger,
@@ -1552,7 +1552,15 @@ async function runGrokBrowserMode({
   let connectionClosedUnexpectedly = false;
   let removeTerminationHooks: (() => void) | null = null;
   const startedAt = Date.now();
-  const manualLogin = Boolean(config.manualLogin);
+  const launchConfig = config.headless
+    ? { ...config, headless: false }
+    : config;
+  const headless = Boolean(launchConfig.headless);
+  if (config.headless) {
+    logger('Grok requires a visible browser; overriding headless=false.');
+  }
+  logger(`[browser] launch mode: headless=${headless} display=${process.env.DISPLAY ?? '(unset)'}`);
+  const manualLogin = Boolean(launchConfig.manualLogin);
   const manualProfileDir = config.manualLoginProfileDir
     ? path.resolve(config.manualLoginProfileDir)
     : path.join(os.homedir(), '.oracle', 'browser-profile');
@@ -1567,9 +1575,9 @@ async function runGrokBrowserMode({
   }
   logger(`Browser profile selection: ${userDataDir}`);
 
-  const effectiveKeepBrowser = Boolean(config.keepBrowser);
+  const effectiveKeepBrowser = Boolean(launchConfig.keepBrowser);
   const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
-  let effectiveConfig = config;
+  let effectiveConfig = launchConfig;
   chrome =
     reusedChrome ??
     (await launchChrome(
@@ -1694,12 +1702,12 @@ async function runGrokBrowserMode({
     }
     await Promise.all(domainEnablers);
     installJavaScriptDialogAutoDismissal(Page, logger);
-    if (!config.headless && config.hideWindow) {
+    if (!headless && launchConfig.hideWindow) {
       await hideChromeWindow(chrome, logger);
     }
 
     await raceWithDisconnect(navigateToGrok(Page, Runtime, config.grokUrl ?? config.url, logger));
-    await raceWithDisconnect(ensureNotBlocked(Runtime, config.headless, logger));
+    await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
     await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger));
     await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));
 
