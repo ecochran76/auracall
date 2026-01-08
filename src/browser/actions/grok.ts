@@ -32,6 +32,24 @@ export async function ensureGrokLoggedIn(Runtime: ChromeClient['Runtime'], logge
   if (GROK_PROVIDER.loginUrlHints?.some((hint) => href.includes(hint))) {
     throw new Error('Grok login required; please sign in to accounts.x.ai and retry.');
   }
+  const probe = await Runtime.evaluate({
+    expression: `(() => {
+      const text = (document.body?.innerText || '').toLowerCase();
+      const authPattern = /(sign in|log in|login|create account|sign up)/i;
+      const hasAuthCta = Array.from(document.querySelectorAll('a,button')).some((el) =>
+        authPattern.test((el.textContent || '').trim()),
+      );
+      const hasNotFound =
+        text.includes("link doesn't exist") ||
+        text.includes('link does not exist') ||
+        text.includes('page not found');
+      return { hasAuthCta, hasNotFound };
+    })()`,
+    returnByValue: true,
+  });
+  if (probe.result?.value?.hasAuthCta || probe.result?.value?.hasNotFound) {
+    throw new Error('Grok login required; open the profile in a browser and sign in.');
+  }
   logger('Login check passed');
 }
 
