@@ -73,9 +73,15 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
         }
       };
       return Object.assign(
-        { pid: proc.pid ?? undefined, port: launchPort, process: proc, kill },
+        {
+          pid: proc.pid ?? undefined,
+          port: launchPort,
+          process: proc,
+          kill,
+          remoteDebuggingPipes: undefined,
+        },
         { host: connectHost ?? '127.0.0.1' },
-      ) as LaunchedChrome & { host?: string };
+      ) as unknown as LaunchedChrome & { host?: string };
     }
   }
   const usePatchedLauncher = Boolean(connectHost && connectHost !== '127.0.0.1');
