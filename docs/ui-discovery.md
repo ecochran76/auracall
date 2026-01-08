@@ -78,9 +78,21 @@ Modern UIs (like Grok's history) often use virtualized lists (e.g., `cmdk`).
 - **Issue:** `querySelectorAll` only finds visible items.
 - **Solution:** You may need to scroll the container or trigger specific "Show All" actions to load the full dataset.
 
-## Developing Reusable Tools
+## The Inspector Tool (`scripts/inspector.ts`)
 
-For future agentic projects, consider extracting `browser-tools.ts` logic into a standalone "Inspector Agent" that can:
-1.  **Snapshot:** Capture the accessibility tree or simplified DOM.
-2.  **Propose:** Suggest selectors for a described UI element ("Find the send button").
-3.  **Verify:** Test if a selector matches exactly one visible element.
+For more advanced discovery, we have started a dedicated "Inspector" toolset located in `src/inspector`.
+
+**Usage:**
+```bash
+# Dump a semantic JSON snapshot of the current page
+pnpm tsx scripts/inspector.ts
+
+# Highlight an element (draws a purple overlay in the browser)
+pnpm tsx scripts/inspector.ts --highlight 'button[aria-label="Submit"]'
+```
+
+**Architecture:**
+- **Crawler:** `src/inspector/crawler.ts` injects a script to traverse the DOM and extract a simplified "Semantic Tree" (filtering out noise, focusing on interactive elements).
+- **Highlight:** `src/inspector/highlight.ts` uses CDP `DOM.highlightNode` to visually verify selectors.
+
+This tool is the foundation for a future "Inspector Agent" that can autonomously explore the UI.
