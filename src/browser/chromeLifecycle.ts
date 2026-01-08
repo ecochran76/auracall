@@ -26,10 +26,16 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
       }
     }
   }
+  const minimalFlags = Boolean(config.manualLogin);
   const connectHost = resolveRemoteDebugHost();
   const debugBindAddress = connectHost && connectHost !== '127.0.0.1' ? '0.0.0.0' : connectHost;
   const debugPort = config.debugPort ?? parseDebugPortEnv();
-  const chromeFlags = buildChromeFlags(config.headless ?? false, debugBindAddress, config.chromeProfile ?? undefined);
+  const chromeFlags = buildChromeFlags(
+    config.headless ?? false,
+    debugBindAddress,
+    config.chromeProfile ?? undefined,
+    { minimal: minimalFlags },
+  );
   const bypassUserDataDir = shouldBypassLauncherUserDataDir(config.chromePath ?? undefined);
   const userDataDirFlag = `--user-data-dir=${resolveUserDataDirFlag(userDataDir, config.chromePath ?? undefined)}`;
   const effectiveChromeFlags =
@@ -45,6 +51,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
         userDataDir: launcherUserDataDir,
         host: connectHost ?? '127.0.0.1',
         requestedPort: debugPort ?? undefined,
+        ignoreDefaultFlags: minimalFlags,
       })
     : await launch({
         chromePath: config.chromePath ?? undefined,
@@ -52,6 +59,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
         userDataDir: launcherUserDataDir,
         handleSIGINT: false,
         port: debugPort ?? undefined,
+        ignoreDefaultFlags: minimalFlags,
       });
   const pidLabel = typeof launcher.pid === 'number' ? ` (pid ${launcher.pid})` : '';
   const hostLabel = connectHost ? ` on ${connectHost}` : '';
@@ -212,27 +220,30 @@ function buildChromeFlags(
   headless: boolean,
   debugBindAddress?: string | null,
   chromeProfile?: string,
+  options: { minimal?: boolean } = {},
 ): string[] {
-  const flags = [
-    '--disable-background-networking',
-    '--disable-background-timer-throttling',
-    '--disable-breakpad',
-    '--disable-client-side-phishing-detection',
-    '--disable-default-apps',
-    '--disable-hang-monitor',
-    '--disable-popup-blocking',
-    '--disable-prompt-on-repost',
-    '--disable-sync',
-    '--disable-translate',
-    '--metrics-recording-only',
-    '--no-first-run',
-    '--safebrowsing-disable-auto-update',
-    '--disable-features=TranslateUI,AutomationControlled',
-    '--mute-audio',
-    '--window-size=1280,720',
-    '--lang=en-US',
-    '--accept-lang=en-US,en',
-  ];
+  const flags = options.minimal
+    ? ['--new-window']
+    : [
+        '--disable-background-networking',
+        '--disable-background-timer-throttling',
+        '--disable-breakpad',
+        '--disable-client-side-phishing-detection',
+        '--disable-default-apps',
+        '--disable-hang-monitor',
+        '--disable-popup-blocking',
+        '--disable-prompt-on-repost',
+        '--disable-sync',
+        '--disable-translate',
+        '--metrics-recording-only',
+        '--no-first-run',
+        '--safebrowsing-disable-auto-update',
+        '--disable-features=TranslateUI,AutomationControlled',
+        '--mute-audio',
+        '--window-size=1280,720',
+        '--lang=en-US',
+        '--accept-lang=en-US,en',
+      ];
   if (chromeProfile) {
     flags.push(`--profile-directory=${chromeProfile}`);
   }
@@ -304,12 +315,14 @@ async function launchWithCustomHost({
   userDataDir,
   host,
   requestedPort,
+  ignoreDefaultFlags,
 }: {
   chromeFlags: string[];
   chromePath?: string | null;
   userDataDir: string | boolean;
   host: string | null;
   requestedPort?: number;
+  ignoreDefaultFlags?: boolean;
 }): Promise<LaunchedChrome & { host?: string }> {
   const launcher = new Launcher({
     chromePath: chromePath ?? undefined,
@@ -317,6 +330,7 @@ async function launchWithCustomHost({
     userDataDir,
     handleSIGINT: false,
     port: requestedPort ?? undefined,
+    ignoreDefaultFlags: Boolean(ignoreDefaultFlags),
   });
 
   if (host) {
