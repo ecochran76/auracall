@@ -597,24 +597,48 @@ async function expandHistoryDialog(client: ChromeClient): Promise<void> {
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
-  const clicked = await client.Runtime.evaluate({
-    expression: `(() => {
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const nodes = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
-      for (const node of nodes) {
-        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        if (label === 'history' || label.endsWith(' history') || label.includes('history')) {
-          node.click();
-          return true;
+  const findAndClickHistory = async () => {
+    const clicked = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const nodes = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
+        for (const node of nodes) {
+          const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+          if (label === 'history' || label.endsWith(' history') || label.includes('history')) {
+            node.click();
+            return true;
+          }
         }
-      }
-      return false;
-    })()`,
-    returnByValue: true,
-  });
-  if (!clicked.result?.value) {
-    return false;
+        return false;
+      })()`,
+      returnByValue: true,
+    });
+    return clicked.result?.value;
+  };
+
+  if (await findAndClickHistory()) {
+    return waitForDialog(client);
   }
+
+  // Try opening the sidebar/menu
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const menus = Array.from(document.querySelectorAll('button[aria-label="Toggle Menu"]'));
+      for (const menu of menus) {
+        menu.click();
+      }
+    })()`,
+  });
+  await new Promise((resolve) => setTimeout(resolve, 500));
+
+  if (await findAndClickHistory()) {
+    return waitForDialog(client);
+  }
+
+  return false;
+}
+
+async function waitForDialog(client: ChromeClient): Promise<boolean> {
   const deadline = Date.now() + 5000;
   while (Date.now() < deadline) {
     const { result } = await client.Runtime.evaluate({
