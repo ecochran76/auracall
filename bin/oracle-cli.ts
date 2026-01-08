@@ -606,7 +606,11 @@ program
         console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
-    console.log(JSON.stringify(projects, null, 2));
+    if (process.stdout.isTTY) {
+      console.table(projects);
+    } else {
+      console.log(JSON.stringify(projects, null, 2));
+    }
   });
 
 program
@@ -750,7 +754,11 @@ program
       }
     }
     const filtered = filterConversationsByQuery(resolved, filterText);
-    console.log(JSON.stringify(filtered, null, 2));
+    if (process.stdout.isTTY) {
+      console.table(filtered);
+    } else {
+      console.log(JSON.stringify(filtered, null, 2));
+    }
   });
 
 program

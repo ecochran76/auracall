@@ -104,9 +104,6 @@ export function createGrokAdapter(): Pick<
             history = await listHistoryConversations(client, resolvedProjectId, options);
           }
         }
-        const clicked = resolvedProjectId
-          ? []
-          : await listConversationsByClick(client, resolvedProjectId);
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
             const projectId = ${JSON.stringify(resolvedProjectId ?? null)};
@@ -166,11 +163,6 @@ export function createGrokAdapter(): Pick<
           });
         }
         for (const entry of history) {
-          if (!merged.has(entry.id)) {
-            merged.set(entry.id, entry);
-          }
-        }
-        for (const entry of clicked) {
           if (!merged.has(entry.id)) {
             merged.set(entry.id, entry);
           }
@@ -658,84 +650,6 @@ async function closeHistoryDialog(client: ChromeClient): Promise<void> {
     returnByValue: true,
   });
   await new Promise((resolve) => setTimeout(resolve, 200));
-}
-
-async function listConversationsByClick(
-  client: ChromeClient,
-  projectId?: string,
-): Promise<Conversation[]> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
-      const panel = document.querySelector('[role="tabpanel"]');
-      if (!panel) return [];
-      const items = Array.from(panel.querySelectorAll('a[href*="/c/"]'));
-      let index = 0;
-      const entries = [];
-      for (const node of items) {
-        const row =
-          node.closest('div.max-h-11') ||
-          node.closest('div[class*="rounded"]') ||
-          node.closest('div[class*="grid"]') ||
-          node.parentElement;
-        const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row || node;
-        const title = (titleNode.textContent || '').trim();
-        node.setAttribute('data-oracle-conv-index', String(index));
-        entries.push({ index, title });
-        index += 1;
-      }
-      return entries;
-    })()`,
-    returnByValue: true,
-  });
-  const entries = (result?.value ?? []) as Array<{ index: number; title: string }>;
-  const output: Conversation[] = [];
-  for (const entry of entries.slice(0, 30)) {
-    const clicked = await client.Runtime.evaluate({
-      expression: `(() => {
-        const node = document.querySelector('[data-oracle-conv-index="${entry.index}"]');
-        if (!node) return false;
-        node.click();
-        return true;
-      })()`,
-      returnByValue: true,
-    });
-    if (!clicked.result?.value) continue;
-    const chatId = await waitForChatId(client, 4000);
-    if (!chatId) continue;
-    output.push({
-      id: chatId,
-      title: entry.title || chatId,
-      provider: 'grok',
-      projectId,
-      url: `https://grok.com/c/${chatId}`,
-    });
-  }
-  return output;
-}
-
-async function waitForChatId(client: ChromeClient, timeoutMs: number): Promise<string | null> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
-        try {
-          const url = new URL(location.href);
-          const chat = url.searchParams.get('chat');
-          if (chat) return chat;
-          const match = url.pathname.match(/\\/c\\/([^/?#]+)/);
-          return match?.[1] || null;
-        } catch {
-          return null;
-        }
-      })()`,
-      returnByValue: true,
-    });
-    if (typeof result?.value === 'string' && result.value.length > 0) {
-      return result.value;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 250));
-  }
-  return null;
 }
 
 async function listOpenConversations(
