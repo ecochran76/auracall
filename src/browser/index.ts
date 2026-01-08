@@ -221,8 +221,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         }
         chrome = await launchChrome(
           {
-            ...effectiveConfig,
-            remoteChrome: effectiveConfig.remoteChrome,
+            ...config,
+            remoteChrome: config.remoteChrome,
           },
           userDataDir,
           logger,

@@ -1,6 +1,7 @@
 import { rm } from 'node:fs/promises';
-import { readFileSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
+import path from 'node:path';
 import net from 'node:net';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -12,9 +13,18 @@ import { cleanupStaleProfileState } from './profileState.js';
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
-  if (!config.headless && process.platform === 'linux' && !process.env.DISPLAY) {
-    process.env.DISPLAY = ':0.0';
-    logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
+  if (!config.headless && process.platform === 'linux') {
+    if (!process.env.DISPLAY) {
+      process.env.DISPLAY = ':0.0';
+      logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
+    }
+    if (!process.env.XAUTHORITY) {
+      const fallback = path.join(os.homedir(), '.Xauthority');
+      if (existsSync(fallback)) {
+        process.env.XAUTHORITY = fallback;
+        logger(`XAUTHORITY not set; using ${fallback}.`);
+      }
+    }
   }
   const connectHost = resolveRemoteDebugHost();
   const debugBindAddress = connectHost && connectHost !== '127.0.0.1' ? '0.0.0.0' : connectHost;
