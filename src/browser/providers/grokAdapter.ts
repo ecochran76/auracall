@@ -467,8 +467,8 @@ async function listHistoryConversations(
                 .trim();
               return title;
             };
-          const items = Array.from(
-            dialog.querySelectorAll('a,button,[role="link"],[role="button"],[data-href],[data-url]')
+            const items = Array.from(
+            dialog.querySelectorAll('a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]')
           );
           const conversations = [];
           let oldest = null;
@@ -480,20 +480,28 @@ async function listHistoryConversations(
               node.dataset?.href ||
               node.dataset?.url ||
               '';
-            if (!href) continue;
+            const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
+            
             let url = '';
             let chatId = '';
-            try {
-              url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-              const parsed = new URL(url);
-              chatId = parsed.searchParams.get('chat') || '';
-              if (!chatId) {
-                const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
-                chatId = match?.[1] || '';
+            
+            if (dataValue.startsWith('conversation:')) {
+              chatId = dataValue.split(':')[1];
+              url = 'https://grok.com/c/' + chatId;
+            } else if (href) {
+              try {
+                url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+                const parsed = new URL(url);
+                chatId = parsed.searchParams.get('chat') || '';
+                if (!chatId) {
+                  const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+                  chatId = match?.[1] || '';
+                }
+              } catch {
+                // ignore URL parse
               }
-            } catch {
-              // ignore URL parse
             }
+            
             if (!chatId) continue;
             if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
               continue;
