@@ -231,7 +231,10 @@ function buildChromeFlags(headless: boolean, debugBindAddress?: string | null): 
   ];
 
   if (process.platform !== 'win32' && !isWsl()) {
-    flags.push('--password-store=basic', '--use-mock-keychain');
+    flags.push('--password-store=basic');
+    if (process.platform === 'darwin') {
+      flags.push('--use-mock-keychain');
+    }
   }
 
   if (debugBindAddress) {
