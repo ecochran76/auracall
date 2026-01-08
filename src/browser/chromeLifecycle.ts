@@ -3,7 +3,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import net from 'node:net';
-import { execFile, spawn } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import CDP from 'chrome-remote-interface';
 import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
@@ -47,47 +47,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
     `[browser] chrome flags (${minimalFlags ? 'minimal' : 'default'}): ` +
       `${effectiveChromeFlags.join(' ')}`,
   );
-  if (minimalFlags && !connectHost) {
-    const chromePath = resolveChromePath(config.chromePath ?? undefined);
-    if (!chromePath) {
-      logger('Chrome binary not found; falling back to chrome-launcher.');
-    } else {
-      const launchPort = debugPort ?? (await findAvailablePort());
-      const args = [...effectiveChromeFlags];
-      if (!args.some((flag) => flag.startsWith('--user-data-dir='))) {
-        args.push(userDataDirFlag);
-      }
-      args.push(`--remote-debugging-port=${launchPort}`);
-      logger(`[browser] spawn chrome: ${chromePath} ${args.join(' ')}`);
-      const proc = spawn(chromePath, args, { detached: true, stdio: 'ignore' });
-      const kill = async () => {
-        if (!proc.pid) return;
-        try {
-          if (process.platform === 'win32') {
-            process.kill(proc.pid, 'SIGTERM');
-          } else {
-            process.kill(-proc.pid, 'SIGKILL');
-          }
-        } catch {
-          try {
-            process.kill(proc.pid, 'SIGKILL');
-          } catch {
-            // ignore
-          }
-        }
-      };
-      return Object.assign(
-        {
-          pid: proc.pid ?? undefined,
-          port: launchPort,
-          process: proc,
-          kill,
-          remoteDebuggingPipes: undefined,
-        },
-        { host: connectHost ?? '127.0.0.1' },
-      ) as unknown as LaunchedChrome & { host?: string };
-    }
-  }
+
   const usePatchedLauncher = Boolean(connectHost && connectHost !== '127.0.0.1');
   const launcher = usePatchedLauncher
     ? await launchWithCustomHost({
@@ -354,30 +314,6 @@ function isWsl(): boolean {
   return release.toLowerCase().includes('microsoft');
 }
 
-function resolveChromePath(preferredPath?: string | null): string | null {
-  if (preferredPath) return preferredPath;
-  const installations = Launcher.getInstallations();
-  return installations[0] ?? null;
-}
-
-async function findAvailablePort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address !== 'object') {
-        server.close(() => reject(new Error('Unable to allocate a debug port.')));
-        return;
-      }
-      const port = address.port;
-      server.close((err) => {
-        if (err) reject(err);
-        else resolve(port);
-      });
-    });
-  });
-}
 
 async function launchWithCustomHost({
   chromeFlags,
