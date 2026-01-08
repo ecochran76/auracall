@@ -176,11 +176,28 @@ export async function navigateToPromptReadyWithFallback(
 
 export async function ensureNotBlocked(Runtime: ChromeClient['Runtime'], headless: boolean, logger: BrowserLogger) {
   if (await isCloudflareInterstitial(Runtime)) {
-    const message = headless
-      ? 'Cloudflare challenge detected in headless mode. Re-run with --headful so you can solve the challenge.'
-      : 'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.';
-    logger('Cloudflare anti-bot page detected');
-    throw new Error(message);
+    if (headless) {
+      const message =
+        'Cloudflare challenge detected in headless mode. Re-run with --headful so you can solve the challenge.';
+      logger('Cloudflare anti-bot page detected');
+      throw new Error(message);
+    }
+    logger('Cloudflare anti-bot page detected; waiting for the challenge to clear in the open browser.');
+    const deadline = Date.now() + 10 * 60_000;
+    let lastNotice = 0;
+    while (Date.now() < deadline) {
+      if (!(await isCloudflareInterstitial(Runtime))) {
+        logger('Cloudflare challenge cleared; resuming.');
+        return;
+      }
+      const now = Date.now();
+      if (now - lastNotice > 5000) {
+        logger('Waiting for Cloudflare challenge to clear...');
+        lastNotice = now;
+      }
+      await delay(1000);
+    }
+    throw new Error('Cloudflare challenge did not clear in time. Please retry.');
   }
 }
 
