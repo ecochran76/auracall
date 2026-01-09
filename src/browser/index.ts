@@ -52,7 +52,6 @@ import { BrowserAutomationError } from '../oracle/errors.js';
 import { alignPromptEchoPair, buildPromptEchoMatcher } from './reattachHelpers.js';
 import {
   cleanupStaleProfileState,
-  isProcessAlive,
   readChromePid,
   readDevToolsPort,
   shouldCleanupManualLoginProfileState,
@@ -60,6 +59,7 @@ import {
   writeChromePid,
   writeDevToolsActivePort,
 } from './profileState.js';
+import { isProcessAlive } from './processCheck.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -1726,7 +1726,13 @@ async function runGrokBrowserMode({
       await hideChromeWindow(chrome, logger);
     }
 
-    const grokTargetUrl = config.grokUrl ?? config.url;
+    let grokTargetUrl = config.grokUrl ?? config.url;
+    if (config.projectId) {
+      grokTargetUrl = `https://grok.com/project/${config.projectId}`;
+      if (config.conversationId) {
+        grokTargetUrl += `?chat=${config.conversationId}`;
+      }
+    }
     await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
     await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
     const projectLookup = await Runtime.evaluate({

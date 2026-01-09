@@ -4,6 +4,7 @@ import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
 import net from 'node:net';
 import type { BrowserModelStrategy, CookieParam } from './browser/types.js';
+import { isProcessAlive, isPortOpen } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
 import { DEFAULT_MODEL } from './oracle.js';
 import { safeModelSlug } from './oracle/modelResolver.js';
@@ -769,47 +770,3 @@ function isZombie(meta: SessionMetadata): boolean {
   return Date.now() - startedMs > ZOMBIE_MAX_AGE_MS;
 }
 
-function isProcessAlive(pid?: number): boolean {
-  if (!pid) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
-    if (code === 'ESRCH' || code === 'EINVAL') {
-      return false;
-    }
-    if (code === 'EPERM') {
-      return true;
-    }
-    return true;
-  }
-}
-
-async function isPortOpen(host: string, port: number): Promise<boolean> {
-  if (!port || port <= 0 || port > 65535) {
-    return false;
-  }
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
-    let settled = false;
-    const cleanup = (result: boolean) => {
-      if (settled) return;
-      settled = true;
-      socket.removeAllListeners();
-      socket.end();
-      socket.destroy();
-      socket.unref();
-      resolve(result);
-    };
-    const timer = setTimeout(() => cleanup(false), CHROME_RUNTIME_TIMEOUT_MS);
-    socket.once('connect', () => {
-      clearTimeout(timer);
-      cleanup(true);
-    });
-    socket.once('error', () => {
-      clearTimeout(timer);
-      cleanup(false);
-    });
-  });
-}

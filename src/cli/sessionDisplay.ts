@@ -14,27 +14,11 @@ import type { BrowserLogger } from '../browser/types.js';
 import { resumeBrowserSession } from '../browser/reattach.js';
 import { estimateTokenCount } from '../browser/utils.js';
 import { formatSessionTableHeader, formatSessionTableRow, resolveSessionCost } from './sessionTable.js';
+import { isProcessAlive } from '../browser/processCheck.js';
 
 const isTty = (): boolean => Boolean(process.stdout.isTTY);
 const dim = (text: string): string => (isTty() ? kleur.dim(text) : text);
 export const MAX_RENDER_BYTES = 200_000;
-
-function isProcessAlive(pid?: number): boolean {
-  if (!pid) return false;
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch (error) {
-    const code = error instanceof Error ? (error as NodeJS.ErrnoException).code : undefined;
-    if (code === 'ESRCH' || code === 'EINVAL') {
-      return false;
-    }
-    if (code === 'EPERM') {
-      return true;
-    }
-    return true;
-  }
-}
 
 export interface ShowStatusOptions {
   hours: number;

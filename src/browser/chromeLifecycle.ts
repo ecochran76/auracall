@@ -8,11 +8,29 @@ import { promisify } from 'node:util';
 import CDP from 'chrome-remote-interface';
 import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
-import { cleanupStaleProfileState } from './profileState.js';
+import { cleanupStaleProfileState, readDevToolsPort } from './profileState.js';
+import { isPortOpen, isChromeUsingUserDataDir } from './processCheck.js';
 
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
+  // Smart Launch: check if this profile is already active
+  if (await isChromeUsingUserDataDir(userDataDir)) {
+    const activePort = await readDevToolsPort(userDataDir);
+    const connectHost = resolveRemoteDebugHost() || '127.0.0.1';
+    if (activePort && await isPortOpen(connectHost, activePort)) {
+      logger(`Found running Chrome using profile ${userDataDir} on port ${activePort}; reusing.`);
+      return {
+        pid: undefined, // We don't own the PID, so we don't return it to avoid killing it
+        port: activePort,
+        kill: async () => { logger('Skipping shutdown of reused Chrome instance.'); },
+        process: undefined,
+        host: connectHost,
+      } as unknown as LaunchedChrome & { host?: string };
+    }
+    logger(`Chrome is running with profile ${userDataDir} but DevTools port ${activePort ?? '(unknown)'} is unreachable. Launching new instance.`);
+  }
+
   if (!config.headless && process.platform === 'linux') {
     if (!process.env.DISPLAY) {
       process.env.DISPLAY = ':0.0';
