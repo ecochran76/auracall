@@ -46,4 +46,20 @@ describe('Config Resolver', () => {
     expect(result.model).toBe('gpt-5-pro');
     expect(result.browser.headless).toBe(false);
   });
+
+  it('should override project-id from config with CLI flag', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: { browser: { projectId: 'CONFIG_ID' } } as any,
+      path: '/tmp/config.json',
+      loaded: true
+    });
+
+    const cliOptions = {
+      projectId: 'CLI_ID'
+    };
+    
+    const result = await resolveConfig(cliOptions);
+    
+    expect(result.browser.projectId).toBe('CLI_ID');
+  });
 });
