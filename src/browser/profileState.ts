@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { isProcessAlive, isChromeUsingUserDataDir } from './processCheck.js';
+import { isProcessAlive, findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive } from './processCheck.js';
 
 export type ProfileStateLogger = (message: string) => void;
 
@@ -70,47 +70,13 @@ export async function writeChromePid(userDataDir: string, pid: number): Promise<
 }
 
 
-export async function verifyDevToolsReachable({
-  port,
-  host = '127.0.0.1',
-  attempts = 3,
-  timeoutMs = 3000,
-}: {
-  port: number;
-  host?: string;
-  attempts?: number;
-  timeoutMs?: number;
-}): Promise<{ ok: true } | { ok: false; error: string }> {
-  const versionUrl = `http://${host}:${port}/json/version`;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(versionUrl, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return { ok: true };
-    } catch (error) {
-      if (attempt < attempts - 1) {
-        await new Promise((resolve) => setTimeout(resolve, 500 * (attempt + 1)));
-        continue;
-      }
-      const message = error instanceof Error ? error.message : String(error);
-      return { ok: false, error: message };
-    }
-  }
-  return { ok: false, error: 'unreachable' };
-}
-
 export async function shouldCleanupManualLoginProfileState(
   userDataDir: string,
   logger?: ProfileStateLogger,
   options: {
     connectionClosedUnexpectedly?: boolean;
     host?: string;
-    probe?: typeof verifyDevToolsReachable;
+    probe?: (opts: { port: number; host?: string }) => Promise<boolean>;
   } = {},
 ): Promise<boolean> {
   if (!options.connectionClosedUnexpectedly) {
@@ -120,12 +86,12 @@ export async function shouldCleanupManualLoginProfileState(
   if (!port) {
     return true;
   }
-  const probe = await (options.probe ?? verifyDevToolsReachable)({ port, host: options.host });
-  if (probe.ok) {
+  const alive = await (options.probe ?? isDevToolsResponsive)({ port, host: options.host });
+  if (alive) {
     logger?.(`DevTools port ${port} still reachable; preserving manual-login profile state`);
     return false;
   }
-  logger?.(`DevTools port ${port} unreachable (${probe.error}); clearing stale profile state`);
+  logger?.(`DevTools port ${port} unreachable; clearing stale profile state`);
   return true;
 }
 
@@ -152,14 +118,16 @@ export async function cleanupStaleProfileState(
   if (!pid) {
     return;
   }
-  if (isProcessAlive(pid)) {
+  // Robust check: verify the PID is actually *our* Chrome instance.
+  // If PID is reused by a random process, isChromeAlive returns false, allowing cleanup.
+  if (await isChromeAlive(pid, userDataDir)) {
     logger?.(`Chrome pid ${pid} still alive; skipping profile lock cleanup`);
     return;
   }
 
   // Extra safety: if Chrome is running with this profile (but with a different PID, e.g. user relaunched
   // without remote debugging), never delete lock files.
-  if (await isChromeUsingUserDataDir(userDataDir)) {
+  if (await findChromePidUsingUserDataDir(userDataDir)) {
     logger?.('Detected running Chrome using this profile; skipping profile lock cleanup');
     return;
   }

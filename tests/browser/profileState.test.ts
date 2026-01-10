@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -6,6 +6,19 @@ import { once } from 'node:events';
 import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import * as profileState from '../../src/browser/profileState.js';
+
+vi.mock('../../src/browser/processCheck.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../src/browser/processCheck.js')>();
+  return {
+    ...actual,
+    isChromeAlive: vi.fn(async (pid) => {
+      // In tests, we use the current process or a dummy child as the "Chrome" PID.
+      // Robust checks fail because these aren't actual Chrome processes with userDataDirs.
+      // Revert to simple PID check for these tests.
+      return actual.isProcessAlive(pid);
+    }),
+  };
+});
 
 describe('profileState', () => {
   test('writes DevToolsActivePort to both root and Default', async () => {
@@ -69,7 +82,7 @@ describe('profileState', () => {
       await expect(
         profileState.shouldCleanupManualLoginProfileState(dir, undefined, {
           connectionClosedUnexpectedly: true,
-          probe: async () => ({ ok: true }),
+          probe: async () => true,
         }),
       ).resolves.toBe(false);
     } finally {
@@ -84,7 +97,7 @@ describe('profileState', () => {
       await expect(
         profileState.shouldCleanupManualLoginProfileState(dir, undefined, {
           connectionClosedUnexpectedly: true,
-          probe: async () => ({ ok: false, error: 'offline' }),
+          probe: async () => false,
         }),
       ).resolves.toBe(true);
     } finally {

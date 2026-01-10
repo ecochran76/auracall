@@ -4,7 +4,7 @@ import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
 import net from 'node:net';
 import type { BrowserModelStrategy, CookieParam } from './browser/types.js';
-import { isProcessAlive, isPortOpen } from './browser/processCheck.js';
+import { isChromeAlive, isProcessAlive, isPortOpen } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
 import { DEFAULT_MODEL } from './oracle.js';
 import { safeModelSlug } from './oracle/modelResolver.js';
@@ -691,16 +691,21 @@ async function markZombie(meta: SessionMetadata, { persist }: { persist: boolean
   if (meta.mode === 'browser') {
     const runtime = meta.browser?.runtime;
     if (runtime) {
-      const signals: boolean[] = [];
-      if (runtime.chromePid) {
-        signals.push(isProcessAlive(runtime.chromePid));
-      }
-      if (runtime.chromePort) {
-        const host = runtime.chromeHost ?? '127.0.0.1';
-        signals.push(await isPortOpen(host, runtime.chromePort));
-      }
-      if (signals.some(Boolean)) {
-        return meta;
+      if (runtime.chromePid && runtime.userDataDir) {
+        const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort);
+        if (alive) return meta;
+      } else {
+        const signals: boolean[] = [];
+        if (runtime.chromePid) {
+          signals.push(isProcessAlive(runtime.chromePid));
+        }
+        if (runtime.chromePort) {
+          const host = runtime.chromeHost ?? '127.0.0.1';
+          signals.push(await isPortOpen(host, runtime.chromePort));
+        }
+        if (signals.some(Boolean)) {
+          return meta;
+        }
       }
     }
   }
@@ -724,16 +729,21 @@ async function markDeadBrowser(meta: SessionMetadata, { persist }: { persist: bo
   if (!runtime) {
     return meta;
   }
-  const signals: boolean[] = [];
-  if (runtime.chromePid) {
-    signals.push(isProcessAlive(runtime.chromePid));
-  }
-  if (runtime.chromePort) {
-    const host = runtime.chromeHost ?? '127.0.0.1';
-    signals.push(await isPortOpen(host, runtime.chromePort));
-  }
-  if (signals.length === 0 || signals.some(Boolean)) {
-    return meta;
+  if (runtime.chromePid && runtime.userDataDir) {
+    const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort);
+    if (alive) return meta;
+  } else {
+    const signals: boolean[] = [];
+    if (runtime.chromePid) {
+      signals.push(isProcessAlive(runtime.chromePid));
+    }
+    if (runtime.chromePort) {
+      const host = runtime.chromeHost ?? '127.0.0.1';
+      signals.push(await isPortOpen(host, runtime.chromePort));
+    }
+    if (signals.length === 0 || signals.some(Boolean)) {
+      return meta;
+    }
   }
   const response = meta.response
     ? {

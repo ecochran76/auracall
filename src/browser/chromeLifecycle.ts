@@ -9,16 +9,17 @@ import CDP from 'chrome-remote-interface';
 import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
 import { cleanupStaleProfileState, readDevToolsPort } from './profileState.js';
-import { isPortOpen, isChromeUsingUserDataDir } from './processCheck.js';
+import { isDevToolsResponsive, findChromePidUsingUserDataDir } from './processCheck.js';
 
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
   // Smart Launch: check if this profile is already active
-  if (await isChromeUsingUserDataDir(userDataDir)) {
+  const existingPid = await findChromePidUsingUserDataDir(userDataDir);
+  if (existingPid) {
     const activePort = await readDevToolsPort(userDataDir);
     const connectHost = resolveRemoteDebugHost() || '127.0.0.1';
-    if (activePort && await isPortOpen(connectHost, activePort)) {
+    if (activePort && await isDevToolsResponsive({ host: connectHost, port: activePort })) {
       logger(`Found running Chrome using profile ${userDataDir} on port ${activePort}; reusing.`);
       return {
         pid: undefined, // We don't own the PID, so we don't return it to avoid killing it
@@ -28,7 +29,18 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
         host: connectHost,
       } as unknown as LaunchedChrome & { host?: string };
     }
-    logger(`Chrome is running with profile ${userDataDir} but DevTools port ${activePort ?? '(unknown)'} is unreachable. Launching new instance.`);
+    logger(`Chrome (pid ${existingPid}) is running with profile ${userDataDir} but DevTools port is unreachable. Killing it to release lock.`);
+    try {
+      process.kill(existingPid, 'SIGTERM');
+      await new Promise(r => setTimeout(r, 1500));
+      // Double check and force kill if needed
+      try {
+        process.kill(existingPid, 0);
+        process.kill(existingPid, 'SIGKILL');
+      } catch { /* already dead */ }
+    } catch (e) {
+      logger(`Failed to kill Chrome process: ${e}`);
+    }
   }
 
   if (!config.headless && process.platform === 'linux') {

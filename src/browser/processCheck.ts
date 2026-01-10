@@ -34,7 +34,7 @@ export async function isPortOpen(host: string, port: number): Promise<boolean> {
       socket.unref();
       resolve(result);
     };
-    const timer = setTimeout(() => cleanup(false), 250);
+    const timer = setTimeout(() => cleanup(false), 1000);
     socket.once('connect', () => {
       clearTimeout(timer);
       cleanup(true);
@@ -46,29 +46,140 @@ export async function isPortOpen(host: string, port: number): Promise<boolean> {
   });
 }
 
-export async function isChromeUsingUserDataDir(userDataDir: string): Promise<boolean> {
-  if (process.platform === 'win32') {
-    // On Windows, checking command lines is expensive/complex.
-    // Ideally use `wmic process where "name='chrome.exe'" get commandline` but parsing is fragile.
-    // For now, assume false and let the lockfile logic in profileState handle it (or let launch fail).
+export async function isDevToolsResponsive({
+  port,
+  host = '127.0.0.1',
+  attempts = 1,
+  timeoutMs = 1000,
+}: {
+  port: number;
+  host?: string;
+  attempts?: number;
+  timeoutMs?: number;
+}): Promise<boolean> {
+  const versionUrl = `http://${host}:${port}/json/version`;
+  for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), timeoutMs);
+      const response = await fetch(versionUrl, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (response.ok) {
+        return true;
+      }
+    } catch {
+      // ignore errors until final attempt
+    }
+    if (attempt < attempts - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 200));
+    }
+  }
+  return false;
+}
+
+/**
+ * Robustly checks if a Chrome process is alive and matches the expected profile.
+ * Prevents false positives from PID reuse.
+ */
+export async function isChromeAlive(
+  pid: number | undefined | null,
+  userDataDir: string,
+  port?: number,
+): Promise<boolean> {
+  // 1. Fast, cheap check: does the PID exist?
+  if (!isProcessAlive(pid)) {
     return false;
   }
 
+  // 2. Robust check: does the PID belong to a Chrome using our profile?
+  const verifiedPid = await findChromePidUsingUserDataDir(userDataDir);
+  
+  // verifiedPid is the PID of the Chrome process running with this userDataDir.
+  // If null, no Chrome is running with this profile -> our PID is a zombie/reused.
+  if (!verifiedPid) {
+    return false;
+  }
+  
+  // If we found a Chrome, but it has a DIFFERENT PID, then our PID is definitely stale.
+  // (The user might have restarted Chrome manually or a new session started).
+  if (pid !== verifiedPid) {
+    return false;
+  }
+
+  // 3. Optional Service check: is the DevTools port actually responsive?
+  if (port) {
+    // If the port is specified, we expect it to be open and speaking DevTools protocol.
+    // We trust the process check more, but this confirms the service is ready/healthy.
+    return isDevToolsResponsive({ port });
+  }
+
+  return true;
+}
+
+export async function findChromePidUsingUserDataDir(userDataDir: string): Promise<number | null> {
+  if (process.platform === 'win32') {
+    return findChromePidWin32(userDataDir);
+  }
+  return findChromePidUnix(userDataDir);
+}
+
+async function findChromePidUnix(userDataDir: string): Promise<number | null> {
   try {
-    const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'command='], { maxBuffer: 10 * 1024 * 1024 });
+    // -o pid,args to get PID and command line
+    const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
     const lines = String(stdout ?? '').split('\n');
     const needle = userDataDir;
     for (const line of lines) {
       if (!line) continue;
-      const lower = line.toLowerCase();
+      // Line format: "  PID COMMAND..."
+      const match = line.match(/^\s*(\d+)\s+(.*)$/);
+      if (!match) continue;
+      
+      const pid = parseInt(match[1], 10);
+      const cmd = match[2];
+      const lower = cmd.toLowerCase();
+      
       if (!lower.includes('chrome') && !lower.includes('chromium')) continue;
-      // Exact check for user-data-dir flag to avoid partial matches
-      if (line.includes(needle) && (lower.includes('--user-data-dir') || lower.includes('/user-data-dir'))) {
-        return true;
+      if (cmd.includes(needle) && (lower.includes('--user-data-dir') || lower.includes('/user-data-dir'))) {
+        return pid;
       }
     }
   } catch {
     // best effort
   }
-  return false;
+  return null;
+}
+
+async function findChromePidWin32(userDataDir: string): Promise<number | null> {
+  try {
+    const script = `Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*chrome*' -or $_.Name -like '*chromium*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json`;
+    const { stdout } = await execFileAsync('powershell', ['-NoProfile', '-Command', script], {
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 5000,
+    });
+    
+    if (!stdout || !stdout.trim()) return null;
+
+    let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
+    try {
+      const parsed = JSON.parse(stdout);
+      processes = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return null;
+    }
+
+    // Normalize slashes for comparison
+    const needle = userDataDir.replace(/\\/g, '/').toLowerCase();
+
+    for (const proc of processes) {
+      if (!proc.CommandLine) continue;
+      const cmd = proc.CommandLine.replace(/\\/g, '/').toLowerCase();
+      if (cmd.includes(needle) && (cmd.includes('--user-data-dir') || cmd.includes('/user-data-dir'))) {
+        return proc.ProcessId;
+      }
+    }
+  } catch {
+    // best effort
+  }
+  return null;
 }

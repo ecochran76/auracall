@@ -55,11 +55,10 @@ import {
   readChromePid,
   readDevToolsPort,
   shouldCleanupManualLoginProfileState,
-  verifyDevToolsReachable,
   writeChromePid,
   writeDevToolsActivePort,
 } from './profileState.js';
-import { isProcessAlive } from './processCheck.js';
+import { isProcessAlive, isDevToolsResponsive } from './processCheck.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -829,7 +828,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           // ignore kill failures
         }
       }
-      if (manualLogin) {
+      if (manualLogin && !effectiveKeepBrowser) {
         const shouldCleanup = await shouldCleanupManualLoginProfileState(
           userDataDir,
           logger.verbose ? logger : undefined,
@@ -972,9 +971,9 @@ async function maybeReuseRunningChrome(userDataDir: string, logger: BrowserLogge
   const port = await readDevToolsPort(userDataDir);
   if (!port) return null;
 
-  const probe = await verifyDevToolsReachable({ port });
-  if (!probe.ok) {
-    logger(`DevToolsActivePort found for ${userDataDir} but unreachable (${probe.error}); launching new Chrome.`);
+  const probe = await isDevToolsResponsive({ port });
+  if (!probe) {
+    logger(`DevToolsActivePort found for ${userDataDir} but unreachable; launching new Chrome.`);
     // Safe cleanup: remove stale DevToolsActivePort; only remove lock files if this was an Oracle-owned pid that died.
     await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
     return null;
@@ -1605,13 +1604,13 @@ async function runGrokBrowserMode({
     if (!chrome?.port) {
       throw new Error('Chrome DevTools port unavailable after launch.');
     }
-    const probe = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
-    if (probe.ok) {
+    const probe = await isDevToolsResponsive({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
+    if (probe) {
       return;
     }
     const fallbackPort = await findEphemeralPort();
     logger(
-      `DevTools port ${chrome.port} unreachable (${probe.error}); relaunching Chrome on ${fallbackPort}.`,
+      `DevTools port ${chrome.port} unreachable; relaunching Chrome on ${fallbackPort}.`,
     );
     try {
       await chrome.kill();
@@ -1637,9 +1636,9 @@ async function runGrokBrowserMode({
         await writeChromePid(userDataDir, chrome.pid);
       }
     }
-    const retryProbe = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
-    if (!retryProbe.ok) {
-      throw new Error(`DevTools port ${chrome.port} unreachable (${retryProbe.error}).`);
+    const retryProbe = await isDevToolsResponsive({ port: chrome.port, host: chromeHost, attempts: 8, timeoutMs: 2500 });
+    if (!retryProbe) {
+      throw new Error(`DevTools port ${chrome.port} unreachable.`);
     }
   };
   await ensureDevToolsReady();
@@ -1660,8 +1659,8 @@ async function runGrokBrowserMode({
       client = await connectToChrome(chrome.port, logger, chromeHost);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      const reachable = await verifyDevToolsReachable({ port: chrome.port, host: chromeHost, attempts: 4, timeoutMs: 2000 });
-      if (reachable.ok) {
+      const reachable = await isDevToolsResponsive({ port: chrome.port, host: chromeHost, attempts: 4, timeoutMs: 2000 });
+      if (reachable) {
         client = await connectToChrome(chrome.port, logger, chromeHost);
       } else if (manualLogin) {
         logger(`DevTools connection failed (${message}); clearing stale profile state and relaunching Chrome.`);
@@ -1832,11 +1831,13 @@ async function runGrokBrowserMode({
       }
     }
     if (manualLogin) {
-      const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
-        connectionClosedUnexpectedly,
-      });
-      if (shouldCleanup) {
-        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+      if (!effectiveKeepBrowser) {
+        const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
+          connectionClosedUnexpectedly,
+        });
+        if (shouldCleanup) {
+          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+        }
       }
     } else {
       await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
