@@ -179,7 +179,9 @@ export async function waitForGrokAssistantResponse(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const current = await readAssistantSnapshot(Runtime);
-    if (current.count > baseline.count && current.lastText.trim().length > 0) {
+    const hasNewContent = current.count > baseline.count || (current.count === baseline.count && current.lastText.length > baseline.lastText.length);
+    
+    if (hasNewContent && current.lastText.trim().length > 0) {
       if (current.lastText === lastText) {
         stableCount += 1;
       } else {
@@ -242,7 +244,13 @@ async function readAssistantSnapshot(Runtime: ChromeClient['Runtime']): Promise<
         ? assistant
         : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
       const last = candidates[candidates.length - 1];
-      return { count: candidates.length, lastText: last ? (last.textContent || '').trim() : '' };
+      if (!last) return { count: candidates.length, lastText: '' };
+      
+      const clone = last.cloneNode(true);
+      const thinking = clone.querySelector('.thinking-container');
+      if (thinking) thinking.remove();
+      
+      return { count: candidates.length, lastText: (clone.textContent || '').trim() };
     })()`,
     returnByValue: true,
   });

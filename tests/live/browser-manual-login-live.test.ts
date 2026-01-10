@@ -8,8 +8,8 @@ import { runBrowserMode } from '../../src/browser/index.js';
 import {
   getDevToolsActivePortPaths,
   readDevToolsPort,
-  verifyDevToolsReachable,
 } from '../../src/browser/profileState.js';
+import { isDevToolsResponsive } from '../../src/browser/processCheck.js';
 import { acquireLiveTestLock, releaseLiveTestLock } from './liveLock.js';
 import { getCookies } from '@steipete/sweet-cookie';
 
@@ -111,8 +111,8 @@ async function waitForPageTarget(host: string, port: number, timeoutMs = 30_000)
           expect(outcome.error.message.toLowerCase()).toMatch(/connection|chrome window closed|target closed/);
         }
 
-        const probe = await verifyDevToolsReachable({ port, host });
-        if (!probe.ok) {
+        const alive = await isDevToolsResponsive({ port, host });
+        if (!alive) {
           console.warn('Skipping DevToolsActivePort assertion; Chrome not reachable after target close.');
           return;
         }

@@ -47,9 +47,10 @@ const originalCI = process.env.CI;
 
 describe('askOracleFlow', () => {
   beforeEach(() => {
-    // Make notification defaults deterministic (CI disables by default).
-  process.env.CI = '';
-  promptMock.mockReset();
+    // Make notification defaults deterministic (CI and SSH disable by default).
+    process.env.CI = '';
+    process.env.SSH_CONNECTION = '';
+    promptMock.mockReset();
   performSessionRunMock.mockReset();
   ensureSessionStorageMock.mockReset();
   initializeSessionMock.mockReset();

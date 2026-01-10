@@ -64,7 +64,7 @@ export function resolveRunOptionsFromConfig({
     );
   }
 
-  const allowGrokBrowser = browserRequested || browserConfigured;
+  const allowGrokBrowser = browserRequested || browserConfigured || engineWasBrowser;
   const engineCoercedToApi = engineWasBrowser && (isCodex || isClaude);
   const fixedEngine: EngineMode =
     isCodex || isClaude || (isGrok && !allowGrokBrowser) || normalizedRequestedModels.length > 0

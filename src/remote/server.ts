@@ -15,10 +15,10 @@ import { CHATGPT_URL } from '../browser/constants.js';
 import {
   cleanupStaleProfileState,
   readDevToolsPort,
-  verifyDevToolsReachable,
   writeChromePid,
   writeDevToolsActivePort,
 } from '../browser/profileState.js';
+import { isDevToolsResponsive } from '../browser/processCheck.js';
 import { normalizeChatgptUrl } from '../browser/utils.js';
 
 export interface RemoteServerOptions {
@@ -262,12 +262,12 @@ export async function serveRemote(options: RemoteServerOptions = {}): Promise<vo
       );
       const existingPort = await readDevToolsPort(manualProfileDir);
       if (existingPort) {
-        const reachable = await verifyDevToolsReachable({ port: existingPort });
-        if (reachable.ok) {
+        const reachable = await isDevToolsResponsive({ port: existingPort });
+        if (reachable) {
           console.log('Detected an existing automation Chrome session; will reuse it for manual login.');
         } else {
           console.log(
-            `Found stale DevToolsActivePort (port ${existingPort}, ${reachable.error}); launching a fresh manual-login Chrome.`,
+            `Found stale DevToolsActivePort (port ${existingPort}); launching a fresh manual-login Chrome.`,
           );
           await cleanupStaleProfileState(manualProfileDir, console.log, { lockRemovalMode: 'never' });
           void launchManualLoginChrome(manualProfileDir, CHATGPT_URL, console.log);

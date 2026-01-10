@@ -100,8 +100,10 @@ import {
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
+import { readDevToolsPort } from '../src/browser/profileState.js';
 import { diagnoseProvider } from '../src/inspector/doctor.js';
 import { resolveConfig } from '../src/schema/resolver.js';
+import { isPortOpen } from '../src/browser/processCheck.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -764,6 +766,38 @@ program
   });
 
 program
+  .command('rename <id> <name>')
+  .description('Rename a conversation.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to use.')
+  .option('--project-id <id>', 'Project ID (if conversation is in a project).')
+  .action(async (id, name, commandOptions) => {
+    const { config: userConfig } = await loadUserConfig();
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const provider = getProvider(target);
+    
+    if (!provider.renameConversation) {
+      console.error(`Rename is not supported for ${target}.`);
+      process.exit(1);
+    }
+    
+    // Resolve project ID if needed (e.g. from name via existing logic? for now direct ID)
+    const projectId = commandOptions.projectId ?? userConfig.browser?.projectId;
+    let port = resolveBrowserListPort(userConfig);
+    if (!port && userConfig.browser?.manualLoginProfileDir) {
+      port = await readDevToolsPort(userConfig.browser.manualLoginProfileDir) ?? undefined;
+    }
+    
+    console.log(`Renaming conversation ${id} to "${name}"...`);
+    try {
+      await provider.renameConversation(id, name, projectId, { port });
+      console.log(chalk.green('Renamed successfully.'));
+    } catch (error) {
+      console.error(`Rename failed: ${error instanceof Error ? error.message : String(error)}`);
+      process.exit(1);
+    }
+  });
+
+program
   .command('cache')
   .description('Show cached browser project/conversation lists.')
   .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
@@ -991,6 +1025,11 @@ function filterConversationsByQuery(conversations: unknown, rawFilter: unknown):
 async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConfig): Promise<void> {
   const projectName = typeof options.projectName === 'string' ? options.projectName.trim() : '';
   const conversationName = typeof options.conversationName === 'string' ? options.conversationName.trim() : '';
+  
+  if (options.verbose) {
+    console.log(chalk.dim(`[hints] projectName=${projectName} conversationName=${conversationName}`));
+  }
+
   if (!projectName && !conversationName) {
     return;
   }
@@ -1022,7 +1061,11 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
       cacheContext,
       provider,
       forceRefresh: false,
+      allowAutoRefresh: !options.dryRun,
     });
+    if (options.projectId) {
+      console.log(chalk.dim(`Resolved project "${projectName}" to ${options.projectId}`));
+    }
   }
   if (!options.conversationId && conversationName) {
     const match = await resolveConversationByName({
@@ -1031,8 +1074,10 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
       provider,
       projectId: options.projectId ?? undefined,
       forceRefresh: false,
+      allowAutoRefresh: !options.dryRun,
     });
     if (match) {
+      console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
       options.conversationId = match.id;
     }
   }
@@ -1083,6 +1128,7 @@ async function resolveProjectIdByName({
   cacheContext,
   provider,
   forceRefresh,
+  allowAutoRefresh = true,
 }: {
   projectName: string;
   cacheContext: {
@@ -1092,13 +1138,23 @@ async function resolveProjectIdByName({
   };
   provider: ReturnType<typeof getProvider>;
   forceRefresh: boolean;
+  allowAutoRefresh?: boolean;
 }): Promise<string> {
   let cached = await readProjectCache(cacheContext);
-  if ((forceRefresh || cached.stale) && provider.listProjects) {
-    const refreshed = await provider.listProjects(cacheContext.listOptions);
-    if (Array.isArray(refreshed)) {
-      await writeProjectCache(cacheContext, refreshed);
-      cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && provider.listProjects) {
+    const port = cacheContext.listOptions.port;
+    if (port && await isPortOpen('127.0.0.1', port)) {
+      try {
+        const refreshed = await provider.listProjects(cacheContext.listOptions);
+        if (Array.isArray(refreshed)) {
+          await writeProjectCache(cacheContext, refreshed);
+          cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+        }
+      } catch (error) {
+        console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else if (forceRefresh) {
+      console.warn(`Cannot refresh projects: Chrome DevTools port ${port ?? '(unknown)'} is not open.`);
     }
   } else if (forceRefresh && !provider.listProjects) {
     console.warn('Project refresh requested, but this provider does not support project listing.');
@@ -1120,6 +1176,7 @@ async function resolveConversationByName({
   provider,
   projectId,
   forceRefresh,
+  allowAutoRefresh = true,
 }: {
   conversationName: string;
   cacheContext: {
@@ -1135,20 +1192,28 @@ async function resolveConversationByName({
   provider: ReturnType<typeof getProvider>;
   projectId?: string;
   forceRefresh: boolean;
+  allowAutoRefresh?: boolean;
 }): Promise<{ id: string; title?: string; url?: string } | null> {
   let cached = await readConversationCache(cacheContext);
-  if ((forceRefresh || cached.stale) && provider.listConversations) {
-    const listOptions = cacheContext.listOptions.configuredUrl?.includes('/project/') && !projectId
-      ? { ...cacheContext.listOptions, configuredUrl: null }
-      : cacheContext.listOptions;
-    const refreshed = await provider.listConversations(projectId, listOptions);
-    if (Array.isArray(refreshed)) {
-      await writeConversationCache({ ...cacheContext, listOptions }, refreshed);
-      cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
+  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && provider.listConversations) {
+    const port = cacheContext.listOptions.port;
+    if (port && await isPortOpen('127.0.0.1', port)) {
+      try {
+        const conversations = await provider.listConversations(projectId, cacheContext.listOptions);
+        if (Array.isArray(conversations)) {
+          await writeConversationCache(cacheContext, conversations);
+          cached = { items: conversations, fetchedAt: Date.now(), stale: false };
+        }
+      } catch (error) {
+        console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    } else if (forceRefresh) {
+      console.warn(`Cannot refresh conversations: Chrome DevTools port ${port ?? '(unknown)'} is not open.`);
     }
   } else if (forceRefresh && !provider.listConversations) {
-    console.warn('Conversation refresh requested, but this provider does not support listing conversations.');
+    console.warn('Conversation refresh requested, but this provider does not support conversation listing.');
   }
+
   const { match, candidates } = matchConversationByTitle(cached.items, conversationName);
   if (match) {
     return match;
@@ -1533,6 +1598,10 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     return source == null || source === 'default';
   };
 
+  if (!optionUsesDefault('model') && multiModelProvided) {
+    throw new Error('--models cannot be combined with --model.');
+  }
+
   const userForcedBrowser = options.browser || options.engine === 'browser';
   const cliModelArg = normalizeModelOption(options.model);
 
@@ -1650,6 +1719,8 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     console.log(chalk.dim('Remote browser runs require --wait; ignoring --no-wait.'));
     waitPreference = true;
   }
+
+  await resolveBrowserNameHints(options, userConfig as any);
 
   if (await handleStatusFlag(options, { attachSession, showStatus })) {
     return;
@@ -1787,7 +1858,6 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   }
 
   const getSource = (key: keyof CliOptions) => program.getOptionValueSource?.(key as string) ?? undefined;
-  await resolveBrowserNameHints(options, userConfig as any);
 
   const notifications = resolveNotificationSettings({
     cliNotify: options.notify,
@@ -1809,6 +1879,17 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           ...options,
           model: resolvedModel,
           browserModelLabel: browserModelLabelOverride,
+          browserManualLogin: config.browser.manualLogin,
+          browserManualLoginProfileDir: config.browser.manualLoginProfileDir,
+          browserChromeProfile: config.browser.chromeProfile,
+          browserChromePath: config.browser.chromePath,
+          browserCookiePath: config.browser.chromeCookiePath,
+          browserHeadless: config.browser.headless,
+          browserHideWindow: config.browser.hideWindow,
+          browserKeepBrowser: config.browser.keepBrowser,
+          browserTimeout: config.browser.timeoutMs ? String(config.browser.timeoutMs) : undefined,
+          browserInputTimeout: config.browser.inputTimeoutMs ? String(config.browser.inputTimeoutMs) : undefined,
+          browserCookieWait: config.browser.cookieSyncWaitMs ? String(config.browser.cookieSyncWaitMs) : undefined,
         })
       : undefined;
   const browserContext = buildBrowserContext({
@@ -1877,8 +1958,8 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   }
   let sessionMeta = await sessionStore.createSession(
     {
-      ...baseRunOptions,
-      mode: sessionMode,
+      ...resolvedOptions,
+      mode: engine as SessionMode,
       browserConfig,
     },
     process.cwd(),
@@ -2312,12 +2393,18 @@ program.action(async function (this: Command) {
 });
 
 async function main(): Promise<void> {
-  const parsePromise = program.parseAsync(process.argv);
-  const sigintPromise = once(process, 'SIGINT').then(() => 'sigint' as const);
-  const result = await Promise.race([parsePromise.then(() => 'parsed' as const), sigintPromise]);
-  if (result === 'sigint') {
-    console.log(chalk.yellow('\nCancelled.'));
-    process.exitCode = 130;
+  try {
+    const parsePromise = program.parseAsync(process.argv);
+    const sigintPromise = once(process, 'SIGINT').then(() => 'sigint' as const);
+
+    const result = await Promise.race([parsePromise, sigintPromise]);
+    if (result === 'sigint') {
+      console.log(chalk.yellow('\nInterrupted.'));
+      process.exit(130);
+    }
+  } catch (error) {
+    console.error(chalk.red('FATAL ERROR:'), error);
+    process.exit(1);
   }
 }
 

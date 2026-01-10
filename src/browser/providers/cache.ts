@@ -45,7 +45,11 @@ export function resolveProviderCacheKey(context: ProviderCacheContext): string {
     geminiUrl: browser.geminiUrl ?? null,
   };
   const payload = JSON.stringify(signature);
-  return crypto.createHash('sha256').update(payload).digest('hex').slice(0, 12);
+  const key = crypto.createHash('sha256').update(payload).digest('hex').slice(0, 12);
+  if (process.env.ORACLE_DEBUG_CACHE === '1') {
+    console.error(`[cache] key=${key} payload=${payload}`);
+  }
+  return key;
 }
 
 export async function readProjectCache(
@@ -82,7 +86,17 @@ export function matchConversationByTitle(
   conversations: Conversation[],
   title: string,
 ): CacheNameMatch<Conversation> {
-  return matchByName(conversations, title, (conversation) => conversation.title || conversation.id);
+  const result = matchByName(conversations, title, (conversation) => conversation.title || conversation.id);
+  if (!result.match && result.candidates.length > 1) {
+    // Resolve ambiguity by picking the most recent one
+    const sorted = [...result.candidates].sort((a, b) => {
+      const ta = a.updatedAt ? Date.parse(a.updatedAt) : 0;
+      const tb = b.updatedAt ? Date.parse(b.updatedAt) : 0;
+      return tb - ta;
+    });
+    return { match: sorted[0], candidates: sorted };
+  }
+  return result;
 }
 
 function normalize(value: string): string {

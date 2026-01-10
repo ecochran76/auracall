@@ -9,7 +9,7 @@ export async function highlightSelector(client: Awaited<ReturnType<typeof CDP>>,
     });
 
     if (nodeId) {
-      await client.DOM.highlightNode({
+      await (client.DOM.highlightNode as any)({
         nodeId,
         highlightConfig: {
           contentColor: { r: 155, g: 11, b: 239, a: 0.3 },

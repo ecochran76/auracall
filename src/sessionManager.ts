@@ -4,7 +4,7 @@ import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
 import net from 'node:net';
 import type { BrowserModelStrategy, CookieParam } from './browser/types.js';
-import { isChromeAlive, isProcessAlive, isPortOpen } from './browser/processCheck.js';
+import { isChromeAlive, isProcessAlive, isPortOpen, findAllChromeProcesses } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
 import { DEFAULT_MODEL } from './oracle.js';
 import { safeModelSlug } from './oracle/modelResolver.js';
@@ -435,12 +435,15 @@ export async function initializeSession(
   return metadata;
 }
 
-export async function readSessionMetadata(sessionId: string): Promise<SessionMetadata | null> {
-  const modern = await readModernSessionMetadata(sessionId);
+export async function readSessionMetadata(
+  sessionId: string,
+  allChromeProcesses?: Map<string, number>,
+): Promise<SessionMetadata | null> {
+  const modern = await readModernSessionMetadata(sessionId, allChromeProcesses);
   if (modern) {
     return modern;
   }
-  const legacy = await readLegacySessionMetadata(sessionId);
+  const legacy = await readLegacySessionMetadata(sessionId, allChromeProcesses);
   if (legacy) {
     return legacy;
   }
@@ -460,7 +463,10 @@ export async function updateSessionMetadata(
   return next;
 }
 
-async function readModernSessionMetadata(sessionId: string): Promise<SessionMetadata | null> {
+async function readModernSessionMetadata(
+  sessionId: string,
+  allChromeProcesses?: Map<string, number>,
+): Promise<SessionMetadata | null> {
   try {
     const raw = await fs.readFile(metaPath(sessionId), 'utf8');
     const parsed = JSON.parse(raw) as SessionMetadata | StoredRunOptions;
@@ -468,20 +474,23 @@ async function readModernSessionMetadata(sessionId: string): Promise<SessionMeta
       return null;
     }
     const enriched = await attachModelRuns(parsed, sessionId);
-    const runtimeChecked = await markDeadBrowser(enriched, { persist: false });
-    return await markZombie(runtimeChecked, { persist: false });
+    const runtimeChecked = await markDeadBrowser(enriched, { persist: false, allChromeProcesses });
+    return await markZombie(runtimeChecked, { persist: false, allChromeProcesses });
   } catch {
     return null;
   }
 }
 
-async function readLegacySessionMetadata(sessionId: string): Promise<SessionMetadata | null> {
+async function readLegacySessionMetadata(
+  sessionId: string,
+  allChromeProcesses?: Map<string, number>,
+): Promise<SessionMetadata | null> {
   try {
     const raw = await fs.readFile(legacySessionPath(sessionId), 'utf8');
     const parsed = JSON.parse(raw) as SessionMetadata;
     const enriched = await attachModelRuns(parsed, sessionId);
-    const runtimeChecked = await markDeadBrowser(enriched, { persist: false });
-    return await markZombie(runtimeChecked, { persist: false });
+    const runtimeChecked = await markDeadBrowser(enriched, { persist: false, allChromeProcesses });
+    return await markZombie(runtimeChecked, { persist: false, allChromeProcesses });
   } catch {
     return null;
   }
@@ -518,12 +527,13 @@ export function createSessionLogWriter(sessionId: string, model?: string): Sessi
 export async function listSessionsMetadata(): Promise<SessionMetadata[]> {
   await ensureSessionStorage();
   const entries = await fs.readdir(getSessionsDir()).catch(() => []);
+  const allChromeProcesses = await findAllChromeProcesses();
   const metas: SessionMetadata[] = [];
   for (const entry of entries) {
-    let meta = await readSessionMetadata(entry);
+    let meta = await readSessionMetadata(entry, allChromeProcesses);
     if (meta) {
-      meta = await markDeadBrowser(meta, { persist: true });
-      meta = await markZombie(meta, { persist: true }); // keep stored metadata consistent with zombie detection
+      meta = await markDeadBrowser(meta, { persist: true, allChromeProcesses });
+      meta = await markZombie(meta, { persist: true, allChromeProcesses }); // keep stored metadata consistent with zombie detection
       metas.push(meta);
     }
   }
@@ -684,7 +694,10 @@ export async function getSessionPaths(sessionId: string): Promise<{
   return { dir, metadata, log, request };
 }
 
-async function markZombie(meta: SessionMetadata, { persist }: { persist: boolean }): Promise<SessionMetadata> {
+async function markZombie(
+  meta: SessionMetadata,
+  { persist, allChromeProcesses }: { persist: boolean; allChromeProcesses?: Map<string, number> },
+): Promise<SessionMetadata> {
   if (!isZombie(meta)) {
     return meta;
   }
@@ -692,7 +705,7 @@ async function markZombie(meta: SessionMetadata, { persist }: { persist: boolean
     const runtime = meta.browser?.runtime;
     if (runtime) {
       if (runtime.chromePid && runtime.userDataDir) {
-        const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort);
+        const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort, allChromeProcesses);
         if (alive) return meta;
       } else {
         const signals: boolean[] = [];
@@ -721,7 +734,10 @@ async function markZombie(meta: SessionMetadata, { persist }: { persist: boolean
   return updated;
 }
 
-async function markDeadBrowser(meta: SessionMetadata, { persist }: { persist: boolean }): Promise<SessionMetadata> {
+async function markDeadBrowser(
+  meta: SessionMetadata,
+  { persist, allChromeProcesses }: { persist: boolean; allChromeProcesses?: Map<string, number> },
+): Promise<SessionMetadata> {
   if (meta.status !== 'running' || meta.mode !== 'browser') {
     return meta;
   }
@@ -730,7 +746,7 @@ async function markDeadBrowser(meta: SessionMetadata, { persist }: { persist: bo
     return meta;
   }
   if (runtime.chromePid && runtime.userDataDir) {
-    const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort);
+    const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort, allChromeProcesses);
     if (alive) return meta;
   } else {
     const signals: boolean[] = [];

@@ -85,6 +85,7 @@ export async function isChromeAlive(
   pid: number | undefined | null,
   userDataDir: string,
   port?: number,
+  allChromeProcesses?: Map<string, number>,
 ): Promise<boolean> {
   // 1. Fast, cheap check: does the PID exist?
   if (!isProcessAlive(pid)) {
@@ -92,7 +93,9 @@ export async function isChromeAlive(
   }
 
   // 2. Robust check: does the PID belong to a Chrome using our profile?
-  const verifiedPid = await findChromePidUsingUserDataDir(userDataDir);
+  const verifiedPid = allChromeProcesses
+    ? allChromeProcesses.get(userDataDir)
+    : await findChromePidUsingUserDataDir(userDataDir);
   
   // verifiedPid is the PID of the Chrome process running with this userDataDir.
   // If null, no Chrome is running with this profile -> our PID is a zombie/reused.
@@ -114,6 +117,79 @@ export async function isChromeAlive(
   }
 
   return true;
+}
+
+/**
+ * Returns a map of userDataDir to PID for all running Chrome/Chromium processes.
+ * Used to optimize session listing.
+ */
+export async function findAllChromeProcesses(): Promise<Map<string, number>> {
+  if (process.platform === 'win32') {
+    return findAllChromeProcessesWin32();
+  }
+  return findAllChromeProcessesUnix();
+}
+
+async function findAllChromeProcessesUnix(): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  try {
+    const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
+    const lines = String(stdout ?? '').split('\n');
+    for (const line of lines) {
+      if (!line) continue;
+      const match = line.match(/^\s*(\d+)\s+(.*)$/);
+      if (!match) continue;
+      
+      const pid = parseInt(match[1], 10);
+      const cmd = match[2];
+      const lower = cmd.toLowerCase();
+      
+      if (!lower.includes('chrome') && !lower.includes('chromium')) continue;
+      
+      // Extract --user-data-dir=...
+      const dirMatch = cmd.match(/--(?:user-data-dir|user-data-dir)=["']?([^"'\s]+)["']?/);
+      if (dirMatch?.[1]) {
+        results.set(dirMatch[1], pid);
+      }
+    }
+  } catch {
+    // best effort
+  }
+  return results;
+}
+
+async function findAllChromeProcessesWin32(): Promise<Map<string, number>> {
+  const results = new Map<string, number>();
+  try {
+    const script = `Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*chrome*' -or $_.Name -like '*chromium*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json`;
+    const { stdout } = await execFileAsync('powershell', ['-NoProfile', '-Command', script], {
+      maxBuffer: 10 * 1024 * 1024,
+      timeout: 5000,
+    });
+    
+    if (!stdout || !stdout.trim()) return results;
+
+    let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
+    try {
+      const parsed = JSON.parse(stdout);
+      processes = Array.isArray(parsed) ? parsed : [parsed];
+    } catch {
+      return results;
+    }
+
+    for (const proc of processes) {
+      if (!proc.CommandLine) continue;
+      const cmd = proc.CommandLine;
+      const dirMatch = cmd.match(/--(?:user-data-dir|user-data-dir)=["']?([^"'\s]+)["']?/);
+      if (dirMatch?.[1]) {
+        // Normalize slashes for consistency if needed, but here we store as-is from cmdline
+        results.set(dirMatch[1], proc.ProcessId);
+      }
+    }
+  } catch {
+    // best effort
+  }
+  return results;
 }
 
 export async function findChromePidUsingUserDataDir(userDataDir: string): Promise<number | null> {

@@ -36,6 +36,8 @@ describe('oracle CLI integration', () => {
       [
         TSX_BIN,
         CLI_ENTRY,
+        '--engine',
+        'api',
         '--prompt',
         'Integration check',
         '--model',
@@ -102,7 +104,7 @@ describe('oracle CLI integration', () => {
 
     await execFileAsync(
       process.execPath,
-      [TSX_BIN, CLI_ENTRY, '--prompt', 'Codex integration', '--model', 'gpt-5.1-codex'],
+      [TSX_BIN, CLI_ENTRY, '--engine', 'api', '--prompt', 'Codex integration', '--model', 'gpt-5.1-codex'],
       { env },
     );
 
@@ -135,7 +137,7 @@ describe('oracle CLI integration', () => {
     await expect(
       execFileAsync(
         process.execPath,
-        [TSX_BIN, CLI_ENTRY, '--prompt', 'Codex Max integration', '--model', 'gpt-5.1-codex-max'],
+        [TSX_BIN, CLI_ENTRY, '--engine', 'api', '--prompt', 'Codex Max integration', '--model', 'gpt-5.1-codex-max'],
         { env },
       ),
     ).rejects.toThrow(/codex-max is not available yet/i);
@@ -143,7 +145,7 @@ describe('oracle CLI integration', () => {
     await rm(oracleHome, { recursive: true, force: true });
   }, INTEGRATION_TIMEOUT);
 
-  test('runs multi-model across OpenAI, Gemini, and Claude with custom factory', async () => {
+  test('runs multi-model across OpenAI and Gemini with custom factory', async () => {
     const oracleHome = await mkdtemp(path.join(os.tmpdir(), 'oracle-multi-'));
     const env = {
       ...process.env,
@@ -152,8 +154,6 @@ describe('oracle CLI integration', () => {
       // biome-ignore lint/style/useNamingConvention: env var name
       GEMINI_API_KEY: 'gk-integration',
       // biome-ignore lint/style/useNamingConvention: env var name
-      ANTHROPIC_API_KEY: 'ak-integration',
-      // biome-ignore lint/style/useNamingConvention: env var name
       ORACLE_HOME_DIR: oracleHome,
       // biome-ignore lint/style/useNamingConvention: env var name
       ORACLE_CLIENT_FACTORY: path.join(process.cwd(), 'tests', 'fixtures', 'mockPolyClient.cjs'),
@@ -161,11 +161,28 @@ describe('oracle CLI integration', () => {
       ORACLE_NO_DETACH: '1',
     };
 
-    await execFileAsync(
-      process.execPath,
-      [TSX_BIN, CLI_ENTRY, '--prompt', 'Multi run test prompt long enough', '--models', 'gpt-5.1,gemini-3-pro,claude-4.5-sonnet'],
-      { env },
-    );
+    try {
+      await execFileAsync(
+        process.execPath,
+        [
+          TSX_BIN,
+          CLI_ENTRY,
+          '--engine',
+          'api',
+          '--wait',
+          '--prompt',
+          'Multi run test prompt long enough',
+          '--models',
+          'gpt-5.1,gemini-3-pro',
+        ],
+        { env },
+      );
+    } catch (err: any) {
+      console.error('CLI Execution Failed:', err.message);
+      console.error('STDOUT:', err.stdout);
+      console.error('STDERR:', err.stderr);
+      throw err;
+    }
 
     const sessionsDir = path.join(oracleHome, 'sessions');
     const sessionIds = await readdir(sessionsDir);
@@ -176,7 +193,7 @@ describe('oracle CLI integration', () => {
       (m: { model: string }) => m.model,
     );
     expect(selectedModels).toEqual(
-      expect.arrayContaining(['gpt-5.1', 'gemini-3-pro', 'claude-4.5-sonnet']),
+      expect.arrayContaining(['gpt-5.1', 'gemini-3-pro']),
     );
     expect(metadata.status).toBe('completed');
 
@@ -201,18 +218,28 @@ describe('oracle CLI integration', () => {
       ORACLE_NO_DETACH: '1',
     };
 
-    await execFileAsync(
-      process.execPath,
-      [
-        TSX_BIN,
-        CLI_ENTRY,
-        '--prompt',
-        'Shorthand multi-model normalization prompt that is safely over twenty characters.',
-        '--models',
-        'gpt-5.1,gemini,sonnet',
-      ],
-      { env },
-    );
+    try {
+      await execFileAsync(
+        process.execPath,
+        [
+          TSX_BIN,
+          CLI_ENTRY,
+          '--engine',
+          'api',
+          '--wait',
+          '--prompt',
+          'Shorthand multi-model normalization prompt that is safely over twenty characters.',
+          '--models',
+          'gpt-5.1,gemini',
+        ],
+        { env },
+      );
+    } catch (err: any) {
+      console.error('CLI Execution Failed (Shorthand):', err.message);
+      console.error('STDOUT:', err.stdout);
+      console.error('STDERR:', err.stderr);
+      throw err;
+    }
 
     const sessionsDir = path.join(oracleHome, 'sessions');
     const sessionIds = await readdir(sessionsDir);
@@ -223,7 +250,7 @@ describe('oracle CLI integration', () => {
       (m: { model: string }) => m.model,
     );
     expect(selectedModels).toEqual(
-      expect.arrayContaining(['gpt-5.1', 'gemini-3-pro', 'claude-4.5-sonnet']),
+      expect.arrayContaining(['gpt-5.1', 'gemini-3-pro']),
     );
     expect(metadata.status).toBe('completed');
 

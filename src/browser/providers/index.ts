@@ -15,7 +15,7 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     config: GROK_PROVIDER,
     resolveProjectUrl: (projectId) => `https://grok.com/project/${projectId}`,
     resolveConversationUrl: (conversationId, projectId) =>
-      projectId ? `https://grok.com/project/${projectId}?chat=${conversationId}` : `https://grok.com/?chat=${conversationId}`,
+      projectId ? `https://grok.com/project/${projectId}?chat=${conversationId}` : `https://grok.com/c/${conversationId}`,
     ...createGrokAdapter(),
   },
 };
