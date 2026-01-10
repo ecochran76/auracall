@@ -30,14 +30,15 @@ Oracle reads layered config files (system → user → project tree). Files use 
     grokUrl: "https://grok.com/",
     chatgptUrl: "https://chatgpt.com/", // root is fine; folder URLs also work
     url: null, // alias for chatgptUrl (kept for back-compat)
-    debugPort: null,          // fixed DevTools port (env: ORACLE_BROWSER_PORT / ORACLE_BROWSER_DEBUG_PORT)
+    debugPort: null,          // fixed DevTools port (env-only override; prefer debugPortRange)
+    debugPortRange: [45000, 45100], // optional range for spawning new Chrome instances
     timeoutMs: 1200000,
     inputTimeoutMs: 30000,
     cookieSyncWaitMs: 0,      // wait (ms) before retrying cookie sync when Chrome cookies are empty/locked
     modelStrategy: "select", // select | current | ignore (ChatGPT only; ignored for Gemini web)
     thinkingTime: "extended", // light | standard | extended | heavy (ChatGPT Thinking/Pro models)
     manualLogin: false,        // set true to reuse a persistent automation profile and sign in once (Windows defaults to true when unset)
-    manualLoginProfileDir: null, // override profile dir (or set ORACLE_BROWSER_PROFILE_DIR)
+    manualLoginProfileDir: null, // override profile dir (or set ORACLE_BROWSER_PROFILE_DIR); legacy name pending profile refactor
     headless: false,
     hideWindow: false,
     keepBrowser: false,
@@ -111,7 +112,9 @@ Within each file, later CLI flags still override config, and environment variabl
 - `browser.cache.*` sets defaults for `oracle cache --refresh`.
 - `browser.sessionOpen.*` sets defaults for `oracle session <id> --open-conversation` (URL printing and browser overrides).
 - `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`, `grok` uses `grok-4.1`.
-- Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir`, and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
+- `browser.debugPortRange` restricts the DevTools port range used when spawning new Chrome instances. It does not affect attachment to existing sessions or `--remote-chrome`.
+- `browser.debugPort` pins the DevTools port for new Chrome spawns. Environment overrides (`ORACLE_BROWSER_PORT` / `ORACLE_BROWSER_DEBUG_PORT`) still take priority. Use this when you need a stable port (e.g., firewall rules).
+- Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir` (legacy naming), and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
 
 If the config is missing or invalid, Oracle falls back to defaults and prints a warning for parse errors.
 

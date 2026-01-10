@@ -25,14 +25,14 @@ export function createGrokAdapter(): Pick<
               }
             };
             const current = location.href;
-            const currentMatch = current.match(/\\/project\\/([^/?#]+)/);
+            const currentMatch = current.match(/\/project\/([^/?#]+)/);
             if (currentMatch?.[1]) {
               add(currentMatch[1], document.title || currentMatch[1], current);
             }
             const links = Array.from(document.querySelectorAll('a[href*="/project/"]'));
             for (const link of links) {
               const href = link.getAttribute('href') || '';
-              const match = href.match(/\\/project\\/([^/?#]+)/);
+              const match = href.match(/\/project\/([^/?#]+)/);
               if (!match?.[1]) continue;
               const text = (link.textContent || '').trim();
               const url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
@@ -76,7 +76,7 @@ export function createGrokAdapter(): Pick<
           ? []
           : await listOpenConversations(host, port, resolvedProjectId);
         let history: Conversation[] = [];
-        if (!resolvedProjectId && includeHistory) {
+        if (includeHistory) {
           if (options?.configuredUrl?.includes('/project/')) {
             const historyConnection = await connectToGrokTab(
               { ...options, configuredUrl: 'https://grok.com/' },
@@ -121,7 +121,9 @@ export function createGrokAdapter(): Pick<
                 if (!text) return null;
                 if (text === 'just now' || text === 'moments ago') return now;
                 if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
-                const match = text.match(/(\\d+)\\s+(minute|hour|day|week|month|year)s?\\s+ago/);
+                // Use RegExp constructor to avoid literal parsing issues in template string
+                const timeRegex = new RegExp("([0-9]+)[ \\t\\n]+(minute|hour|day|week|month|year)s?[ \\t\\n]+ago", "i");
+                const match = text.match(timeRegex);
                 if (match) {
                   const amount = Number.parseInt(match[1], 10);
                   if (!Number.isFinite(amount)) return null;
@@ -159,12 +161,9 @@ export function createGrokAdapter(): Pick<
                 }
 
                 // Scan direct text of children for relative time patterns
-                // We look for short strings on the right side usually
                 const candidates = Array.from(node.querySelectorAll('*'));
-                // Often the time is the last element or close to it
                 for (const candidate of candidates.reverse()) {
                   const text = (candidate.textContent || '').trim();
-                  // Avoid reading the whole title
                   if (text.length > 20) continue; 
                   const parsed = parseRelative(text);
                   if (parsed) return parsed;
@@ -173,6 +172,12 @@ export function createGrokAdapter(): Pick<
               };
               
               const items = Array.from(document.querySelectorAll('a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]'));
+              const nodeDetails = items.slice(0, 10).map(n => ({
+                tag: n.tagName,
+                text: (n.textContent || '').trim().slice(0, 30),
+                href: n.getAttribute('href'),
+                dataValue: n.getAttribute('data-value') || n.dataset?.value
+              }));
               
               for (const node of items) {
                 const href = node.getAttribute('href') || node.getAttribute('data-href') || node.getAttribute('data-url') || '';
@@ -186,12 +191,12 @@ export function createGrokAdapter(): Pick<
                 } else if (href) {
                   try {
                     const fullUrl = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                    const match = fullUrl.match(/\\/c\\/([^/?#]+)/);
+                    const match = fullUrl.match(/\/c\/([^/?#]+)/);
                     if (match?.[1]) {
                       chatId = match[1];
                       url = fullUrl;
                     }
-                  } catch { /* ignore */ }
+                  } catch { /* ignore */ } 
                 }
 
                 if (!chatId) continue;
@@ -201,22 +206,26 @@ export function createGrokAdapter(): Pick<
                 }
 
                 const row = node.closest('div,li') || node;
-                const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row;
+                const ts = readTimestamp(row);
                 
                 // Exclude time text from title if possible
-                let title = (titleNode?.textContent || '').trim();
-                const ts = readTimestamp(row);
-
-                if (ts) {
-                  // Attempt to clean title if it accidentally includes the time text (e.g. if titleNode IS the row)
-                  // This is a simple heuristic: if title ends with time-like string, chop it.
-                  // But usually titleNode is a specific element.
+                let title = (row.textContent || '').trim();
+                const titleNode = row.querySelector('[class*="line-clamp"], [class*="truncate"]');
+                if (titleNode) {
+                   title = (titleNode.textContent || '').trim();
                 }
+                // Try cleaning title with safe regexes
+                title = title
+                    .replace(/(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi, '')
+                    .replace(/(^|\\s)(yesterday|today)(\\s|$)/gi, '')
+                    .replace(/(^|\\s)(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+[0-9]{1,2}(\\s|$)/gi, '')
+                    .replace(/\\s+/g, ' ')
+                    .trim();
 
                 if (!title) continue;
                 add(chatId, title, url, ts);
               }
-              return { items: Array.from(conversations.values()), count: conversations.size, nodes: items.length, href: location.href, path: location.pathname, projectId };
+              return { items: Array.from(conversations.values()), count: conversations.size, nodes: items.length, href: location.href, path: location.pathname, projectId, nodeDetails };
             } catch (e) {
               return { error: e.message, stack: e.stack };
             }
@@ -226,7 +235,7 @@ export function createGrokAdapter(): Pick<
         const payload = (result?.value ?? { items: [] }) as any;
         const raw = payload.items || [];
         if (raw.length === 0) {
-           console.log('[DEBUG] Scraper result:', JSON.stringify(payload, null, 2));
+           // Debug logging if needed, can be enabled via env
         }
         const merged = new Map<string, Conversation>();
         for (const entry of raw) {
@@ -263,77 +272,126 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const projectUrl = projectId ? `https://grok.com/project/${projectId}?tab=conversations` : undefined;
-      // If no project, we might need to find it in history/sidebar. For now, require project or assume sidebar.
-      // But sidebar items often don't have rename.
+      const targetUrl = projectId 
+        ? `https://grok.com/project/${projectId}?chat=${conversationId}`
+        : `https://grok.com/c/${conversationId}`;
       
-      const connection = projectUrl
-        ? await connectToGrokProjectTab(options, projectId ?? null, projectUrl)
-        : await connectToGrokTab(options, `https://grok.com/`);
+      const connection = projectId
+        ? await connectToGrokProjectTab(options, projectId, targetUrl)
+        : await connectToGrokTab(options, targetUrl);
         
-      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
+      const { client, targetId, shouldClose, host, port } = connection;
       try {
-        if (projectUrl && !usedExisting) {
-           await navigateToProject(client, projectUrl);
-        }
+        await navigateToProject(client, targetUrl);
+        // Wait a bit for the sidebar to reflect the active conversation
+        await new Promise(r => setTimeout(r, 2000));
         
-        await client.Runtime.evaluate({
-          expression: `(async () => {
-            const chatId = ${JSON.stringify(conversationId)};
-            const newTitle = ${JSON.stringify(newTitle)};
-            
-            // 1. Find the item
-            const selector = \`a[href*="\${chatId}"], [data-value*="\${chatId}"]\`;
-            let item = document.querySelector(selector);
-            
-            if (!item) {
-               // Try scrolling or waiting?
-               // Assuming it's visible for now.
-               throw new Error('Conversation item not found: ' + chatId);
-            }
-            
-            const row = item.closest('div.grid') || item.closest('li') || item.parentElement;
-            
-            // 2. Find "More" button (usually 3 dots)
-            // It might appear on hover.
-            row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-            await new Promise(r => setTimeout(r, 200));
-            
-            const menuBtn = row.querySelector('button[aria-label="More options"], button[aria-label="Options"], button[aria-haspopup="menu"]');
-            
-            if (!menuBtn) throw new Error('Menu button not found for conversation');
-            
-            menuBtn.click();
-            await new Promise(r => setTimeout(r, 500));
-            
-            // 3. Click Rename
-            const menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
-            const renameBtn = menuItems.find(el => el.textContent.toLowerCase().includes('rename'));
-            
-            if (!renameBtn) throw new Error('Rename option not found in menu');
-            
-            renameBtn.click();
-            await new Promise(r => setTimeout(r, 500));
-            
-            // 4. Type new name
-            // It usually turns into an input or contenteditable
-            const input = row.querySelector('input, [contenteditable="true"]');
-            if (!input) throw new Error('Rename input not found');
-            
-            if (input.tagName === 'INPUT') {
-               input.value = newTitle;
-               input.dispatchEvent(new Event('input', { bubbles: true }));
-            } else {
-               input.textContent = newTitle;
-               input.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-            
-            // 5. Submit
-            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
-            
-          })()`,
-          awaitPromise: true
-        });
+        const performRename = async () => {
+          const evalResult = await client.Runtime.evaluate({
+            expression: `(async () => {
+              const chatId = ${JSON.stringify(conversationId)};
+              const newTitle = ${JSON.stringify(newTitle)};
+              const logs = [];
+              const log = (msg) => {
+                logs.push(msg);
+                console.log('[browser-rename] ' + msg);
+              };
+              
+              try {
+                log('Searching for active sidebar item for chatId: ' + chatId);
+                // Look for the active item in the sidebar
+                const selector = 'a[href*="' + chatId + '"]';
+                const items = Array.from(document.querySelectorAll(selector));
+                // Prefer the one in the sidebar list (usually inside a UL or div with specific classes)
+                let item = items.find(el => el.closest('nav') || el.closest('aside') || el.closest('.group\\/sidebar-wrapper'));
+                if (!item) item = items[0]; // fallback
+                
+                if (!item) {
+                   log('Item not found via selector: ' + selector);
+                   return { success: false, logs };
+                }
+                log('Found item: ' + item.tagName);
+                
+                const row = item.closest('div.grid') || item.closest('li') || item.closest('div[class*="rounded"]') || item.parentElement;
+                log('Found row: ' + (row ? row.className : 'null'));
+                
+                if (!row) throw new Error('Could not find row container for conversation');
+
+                log('Triggering mouseover/mouseenter on row');
+                row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+                row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+                await new Promise(r => setTimeout(r, 500));
+                
+                log('Searching for menu button');
+                const menuBtn = row.querySelector('button[aria-label*="option" i], button[aria-label*="menu" i], [aria-haspopup="menu"]');
+                
+                if (!menuBtn) {
+                  const buttons = Array.from(row.querySelectorAll('button'));
+                  const btnDebug = buttons.map(b => ({ tag: b.tagName, label: b.getAttribute('aria-label') || b.textContent }));
+                  log('Available buttons in row: ' + JSON.stringify(btnDebug));
+                  log('Menu button not found in row. Row HTML: ' + row.innerHTML.slice(0, 300));
+                  throw new Error('Menu button not found for conversation');
+                }
+                log('Clicking menu button');
+                menuBtn.click();
+                await new Promise(r => setTimeout(r, 800));
+                
+                const menuItems = Array.from(document.querySelectorAll('[role="menuitem"], button, a'));
+                const renameBtn = menuItems.find(el => (el.textContent || '').toLowerCase().includes('rename'));
+                
+                if (!renameBtn) {
+                  log('Rename option not found in menu. Found ' + menuItems.length + ' candidates.');
+                  throw new Error('Rename option not found in menu');
+                }
+                log('Clicking rename button');
+                renameBtn.click();
+                await new Promise(r => setTimeout(r, 800));
+                
+                const input = row.querySelector('input, [contenteditable="true"]');
+                if (!input) {
+                  log('Rename input/contenteditable not found in row after clicking rename');
+                  throw new Error('Rename input not found');
+                }
+                log('Found input: ' + input.tagName);
+                
+                if (input.tagName === 'INPUT') {
+                   input.focus();
+                   input.value = newTitle;
+                   input.dispatchEvent(new Event('input', { bubbles: true }));
+                   input.dispatchEvent(new Event('change', { bubbles: true }));
+                } else {
+                   input.focus();
+                   input.textContent = newTitle;
+                   input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
+                log('Submitting with Enter');
+                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+                await new Promise(r => setTimeout(r, 1000));
+                
+                return { success: true, logs };
+              } catch (e) {
+                return { success: false, error: e.message, logs };
+              }
+            })()`,
+            awaitPromise: true,
+            returnByValue: true
+          });
+          
+          if (evalResult.exceptionDetails) {
+            return {
+              success: false,
+              error: 'JS Exception: ' + evalResult.exceptionDetails.exception?.description,
+              logs: []
+            };
+          }
+          return evalResult.result?.value || { success: false, error: 'Empty result from browser', logs: [] };
+        };
+
+        const info = await performRename();
+        if (!info || !info.success) {
+          throw new Error(info?.error || 'Rename failed');
+        }
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -358,7 +416,7 @@ async function connectToGrokTab(
   const host = options?.host ?? '127.0.0.1';
   const port = options?.port ?? resolvePortFromEnv();
   if (!port) {
-    throw new Error('Missing DevTools port. Set ORACLE_BROWSER_PORT or browser.debugPort.');
+    throw new Error('Missing DevTools port. Launch a Grok browser session or set ORACLE_BROWSER_PORT.');
   }
   const targets = await CDP.List({ host, port });
   const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
@@ -408,7 +466,7 @@ async function connectToGrokProjectTab(
   const host = options?.host ?? '127.0.0.1';
   const port = options?.port ?? resolvePortFromEnv();
   if (!port) {
-    throw new Error('Missing DevTools port. Set ORACLE_BROWSER_PORT or browser.debugPort.');
+    throw new Error('Missing DevTools port. Launch a Grok browser session or set ORACLE_BROWSER_PORT.');
   }
   const targets = await CDP.List({ host, port });
   const match = projectId
@@ -507,7 +565,7 @@ async function ensureProjectPage(client: ChromeClient, projectId?: string): Prom
 async function openConversationList(client: ChromeClient): Promise<void> {
   await client.Runtime.evaluate({
     expression: `(() => {
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
       const tablist = document.querySelector('[role="tablist"]');
       if (tablist) {
         const tabs = Array.from(tablist.querySelectorAll('a,button,[role="tab"],[role="button"],[role="link"]'));
@@ -539,8 +597,8 @@ async function listHistoryConversations(
     }
     opened = await openHistoryDialog(client);
   }
-  if (!opened) return [];
   try {
+    if (!opened) return [];
     await expandHistoryDialog(client);
     const maxItems = Math.max(1, options?.historyLimit ?? 200);
     const cutoffMs = options?.historySince ? Date.parse(options.historySince) : NaN;
@@ -549,8 +607,7 @@ async function listHistoryConversations(
     let lastCount = 0;
     let lastScrollTop = -1;
     while (entries.size < maxItems && idleCount < 10) {
-      const { result } = await client.Runtime.evaluate({
-        expression: `(() => {
+      const expression = `(() => {
           const projectId = ${JSON.stringify(projectId ?? null)};
           const dialog =
             document.querySelector('[role="dialog"]') ||
@@ -561,6 +618,7 @@ async function listHistoryConversations(
           const parseRelative = (value) => {
             const text = String(value || '').toLowerCase().trim();
             if (!text) return null;
+            if (text === 'just now' || text === 'moments ago') return now;
             if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
             const match = text.match(/(\\d+)\\s+(minute|hour|day|week|month|year)s?\\s+ago/);
             if (match) {
@@ -600,6 +658,26 @@ async function listHistoryConversations(
                 const absolute = Date.parse(String(candidate || ''));
                 if (Number.isFinite(absolute)) return { ts: absolute, label: String(candidate || '').trim() };
               }
+              const timeNode =
+                node.querySelector?.('.z-20') ||
+                node.querySelector?.('[class*="time"]') ||
+                node.querySelector?.('[class*="timestamp"]');
+              if (timeNode) {
+                const text = (timeNode.textContent || '').trim();
+                const parsed = parseRelative(text);
+                if (parsed) return { ts: parsed, label: text };
+                const absolute = Date.parse(text);
+                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
+              }
+              const descendants = Array.from(node.querySelectorAll?.('*') ?? []).reverse();
+              for (const el of descendants) {
+                const text = (el.textContent || '').trim();
+                if (!text || text.length > 40) continue;
+                const parsed = parseRelative(text);
+                if (parsed) return { ts: parsed, label: text };
+                const absolute = Date.parse(text);
+                if (Number.isFinite(absolute)) return { ts: absolute, label: text };
+              }
               return { ts: null, label: '' };
             };
             const extractTitle = (node, timeLabel) => {
@@ -617,15 +695,18 @@ async function listHistoryConversations(
               }
               let title = text.replace(/\\s+/g, ' ').trim();
               if (timeLabel) {
-                const escaped = timeLabel.replace(/[.*+?^$()|[\\]\\\\]/g, '\\\\$&');
+                const escaped = timeLabel.replace(/[.*+?^$()|[\\]\\\\]/g, '\\$&');
                 title = title.replace(new RegExp(escaped, 'i'), '').trim();
               }
+              const timeCleanRegex = /(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi;
+              const dayCleanRegex = /(^|\\s)(yesterday|today)(\\s|$)/gi;
+              const dateCleanRegex = /(^|\\s)(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+[0-9]{1,2}(\\s|$)/gi;
               title = title
-                .replace(/\\b\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago\\b/gi, '')
-                .replace(/\\b(yesterday|today)\\b/gi, '')
-                .replace(/\\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)\\s+\\d{1,2}\\b/gi, '')
-                .replace(/\\s+/g, ' ')
-                .trim();
+                  .replace(timeCleanRegex, '')
+                  .replace(dayCleanRegex, '')
+                  .replace(dateCleanRegex, '')
+                  .replace(/\\s+/g, ' ')
+                  .trim();
               return title;
             };
             const items = Array.from(
@@ -695,17 +776,23 @@ async function listHistoryConversations(
             scrollHeight: scrollable.scrollHeight,
             oldest,
           };
-        })()`,
+        })()`;
+      const { result } = await client.Runtime.evaluate({
+        expression,
         returnByValue: true,
       });
-      const payload = result?.value as {
-        items: Array<{ id: string; title: string; url?: string; timestamp?: number | null }>;
-        canScroll: boolean;
-        atBottom: boolean;
-        scrollTop: number;
-        scrollHeight: number;
-        oldest: number | null;
+      const payload = (result?.value || {}) as {
+        items?: Array<{ id: string; title: string; url?: string; timestamp?: number | null }>;
+        canScroll?: boolean;
+        atBottom?: boolean;
+        scrollTop?: number;
+        scrollHeight?: number;
+        oldest?: number | null;
+        error?: string;
       };
+      if (process.env.ORACLE_DEBUG_GROK === '1') {
+         if (!payload.items) console.log('[grok-history] RAW:', JSON.stringify(result));
+      }
       for (const entry of payload.items ?? []) {
         if (!entries.has(entry.id)) {
           entries.set(entry.id, entry);
@@ -724,7 +811,9 @@ async function listHistoryConversations(
         idleCount = 0;
       }
       lastCount = entries.size;
-      lastScrollTop = payload.scrollTop;
+      if (typeof payload.scrollTop === 'number') {
+        lastScrollTop = payload.scrollTop;
+      }
       await new Promise((resolve) => setTimeout(resolve, 500));
     }
     return Array.from(entries.values())
@@ -750,7 +839,7 @@ async function expandHistoryDialog(client: ChromeClient): Promise<void> {
         document.querySelector('dialog') ||
         document.querySelector('[aria-modal="true"]');
       if (!dialog) return false;
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
       const nodes = Array.from(dialog.querySelectorAll('button,a,[role="button"],[role="link"],[role="option"],div.cursor-pointer'));
       for (const node of nodes) {
         const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
@@ -767,23 +856,40 @@ async function expandHistoryDialog(client: ChromeClient): Promise<void> {
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
+  const alreadyOpen = await client.Runtime.evaluate({
+    expression: `Boolean(document.querySelector('[role="dialog"],dialog,[aria-modal="true"]'))`,
+    returnByValue: true,
+  });
+  if (alreadyOpen?.result?.value) {
+    return true;
+  }
+
   const findAndClickHistory = async () => {
-    const clicked = await client.Runtime.evaluate({
+    const result = await client.Runtime.evaluate({
       expression: `(() => {
-        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
         const nodes = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"]'));
+        const candidates = nodes.map(n => ({ tag: n.tagName, label: normalize(n.getAttribute('aria-label') || n.textContent || '') }));
+        
         for (const node of nodes) {
-          const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-          if (label === 'history' || label.endsWith(' history') || label.includes('history')) {
-            node.click();
-            return true;
+          const label = normalize(node.getAttribute('aria-label') || node.textContent || '');
+          if (label.includes('history') || (label.includes('tory') && label.includes('hi'))) {
+            const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+            node.dispatchEvent(clickEvent);
+            return { success: true, candidates: [] };
           }
         }
-        return false;
+        return { success: false, candidates: candidates.slice(0, 50) };
       })()`,
       returnByValue: true,
     });
-    return clicked.result?.value;
+    const val = result.result?.value as { success: boolean; candidates: any[] };
+    if (!val || !val.success) {
+      if (process.env.ORACLE_DEBUG_GROK === '1') {
+        console.log('[DEBUG] History candidates:', JSON.stringify(val?.candidates || [], null, 2));
+      }
+    }
+    return val?.success ?? false;
   };
 
   if (await findAndClickHistory()) {
@@ -827,6 +933,15 @@ async function closeHistoryDialog(client: ChromeClient): Promise<void> {
       const getDialog = () => document.querySelector('[role="dialog"]') || document.querySelector('dialog') || document.querySelector('[aria-modal="true"]');
       let dialog = getDialog();
       if (!dialog) return true;
+
+      // Try close button inside dialog
+      const closeButton =
+        dialog.querySelector('[aria-label*="close" i], [data-state="open"] [aria-label*="close" i]') ||
+        dialog.querySelector('button[aria-label*="close" i]') ||
+        dialog.querySelector('button[title*="close" i]');
+      if (closeButton) {
+        closeButton.click();
+      }
 
       // Try backdrop click
       const backdrop =

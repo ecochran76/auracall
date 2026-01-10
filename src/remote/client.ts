@@ -14,10 +14,11 @@ interface RemoteExecutorOptions {
 export function createRemoteBrowserExecutor({ host, token }: RemoteExecutorOptions) {
   // Return a drop-in replacement for runBrowserMode so the browser session runner can stay unchanged.
   return async function remoteBrowserExecutor(options: BrowserRunOptions): Promise<BrowserRunResult> {
+    const browserConfig = normalizeBrowserConfig(options.config);
     const payload: RemoteRunPayload = {
       prompt: options.prompt,
       attachments: await serializeAttachments(options.attachments ?? []),
-      browserConfig: options.config ?? {},
+      browserConfig,
       options: {
         heartbeatIntervalMs: options.heartbeatIntervalMs,
         verbose: options.verbose,
@@ -78,6 +79,52 @@ export function createRemoteBrowserExecutor({ host, token }: RemoteExecutorOptio
       req.end();
     });
   };
+}
+
+function normalizeBrowserConfig(
+  config: BrowserRunOptions['config'],
+): RemoteRunPayload['browserConfig'] {
+  if (!config) return {};
+  const remoteChrome = config.remoteChrome;
+  if (typeof remoteChrome === 'string') {
+    const parsed = parseRemoteChromeTarget(remoteChrome);
+    return {
+      ...config,
+      remoteChrome: parsed ?? null,
+    };
+  }
+  return {
+    ...config,
+    remoteChrome: remoteChrome ?? null,
+  };
+}
+
+function parseRemoteChromeTarget(raw: string): { host: string; port: number } | null {
+  const target = raw.trim();
+  if (!target) {
+    return null;
+  }
+  const ipv6Match = target.match(/^\[(.+)]:(\d+)$/);
+  let host: string | undefined;
+  let portSegment: string | undefined;
+
+  if (ipv6Match) {
+    host = ipv6Match[1]?.trim();
+    portSegment = ipv6Match[2]?.trim();
+  } else {
+    const lastColon = target.lastIndexOf(':');
+    if (lastColon === -1) {
+      return null;
+    }
+    host = target.slice(0, lastColon).trim();
+    portSegment = target.slice(lastColon + 1).trim();
+  }
+  if (!host) return null;
+  const port = Number.parseInt(portSegment ?? '', 10);
+  if (!Number.isFinite(port) || port <= 0 || port > 65_535) {
+    return null;
+  }
+  return { host, port };
 }
 
 async function serializeAttachments(attachments: BrowserAttachment[]): Promise<RemoteAttachmentPayload[]> {

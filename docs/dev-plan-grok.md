@@ -13,12 +13,12 @@
 - `src/browser/index.ts` — session lifecycle, cookies, reattach, logging.
 
 ## Grok-specific flow (selectors + logic)
-Selectors observed in `https://grok.com/project/ef52c821-cc28-4166-9e27-2e61b40a2a81`:
+Selectors observed in `https://grok.com/c/<conversation-id>`:
 - **Composer input**: `div.ProseMirror[contenteditable="true"]` (tiptap editor)
 - **Send button**: `button[aria-label="Submit"][type="submit"]`
-- **Message bubbles**: `main .message-bubble`
-  - **Assistant**: bubble includes `w-full max-w-none`
-  - **User**: bubble includes `bg-surface-l1`
+- **Message rows**: `main div.relative.group.flex.flex-col`
+  - **Assistant**: `main div.relative.group.flex.flex-col.items-start`
+  - **User**: `main div.relative.group.flex.flex-col.items-end`
 - **Attach button**: `button[aria-label="Attach"]`
 - **Attachments menu items** (role `menuitem`): `Upload a file`, `Add text content`, `Draw a sketch`, `Google Drive...`, `Connect Microsoft OneDrive`, `Recent`
 - **Hidden file input**: `input[type="file"].hidden` (multiple=true)

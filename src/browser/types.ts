@@ -31,11 +31,12 @@ export interface BrowserAutomationConfig {
   chatgptUrl?: string | null;
   timeoutMs?: number;
   debugPort?: number | null;
+  debugPortRange?: [number, number] | null;
   inputTimeoutMs?: number;
   cookieSync?: boolean;
-  cookieNames?: string[] | null;
+  cookieNames?: string[] | string | null;
   cookieSyncWaitMs?: number;
-  inlineCookies?: CookieParam[] | null;
+  inlineCookies?: CookieParam[] | string | null;
   inlineCookiesSource?: string | null;
   headless?: boolean;
   keepBrowser?: boolean;
@@ -44,10 +45,11 @@ export interface BrowserAutomationConfig {
   modelStrategy?: BrowserModelStrategy;
   debug?: boolean;
   allowCookieErrors?: boolean;
-  remoteChrome?: { host: string; port: number } | null;
+  remoteChrome?: { host: string; port: number } | string | null;
   manualLogin?: boolean;
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
+  wslChromePreference?: 'auto' | 'wsl' | 'windows';
   /** Thinking time intensity level for Thinking/Pro models: light, standard, extended, heavy */
   thinkingTime?: ThinkingTimeLevel;
 }
@@ -98,9 +100,13 @@ export type ResolvedBrowserConfig = Required<
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;
   debugPort?: number | null;
+  debugPortRange?: [number, number] | null;
+  inlineCookies?: CookieParam[] | null;
   inlineCookiesSource?: string | null;
+  cookieNames?: string[] | null;
   remoteChrome?: { host: string; port: number } | null;
   manualLogin?: boolean;
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
+  wslChromePreference?: 'auto' | 'wsl' | 'windows';
 };

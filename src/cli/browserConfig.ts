@@ -10,7 +10,6 @@ import { getOracleHomeDir } from '../oracleHome.js';
 
 const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
-const DEFAULT_CHROME_PROFILE = 'Default';
 
 // Ordered array: most specific models first to ensure correct selection.
 // The browser label is passed to the model picker which fuzzy-matches against ChatGPT's UI.
@@ -49,6 +48,7 @@ export interface BrowserFlagOptions {
   browserKeepBrowser?: boolean;
   browserManualLogin?: boolean;
   browserManualLoginProfileDir?: string | null;
+  browserWslChrome?: 'auto' | 'wsl' | 'windows';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   browserThinkingTime?: ThinkingTimeLevel;
   browserModelLabel?: string;
@@ -134,7 +134,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
 
   return {
-    chromeProfile: options.browserChromeProfile ?? DEFAULT_CHROME_PROFILE,
+    chromeProfile: options.browserChromeProfile ?? undefined,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,
     target,
@@ -157,6 +157,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     keepBrowser: options.browserKeepBrowser ? true : undefined,
     manualLogin: options.browserManualLogin === undefined ? undefined : options.browserManualLogin,
     manualLoginProfileDir: options.browserManualLoginProfileDir ?? undefined,
+    wslChromePreference: options.browserWslChrome ?? undefined,
     hideWindow: options.browserHideWindow ? true : undefined,
     desiredModel,
     modelStrategy,

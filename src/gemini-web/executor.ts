@@ -131,10 +131,11 @@ async function loadGeminiCookiesFromInline(
   log?: BrowserLogger,
 ): Promise<Record<string, string>> {
   const inline = browserConfig?.inlineCookies;
-  if (!inline || inline.length === 0) return {};
+  if (!Array.isArray(inline) || inline.length === 0) return {};
+  const inlineCookies = inline as CookieParam[];
 
   const cookieMap = buildGeminiCookieMap(
-    inline.filter((cookie): cookie is CookieParam => Boolean(cookie?.name && typeof cookie.value === 'string')),
+    inlineCookies.filter((cookie): cookie is CookieParam => Boolean(cookie?.name && typeof cookie.value === 'string')),
   );
 
   if (Object.keys(cookieMap).length > 0) {

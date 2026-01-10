@@ -24,6 +24,7 @@ export const CLI_MAPPING: Record<string, string> = {
   'browserKeepBrowser': 'browser.keepBrowser',
   'browserManualLogin': 'browser.manualLogin',
   'browserManualLoginProfileDir': 'browser.manualLoginProfileDir',
+  'browserWslChrome': 'browser.wslChromePreference',
   
   // Browser - Connection/Chrome
   'browserChromeProfile': 'browser.chromeProfile',

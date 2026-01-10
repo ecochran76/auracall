@@ -43,4 +43,19 @@ describe('resolveBrowserConfig', () => {
       }),
     ).toThrow(/Temporary Chat/i);
   });
+
+  test('normalizes debugPortRange', () => {
+    const resolved = resolveBrowserConfig({
+      debugPortRange: [46010, 46000],
+    });
+    expect(resolved.debugPortRange).toEqual([46000, 46010]);
+  });
+
+  test('rejects invalid debugPortRange', () => {
+    expect(() =>
+      resolveBrowserConfig({
+        debugPortRange: [0, 70000],
+      }),
+    ).toThrow(/debugPortRange/i);
+  });
 });

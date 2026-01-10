@@ -72,9 +72,11 @@ export const BrowserConfigSchema = z.object({
   keepBrowser: z.boolean().optional(),
   manualLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
+  wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
   
   // Connection
   debugPort: z.number().optional(),
+  debugPortRange: z.tuple([z.number(), z.number()]).optional(),
   remoteChrome: z.object({ host: z.string(), port: z.number() }).optional().or(z.string().optional()), // CLI passes string
   
   // Timing

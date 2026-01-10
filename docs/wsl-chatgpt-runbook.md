@@ -29,7 +29,7 @@ sudo apt-get install -y google-chrome-stable
     chromeCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
     chromeProfile: "Default",
     manualLogin: true,
-    manualLoginProfileDir: "/home/you/.oracle/browser-profile"
+    manualLoginProfileDir: "/home/you/.oracle/browser-profile" # legacy naming pending profile refactor
   }
 }
 ```
@@ -51,6 +51,9 @@ oracle --engine browser -p "Say hello from Chrome (WSL)"
 ## Troubleshooting
 - **Chrome opens but the URL never changes**: Oracle is connecting to the wrong DevTools host.
   - Fix: set `ORACLE_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1` for the run.
+- **Using Windows Chrome from WSL**:
+  - Keep `manualLoginProfileDir` as a WSL path (e.g., `/home/you/.oracle/browser-profile`); Oracle converts it to the `\\wsl.localhost\...` path for Windows Chrome.
+  - If DevTools can’t be reached, open the Windows firewall for the chosen port or pin a port with `ORACLE_BROWSER_PORT`.
 - **Wrong profile opens / not logged in**:
   - Keep the login window open, sign in, then rerun. The profile is reused on subsequent runs.
 - **Need a clean profile**:

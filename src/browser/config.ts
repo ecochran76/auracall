@@ -3,6 +3,7 @@ import { resolveProviderUrl } from './providers/service.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
+import { discoverDefaultBrowserProfile, type WslChromePreference } from './profileDiscovery.js';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -19,6 +20,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chatgptUrl: CHATGPT_URL,
   timeoutMs: 1_200_000,
   debugPort: null,
+  debugPortRange: [45000, 45100],
   inputTimeoutMs: 60_000,
   cookieSync: true,
   cookieNames: null,
@@ -36,6 +38,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   manualLogin: false,
   manualLoginProfileDir: null,
   manualLoginCookieSync: false,
+  wslChromePreference: 'auto',
 };
 
 export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined): ResolvedBrowserConfig {
@@ -74,11 +77,25 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   const isWindows = process.platform === 'win32';
   const manualLogin = config?.manualLogin ?? (isWindows ? true : DEFAULT_BROWSER_CONFIG.manualLogin);
   const cookieSyncDefault = isWindows ? false : DEFAULT_BROWSER_CONFIG.cookieSync;
+  const normalizedCookieNames = normalizeCookieNames(config?.cookieNames ?? DEFAULT_BROWSER_CONFIG.cookieNames);
+  const normalizedInlineCookies = normalizeInlineCookies(config?.inlineCookies ?? DEFAULT_BROWSER_CONFIG.inlineCookies);
+  const wslChromePreference = normalizeWslChromePreference(
+    config?.wslChromePreference ?? process.env.ORACLE_WSL_CHROME,
+  );
+  const explicitProfileDir = config?.manualLoginProfileDir ?? process.env.ORACLE_BROWSER_PROFILE_DIR ?? null;
+  const discoveredProfile = explicitProfileDir
+    ? null
+    : discoverDefaultBrowserProfile({ preference: wslChromePreference });
   const resolvedProfileDir = normalizeManualLoginProfileDir(
-    config?.manualLoginProfileDir ??
-      process.env.ORACLE_BROWSER_PROFILE_DIR ??
+    explicitProfileDir ??
+      discoveredProfile?.userDataDir ??
       path.join(os.homedir(), '.oracle', 'browser-profile'),
   );
+  const resolvedChromeProfile = config?.chromeProfile ?? discoveredProfile?.profileName ?? DEFAULT_BROWSER_CONFIG.chromeProfile;
+  const resolvedChromePath = config?.chromePath ?? discoveredProfile?.chromePath ?? DEFAULT_BROWSER_CONFIG.chromePath;
+  const resolvedCookiePath = config?.chromeCookiePath ?? discoveredProfile?.cookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath;
+  const debugPortRange = normalizeDebugPortRange(config?.debugPortRange);
+  const normalizedRemoteChrome = normalizeRemoteChrome(config?.remoteChrome ?? DEFAULT_BROWSER_CONFIG.remoteChrome);
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
@@ -86,29 +103,32 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     url: normalizedUrl,
     chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
     timeoutMs: config?.timeoutMs ?? DEFAULT_BROWSER_CONFIG.timeoutMs,
-    debugPort: config?.debugPort ?? debugPortEnv ?? DEFAULT_BROWSER_CONFIG.debugPort,
+    debugPort: debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
+    debugPortRange,
     inputTimeoutMs: config?.inputTimeoutMs ?? DEFAULT_BROWSER_CONFIG.inputTimeoutMs,
     cookieSync: config?.cookieSync ?? cookieSyncDefault,
-    cookieNames: config?.cookieNames ?? DEFAULT_BROWSER_CONFIG.cookieNames,
+    cookieNames: normalizedCookieNames,
     cookieSyncWaitMs: config?.cookieSyncWaitMs ?? DEFAULT_BROWSER_CONFIG.cookieSyncWaitMs,
-    inlineCookies: config?.inlineCookies ?? DEFAULT_BROWSER_CONFIG.inlineCookies,
+    inlineCookies: normalizedInlineCookies,
     inlineCookiesSource: config?.inlineCookiesSource ?? DEFAULT_BROWSER_CONFIG.inlineCookiesSource,
     headless: config?.headless ?? DEFAULT_BROWSER_CONFIG.headless,
     keepBrowser: config?.keepBrowser ?? DEFAULT_BROWSER_CONFIG.keepBrowser,
     hideWindow: config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
     desiredModel,
     modelStrategy,
-    chromeProfile: config?.chromeProfile ?? DEFAULT_BROWSER_CONFIG.chromeProfile,
-    chromePath: config?.chromePath ?? DEFAULT_BROWSER_CONFIG.chromePath,
-    chromeCookiePath: config?.chromeCookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath,
+    chromeProfile: resolvedChromeProfile,
+    chromePath: resolvedChromePath,
+    chromeCookiePath: resolvedCookiePath,
     geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
     grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
     debug: config?.debug ?? DEFAULT_BROWSER_CONFIG.debug,
     allowCookieErrors: config?.allowCookieErrors ?? envAllowCookieErrors ?? DEFAULT_BROWSER_CONFIG.allowCookieErrors,
+    remoteChrome: normalizedRemoteChrome,
     thinkingTime: config?.thinkingTime,
     manualLogin,
     manualLoginProfileDir: manualLogin ? resolvedProfileDir : null,
     manualLoginCookieSync: config?.manualLoginCookieSync ?? DEFAULT_BROWSER_CONFIG.manualLoginCookieSync,
+    wslChromePreference,
   };
 }
 
@@ -130,6 +150,111 @@ function normalizeManualLoginProfileDir(value: string): string {
     return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2].replace(/\\/g, '/')}`;
   }
   return value;
+}
+
+function normalizeDebugPortRange(
+  value: [number, number] | null | undefined,
+): [number, number] | null {
+  if (!value) return null;
+  const [start, end] = value;
+  const startNum = Number(start);
+  const endNum = Number(end);
+  if (!Number.isFinite(startNum) || !Number.isFinite(endNum)) {
+    throw new Error('browser.debugPortRange must contain two numbers.');
+  }
+  const min = Math.min(startNum, endNum);
+  const max = Math.max(startNum, endNum);
+  if (min <= 0 || max > 65535) {
+    throw new Error('browser.debugPortRange must be within 1-65535.');
+  }
+  if (min === max) {
+    return [min, max];
+  }
+  return [min, max];
+}
+
+function normalizeCookieNames(value: string[] | string | null | undefined): string[] | null {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    const normalized = value.map((entry) => entry.trim()).filter(Boolean);
+    return normalized.length ? normalized : null;
+  }
+  const names = value
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter(Boolean);
+  return names.length ? names : null;
+}
+
+function normalizeInlineCookies(
+  value: import('./types.js').CookieParam[] | string | null | undefined,
+): import('./types.js').CookieParam[] | null {
+  if (!value) return null;
+  if (Array.isArray(value)) {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = parseCookiePayload(trimmed) ?? parseCookiePayload(Buffer.from(trimmed, 'base64').toString('utf8'));
+  return parsed ?? null;
+}
+
+function parseCookiePayload(raw: string): import('./types.js').CookieParam[] | null {
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeRemoteChrome(
+  value: import('./types.js').BrowserAutomationConfig['remoteChrome'],
+): { host: string; port: number } | null {
+  if (!value) return null;
+  if (typeof value === 'string') {
+    return parseRemoteChromeTarget(value);
+  }
+  return value;
+}
+
+function parseRemoteChromeTarget(raw: string): { host: string; port: number } | null {
+  const target = raw.trim();
+  if (!target) {
+    return null;
+  }
+  const ipv6Match = target.match(/^\[(.+)]:(\d+)$/);
+  let host: string | undefined;
+  let portSegment: string | undefined;
+
+  if (ipv6Match) {
+    host = ipv6Match[1]?.trim();
+    portSegment = ipv6Match[2]?.trim();
+  } else {
+    const lastColon = target.lastIndexOf(':');
+    if (lastColon === -1) {
+      return null;
+    }
+    host = target.slice(0, lastColon).trim();
+    portSegment = target.slice(lastColon + 1).trim();
+  }
+  if (!host) return null;
+  const port = Number.parseInt(portSegment ?? '', 10);
+  if (!Number.isFinite(port) || port <= 0 || port > 65_535) {
+    return null;
+  }
+  return { host, port };
+}
+
+function normalizeWslChromePreference(input: string | null | undefined): WslChromePreference {
+  const normalized = (input ?? '').trim().toLowerCase();
+  if (normalized === 'windows' || normalized === 'wsl' || normalized === 'auto') {
+    return normalized as WslChromePreference;
+  }
+  return 'auto';
 }
 
 function isWsl(): boolean {

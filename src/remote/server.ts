@@ -1,7 +1,6 @@
 import http from 'node:http';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { randomBytes, randomUUID } from 'node:crypto';
 import { spawn, spawnSync } from 'node:child_process';
 import { mkdtemp, rm, mkdir, writeFile } from 'node:fs/promises';
@@ -15,10 +14,9 @@ import { CHATGPT_URL } from '../browser/constants.js';
 import {
   cleanupStaleProfileState,
   readDevToolsPort,
-  writeChromePid,
-  writeDevToolsActivePort,
 } from '../browser/profileState.js';
 import { isDevToolsResponsive } from '../browser/processCheck.js';
+import { launchManualLoginSession } from '../browser/manualLogin.js';
 import { normalizeChatgptUrl } from '../browser/utils.js';
 
 export interface RemoteServerOptions {
@@ -40,21 +38,7 @@ interface RemoteServerInstance {
   close(): Promise<void>;
 }
 
-async function findAvailablePort(): Promise<number> {
-  return await new Promise<number>((resolve, reject) => {
-    const srv = net.createServer();
-    srv.on('error', (err) => reject(err));
-    srv.listen(0, () => {
-      const address = srv.address();
-      if (typeof address === 'object' && address?.port) {
-        const port = address.port;
-        srv.close(() => resolve(port));
-      } else {
-        srv.close(() => reject(new Error('Unable to allocate port')));
-      }
-    });
-  });
-}
+// findAvailablePort removed; manual login uses shared port selection in manualLogin helper.
 
 export async function createRemoteServer(
   options: RemoteServerOptions = {},
@@ -511,32 +495,16 @@ async function launchManualLoginChrome(profileDir: string, url: string, logger: 
   }, timeoutMs);
 
   try {
-    const chromeLauncher = await import('chrome-launcher');
-    const { launch } = chromeLauncher;
-    const debugPort = await findAvailablePort();
-    logger(`Planned manual-login Chrome DevTools port: ${debugPort}`);
-    const chrome = await launch({
-      // Expose DevTools so later runs can attach instead of spawning a second Chrome.
-      // Use a per-serve free port so the login window stays stable for all runs.
-      port: debugPort,
+    const { chrome } = await launchManualLoginSession({
+      chromePath: 'google-chrome',
+      profileName: 'Default',
       userDataDir: profileDir,
-      startingUrl: url,
-      chromeFlags: [
-        '--no-first-run',
-        '--no-default-browser-check',
-        `--user-data-dir=${profileDir}`,
-        '--remote-allow-origins=*',
-        `--remote-debugging-port=${debugPort}`, // ensure DevToolsActivePort is written even on Windows
-      ],
+      url,
+      logger,
     });
 
-    const chosenPort = chrome?.port ?? debugPort ?? null;
+    const chosenPort = chrome?.port ?? null;
     if (chosenPort) {
-      // Persist DevToolsActivePort eagerly so future runs can attach/reuse this Chrome.
-      await writeDevToolsActivePort(profileDir, chosenPort);
-      if (chrome?.pid) {
-        await writeChromePid(profileDir, chrome.pid);
-      }
       logger(`Manual-login Chrome DevTools port: ${chosenPort}`);
       logger(`If needed, DevTools JSON at http://127.0.0.1:${chosenPort}/json/version`);
     } else {

@@ -8,18 +8,27 @@
  * directly via the DevTools protocol without pulling in a large MCP server.
  */
 import { Command } from 'commander';
-import { execSync, spawn } from 'node:child_process';
+import { execSync } from 'node:child_process';
 import http from 'node:http';
+import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import puppeteer from 'puppeteer-core';
+import { loadUserConfig } from '../src/config.js';
+import { resolveBrowserConfig } from '../src/browser/config.js';
+import { launchManualLoginSession } from '../src/browser/manualLogin.js';
+import { resolveBrowserListPort } from '../src/browser/portResolution.js';
+import {
+  DEFAULT_DEBUG_PORT,
+  DEFAULT_DEBUG_PORT_RANGE,
+  pickAvailableDebugPort,
+} from '../src/browser/portSelection.js';
 
 /** Utility type so TypeScript knows the async function constructor */
 type AsyncFunctionCtor = new (...args: string[]) => (...fnArgs: unknown[]) => Promise<unknown>;
 
-const DEFAULT_PORT = 9222;
 const DEFAULT_PROFILE_DIR = path.join(os.homedir(), '.cache', 'scraping');
 const DEFAULT_CHROME_BIN = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 
@@ -29,6 +38,58 @@ function browserURL(port: number): string {
 
 async function connectBrowser(port: number) {
   return puppeteer.connect({ browserURL: browserURL(port), defaultViewport: null });
+}
+
+async function copyProfileIfRequested(baseDir: string, copyProfile: boolean): Promise<string | null> {
+  if (!copyProfile) return null;
+  await fs.mkdir(baseDir, { recursive: true });
+  const userDataDir = await fs.mkdtemp(path.join(baseDir, 'browser-tools-'));
+  const source = `${path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome')}/`;
+  execSync(`rsync -a --delete "${source}" "${userDataDir}/"`, { stdio: 'ignore' });
+  return userDataDir;
+}
+
+async function resolvePortOrLaunch(options: {
+  port?: number;
+  chromePath?: string;
+  profileDir?: string;
+  copyProfile?: boolean;
+}): Promise<number> {
+  if (options.port) {
+    return options.port;
+  }
+  const { config: userConfig } = await loadUserConfig();
+  const registryPort = await resolveBrowserListPort(userConfig);
+  if (registryPort) {
+    return registryPort;
+  }
+  const resolved = resolveBrowserConfig(userConfig.browser);
+  const baseDir =
+    options.profileDir ??
+    resolved.manualLoginProfileDir ??
+    path.join(os.homedir(), '.oracle', 'browser-profile');
+  const copiedDir = await copyProfileIfRequested(baseDir, Boolean(options.copyProfile));
+  const userDataDir = copiedDir ?? baseDir;
+  const debugPortRange = resolved.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+  const logger = (message: string) => console.log(message);
+  const debugPort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, debugPortRange);
+  const { chrome } = await launchManualLoginSession({
+    chromePath: options.chromePath ?? resolved.chromePath ?? DEFAULT_CHROME_BIN,
+    profileName: resolved.chromeProfile ?? 'Default',
+    userDataDir,
+    url: resolved.target === 'grok'
+      ? resolved.grokUrl ?? 'https://grok.com'
+      : resolved.target === 'gemini'
+        ? resolved.geminiUrl ?? 'https://gemini.google.com/app'
+        : resolved.chatgptUrl ?? 'https://chatgpt.com/',
+    logger,
+    debugPort,
+    debugPortRange,
+  });
+  if (!chrome.port) {
+    throw new Error('Chrome launch did not return a DevTools port.');
+  }
+  return chrome.port;
 }
 
 async function getActivePage(port: number) {
@@ -52,13 +113,13 @@ program
 program
   .command('start')
   .description('Launch Chrome with remote debugging enabled.')
-  .option('-p, --port <number>', 'Remote debugging port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('-p, --port <number>', 'Remote debugging port (default: from registry or range)', (value) => Number.parseInt(value, 10))
   .option('--profile', 'Copy your default Chrome profile before launch.', false)
   .option('--profile-dir <path>', 'Directory for the temporary Chrome profile.', DEFAULT_PROFILE_DIR)
   .option('--chrome-path <path>', 'Path to the Chrome binary.', DEFAULT_CHROME_BIN)
   .action(async (options) => {
     const { port, profile, profileDir, chromePath } = options as {
-      port: number;
+      port?: number;
       profile: boolean;
       profileDir: string;
       chromePath: string;
@@ -66,47 +127,26 @@ program
 
     try {
       execSync("killall 'Google Chrome'", { stdio: 'ignore' });
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     } catch {
       // ignore missing processes
     }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    execSync(`mkdir -p "${profileDir}"`);
-    if (profile) {
-      const source = `${path.join(os.homedir(), 'Library', 'Application Support', 'Google', 'Chrome')}/`;
-      execSync(`rsync -a --delete "${source}" "${profileDir}/"`, { stdio: 'ignore' });
-    }
-
-    spawn(chromePath, [`--remote-debugging-port=${port}`, `--user-data-dir=${profileDir}`, '--no-first-run', '--disable-popup-blocking'], {
-      detached: true,
-      stdio: 'ignore',
-    }).unref();
-
-    let connected = false;
-    for (let attempt = 0; attempt < 30; attempt++) {
-      try {
-        const browser = await connectBrowser(port);
-        await browser.disconnect();
-        connected = true;
-        break;
-      } catch {
-        await new Promise((resolve) => setTimeout(resolve, 500));
-      }
-    }
-
-    if (!connected) {
-      console.error(`✗ Failed to start Chrome on port ${port}`);
-      process.exit(1);
-    }
-    console.log(`✓ Chrome listening on http://localhost:${port}${profile ? ' (profile copied)' : ''}`);
+    const resolvedPort = await resolvePortOrLaunch({
+      port,
+      chromePath,
+      profileDir,
+      copyProfile: profile,
+    });
+    console.log(`✓ Chrome listening on http://localhost:${resolvedPort}${profile ? ' (profile copied)' : ''}`);
   });
 
 program
   .command('nav <url>')
   .description('Navigate the current tab or open a new tab.')
-  .option('--port <number>', 'Debugger port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
   .option('--new', 'Open in a new tab.', false)
   .action(async (url: string, options) => {
-    const port = options.port as number;
+    const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
     const browser = await connectBrowser(port);
     try {
       if (options.new) {
@@ -130,10 +170,10 @@ program
 program
   .command('eval <code...>')
   .description('Evaluate JavaScript in the active page context.')
-  .option('--port <number>', 'Debugger port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
   .action(async (code: string[], options) => {
     const snippet = code.join(' ');
-    const port = options.port as number;
+    const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
     const { browser, page } = await getActivePage(port);
     try {
       const result = await page.evaluate((body) => {
@@ -165,9 +205,9 @@ program
 program
   .command('screenshot')
   .description('Capture the current viewport and print the temp PNG path.')
-  .option('--port <number>', 'Debugger port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
   .action(async (options) => {
-    const port = options.port as number;
+    const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
     const { browser, page } = await getActivePage(port);
     try {
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -185,10 +225,10 @@ program
 program
   .command('pick <message...>')
   .description('Interactive DOM picker that prints metadata for clicked elements.')
-  .option('--port <number>', 'Debugger port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
   .action(async (messageParts: string[], options) => {
     const message = messageParts.join(' ');
-    const port = options.port as number;
+    const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
     const { browser, page } = await getActivePage(port);
     try {
       const pickScript = `
@@ -339,9 +379,9 @@ program
 program
   .command('cookies')
   .description('Dump cookies from the active tab as JSON.')
-  .option('--port <number>', 'Debugger port (default: 9222)', (value) => Number.parseInt(value, 10), DEFAULT_PORT)
+  .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
   .action(async (options) => {
-    const port = options.port as number;
+    const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
     const { browser, page } = await getActivePage(port);
     try {
       const cookies = await page.cookies();

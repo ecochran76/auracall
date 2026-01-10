@@ -1,4 +1,5 @@
 import net from 'node:net';
+import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 
@@ -87,6 +88,15 @@ export async function isChromeAlive(
   port?: number,
   allChromeProcesses?: Map<string, number>,
 ): Promise<boolean> {
+  if (isWsl() && isWindowsUserDataDir(userDataDir)) {
+    if (!pid || !await isWindowsProcessAlive(pid)) {
+      return false;
+    }
+    if (port) {
+      return isDevToolsResponsive({ port });
+    }
+    return true;
+  }
   // 1. Fast, cheap check: does the PID exist?
   if (!isProcessAlive(pid)) {
     return false;
@@ -193,10 +203,76 @@ async function findAllChromeProcessesWin32(): Promise<Map<string, number>> {
 }
 
 export async function findChromePidUsingUserDataDir(userDataDir: string): Promise<number | null> {
+  if (isWsl() && isWindowsUserDataDir(userDataDir)) {
+    return findWindowsChromePidUsingTasklist();
+  }
   if (process.platform === 'win32') {
     return findChromePidWin32(userDataDir);
   }
   return findChromePidUnix(userDataDir);
+}
+
+export async function findWindowsChromePidUsingTasklist(): Promise<number | null> {
+  if (!isWsl()) {
+    return null;
+  }
+  try {
+    const { stdout } = await execFileAsync('tasklist.exe', [
+      '/FI', 'IMAGENAME eq chrome.exe',
+      '/FO', 'CSV',
+      '/NH',
+    ], { timeout: 5000, maxBuffer: 1024 * 1024 });
+    const lines = String(stdout ?? '').trim().split('\n').filter(Boolean);
+    const pids = lines
+      .map((line) => line.trim())
+      .filter((line) => !line.toLowerCase().includes('no tasks'))
+      .map((line) => {
+        const parts = line.split('","').map((chunk) => chunk.replace(/^"|"$/g, ''));
+        const pidValue = Number.parseInt(parts[1] ?? '', 10);
+        return Number.isFinite(pidValue) ? pidValue : null;
+      })
+      .filter((value): value is number => typeof value === 'number');
+    if (pids.length === 0) {
+      return null;
+    }
+    return pids[0];
+  } catch {
+    return null;
+  }
+}
+
+async function isWindowsProcessAlive(pid: number): Promise<boolean> {
+  if (!isWsl() || !pid) {
+    return false;
+  }
+  try {
+    const { stdout } = await execFileAsync('tasklist.exe', [
+      '/FI', `PID eq ${pid}`,
+      '/FO', 'CSV',
+      '/NH',
+    ], { timeout: 5000, maxBuffer: 1024 * 1024 });
+    const output = String(stdout ?? '').trim();
+    if (!output) return false;
+    if (output.toLowerCase().includes('no tasks')) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function isWindowsUserDataDir(userDataDir: string): boolean {
+  const normalized = userDataDir.replace(/\\/g, '/').toLowerCase();
+  return normalized.startsWith('/mnt/c/users/');
+}
+
+function isWsl(): boolean {
+  if (process.platform !== 'linux') {
+    return false;
+  }
+  if (process.env.WSL_DISTRO_NAME) {
+    return true;
+  }
+  return os.release().toLowerCase().includes('microsoft');
 }
 
 async function findChromePidUnix(userDataDir: string): Promise<number | null> {

@@ -6,6 +6,22 @@ The `bin/oracle-cli.ts` file has become a "god object", conflating CLI argument 
 ## Objective
 Extract a `BrowserAutomationClient` class to encapsulate all browser connection, provider resolution, and command dispatch logic. The CLI should act as a thin layer that parses arguments and delegates to this client.
 
+## Session + Profile Principles (added 2026-01-10)
+These are the intended behaviors for session management and login flows as we refactor:
+
+- **Profile identity** is `{ profilePath, profileName }`. This is the stable key for registry, reuse, and session resolution.
+- **Registry first**: active sessions are resolved from `~/.oracle/browser-state.json` (env override only for debugging).
+- **Login flow intent**: “manual login” means a *human-interactive* bootstrap of the persistent profile; it is not a disposable profile.
+- **Profile reuse**: Oracle should reuse a live session for the same profile identity and spawn a new one only when missing.
+
+### Future extensions (post-refactor goals)
+- **Multi-profile config blocks**: allow multiple named profile identities (e.g., `browser.profiles.<name>`) so different folders/targets can select different logins via config layering.
+- **Smart defaults**: when no profile is configured, attempt to detect a Chromium-based default browser/profile and attach to it before falling back to `~/.oracle`.
+- **Profile discovery precedence** (target behavior):
+  1) Explicit config/CLI profile identity.
+  2) Discovered system/browser profile (Chromium-based).
+  3) Oracle-managed profile under `~/.oracle`.
+
 ## Implementation Phases
 
 ### Phase 1: Create `BrowserAutomationClient`
@@ -55,3 +71,9 @@ Systematically replace the body of each command with `BrowserAutomationClient` u
 *   **Single Responsibility**: CLI parses args; Client executes logic.
 *   **Reusability**: The client can be used by the MCP server or other tools easily.
 *   **Consistency**: All commands resolve the "active browser" using the exact same logic.
+
+## Status (2026-01-10)
+*   Phase 1: Complete (client added in `src/browser/client.ts`).
+*   Phase 2: Complete (port resolution + login helpers centralized).
+*   Phase 3: Complete (projects/conversations/rename/login/doctor use client; manual login flows consolidated via shared helper; cache refresh routed via client).
+*   Phase 4: Complete (legacy helper cleanup + import pruning).

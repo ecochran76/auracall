@@ -4,7 +4,6 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
-import net from 'node:net';
 import { Command, Option } from 'commander';
 import type { OptionValues } from 'commander';
 // Allow `npx @steipete/oracle oracle-mcp` to resolve the MCP server even though npx runs the default binary.
@@ -56,7 +55,6 @@ import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browser
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
-import type { CookieParam } from '../src/browser/types.js';
 import type { BrowserProviderListOptions } from '../src/browser/providers/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
@@ -82,10 +80,8 @@ import { loadUserConfig, type UserConfig } from '../src/config.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
-import CDP from 'chrome-remote-interface';
-import { launch } from 'chrome-launcher';
 import { getOracleHomeDir } from '../src/oracleHome.js';
-import { getProvider } from '../src/browser/providers/index.js';
+import { BrowserAutomationClient } from '../src/browser/client.js';
 import {
   deriveProjectsFromConfig,
   deriveConversationsFromConfig,
@@ -100,12 +96,9 @@ import {
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
-import { readDevToolsPort } from '../src/browser/profileState.js';
-import { diagnoseProvider } from '../src/inspector/doctor.js';
 import { resolveConfig } from '../src/schema/resolver.js';
-import { isPortOpen, isDevToolsResponsive } from '../src/browser/processCheck.js';
-import { findActiveInstance } from '../src/browser/stateRegistry.js';
-import { readDevToolsPort } from '../src/browser/profileState.js';
+import { isPortOpen } from '../src/browser/processCheck.js';
+import type { BrowserProvider } from '../src/browser/providers/types.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -164,6 +157,7 @@ interface CliOptions extends OptionValues {
   browserModelStrategy?: 'select' | 'current' | 'ignore';
   browserManualLogin?: boolean;
   browserManualLoginProfileDir?: string;
+  browserWslChrome?: 'auto' | 'wsl' | 'windows';
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
   browserAllowCookieErrors?: boolean;
@@ -563,12 +557,10 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const provider = getProvider(target);
-    const listOptions = {
-      port: await resolveBrowserListPort(userConfig),
-      configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
-    };
-    const cacheContext = { provider: target, userConfig, listOptions };
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+    const provider = client.provider;
+    const listOptions = await client.buildListOptions();
+    const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
     if (!provider.listProjects) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
@@ -587,7 +579,7 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const projects = await provider.listProjects(listOptions);
+    const projects = await client.listProjects(listOptions);
     if (Array.isArray(projects) && projects.length === 0) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
@@ -637,7 +629,8 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const provider = getProvider(target);
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+    const provider = client.provider;
     let projectId =
       (commandOptions.projectId?.trim() ||
        parentOptions.projectId?.trim() ||
@@ -668,13 +661,11 @@ program
       (command.getOptionValueSource?.('refresh') === 'cli')
         ? Boolean(commandOptions.refresh)
         : Boolean(listDefaults?.refresh ?? commandOptions.refresh);
-    let listOptions = {
-      port: resolveBrowserListPort(userConfig),
-      configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+    let listOptions: BrowserProviderListOptions = await client.buildListOptions({
       includeHistory,
       historyLimit,
       historySince,
-    };
+    });
     if (!projectId && listOptions.includeHistory && listOptions.configuredUrl?.includes('/project/')) {
       listOptions = { ...listOptions, configuredUrl: null };
     }
@@ -684,7 +675,7 @@ program
     if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
       throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
     }
-    const cacheContext = { provider: target, userConfig, listOptions };
+    const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
     const projectName =
       typeof commandOptions.projectName === 'string'
         ? commandOptions.projectName.trim()
@@ -732,7 +723,7 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const conversations = await provider.listConversations(projectId, listOptions);
+    const conversations = await client.listConversations(projectId, listOptions);
     let resolved = conversations;
     if (Array.isArray(resolved) && resolved.length === 0) {
       const fallback = deriveConversationsFromConfig({
@@ -775,7 +766,8 @@ program
   .action(async (id, name, commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    const provider = getProvider(target);
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+    const provider = client.provider;
     
     if (!provider.renameConversation) {
       console.error(`Rename is not supported for ${target}.`);
@@ -784,11 +776,9 @@ program
     
     // Resolve project ID if needed (e.g. from name via existing logic? for now direct ID)
     const projectId = commandOptions.projectId ?? userConfig.browser?.projectId;
-    const port = await resolveBrowserListPort(userConfig);
-    
     console.log(`Renaming conversation ${id} to "${name}"...`);
     try {
-      await provider.renameConversation(id, name, projectId, { port });
+      await client.renameConversation(id, name, projectId);
       console.log(chalk.green('Renamed successfully.'));
     } catch (error) {
       console.error(`Rename failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -840,13 +830,14 @@ program
       if (!providers.has(target)) {
         throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
       }
-          const listOptions = {
-            port: await resolveBrowserListPort(userConfig),
-            configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
-            includeHistory,
-            historyLimit,
-            historySince,
-          };      if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
+      const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+      const listOptions = await client.buildListOptions({
+        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        includeHistory,
+        historyLimit,
+        historySince,
+      });
+      if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
         throw new Error('history-limit must be a positive number.');
       }
       if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
@@ -926,22 +917,14 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const provider = getProvider(target);
-    const port = await resolveBrowserListPort(userConfig);
-    if (!port) {
-      console.error('No DevTools port configured. Ensure ORACLE_BROWSER_PORT is set or browser.debugPort is in config.');
-      process.exit(1);
-    }
-    console.log(`Connecting to ${target} via port ${port}...`);
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
     try {
-      const client = await CDP({ port });
-      await Promise.all([client.Runtime.enable(), client.DOM.enable()]);
-      
-      // If forced snapshot is requested, pass cwd even if checks pass? 
-      // diagnoseProvider only snapshots on failure if basePath is provided.
-      // We can hack it by passing basePath always, but checking return.
-      const report = await diagnoseProvider(client, provider.config, process.cwd());
-      
+      const { report, port } = await client.diagnose({
+        basePath: process.cwd(),
+        saveSnapshot: Boolean(commandOptions.saveSnapshot),
+      });
+
+      console.log(`Diagnosed ${target} via port ${port}.`);
       console.log(`\nDiagnosis for ${report.url}:`);
       const tableData = report.checks.map((c) => ({
         Component: c.name,
@@ -949,29 +932,17 @@ program
         Matches: c.matchCount,
         Selector: c.matchedSelector || c.selectors[0],
       }));
-      
+
       if (process.stdout.isTTY) {
         console.table(tableData);
       } else {
         console.log(JSON.stringify(tableData, null, 2));
       }
 
-      if (!report.allPassed && report.snapshotPath) {
+      if (report.snapshotPath) {
         console.log(`\nSnapshot saved to: ${report.snapshotPath}`);
-      } else if (commandOptions.saveSnapshot) {
-         const { CRAWLER_SCRIPT } = await import('../src/inspector/crawler.js');
-         const { result } = await client.Runtime.evaluate({
-           expression: CRAWLER_SCRIPT,
-           returnByValue: true
-         });
-         if (result.value) {
-           const dumpPath = path.join(process.cwd(), `oracle-snapshot-${target}-${Date.now()}.json`);
-           await fs.writeFile(dumpPath, JSON.stringify(result.value, null, 2));
-           console.log(`\nSnapshot saved to: ${dumpPath}`);
-         }
       }
-      
-      await client.close();
+
       if (!report.allPassed) {
         console.error('\nSome selectors failed to match. The UI structure may have changed.');
         process.exit(1);
@@ -987,7 +958,8 @@ async function refreshProviderCache(
   userConfig: UserConfig,
   listOptions: BrowserProviderListOptions,
 ): Promise<void> {
-  const provider = getProvider(providerId);
+  const client = await BrowserAutomationClient.fromConfig(userConfig, { target: providerId });
+  const provider = client.provider;
   const cacheContext = { provider: providerId, userConfig, listOptions };
   if (provider.listProjects) {
     const projects = await provider.listProjects(listOptions);
@@ -1044,14 +1016,14 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
     target === 'grok'
       ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
       : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
-  const listOptions = {
-    port: await resolveBrowserListPort(userConfig),
+  const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+  const listOptions = await client.buildListOptions({
     configuredUrl,
     includeHistory: true,
     historyLimit: 200,
-  };
-  const cacheContext = { provider: target, userConfig, listOptions };
-  const provider = getProvider(target);
+  });
+  const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
+  const provider = client.provider;
 
   if (!options.projectId && projectName) {
     options.projectId = await resolveProjectIdByName({
@@ -1081,7 +1053,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
   }
 }
 
-function buildBrowserContext({
+async function buildBrowserContext({
   options,
   userConfig,
   browserConfig,
@@ -1091,7 +1063,7 @@ function buildBrowserContext({
   userConfig: UserConfig;
   browserConfig?: BrowserSessionConfig;
   model: string;
-}): BrowserContextMetadata | null {
+}): Promise<BrowserContextMetadata | null> {
   if (!browserConfig) {
     return null;
   }
@@ -1105,10 +1077,8 @@ function buildBrowserContext({
       : browserConfig.chatgptUrl ?? browserConfig.url ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
   const projectName = options.projectName ? options.projectName.trim() : null;
   const conversationName = options.conversationName ? options.conversationName.trim() : null;
-  const listOptions = {
-    configuredUrl,
-    port: resolveBrowserListPort(userConfig),
-  };
+  const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+  const listOptions = await client.buildListOptions({ configuredUrl });
   const cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions });
   return {
     provider: target,
@@ -1132,9 +1102,9 @@ async function resolveProjectIdByName({
   cacheContext: {
     provider: 'chatgpt' | 'grok';
     userConfig: UserConfig;
-    listOptions: { configuredUrl: string | null; port?: number };
+    listOptions: BrowserProviderListOptions;
   };
-  provider: ReturnType<typeof getProvider>;
+  provider: BrowserProvider;
   forceRefresh: boolean;
   allowAutoRefresh?: boolean;
 }): Promise<string> {
@@ -1180,14 +1150,9 @@ async function resolveConversationByName({
   cacheContext: {
     provider: 'chatgpt' | 'grok';
     userConfig: UserConfig;
-    listOptions: {
-      configuredUrl: string | null;
-      includeHistory?: boolean;
-      historyLimit?: number;
-      port?: number;
-    };
+    listOptions: BrowserProviderListOptions;
   };
-  provider: ReturnType<typeof getProvider>;
+  provider: BrowserProvider;
   projectId?: string;
   forceRefresh: boolean;
   allowAutoRefresh?: boolean;
@@ -1238,6 +1203,13 @@ program
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
   .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
   .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
+  .addOption(
+    new Option(
+      '--browser-wsl-chrome <auto|wsl|windows>',
+      'On WSL, prefer WSL-native Chrome or Windows-hosted Chrome (default: auto).',
+    )
+      .choices(['auto', 'wsl', 'windows']),
+  )
   .action(async (commandOptions) => {
     const { config: userConfig } = await loadUserConfig();
     const explicitTarget = commandOptions.target;
@@ -1255,17 +1227,6 @@ program
     if (!chromePath) {
       throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');
     }
-
-    const url =
-      target === 'gemini'
-        ? commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app'
-        : target === 'grok'
-          ? commandOptions.grokUrl ?? userConfig.browser?.grokUrl ?? GROK_URL
-          : commandOptions.chatgptUrl ??
-            userConfig.browser?.chatgptUrl ??
-            userConfig.browser?.url ??
-            CHATGPT_URL;
-
     const manualLoginDir =
       commandOptions.browserManualLoginProfileDir ??
       userConfig.browser?.manualLoginProfileDir ??
@@ -1274,126 +1235,25 @@ program
       commandOptions.browserChromeProfile ?? userConfig.browser?.chromeProfile ?? 'Default';
     const cookiePath =
       commandOptions.browserCookiePath ?? userConfig.browser?.chromeCookiePath ?? undefined;
-    const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
 
-    const inferred = cookiePath ? inferProfileFromCookiePath(cookiePath) : null;
-    const userDataDir =
-      target === 'chatgpt' ? manualLoginDir : inferred?.userDataDir ?? manualLoginDir;
-    const profileDir =
-      target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
-
-    const exportCookies = Boolean(commandOptions.exportCookies);
-    if (exportCookies && target !== 'gemini') {
-      throw new Error('Cookie export currently supports Gemini login only.');
-    }
-
-    if (exportCookies) {
-      if (process.platform !== 'win32' || isWsl()) {
-        console.log(
-          chalk.yellow(
-            'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
-          ),
-        );
-      }
-      const args = [
-        '--new-window',
-        `--user-data-dir=${userDataDir}`,
-        `--profile-directory=${profileDir}`,
-        '--remote-allow-origins=*',
-        url,
-      ];
-      const cookieUrls = ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'];
-      const requiredCookies = ['__Secure-1PSID', '__Secure-1PSIDTS'];
-      const oracleHome = getOracleHomeDir();
-      const cookieOutput = path.join(oracleHome, 'cookies.json');
-      const timeoutMs = 120_000;
-
-      let debugPort: number | null = null;
-      if (wslWindowsChrome) {
-        debugPort = await pickOpenPort();
-        const winChromePath = toWindowsPath(chromePath);
-        const argsWithDebug = [
-          ...args.slice(0, -1),
-          `--remote-debugging-port=${debugPort}`,
-          args[args.length - 1],
-        ];
-        const winArgs = argsWithDebug.map(toWindowsPath);
-        const argList = winArgs.map(quotePowerShellLiteral).join(', ');
-        const psCommand =
-          `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
-          `-ArgumentList @(${argList}) -WindowStyle Normal`;
-        const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
-          detached: true,
-          stdio: 'ignore',
-          windowsVerbatimArguments: true,
-        });
-        loginProcess.unref();
-        await waitForPortOpen(debugPort, timeoutMs);
-      } else {
-        const chrome = await launch({
-          chromePath,
-          chromeFlags: args,
-        });
-        chrome.process?.unref();
-        debugPort = chrome.port;
-      }
-
-      console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
-      console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
-      console.log(chalk.dim(`URL: ${url}`));
-      console.log(chalk.dim('Waiting for Gemini cookies...'));
-
-      const cookies = await exportCookiesFromCdp({
-        port: debugPort,
-        requiredNames: requiredCookies,
-        urls: cookieUrls,
-        timeoutMs,
-      });
-      await fs.mkdir(oracleHome, { recursive: true });
-      await fs.writeFile(cookieOutput, JSON.stringify(cookies, null, 2), 'utf8');
-      console.log(chalk.green(`Saved Gemini cookies to ${cookieOutput}`));
-      return;
-    }
-
-    if (process.platform !== 'win32' || isWsl()) {
-      console.log(
-        chalk.yellow(
-          'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
-        ),
-      );
-    }
-    const args = ['--new-window', `--user-data-dir=${userDataDir}`, `--profile-directory=${profileDir}`, url];
-    if (wslWindowsChrome) {
-      const winChromePath = toWindowsPath(chromePath);
-      const winArgs = args.map(toWindowsPath);
-      const argList = winArgs.map(quotePowerShellLiteral).join(', ');
-      const psCommand =
-        `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
-        `-ArgumentList @(${argList}) -WindowStyle Normal`;
-      const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
-        detached: true,
-        stdio: 'ignore',
-        windowsVerbatimArguments: true,
-      });
-      loginProcess.unref();
-    } else if (process.platform === 'win32') {
-      const winArgs = args.map(winChromePath);
-      const loginProcess = spawn(winChromePath(chromePath), winArgs, {
-        detached: true,
-        stdio: 'ignore',
-      });
-      loginProcess.unref();
-    } else {
-      const loginProcess = spawn(chromePath, args, {
-        detached: true,
-        stdio: 'ignore',
-      });
-      loginProcess.unref();
-    }
-    console.log(chalk.green(`Opened ${target} login in ${chromePath}`));
-    console.log(chalk.dim(`Profile: ${userDataDir} (${profileDir})`));
-    console.log(chalk.dim(`URL: ${url}`));
-    console.log(chalk.dim(`Args: ${args.join(' ')}`));
+    const client = await BrowserAutomationClient.fromConfig(userConfig, {
+      target: target === 'grok' ? 'grok' : 'chatgpt',
+    });
+    await client.login({
+      target,
+      chromePath,
+      chromeProfile,
+      manualLoginProfileDir: manualLoginDir,
+      cookiePath,
+      chatgptUrl:
+        commandOptions.chatgptUrl ??
+        userConfig.browser?.chatgptUrl ??
+        userConfig.browser?.url ??
+        CHATGPT_URL,
+      geminiUrl: commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app',
+      grokUrl: commandOptions.grokUrl ?? userConfig.browser?.grokUrl ?? GROK_URL,
+      exportCookies: Boolean(commandOptions.exportCookies),
+    });
   });
 
 program
@@ -1890,7 +1750,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           browserCookieWait: config.browser.cookieSyncWaitMs ? String(config.browser.cookieSyncWaitMs) : undefined,
         })
       : undefined;
-  const browserContext = buildBrowserContext({
+  const browserContext = await buildBrowserContext({
     options,
     userConfig,
     browserConfig,
@@ -2191,208 +2051,6 @@ function resolveWaitFlag({
   return defaultWaitPreference(model, engine);
 }
 
-async function pickOpenPort(): Promise<number> {
-  return await new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', reject);
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (!address || typeof address !== 'object') {
-        server.close(() => reject(new Error('Unable to allocate a debug port.')));
-        return;
-      }
-      const port = address.port;
-      server.close((err) => {
-        if (err) reject(err);
-        else resolve(port);
-      });
-    });
-  });
-}
-
-async function resolveBrowserListPort(userConfig: UserConfig): Promise<number | undefined> {
-  const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
-  if (raw) {
-    const parsed = Number.parseInt(raw, 10);
-    if (Number.isFinite(parsed) && parsed > 0) return parsed;
-  }
-  const fromConfig = userConfig.browser?.debugPort;
-  if (typeof fromConfig === 'number' && Number.isFinite(fromConfig) && fromConfig > 0) {
-    return fromConfig;
-  }
-  const profileDir = userConfig.browser?.manualLoginProfileDir;
-  if (profileDir) {
-    const instance = await findActiveInstance(profileDir);
-    if (instance) return instance.port;
-    const filePort = await readDevToolsPort(profileDir);
-    if (filePort && await isDevToolsResponsive({ port: filePort })) {
-      return filePort;
-    }
-  }
-  return undefined;
-}
-
-async function waitForPortOpen(port: number, timeoutMs: number): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const socket = net.connect(port, '127.0.0.1');
-        socket.once('connect', () => {
-          socket.destroy();
-          resolve();
-        });
-        socket.once('error', (err) => {
-          socket.destroy();
-          reject(err);
-        });
-      });
-      return;
-    } catch {
-      await delay(200);
-    }
-  }
-  throw new Error(`Timed out waiting for Chrome debug port ${port}.`);
-}
-
-function mapCookieToParam(cookie: {
-  name: string;
-  value: string;
-  domain?: string;
-  path?: string;
-  expires?: number;
-  httpOnly?: boolean;
-  secure?: boolean;
-  sameSite?: 'Strict' | 'Lax' | 'None';
-  priority?: 'Low' | 'Medium' | 'High';
-  sameParty?: boolean;
-}): CookieParam {
-  const param: CookieParam = {
-    name: cookie.name,
-    value: cookie.value,
-  };
-  if (cookie.domain) param.domain = cookie.domain;
-  if (cookie.path) param.path = cookie.path;
-  if (typeof cookie.expires === 'number') param.expires = cookie.expires;
-  if (typeof cookie.httpOnly === 'boolean') param.httpOnly = cookie.httpOnly;
-  if (typeof cookie.secure === 'boolean') param.secure = cookie.secure;
-  if (cookie.sameSite) param.sameSite = cookie.sameSite;
-  if (cookie.priority) param.priority = cookie.priority;
-  if (typeof cookie.sameParty === 'boolean') param.sameParty = cookie.sameParty;
-  return param;
-}
-
-async function exportCookiesFromCdp({
-  port,
-  requiredNames,
-  urls,
-  timeoutMs,
-}: {
-  port: number | null;
-  requiredNames: string[];
-  urls: string[];
-  timeoutMs: number;
-}): Promise<CookieParam[]> {
-  if (!port) {
-    throw new Error('Missing Chrome debug port for cookie export.');
-  }
-  const client = await CDP({ port });
-  try {
-    await client.Network.enable();
-    const start = Date.now();
-    while (Date.now() - start < timeoutMs) {
-      const { cookies } = await client.Network.getCookies({ urls });
-      const hasRequired = requiredNames.every((name) => cookies.some((cookie) => cookie.name === name));
-      if (hasRequired) {
-        return cookies.map(mapCookieToParam);
-      }
-      await delay(2_000);
-    }
-    throw new Error(`Timed out waiting for cookies: ${requiredNames.join(', ')}`);
-  } finally {
-    await client.close();
-  }
-}
-
-function delay(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-function inferProfileFromCookiePath(cookiePath: string): { userDataDir: string; profileDir: string } | null {
-  const normalized = path.normalize(cookiePath);
-  const parts = normalized.split(path.sep);
-  const userDataIndex = parts.findIndex((part) => part.toLowerCase() === 'user data');
-  if (userDataIndex !== -1 && userDataIndex + 1 < parts.length) {
-    const userDataDir = parts.slice(0, userDataIndex + 1).join(path.sep);
-    const profileDir = parts[userDataIndex + 1];
-    if (profileDir) {
-      return { userDataDir, profileDir };
-    }
-  }
-
-  // Fallback for paths like <profile>/Network/Cookies
-  const networkIndex = parts.findIndex((part) => part.toLowerCase() === 'network');
-  if (networkIndex > 0 && parts[networkIndex + 1]?.toLowerCase() === 'cookies') {
-    const profileDir = parts[networkIndex - 1];
-    const userDataDir = parts.slice(0, networkIndex - 1).join(path.sep);
-    if (profileDir && userDataDir) {
-      return { userDataDir, profileDir };
-    }
-  }
-
-  return null;
-}
-
-function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
-  }
-  return os.release().toLowerCase().includes('microsoft');
-}
-
-function winChromePath(value: string): string {
-  if (process.platform !== 'win32') {
-    return value;
-  }
-  return value.replace(/\//g, '\\');
-}
-
-function toWindowsPath(value: string): string {
-  if (!isWsl()) {
-    return value;
-  }
-  const normalized = value.replace(/\\/g, '/');
-  const match = normalized.match(/^\/mnt\/([a-z])\/(.*)$/i);
-  if (match) {
-    const drive = match[1].toUpperCase();
-    const rest = match[2].replace(/\//g, '\\');
-    return `${drive}:\\${rest}`;
-  }
-  if (normalized.startsWith('/')) {
-    return `\\\\wsl.localhost\\${process.env.WSL_DISTRO_NAME ?? 'Ubuntu'}${normalized.replace(/\//g, '\\')}`;
-  }
-  return value;
-}
-
-function isWindowsChromePath(value: string): boolean {
-  const trimmed = value.trim();
-  if (/^[a-zA-Z]:[\\/]/.test(trimmed)) {
-    return true;
-  }
-  if (trimmed.startsWith('\\\\') || trimmed.startsWith('//')) {
-    return true;
-  }
-  const normalized = trimmed.replace(/\\/g, '/');
-  return normalized.startsWith('/mnt/');
-}
-
-function quotePowerShellLiteral(value: string): string {
-  const escaped = value.replace(/'/g, "''");
-  return `'${escaped}'`;
-}
 
 program.action(async function (this: Command) {
   const options = this.optsWithGlobals() as CliOptions;

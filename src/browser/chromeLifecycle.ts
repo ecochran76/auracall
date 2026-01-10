@@ -16,7 +16,7 @@ const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
   // 1. Check persistent registry first
-  const registered = await findActiveInstance(userDataDir);
+  const registered = await findActiveInstance(userDataDir, config.chromeProfile ?? 'Default');
   if (registered) {
     logger(`Found active Chrome instance in registry (pid ${registered.pid}, port ${registered.port}); reusing.`);
     return {
@@ -40,6 +40,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
         port: activePort,
         host: connectHost,
         profilePath: userDataDir,
+        profileName: config.chromeProfile ?? 'Default',
         type: 'chrome',
         launchedAt: new Date().toISOString(),
         lastSeenAt: new Date().toISOString(),
@@ -67,7 +68,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   }
 
   if (!config.headless && process.platform === 'linux') {
-    if (!process.env.DISPLAY) {
+    if (!process.env.DISPLAY || process.env.DISPLAY === '0' || process.env.DISPLAY === '0.0') {
       process.env.DISPLAY = ':0.0';
       logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
     }
@@ -129,6 +130,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
       port: launcher.port,
       host: connectHost ?? '127.0.0.1',
       profilePath: userDataDir,
+      profileName: config.chromeProfile ?? 'Default',
       type: 'chrome',
       launchedAt: new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
@@ -137,7 +139,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
 
   const originalKill = launcher.kill;
   const kill = async () => {
-    await unregisterInstance(userDataDir);
+    await unregisterInstance(userDataDir, config.chromeProfile ?? 'Default');
     return originalKill();
   };
 
@@ -245,6 +247,8 @@ export async function connectToChrome(port: number, logger: BrowserLogger, host?
   logger('Connected to Chrome DevTools protocol');
   return client;
 }
+
+// NOTE: resolveWslHost/buildWslFirewallHint are defined below near isWsl to reuse helpers.
 
 export async function connectToRemoteChrome(
   host: string,
@@ -354,6 +358,21 @@ function parseDebugPortEnv(): number | null {
 }
 
 function resolveRemoteDebugHost(): string | null {
+  return resolveWslHost();
+}
+
+function isWsl(): boolean {
+  if (process.platform !== 'linux') {
+    return false;
+  }
+  if (process.env.WSL_DISTRO_NAME) {
+    return true;
+  }
+  const release = os.release();
+  return release.toLowerCase().includes('microsoft');
+}
+
+export function resolveWslHost(): string | null {
   const override = process.env.ORACLE_BROWSER_REMOTE_DEBUG_HOST?.trim() || process.env.WSL_HOST_IP?.trim();
   if (override) {
     return override;
@@ -375,15 +394,16 @@ function resolveRemoteDebugHost(): string | null {
   return null;
 }
 
-function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
+export function buildWslFirewallHint(host: string, devtoolsPort: number): string | null {
+  if (!isWsl()) {
+    return null;
   }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
-  }
-  const release = os.release();
-  return release.toLowerCase().includes('microsoft');
+  return [
+    `DevTools port ${host}:${devtoolsPort} is blocked from WSL.`,
+    'PowerShell (admin):',
+    `New-NetFirewallRule -DisplayName 'Chrome DevTools ${devtoolsPort}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${devtoolsPort}`,
+    "New-NetFirewallRule -DisplayName 'Chrome DevTools (chrome.exe)' -Direction Inbound -Action Allow -Program 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' -Protocol TCP",
+  ].join(' ');
 }
 
 

@@ -20,7 +20,7 @@ Oracle supports full browser automation for Grok, including manual login persist
     ```bash
     oracle --browser-manual-login --model grok
     ```
-    This launches a dedicated Chrome instance. Log in to your xAI account. The session (cookies) will be saved to `~/.oracle/browser-profile-manual`.
+    This launches a dedicated Chrome instance. Log in to your xAI account. The session (cookies) will be saved to `~/.oracle/browser-profile`.
 
 2.  **Running Queries:**
     ```bash
@@ -51,9 +51,10 @@ Oracle supports full browser automation for Grok, including manual login persist
 
 ### Troubleshooting
 
--   **Session Not Persisting:** Ensure you have run the manual login step once. Oracle syncs cookies from the manual profile (`~/.oracle/browser-profile-manual`) to the temporary automation run.
+-   **Session Not Persisting:** Ensure you have run the manual login step once. Oracle reuses the persistent profile at `~/.oracle/browser-profile` (override with `ORACLE_BROWSER_PROFILE_DIR`).
 -   **Wrong Project Loaded:** If `oracle.config.json` has a default `grokUrl`, it might override your intent. Use `--project-id` explicitly to force navigation to the correct workspace.
 -   **Empty Conversation List:** If `oracle conversations` returns an empty list:
     -   Ensure the browser window is not stuck. The scraper attempts to toggle the menu and close the history dialog automatically.
     -   Try running with `--refresh` to force a re-scrape.
     -   Check if the UI has changed; the scraper relies on `role="option"` and `data-value` attributes.
+-   **No Window on Linux:** Oracle launches a headful Chrome for manual login/listing. If you do not see a window, ensure `DISPLAY` is set (Oracle normalizes `DISPLAY=0`/`0.0` to `:0.0`).

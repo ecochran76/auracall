@@ -8,13 +8,14 @@ export interface BrowserInstance {
   port: number;
   host: string;
   profilePath: string;
+  profileName?: string;
   type: 'chrome' | 'chromium';
   launchedAt: string;
   lastSeenAt: string;
 }
 
 export interface BrowserStateRegistry {
-  instances: Record<string, BrowserInstance>; // Keyed by normalized profilePath
+  instances: Record<string, BrowserInstance>;
 }
 
 function getRegistryPath(): string {
@@ -25,7 +26,12 @@ async function loadRegistry(): Promise<BrowserStateRegistry> {
   const file = getRegistryPath();
   try {
     const raw = await fs.readFile(file, 'utf8');
-    return JSON.parse(raw) as BrowserStateRegistry;
+    const parsed = JSON.parse(raw) as BrowserStateRegistry;
+    const normalized = normalizeRegistry(parsed);
+    if (normalized.changed) {
+      await saveRegistry(normalized.registry);
+    }
+    return normalized.registry;
   } catch {
     return { instances: {} };
   }
@@ -42,24 +48,40 @@ async function saveRegistry(registry: BrowserStateRegistry): Promise<void> {
 
 export async function registerInstance(instance: BrowserInstance): Promise<void> {
   const registry = await loadRegistry();
-  const key = path.normalize(instance.profilePath);
-  registry.instances[key] = instance;
+  const profileName = instance.profileName ?? 'Default';
+  const key = buildRegistryKey(instance.profilePath, profileName);
+  registry.instances[key] = { ...instance, profileName };
   await saveRegistry(registry);
 }
 
-export async function unregisterInstance(profilePath: string): Promise<void> {
+export async function unregisterInstance(profilePath: string, profileName?: string | null): Promise<void> {
   const registry = await loadRegistry();
-  const key = path.normalize(profilePath);
+  const key = buildRegistryKey(profilePath, profileName ?? undefined);
   if (registry.instances[key]) {
     delete registry.instances[key];
     await saveRegistry(registry);
   }
 }
 
-export async function findActiveInstance(profilePath: string): Promise<BrowserInstance | null> {
+export async function findActiveInstance(
+  profilePath: string,
+  profileName?: string | null,
+): Promise<BrowserInstance | null> {
   const registry = await loadRegistry();
-  const key = path.normalize(profilePath);
-  const instance = registry.instances[key];
+  const normalizedName = profileName ?? 'Default';
+  const key = buildRegistryKey(profilePath, normalizedName);
+  let instance = registry.instances[key];
+  if (!instance) {
+    const legacyKey = path.normalize(profilePath);
+    const legacy = registry.instances[legacyKey];
+    if (legacy) {
+      const migrated = { ...legacy, profileName: normalizedName };
+      delete registry.instances[legacyKey];
+      registry.instances[key] = migrated;
+      await saveRegistry(registry);
+      instance = migrated;
+    }
+  }
   if (!instance) return null;
 
   // Verify liveliness
@@ -70,7 +92,7 @@ export async function findActiveInstance(profilePath: string): Promise<BrowserIn
   }
 
   // Prune if dead
-  await unregisterInstance(profilePath);
+  await unregisterInstance(profilePath, normalizedName);
   return null;
 }
 
@@ -87,4 +109,29 @@ export async function pruneRegistry(): Promise<void> {
   if (changed) {
     await saveRegistry(registry);
   }
+}
+
+function buildRegistryKey(profilePath: string, profileName?: string): string {
+  const normalizedPath = path.normalize(profilePath);
+  const normalizedName = (profileName ?? 'Default').trim().toLowerCase();
+  return `${normalizedPath}::${normalizedName}`;
+}
+
+function normalizeRegistry(
+  registry: BrowserStateRegistry,
+): { registry: BrowserStateRegistry; changed: boolean } {
+  const normalized: BrowserStateRegistry = { instances: {} };
+  let changed = false;
+  for (const [key, instance] of Object.entries(registry.instances ?? {})) {
+    const profileName = instance.profileName ?? 'Default';
+    const normalizedKey = buildRegistryKey(instance.profilePath, profileName);
+    normalized.instances[normalizedKey] = { ...instance, profileName };
+    if (normalizedKey !== key) {
+      changed = true;
+    }
+  }
+  if (!changed) {
+    return { registry, changed };
+  }
+  return { registry: normalized, changed };
 }

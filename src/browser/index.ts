@@ -59,6 +59,11 @@ import {
   writeDevToolsActivePort,
 } from './profileState.js';
 import { isProcessAlive, isDevToolsResponsive } from './processCheck.js';
+import {
+  DEFAULT_DEBUG_PORT,
+  DEFAULT_DEBUG_PORT_RANGE,
+  pickAvailableDebugPort,
+} from './portSelection.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -116,11 +121,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     );
   }
 
-  if (!config.remoteChrome && !config.manualLogin) {
-    const preferredPort = config.debugPort ?? DEFAULT_DEBUG_PORT;
-    const availablePort = await pickAvailableDebugPort(preferredPort, logger);
-    if (availablePort !== preferredPort) {
-      logger(`DevTools port ${preferredPort} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
+  if (!config.remoteChrome && !config.debugPort) {
+    const range = config.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+    const availablePort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, range);
+    if (availablePort !== DEFAULT_DEBUG_PORT) {
+      logger(`DevTools port ${DEFAULT_DEBUG_PORT} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
     }
     config = { ...config, debugPort: availablePort };
   }
@@ -854,50 +859,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   }
 }
 
-const DEFAULT_DEBUG_PORT = 9222;
-
-async function pickAvailableDebugPort(preferredPort: number, logger: BrowserLogger): Promise<number> {
-  const start = Number.isFinite(preferredPort) && preferredPort > 0 ? preferredPort : DEFAULT_DEBUG_PORT;
-  for (let offset = 0; offset < 10; offset++) {
-    const candidate = start + offset;
-    if (await isPortAvailable(candidate)) {
-      return candidate;
-    }
-  }
-  const fallback = await findEphemeralPort();
-  logger(`DevTools ports ${start}-${start + 9} are occupied; falling back to ${fallback}.`);
-  return fallback;
-}
-
-async function isPortAvailable(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = net.createServer();
-    server.once('error', () => resolve(false));
-    server.once('listening', () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port, '127.0.0.1');
-  });
-}
-
-async function findEphemeralPort(): Promise<number> {
-  return new Promise((resolve, reject) => {
-    const server = net.createServer();
-    server.once('error', (error) => {
-      server.close();
-      reject(error);
-    });
-    server.listen(0, '127.0.0.1', () => {
-      const address = server.address();
-      if (address && typeof address === 'object') {
-        const port = address.port;
-        server.close(() => resolve(port));
-      } else {
-        server.close(() => reject(new Error('Failed to acquire ephemeral port')));
-      }
-    });
-  });
-}
 
 async function waitForLogin({
   runtime,
@@ -1608,7 +1569,8 @@ async function runGrokBrowserMode({
     if (probe) {
       return;
     }
-    const fallbackPort = await findEphemeralPort();
+    const fallbackRange = effectiveConfig.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+    const fallbackPort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, fallbackRange);
     logger(
       `DevTools port ${chrome.port} unreachable; relaunching Chrome on ${fallbackPort}.`,
     );

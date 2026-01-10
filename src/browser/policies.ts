@@ -61,17 +61,16 @@ export type CookiePlan =
   | { type: 'copy'; description: string };
 
 export function buildCookiePlan(config?: BrowserSessionConfig): CookiePlan {
-  if (config?.inlineCookies && config.inlineCookies.length > 0) {
+  if (Array.isArray(config?.inlineCookies) && config.inlineCookies.length > 0) {
     const source = config.inlineCookiesSource ?? 'inline';
     return { type: 'inline', description: `Cookies: inline payload (${config.inlineCookies.length}) via ${source}.` };
   }
   if (config?.cookieSync === false) {
     return { type: 'disabled', description: 'Cookies: sync disabled (--browser-no-cookie-sync).' };
   }
-  const allowlist =
-    config?.cookieNames && config.cookieNames.length > 0
-      ? config.cookieNames.join(', ')
-      : 'all from Chrome profile';
+  const allowlist = Array.isArray(config?.cookieNames) && config.cookieNames.length > 0
+    ? config.cookieNames.join(', ')
+    : 'all from Chrome profile';
   return { type: 'copy', description: `Cookies: copy from Chrome (${allowlist}).` };
 }
 

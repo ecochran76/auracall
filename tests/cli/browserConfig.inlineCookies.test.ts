@@ -23,7 +23,8 @@ describe('buildBrowserConfig inline cookies', () => {
         JSON.stringify([{ name: '__Secure-next-auth.session-token', value: 'abc', domain: 'chatgpt.com' }]),
       );
       const config = await buildBrowserConfig({ browserInlineCookiesFile: file, model });
-      expect(config.inlineCookies?.[0]?.name).toBe('__Secure-next-auth.session-token');
+      const inline = Array.isArray(config.inlineCookies) ? config.inlineCookies : [];
+      expect(inline[0]?.name).toBe('__Secure-next-auth.session-token');
       expect(config.inlineCookiesSource).toBe('inline-file');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
@@ -36,7 +37,8 @@ describe('buildBrowserConfig inline cookies', () => {
       const file = path.join(tmp, 'cookies.json');
       await fs.writeFile(file, JSON.stringify([{ name: '_account', value: 'personal', domain: 'chatgpt.com' }]));
       const config = await buildBrowserConfig({ browserInlineCookies: file, model });
-      expect(config.inlineCookies?.[0]?.name).toBe('_account');
+      const inline = Array.isArray(config.inlineCookies) ? config.inlineCookies : [];
+      expect(inline[0]?.name).toBe('_account');
       expect(config.inlineCookiesSource).toBe('inline-arg');
     } finally {
       await fs.rm(tmp, { recursive: true, force: true });
@@ -63,7 +65,8 @@ describe('buildBrowserConfig inline cookies', () => {
     const homeFile = path.join(oracleDir, 'cookies.json');
     await fs.writeFile(homeFile, JSON.stringify([{ name: 'cf_clearance', value: 'token', domain: 'chatgpt.com' }]));
     const config = await buildBrowserConfig({ model, browserNoCookieSync: true });
-    expect(config.inlineCookies?.[0]?.name).toBe('cf_clearance');
+    const inline = Array.isArray(config.inlineCookies) ? config.inlineCookies : [];
+    expect(inline[0]?.name).toBe('cf_clearance');
     expect(config.inlineCookiesSource).toBe('home:cookies.json');
   });
 });

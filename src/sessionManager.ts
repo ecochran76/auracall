@@ -27,9 +27,9 @@ export interface BrowserSessionConfig {
   debugPort?: number | null;
   inputTimeoutMs?: number;
   cookieSync?: boolean;
-  cookieNames?: string[] | null;
+  cookieNames?: string[] | string | null;
   cookieSyncWaitMs?: number;
-  inlineCookies?: CookieParam[] | null;
+  inlineCookies?: CookieParam[] | string | null;
   inlineCookiesSource?: string | null;
   headless?: boolean;
   keepBrowser?: boolean;
@@ -42,6 +42,7 @@ export interface BrowserSessionConfig {
   manualLogin?: boolean;
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
+  wslChromePreference?: 'auto' | 'wsl' | 'windows';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   thinkingTime?: ThinkingTimeLevel;
 }

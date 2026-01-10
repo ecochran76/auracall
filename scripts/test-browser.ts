@@ -8,8 +8,7 @@
 
 import { setTimeout as sleep } from 'node:timers/promises';
 import { launch } from 'chrome-launcher';
-import os from 'node:os';
-import { readFileSync } from 'node:fs';
+import { resolveWslHost, buildWslFirewallHint } from '../src/browser/chromeLifecycle.js';
 
 const DEFAULT_PORT = 45871;
 const port = normalizePort(process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT) ?? DEFAULT_PORT;
@@ -21,39 +20,6 @@ function normalizePort(raw?: string | null): number | null {
   const value = Number.parseInt(raw, 10);
   if (!Number.isFinite(value) || value <= 0 || value > 65535) return null;
   return value;
-}
-
-function isWsl(): boolean {
-  if (process.platform !== 'linux') return false;
-  if (process.env.WSL_DISTRO_NAME) return true;
-  return os.release().toLowerCase().includes('microsoft');
-}
-
-function resolveWslHost(): string | null {
-  if (!isWsl()) return null;
-  try {
-    const resolv = readFileSync('/etc/resolv.conf', 'utf8');
-    for (const line of resolv.split('\n')) {
-      const match = line.match(/^nameserver\s+([0-9.]+)/);
-      if (match?.[1]) return match[1];
-    }
-  } catch {
-    // ignore
-  }
-  return null;
-}
-
-function firewallHint(host: string, devtoolsPort: number): string | null {
-  if (!isWsl()) return null;
-  return [
-    `DevTools port ${host}:${devtoolsPort} is blocked from WSL.`,
-    '',
-    'PowerShell (admin):',
-    `New-NetFirewallRule -DisplayName 'Chrome DevTools ${devtoolsPort}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${devtoolsPort}`,
-    "New-NetFirewallRule -DisplayName 'Chrome DevTools (chrome.exe)' -Direction Inbound -Action Allow -Program 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' -Protocol TCP",
-    '',
-    'Re-run ./runner pnpm test:browser after adding the rule.',
-  ].join('\n');
 }
 
 async function fetchVersion(host: string, devtoolsPort: number): Promise<boolean> {
@@ -91,10 +57,10 @@ async function main() {
     process.exit(0);
   }
 
-  const hint = firewallHint(targetHost, chrome.port);
+  const hint = buildWslFirewallHint(targetHost, chrome.port);
   console.error(`[browser-test] FAIL: DevTools not reachable at ${targetHost}:${chrome.port}`);
   if (hint) {
-    console.error(hint);
+    console.error(`${hint}\n\nRe-run ./runner pnpm test:browser after adding the rule.`);
   }
   process.exit(1);
 }

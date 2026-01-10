@@ -1,6 +1,8 @@
 # AGENTS.MD
 
 Oracle-specific notes:
+- Before digging into a task, review recent git commit logs and scan relevant dev docs (start with `README.md`, `docs/testing.md`, and the newest entries in `docs/dev-fixes-log.md`).
+- Keep `docs/dev-fixes-log.md` and related dev docs up to date as you fix issues or learn new failure modes.
 - ChatGPT project URLs: steipete@gmail.com -> https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project; studpete@gmail.com -> https://chatgpt.com/g/g-p-69505ed97e3081918a275477a647a682/project. Prefer studpete URL if steipete project not found.
 - Pro browser runs: allow up to 10 minutes; never click "Answer now"; keep at least 1–2 Pro live tests (reattach must stay Pro); move other tests to faster models where safe.
 - Live smoke tests: OpenAI live tests are opt-in. Run `ORACLE_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts` with a real `OPENAI_API_KEY` when you need the background path; gpt-5-pro can take ~10 minutes.

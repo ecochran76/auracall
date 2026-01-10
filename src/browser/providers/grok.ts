@@ -23,10 +23,15 @@ export const GROK_PROVIDER: BrowserProviderConfig = {
       '[role="menuitem"]',
       '[role="menuitemradio"]',
       'button[role="menuitem"]',
+      'div[role="option"]',
+      'div[role="button"]',
+      'button', // fallback for generic buttons in menu
     ],
-    assistantBubble: ['main .message-bubble'],
+    assistantBubble: [
+      'main div.relative.group.flex.flex-col',
+    ],
     assistantRole: [
-      'main .message-bubble.w-full.max-w-none',
+      'main div.relative.group.flex.flex-col.items-start',
     ],
     copyButton: [
       'button[aria-label*="Copy"]',
