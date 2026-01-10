@@ -103,7 +103,9 @@ import {
 import { readDevToolsPort } from '../src/browser/profileState.js';
 import { diagnoseProvider } from '../src/inspector/doctor.js';
 import { resolveConfig } from '../src/schema/resolver.js';
-import { isPortOpen } from '../src/browser/processCheck.js';
+import { isPortOpen, isDevToolsResponsive } from '../src/browser/processCheck.js';
+import { findActiveInstance } from '../src/browser/stateRegistry.js';
+import { readDevToolsPort } from '../src/browser/profileState.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -563,7 +565,7 @@ program
     }
     const provider = getProvider(target);
     const listOptions = {
-      port: resolveBrowserListPort(userConfig),
+      port: await resolveBrowserListPort(userConfig),
       configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
     };
     const cacheContext = { provider: target, userConfig, listOptions };
@@ -782,10 +784,7 @@ program
     
     // Resolve project ID if needed (e.g. from name via existing logic? for now direct ID)
     const projectId = commandOptions.projectId ?? userConfig.browser?.projectId;
-    let port = resolveBrowserListPort(userConfig);
-    if (!port && userConfig.browser?.manualLoginProfileDir) {
-      port = await readDevToolsPort(userConfig.browser.manualLoginProfileDir) ?? undefined;
-    }
+    const port = await resolveBrowserListPort(userConfig);
     
     console.log(`Renaming conversation ${id} to "${name}"...`);
     try {
@@ -841,14 +840,13 @@ program
       if (!providers.has(target)) {
         throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
       }
-      const listOptions = {
-        port: resolveBrowserListPort(userConfig),
-        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
-        includeHistory,
-        historyLimit,
-        historySince,
-      };
-      if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
+          const listOptions = {
+            port: await resolveBrowserListPort(userConfig),
+            configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+            includeHistory,
+            historyLimit,
+            historySince,
+          };      if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
         throw new Error('history-limit must be a positive number.');
       }
       if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
@@ -929,7 +927,7 @@ program
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
     const provider = getProvider(target);
-    const port = resolveBrowserListPort(userConfig);
+    const port = await resolveBrowserListPort(userConfig);
     if (!port) {
       console.error('No DevTools port configured. Ensure ORACLE_BROWSER_PORT is set or browser.debugPort is in config.');
       process.exit(1);
@@ -1047,7 +1045,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
       ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
       : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
   const listOptions = {
-    port: resolveBrowserListPort(userConfig),
+    port: await resolveBrowserListPort(userConfig),
     configuredUrl,
     includeHistory: true,
     historyLimit: 200,
@@ -2212,7 +2210,7 @@ async function pickOpenPort(): Promise<number> {
   });
 }
 
-function resolveBrowserListPort(userConfig: UserConfig): number | undefined {
+async function resolveBrowserListPort(userConfig: UserConfig): Promise<number | undefined> {
   const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
   if (raw) {
     const parsed = Number.parseInt(raw, 10);
@@ -2221,6 +2219,15 @@ function resolveBrowserListPort(userConfig: UserConfig): number | undefined {
   const fromConfig = userConfig.browser?.debugPort;
   if (typeof fromConfig === 'number' && Number.isFinite(fromConfig) && fromConfig > 0) {
     return fromConfig;
+  }
+  const profileDir = userConfig.browser?.manualLoginProfileDir;
+  if (profileDir) {
+    const instance = await findActiveInstance(profileDir);
+    if (instance) return instance.port;
+    const filePort = await readDevToolsPort(profileDir);
+    if (filePort && await isDevToolsResponsive({ port: filePort })) {
+      return filePort;
+    }
   }
   return undefined;
 }

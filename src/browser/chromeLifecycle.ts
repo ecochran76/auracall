@@ -10,17 +10,40 @@ import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
 import { cleanupStaleProfileState, readDevToolsPort } from './profileState.js';
 import { isDevToolsResponsive, findChromePidUsingUserDataDir } from './processCheck.js';
+import { findActiveInstance, registerInstance, unregisterInstance } from './stateRegistry.js';
 
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
-  // Smart Launch: check if this profile is already active
+  // 1. Check persistent registry first
+  const registered = await findActiveInstance(userDataDir);
+  if (registered) {
+    logger(`Found active Chrome instance in registry (pid ${registered.pid}, port ${registered.port}); reusing.`);
+    return {
+      pid: registered.pid,
+      port: registered.port,
+      kill: async () => { logger('Skipping shutdown of reused Chrome instance.'); },
+      process: undefined,
+      host: registered.host,
+    } as unknown as LaunchedChrome & { host?: string };
+  }
+
+  // 2. Legacy Fallback: check if this profile is already active via OS/FS
   const existingPid = await findChromePidUsingUserDataDir(userDataDir);
   if (existingPid) {
     const activePort = await readDevToolsPort(userDataDir);
     const connectHost = resolveRemoteDebugHost() || '127.0.0.1';
     if (activePort && await isDevToolsResponsive({ host: connectHost, port: activePort })) {
-      logger(`Found running Chrome using profile ${userDataDir} on port ${activePort}; reusing.`);
+      logger(`Found running Chrome using profile ${userDataDir} on port ${activePort} (not in registry); adopting.`);
+      await registerInstance({
+        pid: existingPid,
+        port: activePort,
+        host: connectHost,
+        profilePath: userDataDir,
+        type: 'chrome',
+        launchedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      });
       return {
         pid: undefined, // We don't own the PID, so we don't return it to avoid killing it
         port: activePort,
@@ -99,7 +122,26 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   const pidLabel = typeof launcher.pid === 'number' ? ` (pid ${launcher.pid})` : '';
   const hostLabel = connectHost ? ` on ${connectHost}` : '';
   logger(`Launched Chrome${pidLabel} on port ${launcher.port}${hostLabel}`);
-  return Object.assign(launcher, { host: connectHost ?? '127.0.0.1' }) as LaunchedChrome & { host?: string };
+
+  if (launcher.pid) {
+    await registerInstance({
+      pid: launcher.pid,
+      port: launcher.port,
+      host: connectHost ?? '127.0.0.1',
+      profilePath: userDataDir,
+      type: 'chrome',
+      launchedAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+    });
+  }
+
+  const originalKill = launcher.kill;
+  const kill = async () => {
+    await unregisterInstance(userDataDir);
+    return originalKill();
+  };
+
+  return Object.assign(launcher, { kill, host: connectHost ?? '127.0.0.1' }) as LaunchedChrome & { host?: string };
 }
 
 export function registerTerminationHooks(
