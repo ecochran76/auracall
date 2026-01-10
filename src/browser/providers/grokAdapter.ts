@@ -5,7 +5,7 @@ import type { ChromeClient } from '../types.js';
 
 export function createGrokAdapter(): Pick<
   BrowserProvider,
-  'listProjects' | 'listConversations' | 'capabilities'
+  'listProjects' | 'listConversations' | 'capabilities' | 'renameConversation'
 > {
   return {
     capabilities: {
@@ -68,9 +68,7 @@ export function createGrokAdapter(): Pick<
           await navigateToProject(client, projectUrl);
         }
         await ensureProjectPage(client, resolvedProjectId);
-        await closeHistoryDialog(client);
         await openConversationList(client);
-        await closeHistoryDialog(client);
       }
       try {
         const includeHistory = Boolean(options?.includeHistory);
@@ -85,6 +83,7 @@ export function createGrokAdapter(): Pick<
               'https://grok.com/',
             );
             try {
+              await navigateToProject(historyConnection.client, 'https://grok.com/');
               history = await listHistoryConversations(
                 historyConnection.client,
                 resolvedProjectId,
@@ -106,52 +105,129 @@ export function createGrokAdapter(): Pick<
         }
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
-            const projectId = ${JSON.stringify(resolvedProjectId ?? null)};
-            if (projectId && !location.pathname.includes('/project/' + projectId)) {
-              return [];
-            }
-            const conversations = new Map();
-            const add = (id, title, url) => {
-              if (!id) return;
-              if (!conversations.has(id)) {
-                conversations.set(id, { id, title: title || id, url: url || null });
-              }
-            };
-            const root = document.querySelector('main') || document.body;
-            const panels = Array.from(root.querySelectorAll('[id*="content-conversations"]'));
-            const panel =
-              panels.find((node) => {
-                const state = node.getAttribute('data-state') || '';
-                const hidden = node.getAttribute('aria-hidden');
-                if (state === 'active') return true;
-                if (hidden === 'false') return true;
-                return (node as HTMLElement).offsetParent !== null;
-              }) ?? panels[0];
-            if (panel) {
-              const anchors = Array.from(panel.querySelectorAll('a[href*="/c/"]'));
-              for (const anchor of anchors) {
-                const href = anchor.getAttribute('href') || '';
-                if (!href.includes('/c/')) continue;
-                const url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                const match = url.match(/\\/c\\/([^/?#]+)/);
-                const chatId = match?.[1] || '';
+            try {
+              const projectId = ${JSON.stringify(resolvedProjectId ?? null)};
+              const conversations = new Map();
+              const add = (id, title, url, ts) => {
+                if (!id) return;
+                if (!conversations.has(id)) {
+                  conversations.set(id, { id, title: title || id, url: url || null, timestamp: ts });
+                }
+              };
+
+              const now = Date.now();
+              const parseRelative = (value) => {
+                const text = String(value || '').toLowerCase().trim();
+                if (!text) return null;
+                if (text === 'just now' || text === 'moments ago') return now;
+                if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
+                const match = text.match(/(\\d+)\\s+(minute|hour|day|week|month|year)s?\\s+ago/);
+                if (match) {
+                  const amount = Number.parseInt(match[1], 10);
+                  if (!Number.isFinite(amount)) return null;
+                  const unit = match[2];
+                  const ms =
+                    unit === 'minute'
+                      ? amount * 60 * 1000
+                      : unit === 'hour'
+                        ? amount * 60 * 60 * 1000
+                        : unit === 'day'
+                          ? amount * 24 * 60 * 60 * 1000
+                          : unit === 'week'
+                            ? amount * 7 * 24 * 60 * 60 * 1000
+                            : unit === 'month'
+                              ? amount * 30 * 24 * 60 * 60 * 1000
+                              : amount * 365 * 24 * 60 * 60 * 1000;
+                  return now - ms;
+                }
+                const parsed = Date.parse(text);
+                return Number.isFinite(parsed) ? parsed : null;
+              };
+
+              const readTimestamp = (node) => {
+                // Check specific time elements first
+                const timeEl = node.querySelector('time');
+                if (timeEl) {
+                  const dt = timeEl.getAttribute('datetime');
+                  if (dt) {
+                    const parsed = Date.parse(dt);
+                    if (Number.isFinite(parsed)) return parsed;
+                  }
+                  const text = timeEl.textContent;
+                  const parsed = parseRelative(text);
+                  if (parsed) return parsed;
+                }
+
+                // Scan direct text of children for relative time patterns
+                // We look for short strings on the right side usually
+                const candidates = Array.from(node.querySelectorAll('*'));
+                // Often the time is the last element or close to it
+                for (const candidate of candidates.reverse()) {
+                  const text = (candidate.textContent || '').trim();
+                  // Avoid reading the whole title
+                  if (text.length > 20) continue; 
+                  const parsed = parseRelative(text);
+                  if (parsed) return parsed;
+                }
+                return null;
+              };
+              
+              const items = Array.from(document.querySelectorAll('a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]'));
+              
+              for (const node of items) {
+                const href = node.getAttribute('href') || node.getAttribute('data-href') || node.getAttribute('data-url') || '';
+                const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
+                let chatId = '';
+                let url = '';
+
+                if (dataValue.startsWith('conversation:')) {
+                  chatId = dataValue.split(':')[1];
+                  url = 'https://grok.com/c/' + chatId;
+                } else if (href) {
+                  try {
+                    const fullUrl = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+                    const match = fullUrl.match(/\\/c\\/([^/?#]+)/);
+                    if (match?.[1]) {
+                      chatId = match[1];
+                      url = fullUrl;
+                    }
+                  } catch { /* ignore */ }
+                }
+
                 if (!chatId) continue;
-                const row =
-                  anchor.closest('div.max-h-11') ||
-                  anchor.closest('div[class*="rounded"]') ||
-                  anchor.closest('div[class*="grid"]') ||
-                  anchor.parentElement;
+                
+                if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
+                  continue;
+                }
+
+                const row = node.closest('div,li') || node;
                 const titleNode = row?.querySelector?.('[class*="line-clamp"],[class*="truncate"]') || row;
-                const title = (titleNode?.textContent || '').trim();
+                
+                // Exclude time text from title if possible
+                let title = (titleNode?.textContent || '').trim();
+                const ts = readTimestamp(row);
+
+                if (ts) {
+                  // Attempt to clean title if it accidentally includes the time text (e.g. if titleNode IS the row)
+                  // This is a simple heuristic: if title ends with time-like string, chop it.
+                  // But usually titleNode is a specific element.
+                }
+
                 if (!title) continue;
-                add(chatId, title, url);
+                add(chatId, title, url, ts);
               }
+              return { items: Array.from(conversations.values()), count: conversations.size, nodes: items.length, href: location.href, path: location.pathname, projectId };
+            } catch (e) {
+              return { error: e.message, stack: e.stack };
             }
-            return Array.from(conversations.values());
           })()`,
           returnByValue: true,
         });
-        const raw = (result?.value ?? []) as Array<{ id: string; title: string; url?: string | null }>;
+        const payload = (result?.value ?? { items: [] }) as any;
+        const raw = payload.items || [];
+        if (raw.length === 0) {
+           console.log('[DEBUG] Scraper result:', JSON.stringify(payload, null, 2));
+        }
         const merged = new Map<string, Conversation>();
         for (const entry of raw) {
           merged.set(entry.id, {
@@ -160,6 +236,7 @@ export function createGrokAdapter(): Pick<
             provider: 'grok',
             projectId: resolvedProjectId ?? undefined,
             url: entry.url ?? undefined,
+            updatedAt: typeof entry.timestamp === 'number' ? new Date(entry.timestamp).toISOString() : undefined,
           });
         }
         for (const entry of history) {
@@ -173,6 +250,90 @@ export function createGrokAdapter(): Pick<
           }
         }
         return Array.from(merged.values());
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async renameConversation(
+      conversationId: string,
+      newTitle: string,
+      projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const projectUrl = projectId ? `https://grok.com/project/${projectId}?tab=conversations` : undefined;
+      // If no project, we might need to find it in history/sidebar. For now, require project or assume sidebar.
+      // But sidebar items often don't have rename.
+      
+      const connection = projectUrl
+        ? await connectToGrokProjectTab(options, projectId ?? null, projectUrl)
+        : await connectToGrokTab(options, `https://grok.com/`);
+        
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
+      try {
+        if (projectUrl && !usedExisting) {
+           await navigateToProject(client, projectUrl);
+        }
+        
+        await client.Runtime.evaluate({
+          expression: `(async () => {
+            const chatId = ${JSON.stringify(conversationId)};
+            const newTitle = ${JSON.stringify(newTitle)};
+            
+            // 1. Find the item
+            const selector = \`a[href*="\${chatId}"], [data-value*="\${chatId}"]\`;
+            let item = document.querySelector(selector);
+            
+            if (!item) {
+               // Try scrolling or waiting?
+               // Assuming it's visible for now.
+               throw new Error('Conversation item not found: ' + chatId);
+            }
+            
+            const row = item.closest('div.grid') || item.closest('li') || item.parentElement;
+            
+            // 2. Find "More" button (usually 3 dots)
+            // It might appear on hover.
+            row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+            await new Promise(r => setTimeout(r, 200));
+            
+            const menuBtn = row.querySelector('button[aria-label="More options"], button[aria-label="Options"], button[aria-haspopup="menu"]');
+            
+            if (!menuBtn) throw new Error('Menu button not found for conversation');
+            
+            menuBtn.click();
+            await new Promise(r => setTimeout(r, 500));
+            
+            // 3. Click Rename
+            const menuItems = Array.from(document.querySelectorAll('[role="menuitem"]'));
+            const renameBtn = menuItems.find(el => el.textContent.toLowerCase().includes('rename'));
+            
+            if (!renameBtn) throw new Error('Rename option not found in menu');
+            
+            renameBtn.click();
+            await new Promise(r => setTimeout(r, 500));
+            
+            // 4. Type new name
+            // It usually turns into an input or contenteditable
+            const input = row.querySelector('input, [contenteditable="true"]');
+            if (!input) throw new Error('Rename input not found');
+            
+            if (input.tagName === 'INPUT') {
+               input.value = newTitle;
+               input.dispatchEvent(new Event('input', { bubbles: true }));
+            } else {
+               input.textContent = newTitle;
+               input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            
+            // 5. Submit
+            input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true }));
+            
+          })()`,
+          awaitPromise: true
+        });
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -362,7 +523,7 @@ async function openConversationList(client: ChromeClient): Promise<void> {
       return false;
     })()`,
   });
-  await new Promise((resolve) => setTimeout(resolve, 750));
+  await new Promise((resolve) => setTimeout(resolve, 3000));
 }
 
 async function listHistoryConversations(
@@ -387,7 +548,7 @@ async function listHistoryConversations(
     let idleCount = 0;
     let lastCount = 0;
     let lastScrollTop = -1;
-    while (entries.size < maxItems && idleCount < 4) {
+    while (entries.size < maxItems && idleCount < 10) {
       const { result } = await client.Runtime.evaluate({
         expression: `(() => {
           const projectId = ${JSON.stringify(projectId ?? null)};
@@ -468,7 +629,7 @@ async function listHistoryConversations(
               return title;
             };
             const items = Array.from(
-            dialog.querySelectorAll('a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]')
+            dialog.querySelectorAll('[role="option"], a[href*="/c/"]')
           );
           const conversations = [];
           let oldest = null;
@@ -574,6 +735,7 @@ async function listHistoryConversations(
         provider: 'grok',
         projectId,
         url: entry.url,
+        updatedAt: typeof entry.timestamp === 'number' ? new Date(entry.timestamp).toISOString() : undefined,
       }));
   } finally {
     await closeHistoryDialog(client);
@@ -589,7 +751,7 @@ async function expandHistoryDialog(client: ChromeClient): Promise<void> {
         document.querySelector('[aria-modal="true"]');
       if (!dialog) return false;
       const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const nodes = Array.from(dialog.querySelectorAll('button,a,[role="button"],[role="link"]'));
+      const nodes = Array.from(dialog.querySelectorAll('button,a,[role="button"],[role="link"],[role="option"],div.cursor-pointer'));
       for (const node of nodes) {
         const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
         if (label.includes('show all')) {
@@ -601,7 +763,7 @@ async function expandHistoryDialog(client: ChromeClient): Promise<void> {
     })()`,
     returnByValue: true,
   });
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
@@ -632,12 +794,12 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
   await client.Runtime.evaluate({
     expression: `(() => {
       const menus = Array.from(document.querySelectorAll('button[aria-label="Toggle Menu"]'));
-      for (const menu of menus) {
-        menu.click();
+      if (menus[0]) {
+        menus[0].click();
       }
     })()`,
   });
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   if (await findAndClickHistory()) {
     return waitForDialog(client);
@@ -647,7 +809,7 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
 }
 
 async function waitForDialog(client: ChromeClient): Promise<boolean> {
-  const deadline = Date.now() + 5000;
+  const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     const { result } = await client.Runtime.evaluate({
       expression: `(() => Boolean(document.querySelector('[role="dialog"],dialog,[aria-modal="true"]')) )()`,
@@ -662,26 +824,43 @@ async function waitForDialog(client: ChromeClient): Promise<boolean> {
 async function closeHistoryDialog(client: ChromeClient): Promise<void> {
   await client.Runtime.evaluate({
     expression: `(() => {
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('dialog') ||
-        document.querySelector('[aria-modal="true"]');
-      if (!dialog) return false;
+      const getDialog = () => document.querySelector('[role="dialog"]') || document.querySelector('dialog') || document.querySelector('[aria-modal="true"]');
+      let dialog = getDialog();
+      if (!dialog) return true;
+
+      // Try backdrop click
       const backdrop =
-        dialog.parentElement?.querySelector?.('[data-state="open"]') ||
-        document.querySelector('[data-state="open"][data-radix-portal]') ||
+        dialog.parentElement?.querySelector?.('[data-state="open"][class*="backdrop"]') ||
+        document.querySelector('[data-state="open"][data-radix-portal] > [class*="backdrop"]') ||
         document.querySelector('[data-radix-portal] [data-state="open"]');
-      if (backdrop) {
+      
+      if (backdrop && backdrop !== dialog) {
         backdrop.click();
-        return true;
       }
-      const event = new KeyboardEvent('keydown', { key: 'Escape', bubbles: true });
-      document.dispatchEvent(event);
+
+      // Try Escape on body (proven to work)
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+      
+      // Try Escape on dialog
+      if (getDialog()) {
+         getDialog()?.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+      }
+      
       return true;
     })()`,
     returnByValue: true,
   });
-  await new Promise((resolve) => setTimeout(resolve, 200));
+  
+  // Verification loop
+  const deadline = Date.now() + 3000;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `Boolean(document.querySelector('[role="dialog"],dialog,[aria-modal="true"]'))`,
+      returnByValue: true
+    });
+    if (!result?.value) return; // Closed
+    await new Promise(r => setTimeout(r, 250));
+  }
 }
 
 async function listOpenConversations(
