@@ -34,6 +34,9 @@ export async function runBrowserSessionExecution(
       executeBrowser,
       formatTokenCount,
       formatFinishLine,
+      runtimeExtras: (result) => ({
+        conversationId: (result as { conversationId?: string }).conversationId,
+      }),
       persistRuntimeHint,
       errorWrapper: (message, cause) => new BrowserAutomationError(message, { stage: 'execute-browser' }, cause),
       color: {

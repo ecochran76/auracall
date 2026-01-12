@@ -4,37 +4,48 @@ import path from 'node:path';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
 import type { BrowserRuntimeMetadata, BrowserSessionConfig } from './types.js';
 import type { BrowserLogger, ChromeClient, ResolvedBrowserConfig } from './types.js';
-import {
-  pickTarget,
-  extractConversationIdFromUrl,
-  buildConversationUrl,
-  withTimeout,
-  openConversationFromSidebar,
-  openConversationFromSidebarWithRetry,
-  waitForLocationChange,
-  readConversationTurnIndex,
-  buildPromptEchoMatcher,
-  recoverPromptEcho,
-  alignPromptEchoMarkdown,
-  type TargetInfoLite,
-} from './reattachHelpers.js';
+export type ReattachTargetInfo = {
+  targetId?: string;
+  url?: string;
+  type?: string;
+  title?: string;
+};
 
 export interface ReattachDeps {
-  listTargets?: () => Promise<TargetInfoLite[]>;
+  listTargets?: () => Promise<ReattachTargetInfo[]>;
   connect?: (options?: unknown) => Promise<ChromeClient>;
   waitForAssistantResponse?: (Runtime: ChromeClient['Runtime'], timeoutMs: number, logger: BrowserLogger, minTurn?: number) => Promise<{
     text: string;
     meta?: unknown;
   }>;
   captureAssistantMarkdown?: (Runtime: ChromeClient['Runtime'], meta: unknown, logger: BrowserLogger) => Promise<string | null>;
-  recoverSession?: (runtime: BrowserRuntimeMetadata, config: BrowserSessionConfig | undefined) => Promise<ReattachResult>;
+  recoverSession?: (runtime: ReattachRuntime, config: BrowserSessionConfig | undefined) => Promise<ReattachResult>;
   promptPreview?: string;
+  helpers: ReattachHelperDeps;
 }
 
 export interface ReattachResult {
   answerText: string;
   answerMarkdown: string;
 }
+
+export type ReattachRuntime = BrowserRuntimeMetadata & {
+  conversationId?: string;
+};
+
+export type ReattachHelperDeps = {
+  pickTarget: (targets: ReattachTargetInfo[], runtime: ReattachRuntime) => ReattachTargetInfo | null;
+  extractConversationIdFromUrl: (url: string) => string | null;
+  buildConversationUrl: (runtime: { tabUrl?: string; conversationId?: string }, baseUrl: string) => string | null;
+  withTimeout: <T>(promise: Promise<T>, timeoutMs: number, message: string) => Promise<T>;
+  openConversationFromSidebar: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }) => Promise<boolean>;
+  openConversationFromSidebarWithRetry: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }, timeoutMs: number) => Promise<boolean>;
+  waitForLocationChange: (Runtime: ChromeClient['Runtime'], timeoutMs: number) => Promise<void>;
+  readConversationTurnIndex: (Runtime: ChromeClient['Runtime'], logger: BrowserLogger) => Promise<number | null>;
+  buildPromptEchoMatcher: (preview?: string) => RegExp | null;
+  recoverPromptEcho: (Runtime: ChromeClient['Runtime'], answer: { text: string; meta?: unknown }, matcher: RegExp | null, logger: BrowserLogger, minTurn?: number | null, timeoutMs?: number) => Promise<{ text: string; meta?: unknown }>;
+  alignPromptEchoMarkdown: (text: string, markdown: string, matcher: RegExp | null, logger: BrowserLogger) => { answerText: string; answerMarkdown: string };
+};
 
 export interface ReattachRuntimeDeps {
   resolveBrowserConfig: (config: BrowserSessionConfig) => ResolvedBrowserConfig;
@@ -61,12 +72,16 @@ export interface ReattachRuntimeDeps {
 }
 
 export async function resumeBrowserSessionCore(
-  runtime: BrowserRuntimeMetadata,
+  runtime: ReattachRuntime,
   config: BrowserSessionConfig | undefined,
   logger: BrowserLogger,
-  deps: ReattachDeps = {},
+  deps: ReattachDeps = {} as ReattachDeps,
   runtimeDeps?: ReattachRuntimeDeps,
 ): Promise<ReattachResult> {
+  if (!deps.helpers) {
+    throw new Error('Reattach helpers are required.');
+  }
+  const helpers = deps.helpers;
   const recoverSession =
     deps.recoverSession ??
     (async (runtimeMeta, configMeta) =>
@@ -83,11 +98,11 @@ export async function resumeBrowserSessionCore(
       deps.listTargets ??
       (async () => {
         const targets = await CDP.List({ host, port: runtime.chromePort as number });
-        return targets as unknown as TargetInfoLite[];
+        return targets as unknown as ReattachTargetInfo[];
       });
     const connect = deps.connect ?? ((options?: unknown) => CDP(options as CDP.Options));
-    const targetList = (await listTargets()) as TargetInfoLite[];
-    const target = pickTarget(targetList, runtime);
+    const targetList = (await listTargets()) as ReattachTargetInfo[];
+    const target = helpers.pickTarget(targetList, runtime);
     const client: ChromeClient = (await connect({
       host,
       port: runtime.chromePort,
@@ -105,15 +120,15 @@ export async function resumeBrowserSessionCore(
       const { result } = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
       const href = typeof result?.value === 'string' ? result.value : '';
       if (href.includes('/c/')) {
-        const currentId = extractConversationIdFromUrl(href);
+        const currentId = helpers.extractConversationIdFromUrl(href);
         if (!runtime.conversationId || (currentId && currentId === runtime.conversationId)) {
           return;
         }
       }
-      const opened = await openConversationFromSidebarWithRetry(
+      const opened = await helpers.openConversationFromSidebarWithRetry(
         Runtime,
         {
-          conversationId: runtime.conversationId ?? extractConversationIdFromUrl(runtime.tabUrl ?? ''),
+          conversationId: runtime.conversationId ?? helpers.extractConversationIdFromUrl(runtime.tabUrl ?? ''),
           preferProjects: true,
           promptPreview: deps.promptPreview,
         },
@@ -122,7 +137,7 @@ export async function resumeBrowserSessionCore(
       if (!opened) {
         throw new Error('Unable to locate prior ChatGPT conversation in sidebar.');
       }
-      await waitForLocationChange(Runtime, 15_000);
+      await helpers.waitForLocationChange(Runtime, 15_000);
     };
 
     const waitForResponse = deps.waitForAssistantResponse;
@@ -132,26 +147,26 @@ export async function resumeBrowserSessionCore(
     }
     const timeoutMs = config?.timeoutMs ?? 120_000;
     const pingTimeoutMs = Math.min(5_000, Math.max(1_500, Math.floor(timeoutMs * 0.05)));
-    await withTimeout(
+    await helpers.withTimeout(
       Runtime.evaluate({ expression: '1+1', returnByValue: true }),
       pingTimeoutMs,
       'Reattach target did not respond',
     );
     await ensureConversationOpen();
-    const minTurnIndex = await readConversationTurnIndex(Runtime, logger);
-    const promptEcho = buildPromptEchoMatcher(deps.promptPreview);
-    const answer = await withTimeout(
+    const minTurnIndex = await helpers.readConversationTurnIndex(Runtime, logger);
+    const promptEcho = helpers.buildPromptEchoMatcher(deps.promptPreview);
+    const answer = await helpers.withTimeout(
       waitForResponse(Runtime, timeoutMs, logger, minTurnIndex ?? undefined),
       timeoutMs + 5_000,
       'Reattach response timed out',
     );
-    const recovered = await recoverPromptEcho(Runtime, answer, promptEcho, logger, minTurnIndex, timeoutMs);
-    const markdown = (await withTimeout(
+    const recovered = await helpers.recoverPromptEcho(Runtime, answer, promptEcho, logger, minTurnIndex, timeoutMs);
+    const markdown = (await helpers.withTimeout(
       captureMarkdown(Runtime, recovered.meta, logger),
       15_000,
       'Reattach markdown capture timed out',
     )) ?? recovered.text;
-    const aligned = alignPromptEchoMarkdown(recovered.text, markdown, promptEcho, logger);
+    const aligned = helpers.alignPromptEchoMarkdown(recovered.text, markdown, promptEcho, logger);
 
     if (client && typeof client.close === 'function') {
       try {
@@ -170,7 +185,7 @@ export async function resumeBrowserSessionCore(
 }
 
 async function resumeBrowserSessionViaNewChrome(
-  runtime: BrowserRuntimeMetadata,
+  runtime: ReattachRuntime,
   config: BrowserSessionConfig | undefined,
   logger: BrowserLogger,
   deps: ReattachDeps,
@@ -222,17 +237,17 @@ async function resumeBrowserSessionViaNewChrome(
   }
   await runtimeDeps.ensurePromptReady(Runtime, resolved.inputTimeoutMs, logger);
 
-  const conversationUrl = buildConversationUrl(runtime, resolved.url ?? 'https://chatgpt.com/');
+  const conversationUrl = helpers.buildConversationUrl(runtime, resolved.url ?? 'https://chatgpt.com/');
   if (conversationUrl) {
     logger(`Reopening conversation at ${conversationUrl}`);
     await runtimeDeps.navigateToChatGPT(Page, Runtime, conversationUrl, logger);
     await runtimeDeps.ensureNotBlocked(Runtime, resolved.headless, logger);
     await runtimeDeps.ensurePromptReady(Runtime, resolved.inputTimeoutMs, logger);
   } else {
-    const opened = await openConversationFromSidebarWithRetry(
+    const opened = await helpers.openConversationFromSidebarWithRetry(
       Runtime,
       {
-        conversationId: runtime.conversationId ?? extractConversationIdFromUrl(runtime.tabUrl ?? ''),
+        conversationId: runtime.conversationId ?? helpers.extractConversationIdFromUrl(runtime.tabUrl ?? ''),
         preferProjects:
           resolved.url !== 'https://chatgpt.com/' ||
           Boolean(runtime.tabUrl && (/\/g\//.test(runtime.tabUrl) || runtime.tabUrl.includes('/project'))),
@@ -243,7 +258,7 @@ async function resumeBrowserSessionViaNewChrome(
     if (!opened) {
       throw new Error('Unable to locate prior ChatGPT conversation in sidebar.');
     }
-    await waitForLocationChange(Runtime, 15_000);
+    await helpers.waitForLocationChange(Runtime, 15_000);
   }
 
   const waitForResponse = deps.waitForAssistantResponse;
@@ -252,12 +267,12 @@ async function resumeBrowserSessionViaNewChrome(
     throw new Error('Reattach dependencies missing response capture handlers.');
   }
   const timeoutMs = resolved.timeoutMs ?? 120_000;
-  const minTurnIndex = await readConversationTurnIndex(Runtime, logger);
-  const promptEcho = buildPromptEchoMatcher(deps.promptPreview);
+  const minTurnIndex = await helpers.readConversationTurnIndex(Runtime, logger);
+  const promptEcho = helpers.buildPromptEchoMatcher(deps.promptPreview);
   const answer = await waitForResponse(Runtime, timeoutMs, logger, minTurnIndex ?? undefined);
-  const recovered = await recoverPromptEcho(Runtime, answer, promptEcho, logger, minTurnIndex, timeoutMs);
+  const recovered = await helpers.recoverPromptEcho(Runtime, answer, promptEcho, logger, minTurnIndex, timeoutMs);
   const markdown = (await captureMarkdown(Runtime, recovered.meta, logger)) ?? recovered.text;
-  const aligned = alignPromptEchoMarkdown(recovered.text, markdown, promptEcho, logger);
+  const aligned = helpers.alignPromptEchoMarkdown(recovered.text, markdown, promptEcho, logger);
 
   if (client && typeof client.close === 'function') {
     try {
@@ -281,10 +296,3 @@ async function resumeBrowserSessionViaNewChrome(
 
   return { answerText: aligned.answerText, answerMarkdown: aligned.answerMarkdown };
 }
-
-export const __test__ = {
-  pickTarget,
-  extractConversationIdFromUrl,
-  buildConversationUrl,
-  openConversationFromSidebar,
-};

@@ -27,7 +27,7 @@ export interface BrowserSessionConfigLike {
   timeoutMs?: number | null;
 }
 
-export interface BrowserExecutionResult {
+export interface BrowserExecutionResult<TRuntime extends BrowserRuntimeMetadata = BrowserRuntimeMetadata> {
   usage: {
     inputTokens: number;
     outputTokens: number;
@@ -35,7 +35,7 @@ export interface BrowserExecutionResult {
     totalTokens: number;
   };
   elapsedMs: number;
-  runtime: BrowserRuntimeMetadata;
+  runtime: TRuntime;
   answerText: string;
 }
 
@@ -58,6 +58,7 @@ export interface BrowserSessionRunnerDeps {
     tokensPart: string;
     detailParts: Array<string | null>;
   }) => { line1: string; line2?: string };
+  runtimeExtras?: (result: BrowserRunResult) => Partial<BrowserRuntimeMetadata>;
   color?: {
     dim?: (value: string) => string;
     bold?: (value: string) => string;
@@ -184,18 +185,19 @@ export async function runBrowserSessionExecutionCore(
   if (line2) {
     log(dim(line2));
   }
+  const baseRuntime = {
+    chromePid: browserResult.chromePid,
+    chromePort: browserResult.chromePort,
+    chromeHost: browserResult.chromeHost,
+    userDataDir: browserResult.userDataDir,
+    controllerPid: browserResult.controllerPid ?? process.pid,
+    tabUrl: browserResult.tabUrl,
+  };
+  const runtimeExtras = deps.runtimeExtras?.(browserResult) ?? {};
   return {
     usage,
     elapsedMs: browserResult.tookMs,
-    runtime: {
-      chromePid: browserResult.chromePid,
-      chromePort: browserResult.chromePort,
-      chromeHost: browserResult.chromeHost,
-      userDataDir: browserResult.userDataDir,
-      controllerPid: browserResult.controllerPid ?? process.pid,
-      conversationId: browserResult.conversationId,
-      tabUrl: browserResult.tabUrl,
-    },
+    runtime: { ...baseRuntime, ...runtimeExtras },
     answerText,
   };
 }

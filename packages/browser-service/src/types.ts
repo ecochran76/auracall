@@ -3,8 +3,6 @@ import type Protocol from 'devtools-protocol';
 
 export type ChromeClient = Awaited<ReturnType<typeof CDP>>;
 export type CookieParam = Protocol.Network.CookieParam;
-export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
-export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
 
 export type BrowserLogger = ((message: string) => void) & {
   verbose?: boolean;
@@ -24,7 +22,6 @@ export interface BrowserRuntimeMetadata {
   userDataDir?: string;
   chromeTargetId?: string;
   tabUrl?: string;
-  conversationId?: string;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
 }
@@ -33,12 +30,6 @@ export interface BrowserSessionConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
-  target?: 'chatgpt' | 'gemini' | 'grok';
-  projectId?: string | null;
-  conversationId?: string | null;
-  geminiUrl?: string | null;
-  grokUrl?: string | null;
-  chatgptUrl?: string | null;
   url?: string;
   timeoutMs?: number;
   debugPort?: number | null;
@@ -51,8 +42,6 @@ export interface BrowserSessionConfig {
   headless?: boolean;
   keepBrowser?: boolean;
   hideWindow?: boolean;
-  desiredModel?: string | null;
-  modelStrategy?: BrowserModelStrategy;
   debug?: boolean;
   allowCookieErrors?: boolean;
   remoteChrome?: { host: string; port: number } | null;
@@ -61,7 +50,6 @@ export interface BrowserSessionConfig {
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
   blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
-  thinkingTime?: ThinkingTimeLevel;
 }
 
 export interface BrowserAutomationConfig {
@@ -71,13 +59,7 @@ export interface BrowserAutomationConfig {
   display?: string | null;
   profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
   blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
-  target?: 'chatgpt' | 'gemini' | 'grok';
-  projectId?: string | null;
-  conversationId?: string | null;
-  geminiUrl?: string | null;
-  grokUrl?: string | null;
   url?: string;
-  chatgptUrl?: string | null;
   timeoutMs?: number;
   debugPort?: number | null;
   debugPortRange?: [number, number] | null;
@@ -90,8 +72,6 @@ export interface BrowserAutomationConfig {
   headless?: boolean;
   keepBrowser?: boolean;
   hideWindow?: boolean;
-  desiredModel?: string | null;
-  modelStrategy?: BrowserModelStrategy;
   debug?: boolean;
   allowCookieErrors?: boolean;
   remoteChrome?: { host: string; port: number } | string | null;
@@ -99,16 +79,14 @@ export interface BrowserAutomationConfig {
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
-  /** Thinking time intensity level for Thinking/Pro models: light, standard, extended, heavy */
-  thinkingTime?: ThinkingTimeLevel;
 }
 
 export interface BrowserRunOptions {
   prompt: string;
   attachments?: BrowserAttachment[];
-  /**
-   * Optional secondary submission to try if the initial prompt is rejected by ChatGPT
-   * (e.g. inline file paste exceeds composer limits). Intended for auto inline->upload fallback.
+  /** 
+   * Optional secondary submission to try if the initial prompt is rejected.
+   * Intended for inline->upload fallback.
    */
   fallbackSubmission?: { prompt: string; attachments: BrowserAttachment[] };
   config?: BrowserAutomationConfig;
@@ -132,7 +110,6 @@ export interface BrowserRunResult {
   userDataDir?: string;
   chromeTargetId?: string;
   tabUrl?: string;
-  conversationId?: string;
   controllerPid?: number;
 }
 
@@ -142,10 +119,7 @@ export type ResolvedBrowserConfig = Required<
     'chromeProfile' |
       'chromePath' |
       'chromeCookiePath' |
-      'desiredModel' |
       'remoteChrome' |
-      'thinkingTime' |
-      'modelStrategy' |
       'profileConflictAction'
   >
 > & {
@@ -155,9 +129,6 @@ export type ResolvedBrowserConfig = Required<
   display?: string | null;
   blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
   profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
-  desiredModel?: string | null;
-  modelStrategy?: BrowserModelStrategy;
-  thinkingTime?: ThinkingTimeLevel;
   debugPort?: number | null;
   debugPortRange?: [number, number] | null;
   inlineCookies?: CookieParam[] | null;

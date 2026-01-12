@@ -12,7 +12,19 @@ import { launchChrome, connectToChrome, hideChromeWindow } from './chromeLifecyc
 import { resolveBrowserConfig } from './config.js';
 import { syncCookies } from './cookies.js';
 import { cleanupStaleProfileState } from './profileState.js';
-import { openConversationFromSidebar } from './reattachHelpers.js';
+import {
+  pickTarget,
+  extractConversationIdFromUrl,
+  buildConversationUrl,
+  withTimeout,
+  openConversationFromSidebar,
+  openConversationFromSidebarWithRetry,
+  waitForLocationChange,
+  readConversationTurnIndex,
+  buildPromptEchoMatcher,
+  recoverPromptEcho,
+  alignPromptEchoMarkdown,
+} from './reattachHelpers.js';
 import {
   resumeBrowserSessionCore,
   type ReattachDeps,
@@ -33,6 +45,19 @@ export async function resumeBrowserSession(
       ...deps,
       waitForAssistantResponse: deps.waitForAssistantResponse ?? waitForAssistantResponse,
       captureAssistantMarkdown: deps.captureAssistantMarkdown ?? captureAssistantMarkdown,
+      helpers: {
+        pickTarget,
+        extractConversationIdFromUrl,
+        buildConversationUrl,
+        withTimeout,
+        openConversationFromSidebar,
+        openConversationFromSidebarWithRetry,
+        waitForLocationChange,
+        readConversationTurnIndex,
+        buildPromptEchoMatcher,
+        recoverPromptEcho,
+        alignPromptEchoMarkdown,
+      },
     },
     {
       resolveBrowserConfig: (candidate) => resolveBrowserConfig(candidate as BrowserSessionConfig),
@@ -53,4 +78,7 @@ export async function resumeBrowserSession(
 export const __test__ = {
   openConversationFromSidebar: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null }) =>
     openConversationFromSidebar(Runtime, options),
+  pickTarget,
+  extractConversationIdFromUrl,
+  buildConversationUrl,
 };

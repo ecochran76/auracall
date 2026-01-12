@@ -14,7 +14,7 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - Chrome lifecycle helpers (launch/connect/terminate)
 - Port selection + registry helpers
 - Profile discovery + cookie path utilities
-- Session helper utilities (DOM helpers, debug helpers)
+- Session helper utilities (generic DOM helpers)
 - Manual login session helper (config injected by host app)
 - Core browser session runner (host app supplies prompt assembly + error handling)
 
@@ -23,6 +23,7 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - Cache policies and list/refresh semantics
 - CLI behaviors and logging conventions
 - Oracle-specific config parsing and defaults
+- ChatGPT-specific selectors, cookies, and DOM debugging helpers
 
 ## Integration Notes
 - Oracle keeps thin wrappers for registry path and default profile directory ("~/.oracle").
