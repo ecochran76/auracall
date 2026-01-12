@@ -78,7 +78,7 @@ import {
   deriveNotificationSettingsFromMetadata,
   type NotificationSettings,
 } from '../src/cli/notifier.js';
-import { configPath, loadUserConfig, scaffoldDefaultConfigFile, type UserConfig } from '../src/config.js';
+import { configPath, loadUserConfig, scaffoldDefaultConfigFile, type ResolvedUserConfig, type UserConfig } from '../src/config.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -1079,7 +1079,7 @@ function filterConversationsByQuery(conversations: unknown, rawFilter: unknown):
   });
 }
 
-async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConfig): Promise<void> {
+async function resolveBrowserNameHints(options: CliOptions, userConfig: ResolvedUserConfig): Promise<void> {
   const disableProject = options.noProject === true || options.project === false;
   const projectName = disableProject
     ? ''
@@ -1207,7 +1207,7 @@ async function buildBrowserContext({
   model,
 }: {
   options: CliOptions;
-  userConfig: UserConfig;
+  userConfig: ResolvedUserConfig;
   browserConfig?: BrowserSessionConfig;
   model: string;
 }): Promise<BrowserContextMetadata | null> {
@@ -1252,7 +1252,7 @@ function applyBrowserLaunchUrl({
   model,
 }: {
   browserConfig?: BrowserSessionConfig;
-  userConfig: UserConfig;
+  userConfig: ResolvedUserConfig;
   model: string;
 }): void {
   if (!browserConfig) return;
@@ -2089,7 +2089,7 @@ async function runInteractiveSession(
   browserConfig?: BrowserSessionConfig,
   showReattachHint = true,
   notifications?: NotificationSettings,
-  userConfig?: UserConfig,
+  userConfig?: ResolvedUserConfig,
   suppressSummary = false,
   browserDeps?: BrowserSessionRunnerDeps,
 ): Promise<void> {

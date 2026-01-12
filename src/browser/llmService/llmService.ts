@@ -1,4 +1,4 @@
-import type { UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import type { Conversation, Project, ProviderId } from '../providers/domain.js';
 import {
@@ -32,7 +32,7 @@ export abstract class LlmService {
   private readonly identityPrompt?: IdentityPrompt;
 
   protected constructor(
-    private readonly userConfig: UserConfig,
+    private readonly userConfig: ResolvedUserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,
     options?: { identityPrompt?: IdentityPrompt },

@@ -3,7 +3,7 @@ import type { Command, OptionValues } from 'commander';
 import { usesDefaultStatusFilters } from './options.js';
 import { attachSession, showStatus, type AttachSessionOptions, type ShowStatusOptions } from './sessionDisplay.js';
 import { sessionStore } from '../sessionStore.js';
-import type { UserConfig } from '../config.js';
+import type { ResolvedUserConfig } from '../config.js';
 import { createLlmService } from '../browser/llmService/index.js';
 import { spawn } from 'node:child_process';
 
@@ -61,7 +61,7 @@ export async function handleSessionCommand(
   sessionId: string | undefined,
   command: Command,
   deps: SessionCommandDependencies = defaultDependencies,
-  userConfig?: UserConfig,
+  userConfig?: ResolvedUserConfig,
 ): Promise<void> {
   const sessionOptions = command.opts<StatusOptions>();
   if (sessionOptions.verboseRender) {
@@ -192,7 +192,7 @@ function resolveConversationUrl(
       context?: { provider?: string | null; projectId?: string | null; conversationId?: string | null };
     };
   },
-  userConfig?: UserConfig,
+  userConfig?: ResolvedUserConfig,
 ): string | null {
   const runtimeUrl = metadata.browser?.runtime?.tabUrl ?? null;
   if (runtimeUrl && hasConversationMarker(runtimeUrl)) {

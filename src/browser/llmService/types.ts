@@ -1,6 +1,6 @@
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import type { Conversation, Project, ProviderId } from '../providers/domain.js';
-import type { UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
 
 export type LlmCapabilities = {
   projects?: boolean;
@@ -27,7 +27,7 @@ export type CacheIdentity = {
 
 export type CacheContext = CacheSettings & {
   provider: ProviderId;
-  userConfig: UserConfig;
+  userConfig: ResolvedUserConfig;
   listOptions: BrowserProviderListOptions;
   userIdentity?: ProviderUserIdentity | null;
   identityKey?: string | null;

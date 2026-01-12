@@ -1,4 +1,4 @@
-import type { UserConfig } from '../../../config.js';
+import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
 import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
 import { BrowserService } from '../../service/browserService.js';
@@ -8,7 +8,7 @@ import type { Conversation, Project } from '../../providers/domain.js';
 
 export class GrokService extends LlmService {
   private constructor(
-    userConfig: UserConfig,
+    userConfig: ResolvedUserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,
     options?: { identityPrompt?: IdentityPrompt },
@@ -17,7 +17,7 @@ export class GrokService extends LlmService {
   }
 
   static create(
-    userConfig: UserConfig,
+    userConfig: ResolvedUserConfig,
     options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
   ): GrokService {
     const provider = getProvider('grok') as LlmServiceAdapter;

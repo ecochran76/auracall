@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { UserConfig } from '../config.js';
+import type { ResolvedUserConfig } from '../config.js';
 import type { ChromeClient } from './types.js';
 import type { BrowserProvider, BrowserProviderListOptions } from './providers/types.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
@@ -18,7 +18,7 @@ export class BrowserAutomationClient {
   private readonly llmService: LlmService;
 
   private constructor(
-    readonly userConfig: UserConfig,
+    readonly userConfig: ResolvedUserConfig,
     target: 'chatgpt' | 'grok',
     browserService: BrowserService,
   ) {
@@ -29,7 +29,7 @@ export class BrowserAutomationClient {
   }
 
   static async fromConfig(
-    userConfig: UserConfig,
+    userConfig: ResolvedUserConfig,
     options?: { target?: 'chatgpt' | 'grok' },
   ): Promise<BrowserAutomationClient> {
     const target = options?.target ?? userConfig.browser?.target ?? 'chatgpt';

@@ -3,7 +3,7 @@ import path from 'node:path';
 import { getOracleHomeDir } from '../../oracleHome.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { Conversation, Project, ProviderId, ConversationContext, FileRef } from './domain.js';
-import type { UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
 
 export const PROVIDER_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
 
@@ -23,7 +23,7 @@ export interface CacheReadResult<T> {
 
 export interface ProviderCacheContext {
   provider: ProviderId;
-  userConfig: UserConfig;
+  userConfig: ResolvedUserConfig;
   listOptions: BrowserProviderListOptions;
   userIdentity?: ProviderUserIdentity | null;
   identityKey?: string | null;

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
 import { getOracleHomeDir } from '../../oracleHome.js';
 import { isDevToolsResponsive } from '../processCheck.js';
 import { resolveWslHost } from '../chromeLifecycle.js';
@@ -12,13 +12,13 @@ export type BrowserListTarget = {
   host?: string;
 };
 
-export async function resolveBrowserListPort(userConfig: UserConfig): Promise<number | undefined> {
+export async function resolveBrowserListPort(userConfig: ResolvedUserConfig): Promise<number | undefined> {
   const target = await resolveBrowserListTarget(userConfig);
   return target?.port;
 }
 
 export async function resolveBrowserListTarget(
-  userConfig: UserConfig,
+  userConfig: ResolvedUserConfig,
 ): Promise<BrowserListTarget | undefined> {
   const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
   if (raw) {

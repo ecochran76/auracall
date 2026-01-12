@@ -1,4 +1,4 @@
-import type { UserConfig } from '../../../config.js';
+import type { ResolvedUserConfig } from '../../../config.js';
 import type { IdentityPrompt } from '../types.js';
 import type { BrowserService } from '../../service/browserService.js';
 import { ChatgptService } from './chatgptService.js';
@@ -8,7 +8,7 @@ import type { LlmService } from '../llmService.js';
 
 export function createLlmService(
   providerId: ProviderId,
-  userConfig: UserConfig,
+  userConfig: ResolvedUserConfig,
   options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
 ): LlmService {
   if (providerId === 'grok') {

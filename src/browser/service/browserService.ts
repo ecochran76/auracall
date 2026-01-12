@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
-import type { UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
 import type { ChromeClient } from '../types.js';
 import { resolveBrowserConfig } from '../config.js';
 import { resolveBrowserListTarget, pruneRegistry } from './session.js';
@@ -12,11 +12,11 @@ import type { CredentialHint } from './types.js';
 export class BrowserService {
   private readonly resolvedConfig;
 
-  private constructor(private readonly userConfig: UserConfig) {
+  private constructor(private readonly userConfig: ResolvedUserConfig) {
     this.resolvedConfig = resolveBrowserConfig(userConfig.browser);
   }
 
-  static fromConfig(userConfig: UserConfig): BrowserService {
+  static fromConfig(userConfig: ResolvedUserConfig): BrowserService {
     return new BrowserService(userConfig);
   }
 
