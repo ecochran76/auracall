@@ -4,7 +4,7 @@ import { usesDefaultStatusFilters } from './options.js';
 import { attachSession, showStatus, type AttachSessionOptions, type ShowStatusOptions } from './sessionDisplay.js';
 import { sessionStore } from '../sessionStore.js';
 import type { UserConfig } from '../config.js';
-import { getProvider } from '../browser/providers/index.js';
+import { createLlmService } from '../browser/llmService/index.js';
 import { spawn } from 'node:child_process';
 
 export interface StatusOptions extends OptionValues {
@@ -144,7 +144,7 @@ export async function handleSessionCommand(
       process.exitCode = 1;
       return;
     }
-    const url = resolveConversationUrl(metadata);
+    const url = resolveConversationUrl(metadata, userConfig);
     if (!url) {
       console.error('No conversation URL found in this session.');
       process.exitCode = 1;
@@ -184,7 +184,16 @@ export async function handleSessionCommand(
   });
 }
 
-function resolveConversationUrl(metadata: { browser?: { config?: { target?: string | null; projectId?: string | null; conversationId?: string | null }; runtime?: { tabUrl?: string | null; conversationId?: string | null }; context?: { provider?: string | null; projectId?: string | null; conversationId?: string | null } } }): string | null {
+function resolveConversationUrl(
+  metadata: {
+    browser?: {
+      config?: { target?: string | null; projectId?: string | null; conversationId?: string | null };
+      runtime?: { tabUrl?: string | null; conversationId?: string | null };
+      context?: { provider?: string | null; projectId?: string | null; conversationId?: string | null };
+    };
+  },
+  userConfig?: UserConfig,
+): string | null {
   const runtimeUrl = metadata.browser?.runtime?.tabUrl ?? null;
   if (runtimeUrl && hasConversationMarker(runtimeUrl)) {
     return runtimeUrl;
@@ -204,9 +213,12 @@ function resolveConversationUrl(metadata: { browser?: { config?: { target?: stri
   if (providerId === 'gemini') {
     return runtimeUrl && hasConversationMarker(runtimeUrl) ? runtimeUrl : null;
   }
+  if (!userConfig) {
+    return runtimeUrl ?? null;
+  }
   const projectId = metadata.browser?.context?.projectId ?? metadata.browser?.config?.projectId ?? null;
-  const provider = getProvider(providerId === 'grok' ? 'grok' : 'chatgpt');
-  return provider.resolveConversationUrl?.(conversationId, projectId ?? undefined) ?? runtimeUrl ?? null;
+  const llmService = createLlmService(providerId === 'grok' ? 'grok' : 'chatgpt', userConfig);
+  return llmService.provider.resolveConversationUrl?.(conversationId, projectId ?? undefined) ?? runtimeUrl ?? null;
 }
 
 function hasConversationMarker(url: string): boolean {

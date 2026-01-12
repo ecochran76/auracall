@@ -1,9 +1,13 @@
 import CDP from 'chrome-remote-interface';
-import { GROK_PROVIDER } from '../src/browser/providers/grok.js';
+import { resolveConfig } from '../src/schema/resolver.js';
+import { createLlmService } from '../src/browser/llmService/index.js';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 
 async function main() {
   const { host, port } = await resolveScriptBrowserTarget();
+  const userConfig = await resolveConfig({}, process.cwd(), process.env);
+  const llmService = createLlmService('grok', userConfig);
+  const selectors = llmService.provider.config.selectors;
   console.log(`Connecting to ${host}:${port}...`);
   const client = await CDP({ host, port });
   await client.Runtime.enable();
@@ -12,7 +16,7 @@ async function main() {
   // 1. Check if menu is open (it should be if it was "hanging open")
   // Or we try to open it.
   console.log('Checking model menu state...');
-  const menuBtnSelector = GROK_PROVIDER.selectors.modelButton.join(',');
+  const menuBtnSelector = selectors.modelButton.join(',');
   const menuOpen = await client.Runtime.evaluate({
     expression: `(() => {
         const btn = document.querySelector('${menuBtnSelector}');
@@ -35,7 +39,7 @@ async function main() {
   }
 
   // 2. Test menu item selectors
-  const itemSelectors = GROK_PROVIDER.selectors.menuItem.join(',');
+  const itemSelectors = selectors.menuItem.join(',');
   console.log(`Testing selectors: ${itemSelectors}`);
   
   const items = await client.Runtime.evaluate({
