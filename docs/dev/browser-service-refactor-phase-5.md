@@ -29,6 +29,10 @@
     and optional credential helper stubs.
   - Add explicit hooks/overrides for provider-specific aliases (ex: profileConflictAction) and config alias mapping.
 
+  Progress notes:
+  - Core utilities (constants/utils/types/portSelection/processCheck/profileState/cookies/domDebug/reattachHelpers)
+    moved into `packages/browser-service/` with oracle-side re-export stubs for now.
+
   3) Extraction plan + package layout
 
   - Create package skeleton (e.g., packages/browser-service/) with tsconfig, build target, exports map.
