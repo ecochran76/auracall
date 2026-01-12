@@ -29,6 +29,41 @@ export interface BrowserRuntimeMetadata {
   controllerPid?: number;
 }
 
+export interface BrowserSessionConfig {
+  chromeProfile?: string | null;
+  chromePath?: string | null;
+  chromeCookiePath?: string | null;
+  target?: 'chatgpt' | 'gemini' | 'grok';
+  projectId?: string | null;
+  conversationId?: string | null;
+  geminiUrl?: string | null;
+  grokUrl?: string | null;
+  chatgptUrl?: string | null;
+  url?: string;
+  timeoutMs?: number;
+  debugPort?: number | null;
+  inputTimeoutMs?: number;
+  cookieSync?: boolean;
+  cookieNames?: string[] | string | null;
+  cookieSyncWaitMs?: number;
+  inlineCookies?: CookieParam[] | string | null;
+  inlineCookiesSource?: string | null;
+  headless?: boolean;
+  keepBrowser?: boolean;
+  hideWindow?: boolean;
+  desiredModel?: string | null;
+  modelStrategy?: BrowserModelStrategy;
+  debug?: boolean;
+  allowCookieErrors?: boolean;
+  remoteChrome?: { host: string; port: number } | null;
+  manualLogin?: boolean;
+  manualLoginProfileDir?: string | null;
+  manualLoginCookieSync?: boolean;
+  wslChromePreference?: 'auto' | 'wsl' | 'windows';
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  thinkingTime?: ThinkingTimeLevel;
+}
+
 export interface BrowserAutomationConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;

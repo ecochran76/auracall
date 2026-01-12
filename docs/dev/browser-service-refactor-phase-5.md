@@ -41,6 +41,7 @@
   - manualLogin core moved into the package with oracle providing default config injection.
   - Added generic `BROWSER_SERVICE_*` env aliases for package-level cookies and browser runtime settings.
   - session runner core moved into the package; oracle wrapper injects prompt assembly + error handling.
+  - reattach core moved into the package; oracle wrapper injects page actions + config defaults.
 
   3) Extraction plan + package layout
 
