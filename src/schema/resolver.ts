@@ -55,6 +55,7 @@ export async function resolveConfig(
   cliOptions: OptionValues,
   cwd: string = process.cwd(),
   env: NodeJS.ProcessEnv = process.env,
+  options: { aliasRules?: import('../config/migrate.js').ConfigAliasRule[] } = {},
 ): Promise<OracleConfig> {
   // 1. Load User/System/Project Config
   const loaded = await loadUserConfig(cwd);
@@ -84,7 +85,9 @@ export async function resolveConfig(
 
   // 3. Merge (CLI overrides File)
   const merged = mergeRecursively(fileConfig as MutableConfig, cliConfig);
-  const normalized = normalizeConfigV1toV2(merged as OracleConfig) as MutableConfig;
+  const normalized = normalizeConfigV1toV2(merged as OracleConfig, {
+    aliasRules: options.aliasRules,
+  }) as MutableConfig;
   applyOracleProfile(normalized);
 
   // 4. Resolve Model and Engine Business Logic
