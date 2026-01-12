@@ -1,6 +1,6 @@
 import type { RunOracleOptions, ModelName } from '../oracle.js';
 import { DEFAULT_MODEL, MODEL_CONFIGS } from '../oracle.js';
-import type { UserConfig } from '../config.js';
+import type { ResolvedUserConfig } from '../config.js';
 import type { EngineMode } from './engine.js';
 import { resolveEngine } from './engine.js';
 import { normalizeModelOption, inferModelFromLabel, resolveApiModel, normalizeBaseUrl } from './options.js';
@@ -14,7 +14,7 @@ export interface ResolveRunOptionsInput {
   model?: string;
   models?: string[];
   engine?: EngineMode;
-  userConfig?: Partial<UserConfig>;
+  userConfig?: Partial<ResolvedUserConfig>;
   env?: NodeJS.ProcessEnv;
 }
 

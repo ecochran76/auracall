@@ -1,6 +1,6 @@
 import type { RunOracleOptions } from '../oracle.js';
 import type { EngineMode } from '../cli/engine.js';
-import type { UserConfig } from '../config.js';
+import type { ResolvedUserConfig } from '../config.js';
 import { resolveRunOptionsFromConfig } from '../cli/runOptions.js';
 import { Launcher } from 'chrome-launcher';
 
@@ -20,7 +20,7 @@ export function mapConsultToRunOptions({
   models?: string[];
   engine?: EngineMode;
   search?: boolean;
-  userConfig?: UserConfig;
+  userConfig?: Partial<ResolvedUserConfig>;
   env?: NodeJS.ProcessEnv;
 }): { runOptions: RunOracleOptions; resolvedEngine: EngineMode } {
   // Normalize CLI-style inputs through the shared resolver so config/env defaults apply,
