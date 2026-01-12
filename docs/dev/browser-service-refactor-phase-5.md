@@ -11,15 +11,16 @@
   - Output: short decision note + checklist of modules to extract.
 
   Scope checklist (initial draft):
-  - Move to browser-service: `src/browser/browserService/**`, `src/browser/client.ts`,
+  - Move to browser-service: `src/browser/browserService/**`,
     `src/browser/chromeLifecycle.ts`, `src/browser/portSelection.ts`, `src/browser/processCheck.ts`,
-    `src/browser/reattach.ts`, `src/browser/reattachHelpers.ts`, `src/browser/sessionRunner.ts`,
-    `src/browser/profileState.ts`, `src/browser/cookies.ts`, `src/browser/utils.ts`,
-    `src/browser/constants.ts`, `src/browser/types.ts`, `src/browser/domDebug.ts`.
+    `src/browser/reattachHelpers.ts`, `src/browser/profileState.ts`, `src/browser/cookies.ts`,
+    `src/browser/utils.ts`, `src/browser/constants.ts`, `src/browser/types.ts`, `src/browser/domDebug.ts`.
+  - Defer (LLM/session coupling to unwind): `src/browser/client.ts`, `src/browser/reattach.ts`,
+    `src/browser/sessionRunner.ts`.
   - Keep in oracle (LLM layer): `src/browser/llmService/**`, `src/browser/providers/**`,
     `src/browser/policies.ts`, `src/browser/modelStrategy.ts`, `src/browser/prompt.ts`,
     `src/browser/promptSummary.ts`, `src/browser/pageActions.ts`, `src/browser/login.ts`,
-    `src/browser/manualLogin.ts`, `src/browser/config.ts`.
+    `src/browser/config.ts`.
   - CLI-only glue and cache stay in oracle.
 
   2) Dependency audit + API surface
