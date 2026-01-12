@@ -36,6 +36,7 @@
   - Registry implementation moved into the package with an oracle wrapper that binds the registry path.
   - Port resolution core moved into the package with an oracle wrapper to supply env/config defaults.
   - chromeLifecycle moved into the package; oracle wrapper injects the registry path.
+  - BrowserService core moved into the package with oracle wrapper for config resolution + session hooks.
 
   3) Extraction plan + package layout
 
