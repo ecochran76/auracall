@@ -1,10 +1,8 @@
-import CDP from 'chrome-remote-interface';
-import type { BrowserLogger } from './types.js';
+import path from 'node:path';
+import { getOracleHomeDir } from '../oracleHome.js';
 import { DEFAULT_BROWSER_CONFIG } from './config.js';
-import { DEFAULT_DEBUG_PORT, DEFAULT_DEBUG_PORT_RANGE, pickAvailableDebugPort } from './portSelection.js';
-import { launchChrome } from './chromeLifecycle.js';
-import { writeChromePid, writeDevToolsActivePort } from './profileState.js';
-import { isDevToolsResponsive } from './processCheck.js';
+import { launchManualLoginSession as launchManualLoginSessionCore } from '../../packages/browser-service/src/manualLogin.js';
+import type { BrowserLogger } from './types.js';
 
 export async function launchManualLoginSession(options: {
   chromePath: string;
@@ -15,47 +13,10 @@ export async function launchManualLoginSession(options: {
   debugPort?: number;
   debugPortRange?: [number, number] | null;
   detach?: boolean;
-}): Promise<{ chrome: Awaited<ReturnType<typeof launchChrome>>; port: number }> {
-  const port = options.debugPort ?? await pickAvailableDebugPort(
-    DEFAULT_DEBUG_PORT,
-    options.logger,
-    options.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE,
-  );
-  const config = {
-    ...DEFAULT_BROWSER_CONFIG,
-    chromePath: options.chromePath,
-    chromeProfile: options.profileName,
-    manualLogin: true,
-    manualLoginProfileDir: options.userDataDir,
-    debugPort: port,
-    headless: false,
-    hideWindow: false,
-    keepBrowser: true,
-  };
-  const chrome = await launchChrome(config, options.userDataDir, options.logger);
-  if (options.detach) {
-    chrome.process?.unref();
-  }
-
-  await writeDevToolsActivePort(options.userDataDir, chrome.port);
-  if (chrome.pid) {
-    await writeChromePid(options.userDataDir, chrome.pid);
-  }
-
-  const host = chrome.host ?? '127.0.0.1';
-  const ready = await isDevToolsResponsive({ host, port: chrome.port, attempts: 5, timeoutMs: 1000 });
-  if (!ready) {
-    throw new Error(`Chrome DevTools did not respond on ${host}:${chrome.port}.`);
-  }
-
-  await openLoginUrl(host, chrome.port, options.url);
-  return { chrome, port: chrome.port };
-}
-
-async function openLoginUrl(host: string, port: number, url: string): Promise<void> {
-  try {
-    await CDP.New({ host, port, url });
-  } catch {
-    // Best effort: login can proceed even if we can't open a new tab.
-  }
+}): Promise<{ chrome: Awaited<ReturnType<typeof launchManualLoginSessionCore>>['chrome']; port: number }> {
+  return launchManualLoginSessionCore({
+    ...options,
+    baseConfig: DEFAULT_BROWSER_CONFIG,
+    registryPath: path.join(getOracleHomeDir(), 'browser-state.json'),
+  });
 }

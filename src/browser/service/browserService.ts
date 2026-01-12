@@ -1,3 +1,5 @@
+import os from 'node:os';
+import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
 import { resolveBrowserListTarget, pruneRegistry } from './session.js';
@@ -20,5 +22,19 @@ export class BrowserService extends BrowserServiceCore {
 
   static fromConfig(userConfig: ResolvedUserConfig): BrowserService {
     return new BrowserService(userConfig);
+  }
+
+  override async resolveDevToolsTarget(options: {
+    host?: string;
+    port?: number;
+    ensurePort?: boolean;
+    launchUrl?: string;
+    defaultProfileDir?: string;
+  } = {}) {
+    const fallbackDir = path.join(os.homedir(), '.oracle', 'browser-profile');
+    return super.resolveDevToolsTarget({
+      ...options,
+      defaultProfileDir: options.defaultProfileDir ?? fallbackDir,
+    });
   }
 }

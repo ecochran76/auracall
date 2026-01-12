@@ -49,6 +49,7 @@ export type BrowserServiceHandle = {
     port?: number;
     ensurePort?: boolean;
     launchUrl?: string;
+    defaultProfileDir?: string;
   }): Promise<{ host?: string; port?: number; launched?: boolean }>;
   connectDevTools(): Promise<{ client: ChromeClient; port: number }>;
   resolveCredentials(): Promise<CredentialHint | null>;

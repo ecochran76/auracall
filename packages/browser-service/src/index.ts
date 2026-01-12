@@ -2,6 +2,7 @@ export * from './constants.js';
 export * from './cookies.js';
 export * from './domDebug.js';
 export * from './chromeLifecycle.js';
+export * from './manualLogin.js';
 export * from './portSelection.js';
 export * from './processCheck.js';
 export * from './profileState.js';

@@ -42,6 +42,7 @@ export class BrowserService {
     port?: number;
     ensurePort?: boolean;
     launchUrl?: string;
+    defaultProfileDir?: string;
   } = {}): Promise<{ host?: string; port?: number; launched?: boolean }> {
     const remoteChrome = this.resolvedConfig.remoteChrome ?? null;
     let port = options.port ?? remoteChrome?.port;
@@ -65,7 +66,9 @@ export class BrowserService {
     }
     if (!port && options.ensurePort) {
       const userDataDir =
-        this.resolvedConfig.manualLoginProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile');
+        this.resolvedConfig.manualLoginProfileDir ??
+        options.defaultProfileDir ??
+        path.join(os.homedir(), '.browser-service', 'browser-profile');
       const profileName = this.resolvedConfig.chromeProfile ?? 'Default';
       const url = options.launchUrl ?? 'about:blank';
       const { chrome } = await this.deps.launchManualLoginSession({
