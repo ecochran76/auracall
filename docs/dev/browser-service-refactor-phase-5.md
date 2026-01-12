@@ -3,10 +3,24 @@
 
   1) Packaging decision + scope guardrails
 
+  Decision: monorepo package under `packages/browser-service/` with oracle re-exports for stability.
+
   - Decide packaging approach: monorepo package vs separate repo (doc tradeoffs + final choice).
   - Define what stays in oracle (LLM-specific DOM adapters, cache policy, CLI) vs what moves (browser core,
     session/port registry, DOM utilities, profile/cookie helpers).
   - Output: short decision note + checklist of modules to extract.
+
+  Scope checklist (initial draft):
+  - Move to browser-service: `src/browser/browserService/**`, `src/browser/client.ts`,
+    `src/browser/chromeLifecycle.ts`, `src/browser/portSelection.ts`, `src/browser/processCheck.ts`,
+    `src/browser/reattach.ts`, `src/browser/reattachHelpers.ts`, `src/browser/sessionRunner.ts`,
+    `src/browser/profileState.ts`, `src/browser/cookies.ts`, `src/browser/utils.ts`,
+    `src/browser/constants.ts`, `src/browser/types.ts`, `src/browser/domDebug.ts`.
+  - Keep in oracle (LLM layer): `src/browser/llmService/**`, `src/browser/providers/**`,
+    `src/browser/policies.ts`, `src/browser/modelStrategy.ts`, `src/browser/prompt.ts`,
+    `src/browser/promptSummary.ts`, `src/browser/pageActions.ts`, `src/browser/login.ts`,
+    `src/browser/manualLogin.ts`, `src/browser/config.ts`.
+  - CLI-only glue and cache stay in oracle.
 
   2) Dependency audit + API surface
 
