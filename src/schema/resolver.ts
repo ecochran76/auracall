@@ -1,10 +1,11 @@
-import { ConfigSchema, type OracleConfig } from './types.js';
+import { ConfigSchema, type OracleConfig } from '../config/schema.js';
 import { CLI_MAPPING } from './cli-map.js';
 import { loadUserConfig } from '../config.js';
 import type { OptionValues } from 'commander';
 import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/options.js';
 import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { resolveCookiePath, resolveProfileDirectoryName } from '../browser/service/profile.js';
+import { normalizeConfigV1toV2 } from '../config/migrate.js';
 
 type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 
@@ -83,14 +84,15 @@ export async function resolveConfig(
 
   // 3. Merge (CLI overrides File)
   const merged = mergeRecursively(fileConfig as MutableConfig, cliConfig);
-  applyOracleProfile(merged);
+  const normalized = normalizeConfigV1toV2(merged as OracleConfig) as MutableConfig;
+  applyOracleProfile(normalized);
 
   // 4. Resolve Model and Engine Business Logic
-  const cliModelArg = cliConfig.model || merged.model || 'gpt-5.2-pro';
+  const cliModelArg = cliConfig.model || normalized.model || 'gpt-5.2-pro';
   
   // Decide engine
   let engine = resolveEngine({
-    engine: (typeof merged.engine === 'string' ? (merged.engine as EngineMode) : undefined),
+    engine: (typeof normalized.engine === 'string' ? (normalized.engine as EngineMode) : undefined),
     browserFlag: cliOptions.browser,
     env,
   });
@@ -109,17 +111,17 @@ export async function resolveConfig(
 
   // Resolve Base URL
   const baseUrl = normalizeBaseUrl(
-    asNonEmptyString(merged.apiBaseUrl) ??
+    asNonEmptyString(normalized.apiBaseUrl) ??
       (isClaude ? env.ANTHROPIC_BASE_URL : isGrok ? env.XAI_BASE_URL : env.OPENAI_BASE_URL),
   );
 
   // Update merged object with resolved values
-  merged.model = inferredModel;
-  merged.engine = engine;
-  merged.apiBaseUrl = baseUrl;
+  normalized.model = inferredModel;
+  normalized.engine = engine;
+  normalized.apiBaseUrl = baseUrl;
 
   // 5. Validate and Default
-  return ConfigSchema.parse(merged);
+  return ConfigSchema.parse(normalized);
 }
 
 function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {
