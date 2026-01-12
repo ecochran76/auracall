@@ -97,7 +97,8 @@ export async function launchChrome(
   }
 
   if (!config.headless && process.platform === 'linux') {
-    const overrideDisplay = config.display ?? process.env.ORACLE_BROWSER_DISPLAY;
+    const overrideDisplay =
+      config.display ?? process.env.BROWSER_SERVICE_BROWSER_DISPLAY ?? process.env.ORACLE_BROWSER_DISPLAY;
     if (overrideDisplay) {
       process.env.DISPLAY = overrideDisplay;
       logger(`DISPLAY override set to ${overrideDisplay}.`);
@@ -429,7 +430,11 @@ function buildChromeFlags(
 }
 
 function parseDebugPortEnv(): number | null {
-  const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
+  const raw =
+    process.env.BROWSER_SERVICE_BROWSER_PORT ??
+    process.env.BROWSER_SERVICE_BROWSER_DEBUG_PORT ??
+    process.env.ORACLE_BROWSER_PORT ??
+    process.env.ORACLE_BROWSER_DEBUG_PORT;
   if (!raw) return null;
   const value = Number.parseInt(raw, 10);
   if (!Number.isFinite(value) || value <= 0 || value > 65535) {
@@ -454,7 +459,10 @@ function isWsl(): boolean {
 }
 
 export function resolveWslHost(): string | null {
-  const override = process.env.ORACLE_BROWSER_REMOTE_DEBUG_HOST?.trim() || process.env.WSL_HOST_IP?.trim();
+  const override =
+    process.env.BROWSER_SERVICE_BROWSER_REMOTE_DEBUG_HOST?.trim() ||
+    process.env.ORACLE_BROWSER_REMOTE_DEBUG_HOST?.trim() ||
+    process.env.WSL_HOST_IP?.trim();
   if (override) {
     return override;
   }
