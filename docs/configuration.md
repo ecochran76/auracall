@@ -11,6 +11,12 @@ oracle config migrate --output ~/.oracle/config.v2.json
 oracle config migrate --in-place --strip-legacy
 ```
 
+When invoking via `pnpm tsx`, pass `--dry-run` after `--` so the flag reaches the CLI:
+
+```sh
+pnpm tsx bin/oracle-cli.ts config migrate -- --dry-run
+```
+
 ## Example (`~/.oracle/config.json`)
 
 ```json5
