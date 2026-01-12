@@ -1367,6 +1367,7 @@ configCommand
   .option('--path <path>', 'Input config path (defaults to ~/.oracle/config.json).')
   .option('--output <path>', 'Write migrated config to a custom path.')
   .option('--in-place', 'Overwrite the input config file in place.', false)
+  .option('--dry-run', 'Print the migrated config instead of writing it.', false)
   .option('--strip-legacy', 'Drop legacy browser/oracleProfiles keys from output.', false)
   .option('--force', 'Overwrite an existing output file.', false)
   .action(async (commandOptions) => {
@@ -1377,6 +1378,10 @@ configCommand
     const raw = await fs.readFile(inputPath, 'utf8');
     const parsed = JSON5.parse(raw) as UserConfig;
     const migrated = materializeConfigV2(parsed, { stripLegacy: Boolean(commandOptions.stripLegacy) });
+    if (commandOptions.dryRun) {
+      console.log(JSON.stringify(migrated, null, 2));
+      return;
+    }
     const outputPath = commandOptions.inPlace
       ? inputPath
       : commandOptions.output ?? `${inputPath}.v2`;

@@ -3,7 +3,13 @@
 Oracle reads layered config files (system → user → project tree). Files use JSON5 parsing, so trailing commas and comments are allowed.
 
 If no config file exists, Oracle scaffolds a default `oracleProfile` using your detected browser profile. You can also run `oracle profile scaffold` to regenerate it.
-Use `oracle config migrate` to write a v2-style layout from an existing config file.
+Use `oracle config migrate` to write a v2-style layout from an existing config file:
+
+```sh
+oracle config migrate --dry-run
+oracle config migrate --output ~/.oracle/config.v2.json
+oracle config migrate --in-place --strip-legacy
+```
 
 ## Example (`~/.oracle/config.json`)
 
