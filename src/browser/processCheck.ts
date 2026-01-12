@@ -179,21 +179,34 @@ async function findAllChromeProcessesWin32(): Promise<Map<string, number>> {
     
     if (!stdout || !stdout.trim()) return results;
 
-    let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
+    let processes: Array<{ processId: number; commandLine: string }> = [];
     try {
-      const parsed = JSON.parse(stdout);
-      processes = Array.isArray(parsed) ? parsed : [parsed];
+      const parsed = JSON.parse(stdout) as unknown;
+      const rows = Array.isArray(parsed) ? parsed : [parsed];
+      processes = rows
+        .map((row) => {
+          const record = row as Record<string, unknown>;
+          const processId = Number(record.ProcessId ?? record.processId);
+          const commandLine =
+            typeof record.CommandLine === 'string'
+              ? record.CommandLine
+              : typeof record.commandLine === 'string'
+                ? record.commandLine
+                : '';
+          return { processId, commandLine };
+        })
+        .filter((proc) => Number.isFinite(proc.processId) && proc.processId > 0);
     } catch {
       return results;
     }
 
     for (const proc of processes) {
-      if (!proc.CommandLine) continue;
-      const cmd = proc.CommandLine;
+      if (!proc.commandLine) continue;
+      const cmd = proc.commandLine;
       const dirMatch = cmd.match(/--(?:user-data-dir|user-data-dir)=["']?([^"'\s]+)["']?/);
       if (dirMatch?.[1]) {
         // Normalize slashes for consistency if needed, but here we store as-is from cmdline
-        results.set(dirMatch[1], proc.ProcessId);
+        results.set(dirMatch[1], proc.processId);
       }
     }
   } catch {
@@ -312,10 +325,23 @@ async function findChromePidWin32(userDataDir: string): Promise<number | null> {
     
     if (!stdout || !stdout.trim()) return null;
 
-    let processes: Array<{ ProcessId: number; CommandLine: string }> = [];
+    let processes: Array<{ processId: number; commandLine: string }> = [];
     try {
-      const parsed = JSON.parse(stdout);
-      processes = Array.isArray(parsed) ? parsed : [parsed];
+      const parsed = JSON.parse(stdout) as unknown;
+      const rows = Array.isArray(parsed) ? parsed : [parsed];
+      processes = rows
+        .map((row) => {
+          const record = row as Record<string, unknown>;
+          const processId = Number(record.ProcessId ?? record.processId);
+          const commandLine =
+            typeof record.CommandLine === 'string'
+              ? record.CommandLine
+              : typeof record.commandLine === 'string'
+                ? record.commandLine
+                : '';
+          return { processId, commandLine };
+        })
+        .filter((proc) => Number.isFinite(proc.processId) && proc.processId > 0);
     } catch {
       return null;
     }
@@ -324,10 +350,10 @@ async function findChromePidWin32(userDataDir: string): Promise<number | null> {
     const needle = userDataDir.replace(/\\/g, '/').toLowerCase();
 
     for (const proc of processes) {
-      if (!proc.CommandLine) continue;
-      const cmd = proc.CommandLine.replace(/\\/g, '/').toLowerCase();
+      if (!proc.commandLine) continue;
+      const cmd = proc.commandLine.replace(/\\/g, '/').toLowerCase();
       if (cmd.includes(needle) && (cmd.includes('--user-data-dir') || cmd.includes('/user-data-dir'))) {
-        return proc.ProcessId;
+        return proc.processId;
       }
     }
   } catch {

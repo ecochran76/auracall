@@ -208,20 +208,20 @@ export async function waitForGrokAssistantResponse(
 }
 
 export async function uploadGrokAttachments(
-  DOM: ChromeClient['DOM'],
-  Runtime: ChromeClient['Runtime'],
+  dom: ChromeClient['DOM'],
+  runtime: ChromeClient['Runtime'],
   attachments: BrowserAttachment[],
   logger: BrowserLogger,
 ): Promise<void> {
   if (!attachments.length) return;
-  const inputNode = await queryFileInputNode(DOM);
+  const inputNode = await queryFileInputNode(dom);
   if (!inputNode.nodeId) {
     throw new Error('Unable to locate Grok file input.');
   }
   for (const attachment of attachments) {
-    await DOM.setFileInputFiles({ nodeId: inputNode.nodeId, files: [attachment.path] });
+    await dom.setFileInputFiles({ nodeId: inputNode.nodeId, files: [attachment.path] });
     const name = path.basename(attachment.displayPath ?? attachment.path);
-    const appeared = await waitForAttachmentName(Runtime, name);
+    const appeared = await waitForAttachmentName(runtime, name);
     if (!appeared) {
       logger(`Attachment name not detected for ${attachment.displayPath}; proceeding anyway.`);
     }
@@ -229,12 +229,12 @@ export async function uploadGrokAttachments(
 }
 
 async function waitForAttachmentName(
-  Runtime: ChromeClient['Runtime'],
+  runtime: ChromeClient['Runtime'],
   name: string,
 ): Promise<boolean> {
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
-    const outcome = await Runtime.evaluate({
+    const outcome = await runtime.evaluate({
       expression: `(() => document.body?.innerText?.includes(${JSON.stringify(name)}) ?? false)()`,
       returnByValue: true,
     });
@@ -292,10 +292,10 @@ async function readLocationHref(Runtime: ChromeClient['Runtime']): Promise<strin
   return typeof result?.value === 'string' ? result.value : '';
 }
 
-async function queryFileInputNode(DOM: ChromeClient['DOM']) {
-  const documentNode = await DOM.getDocument();
+async function queryFileInputNode(dom: ChromeClient['DOM']) {
+  const documentNode = await dom.getDocument();
   for (const selector of GROK_PROVIDER.selectors.fileInput) {
-    const match = await DOM.querySelector({
+    const match = await dom.querySelector({
       nodeId: documentNode.root.nodeId,
       selector,
     });

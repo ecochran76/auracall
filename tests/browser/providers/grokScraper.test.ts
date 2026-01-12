@@ -34,7 +34,13 @@ class MockElement {
     // Very basic selector support for the test
     if (selector.includes('line-clamp') || selector.includes('truncate')) {
       // Assume searching for title node
-      return this.findChild(c => c.attributes.has('class') && (c.attributes.get('class')!.includes('line-clamp') || c.attributes.get('class')!.includes('truncate')));
+      return this.findChild((child) => {
+        if (!child.attributes.has('class')) return false;
+        const className = child.attributes.get('class');
+        return Boolean(
+          className?.includes('line-clamp') || className?.includes('truncate'),
+        );
+      });
     }
     return null;
   }
@@ -59,8 +65,8 @@ class MockElement {
 }
 
 // Scraper logic extracted from grokAdapter.ts (simplified for test context)
-function scrape(items: any[], projectId: string | null) {
-  const conversations = new Map();
+function scrape(items: MockElement[], projectId: string | null) {
+  const conversations = new Map<string, { id: string; title: string; url: string | null }>();
   const add = (id: string, title: string, url: string) => {
     if (!id) return;
     if (!conversations.has(id)) {
@@ -76,7 +82,7 @@ function scrape(items: any[], projectId: string | null) {
 
     if (dataValue.startsWith('conversation:')) {
       chatId = dataValue.split(':')[1];
-      url = 'https://grok.com/c/' + chatId;
+      url = `https://grok.com/c/${chatId}`;
     } else if (href) {
       try {
         // Mock URL parsing
@@ -89,7 +95,7 @@ function scrape(items: any[], projectId: string | null) {
 
     if (!chatId) continue;
     
-    if (projectId && url.includes('/project/') && !url.includes('/project/' + projectId)) {
+    if (projectId && url.includes('/project/') && !url.includes(`/project/${projectId}`)) {
       continue;
     }
 

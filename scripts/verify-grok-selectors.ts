@@ -54,7 +54,11 @@ async function main() {
 
   console.log('Found items:', JSON.stringify(items.result.value, null, 2));
   
-  const grok2 = (items.result.value as any[]).find(i => i.text.includes('Grok 2') || i.text.includes('Grok 3') || i.text.includes('Thinking'));
+  const grok2 = (items.result.value as Array<{ text?: string }>).find(
+    (item) =>
+      typeof item.text === 'string' &&
+      (item.text.includes('Grok 2') || item.text.includes('Grok 3') || item.text.includes('Thinking')),
+  );
   if (grok2) {
       console.log('✅ SUCCESS: Found model item:', grok2.text);
   } else {
@@ -64,4 +68,4 @@ async function main() {
   client.close();
 }
 
-main();
+void main();

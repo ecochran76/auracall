@@ -5,7 +5,7 @@ import * as configModule from '../../src/config.js';
 describe('Config Resolver', () => {
   it('should resolve default values when no config/cli provided', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
-      config: {} as any,
+      config: { model: 'gpt-5.2-pro', browser: {} },
       path: '/tmp/config.json',
       loaded: false
     });
@@ -49,7 +49,7 @@ describe('Config Resolver', () => {
 
   it('should override project-id from config with CLI flag', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
-      config: { browser: { projectId: 'CONFIG_ID' } } as any,
+      config: { model: 'gpt-5.2-pro', browser: { projectId: 'CONFIG_ID' } },
       path: '/tmp/config.json',
       loaded: true
     });

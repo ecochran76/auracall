@@ -30,7 +30,7 @@ export const CRAWLER_SCRIPT = `(() => {
   }
 
   function cleanText(text) {
-    return (text || '').replace(/\s+/g, ' ').trim();
+    return (text || '').replace(/\\s+/g, ' ').trim();
   }
 
   function crawl(node) {

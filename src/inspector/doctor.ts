@@ -1,9 +1,8 @@
 import type { ChromeClient } from '../browser/types.js';
-import type { BrowserProviderConfig, SelectorList } from '../browser/providers/types.js';
+import type { BrowserProviderConfig } from '../browser/providers/types.js';
 import { CRAWLER_SCRIPT } from './crawler.js';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 
 export interface SelectorCheckResult {
   name: string;

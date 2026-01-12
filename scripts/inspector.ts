@@ -1,6 +1,7 @@
 import { CRAWLER_SCRIPT } from '../src/inspector/crawler.js';
 import { highlightSelector } from '../src/inspector/highlight.js';
 import CDP from 'chrome-remote-interface';
+import type { Client } from 'chrome-remote-interface';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 
 async function main() {
@@ -11,16 +12,19 @@ async function main() {
   const selector = highlightIndex !== -1 ? args[highlightIndex + 1] : null;
 
   console.log(`Connecting to Chrome on ${host}:${port}...`);
-  let client;
+  let client: Client | null = null;
   try {
     client = await CDP({ host, port });
     await client.Runtime.enable();
     await client.DOM.enable();
     await client.CSS.enable();
     await client.Overlay.enable();
-  } catch (error) {
+  } catch (_error) {
     console.error('Failed to connect to Chrome. Ensure it is running with --remote-debugging-port=9222.');
     process.exit(1);
+  }
+  if (!client) {
+    return;
   }
 
   if (selector) {

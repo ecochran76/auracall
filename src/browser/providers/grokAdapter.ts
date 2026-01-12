@@ -306,7 +306,7 @@ export function createGrokAdapter(): Pick<
                 } else if (href) {
                   try {
                     const fullUrl = href.startsWith('http') ? href : new URL(href, location.origin).toString();
-                    const match = fullUrl.match(/\/c\/([^/?#]+)/);
+                    const match = fullUrl.match(/\\/c\\/([^/?#]+)/);
                     if (match?.[1]) {
                       chatId = match[1];
                       url = fullUrl;
@@ -347,20 +347,27 @@ export function createGrokAdapter(): Pick<
           })()`,
           returnByValue: true,
         });
-        const payload = (result?.value ?? { items: [] }) as any;
-        const raw = payload.items || [];
+        const payload = (result?.value ?? { items: [] }) as { items?: unknown[] };
+        const raw = Array.isArray(payload.items) ? payload.items : [];
         if (raw.length === 0) {
            // Debug logging if needed, can be enabled via env
         }
         const merged = new Map<string, Conversation>();
         for (const entry of raw) {
-          merged.set(entry.id, {
-            id: entry.id,
-            title: entry.title,
+          if (!entry || typeof entry !== 'object') continue;
+          const record = entry as Record<string, unknown>;
+          const id = typeof record.id === 'string' ? record.id : null;
+          const title = typeof record.title === 'string' ? record.title : '';
+          if (!id || !title) continue;
+          const url = typeof record.url === 'string' ? record.url : undefined;
+          const timestamp = typeof record.timestamp === 'number' ? record.timestamp : undefined;
+          merged.set(id, {
+            id,
+            title,
             provider: 'grok',
             projectId: resolvedProjectId ?? undefined,
-            url: entry.url ?? undefined,
-            updatedAt: typeof entry.timestamp === 'number' ? new Date(entry.timestamp).toISOString() : undefined,
+            url,
+            updatedAt: timestamp ? new Date(timestamp).toISOString() : undefined,
           });
         }
         for (const entry of history) {
@@ -518,7 +525,7 @@ export function createGrokAdapter(): Pick<
 
               try {
                 const dialog = document.querySelector('[role="dialog"]') || document.querySelector('dialog') || document.querySelector('[aria-modal="true"]');
-                const sidebar = document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\/sidebar-wrapper');
+                const sidebar = document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\\/sidebar-wrapper');
                 const roots = [];
                 if (preferDialog && dialog) roots.push(dialog);
                 if (sidebar) roots.push(sidebar);
@@ -627,7 +634,7 @@ export function createGrokAdapter(): Pick<
           if (evalResult.exceptionDetails) {
             return {
               success: false,
-              error: 'JS Exception: ' + evalResult.exceptionDetails.exception?.description,
+              error: `JS Exception: ${evalResult.exceptionDetails.exception?.description}`,
               logs: [],
             };
           }
@@ -673,7 +680,7 @@ async function connectToGrokTab(
   if ((!port || !host) && options?.browserService) {
     const target = await options.browserService.resolveDevToolsTarget({
       host,
-      port,
+      port: port ?? undefined,
       ensurePort: true,
       launchUrl: urlOverride ?? options?.configuredUrl ?? 'https://grok.com/',
     });
@@ -683,7 +690,8 @@ async function connectToGrokTab(
   if (!port) {
     throw new Error('Missing DevTools port. Launch a Grok browser session or set ORACLE_BROWSER_PORT.');
   }
-  const targets = await CDP.List({ host, port });
+  const resolvedPort = port;
+  const targets = await CDP.List({ host, port: resolvedPort });
   const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
   const preferredUrl = urlOverride ?? options?.configuredUrl;
   const preferred = preferredUrl
@@ -693,7 +701,7 @@ async function connectToGrokTab(
   let shouldClose = false;
   let usedExisting = Boolean(targetInfo?.id);
   if (!targetInfo && preferredUrl) {
-    const created = await CDP.New({ host, port, url: preferredUrl });
+    const created = await CDP.New({ host, port: resolvedPort, url: preferredUrl });
     targetInfo = created ?? undefined;
     shouldClose = true;
     usedExisting = false;
@@ -703,7 +711,7 @@ async function connectToGrokTab(
   }
   if (!targetInfo?.id) {
     const fallbackUrl = preferredUrl ?? 'https://grok.com/';
-    const created = await CDP.New({ host, port, url: fallbackUrl });
+    const created = await CDP.New({ host, port: resolvedPort, url: fallbackUrl });
     targetInfo = created ?? undefined;
     shouldClose = true;
     usedExisting = false;
@@ -711,9 +719,9 @@ async function connectToGrokTab(
   if (!targetInfo?.id) {
     throw new Error('No grok.com tab found. Launch a Grok browser session and retry.');
   }
-  const client = await CDP({ host, port, target: targetInfo });
+  const client = await CDP({ host, port: resolvedPort, target: targetInfo });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  return { client, targetId: targetInfo.id, shouldClose, host, port, usedExisting };
+  return { client, targetId: targetInfo.id, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
 async function connectToGrokProjectTab(
@@ -733,7 +741,7 @@ async function connectToGrokProjectTab(
   if ((!port || !host) && options?.browserService) {
     const target = await options.browserService.resolveDevToolsTarget({
       host,
-      port,
+      port: port ?? undefined,
       ensurePort: true,
       launchUrl: projectUrl,
     });
@@ -743,7 +751,8 @@ async function connectToGrokProjectTab(
   if (!port) {
     throw new Error('Missing DevTools port. Launch a Grok browser session or set ORACLE_BROWSER_PORT.');
   }
-  const targets = await CDP.List({ host, port });
+  const resolvedPort = port;
+  const targets = await CDP.List({ host, port: resolvedPort });
   const match = projectId
     ? targets.find(
         (target) => target.type === 'page' && target.url?.includes(`/project/${projectId}`),
@@ -753,7 +762,7 @@ async function connectToGrokProjectTab(
   let shouldClose = false;
   let usedExisting = Boolean(targetInfo?.id);
   if (!targetInfo?.id) {
-    const created = await CDP.New({ host, port, url: projectUrl });
+    const created = await CDP.New({ host, port: resolvedPort, url: projectUrl });
     targetInfo = created ?? undefined;
     shouldClose = true;
     usedExisting = false;
@@ -761,9 +770,9 @@ async function connectToGrokProjectTab(
   if (!targetInfo?.id) {
     throw new Error('No grok.com project tab found. Launch a Grok browser session and retry.');
   }
-  const client = await CDP({ host, port, target: targetInfo });
+  const client = await CDP({ host, port: resolvedPort, target: targetInfo });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
-  return { client, targetId: targetInfo.id, shouldClose, host, port, usedExisting };
+  return { client, targetId: targetInfo.id, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
 function resolvePortFromEnv(): number | null {
@@ -843,7 +852,7 @@ async function ensureProjectPage(client: ChromeClient, projectId?: string): Prom
 async function openConversationList(client: ChromeClient): Promise<void> {
   await client.Runtime.evaluate({
     expression: `(() => {
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
       const tablist = document.querySelector('[role="tablist"]');
       if (tablist) {
         const tabs = Array.from(tablist.querySelectorAll('a,button,[role="tab"],[role="button"],[role="link"]'));
@@ -1186,12 +1195,12 @@ async function getIdentityFromSettingsMenu(client: ChromeClient): Promise<Provid
         document.querySelector('dialog');
       if (!dialog) return null;
       const text = normalize(dialog.textContent || '');
-      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
+      const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/i);
       const uuidMatch = text.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
       let name = null;
       if (emailMatch) {
         const before = text.slice(0, emailMatch.index ?? 0).trim();
-        const nameMatch = before.match(/([A-Za-z][A-Za-z'\-]+(?:\s+[A-Za-z][A-Za-z'\-]+){0,3})$/);
+        const nameMatch = before.match(/([A-Za-z][A-Za-z'-]+(?:\\s+[A-Za-z][A-Za-z'-]+){0,3})$/);
         if (nameMatch) {
           name = nameMatch[1];
         }
@@ -1229,7 +1238,7 @@ async function getIdentityFromSettingsMenu(client: ChromeClient): Promise<Provid
 
 async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
   const { result } = await client.Runtime.evaluate({
-    expression: `(() => Boolean(document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\/sidebar-wrapper')))()`,
+    expression: `(() => Boolean(document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\\/sidebar-wrapper')))()`,
     returnByValue: true,
   });
   if (result?.value) return;

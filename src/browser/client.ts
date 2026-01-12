@@ -6,7 +6,6 @@ import type { BrowserProvider, BrowserProviderListOptions } from './providers/ty
 import { getProvider } from './providers/index.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
-import CDP from 'chrome-remote-interface';
 import type { BrowserLoginOptions } from './login.js';
 import { runBrowserLogin } from './login.js';
 import { BrowserService } from './service/browserService.js';
@@ -49,7 +48,7 @@ export class BrowserAutomationClient {
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const configuredUrl = Object.prototype.hasOwnProperty.call(overrides, 'configuredUrl')
+    const configuredUrl = Object.hasOwn(overrides, 'configuredUrl')
       ? overrides.configuredUrl ?? null
       : this.getConfiguredUrl();
     const launchUrl =

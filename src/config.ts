@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import JSON5 from 'json5';
 import { getOracleHomeDir } from './oracleHome.js';
-import { ConfigSchema, type OracleConfig } from './schema/types.js';
+import type { OracleConfig } from './schema/types.js';
 import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 
@@ -108,7 +108,7 @@ async function readConfigFile(configPath: string): Promise<{ path: string; confi
 }
 
 function mergeConfig(base: UserConfig, override: UserConfig): UserConfig {
-  const merged: any = { ...base };
+  const merged: Record<string, unknown> = { ...base };
   for (const [key, value] of Object.entries(override)) {
     if (value === undefined) continue;
     const existing = merged[key];
@@ -152,6 +152,8 @@ export async function scaffoldDefaultConfigFile(options: {
     browser,
   };
   const scaffolded: UserConfig = {
+    model: 'gpt-5.2-pro',
+    browser: {},
     oracleProfile: 'default',
     services: {
       chatgpt: { url: CHATGPT_URL },
@@ -161,10 +163,10 @@ export async function scaffoldDefaultConfigFile(options: {
     oracleProfiles: {
       default: profile,
     },
-  } as UserConfig;
+  };
 
   await fs.mkdir(path.dirname(userPath), { recursive: true });
-  await fs.writeFile(userPath, JSON.stringify(scaffolded, null, 2) + '\n', 'utf8');
+  await fs.writeFile(userPath, `${JSON.stringify(scaffolded, null, 2)}\n`, 'utf8');
   return { path: userPath, config: scaffolded };
 }
 

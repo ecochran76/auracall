@@ -2,7 +2,6 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
-import net from 'node:net';
 import type { BrowserModelStrategy, CookieParam } from './browser/types.js';
 import { isChromeAlive, isProcessAlive, isPortOpen, findAllChromeProcesses } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
@@ -43,6 +42,7 @@ export interface BrowserSessionConfig {
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   thinkingTime?: ThinkingTimeLevel;
 }
@@ -199,7 +199,6 @@ const MODEL_JSON_EXTENSION = '.json';
 const MODEL_LOG_EXTENSION = '.log';
 const MAX_STATUS_LIMIT = 1000;
 const ZOMBIE_MAX_AGE_MS = 60 * 60 * 1000; // 60 minutes
-const CHROME_RUNTIME_TIMEOUT_MS = 250;
 const DEFAULT_SLUG = 'session';
 const MAX_SLUG_WORDS = 5;
 const MIN_CUSTOM_SLUG_WORDS = 3;

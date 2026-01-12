@@ -3,23 +3,51 @@ import { CLI_MAPPING } from './cli-map.js';
 import { loadUserConfig } from '../config.js';
 import type { OptionValues } from 'commander';
 import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/options.js';
-import { resolveEngine } from '../cli/engine.js';
+import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { resolveCookiePath, resolveProfileDirectoryName } from '../browser/service/profile.js';
 
 type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 
+type MutableBrowserConfig = Record<string, unknown>;
+type MutableConfig = Record<string, unknown> & {
+  browser?: MutableBrowserConfig;
+  dev?: { browserPortRange?: [number, number] };
+  engine?: string;
+  search?: unknown;
+  oracleProfile?: string;
+  oracleProfiles?: Record<string, unknown>;
+  model?: string;
+};
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function asNonEmptyString(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
 // Simple deep merge helper if needed
-function deepSet(obj: any, path: string, value: any) {
+function deepSet(obj: MutableConfig, path: string, value: unknown) {
   const keys = path.split('.');
-  let current = obj;
+  let current: Record<string, unknown> = obj;
   while (keys.length > 1) {
-    const key = keys.shift()!;
-    if (!current[key] || typeof current[key] !== 'object') {
+    const key = keys.shift();
+    if (!key) {
+      return;
+    }
+    if (!isRecord(current[key])) {
       current[key] = {};
     }
-    current = current[key];
+    current = current[key] as Record<string, unknown>;
   }
-  current[keys[0]] = value;
+  const leaf = keys[0];
+  if (!leaf) {
+    return;
+  }
+  current[leaf] = value;
 }
 
 export async function resolveConfig(
@@ -32,7 +60,7 @@ export async function resolveConfig(
   const fileConfig = loaded.config;
 
   // 2. Map CLI Options to Config Structure
-  const cliConfig: any = {};
+  const cliConfig: MutableConfig = {};
   for (const [flag, value] of Object.entries(cliOptions)) {
     if (value === undefined) continue;
     const mapPath = CLI_MAPPING[flag];
@@ -54,7 +82,7 @@ export async function resolveConfig(
   }
 
   // 3. Merge (CLI overrides File)
-  const merged = mergeRecursively(fileConfig, cliConfig);
+  const merged = mergeRecursively(fileConfig as MutableConfig, cliConfig);
   applyOracleProfile(merged);
 
   // 4. Resolve Model and Engine Business Logic
@@ -62,7 +90,7 @@ export async function resolveConfig(
   
   // Decide engine
   let engine = resolveEngine({
-    engine: merged.engine,
+    engine: (typeof merged.engine === 'string' ? (merged.engine as EngineMode) : undefined),
     browserFlag: cliOptions.browser,
     env,
   });
@@ -81,7 +109,7 @@ export async function resolveConfig(
 
   // Resolve Base URL
   const baseUrl = normalizeBaseUrl(
-    merged.apiBaseUrl ||
+    asNonEmptyString(merged.apiBaseUrl) ??
       (isClaude ? env.ANTHROPIC_BASE_URL : isGrok ? env.XAI_BASE_URL : env.OPENAI_BASE_URL),
   );
 
@@ -94,20 +122,23 @@ export async function resolveConfig(
   return ConfigSchema.parse(merged);
 }
 
-function mergeRecursively(target: any, source: any): any {
-  if (typeof source !== 'object' || source === null) {
-    return source;
+function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {
+  if (!isRecord(source)) {
+    return source as MutableConfig;
   }
-  if (typeof target !== 'object' || target === null) {
+  if (!isRecord(target)) {
     return source;
   }
   
-  const result = { ...target };
+  const result: MutableConfig = { ...target };
   for (const key of Object.keys(source)) {
-    if (source[key] instanceof Array) {
+    if (Array.isArray(source[key])) {
        result[key] = source[key];
-    } else if (typeof source[key] === 'object' && source[key] !== null) {
-      result[key] = mergeRecursively(target[key], source[key]);
+    } else if (isRecord(source[key])) {
+      result[key] = mergeRecursively(
+        (isRecord(target[key]) ? (target[key] as MutableConfig) : ({} as MutableConfig)),
+        source[key] as MutableConfig,
+      );
     } else {
       result[key] = source[key];
     }
@@ -115,7 +146,7 @@ function mergeRecursively(target: any, source: any): any {
   return result;
 }
 
-function applyOracleProfile(merged: any): void {
+function applyOracleProfile(merged: MutableConfig): void {
   const profiles = merged.oracleProfiles ?? null;
   if (!profiles || typeof profiles !== 'object') {
     return;
@@ -126,9 +157,12 @@ function applyOracleProfile(merged: any): void {
   }
   merged.oracleProfile = profileName;
   const profile = profiles[profileName];
+  if (!isRecord(profile)) {
+    return;
+  }
 
   if (merged.engine === undefined && profile.engine !== undefined) {
-    merged.engine = profile.engine;
+    merged.engine = profile.engine as string;
   }
   if (merged.search === undefined && profile.search !== undefined) {
     merged.search = profile.search;
@@ -136,13 +170,16 @@ function applyOracleProfile(merged: any): void {
 
   merged.browser = merged.browser ?? {};
   const browser = merged.browser;
-  const profileBrowser = profile.browser ?? {};
-  const defaultService = profile.defaultService ?? browser.target ?? merged.browser?.target ?? undefined;
+  const profileBrowser = (profile.browser ?? {}) as Record<string, unknown>;
+  const defaultService =
+    asNonEmptyString(profile.defaultService) ??
+    asNonEmptyString(browser.target) ??
+    asNonEmptyString(merged.browser?.target);
   if (!browser.target && defaultService) {
     browser.target = defaultService;
   }
   if (profile.keepBrowser !== undefined && browser.keepBrowser === undefined) {
-    browser.keepBrowser = profile.keepBrowser;
+    browser.keepBrowser = profile.keepBrowser as boolean;
   }
   const devRange = merged.dev?.browserPortRange;
   if (browser.debugPortRange === undefined && profileBrowser.debugPortRange !== undefined) {
@@ -156,7 +193,7 @@ function applyOracleProfile(merged: any): void {
   applyCacheDefaults(browser, profile.cache ?? null);
 }
 
-function resolveActiveProfileName(merged: any): string | null {
+function resolveActiveProfileName(merged: MutableConfig): string | null {
   const profiles = merged.oracleProfiles ?? null;
   if (!profiles || typeof profiles !== 'object') return null;
   const explicit = typeof merged.oracleProfile === 'string' ? merged.oracleProfile.trim() : '';
@@ -166,7 +203,12 @@ function resolveActiveProfileName(merged: any): string | null {
   return keys.length ? keys[0] : null;
 }
 
-function applyBrowserProfileDefaults(browser: any, profileBrowser: any): void {
+function applyBrowserProfileDefaults(browser: MutableBrowserConfig, profileBrowser: MutableBrowserConfig): void {
+  const profilePath = asNonEmptyString(profileBrowser.profilePath);
+  const profileName = asNonEmptyString(profileBrowser.profileName);
+  const cookiePath = asNonEmptyString(profileBrowser.cookiePath);
+  const chromeProfile = asNonEmptyString(browser.chromeProfile);
+
   if (browser.chromePath === undefined && profileBrowser.chromePath) {
     browser.chromePath = profileBrowser.chromePath;
   }
@@ -176,22 +218,20 @@ function applyBrowserProfileDefaults(browser: any, profileBrowser: any): void {
   if (browser.blockingProfileAction === undefined && profileBrowser.blockingProfileAction !== undefined) {
     browser.blockingProfileAction = profileBrowser.blockingProfileAction;
   }
-  if (browser.chromeProfile === undefined && profileBrowser.profileName) {
-    const profilePath = profileBrowser.profilePath ?? null;
+  if (browser.chromeProfile === undefined && profileName) {
     browser.chromeProfile = profilePath
-      ? resolveProfileDirectoryName(profilePath, profileBrowser.profileName)
-      : profileBrowser.profileName;
+      ? resolveProfileDirectoryName(profilePath, profileName)
+      : profileName;
   }
   if (browser.chromeCookiePath === undefined) {
-    const profilePath = profileBrowser.profilePath ?? null;
-    const resolvedProfileName = profilePath && browser.chromeProfile
-      ? resolveProfileDirectoryName(profilePath, browser.chromeProfile)
-      : browser.chromeProfile;
-    if (profileBrowser.cookiePath) {
-      browser.chromeCookiePath = profileBrowser.cookiePath;
-    } else if (profileBrowser.profilePath) {
-      const profileName = resolvedProfileName ?? profileBrowser.profileName ?? browser.chromeProfile ?? 'Default';
-      const resolvedCookie = resolveCookiePath(profileBrowser.profilePath, profileName);
+    const resolvedProfileName = profilePath && chromeProfile
+      ? resolveProfileDirectoryName(profilePath, chromeProfile)
+      : chromeProfile;
+    if (cookiePath) {
+      browser.chromeCookiePath = cookiePath;
+    } else if (profilePath) {
+      const resolvedName = resolvedProfileName ?? profileName ?? chromeProfile ?? 'Default';
+      const resolvedCookie = resolveCookiePath(profilePath, resolvedName);
       if (resolvedCookie) {
         browser.chromeCookiePath = resolvedCookie;
       }
@@ -201,10 +241,11 @@ function applyBrowserProfileDefaults(browser: any, profileBrowser: any): void {
     browser.manualLogin = profileBrowser.manualLogin;
   }
   if (browser.manualLoginProfileDir === undefined) {
-    if (profileBrowser.manualLoginProfileDir) {
-      browser.manualLoginProfileDir = profileBrowser.manualLoginProfileDir;
-    } else if (profileBrowser.profilePath) {
-      browser.manualLoginProfileDir = profileBrowser.profilePath;
+    const manualLoginProfileDir = asNonEmptyString(profileBrowser.manualLoginProfileDir);
+    if (manualLoginProfileDir) {
+      browser.manualLoginProfileDir = manualLoginProfileDir;
+    } else if (profilePath) {
+      browser.manualLoginProfileDir = profilePath;
     }
   }
   if (browser.headless === undefined && profileBrowser.headless !== undefined) {
@@ -260,25 +301,34 @@ function applyBrowserProfileDefaults(browser: any, profileBrowser: any): void {
   }
 }
 
-function applyServiceDefaults(merged: any, profile: any, browser: any): void {
-  const services = merged.services ?? {};
-  const profileServices = profile.services ?? {};
+function applyServiceDefaults(
+  merged: MutableConfig,
+  profile: Record<string, unknown>,
+  browser: MutableBrowserConfig,
+): void {
+  const services = isRecord(merged.services) ? merged.services : {};
+  const profileServices = isRecord(profile.services) ? profile.services : {};
   const target = browser.target as ServiceId | undefined;
 
   const resolveUrl = (service: ServiceId, fallback: string | null = null): string | null => {
-    const profileUrl = profileServices?.[service]?.url;
-    const globalUrl = services?.[service]?.url;
+    const profileConfig = (profileServices[service] ?? {}) as Record<string, unknown>;
+    const serviceConfig = (services[service] ?? {}) as Record<string, unknown>;
+    const profileUrl = asNonEmptyString(profileConfig.url);
+    const globalUrl = asNonEmptyString(serviceConfig.url);
     return profileUrl ?? globalUrl ?? fallback;
   };
 
   const resolveServiceConfig = (service: ServiceId): Record<string, unknown> => ({
-    ...(services?.[service] ?? {}),
-    ...(profileServices?.[service] ?? {}),
+    ...(services[service] ?? {}),
+    ...(profileServices[service] ?? {}),
   });
 
-  browser.chatgptUrl = browser.chatgptUrl ?? resolveUrl('chatgpt', browser.chatgptUrl ?? null);
-  browser.geminiUrl = browser.geminiUrl ?? resolveUrl('gemini', browser.geminiUrl ?? null);
-  browser.grokUrl = browser.grokUrl ?? resolveUrl('grok', browser.grokUrl ?? null);
+  const currentChatgptUrl = asNonEmptyString(browser.chatgptUrl) ?? null;
+  const currentGeminiUrl = asNonEmptyString(browser.geminiUrl) ?? null;
+  const currentGrokUrl = asNonEmptyString(browser.grokUrl) ?? null;
+  browser.chatgptUrl = browser.chatgptUrl ?? resolveUrl('chatgpt', currentChatgptUrl);
+  browser.geminiUrl = browser.geminiUrl ?? resolveUrl('gemini', currentGeminiUrl);
+  browser.grokUrl = browser.grokUrl ?? resolveUrl('grok', currentGrokUrl);
 
   if (!target) {
     return;
@@ -297,7 +347,7 @@ function applyServiceDefaults(merged: any, profile: any, browser: any): void {
     browser.conversationName = serviceConfig.conversationName;
   }
   if (!merged.model && serviceConfig.model && merged.engine === 'browser') {
-    merged.model = serviceConfig.model;
+    merged.model = serviceConfig.model as string;
   }
   if (browser.modelStrategy === undefined && serviceConfig.modelStrategy) {
     browser.modelStrategy = serviceConfig.modelStrategy;
@@ -313,10 +363,10 @@ function applyServiceDefaults(merged: any, profile: any, browser: any): void {
   }
 }
 
-function applyCacheDefaults(browser: any, cache: any): void {
-  if (!cache) return;
+function applyCacheDefaults(browser: MutableBrowserConfig, cache: unknown): void {
+  if (!isRecord(cache)) return;
   browser.cache = browser.cache ?? {};
-  const targetCache = browser.cache;
+  const targetCache = browser.cache as Record<string, unknown>;
   if (targetCache.refresh === undefined && cache.refresh !== undefined) {
     targetCache.refresh = cache.refresh;
   }

@@ -2,29 +2,34 @@ import { z } from 'zod';
 import { parseDuration } from '../browser/utils.js';
 
 // Helper for duration parsing (string "1h" or number ms)
+// biome-ignore lint/style/useNamingConvention: schema helper naming is stable.
 const DurationMs = z.union([z.number(), z.string()])
   .transform((val) => {
     if (typeof val === 'number') return val;
     return parseDuration(val, 0);
   });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const NotifyConfigSchema = z.object({
   enabled: z.boolean().optional(),
   sound: z.boolean().optional(),
   muteIn: z.array(z.enum(['CI', 'SSH'])).optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const AzureConfigSchema = z.object({
   endpoint: z.string().optional(),
   deployment: z.string().optional(),
   apiVersion: z.string().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const RemoteServiceConfigSchema = z.object({
   host: z.string().optional(),
   token: z.string().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserListConfigSchema = z.object({
   includeHistory: z.boolean().optional(),
   historyLimit: z.number().optional(),
@@ -33,12 +38,14 @@ export const BrowserListConfigSchema = z.object({
   refresh: z.boolean().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceIdentitySchema = z.object({
   name: z.string().optional(),
   handle: z.string().optional(),
   email: z.string().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ServiceConfigSchema = z.object({
   url: z.string().optional(),
   identity: ServiceIdentitySchema.optional(),
@@ -53,6 +60,7 @@ export const ServiceConfigSchema = z.object({
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserCacheConfigSchema = z.object({
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
@@ -72,6 +80,7 @@ export const BrowserCacheConfigSchema = z.object({
   refreshHours: z.number().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserSessionOpenConfigSchema = z.object({
   openConversation: z.boolean().optional(),
   printUrl: z.boolean().optional(),
@@ -79,6 +88,7 @@ export const BrowserSessionOpenConfigSchema = z.object({
   browserProfile: z.string().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserConfigSchema = z.object({
   // Targeting
   target: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
@@ -138,6 +148,7 @@ export const BrowserConfigSchema = z.object({
   sessionOpen: BrowserSessionOpenConfigSchema.optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileBrowserSchema = z.object({
   chromePath: z.string().optional(),
   profilePath: z.string().optional(),
@@ -167,6 +178,7 @@ export const OracleProfileBrowserSchema = z.object({
   wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileCacheSchema = z.object({
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
@@ -177,6 +189,7 @@ export const OracleProfileCacheSchema = z.object({
   refreshHours: z.number().optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileSchema = z.object({
   engine: z.enum(['api', 'browser']).optional(),
   search: z.union([z.enum(['on', 'off']), z.boolean()])
@@ -198,16 +211,19 @@ export const OracleProfileSchema = z.object({
   cache: OracleProfileCacheSchema.optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleServicesSchema = z.object({
   chatgpt: ServiceConfigSchema.optional(),
   gemini: ServiceConfigSchema.optional(),
   grok: ServiceConfigSchema.optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleDevConfigSchema = z.object({
   browserPortRange: z.tuple([z.number(), z.number()]).optional(),
 });
 
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ConfigSchema = z.object({
   // Core
   engine: z.enum(['api', 'browser']).optional(),

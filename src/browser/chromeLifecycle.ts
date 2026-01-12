@@ -540,7 +540,7 @@ async function launchWithCustomHost({
   } as unknown as LaunchedChrome & { host?: string };
 }
 
-function shouldBypassLauncherUserDataDir(chromePath?: string): boolean {
+function shouldBypassLauncherUserDataDir(_chromePath?: string): boolean {
   return isWsl();
 }
 

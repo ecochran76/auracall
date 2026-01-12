@@ -1,11 +1,12 @@
 import CDP from 'chrome-remote-interface';
+import type { Client } from 'chrome-remote-interface';
 
 async function main() {
   const port = 34105;
   const host = '127.0.0.1';
   console.log(`Connecting to Grok on ${host}:${port}...`);
   
-  let client;
+  let client: Client | null = null;
   try {
     client = await CDP({ host, port });
     await client.Runtime.enable();
@@ -15,10 +16,13 @@ async function main() {
     return;
   }
 
+  if (!client) {
+    return;
+  }
   console.log('Searching for history button...');
   await client.Runtime.evaluate({
     expression: `(async () => {
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\s+/g, ' ').trim();
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
       const nodes = Array.from(document.querySelectorAll('a,button,[role="button"],[role="link"],div'));
       
       for (const node of nodes) {
@@ -39,4 +43,4 @@ async function main() {
   await client.close();
 }
 
-main();
+void main();

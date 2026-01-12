@@ -1,6 +1,6 @@
 import type { UserConfig } from '../../config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
-import type { Conversation, Project, ProviderId } from '../providers/domain.js';
+import type { Conversation, ProviderId } from '../providers/domain.js';
 import {
   matchConversationByTitle,
   matchProjectByName,
@@ -75,7 +75,7 @@ export class LlmService {
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const configuredUrl = Object.prototype.hasOwnProperty.call(overrides, 'configuredUrl')
+    const configuredUrl = Object.hasOwn(overrides, 'configuredUrl')
       ? overrides.configuredUrl ?? null
       : this.getConfiguredUrl();
     const launchUrl =
@@ -378,15 +378,13 @@ export class LlmService {
     options: { action: string; retries?: number } = { action: 'operation' },
   ): Promise<T> {
     const retries = typeof options.retries === 'number' ? options.retries : 1;
-    let attempt = 0;
-    while (true) {
+    for (let attempt = 0; ; attempt += 1) {
       try {
         return await fn();
       } catch (error) {
         if (attempt >= retries || !this.isRetryableError(error)) {
           throw error;
         }
-        attempt += 1;
         await this.delay(500);
       }
     }

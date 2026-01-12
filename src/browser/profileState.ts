@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { isProcessAlive, findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive } from './processCheck.js';
+import { findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive } from './processCheck.js';
 
 export type ProfileStateLogger = (message: string) => void;
 

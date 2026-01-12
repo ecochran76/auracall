@@ -177,10 +177,11 @@ describe('oracle CLI integration', () => {
         ],
         { env },
       );
-    } catch (err: any) {
-      console.error('CLI Execution Failed:', err.message);
-      console.error('STDOUT:', err.stdout);
-      console.error('STDERR:', err.stderr);
+    } catch (err: unknown) {
+      const error = err as { message?: string; stdout?: string; stderr?: string };
+      console.error('CLI Execution Failed:', error.message ?? err);
+      console.error('STDOUT:', error.stdout ?? '');
+      console.error('STDERR:', error.stderr ?? '');
       throw err;
     }
 
@@ -234,10 +235,11 @@ describe('oracle CLI integration', () => {
         ],
         { env },
       );
-    } catch (err: any) {
-      console.error('CLI Execution Failed (Shorthand):', err.message);
-      console.error('STDOUT:', err.stdout);
-      console.error('STDERR:', err.stderr);
+    } catch (err: unknown) {
+      const error = err as { message?: string; stdout?: string; stderr?: string };
+      console.error('CLI Execution Failed (Shorthand):', error.message ?? err);
+      console.error('STDOUT:', error.stdout ?? '');
+      console.error('STDERR:', error.stderr ?? '');
       throw err;
     }
 

@@ -1054,9 +1054,9 @@ async function promptForCacheIdentity(provider: string): Promise<ProviderUserIde
 }
 
 function assertCacheIdentity(
-  identity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null },
+  identity: { userIdentity?: ProviderUserIdentity | null; identityKey?: string | null },
   provider: string,
-): asserts identity is { userIdentity: ProviderUserIdentity | null; identityKey: string } {
+): asserts identity is { userIdentity?: ProviderUserIdentity | null; identityKey: string } {
   if (!identity.identityKey) {
     throw new Error(
       `Cache identity for ${provider} is required. ` +

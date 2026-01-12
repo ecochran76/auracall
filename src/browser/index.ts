@@ -2,7 +2,6 @@ import { mkdtemp, rm, mkdir } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import net from 'node:net';
 import { resolveBrowserConfig } from './config.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger, ChromeClient, BrowserAttachment } from './types.js';
 import {
