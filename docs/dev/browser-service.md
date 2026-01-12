@@ -36,6 +36,7 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - `launchManualLoginSession`
 - `BrowserService` (core)
 - `runBrowserSessionExecutionCore`
+- `resumeBrowserSessionCore`
 - `profileDiscovery` helpers + registry utilities
 
 ## Non-Goals
