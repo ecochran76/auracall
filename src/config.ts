@@ -146,22 +146,29 @@ export async function scaffoldDefaultConfigFile(options: {
     profileName: discovered?.profileName,
     cookiePath: discovered?.cookiePath,
   };
-  const profile: Record<string, unknown> = {
-    engine: 'browser',
-    defaultService: 'chatgpt',
-    browser,
-  };
   const scaffolded: UserConfig = {
+    version: 2,
+    globals: {},
+    browserDefaults: browser,
+    llmDefaults: {
+      model: 'gpt-5.2-pro',
+    },
     model: 'gpt-5.2-pro',
     browser: {},
-    oracleProfile: 'default',
     services: {
       chatgpt: { url: CHATGPT_URL },
       gemini: { url: 'https://gemini.google.com/app' },
       grok: { url: GROK_URL },
     },
-    oracleProfiles: {
-      default: profile,
+    oracleProfile: 'default',
+    profiles: {
+      default: {
+        engine: 'browser',
+        defaultService: 'chatgpt',
+        browser: {},
+        llm: {},
+        services: {},
+      },
     },
   };
 

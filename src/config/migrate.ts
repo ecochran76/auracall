@@ -21,6 +21,11 @@ const DEFAULT_ALIAS_RULES: ConfigAliasRule[] = [
   { path: 'browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
   { path: 'browserDefaults', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
   { path: 'profiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
+  { path: 'browser', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'browserDefaults', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'profiles.*.browser', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'services.*', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'profiles.*.services.*', from: 'interactiveLogin', to: 'manualLogin' },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -104,6 +109,28 @@ export function normalizeConfigV1toV2(
       browser.projectId = llmDefaults.defaultProjectId;
     }
     normalized.browser = browser;
+
+    const services = isRecord(normalized.services) ? normalized.services : {};
+    for (const [serviceKey, serviceValue] of Object.entries(services)) {
+      if (!KNOWN_SERVICES.has(serviceKey)) continue;
+      if (!isRecord(serviceValue)) continue;
+      const serviceConfig = serviceValue as Record<string, unknown>;
+      const defaultProjectName = serviceConfig.defaultProjectName;
+      const defaultProjectId = serviceConfig.defaultProjectId;
+      if (defaultProjectId && defaultProjectName) {
+        console.warn(
+          `Service "${serviceKey}" sets both defaultProjectId and defaultProjectName; using defaultProjectId.`,
+        );
+      }
+      if (serviceConfig.projectName === undefined && defaultProjectName !== undefined) {
+        serviceConfig.projectName = defaultProjectName;
+      }
+      if (serviceConfig.projectId === undefined && defaultProjectId !== undefined) {
+        serviceConfig.projectId = defaultProjectId;
+      }
+      services[serviceKey] = serviceConfig;
+    }
+    normalized.services = services;
   }
 
   const profiles = isRecord(normalized.profiles) ? normalized.profiles : null;
@@ -135,6 +162,33 @@ export function normalizeConfigV1toV2(
       if (isRecord(profileValue.services)) {
         const legacyServices = isRecord(legacyProfile.services) ? legacyProfile.services : {};
         legacyProfile.services = mergeRecords(legacyServices, profileValue.services);
+      }
+
+      if (isRecord(profileValue.services)) {
+        for (const [serviceKey, serviceValue] of Object.entries(profileValue.services)) {
+          if (!KNOWN_SERVICES.has(serviceKey)) continue;
+          if (!isRecord(serviceValue)) continue;
+          const serviceConfig = serviceValue as Record<string, unknown>;
+          const defaultProjectName = serviceConfig.defaultProjectName;
+          const defaultProjectId = serviceConfig.defaultProjectId;
+          if (defaultProjectId && defaultProjectName) {
+            console.warn(
+              `Profile "${name}" service "${serviceKey}" sets both defaultProjectId and defaultProjectName; using defaultProjectId.`,
+            );
+          }
+          const legacyServices = isRecord(legacyProfile.services) ? legacyProfile.services : {};
+          const legacyService = isRecord(legacyServices[serviceKey])
+            ? (legacyServices[serviceKey] as Record<string, unknown>)
+            : {};
+          if (legacyService.projectName === undefined && defaultProjectName !== undefined) {
+            legacyService.projectName = defaultProjectName;
+          }
+          if (legacyService.projectId === undefined && defaultProjectId !== undefined) {
+            legacyService.projectId = defaultProjectId;
+          }
+          legacyServices[serviceKey] = legacyService;
+          legacyProfile.services = legacyServices;
+        }
       }
 
       if (isRecord(profileValue.cache) && legacyProfile.cache === undefined) {

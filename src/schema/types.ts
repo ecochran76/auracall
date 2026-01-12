@@ -56,6 +56,7 @@ export const ServiceConfigSchema = z.object({
   model: z.string().optional(),
   modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
   manualLogin: z.boolean().optional(),
+  interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
 });
@@ -124,6 +125,7 @@ export const BrowserConfigSchema = z.object({
   hideWindow: z.boolean().optional(),
   keepBrowser: z.boolean().optional(),
   manualLogin: z.boolean().optional(),
+  interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
   
@@ -167,6 +169,7 @@ export const OracleProfileBrowserSchema = z.object({
   profileConflictAction: z.enum(['fail', 'terminate-existing', 'attach-existing']).optional(),
   blockingProfileAction: z.enum(['fail', 'restart', 'restart-oracle']).optional(),
   manualLogin: z.boolean().optional(),
+  interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   headless: z.boolean().optional(),
   hideWindow: z.boolean().optional(),
