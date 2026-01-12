@@ -23,6 +23,7 @@ export interface BrowserAutomationConfig {
   chromePath?: string | null;
   chromeCookiePath?: string | null;
   display?: string | null;
+  profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
   blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
   target?: 'chatgpt' | 'gemini' | 'grok';
   projectId?: string | null;
@@ -92,7 +93,14 @@ export interface BrowserRunResult {
 export type ResolvedBrowserConfig = Required<
   Omit<
     BrowserAutomationConfig,
-    'chromeProfile' | 'chromePath' | 'chromeCookiePath' | 'desiredModel' | 'remoteChrome' | 'thinkingTime' | 'modelStrategy'
+    'chromeProfile' |
+      'chromePath' |
+      'chromeCookiePath' |
+      'desiredModel' |
+      'remoteChrome' |
+      'thinkingTime' |
+      'modelStrategy' |
+      'profileConflictAction'
   >
 > & {
   chromeProfile?: string | null;
@@ -100,6 +108,7 @@ export type ResolvedBrowserConfig = Required<
   chromeCookiePath?: string | null;
   display?: string | null;
   blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
   desiredModel?: string | null;
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;

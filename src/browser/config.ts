@@ -93,7 +93,18 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     config?.display ?? process.env.ORACLE_BROWSER_DISPLAY ?? DEFAULT_BROWSER_CONFIG.display;
   const debugPortRange = normalizeDebugPortRange(config?.debugPortRange);
   const normalizedRemoteChrome = normalizeRemoteChrome(config?.remoteChrome ?? DEFAULT_BROWSER_CONFIG.remoteChrome);
-  const blockingProfileAction = config?.blockingProfileAction ?? DEFAULT_BROWSER_CONFIG.blockingProfileAction;
+  const mapProfileConflictAction = (
+    value: BrowserAutomationConfig['profileConflictAction'] | undefined,
+  ): BrowserAutomationConfig['blockingProfileAction'] | undefined => {
+    if (!value) return undefined;
+    if (value === 'terminate-existing') return 'restart';
+    if (value === 'attach-existing') return 'fail';
+    return value;
+  };
+  const blockingProfileAction =
+    config?.blockingProfileAction ??
+    mapProfileConflictAction(config?.profileConflictAction) ??
+    DEFAULT_BROWSER_CONFIG.blockingProfileAction;
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),

@@ -6,14 +6,21 @@ export type ConfigAliasRule = {
   path: string;
   from: string;
   to: string;
+  map?: (value: unknown) => unknown;
 };
 
 const KNOWN_SERVICES = new Set(['chatgpt', 'gemini', 'grok']);
 
+const mapProfileConflictAction = (value: unknown): unknown => {
+  if (value === 'terminate-existing') return 'restart';
+  if (value === 'attach-existing') return 'fail';
+  return value;
+};
+
 const DEFAULT_ALIAS_RULES: ConfigAliasRule[] = [
-  { path: 'browser', from: 'profileConflictAction', to: 'blockingProfileAction' },
-  { path: 'browserDefaults', from: 'profileConflictAction', to: 'blockingProfileAction' },
-  { path: 'profiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction' },
+  { path: 'browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
+  { path: 'browserDefaults', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
+  { path: 'profiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -36,7 +43,8 @@ function applyAliasRule(config: MutableConfig, rule: ConfigAliasRule): void {
     if (!isRecord(node)) return;
     if (index >= segments.length) {
       if (node[rule.to] === undefined && node[rule.from] !== undefined) {
-        node[rule.to] = node[rule.from];
+        const value = node[rule.from];
+        node[rule.to] = rule.map ? rule.map(value) : value;
       }
       return;
     }
