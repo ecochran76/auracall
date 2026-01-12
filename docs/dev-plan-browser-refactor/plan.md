@@ -15,7 +15,7 @@ These are the intended behaviors for session management and login flows as we re
 - **Profile reuse**: Oracle should reuse a live session for the same profile identity and spawn a new one only when missing.
 
 ### Future extensions (post-refactor goals)
-- **Multi-profile config blocks**: allow multiple named profile identities (e.g., `browser.profiles.<name>`) so different folders/targets can select different logins via config layering.
+- **Multi-profile config blocks**: allow multiple named profile identities (e.g., `profiles.<name>`) so different folders/targets can select different logins via config layering.
 - **Smart defaults**: when no profile is configured, attempt to detect a Chromium-based default browser/profile and attach to it before falling back to `~/.oracle`.
 - **Profile discovery precedence** (target behavior):
   1) Explicit config/CLI profile identity.

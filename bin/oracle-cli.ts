@@ -2,6 +2,7 @@
 import 'dotenv/config';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
+import JSON5 from 'json5';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
 import readline from 'node:readline/promises';
@@ -77,7 +78,7 @@ import {
   deriveNotificationSettingsFromMetadata,
   type NotificationSettings,
 } from '../src/cli/notifier.js';
-import { loadUserConfig, scaffoldDefaultConfigFile, type UserConfig } from '../src/config.js';
+import { configPath, loadUserConfig, scaffoldDefaultConfigFile, type UserConfig } from '../src/config.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -91,6 +92,7 @@ import {
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
 import { resolveConfig } from '../src/schema/resolver.js';
+import { materializeConfigV2 } from '../src/config/migrate.js';
 import { isPortOpen } from '../src/browser/processCheck.js';
 
 interface CliOptions extends OptionValues {
@@ -1354,6 +1356,44 @@ program
 const profileCommand = program
   .command('profile')
   .description('Manage oracle profiles.');
+
+const configCommand = program
+  .command('config')
+  .description('Manage oracle config files.');
+
+configCommand
+  .command('migrate')
+  .description('Write a v2-style config layout (legacy keys remain unless --strip-legacy).')
+  .option('--path <path>', 'Input config path (defaults to ~/.oracle/config.json).')
+  .option('--output <path>', 'Write migrated config to a custom path.')
+  .option('--in-place', 'Overwrite the input config file in place.', false)
+  .option('--strip-legacy', 'Drop legacy browser/oracleProfiles keys from output.', false)
+  .option('--force', 'Overwrite an existing output file.', false)
+  .action(async (commandOptions) => {
+    if (commandOptions.output && commandOptions.inPlace) {
+      throw new Error('Do not combine --output with --in-place.');
+    }
+    const inputPath = commandOptions.path ?? configPath();
+    const raw = await fs.readFile(inputPath, 'utf8');
+    const parsed = JSON5.parse(raw) as UserConfig;
+    const migrated = materializeConfigV2(parsed, { stripLegacy: Boolean(commandOptions.stripLegacy) });
+    const outputPath = commandOptions.inPlace
+      ? inputPath
+      : commandOptions.output ?? `${inputPath}.v2`;
+    if (!commandOptions.force && outputPath !== inputPath) {
+      try {
+        await fs.access(outputPath);
+        throw new Error(`Refusing to overwrite ${outputPath}. Use --force to overwrite.`);
+      } catch (error) {
+        const code = (error as { code?: string }).code;
+        if (code && code !== 'ENOENT') {
+          throw error;
+        }
+      }
+    }
+    await fs.writeFile(outputPath, `${JSON.stringify(migrated, null, 2)}\n`, 'utf8');
+    console.log(`Wrote migrated config to ${outputPath}`);
+  });
 
 profileCommand
   .command('scaffold')

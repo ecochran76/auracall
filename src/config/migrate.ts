@@ -239,3 +239,49 @@ export function normalizeConfigV1toV2(
 
   return normalized as OracleConfig;
 }
+
+export function materializeConfigV2(
+  config: OracleConfig,
+  options: { stripLegacy?: boolean } = {},
+): OracleConfig {
+  if (!isRecord(config)) return config;
+  const result: MutableConfig = { ...config };
+
+  if (result.version === undefined) {
+    result.version = 2;
+  }
+  if (!isRecord(result.globals)) {
+    result.globals = {};
+  }
+  if (!isRecord(result.browserDefaults) && isRecord(result.browser)) {
+    result.browserDefaults = result.browser;
+  }
+  if (!isRecord(result.llmDefaults)) {
+    const llmDefaults: Record<string, unknown> = {};
+    if (result.model !== undefined) {
+      llmDefaults.model = result.model;
+    }
+    if (isRecord(result.browser) && result.browser.modelStrategy !== undefined) {
+      llmDefaults.modelStrategy = result.browser.modelStrategy;
+    }
+    if (isRecord(result.browser) && result.browser.projectName !== undefined) {
+      llmDefaults.defaultProjectName = result.browser.projectName;
+    }
+    if (isRecord(result.browser) && result.browser.projectId !== undefined) {
+      llmDefaults.defaultProjectId = result.browser.projectId;
+    }
+    if (Object.keys(llmDefaults).length > 0) {
+      result.llmDefaults = llmDefaults;
+    }
+  }
+  if (!isRecord(result.profiles) && isRecord(result.oracleProfiles)) {
+    result.profiles = result.oracleProfiles;
+  }
+
+  if (options.stripLegacy) {
+    delete result.oracleProfiles;
+    delete result.browser;
+  }
+
+  return result as OracleConfig;
+}

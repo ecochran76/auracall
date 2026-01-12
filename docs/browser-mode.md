@@ -66,7 +66,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.
 - `--browser-timeout`, `--browser-input-timeout`: `1200s (20m)`/`30s` defaults. Durations accept `ms`, `s`, `m`, or `h` and can be chained (`1h2m10s`).
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)
-- `--browser-thinking-time <light|standard|extended|heavy>`: set the ChatGPT thinking-time intensity (Thinking/Pro models only). You can also set a default in `~/.oracle/config.json` via `oracleProfiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
+- `--browser-thinking-time <light|standard|extended|heavy>`: set the ChatGPT thinking-time intensity (Thinking/Pro models only). You can also set a default in `~/.oracle/config.json` via `profiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
 - `--browser-port <port>` (alias: `--browser-debug-port`; env: `ORACLE_BROWSER_PORT`/`ORACLE_BROWSER_DEBUG_PORT`): pin the DevTools port (handy on WSL/Windows firewalls). When spawning a new Chrome instance, Oracle selects the first free port in `browser.debugPortRange` (default `[45000, 45100]`); attaching to existing sessions uses the registry. The config key `browser.debugPort` is honored when set (env overrides it).
 - If you want Oracle to share an already-running Chrome profile, that Chrome must have been launched with `--remote-debugging-port`. Otherwise Oracle cannot attach to it. This is less safe than a dedicated Oracle profile because any local user/process can control the browser via that port.
   - Linux/macOS: `ps -ax | rg \"chrome.*remote-debugging-port\"` or `tr \"\\0\" \" \" < /proc/<pid>/cmdline | rg remote-debugging-port` to discover the active port.
@@ -103,13 +103,13 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 - `oracle cache [--provider <chatgpt|grok>] [--refresh] [--include-history] [--history-limit <count>] [--history-since <date>]`: show cached project/conversation lists with timestamps and stale status; `--refresh` updates the cache for the active provider.
 - `oracle session <id> --open-conversation [--print-url] [--browser-path <path>] [--browser-profile <name>]`: open the provider conversation linked to a stored session (uses the saved context, not the cache). Use `--print-url` to emit the URL only, `--browser-path` to override the browser binary, and `--browser-profile` to override the profile directory.
 - `oracle conversations [--project-id <id>] [--project-name <name>] [--conversation-name <name>] [--include-history] [--history-limit <count>] [--history-since <date>] [--filter <text>] [--refresh]`: list conversations for a provider (uses the registry or `ORACLE_BROWSER_PORT`, and spawns a manual-login Chrome session when no DevTools target is available). Use `--include-history` if you want the History dialog opened to pull older conversations; use `--history-limit` (default 200) and/or `--history-since` to scroll deeper; use `--filter` to match title/id text; use `--refresh` to force cache updates.
-- Browser project/conversation lists are cached under `~/.oracle/cache/providers/<provider>/<username-or-email>/` (identity-scoped, stale after ~6h or when the configured URL changes). Cache identity comes from `oracleProfiles.<name>.services.<service>.identity` unless `oracleProfiles.<name>.cache.useDetectedIdentity` is enabled.
+- Browser project/conversation lists are cached under `~/.oracle/cache/providers/<provider>/<username-or-email>/` (identity-scoped, stale after ~6h or when the configured URL changes). Cache identity comes from `profiles.<name>.services.<service>.identity` unless `profiles.<name>.cache.useDetectedIdentity` is enabled.
 - Grok conversation listing reads the `/c/<id>` links in the project Conversations panel. If the History dialog opens during scraping, Oracle auto-closes it; if the UI still looks blocked, click the backdrop once to dismiss.
 - When listing conversations with `--project-id`, Oracle prefers an already-open Grok project tab (to avoid History bleed-through) and verifies the URL matches the requested project before scraping.
 
 ### Manual login mode (persistent profile, no cookie copy)
 
-Use `--browser-manual-login` when cookie decrypt is blocked (e.g., Windows app-bound cookies) or you prefer to sign in explicitly. You can also make it the default via `oracleProfiles.<name>.services.<service>.interactiveLogin` in `~/.oracle/config.json` (legacy `manualLogin` still works).
+Use `--browser-manual-login` when cookie decrypt is blocked (e.g., Windows app-bound cookies) or you prefer to sign in explicitly. You can also make it the default via `profiles.<name>.services.<service>.interactiveLogin` in `~/.oracle/config.json` (legacy `manualLogin` still works).
 
 ```bash
 oracle --engine browser \
@@ -119,10 +119,10 @@ oracle --engine browser \
   -p "Say hi"
 ```
 
-- Oracle launches Chrome headful with a persistent automation profile at `~/.oracle/browser-profile` (override with `ORACLE_BROWSER_PROFILE_DIR` or `oracleProfiles.<name>.services.<service>.manualLoginProfileDir` in `~/.oracle/config.json`; legacy `browser.manualLoginProfileDir` still works).
+- Oracle launches Chrome headful with a persistent automation profile at `~/.oracle/browser-profile` (override with `ORACLE_BROWSER_PROFILE_DIR` or `profiles.<name>.services.<service>.manualLoginProfileDir` in `~/.oracle/config.json`; legacy `browser.manualLoginProfileDir` still works).
 - Log into chatgpt.com in that window the first time; Oracle polls until the session is active, then proceeds.
 - Reuse the same profile on subsequent runs (no re-login unless the session expires).
-- Add `--browser-keep-browser` (or config `oracleProfiles.<name>.keepBrowser=true`) when doing the initial login/setup or debugging so the Chrome window stays open after the run. When omitted, Oracle closes Chrome but preserves the profile on disk.
+- Add `--browser-keep-browser` (or config `profiles.<name>.keepBrowser=true`) when doing the initial login/setup or debugging so the Chrome window stays open after the run. When omitted, Oracle closes Chrome but preserves the profile on disk.
 - Cookie copy is skipped by default in this mode. To automate manual-login runs, set `browser.manualLoginCookieSync=true` in `~/.oracle/config.json` to seed the persistent profile from your existing Chrome cookies; inline cookies apply when cookie sync is enabled.
 - If Chrome is already running with that profile and DevTools remote debugging enabled (see `DevToolsActivePort` in the profile dir), you can reuse it instead of relaunching by pointing Oracle at it with `--remote-chrome <host:port>`.
 
