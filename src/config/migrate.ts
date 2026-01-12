@@ -32,6 +32,11 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
   const llmDefaults = isRecord(normalized.llmDefaults) ? normalized.llmDefaults : null;
   if (llmDefaults) {
     const browser = isRecord(normalized.browser) ? normalized.browser : {};
+    if (llmDefaults.defaultProjectId && llmDefaults.defaultProjectName) {
+      console.warn(
+        'Both llmDefaults.defaultProjectId and llmDefaults.defaultProjectName are set; using defaultProjectId.',
+      );
+    }
     if (normalized.model === undefined && llmDefaults.model !== undefined) {
       normalized.model = llmDefaults.model;
     }
@@ -83,6 +88,11 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
 
       const llmConfig = isRecord(profileValue.llm) ? profileValue.llm : null;
       if (llmConfig) {
+        if (llmConfig.defaultProjectId && llmConfig.defaultProjectName) {
+          console.warn(
+            `Profile "${name}" sets both llm.defaultProjectId and llm.defaultProjectName; using defaultProjectId.`,
+          );
+        }
         const defaultService =
           asString(profileValue.defaultService) ??
           asString(legacyProfile.defaultService) ??
