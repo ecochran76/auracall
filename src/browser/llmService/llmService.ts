@@ -32,7 +32,7 @@ export class LlmService {
   private readonly browserService: BrowserService;
   private readonly identityPrompt?: IdentityPrompt;
 
-  private constructor(
+  protected constructor(
     private readonly userConfig: UserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,

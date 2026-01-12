@@ -1,4 +1,5 @@
 export { LlmService } from './llmService.js';
+export { createLlmService } from './providers/index.js';
 export type {
   LlmCapabilities,
   LlmServiceAdapter,

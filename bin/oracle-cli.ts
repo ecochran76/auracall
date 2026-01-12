@@ -83,7 +83,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { getOracleHomeDir } from '../src/oracleHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
-import { LlmService } from '../src/browser/llmService/index.js';
+import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
 import {
   deriveProjectsFromConfig,
   deriveConversationsFromConfig,
@@ -566,7 +566,7 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const llmService = LlmService.fromConfig(userConfig, target, {
+    const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
     });
     const provider = llmService.provider;
@@ -649,7 +649,7 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const llmService = LlmService.fromConfig(userConfig, target, {
+    const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
     });
     const provider = llmService.provider;
@@ -798,7 +798,7 @@ program
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    const llmService = LlmService.fromConfig(userConfig, target);
+    const llmService = createLlmService(target, userConfig);
     const provider = llmService.provider;
     
     if (!provider.renameConversation) {
@@ -863,7 +863,7 @@ program
       if (!providers.has(target)) {
         throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
       }
-      const llmService = LlmService.fromConfig(userConfig, target, {
+      const llmService = createLlmService(target, userConfig, {
         identityPrompt: promptForCacheIdentity,
       });
       const listOptions = await llmService.buildListOptions({
@@ -880,7 +880,10 @@ program
       }
       await refreshProviderCache(llmService, listOptions);
     }
-    const cacheSettings = LlmService.fromConfig(userConfig, (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok').getCacheSettings();
+    const cacheSettings = createLlmService(
+      (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok',
+      userConfig,
+    ).getCacheSettings();
     const cacheRoot = cacheSettings.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
     const cacheTtlMs = cacheSettings.ttlMs ?? PROVIDER_CACHE_TTL_MS;
     const output: Array<{
@@ -1113,7 +1116,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
     target === 'grok'
       ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
       : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
-  const llmService = LlmService.fromConfig(userConfig, target, {
+  const llmService = createLlmService(target, userConfig, {
     identityPrompt: promptForCacheIdentity,
   });
   const listOptions = await llmService.buildListOptions(
@@ -1227,7 +1230,7 @@ async function buildBrowserContext({
       : browserConfig.chatgptUrl ?? browserConfig.url ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
   const projectName = options.projectName ? options.projectName.trim() : null;
   const conversationName = options.conversationName ? options.conversationName.trim() : null;
-  const llmService = LlmService.fromConfig(userConfig, target);
+  const llmService = createLlmService(target, userConfig);
   const listOptions = await llmService.buildListOptions({ configuredUrl });
   let cacheKey: string | null = null;
   try {
