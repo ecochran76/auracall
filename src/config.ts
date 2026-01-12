@@ -3,10 +3,12 @@ import path from 'node:path';
 import JSON5 from 'json5';
 import { getOracleHomeDir } from './oracleHome.js';
 import type { OracleConfig } from './schema/types.js';
+import type { ResolvedUserConfig } from './config/schema.js';
 import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 
 export type UserConfig = OracleConfig;
+export type { ResolvedUserConfig };
 
 function resolveUserConfigPath(): string {
   return process.env.ORACLE_CONFIG_PATH ?? path.join(getOracleHomeDir(), 'config.json');

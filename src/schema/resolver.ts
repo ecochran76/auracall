@@ -1,4 +1,4 @@
-import { ComposedConfigSchema, type OracleConfig } from '../config/schema.js';
+import { ComposedConfigSchema, type OracleConfig, type ResolvedUserConfig } from '../config/schema.js';
 import { CLI_MAPPING } from './cli-map.js';
 import { loadUserConfig } from '../config.js';
 import type { OptionValues } from 'commander';
@@ -54,7 +54,7 @@ export async function resolveConfig(
   cwd: string = process.cwd(),
   env: NodeJS.ProcessEnv = process.env,
   options: { aliasRules?: import('../config/migrate.js').ConfigAliasRule[] } = {},
-): Promise<OracleConfig> {
+): Promise<ResolvedUserConfig> {
   // 1. Load User/System/Project Config
   const loaded = await loadUserConfig(cwd);
   const fileConfig = loaded.config;

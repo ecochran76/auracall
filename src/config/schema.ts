@@ -26,3 +26,4 @@ export const ComposedConfigSchema = ConfigSchema.extend({
 
 export { ConfigSchema };
 export type { OracleConfig };
+export type ResolvedUserConfig = z.infer<typeof ComposedConfigSchema>;
