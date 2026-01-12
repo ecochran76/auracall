@@ -13,7 +13,8 @@ import { MAX_RENDER_BYTES, trimBeforeFirstAnswer } from '../sessionDisplay.js';
 import { formatSessionTableHeader, formatSessionTableRow } from '../sessionTable.js';
 import { buildBrowserConfig, resolveBrowserModelLabel } from '../browserConfig.js';
 import { resolveNotificationSettings } from '../notifier.js';
-import { loadUserConfig, type UserConfig } from '../../config.js';
+import type { ResolvedUserConfig } from '../../config.js';
+import { resolveConfig } from '../../schema/resolver.js';
 import { formatTokenCount } from '../../oracle/runUtils.js';
 
 const isTty = (): boolean => Boolean(process.stdout.isTTY && chalk.level > 0);
@@ -32,7 +33,7 @@ export interface LaunchTuiOptions {
 }
 
 export async function launchTui({ version, printIntro = true }: LaunchTuiOptions): Promise<void> {
-  const userConfig = (await loadUserConfig()).config;
+  const userConfig = await resolveConfig({}, process.cwd(), process.env);
   const rich = isTty();
   let pagingFailures = 0;
   let exitMessageShown = false;
@@ -322,7 +323,7 @@ interface WizardAnswers {
   mode?: SessionMode;
 }
 
-export async function askOracleFlow(version: string, userConfig: Partial<UserConfig> = {}): Promise<void> {
+export async function askOracleFlow(version: string, userConfig: Partial<ResolvedUserConfig> = {}): Promise<void> {
   const modelChoices = Object.keys(MODEL_CONFIGS) as ModelName[];
   const hasApiKey = Boolean(process.env.OPENAI_API_KEY);
   const initialMode: SessionMode = hasApiKey ? 'api' : 'browser';
