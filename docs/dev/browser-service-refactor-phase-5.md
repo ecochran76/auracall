@@ -63,3 +63,6 @@
 
   - Run lint + targeted smoke (Grok prompt, projects, conversations).
   - Verify registry behavior + port selection still match current behavior.
+
+  Status update (Phase 5.2):
+  - Added `docs/dev/browser-service.md` to capture package responsibilities + integration guidance.
