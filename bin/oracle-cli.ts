@@ -83,23 +83,19 @@ import os from 'node:os';
 import path from 'node:path';
 import { getOracleHomeDir } from '../src/oracleHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
+import { LlmService } from '../src/browser/llmService/index.js';
 import {
   deriveProjectsFromConfig,
   deriveConversationsFromConfig,
 } from '../src/browser/providers/service.js';
 import {
-  matchProjectByName,
-  matchConversationByTitle,
-  readConversationCache,
   PROVIDER_CACHE_TTL_MS,
-  readProjectCache,
   resolveProviderCacheKey,
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
 import { resolveConfig } from '../src/schema/resolver.js';
 import { isPortOpen } from '../src/browser/processCheck.js';
-import type { BrowserProvider } from '../src/browser/providers/types.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
@@ -570,22 +566,19 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-    const provider = client.provider;
-    const listOptions = await client.buildListOptions();
-    const cacheContext = {
-      provider: target,
-      userConfig,
-      listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
-      ...resolveCacheSettings(userConfig),
-    };
-    let cacheIdentity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null } | undefined;
+    const llmService = LlmService.fromConfig(userConfig, target, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const provider = llmService.provider;
+    const listOptions = await llmService.buildListOptions();
+    const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
+    let cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>> | undefined;
     const resolveCacheContext = async () => {
-      if (!cacheIdentity) {
-        cacheIdentity = await resolveCacheIdentity(client, userConfig, listOptions);
-        assertCacheIdentity(cacheIdentity, target);
+      if (!cacheContext) {
+        cacheContext = await llmService.resolveCacheContext(normalizedListOptions);
+        assertCacheIdentity(cacheContext, target);
       }
-      return { ...cacheContext, ...cacheIdentity };
+      return cacheContext;
     };
     if (!provider.listProjects) {
       const fallback = deriveProjectsFromConfig({
@@ -605,7 +598,7 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const projects = await client.listProjects(listOptions);
+    const projects = await provider.listProjects?.(normalizedListOptions);
     if (Array.isArray(projects) && projects.length === 0) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
@@ -656,8 +649,10 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-    const provider = client.provider;
+    const llmService = LlmService.fromConfig(userConfig, target, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const provider = llmService.provider;
     let projectId =
       (commandOptions.projectId?.trim() ||
        parentOptions.projectId?.trim() ||
@@ -688,7 +683,7 @@ program
       (command.getOptionValueSource?.('refresh') === 'cli')
         ? Boolean(commandOptions.refresh)
         : Boolean(listDefaults?.refresh ?? commandOptions.refresh);
-    let listOptions: BrowserProviderListOptions = await client.buildListOptions({
+    let listOptions: BrowserProviderListOptions = await llmService.buildListOptions({
       includeHistory,
       historyLimit,
       historySince,
@@ -702,19 +697,14 @@ program
     if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
       throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
     }
-    const cacheContext = {
-      provider: target,
-      userConfig,
-      listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
-      ...resolveCacheSettings(userConfig),
-    };
-    let cacheIdentity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null } | undefined;
+    const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
+    let cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>> | undefined;
     const resolveCacheContext = async () => {
-      if (!cacheIdentity) {
-        cacheIdentity = await resolveCacheIdentity(client, userConfig, listOptions);
-        assertCacheIdentity(cacheIdentity, target);
+      if (!cacheContext) {
+        cacheContext = await llmService.resolveCacheContext(normalizedListOptions);
+        assertCacheIdentity(cacheContext, target);
       }
-      return { ...cacheContext, ...cacheIdentity };
+      return cacheContext;
     };
     const projectName =
       typeof commandOptions.projectName === 'string'
@@ -724,11 +714,9 @@ program
           : '';
     const forceRefresh = refreshFlag;
     if (!projectId && projectName) {
-      projectId = await resolveProjectIdByName({
-        projectName,
-        cacheContext: await resolveCacheContext(),
-        provider,
+      projectId = await llmService.resolveProjectIdByName(projectName, {
         forceRefresh,
+        listOptions: normalizedListOptions,
       });
     }
     const conversationName =
@@ -738,12 +726,10 @@ program
           ? parentOptions.conversationName.trim()
           : '';
     if (conversationName) {
-      const conversationMatch = await resolveConversationByName({
-        conversationName,
-        cacheContext: await resolveCacheContext(),
-        provider,
+      const conversationMatch = await llmService.resolveConversationByName(conversationName, {
         projectId,
         forceRefresh,
+        listOptions: normalizedListOptions,
       });
       console.log(JSON.stringify([conversationMatch], null, 2));
       return;
@@ -768,7 +754,7 @@ program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const conversations = await client.listConversations(projectId, listOptions);
+    const conversations = await provider.listConversations?.(projectId, normalizedListOptions);
     let resolved = conversations;
     if (Array.isArray(resolved) && resolved.length === 0) {
       const fallback = deriveConversationsFromConfig({
@@ -812,8 +798,8 @@ program
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-    const provider = client.provider;
+    const llmService = LlmService.fromConfig(userConfig, target);
+    const provider = llmService.provider;
     
     if (!provider.renameConversation) {
       console.error(`Rename is not supported for ${target}.`);
@@ -824,7 +810,7 @@ program
     const projectId = commandOptions.projectId ?? userConfig.browser?.projectId;
     console.log(`Renaming conversation ${id} to "${name}"...`);
     try {
-      await client.renameConversation(id, name, projectId);
+      await llmService.renameConversation(id, name, projectId);
       console.log(chalk.green('Renamed successfully.'));
     } catch (error) {
       console.error(`Rename failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -877,8 +863,10 @@ program
       if (!providers.has(target)) {
         throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
       }
-      const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-      const listOptions = await client.buildListOptions({
+      const llmService = LlmService.fromConfig(userConfig, target, {
+        identityPrompt: promptForCacheIdentity,
+      });
+      const listOptions = await llmService.buildListOptions({
         configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
         includeHistory,
         historyLimit,
@@ -890,9 +878,9 @@ program
       if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
         throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
       }
-      await refreshProviderCache(target, userConfig, listOptions);
+      await refreshProviderCache(llmService, listOptions);
     }
-    const cacheSettings = resolveCacheSettings(userConfig);
+    const cacheSettings = LlmService.fromConfig(userConfig, (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok').getCacheSettings();
     const cacheRoot = cacheSettings.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
     const cacheTtlMs = cacheSettings.ttlMs ?? PROVIDER_CACHE_TTL_MS;
     const output: Array<{
@@ -1021,155 +1009,25 @@ program
   });
 
 async function refreshProviderCache(
-  providerId: 'chatgpt' | 'grok',
-  userConfig: UserConfig,
+  llmService: LlmService,
   listOptions: BrowserProviderListOptions,
 ): Promise<void> {
-  const client = await BrowserAutomationClient.fromConfig(userConfig, { target: providerId });
-  const provider = client.provider;
-  const cacheContext = { provider: providerId, userConfig, listOptions, ...resolveCacheSettings(userConfig) };
-  const identity = await resolveCacheIdentity(client, userConfig, listOptions);
-  assertCacheIdentity(identity, providerId);
-  const cacheContextWithIdentity = { ...cacheContext, ...identity };
+  const provider = llmService.provider;
+  const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
+  const cacheContext = await llmService.resolveCacheContext(normalizedListOptions);
+  assertCacheIdentity(cacheContext, llmService.providerId);
   if (provider.listProjects) {
-    const projects = await provider.listProjects(listOptions);
+    const projects = await provider.listProjects(normalizedListOptions);
     if (Array.isArray(projects)) {
-      await writeProjectCache(cacheContextWithIdentity, projects);
+      await writeProjectCache(cacheContext, projects);
     }
   }
   if (provider.listConversations) {
-    const conversations = await provider.listConversations(undefined, listOptions);
+    const conversations = await provider.listConversations(undefined, normalizedListOptions);
     if (Array.isArray(conversations)) {
-      await writeConversationCache(cacheContextWithIdentity, conversations);
+      await writeConversationCache(cacheContext, conversations);
     }
   }
-}
-
-async function resolveCacheIdentity(
-  client: BrowserAutomationClient,
-  userConfig: UserConfig,
-  listOptions: BrowserProviderListOptions,
-  options: { prompt?: boolean } = {},
-): Promise<{ userIdentity: ProviderUserIdentity | null; identityKey: string | null }> {
-  const profileIdentity = resolveProfileServiceIdentity(userConfig, client.provider.id);
-  const normalizeIdentityKey = (value: string | null | undefined): string | null => {
-    if (!value) return null;
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed.toLowerCase() : null;
-  };
-  let userIdentity: ProviderUserIdentity | null = profileIdentity;
-  const cacheConfig = userConfig.browser?.cache;
-  const useDetectedIdentity = Boolean(cacheConfig?.useDetectedIdentity);
-  if (!userIdentity && useDetectedIdentity) {
-    try {
-      userIdentity = await client.getUserIdentity(listOptions);
-    } catch {
-      userIdentity = null;
-    }
-  }
-
-  const identityKeyHint =
-    typeof cacheConfig?.identityKey === 'string' && cacheConfig.identityKey.trim().length > 0
-      ? normalizeIdentityKey(cacheConfig.identityKey)
-      : null;
-  const identityHint = cacheConfig?.identity ?? null;
-
-  let identityKey: string | null = identityKeyHint;
-  if (!identityKey && profileIdentity) {
-    identityKey =
-      normalizeIdentityKey(profileIdentity.email) ||
-      normalizeIdentityKey(profileIdentity.handle) ||
-      normalizeIdentityKey(profileIdentity.name) ||
-      null;
-  }
-  if (!identityKey && identityHint) {
-    identityKey =
-      normalizeIdentityKey(identityHint.email) ||
-      normalizeIdentityKey(identityHint.handle) ||
-      normalizeIdentityKey(identityHint.name) ||
-      null;
-    if (identityKey) {
-      userIdentity = userIdentity ?? {
-        name: identityHint.name,
-        handle: identityHint.handle,
-        email: identityHint.email,
-        source: 'config',
-      };
-    }
-  }
-
-  if (!identityKey && !userIdentity && options.prompt !== false) {
-    const prompted = await promptForCacheIdentity(client.provider.id);
-    if (prompted) {
-      userIdentity = prompted;
-      identityKey =
-        normalizeIdentityKey(prompted.email) ||
-        normalizeIdentityKey(prompted.handle) ||
-        normalizeIdentityKey(prompted.name) ||
-        null;
-    }
-  }
-
-  if (!identityKey && userIdentity) {
-    identityKey =
-      normalizeIdentityKey(userIdentity.email) ||
-      normalizeIdentityKey(userIdentity.handle) ||
-      normalizeIdentityKey(userIdentity.name) ||
-      null;
-  }
-
-  return { userIdentity, identityKey };
-}
-
-function resolveProfileServiceIdentity(
-  userConfig: UserConfig,
-  provider: string,
-): ProviderUserIdentity | null {
-  const profileName = resolveActiveProfileName(userConfig);
-  const service = provider as 'chatgpt' | 'grok' | 'gemini';
-  const globalIdentity = userConfig.services?.[service]?.identity;
-  if (!profileName) {
-    if (!globalIdentity) return null;
-    return {
-      name: globalIdentity.name,
-      handle: globalIdentity.handle,
-      email: globalIdentity.email,
-      source: 'config',
-    };
-  }
-  const profile = userConfig.oracleProfiles?.[profileName];
-  const profileIdentity = profile?.services?.[service]?.identity;
-  const identity = profileIdentity ?? globalIdentity;
-  if (!identity) return null;
-  return {
-    name: identity.name,
-    handle: identity.handle,
-    email: identity.email,
-    source: profileIdentity ? 'profile' : 'config',
-  };
-}
-
-function resolveActiveProfileName(userConfig: UserConfig): string | null {
-  const profiles = userConfig.oracleProfiles;
-  if (!profiles) return null;
-  const explicit = typeof userConfig.oracleProfile === 'string' ? userConfig.oracleProfile.trim() : '';
-  if (explicit && profiles[explicit]) return explicit;
-  if (profiles.default) return 'default';
-  const keys = Object.keys(profiles);
-  return keys.length ? keys[0] : null;
-}
-
-function resolveCacheSettings(userConfig: UserConfig): { cacheRoot?: string | null; ttlMs?: number | null } {
-  const cacheConfig = userConfig.browser?.cache;
-  const refreshHours = cacheConfig?.refreshHours;
-  const ttlMs =
-    typeof refreshHours === 'number' && Number.isFinite(refreshHours) && refreshHours > 0
-      ? refreshHours * 60 * 60 * 1000
-      : null;
-  return {
-    cacheRoot: cacheConfig?.rootDir ?? null,
-    ttlMs,
-  };
 }
 
 async function promptForCacheIdentity(provider: string): Promise<ProviderUserIdentity | null> {
@@ -1255,8 +1113,10 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
     target === 'grok'
       ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
       : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
-  const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-  const listOptions = await client.buildListOptions(
+  const llmService = LlmService.fromConfig(userConfig, target, {
+    identityPrompt: promptForCacheIdentity,
+  });
+  const listOptions = await llmService.buildListOptions(
     {
       configuredUrl,
       includeHistory: true,
@@ -1266,25 +1126,26 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
       ensurePort: Boolean(projectName || conversationName),
     },
   );
-  const identity = await resolveCacheIdentity(client, userConfig, listOptions);
+  const identity = await llmService.resolveCacheIdentity(listOptions);
   if (!identity.identityKey) {
     console.warn(
       chalk.yellow(`Skipping cache-based name resolution: missing cache identity for ${target}.`),
     );
     return;
   }
+  const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
   const cacheContext = {
     provider: target,
     userConfig,
-    listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
+    listOptions: normalizedListOptions,
+    ...llmService.getCacheSettings(),
     ...identity,
-    ...resolveCacheSettings(userConfig),
   };
-  const provider = client.provider;
+  const provider = llmService.provider;
 
   if (!options.projectId && projectNameFromConfig && projectName) {
     try {
-      const projects = await client.listProjects(listOptions);
+      const projects = await provider.listProjects?.(normalizedListOptions);
       if (Array.isArray(projects)) {
         await writeProjectCache(cacheContext, projects);
       }
@@ -1299,14 +1160,11 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
 
   if (!options.projectId && projectName) {
     try {
-      options.projectId = await resolveProjectIdByName({
-        projectName,
-        cacheContext,
-        provider,
-        listProjects: client.listProjects.bind(client),
+      options.projectId = await llmService.resolveProjectIdByName(projectName, {
         forceRefresh: projectNameFromConfig,
         allowAutoRefresh: !options.dryRun,
         allowFallback: projectNameFromConfig,
+        listOptions: normalizedListOptions,
       });
       if (options.projectId) {
         console.log(chalk.dim(`Resolved project "${projectName}" to ${options.projectId}`));
@@ -1324,19 +1182,14 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
   }
   if (!options.conversationId && conversationName) {
     try {
-      const match = await resolveConversationByName({
-        conversationName,
-        cacheContext,
-        provider,
-        listConversations: client.listConversations.bind(client),
+      const match = await llmService.resolveConversationByName(conversationName, {
         projectId: options.projectId ?? undefined,
         forceRefresh: conversationNameFromConfig,
         allowAutoRefresh: !options.dryRun,
+        listOptions: normalizedListOptions,
       });
-      if (match) {
-        console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
-        options.conversationId = match.id;
-      }
+      console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
+      options.conversationId = match.id;
     } catch (error) {
       if (!conversationNameFromConfig) {
         throw error;
@@ -1374,11 +1227,11 @@ async function buildBrowserContext({
       : browserConfig.chatgptUrl ?? browserConfig.url ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
   const projectName = options.projectName ? options.projectName.trim() : null;
   const conversationName = options.conversationName ? options.conversationName.trim() : null;
-  const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-  const listOptions = await client.buildListOptions({ configuredUrl });
+  const llmService = LlmService.fromConfig(userConfig, target);
+  const listOptions = await llmService.buildListOptions({ configuredUrl });
   let cacheKey: string | null = null;
   try {
-    const identity = await resolveCacheIdentity(client, userConfig, listOptions, { prompt: false });
+    const identity = await llmService.resolveCacheIdentity(listOptions, { prompt: false });
     if (identity.identityKey) {
       cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions, ...identity });
     }
@@ -1394,160 +1247,6 @@ async function buildBrowserContext({
     configuredUrl,
     cacheKey,
   };
-}
-
-async function resolveProjectIdByName({
-  projectName,
-  cacheContext,
-  provider,
-  listProjects,
-  forceRefresh,
-  allowAutoRefresh = true,
-  allowFallback = false,
-}: {
-  projectName: string;
-  cacheContext: {
-    provider: 'chatgpt' | 'grok';
-    userConfig: UserConfig;
-    listOptions: BrowserProviderListOptions;
-    userIdentity?: ProviderUserIdentity | null;
-    identityKey?: string | null;
-    cacheRoot?: string | null;
-    ttlMs?: number | null;
-  };
-  provider: BrowserProvider;
-  listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
-  forceRefresh: boolean;
-  allowAutoRefresh?: boolean;
-  allowFallback?: boolean;
-}): Promise<string> {
-  let cached = await readProjectCache(cacheContext);
-  let didRefresh = false;
-  const refreshProjects =
-    listProjects ??
-    (provider.listProjects
-      ? (options?: BrowserProviderListOptions) => provider.listProjects?.(options)
-      : undefined);
-  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && refreshProjects) {
-    try {
-      const refreshedItems = await refreshProjects(cacheContext.listOptions);
-      if (Array.isArray(refreshedItems)) {
-        await writeProjectCache(cacheContext, refreshedItems);
-        cached = { items: refreshedItems, fetchedAt: Date.now(), stale: false };
-        didRefresh = true;
-      }
-    } catch (error) {
-      console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  } else if (forceRefresh && !refreshProjects) {
-    console.warn('Project refresh requested, but this provider does not support project listing.');
-  }
-  const { match, candidates } = matchProjectByName(cached.items, projectName);
-  if (match) {
-    return match.id;
-  }
-  if (!didRefresh && allowAutoRefresh && refreshProjects) {
-    try {
-      const refreshedItems = await refreshProjects(cacheContext.listOptions);
-      if (Array.isArray(refreshedItems)) {
-        await writeProjectCache(cacheContext, refreshedItems);
-        const retry = matchProjectByName(refreshedItems, projectName);
-        if (retry.match) {
-          return retry.match.id;
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  if (candidates.length > 1) {
-    const names = candidates.map((item) => item.name || item.id).join(', ');
-    throw new Error(`Project name "${projectName}" is ambiguous. Matches: ${names}`);
-  }
-  if (allowFallback && cacheContext.provider === 'grok') {
-    const fallback = projectName.trim();
-    if (fallback) {
-      console.warn(chalk.yellow(`Using Grok project slug fallback: "${fallback}".`));
-      return fallback;
-    }
-  }
-  throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
-}
-
-async function resolveConversationByName({
-  conversationName,
-  cacheContext,
-  provider,
-  listConversations,
-  projectId,
-  forceRefresh,
-  allowAutoRefresh = true,
-}: {
-  conversationName: string;
-  cacheContext: {
-    provider: 'chatgpt' | 'grok';
-    userConfig: UserConfig;
-    listOptions: BrowserProviderListOptions;
-    userIdentity?: ProviderUserIdentity | null;
-    identityKey?: string | null;
-    cacheRoot?: string | null;
-    ttlMs?: number | null;
-  };
-  provider: BrowserProvider;
-  listConversations?: (
-    projectId?: string,
-    options?: BrowserProviderListOptions,
-  ) => Promise<unknown>;
-  projectId?: string;
-  forceRefresh: boolean;
-  allowAutoRefresh?: boolean;
-}): Promise<{ id: string; title?: string; url?: string } | null> {
-  let cached = await readConversationCache(cacheContext);
-  let didRefresh = false;
-  const refreshConversations =
-    listConversations ??
-    (provider.listConversations
-      ? (proj?: string, options?: BrowserProviderListOptions) =>
-          provider.listConversations?.(proj, options)
-      : undefined);
-  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && refreshConversations) {
-    try {
-      const refreshedItems = await refreshConversations(projectId, cacheContext.listOptions);
-      if (Array.isArray(refreshedItems)) {
-        await writeConversationCache(cacheContext, refreshedItems);
-        cached = { items: refreshedItems, fetchedAt: Date.now(), stale: false };
-        didRefresh = true;
-      }
-    } catch (error) {
-      console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  } else if (forceRefresh && !refreshConversations) {
-    console.warn('Conversation refresh requested, but this provider does not support conversation listing.');
-  }
-
-  const { match, candidates } = matchConversationByTitle(cached.items, conversationName);
-  if (match) {
-    return match;
-  }
-  if (!didRefresh && allowAutoRefresh && refreshConversations) {
-    try {
-      const refreshedItems = await refreshConversations(projectId, cacheContext.listOptions);
-      if (Array.isArray(refreshedItems)) {
-        await writeConversationCache(cacheContext, refreshedItems);
-        const retry = matchConversationByTitle(refreshedItems, conversationName);
-        if (retry.match) {
-          return retry.match;
-        }
-      }
-    } catch (error) {
-      console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  }
-  if (candidates.length > 1) {
-    const names = candidates.map((item) => item.title || item.id).join(', ');
-    throw new Error(`Conversation name "${conversationName}" is ambiguous. Matches: ${names}`);
-  }
-  throw new Error(`No cached conversation named "${conversationName}". Run "oracle conversations" to refresh.`);
 }
 
 program

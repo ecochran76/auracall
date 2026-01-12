@@ -69,3 +69,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Root cause: Manual login + cookie export launches Chrome via `chrome-launcher` without registering the instance in `browser-state.json`.
 - Fix: Register the DevTools port/pid after login chrome launches so registry lookups succeed.
 - Verification: TBD (rerun doctor after login launch).
+
+- Date: 2026-01-12
+- Area: Cache identity + name resolution (llmService)
+- Symptom: Cache refresh/name resolution logic diverged across CLI commands and duplicated LlmService behavior.
+- Root cause: Cache helpers lived in `bin/oracle-cli.ts` instead of the new LlmService layer.
+- Fix: Centralized cache identity/context and name resolution in `src/browser/llmService/llmService.ts`, routing CLI list/resolve flows through it.
+- Verification: Pending (rerun `oracle projects`, `oracle conversations`, and `oracle cache --refresh`).
+- Follow-ups: Validate model-selection fallback in Phase 3.

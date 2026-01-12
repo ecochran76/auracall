@@ -75,7 +75,9 @@ export class LlmService {
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const configuredUrl = overrides.configuredUrl ?? this.getConfiguredUrl();
+    const configuredUrl = Object.prototype.hasOwnProperty.call(overrides, 'configuredUrl')
+      ? overrides.configuredUrl ?? null
+      : this.getConfiguredUrl();
     const launchUrl =
       configuredUrl ?? (this.providerId === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
     const target = await this.browserService.resolveDevToolsTarget({
@@ -109,7 +111,10 @@ export class LlmService {
       return [];
     }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return (await this.provider.listConversations(projectId, listOptions)) as ConversationListResult;
+    return (await this.withRetry(
+      () => this.provider.listConversations?.(projectId, listOptions) as Promise<ConversationListResult>,
+      { action: 'listConversations' },
+    )) as ConversationListResult;
   }
 
   async renameConversation(
@@ -127,20 +132,36 @@ export class LlmService {
 
   async resolveProjectIdByName(
     projectName: string,
-    options?: { forceRefresh?: boolean; allowFallback?: boolean; listOptions?: BrowserProviderListOptions },
+    options?: {
+      forceRefresh?: boolean;
+      allowAutoRefresh?: boolean;
+      allowFallback?: boolean;
+      listOptions?: BrowserProviderListOptions;
+    },
   ): Promise<string> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     const cacheContext = await this.resolveCacheContext(listOptions);
     let cached = await readProjectCache(cacheContext);
-    const refresh = options?.forceRefresh || cached.stale;
-    if (refresh) {
+    const allowAutoRefresh = options?.allowAutoRefresh ?? true;
+    let didRefresh = false;
+    const canList = Boolean(this.provider.listProjects);
+    if ((options?.forceRefresh || (allowAutoRefresh && cached.stale)) && canList) {
       const items = await this.listProjects(listOptions);
       await writeProjectCache(cacheContext, items);
       cached = { items, fetchedAt: Date.now(), stale: false };
+      didRefresh = true;
     }
     const { match, candidates } = matchProjectByName(cached.items, projectName);
     if (match) {
       return match.id;
+    }
+    if (!didRefresh && allowAutoRefresh && canList) {
+      const items = await this.listProjects(listOptions);
+      await writeProjectCache(cacheContext, items);
+      const retry = matchProjectByName(items, projectName);
+      if (retry.match) {
+        return retry.match.id;
+      }
     }
     if (candidates.length > 1) {
       const names = candidates.map((item) => item.name || item.id).join(', ');
@@ -160,11 +181,26 @@ export class LlmService {
       listOptions?: BrowserProviderListOptions;
     },
   ): Promise<string> {
+    const match = await this.resolveConversationByName(conversationName, options);
+    return match.id;
+  }
+
+  async resolveConversationByName(
+    conversationName: string,
+    options?: {
+      projectId?: string;
+      forceRefresh?: boolean;
+      allowAutoRefresh?: boolean;
+      listOptions?: BrowserProviderListOptions;
+    },
+  ): Promise<Conversation> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     const cacheContext = await this.resolveCacheContext(listOptions);
     let cached = await readConversationCache(cacheContext);
-    const refresh = options?.forceRefresh || cached.stale;
-    if (refresh) {
+    const allowAutoRefresh = options?.allowAutoRefresh ?? true;
+    let didRefresh = false;
+    const canList = Boolean(this.provider.listConversations);
+    if ((options?.forceRefresh || (allowAutoRefresh && cached.stale)) && canList) {
       const items = await this.listConversations(options?.projectId, {
         ...listOptions,
         includeHistory: true,
@@ -172,10 +208,23 @@ export class LlmService {
       });
       await writeConversationCache(cacheContext, items);
       cached = { items, fetchedAt: Date.now(), stale: false };
+      didRefresh = true;
     }
     const { match, candidates } = matchConversationByTitle(cached.items, conversationName);
     if (match) {
-      return match.id;
+      return match;
+    }
+    if (!didRefresh && allowAutoRefresh && canList) {
+      const items = await this.listConversations(options?.projectId, {
+        ...listOptions,
+        includeHistory: true,
+        historyLimit: DEFAULT_HISTORY_LIMIT,
+      });
+      await writeConversationCache(cacheContext, items);
+      const retry = matchConversationByTitle(items, conversationName);
+      if (retry.match) {
+        return retry.match;
+      }
     }
     if (candidates.length > 1) {
       const names = candidates.map((item) => item.title || item.id).join(', ');
@@ -184,9 +233,12 @@ export class LlmService {
     throw new Error(`No cached conversation named "${conversationName}". Run "oracle conversations" to refresh.`);
   }
 
-  private async resolveCacheContext(listOptions: BrowserProviderListOptions): Promise<CacheContext> {
-    const settings = this.resolveCacheSettings();
-    const identity = await this.resolveCacheIdentity(listOptions);
+  async resolveCacheContext(
+    listOptions: BrowserProviderListOptions,
+    options: { prompt?: boolean } = {},
+  ): Promise<CacheContext> {
+    const settings = this.getCacheSettings();
+    const identity = await this.resolveCacheIdentity(listOptions, options);
     return {
       provider: this.providerId,
       userConfig: this.userConfig,
@@ -196,7 +248,7 @@ export class LlmService {
     };
   }
 
-  private resolveCacheSettings(): CacheSettings {
+  getCacheSettings(): CacheSettings {
     const cacheConfig = this.userConfig.browser?.cache;
     const refreshHours = cacheConfig?.refreshHours;
     const ttlMs =
@@ -209,7 +261,10 @@ export class LlmService {
     };
   }
 
-  private async resolveCacheIdentity(listOptions: BrowserProviderListOptions): Promise<CacheIdentity> {
+  async resolveCacheIdentity(
+    listOptions: BrowserProviderListOptions,
+    options: { prompt?: boolean } = {},
+  ): Promise<CacheIdentity> {
     const normalizeIdentityKey = (value: string | null | undefined): string | null => {
       if (!value) return null;
       const trimmed = value.trim();
@@ -257,7 +312,7 @@ export class LlmService {
       }
     }
 
-    if (!identityKey && !userIdentity && this.identityPrompt) {
+    if (!identityKey && !userIdentity && this.identityPrompt && options.prompt !== false) {
       const prompted = await this.identityPrompt(this.providerId);
       if (prompted) {
         userIdentity = prompted;
@@ -316,5 +371,33 @@ export class LlmService {
 
   resolveProviderCacheKey(cacheContext: CacheContext): string {
     return resolveProviderCacheKey(cacheContext);
+  }
+
+  private async withRetry<T>(
+    fn: () => Promise<T>,
+    options: { action: string; retries?: number } = { action: 'operation' },
+  ): Promise<T> {
+    const retries = typeof options.retries === 'number' ? options.retries : 1;
+    let attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } catch (error) {
+        if (attempt >= retries || !this.isRetryableError(error)) {
+          throw error;
+        }
+        attempt += 1;
+        await this.delay(500);
+      }
+    }
+  }
+
+  private isRetryableError(error: unknown): boolean {
+    const message = error instanceof Error ? error.message : String(error);
+    return message.includes('WebSocket connection closed') || message.includes('ECONNRESET');
+  }
+
+  private delay(ms: number): Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }

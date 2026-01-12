@@ -49,7 +49,9 @@ export class BrowserAutomationClient {
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const configuredUrl = overrides.configuredUrl ?? this.getConfiguredUrl();
+    const configuredUrl = Object.prototype.hasOwnProperty.call(overrides, 'configuredUrl')
+      ? overrides.configuredUrl ?? null
+      : this.getConfiguredUrl();
     const launchUrl =
       configuredUrl ??
       (this.target === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
