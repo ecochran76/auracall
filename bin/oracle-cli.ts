@@ -85,10 +85,6 @@ import { getOracleHomeDir } from '../src/oracleHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
 import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
 import {
-  deriveProjectsFromConfig,
-  deriveConversationsFromConfig,
-} from '../src/browser/providers/service.js';
-import {
   PROVIDER_CACHE_TTL_MS,
   resolveProviderCacheKey,
   writeConversationCache,
@@ -581,8 +577,7 @@ program
       return cacheContext;
     };
     if (!provider.listProjects) {
-      const fallback = deriveProjectsFromConfig({
-        provider: target,
+      const fallback = llmService.deriveProjectsFromConfig({
         configuredUrl: listOptions.configuredUrl,
         projectId: userConfig.browser?.projectId ?? null,
       });
@@ -600,8 +595,7 @@ program
     }
     const projects = await provider.listProjects?.(normalizedListOptions);
     if (Array.isArray(projects) && projects.length === 0) {
-      const fallback = deriveProjectsFromConfig({
-        provider: target,
+      const fallback = llmService.deriveProjectsFromConfig({
         configuredUrl: listOptions.configuredUrl,
         projectId: userConfig.browser?.projectId ?? null,
       });
@@ -735,8 +729,7 @@ program
       return;
     }
     if (!provider.listConversations) {
-      let fallback = deriveConversationsFromConfig({
-        provider: target,
+      let fallback = llmService.deriveConversationsFromConfig({
         configuredUrl: listOptions.configuredUrl,
         projectId: projectId ?? null,
         conversationId: userConfig.browser?.conversationId ?? null,
@@ -757,8 +750,7 @@ program
     const conversations = await provider.listConversations?.(projectId, normalizedListOptions);
     let resolved = conversations;
     if (Array.isArray(resolved) && resolved.length === 0) {
-      const fallback = deriveConversationsFromConfig({
-        provider: target,
+      const fallback = llmService.deriveConversationsFromConfig({
         configuredUrl: listOptions.configuredUrl,
         projectId: projectId ?? null,
         conversationId: userConfig.browser?.conversationId ?? null,

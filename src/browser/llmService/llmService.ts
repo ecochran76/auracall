@@ -1,6 +1,6 @@
 import type { UserConfig } from '../../config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
-import type { Conversation, ProviderId } from '../providers/domain.js';
+import type { Conversation, Project, ProviderId } from '../providers/domain.js';
 import {
   matchConversationByTitle,
   matchProjectByName,
@@ -75,6 +75,39 @@ export abstract class LlmService {
       return this.provider.resolveProjectUrl(projectId) ?? configuredUrl ?? null;
     }
     return configuredUrl ?? null;
+  }
+
+  deriveProjectsFromConfig(options: { configuredUrl?: string | null; projectId?: string | null } = {}): Project[] {
+    const configuredUrl = options.configuredUrl ?? null;
+    const resolvedId = options.projectId ?? this.extractProjectId(configuredUrl);
+    if (!resolvedId) return [];
+    return [
+      {
+        id: resolvedId,
+        name: resolvedId,
+        provider: this.providerId,
+        url: configuredUrl ?? this.provider.resolveProjectUrl?.(resolvedId) ?? undefined,
+      },
+    ];
+  }
+
+  deriveConversationsFromConfig(options: {
+    configuredUrl?: string | null;
+    projectId?: string | null;
+    conversationId?: string | null;
+  } = {}): Conversation[] {
+    const configuredUrl = options.configuredUrl ?? null;
+    const resolvedId = options.conversationId ?? this.extractConversationId(configuredUrl);
+    if (!resolvedId) return [];
+    return [
+      {
+        id: resolvedId,
+        title: resolvedId,
+        provider: this.providerId,
+        projectId: options.projectId ?? undefined,
+        url: this.provider.resolveConversationUrl?.(resolvedId, options.projectId ?? undefined) ?? undefined,
+      },
+    ];
   }
 
   async buildListOptions(
@@ -360,6 +393,41 @@ export abstract class LlmService {
 
   resolveProviderCacheKey(cacheContext: CacheContext): string {
     return resolveProviderCacheKey(cacheContext);
+  }
+
+  private extractProjectId(configuredUrl: string | null): string | null {
+    if (!configuredUrl) return null;
+    try {
+      const parsed = new URL(configuredUrl);
+      if (this.providerId === 'grok') {
+        const match = parsed.pathname.match(/\/project\/([^/]+)/);
+        return match?.[1] ?? null;
+      }
+      if (this.providerId === 'chatgpt') {
+        const match = parsed.pathname.match(/\/g\/([^/]+)\/project/);
+        return match?.[1] ?? null;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  private extractConversationId(configuredUrl: string | null): string | null {
+    if (!configuredUrl) return null;
+    try {
+      const parsed = new URL(configuredUrl);
+      if (this.providerId === 'grok') {
+        return parsed.searchParams.get('chat');
+      }
+      if (this.providerId === 'chatgpt') {
+        const match = parsed.pathname.match(/\/c\/([a-zA-Z0-9-]+)/);
+        return match?.[1] ?? null;
+      }
+    } catch {
+      return null;
+    }
+    return null;
   }
 
   protected async withRetry<T>(
