@@ -35,6 +35,7 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 ## Current Exports (Partial)
 - `launchChrome`, `connectToChrome`, `resolveWslHost`
 - `launchManualLoginSession`
+- `loginHelpers` (WSL/path helpers, cookie export helpers)
 - `BrowserService` (core)
 - `runBrowserSessionExecutionCore`
 - `resumeBrowserSessionCore`

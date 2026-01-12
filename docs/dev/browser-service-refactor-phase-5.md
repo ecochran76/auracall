@@ -44,6 +44,7 @@
   - reattach core moved into the package; oracle wrapper injects page actions + config defaults.
   - ChatGPT-specific helpers (constants, cookies, domDebug, reattachHelpers) moved back into oracle.
   - Browser-service types trimmed to browser-only fields; LLM-specific config now lives in oracle types.
+  - Login helpers (WSL/path/cookie export utilities) moved into the package for reuse.
 
   3) Extraction plan + package layout
 
