@@ -3,26 +3,29 @@ import path from 'node:path';
 import type { UserConfig } from '../config.js';
 import type { ChromeClient } from './types.js';
 import type { BrowserProvider, BrowserProviderListOptions } from './providers/types.js';
-import { getProvider } from './providers/index.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
 import type { BrowserLoginOptions } from './login.js';
 import { runBrowserLogin } from './login.js';
 import { BrowserService } from './service/browserService.js';
+import { createLlmService } from './llmService/index.js';
+import type { LlmService } from './llmService/llmService.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'grok';
   readonly provider: BrowserProvider;
   private readonly browserService: BrowserService;
+  private readonly llmService: LlmService;
 
   private constructor(
-    private readonly userConfig: UserConfig,
+    readonly userConfig: UserConfig,
     target: 'chatgpt' | 'grok',
     browserService: BrowserService,
   ) {
     this.target = target;
-    this.provider = getProvider(target);
     this.browserService = browserService;
+    this.llmService = createLlmService(target, userConfig, { browserService });
+    this.provider = this.llmService.provider;
   }
 
   static async fromConfig(
@@ -38,62 +41,30 @@ export class BrowserAutomationClient {
     return new BrowserAutomationClient(userConfig, target, browserService);
   }
 
-  getConfiguredUrl(): string | null {
-    return this.target === 'grok'
-      ? this.userConfig.browser?.grokUrl ?? null
-      : this.userConfig.browser?.chatgptUrl ?? this.userConfig.browser?.url ?? null;
-  }
-
   async buildListOptions(
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const configuredUrl = Object.hasOwn(overrides, 'configuredUrl')
-      ? overrides.configuredUrl ?? null
-      : this.getConfiguredUrl();
-    const launchUrl =
-      configuredUrl ??
-      (this.target === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
-    const target = await this.browserService.resolveDevToolsTarget({
-      host: overrides.host,
-      port: overrides.port,
-      ensurePort: options.ensurePort,
-      launchUrl,
-    });
-    const port = target.port;
-    const host = target.host;
-    return {
-      ...overrides,
-      port,
-      host,
-      configuredUrl,
-      browserService: this.browserService,
-    };
+    return this.llmService.buildListOptions(overrides, options);
   }
 
   async listProjects(
     options?: BrowserProviderListOptions,
   ): Promise<unknown> {
-    if (!this.provider.listProjects) return undefined;
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return this.provider.listProjects(listOptions);
+    return this.llmService.listProjects(options);
   }
 
   async listConversations(
     projectId?: string,
     options?: BrowserProviderListOptions,
   ): Promise<unknown> {
-    if (!this.provider.listConversations) return undefined;
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return this.provider.listConversations(projectId, listOptions);
+    return this.llmService.listConversations(projectId, options);
   }
 
   async getUserIdentity(
     options?: BrowserProviderListOptions,
   ): Promise<import('./providers/types.js').ProviderUserIdentity | null> {
-    if (!this.provider.getUserIdentity) return null;
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return this.provider.getUserIdentity(listOptions);
+    return this.llmService.getUserIdentity(options);
   }
 
   async renameConversation(
@@ -102,11 +73,7 @@ export class BrowserAutomationClient {
     projectId?: string,
     options?: BrowserProviderListOptions,
   ): Promise<void> {
-    if (!this.provider.renameConversation) {
-      throw new Error(`Rename is not supported for ${this.target}.`);
-    }
-    const listOptions = await this.buildListOptions(options);
-    await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
+    await this.llmService.renameConversation(conversationId, newTitle, projectId, options);
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {
