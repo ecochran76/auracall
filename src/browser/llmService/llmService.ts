@@ -11,8 +11,7 @@ import {
   writeProjectCache,
   PROVIDER_CACHE_TTL_MS,
 } from '../providers/cache.js';
-import { getProvider } from '../providers/index.js';
-import { BrowserService } from '../service/browserService.js';
+import type { BrowserService } from '../service/browserService.js';
 import type {
   CacheContext,
   CacheIdentity,
@@ -26,7 +25,7 @@ import type {
 
 const DEFAULT_HISTORY_LIMIT = 200;
 
-export class LlmService {
+export abstract class LlmService {
   readonly provider: LlmServiceAdapter;
   readonly providerId: ProviderId;
   private readonly browserService: BrowserService;
@@ -42,16 +41,6 @@ export class LlmService {
     this.providerId = provider.id;
     this.browserService = browserService;
     this.identityPrompt = options?.identityPrompt;
-  }
-
-  static fromConfig(
-    userConfig: UserConfig,
-    providerId: ProviderId,
-    options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
-  ): LlmService {
-    const provider = getProvider(providerId);
-    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig);
-    return new LlmService(userConfig, provider as LlmServiceAdapter, browserService, options);
   }
 
   getCapabilities(): LlmCapabilities {
@@ -95,40 +84,23 @@ export class LlmService {
     };
   }
 
-  async listProjects(options?: BrowserProviderListOptions): Promise<ProjectListResult> {
-    if (!this.provider.listProjects) {
-      return [];
-    }
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return (await this.provider.listProjects(listOptions)) as ProjectListResult;
-  }
+  abstract listProjects(options?: BrowserProviderListOptions): Promise<ProjectListResult>;
 
-  async listConversations(
+  abstract listConversations(
     projectId?: string,
     options?: BrowserProviderListOptions,
-  ): Promise<ConversationListResult> {
-    if (!this.provider.listConversations) {
-      return [];
-    }
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return (await this.withRetry(
-      () => this.provider.listConversations?.(projectId, listOptions) as Promise<ConversationListResult>,
-      { action: 'listConversations' },
-    )) as ConversationListResult;
-  }
+  ): Promise<ConversationListResult>;
 
-  async renameConversation(
+  abstract renameConversation(
     conversationId: string,
     newTitle: string,
     projectId?: string,
     options?: BrowserProviderListOptions,
-  ): Promise<void> {
-    if (!this.provider.renameConversation) {
-      throw new Error(`Rename is not supported for ${this.providerId}.`);
-    }
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
-  }
+  ): Promise<void>;
+
+  abstract getUserIdentity(
+    options?: BrowserProviderListOptions,
+  ): Promise<ProviderUserIdentity | null>;
 
   async resolveProjectIdByName(
     projectName: string,
@@ -274,9 +246,9 @@ export class LlmService {
     let userIdentity: ProviderUserIdentity | null = profileIdentity;
     const cacheConfig = this.userConfig.browser?.cache;
     const useDetectedIdentity = Boolean(cacheConfig?.useDetectedIdentity);
-    if (!userIdentity && useDetectedIdentity && this.provider.getUserIdentity) {
+    if (!userIdentity && useDetectedIdentity) {
       try {
-        userIdentity = await this.provider.getUserIdentity(listOptions);
+        userIdentity = await this.getUserIdentity(listOptions);
       } catch {
         userIdentity = null;
       }
@@ -373,7 +345,7 @@ export class LlmService {
     return resolveProviderCacheKey(cacheContext);
   }
 
-  private async withRetry<T>(
+  protected async withRetry<T>(
     fn: () => Promise<T>,
     options: { action: string; retries?: number } = { action: 'operation' },
   ): Promise<T> {
