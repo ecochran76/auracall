@@ -9,8 +9,9 @@ import { BrowserAutomationError } from '../oracle/errors.js';
 import {
   runBrowserSessionExecutionCore,
   type BrowserExecutionResult,
-  type BrowserSessionRunnerDeps,
+  type BrowserSessionRunnerDeps as CoreBrowserSessionRunnerDeps,
 } from '../../packages/browser-service/src/sessionRunner.js';
+import type { BrowserRunOptions, BrowserRunResult } from './types.js';
 
 interface RunBrowserSessionArgs {
   runOptions: RunOracleOptions;
@@ -19,12 +20,38 @@ interface RunBrowserSessionArgs {
   log: (message?: string) => void;
 }
 
+type ExecuteBrowserInput = Parameters<typeof runBrowserMode>[0] | Parameters<CoreBrowserSessionRunnerDeps['executeBrowser']>[0];
+
+export type BrowserSessionRunnerDeps = {
+  assemblePrompt?: typeof assembleBrowserPrompt;
+  executeBrowser?: (options: ExecuteBrowserInput) => Promise<BrowserRunResult>;
+  persistRuntimeHint?: (runtime: BrowserRuntimeMetadata) => Promise<void> | void;
+};
+
 export async function runBrowserSessionExecution(
   { runOptions, browserConfig, cwd, log }: RunBrowserSessionArgs,
   deps: BrowserSessionRunnerDeps = {},
 ): Promise<BrowserExecutionResult> {
-  const assemblePrompt = deps.assemblePrompt ?? assembleBrowserPrompt;
-  const executeBrowser = deps.executeBrowser ?? runBrowserMode;
+  const assemblePrompt = async (options: { model: string; verbose?: boolean; silent?: boolean; file?: string[]; heartbeatIntervalMs?: number }, context: { cwd: string }) =>
+    (deps.assemblePrompt ?? assembleBrowserPrompt)(options as RunOracleOptions, { cwd: context.cwd });
+  const executeBrowser = async (options: {
+    prompt: string;
+    attachments: Array<{ path: string; displayPath: string; sizeBytes?: number }>;
+    fallbackSubmission?: { prompt: string; attachments: Array<{ path: string; displayPath: string; sizeBytes?: number }> };
+    config: { timeoutMs?: number | null };
+    log: typeof runBrowserMode extends (args: infer A) => Promise<unknown> ? A extends { log?: infer L } ? L : never : never;
+    heartbeatIntervalMs?: number;
+    verbose?: boolean;
+    runtimeHintCb?: (hint: BrowserRuntimeMetadata) => void | Promise<void>;
+  }) => {
+    const config = options.config && options.config.timeoutMs == null
+      ? { ...options.config, timeoutMs: undefined }
+      : options.config;
+    return (deps.executeBrowser ?? runBrowserMode)({
+      ...options,
+      config,
+    } as Parameters<typeof runBrowserMode>[0]);
+  };
   const persistRuntimeHint = deps.persistRuntimeHint;
 
   return runBrowserSessionExecutionCore(

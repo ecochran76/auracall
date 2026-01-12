@@ -38,10 +38,10 @@ export function pickTarget(
   return targets.find((t) => t.type === 'page') ?? targets[0];
 }
 
-export function extractConversationIdFromUrl(url: string): string | undefined {
-  if (!url) return undefined;
+export function extractConversationIdFromUrl(url: string): string | null {
+  if (!url) return null;
   const match = url.match(/\/c\/([a-zA-Z0-9-]+)/);
-  return match?.[1];
+  return match?.[1] ?? null;
 }
 
 export function buildConversationUrl(
@@ -82,7 +82,7 @@ export async function withTimeout<T>(task: Promise<T>, ms: number, label: string
 
 export async function openConversationFromSidebar(
   Runtime: ChromeClient['Runtime'],
-  options: { conversationId?: string; preferProjects?: boolean; promptPreview?: string },
+  options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
   attempt = 0,
 ): Promise<boolean> {
   const response = await Runtime.evaluate({
@@ -200,7 +200,7 @@ export async function openConversationFromSidebar(
 
 export async function openConversationFromSidebarWithRetry(
   Runtime: ChromeClient['Runtime'],
-  options: { conversationId?: string; preferProjects?: boolean; promptPreview?: string },
+  options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
   timeoutMs: number,
 ): Promise<boolean> {
   const start = Date.now();

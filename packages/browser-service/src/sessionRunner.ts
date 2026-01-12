@@ -6,13 +6,13 @@ export interface BrowserPromptArtifacts {
   fallback?: {
     composerText: string;
     attachments: BrowserAttachment[];
-  };
+  } | null;
   bundled?: {
     originalCount: number;
     bundlePath: string;
-  };
+  } | null;
   estimatedInputTokens: number;
-  attachmentMode: 'inline' | 'upload';
+  attachmentMode: 'inline' | 'upload' | 'bundle';
 }
 
 export interface RunOptionsLike {
@@ -24,7 +24,7 @@ export interface RunOptionsLike {
 }
 
 export interface BrowserSessionConfigLike {
-  timeoutMs?: number | null;
+  timeoutMs?: number;
 }
 
 export interface BrowserExecutionResult<TRuntime extends BrowserRuntimeMetadata = BrowserRuntimeMetadata> {
@@ -58,7 +58,7 @@ export interface BrowserSessionRunnerDeps {
     tokensPart: string;
     detailParts: Array<string | null>;
   }) => { line1: string; line2?: string };
-  runtimeExtras?: (result: BrowserRunResult) => Partial<BrowserRuntimeMetadata>;
+  runtimeExtras?: (result: BrowserRunResult) => Partial<BrowserRuntimeMetadata> & Record<string, unknown>;
   color?: {
     dim?: (value: string) => string;
     bold?: (value: string) => string;

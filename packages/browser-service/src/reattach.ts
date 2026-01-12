@@ -21,7 +21,7 @@ export interface ReattachDeps {
   captureAssistantMarkdown?: (Runtime: ChromeClient['Runtime'], meta: unknown, logger: BrowserLogger) => Promise<string | null>;
   recoverSession?: (runtime: ReattachRuntime, config: BrowserSessionConfig | undefined) => Promise<ReattachResult>;
   promptPreview?: string;
-  helpers: ReattachHelperDeps;
+  helpers?: ReattachHelperDeps;
 }
 
 export interface ReattachResult {
@@ -34,17 +34,29 @@ export type ReattachRuntime = BrowserRuntimeMetadata & {
 };
 
 export type ReattachHelperDeps = {
-  pickTarget: (targets: ReattachTargetInfo[], runtime: ReattachRuntime) => ReattachTargetInfo | null;
-  extractConversationIdFromUrl: (url: string) => string | null;
+  pickTarget: (targets: ReattachTargetInfo[], runtime: ReattachRuntime) => ReattachTargetInfo | undefined;
+  extractConversationIdFromUrl: (url: string) => string | null | undefined;
   buildConversationUrl: (runtime: { tabUrl?: string; conversationId?: string }, baseUrl: string) => string | null;
   withTimeout: <T>(promise: Promise<T>, timeoutMs: number, message: string) => Promise<T>;
   openConversationFromSidebar: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }) => Promise<boolean>;
   openConversationFromSidebarWithRetry: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }, timeoutMs: number) => Promise<boolean>;
   waitForLocationChange: (Runtime: ChromeClient['Runtime'], timeoutMs: number) => Promise<void>;
   readConversationTurnIndex: (Runtime: ChromeClient['Runtime'], logger: BrowserLogger) => Promise<number | null>;
-  buildPromptEchoMatcher: (preview?: string) => RegExp | null;
-  recoverPromptEcho: (Runtime: ChromeClient['Runtime'], answer: { text: string; meta?: unknown }, matcher: RegExp | null, logger: BrowserLogger, minTurn?: number | null, timeoutMs?: number) => Promise<{ text: string; meta?: unknown }>;
-  alignPromptEchoMarkdown: (text: string, markdown: string, matcher: RegExp | null, logger: BrowserLogger) => { answerText: string; answerMarkdown: string };
+  buildPromptEchoMatcher: (preview?: string | null) => unknown;
+  recoverPromptEcho: (
+    Runtime: ChromeClient['Runtime'],
+    answer: { text: string; meta?: unknown },
+    matcher: unknown,
+    logger: BrowserLogger,
+    minTurn?: number | null,
+    timeoutMs?: number,
+  ) => Promise<{ text: string; meta?: unknown }>;
+  alignPromptEchoMarkdown: (
+    text: string,
+    markdown: string,
+    matcher: unknown,
+    logger: BrowserLogger,
+  ) => { answerText: string; answerMarkdown: string };
 };
 
 export interface ReattachRuntimeDeps {
@@ -85,7 +97,7 @@ export async function resumeBrowserSessionCore(
   const recoverSession =
     deps.recoverSession ??
     (async (runtimeMeta, configMeta) =>
-      resumeBrowserSessionViaNewChrome(runtimeMeta, configMeta, logger, deps, runtimeDeps));
+      resumeBrowserSessionViaNewChrome(runtimeMeta, configMeta, logger, deps, helpers, runtimeDeps));
 
   if (!runtime.chromePort) {
     logger('No running Chrome detected; reopening browser to locate the session.');
@@ -189,6 +201,7 @@ async function resumeBrowserSessionViaNewChrome(
   config: BrowserSessionConfig | undefined,
   logger: BrowserLogger,
   deps: ReattachDeps,
+  helpers: ReattachHelperDeps,
   runtimeDeps?: ReattachRuntimeDeps,
 ): Promise<ReattachResult> {
   if (!runtimeDeps) {
@@ -219,13 +232,19 @@ async function resumeBrowserSessionViaNewChrome(
 
   let appliedCookies = 0;
   if (!manualLogin && resolved.cookieSync) {
-    appliedCookies = await runtimeDeps.syncCookies(Network, resolved.url, resolved.chromeProfile, logger, {
+    appliedCookies = await runtimeDeps.syncCookies(
+      Network,
+      resolved.url ?? null,
+      resolved.chromeProfile ?? null,
+      logger,
+      {
       allowErrors: resolved.allowCookieErrors,
       filterNames: resolved.cookieNames ?? undefined,
       inlineCookies: resolved.inlineCookies ?? undefined,
       cookiePath: resolved.chromeCookiePath ?? undefined,
       waitMs: resolved.cookieSyncWaitMs ?? 0,
-    });
+      },
+    );
   }
 
   await runtimeDeps.navigateToChatGPT(Page, Runtime, resolved.url ?? 'https://chatgpt.com/', logger);
