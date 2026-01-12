@@ -46,7 +46,7 @@ If no config file exists, Oracle scaffolds a default `oracleProfile` using your 
           projectName: "Oracle",
           model: "gpt-5.2-pro",
           thinkingTime: "extended",
-          manualLogin: false,
+          interactiveLogin: false,
           manualLoginProfileDir: "/Users/me/.oracle/browser-profile",
         },
         grok: {
@@ -109,9 +109,9 @@ Within each file, later CLI flags still override config, and environment variabl
 - `ORACLE_NOTIFY*` env vars still layer on top of the config’s `notify` block.
 - `sessionRetentionHours` controls the default value for `--retain-hours`. When unset, `ORACLE_RETAIN_HOURS` (if present) becomes the fallback, and the CLI flag still wins over both.
 - `services.<service>.url` defines global service URL defaults; `oracleProfiles.<name>.services.<service>.url` can override them per profile.
-- `services.<service>.manualLogin` can set a global login mode default; `oracleProfiles.<name>.services.<service>.manualLogin` overrides it per profile (legacy `browser.manualLogin` still works).
-- `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for manual login.
-- Manual login will be renamed to `interactiveLogin` (or `loginMode`) in a future config update; legacy keys will keep working with deprecation warnings.
+- `services.<service>.interactiveLogin` can set a global login mode default; `oracleProfiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
+- `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
+- `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - Headless/headful settings belong to the browser layer; keep using `browser.headless` and `browser.hideWindow` until the rename lands.
 - `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `oracleProfiles.<name>.browser.thinkingTime` when set).
 - `oracleProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `oracleProfiles.<name>.cache.useDetectedIdentity` is set.

@@ -109,7 +109,7 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 
 ### Manual login mode (persistent profile, no cookie copy)
 
-Use `--browser-manual-login` when cookie decrypt is blocked (e.g., Windows app-bound cookies) or you prefer to sign in explicitly. You can also make it the default via `oracleProfiles.<name>.services.<service>.manualLogin` in `~/.oracle/config.json` (legacy `browser.manualLogin` still works). This will be renamed to `interactiveLogin`/`loginMode` in a future config revision.
+Use `--browser-manual-login` when cookie decrypt is blocked (e.g., Windows app-bound cookies) or you prefer to sign in explicitly. You can also make it the default via `oracleProfiles.<name>.services.<service>.interactiveLogin` in `~/.oracle/config.json` (legacy `manualLogin` still works).
 
 ```bash
 oracle --engine browser \

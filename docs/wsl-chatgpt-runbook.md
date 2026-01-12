@@ -28,13 +28,13 @@ sudo apt-get install -y google-chrome-stable
     chromePath: "/usr/bin/google-chrome",
     chromeCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
     chromeProfile: "Default",
-    manualLogin: true,
-    manualLoginProfileDir: "/home/you/.oracle/browser-profile" # legacy naming pending profile refactor
+    interactiveLogin: true,
+    manualLoginProfileDir: "/home/you/.oracle/browser-profile" # legacy naming still supported
   }
 }
 ```
 
-Note: `manualLogin`/`manualLoginProfileDir` will be renamed to `interactiveLogin`/`loginMode` in a future config update; legacy keys will continue to work.
+Note: `interactiveLogin` is preferred; legacy `manualLogin` keys continue to work.
 
 3) First-time login (keep the window open so you can sign in):
 
