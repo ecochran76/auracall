@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { parseDuration } from '../browser/utils.js';
+import { ChatgptFeatureSchema, GeminiFeatureSchema, GrokFeatureSchema } from '../browser/llmService/providers/schema.js';
 
 // Helper for duration parsing (string "1h" or number ms)
 // biome-ignore lint/style/useNamingConvention: schema helper naming is stable.
@@ -59,6 +60,22 @@ export const ServiceConfigSchema = z.object({
   interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+  features: z.record(z.string(), z.unknown()).optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const ChatgptServiceConfigSchema = ServiceConfigSchema.extend({
+  features: ChatgptFeatureSchema.optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const GrokServiceConfigSchema = ServiceConfigSchema.extend({
+  features: GrokFeatureSchema.optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const GeminiServiceConfigSchema = ServiceConfigSchema.extend({
+  features: GeminiFeatureSchema.optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -220,9 +237,9 @@ export const OracleProfileSchema = z.object({
   llm: OracleProfileLlmSchema.optional(),
   services: z
     .object({
-      chatgpt: ServiceConfigSchema.optional(),
-      gemini: ServiceConfigSchema.optional(),
-      grok: ServiceConfigSchema.optional(),
+      chatgpt: ChatgptServiceConfigSchema.optional(),
+      gemini: GeminiServiceConfigSchema.optional(),
+      grok: GrokServiceConfigSchema.optional(),
     })
     .optional(),
   cache: OracleProfileCacheSchema.optional(),
@@ -230,9 +247,9 @@ export const OracleProfileSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleServicesSchema = z.object({
-  chatgpt: ServiceConfigSchema.optional(),
-  gemini: ServiceConfigSchema.optional(),
-  grok: ServiceConfigSchema.optional(),
+  chatgpt: ChatgptServiceConfigSchema.optional(),
+  gemini: GeminiServiceConfigSchema.optional(),
+  grok: GrokServiceConfigSchema.optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.

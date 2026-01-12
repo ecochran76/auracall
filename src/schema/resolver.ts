@@ -1,4 +1,4 @@
-import { ConfigSchema, type OracleConfig } from '../config/schema.js';
+import { ComposedConfigSchema, type OracleConfig } from '../config/schema.js';
 import { CLI_MAPPING } from './cli-map.js';
 import { loadUserConfig } from '../config.js';
 import type { OptionValues } from 'commander';
@@ -122,7 +122,7 @@ export async function resolveConfig(
   normalized.apiBaseUrl = baseUrl;
 
   // 5. Validate and Default
-  return ConfigSchema.parse(normalized);
+  return ComposedConfigSchema.parse(normalized);
 }
 
 function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {
