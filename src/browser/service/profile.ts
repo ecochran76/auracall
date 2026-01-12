@@ -1,7 +1,1 @@
-export {
-  discoverDefaultBrowserProfile,
-  resolveCookiePath,
-  resolveProfileDirectoryName,
-  type DiscoveredBrowserProfile,
-  type WslChromePreference,
-} from './profileDiscovery.js';
+export * from '../../../packages/browser-service/src/service/profile.js';

@@ -7,3 +7,7 @@ export * from './profileState.js';
 export * from './reattachHelpers.js';
 export * from './types.js';
 export * from './utils.js';
+export * from './service/profile.js';
+export * from './service/profileDiscovery.js';
+export * from './service/types.js';
+export * from './service/ui.js';

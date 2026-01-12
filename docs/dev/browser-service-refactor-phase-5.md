@@ -32,6 +32,7 @@
   Progress notes:
   - Core utilities (constants/utils/types/portSelection/processCheck/profileState/cookies/domDebug/reattachHelpers)
     moved into `packages/browser-service/` with oracle-side re-export stubs for now.
+  - Generic service helpers (profile discovery + UI helpers) moved into the package; oracle keeps thin re-exports.
 
   3) Extraction plan + package layout
 
