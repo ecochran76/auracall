@@ -8,8 +8,24 @@ If no config file exists, Oracle scaffolds a default `oracleProfile` using your 
 
 ```json5
 {
-  // Select which oracleProfile to use by default
+  version: 2,
+
+  // Select which profile to use by default
   oracleProfile: "default",
+
+  globals: {},
+
+  // Browser defaults shared by profiles (override per profile)
+  browserDefaults: {
+    chromePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    profilePath: "/Users/me/Library/Application Support/Google/Chrome",
+    profileName: "Default",
+    cookiePath: "/Users/me/Library/Application Support/Google/Chrome/Default/Network/Cookies",
+  },
+
+  llmDefaults: {
+    model: "gpt-5.2-pro",
+  },
 
   // Optional global service URL defaults (override per profile)
   services: {
@@ -23,7 +39,7 @@ If no config file exists, Oracle scaffolds a default `oracleProfile` using your 
     browserPortRange: [45000, 45100],
   },
 
-  oracleProfiles: {
+  profiles: {
     default: {
       // Profile-scoped defaults
       engine: "browser",     // or "api"
@@ -32,10 +48,6 @@ If no config file exists, Oracle scaffolds a default `oracleProfile` using your 
       keepBrowser: false,
 
       browser: {
-        chromePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
-        profilePath: "/Users/me/Library/Application Support/Google/Chrome",
-        profileName: "Default",
-        cookiePath: "/Users/me/Library/Application Support/Google/Chrome/Default/Network/Cookies",
         headless: false,
         hideWindow: false,
       },
@@ -108,16 +120,16 @@ Within each file, later CLI flags still override config, and environment variabl
 - `OPENAI_API_KEY` only influences engine selection when neither the CLI nor `config.json` specify an engine (API when present, otherwise browser).
 - `ORACLE_NOTIFY*` env vars still layer on top of the config’s `notify` block.
 - `sessionRetentionHours` controls the default value for `--retain-hours`. When unset, `ORACLE_RETAIN_HOURS` (if present) becomes the fallback, and the CLI flag still wins over both.
-- `services.<service>.url` defines global service URL defaults; `oracleProfiles.<name>.services.<service>.url` can override them per profile.
-- `services.<service>.interactiveLogin` can set a global login mode default; `oracleProfiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
+- `services.<service>.url` defines global service URL defaults; `profiles.<name>.services.<service>.url` can override them per profile.
+- `services.<service>.interactiveLogin` can set a global login mode default; `profiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
 - `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - Headless/headful settings belong to the browser layer; keep using `browser.headless` and `browser.hideWindow` until the rename lands.
-- `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `oracleProfiles.<name>.browser.thinkingTime` when set).
-- `oracleProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `oracleProfiles.<name>.cache.useDetectedIdentity` is set.
-- `oracleProfiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Oracle 2`).
-- `oracleProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
-- `oracleProfiles.<name>.cache.*` sets defaults for `oracle cache --refresh` (including `refreshHours` and `rootDir`).
+- `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `profiles.<name>.browser.thinkingTime` when set).
+- `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
+- `profiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Oracle 2`).
+- `profiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
+- `profiles.<name>.cache.*` sets defaults for `oracle cache --refresh` (including `refreshHours` and `rootDir`).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).
 - `browser.blockingProfileAction` controls how Oracle handles a running Chrome profile without DevTools (`fail`, `restart`, `restart-oracle`). Default is `restart-oracle` (only restarts Oracle-managed profiles).
