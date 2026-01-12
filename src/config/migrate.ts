@@ -25,8 +25,15 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
   const browserDefaults = isRecord(normalized.browserDefaults) ? normalized.browserDefaults : null;
 
   if (browserDefaults) {
+    const browserDefaultsRecord = browserDefaults as Record<string, unknown>;
+    if (
+      browserDefaultsRecord.profileConflictAction &&
+      browserDefaultsRecord.blockingProfileAction === undefined
+    ) {
+      browserDefaultsRecord.blockingProfileAction = browserDefaultsRecord.profileConflictAction;
+    }
     const existingBrowser = isRecord(normalized.browser) ? normalized.browser : {};
-    normalized.browser = mergeRecords(browserDefaults, existingBrowser);
+    normalized.browser = mergeRecords(browserDefaultsRecord, existingBrowser);
   }
 
   const llmDefaults = isRecord(normalized.llmDefaults) ? normalized.llmDefaults : null;
@@ -74,7 +81,14 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
 
       if (isRecord(profileValue.browser)) {
         const legacyBrowser = isRecord(legacyProfile.browser) ? legacyProfile.browser : {};
-        legacyProfile.browser = mergeRecords(legacyBrowser, profileValue.browser);
+        const profileBrowser = profileValue.browser as Record<string, unknown>;
+        if (
+          profileBrowser.profileConflictAction &&
+          profileBrowser.blockingProfileAction === undefined
+        ) {
+          profileBrowser.blockingProfileAction = profileBrowser.profileConflictAction;
+        }
+        legacyProfile.browser = mergeRecords(legacyBrowser, profileBrowser);
       }
 
       if (isRecord(profileValue.services)) {

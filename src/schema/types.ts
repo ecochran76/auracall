@@ -61,6 +61,14 @@ export const ServiceConfigSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const LlmDefaultsSchema = z.object({
+  model: z.string().optional(),
+  modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
+  defaultProjectName: z.string().optional(),
+  defaultProjectId: z.string().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserCacheConfigSchema = z.object({
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
@@ -110,6 +118,7 @@ export const BrowserConfigSchema = z.object({
   chromePath: z.string().optional(),
   chromeCookiePath: z.string().optional(),
   display: z.string().optional(),
+  profileConflictAction: z.enum(['fail', 'terminate-existing', 'attach-existing']).optional(),
   blockingProfileAction: z.enum(['fail', 'restart', 'restart-oracle']).optional(),
   headless: z.boolean().optional(),
   hideWindow: z.boolean().optional(),
@@ -155,6 +164,7 @@ export const OracleProfileBrowserSchema = z.object({
   profileName: z.string().optional(),
   cookiePath: z.string().optional(),
   display: z.string().optional(),
+  profileConflictAction: z.enum(['fail', 'terminate-existing', 'attach-existing']).optional(),
   blockingProfileAction: z.enum(['fail', 'restart', 'restart-oracle']).optional(),
   manualLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
@@ -190,6 +200,9 @@ export const OracleProfileCacheSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const OracleProfileLlmSchema = LlmDefaultsSchema;
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileSchema = z.object({
   engine: z.enum(['api', 'browser']).optional(),
   search: z.union([z.enum(['on', 'off']), z.boolean()])
@@ -201,6 +214,7 @@ export const OracleProfileSchema = z.object({
   defaultService: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
   keepBrowser: z.boolean().optional(),
   browser: OracleProfileBrowserSchema.optional(),
+  llm: OracleProfileLlmSchema.optional(),
   services: z
     .object({
       chatgpt: ServiceConfigSchema.optional(),
@@ -225,6 +239,16 @@ export const OracleDevConfigSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ConfigSchema = z.object({
+  version: z.number().optional(),
+  globals: z
+    .object({
+      cacheRoot: z.string().optional(),
+      logLevel: z.string().optional(),
+    })
+    .optional(),
+  browserDefaults: OracleProfileBrowserSchema.optional(),
+  llmDefaults: LlmDefaultsSchema.optional(),
+  profiles: z.record(z.string(), OracleProfileSchema).optional(),
   // Core
   engine: z.enum(['api', 'browser']).optional(),
   model: z.string().default('gpt-5.2-pro'),
