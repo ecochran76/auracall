@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { once } from 'node:events';
+import readline from 'node:readline/promises';
 import { Command, Option } from 'commander';
 import type { OptionValues } from 'commander';
 // Allow `npx @steipete/oracle oracle-mcp` to resolve the MCP server even though npx runs the default binary.
@@ -55,7 +56,7 @@ import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browser
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
-import type { BrowserProviderListOptions } from '../src/browser/providers/types.js';
+import type { BrowserProviderListOptions, ProviderUserIdentity } from '../src/browser/providers/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -76,7 +77,7 @@ import {
   deriveNotificationSettingsFromMetadata,
   type NotificationSettings,
 } from '../src/cli/notifier.js';
-import { loadUserConfig, type UserConfig } from '../src/config.js';
+import { loadUserConfig, scaffoldDefaultConfigFile, type UserConfig } from '../src/config.js';
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
@@ -140,8 +141,11 @@ interface CliOptions extends OptionValues {
   grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-oracle';
   projectId?: string;
   projectName?: string;
+  noProject?: boolean;
+  project?: boolean;
   conversationId?: string;
   conversationName?: string;
   browserTimeout?: string;
@@ -313,6 +317,7 @@ program
   .addOption(
     new Option('--mode <mode>', 'Alias for --engine (api | browser).').choices(['api', 'browser']).hideHelp(),
   )
+  .option('--oracle-profile <name>', 'Select which oracleProfile to use for this run.')
   .option('--files-report', 'Show token usage per attached file (also prints automatically when files exceed the token budget).', false)
   .option('-v, --verbose', 'Enable verbose logging for all operations.', false)
   .addOption(
@@ -388,11 +393,18 @@ program
   .addOption(
     new Option('--browser-cookie-path <path>', 'Explicit Chrome/Chromium cookie DB path for session reuse.'),
   )
+  .addOption(
+    new Option(
+      '--browser-blocking-profile <mode>',
+      'Handle a blocking Chrome profile (fail, restart, restart-oracle).',
+    ).choices(['fail', 'restart', 'restart-oracle']),
+  )
   .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
   .addOption(new Option('--project-id <id>', 'Override the provider project scope for browser runs.').hideHelp())
   .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
   .addOption(new Option('--project-name <name>', 'Resolve browser project by cached name.'))
+  .addOption(new Option('--no-project', 'Ignore configured project defaults for this run.'))
   .addOption(new Option('--conversation-name <name>', 'Resolve browser conversation by cached title.'))
   .addOption(
     new Option(
@@ -552,7 +564,8 @@ program
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .option('--refresh', 'Force refresh of cached project data.')
   .action(async (commandOptions) => {
-    const { config: userConfig } = await loadUserConfig();
+    const parentOptions = program.opts?.() ?? {};
+    const userConfig = await resolveConfig({ ...parentOptions, ...commandOptions }, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
@@ -560,7 +573,20 @@ program
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
     const provider = client.provider;
     const listOptions = await client.buildListOptions();
-    const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
+    const cacheContext = {
+      provider: target,
+      userConfig,
+      listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
+      ...resolveCacheSettings(userConfig),
+    };
+    let cacheIdentity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null } | undefined;
+    const resolveCacheContext = async () => {
+      if (!cacheIdentity) {
+        cacheIdentity = await resolveCacheIdentity(client, userConfig, listOptions);
+        assertCacheIdentity(cacheIdentity, target);
+      }
+      return { ...cacheContext, ...cacheIdentity };
+    };
     if (!provider.listProjects) {
       const fallback = deriveProjectsFromConfig({
         provider: target,
@@ -572,7 +598,7 @@ program
         return;
       }
       try {
-        await writeProjectCache(cacheContext, fallback);
+        await writeProjectCache(await resolveCacheContext(), fallback);
       } catch (error) {
         console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -588,7 +614,7 @@ program
       });
       if (fallback.length > 0) {
         try {
-          await writeProjectCache(cacheContext, fallback);
+          await writeProjectCache(await resolveCacheContext(), fallback);
         } catch (error) {
           console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -598,7 +624,7 @@ program
     }
     if (Array.isArray(projects)) {
       try {
-        await writeProjectCache(cacheContext, projects);
+        await writeProjectCache(await resolveCacheContext(), projects);
       } catch (error) {
         console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -624,7 +650,8 @@ program
   .option('--refresh', 'Force refresh of cached project/conversation data.')
   .action(async (commandOptions, command) => {
     const parentOptions = command.parent?.opts?.() ?? {};
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
@@ -675,7 +702,20 @@ program
     if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
       throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
     }
-    const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
+    const cacheContext = {
+      provider: target,
+      userConfig,
+      listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
+      ...resolveCacheSettings(userConfig),
+    };
+    let cacheIdentity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null } | undefined;
+    const resolveCacheContext = async () => {
+      if (!cacheIdentity) {
+        cacheIdentity = await resolveCacheIdentity(client, userConfig, listOptions);
+        assertCacheIdentity(cacheIdentity, target);
+      }
+      return { ...cacheContext, ...cacheIdentity };
+    };
     const projectName =
       typeof commandOptions.projectName === 'string'
         ? commandOptions.projectName.trim()
@@ -684,7 +724,12 @@ program
           : '';
     const forceRefresh = refreshFlag;
     if (!projectId && projectName) {
-      projectId = await resolveProjectIdByName({ projectName, cacheContext, provider, forceRefresh });
+      projectId = await resolveProjectIdByName({
+        projectName,
+        cacheContext: await resolveCacheContext(),
+        provider,
+        forceRefresh,
+      });
     }
     const conversationName =
       typeof commandOptions.conversationName === 'string'
@@ -695,7 +740,7 @@ program
     if (conversationName) {
       const conversationMatch = await resolveConversationByName({
         conversationName,
-        cacheContext,
+        cacheContext: await resolveCacheContext(),
         provider,
         projectId,
         forceRefresh,
@@ -715,7 +760,7 @@ program
         return;
       }
       try {
-        await writeConversationCache(cacheContext, fallback);
+        await writeConversationCache(await resolveCacheContext(), fallback);
       } catch (error) {
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -734,7 +779,7 @@ program
       });
       if (fallback.length > 0) {
         try {
-          await writeConversationCache(cacheContext, fallback);
+          await writeConversationCache(await resolveCacheContext(), fallback);
         } catch (error) {
           console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
         }
@@ -745,7 +790,7 @@ program
     }
     if (Array.isArray(resolved)) {
       try {
-        await writeConversationCache(cacheContext, resolved);
+        await writeConversationCache(await resolveCacheContext(), resolved);
       } catch (error) {
         console.warn(`Failed to write conversation cache: ${error instanceof Error ? error.message : String(error)}`);
       }
@@ -764,7 +809,8 @@ program
   .option('--target <chatgpt|grok>', 'Choose which provider to use.')
   .option('--project-id <id>', 'Project ID (if conversation is in a project).')
   .action(async (id, name, commandOptions) => {
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
     const provider = client.provider;
@@ -803,7 +849,8 @@ program
     if (filter && !providers.has(filter)) {
       throw new Error(`Invalid provider "${filter}". Use "chatgpt" or "grok".`);
     }
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const cacheDefaults = userConfig.browser?.cache;
     const includeHistory =
       (command.getOptionValueSource?.('includeHistory') === 'cli')
@@ -845,10 +892,13 @@ program
       }
       await refreshProviderCache(target, userConfig, listOptions);
     }
-    const cacheRoot = path.join(getOracleHomeDir(), 'cache', 'providers');
+    const cacheSettings = resolveCacheSettings(userConfig);
+    const cacheRoot = cacheSettings.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+    const cacheTtlMs = cacheSettings.ttlMs ?? PROVIDER_CACHE_TTL_MS;
     const output: Array<{
       provider: string;
-      profileKey: string;
+      identityKey: string;
+      identityHint?: string | null;
       kind: 'projects' | 'conversations';
       fetchedAt: string | null;
       ageHours: number | null;
@@ -870,27 +920,43 @@ program
       if (!providerEntry.isDirectory()) continue;
       if (filter && providerEntry.name !== filter) continue;
       const providerDir = path.join(cacheRoot, providerEntry.name);
-      const profileEntries = await fs.readdir(providerDir, { withFileTypes: true });
-      for (const profileEntry of profileEntries) {
-        if (!profileEntry.isDirectory()) continue;
-        const profileDir = path.join(providerDir, profileEntry.name);
-        const files = await fs.readdir(profileDir, { withFileTypes: true });
+      let identityEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
+      try {
+        identityEntries = await fs.readdir(providerDir, { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const identityEntry of identityEntries) {
+        if (!identityEntry.isDirectory()) continue;
+        const identityDir = path.join(providerDir, identityEntry.name);
+        const files = await fs.readdir(identityDir, { withFileTypes: true });
         for (const file of files) {
           if (!file.isFile()) continue;
           if (file.name !== 'projects.json' && file.name !== 'conversations.json') continue;
           const kind = file.name === 'projects.json' ? 'projects' : 'conversations';
-          const fullPath = path.join(profileDir, file.name);
+          const fullPath = path.join(identityDir, file.name);
           try {
             const raw = await fs.readFile(fullPath, 'utf8');
-            const parsed = JSON.parse(raw) as { fetchedAt?: string; sourceUrl?: string | null };
+            const parsed = JSON.parse(raw) as {
+              fetchedAt?: string;
+              sourceUrl?: string | null;
+              identityKey?: string | null;
+              userIdentity?: { id?: string; handle?: string; email?: string; name?: string };
+            };
             const fetchedAt = parsed?.fetchedAt ?? null;
             const fetchedMs = fetchedAt ? Date.parse(fetchedAt) : NaN;
             const ageMs = Number.isFinite(fetchedMs) ? Date.now() - fetchedMs : NaN;
             const ageHours = Number.isFinite(ageMs) ? Math.round((ageMs / 3600000) * 10) / 10 : null;
-            const stale = !Number.isFinite(fetchedMs) || ageMs > PROVIDER_CACHE_TTL_MS;
+            const stale = !Number.isFinite(fetchedMs) || ageMs > cacheTtlMs;
+            const identityHint =
+              parsed?.userIdentity?.email ||
+              parsed?.userIdentity?.handle ||
+              parsed?.userIdentity?.name ||
+              null;
             output.push({
               provider: providerEntry.name,
-              profileKey: profileEntry.name,
+              identityKey: parsed?.identityKey ?? identityEntry.name,
+              identityHint,
               kind,
               fetchedAt,
               ageHours,
@@ -912,7 +978,8 @@ program
   .option('--target <chatgpt|grok>', 'Choose which provider to inspect (chatgpt or grok).')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
   .action(async (commandOptions) => {
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
@@ -960,18 +1027,183 @@ async function refreshProviderCache(
 ): Promise<void> {
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target: providerId });
   const provider = client.provider;
-  const cacheContext = { provider: providerId, userConfig, listOptions };
+  const cacheContext = { provider: providerId, userConfig, listOptions, ...resolveCacheSettings(userConfig) };
+  const identity = await resolveCacheIdentity(client, userConfig, listOptions);
+  assertCacheIdentity(identity, providerId);
+  const cacheContextWithIdentity = { ...cacheContext, ...identity };
   if (provider.listProjects) {
     const projects = await provider.listProjects(listOptions);
     if (Array.isArray(projects)) {
-      await writeProjectCache(cacheContext, projects);
+      await writeProjectCache(cacheContextWithIdentity, projects);
     }
   }
   if (provider.listConversations) {
     const conversations = await provider.listConversations(undefined, listOptions);
     if (Array.isArray(conversations)) {
-      await writeConversationCache(cacheContext, conversations);
+      await writeConversationCache(cacheContextWithIdentity, conversations);
     }
+  }
+}
+
+async function resolveCacheIdentity(
+  client: BrowserAutomationClient,
+  userConfig: UserConfig,
+  listOptions: BrowserProviderListOptions,
+  options: { prompt?: boolean } = {},
+): Promise<{ userIdentity: ProviderUserIdentity | null; identityKey: string | null }> {
+  const profileIdentity = resolveProfileServiceIdentity(userConfig, client.provider.id);
+  const normalizeIdentityKey = (value: string | null | undefined): string | null => {
+    if (!value) return null;
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed.toLowerCase() : null;
+  };
+  let userIdentity: ProviderUserIdentity | null = profileIdentity;
+  const cacheConfig = userConfig.browser?.cache;
+  const useDetectedIdentity = Boolean(cacheConfig?.useDetectedIdentity);
+  if (!userIdentity && useDetectedIdentity) {
+    try {
+      userIdentity = await client.getUserIdentity(listOptions);
+    } catch {
+      userIdentity = null;
+    }
+  }
+
+  const identityKeyHint =
+    typeof cacheConfig?.identityKey === 'string' && cacheConfig.identityKey.trim().length > 0
+      ? normalizeIdentityKey(cacheConfig.identityKey)
+      : null;
+  const identityHint = cacheConfig?.identity ?? null;
+
+  let identityKey: string | null = identityKeyHint;
+  if (!identityKey && profileIdentity) {
+    identityKey =
+      normalizeIdentityKey(profileIdentity.email) ||
+      normalizeIdentityKey(profileIdentity.handle) ||
+      normalizeIdentityKey(profileIdentity.name) ||
+      null;
+  }
+  if (!identityKey && identityHint) {
+    identityKey =
+      normalizeIdentityKey(identityHint.email) ||
+      normalizeIdentityKey(identityHint.handle) ||
+      normalizeIdentityKey(identityHint.name) ||
+      null;
+    if (identityKey) {
+      userIdentity = userIdentity ?? {
+        name: identityHint.name,
+        handle: identityHint.handle,
+        email: identityHint.email,
+        source: 'config',
+      };
+    }
+  }
+
+  if (!identityKey && !userIdentity && options.prompt !== false) {
+    const prompted = await promptForCacheIdentity(client.provider.id);
+    if (prompted) {
+      userIdentity = prompted;
+      identityKey =
+        normalizeIdentityKey(prompted.email) ||
+        normalizeIdentityKey(prompted.handle) ||
+        normalizeIdentityKey(prompted.name) ||
+        null;
+    }
+  }
+
+  if (!identityKey && userIdentity) {
+    identityKey =
+      normalizeIdentityKey(userIdentity.email) ||
+      normalizeIdentityKey(userIdentity.handle) ||
+      normalizeIdentityKey(userIdentity.name) ||
+      null;
+  }
+
+  return { userIdentity, identityKey };
+}
+
+function resolveProfileServiceIdentity(
+  userConfig: UserConfig,
+  provider: string,
+): ProviderUserIdentity | null {
+  const profileName = resolveActiveProfileName(userConfig);
+  const service = provider as 'chatgpt' | 'grok' | 'gemini';
+  const globalIdentity = userConfig.services?.[service]?.identity;
+  if (!profileName) {
+    if (!globalIdentity) return null;
+    return {
+      name: globalIdentity.name,
+      handle: globalIdentity.handle,
+      email: globalIdentity.email,
+      source: 'config',
+    };
+  }
+  const profile = userConfig.oracleProfiles?.[profileName];
+  const profileIdentity = profile?.services?.[service]?.identity;
+  const identity = profileIdentity ?? globalIdentity;
+  if (!identity) return null;
+  return {
+    name: identity.name,
+    handle: identity.handle,
+    email: identity.email,
+    source: profileIdentity ? 'profile' : 'config',
+  };
+}
+
+function resolveActiveProfileName(userConfig: UserConfig): string | null {
+  const profiles = userConfig.oracleProfiles;
+  if (!profiles) return null;
+  const explicit = typeof userConfig.oracleProfile === 'string' ? userConfig.oracleProfile.trim() : '';
+  if (explicit && profiles[explicit]) return explicit;
+  if (profiles.default) return 'default';
+  const keys = Object.keys(profiles);
+  return keys.length ? keys[0] : null;
+}
+
+function resolveCacheSettings(userConfig: UserConfig): { cacheRoot?: string | null; ttlMs?: number | null } {
+  const cacheConfig = userConfig.browser?.cache;
+  const refreshHours = cacheConfig?.refreshHours;
+  const ttlMs =
+    typeof refreshHours === 'number' && Number.isFinite(refreshHours) && refreshHours > 0
+      ? refreshHours * 60 * 60 * 1000
+      : null;
+  return {
+    cacheRoot: cacheConfig?.rootDir ?? null,
+    ttlMs,
+  };
+}
+
+async function promptForCacheIdentity(provider: string): Promise<ProviderUserIdentity | null> {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    return null;
+  }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    const answer = await rl.question(
+      `Cache identity for ${provider} (username/email, leave blank to skip): `,
+    );
+    const trimmed = answer.trim();
+    if (!trimmed) return null;
+    if (trimmed.startsWith('@')) {
+      return { handle: trimmed, source: 'prompt' };
+    }
+    if (!trimmed.includes(' ') && trimmed.includes('@')) {
+      return { email: trimmed, source: 'prompt' };
+    }
+    return { name: trimmed, source: 'prompt' };
+  } finally {
+    rl.close();
+  }
+}
+
+function assertCacheIdentity(
+  identity: { userIdentity: ProviderUserIdentity | null; identityKey: string | null },
+  provider: string,
+): asserts identity is { userIdentity: ProviderUserIdentity | null; identityKey: string } {
+  if (!identity.identityKey) {
+    throw new Error(
+      `Cache identity for ${provider} is required. ` +
+        'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Oracle can detect it.',
+    );
   }
 }
 
@@ -993,8 +1225,15 @@ function filterConversationsByQuery(conversations: unknown, rawFilter: unknown):
 }
 
 async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConfig): Promise<void> {
-  const projectName = typeof options.projectName === 'string' ? options.projectName.trim() : '';
+  const disableProject = options.noProject === true || options.project === false;
+  const projectName = disableProject
+    ? ''
+    : (typeof options.projectName === 'string' ? options.projectName.trim() : '');
   const conversationName = typeof options.conversationName === 'string' ? options.conversationName.trim() : '';
+  const projectNameFromConfig =
+    (options as { _projectNameSource?: string })._projectNameSource === 'config';
+  const conversationNameFromConfig =
+    (options as { _conversationNameSource?: string })._conversationNameSource === 'config';
   
   if (options.verbose) {
     console.log(chalk.dim(`[hints] projectName=${projectName} conversationName=${conversationName}`));
@@ -1017,38 +1256,96 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: UserConf
       ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
       : options.chatgptUrl ?? options.browserUrl ?? userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null;
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-  const listOptions = await client.buildListOptions({
-    configuredUrl,
-    includeHistory: true,
-    historyLimit: 200,
-  });
-  const cacheContext = { provider: target, userConfig, listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null } };
+  const listOptions = await client.buildListOptions(
+    {
+      configuredUrl,
+      includeHistory: true,
+      historyLimit: 200,
+    },
+    {
+      ensurePort: Boolean(projectName || conversationName),
+    },
+  );
+  const identity = await resolveCacheIdentity(client, userConfig, listOptions);
+  if (!identity.identityKey) {
+    console.warn(
+      chalk.yellow(`Skipping cache-based name resolution: missing cache identity for ${target}.`),
+    );
+    return;
+  }
+  const cacheContext = {
+    provider: target,
+    userConfig,
+    listOptions: { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null },
+    ...identity,
+    ...resolveCacheSettings(userConfig),
+  };
   const provider = client.provider;
 
+  if (!options.projectId && projectNameFromConfig && projectName) {
+    try {
+      const projects = await client.listProjects(listOptions);
+      if (Array.isArray(projects)) {
+        await writeProjectCache(cacheContext, projects);
+      }
+    } catch (error) {
+      console.warn(
+        chalk.yellow(
+          `Failed to refresh projects before resolving "${projectName}": ${error instanceof Error ? error.message : String(error)}`,
+        ),
+      );
+    }
+  }
+
   if (!options.projectId && projectName) {
-    options.projectId = await resolveProjectIdByName({
-      projectName,
-      cacheContext,
-      provider,
-      forceRefresh: false,
-      allowAutoRefresh: !options.dryRun,
-    });
-    if (options.projectId) {
-      console.log(chalk.dim(`Resolved project "${projectName}" to ${options.projectId}`));
+    try {
+      options.projectId = await resolveProjectIdByName({
+        projectName,
+        cacheContext,
+        provider,
+        listProjects: client.listProjects.bind(client),
+        forceRefresh: projectNameFromConfig,
+        allowAutoRefresh: !options.dryRun,
+        allowFallback: projectNameFromConfig,
+      });
+      if (options.projectId) {
+        console.log(chalk.dim(`Resolved project "${projectName}" to ${options.projectId}`));
+      }
+    } catch (error) {
+      if (!projectNameFromConfig) {
+        throw error;
+      }
+      console.warn(
+        chalk.yellow(
+          `Skipping default project "${projectName}" (not in cache). Run "oracle projects" to refresh.`,
+        ),
+      );
     }
   }
   if (!options.conversationId && conversationName) {
-    const match = await resolveConversationByName({
-      conversationName,
-      cacheContext,
-      provider,
-      projectId: options.projectId ?? undefined,
-      forceRefresh: false,
-      allowAutoRefresh: !options.dryRun,
-    });
-    if (match) {
-      console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
-      options.conversationId = match.id;
+    try {
+      const match = await resolveConversationByName({
+        conversationName,
+        cacheContext,
+        provider,
+        listConversations: client.listConversations.bind(client),
+        projectId: options.projectId ?? undefined,
+        forceRefresh: conversationNameFromConfig,
+        allowAutoRefresh: !options.dryRun,
+      });
+      if (match) {
+        console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
+        options.conversationId = match.id;
+      }
+    } catch (error) {
+      if (!conversationNameFromConfig) {
+        throw error;
+      }
+      console.warn(
+        chalk.yellow(
+          `Skipping default conversation "${conversationName}" (not in cache). Run "oracle conversations" to refresh.`,
+        ),
+      );
     }
   }
 }
@@ -1079,7 +1376,15 @@ async function buildBrowserContext({
   const conversationName = options.conversationName ? options.conversationName.trim() : null;
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
   const listOptions = await client.buildListOptions({ configuredUrl });
-  const cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions });
+  let cacheKey: string | null = null;
+  try {
+    const identity = await resolveCacheIdentity(client, userConfig, listOptions, { prompt: false });
+    if (identity.identityKey) {
+      cacheKey = resolveProviderCacheKey({ provider: target, userConfig, listOptions, ...identity });
+    }
+  } catch {
+    cacheKey = null;
+  }
   return {
     provider: target,
     projectId: browserConfig.projectId ?? null,
@@ -1095,45 +1400,76 @@ async function resolveProjectIdByName({
   projectName,
   cacheContext,
   provider,
+  listProjects,
   forceRefresh,
   allowAutoRefresh = true,
+  allowFallback = false,
 }: {
   projectName: string;
   cacheContext: {
     provider: 'chatgpt' | 'grok';
     userConfig: UserConfig;
     listOptions: BrowserProviderListOptions;
+    userIdentity?: ProviderUserIdentity | null;
+    identityKey?: string | null;
+    cacheRoot?: string | null;
+    ttlMs?: number | null;
   };
   provider: BrowserProvider;
+  listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
   forceRefresh: boolean;
   allowAutoRefresh?: boolean;
+  allowFallback?: boolean;
 }): Promise<string> {
   let cached = await readProjectCache(cacheContext);
-  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && provider.listProjects) {
-    const port = cacheContext.listOptions.port;
-    if (port && await isPortOpen('127.0.0.1', port)) {
-      try {
-        const refreshed = await provider.listProjects(cacheContext.listOptions);
-        if (Array.isArray(refreshed)) {
-          await writeProjectCache(cacheContext, refreshed);
-          cached = { items: refreshed, fetchedAt: Date.now(), stale: false };
-        }
-      } catch (error) {
-        console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
+  let didRefresh = false;
+  const refreshProjects =
+    listProjects ??
+    (provider.listProjects
+      ? (options?: BrowserProviderListOptions) => provider.listProjects?.(options)
+      : undefined);
+  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && refreshProjects) {
+    try {
+      const refreshedItems = await refreshProjects(cacheContext.listOptions);
+      if (Array.isArray(refreshedItems)) {
+        await writeProjectCache(cacheContext, refreshedItems);
+        cached = { items: refreshedItems, fetchedAt: Date.now(), stale: false };
+        didRefresh = true;
       }
-    } else if (forceRefresh) {
-      console.warn(`Cannot refresh projects: Chrome DevTools port ${port ?? '(unknown)'} is not open.`);
+    } catch (error) {
+      console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } else if (forceRefresh && !provider.listProjects) {
+  } else if (forceRefresh && !refreshProjects) {
     console.warn('Project refresh requested, but this provider does not support project listing.');
   }
   const { match, candidates } = matchProjectByName(cached.items, projectName);
   if (match) {
     return match.id;
   }
+  if (!didRefresh && allowAutoRefresh && refreshProjects) {
+    try {
+      const refreshedItems = await refreshProjects(cacheContext.listOptions);
+      if (Array.isArray(refreshedItems)) {
+        await writeProjectCache(cacheContext, refreshedItems);
+        const retry = matchProjectByName(refreshedItems, projectName);
+        if (retry.match) {
+          return retry.match.id;
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to refresh projects: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
   if (candidates.length > 1) {
     const names = candidates.map((item) => item.name || item.id).join(', ');
     throw new Error(`Project name "${projectName}" is ambiguous. Matches: ${names}`);
+  }
+  if (allowFallback && cacheContext.provider === 'grok') {
+    const fallback = projectName.trim();
+    if (fallback) {
+      console.warn(chalk.yellow(`Using Grok project slug fallback: "${fallback}".`));
+      return fallback;
+    }
   }
   throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
 }
@@ -1142,6 +1478,7 @@ async function resolveConversationByName({
   conversationName,
   cacheContext,
   provider,
+  listConversations,
   projectId,
   forceRefresh,
   allowAutoRefresh = true,
@@ -1151,35 +1488,60 @@ async function resolveConversationByName({
     provider: 'chatgpt' | 'grok';
     userConfig: UserConfig;
     listOptions: BrowserProviderListOptions;
+    userIdentity?: ProviderUserIdentity | null;
+    identityKey?: string | null;
+    cacheRoot?: string | null;
+    ttlMs?: number | null;
   };
   provider: BrowserProvider;
+  listConversations?: (
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<unknown>;
   projectId?: string;
   forceRefresh: boolean;
   allowAutoRefresh?: boolean;
 }): Promise<{ id: string; title?: string; url?: string } | null> {
   let cached = await readConversationCache(cacheContext);
-  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && provider.listConversations) {
-    const port = cacheContext.listOptions.port;
-    if (port && await isPortOpen('127.0.0.1', port)) {
-      try {
-        const conversations = await provider.listConversations(projectId, cacheContext.listOptions);
-        if (Array.isArray(conversations)) {
-          await writeConversationCache(cacheContext, conversations);
-          cached = { items: conversations, fetchedAt: Date.now(), stale: false };
-        }
-      } catch (error) {
-        console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
+  let didRefresh = false;
+  const refreshConversations =
+    listConversations ??
+    (provider.listConversations
+      ? (proj?: string, options?: BrowserProviderListOptions) =>
+          provider.listConversations?.(proj, options)
+      : undefined);
+  if ((forceRefresh || (allowAutoRefresh && cached.stale)) && refreshConversations) {
+    try {
+      const refreshedItems = await refreshConversations(projectId, cacheContext.listOptions);
+      if (Array.isArray(refreshedItems)) {
+        await writeConversationCache(cacheContext, refreshedItems);
+        cached = { items: refreshedItems, fetchedAt: Date.now(), stale: false };
+        didRefresh = true;
       }
-    } else if (forceRefresh) {
-      console.warn(`Cannot refresh conversations: Chrome DevTools port ${port ?? '(unknown)'} is not open.`);
+    } catch (error) {
+      console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } else if (forceRefresh && !provider.listConversations) {
+  } else if (forceRefresh && !refreshConversations) {
     console.warn('Conversation refresh requested, but this provider does not support conversation listing.');
   }
 
   const { match, candidates } = matchConversationByTitle(cached.items, conversationName);
   if (match) {
     return match;
+  }
+  if (!didRefresh && allowAutoRefresh && refreshConversations) {
+    try {
+      const refreshedItems = await refreshConversations(projectId, cacheContext.listOptions);
+      if (Array.isArray(refreshedItems)) {
+        await writeConversationCache(cacheContext, refreshedItems);
+        const retry = matchConversationByTitle(refreshedItems, conversationName);
+        if (retry.match) {
+          return retry.match;
+        }
+      }
+    } catch (error) {
+      console.warn(`Failed to refresh conversations: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
   if (candidates.length > 1) {
     const names = candidates.map((item) => item.title || item.id).join(', ');
@@ -1202,6 +1564,7 @@ program
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
   .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(new Option('--browser-display <value>', 'Override DISPLAY when launching Chrome on Linux.'))
   .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
   .addOption(
     new Option(
@@ -1211,7 +1574,8 @@ program
       .choices(['auto', 'wsl', 'windows']),
   )
   .action(async (commandOptions) => {
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const explicitTarget = commandOptions.target;
     const aliasTarget = commandOptions.grok ? 'grok' : commandOptions.gemini ? 'gemini' : commandOptions.chatgpt ? 'chatgpt' : undefined;
     if (explicitTarget && aliasTarget && explicitTarget !== aliasTarget) {
@@ -1256,6 +1620,23 @@ program
     });
   });
 
+const profileCommand = program
+  .command('profile')
+  .description('Manage oracle profiles.');
+
+profileCommand
+  .command('scaffold')
+  .description('Create a default oracleProfile config file from the current browser profile.')
+  .option('--force', 'Overwrite an existing config file.', false)
+  .action(async (commandOptions) => {
+    const result = await scaffoldDefaultConfigFile({ force: Boolean(commandOptions.force) });
+    if (!result) {
+      console.log('Config file already exists; use --force to overwrite.');
+      return;
+    }
+    console.log(`Wrote config to ${result.path}`);
+  });
+
 program
   .command('tui')
   .description('Launch the interactive terminal UI for humans (no automation).')
@@ -1282,7 +1663,8 @@ const sessionCommand = program
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId, _options: StatusOptions, cmd: Command) => {
-    const { config: userConfig } = await loadUserConfig();
+    const cliOptions = program.opts?.() ?? {};
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     await handleSessionCommand(sessionId, cmd, undefined, userConfig);
   });
 
@@ -1506,6 +1888,32 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     }
   };
   applyRetentionOption();
+
+  const applyBrowserScopeDefaults = (): void => {
+    if (optionUsesDefault('projectId') && userConfig.browser?.projectId) {
+      options.projectId = userConfig.browser.projectId;
+    }
+    if (optionUsesDefault('projectName') && userConfig.browser?.projectName) {
+      options.projectName = userConfig.browser.projectName;
+      (options as { _projectNameSource?: string })._projectNameSource = 'config';
+    }
+    if (optionUsesDefault('conversationId') && userConfig.browser?.conversationId) {
+      options.conversationId = userConfig.browser.conversationId;
+    }
+    if (optionUsesDefault('conversationName') && userConfig.browser?.conversationName) {
+      options.conversationName = userConfig.browser.conversationName;
+      (options as { _conversationNameSource?: string })._conversationNameSource = 'config';
+    }
+  };
+  applyBrowserScopeDefaults();
+
+  const disableProject =
+    options.noProject === true || options.project === false;
+  if (disableProject) {
+    options.projectId = undefined;
+    options.projectName = undefined;
+    delete (options as { _projectNameSource?: string })._projectNameSource;
+  }
 
   const remoteHost =
     options.remoteHost ?? userConfig.remoteHost ?? userConfig.remote?.host ?? process.env.ORACLE_REMOTE_HOST;
@@ -1975,7 +2383,7 @@ async function executeSession(sessionId: string) {
   const sessionMode = getSessionMode(metadata);
   const browserConfig = getBrowserConfigFromMetadata(metadata);
   const { logLine, writeChunk, stream } = sessionStore.createLogWriter(sessionId);
-  const userConfig = (await loadUserConfig()).config;
+  const userConfig = await resolveConfig({}, metadata.cwd ?? process.cwd(), process.env);
   const notifications = deriveNotificationSettingsFromMetadata(metadata, process.env, userConfig.notify);
   try {
     await performSessionRun({

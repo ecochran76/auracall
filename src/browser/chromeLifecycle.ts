@@ -10,13 +10,16 @@ import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
 import { cleanupStaleProfileState, readDevToolsPort } from './profileState.js';
 import { isDevToolsResponsive, findChromePidUsingUserDataDir } from './processCheck.js';
-import { findActiveInstance, registerInstance, unregisterInstance } from './stateRegistry.js';
+import { findActiveInstance, registerInstance, unregisterInstance } from './service/stateRegistry.js';
+import { resolveProfileDirectoryName } from './service/profile.js';
 
 const execFileAsync = promisify(execFile);
 
 export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) {
+  const resolvedProfileName = resolveProfileDirectoryName(userDataDir, config.chromeProfile ?? 'Default');
+  logger(`Using Chrome profile directory "${resolvedProfileName}" in ${userDataDir}.`);
   // 1. Check persistent registry first
-  const registered = await findActiveInstance(userDataDir, config.chromeProfile ?? 'Default');
+  const registered = await findActiveInstance(userDataDir, resolvedProfileName);
   if (registered) {
     logger(`Found active Chrome instance in registry (pid ${registered.pid}, port ${registered.port}); reusing.`);
     return {
@@ -31,46 +34,69 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   // 2. Legacy Fallback: check if this profile is already active via OS/FS
   const existingPid = await findChromePidUsingUserDataDir(userDataDir);
   if (existingPid) {
+    const oracleHome = path.resolve(os.homedir(), '.oracle');
+    const isOracleManagedProfile = path.resolve(userDataDir).startsWith(oracleHome + path.sep);
+    const blockingAction = config.blockingProfileAction ?? 'restart-oracle';
+    const requestedProfile = resolvedProfileName.trim();
+    const isDefaultProfile = requestedProfile.toLowerCase() === 'default';
     const activePort = await readDevToolsPort(userDataDir);
     const connectHost = resolveRemoteDebugHost() || '127.0.0.1';
     if (activePort && await isDevToolsResponsive({ host: connectHost, port: activePort })) {
-      logger(`Found running Chrome using profile ${userDataDir} on port ${activePort} (not in registry); adopting.`);
-      await registerInstance({
-        pid: existingPid,
-        port: activePort,
-        host: connectHost,
-        profilePath: userDataDir,
-        profileName: config.chromeProfile ?? 'Default',
-        type: 'chrome',
-        launchedAt: new Date().toISOString(),
-        lastSeenAt: new Date().toISOString(),
-      });
-      return {
-        pid: undefined, // We don't own the PID, so we don't return it to avoid killing it
-        port: activePort,
-        kill: async () => { logger('Skipping shutdown of reused Chrome instance.'); },
-        process: undefined,
-        host: connectHost,
-      } as unknown as LaunchedChrome & { host?: string };
+      if (isDefaultProfile) {
+        logger(`Found running Chrome using profile ${userDataDir} on port ${activePort} (not in registry); adopting.`);
+        await registerInstance({
+          pid: existingPid,
+          port: activePort,
+          host: connectHost,
+          profilePath: userDataDir,
+          profileName: resolvedProfileName,
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        });
+        return {
+          pid: undefined, // We don't own the PID, so we don't return it to avoid killing it
+          port: activePort,
+          kill: async () => { logger('Skipping shutdown of reused Chrome instance.'); },
+          process: undefined,
+          host: connectHost,
+        } as unknown as LaunchedChrome & { host?: string };
+      }
+      if (blockingAction === 'fail' || (blockingAction === 'restart-oracle' && !isOracleManagedProfile)) {
+        throw new Error(
+          `Chrome is already running with profile ${userDataDir}, but Oracle needs profile "${requestedProfile}". ` +
+          `Close Chrome and retry so Oracle can launch the correct profile.`,
+        );
+      }
+      logger(
+        `Chrome is running with profile ${userDataDir} but "${requestedProfile}" was requested; restarting to ensure the correct profile.`,
+      );
+      await terminateChromeProcess(existingPid, logger);
+    }
+    if (blockingAction === 'fail' || (blockingAction === 'restart-oracle' && !isOracleManagedProfile)) {
+      throw new Error(
+        `Chrome is already running with profile ${userDataDir}, but DevTools is not enabled. ` +
+        `Close Chrome and retry so Oracle can relaunch with remote debugging enabled.`,
+      );
+    }
+    if (!isOracleManagedProfile && blockingAction === 'restart') {
+      logger(`Forcing restart of user-managed Chrome profile ${userDataDir} (blockingProfileAction=restart).`);
     }
     logger(`Chrome (pid ${existingPid}) is running with profile ${userDataDir} but DevTools port is unreachable. Killing it to release lock.`);
-    try {
-      process.kill(existingPid, 'SIGTERM');
-      await new Promise(r => setTimeout(r, 1500));
-      // Double check and force kill if needed
-      try {
-        process.kill(existingPid, 0);
-        process.kill(existingPid, 'SIGKILL');
-      } catch { /* already dead */ }
-    } catch (e) {
-      logger(`Failed to kill Chrome process: ${e}`);
-    }
+    await terminateChromeProcess(existingPid, logger);
   }
 
   if (!config.headless && process.platform === 'linux') {
-    if (!process.env.DISPLAY || process.env.DISPLAY === '0' || process.env.DISPLAY === '0.0') {
-      process.env.DISPLAY = ':0.0';
-      logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
+    const overrideDisplay = config.display ?? process.env.ORACLE_BROWSER_DISPLAY;
+    if (overrideDisplay) {
+      process.env.DISPLAY = overrideDisplay;
+      logger(`DISPLAY override set to ${overrideDisplay}.`);
+    } else {
+      const display = process.env.DISPLAY;
+      if (!display || display === '0' || display === '0.0' || display === ':0' || display === ':0.0') {
+        process.env.DISPLAY = ':0.0';
+        logger('DISPLAY not set; defaulting to :0.0 for Chrome launch.');
+      }
     }
     if (!process.env.XAUTHORITY) {
       const fallback = path.join(os.homedir(), '.Xauthority');
@@ -87,7 +113,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   const chromeFlags = buildChromeFlags(
     config.headless ?? false,
     debugBindAddress,
-    config.chromeProfile ?? undefined,
+    resolvedProfileName ?? undefined,
     { minimal: minimalFlags },
   );
   const bypassUserDataDir = shouldBypassLauncherUserDataDir(config.chromePath ?? undefined);
@@ -103,26 +129,41 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
   );
 
   const usePatchedLauncher = Boolean(connectHost && connectHost !== '127.0.0.1');
-  const launcher = usePatchedLauncher
-    ? await launchWithCustomHost({
-        chromeFlags: effectiveChromeFlags,
-        chromePath: config.chromePath ?? undefined,
-        userDataDir: launcherUserDataDir,
-        host: connectHost ?? '127.0.0.1',
-        requestedPort: debugPort ?? undefined,
-        ignoreDefaultFlags: minimalFlags,
-      })
-    : await launch({
-        chromePath: config.chromePath ?? undefined,
-        chromeFlags: effectiveChromeFlags,
-        userDataDir: launcherUserDataDir,
-        handleSIGINT: false,
-        port: debugPort ?? undefined,
-        ignoreDefaultFlags: minimalFlags,
-      });
+  let launcher: LaunchedChrome;
+  try {
+    launcher = usePatchedLauncher
+      ? await launchWithCustomHost({
+          chromeFlags: effectiveChromeFlags,
+          chromePath: config.chromePath ?? undefined,
+          userDataDir: launcherUserDataDir,
+          host: connectHost ?? '127.0.0.1',
+          requestedPort: debugPort ?? undefined,
+          ignoreDefaultFlags: minimalFlags,
+        })
+      : await launch({
+          chromePath: config.chromePath ?? undefined,
+          chromeFlags: effectiveChromeFlags,
+          userDataDir: launcherUserDataDir,
+          handleSIGINT: false,
+          port: debugPort ?? undefined,
+          ignoreDefaultFlags: minimalFlags,
+        });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger(`Failed to launch Chrome: ${message}`);
+    throw error;
+  }
   const pidLabel = typeof launcher.pid === 'number' ? ` (pid ${launcher.pid})` : '';
   const hostLabel = connectHost ? ` on ${connectHost}` : '';
   logger(`Launched Chrome${pidLabel} on port ${launcher.port}${hostLabel}`);
+
+  const reachable = await waitForDevTools({ host: connectHost ?? '127.0.0.1', port: launcher.port, logger });
+  if (!reachable) {
+    throw new Error(
+      `Chrome launched but DevTools port ${connectHost ?? '127.0.0.1'}:${launcher.port} is unreachable. ` +
+      `If Chrome is already running with this profile, close it and retry.`,
+    );
+  }
 
   if (launcher.pid) {
     await registerInstance({
@@ -130,7 +171,7 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
       port: launcher.port,
       host: connectHost ?? '127.0.0.1',
       profilePath: userDataDir,
-      profileName: config.chromeProfile ?? 'Default',
+      profileName: resolvedProfileName,
       type: 'chrome',
       launchedAt: new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
@@ -139,11 +180,39 @@ export async function launchChrome(config: ResolvedBrowserConfig, userDataDir: s
 
   const originalKill = launcher.kill;
   const kill = async () => {
-    await unregisterInstance(userDataDir, config.chromeProfile ?? 'Default');
+    await unregisterInstance(userDataDir, resolvedProfileName);
     return originalKill();
   };
 
   return Object.assign(launcher, { kill, host: connectHost ?? '127.0.0.1' }) as LaunchedChrome & { host?: string };
+}
+
+async function waitForDevTools(options: { host: string; port: number; logger: BrowserLogger }): Promise<boolean> {
+  const { host, port, logger } = options;
+  const attempts = 10;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (await isDevToolsResponsive({ host, port })) {
+      return true;
+    }
+    await new Promise(r => setTimeout(r, 200));
+  }
+  logger(`DevTools port ${host}:${port} did not respond after ${attempts} attempts.`);
+  return false;
+}
+
+async function terminateChromeProcess(pid: number, logger: BrowserLogger): Promise<void> {
+  try {
+    process.kill(pid, 'SIGTERM');
+    await new Promise(r => setTimeout(r, 1500));
+    try {
+      process.kill(pid, 0);
+      process.kill(pid, 'SIGKILL');
+    } catch {
+      // already stopped
+    }
+  } catch (e) {
+    logger(`Failed to kill Chrome process: ${e}`);
+  }
 }
 
 export function registerTerminationHooks(

@@ -3,7 +3,7 @@ import { resolveProviderUrl } from './providers/service.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
-import { discoverDefaultBrowserProfile, type WslChromePreference } from './profileDiscovery.js';
+import { discoverDefaultBrowserProfile, resolveProfileDirectoryName, type WslChromePreference } from './service/profile.js';
 import os from 'node:os';
 import path from 'node:path';
 
@@ -11,6 +11,8 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chromeProfile: null,
   chromePath: null,
   chromeCookiePath: null,
+  display: null,
+  blockingProfileAction: 'restart-oracle',
   target: 'chatgpt',
   projectId: null,
   conversationId: null,
@@ -83,22 +85,26 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     config?.wslChromePreference ?? process.env.ORACLE_WSL_CHROME,
   );
   const explicitProfileDir = config?.manualLoginProfileDir ?? process.env.ORACLE_BROWSER_PROFILE_DIR ?? null;
-  const discoveredProfile = explicitProfileDir
-    ? null
-    : discoverDefaultBrowserProfile({ preference: wslChromePreference });
+  const discoveredProfile = discoverDefaultBrowserProfile({ preference: wslChromePreference });
   const resolvedProfileDir = normalizeManualLoginProfileDir(
-    explicitProfileDir ??
-      discoveredProfile?.userDataDir ??
-      path.join(os.homedir(), '.oracle', 'browser-profile'),
+    explicitProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile'),
   );
-  const resolvedChromeProfile = config?.chromeProfile ?? discoveredProfile?.profileName ?? DEFAULT_BROWSER_CONFIG.chromeProfile;
+  const resolvedChromeProfile = resolveProfileDirectoryName(
+    resolvedProfileDir,
+    config?.chromeProfile ?? discoveredProfile?.profileName ?? DEFAULT_BROWSER_CONFIG.chromeProfile ?? 'Default',
+  );
   const resolvedChromePath = config?.chromePath ?? discoveredProfile?.chromePath ?? DEFAULT_BROWSER_CONFIG.chromePath;
-  const resolvedCookiePath = config?.chromeCookiePath ?? discoveredProfile?.cookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath;
+  const resolvedCookiePath =
+    config?.chromeCookiePath ?? discoveredProfile?.cookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath;
+  const resolvedDisplay =
+    config?.display ?? process.env.ORACLE_BROWSER_DISPLAY ?? DEFAULT_BROWSER_CONFIG.display;
   const debugPortRange = normalizeDebugPortRange(config?.debugPortRange);
   const normalizedRemoteChrome = normalizeRemoteChrome(config?.remoteChrome ?? DEFAULT_BROWSER_CONFIG.remoteChrome);
+  const blockingProfileAction = config?.blockingProfileAction ?? DEFAULT_BROWSER_CONFIG.blockingProfileAction;
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
+    blockingProfileAction,
     target,
     url: normalizedUrl,
     chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
@@ -119,6 +125,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     chromeProfile: resolvedChromeProfile,
     chromePath: resolvedChromePath,
     chromeCookiePath: resolvedCookiePath,
+    display: resolvedDisplay,
     geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
     grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
     debug: config?.debug ?? DEFAULT_BROWSER_CONFIG.debug,

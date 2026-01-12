@@ -41,9 +41,9 @@ Create a class that standardizes interaction with the active browser session.
     *   `login()`: Wraps the manual login launch logic.
 
 ### Phase 2: Centralize Shared Logic
-**Files:** `src/browser/chromeLifecycle.ts`, `src/browser/portResolution.ts` (or similar)
+**Files:** `src/browser/chromeLifecycle.ts`, `src/browser/service/portResolution.ts` (or similar)
 
-1.  **Port Resolution**: Move `resolveBrowserListPort` from `bin/oracle-cli.ts` to `src/browser/chromeLifecycle.ts` (or a new utility). It should remain robust (checking Env -> Config -> Registry -> File).
+1.  **Port Resolution**: Move `resolveBrowserListPort` from `bin/oracle-cli.ts` to `src/browser/chromeLifecycle.ts` or `src/browser/service/portResolution.ts`. It should remain robust (checking Env -> Config -> Registry -> File).
 2.  **Login Logic**: Ensure `launchManualLoginChrome` and related helpers are exported from `src/browser/chromeLifecycle.ts` or `src/remote/server.ts` so `BrowserAutomationClient` can use them without circular deps.
 
 ### Phase 3: Refactor CLI Commands

@@ -7,12 +7,13 @@ import CDP from 'chrome-remote-interface';
 import type { CookieParam } from './types.js';
 import { CHATGPT_URL, GROK_URL } from './constants.js';
 import { getOracleHomeDir } from '../oracleHome.js';
-import { registerInstance } from './stateRegistry.js';
+import { registerInstance } from './service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, findWindowsChromePidUsingTasklist } from './processCheck.js';
 import { DEFAULT_DEBUG_PORT, DEFAULT_DEBUG_PORT_RANGE, pickAvailableDebugPort } from './portSelection.js';
 import { resolveWslHost, buildWslFirewallHint } from './chromeLifecycle.js';
 import { delay } from './utils.js';
 import { launchManualLoginSession } from './manualLogin.js';
+import { resolveProfileDirectoryName } from './service/profile.js';
 
 export type LoginTarget = 'chatgpt' | 'gemini' | 'grok';
 
@@ -49,7 +50,8 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
 
   const inferred = cookiePath ? inferProfileFromCookiePath(cookiePath) : null;
   const userDataDir = target === 'chatgpt' ? manualLoginProfileDir : inferred?.userDataDir ?? manualLoginProfileDir;
-  const profileName = target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
+  const resolvedProfile = resolveProfileDirectoryName(userDataDir, chromeProfile);
+  const profileName = target === 'chatgpt' ? resolvedProfile : inferred?.profileDir ?? resolvedProfile;
   const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
   const debugHost = wslWindowsChrome ? (resolveWslHost() ?? '127.0.0.1') : '127.0.0.1';
   const debugPort = await pickAvailableDebugPort(

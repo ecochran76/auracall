@@ -34,6 +34,8 @@ sudo apt-get install -y google-chrome-stable
 }
 ```
 
+Note: `manualLogin`/`manualLoginProfileDir` will be renamed to `interactiveLogin`/`loginMode` in a future config update; legacy keys will continue to work.
+
 3) First-time login (keep the window open so you can sign in):
 
 ```bash

@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import type { UserConfig } from '../config.js';
-import { getOracleHomeDir } from '../oracleHome.js';
-import { isDevToolsResponsive } from './processCheck.js';
-import { resolveWslHost } from './chromeLifecycle.js';
+import type { UserConfig } from '../../config.js';
+import { getOracleHomeDir } from '../../oracleHome.js';
+import { isDevToolsResponsive } from '../processCheck.js';
+import { resolveWslHost } from '../chromeLifecycle.js';
+import { resolveProfileDirectoryName } from './profile.js';
 
 export type BrowserListTarget = {
   port: number;
@@ -32,11 +33,13 @@ export async function resolveBrowserListTarget(
     const host = resolveWslHost() ?? '127.0.0.1';
     return { port: configuredPort, host };
   }
-  const profileName = (userConfig.browser?.chromeProfile ?? 'Default').trim().toLowerCase();
   const profilePath =
     userConfig.browser?.manualLoginProfileDir ??
     process.env.ORACLE_BROWSER_PROFILE_DIR ??
     path.join(os.homedir(), '.oracle', 'browser-profile');
+  const rawProfileName = (userConfig.browser?.chromeProfile ?? 'Default').trim();
+  const resolvedProfileName = resolveProfileDirectoryName(profilePath, rawProfileName);
+  const profileName = resolvedProfileName.trim().toLowerCase();
   const registryPath = path.join(getOracleHomeDir(), 'browser-state.json');
   try {
     const rawRegistry = await fs.readFile(registryPath, 'utf8');
@@ -84,8 +87,9 @@ function normalizeRegistry(registry: {
       continue;
     }
     const profileName = instance.profileName ?? 'Default';
-    const normalizedKey = buildRegistryKey(instance.profilePath, profileName);
-    normalized.instances[normalizedKey] = { ...instance, profileName };
+    const resolvedProfileName = resolveProfileDirectoryName(instance.profilePath, profileName);
+    const normalizedKey = buildRegistryKey(instance.profilePath, resolvedProfileName);
+    normalized.instances[normalizedKey] = { ...instance, profileName: resolvedProfileName };
     if (normalizedKey !== key) {
       changed = true;
     }

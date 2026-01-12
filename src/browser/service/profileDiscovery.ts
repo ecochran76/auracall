@@ -9,14 +9,14 @@ export interface DiscoveredBrowserProfile {
   profileName: string;
   cookiePath?: string;
   chromePath?: string;
-  source: 'wsl' | 'windows';
+  source: 'wsl' | 'windows' | 'local';
 }
 
 export function discoverDefaultBrowserProfile(options: {
   preference: WslChromePreference;
 }): DiscoveredBrowserProfile | null {
   if (!isWsl()) {
-    return null;
+    return discoverLocalProfile();
   }
   const preference = options.preference ?? 'auto';
   if (preference === 'wsl') {
@@ -26,6 +26,148 @@ export function discoverDefaultBrowserProfile(options: {
     return discoverWindowsProfile() ?? discoverWslProfile();
   }
   return discoverWslProfile() ?? discoverWindowsProfile();
+}
+
+function discoverLocalProfile(): DiscoveredBrowserProfile | null {
+  if (process.platform === 'darwin') {
+    return discoverMacProfile();
+  }
+  if (process.platform === 'win32') {
+    return discoverWin32Profile();
+  }
+  return discoverLinuxProfile();
+}
+
+function discoverMacProfile(): DiscoveredBrowserProfile | null {
+  const home = os.homedir();
+  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+    {
+      userDataDir: path.join(home, 'Library', 'Application Support', 'Google', 'Chrome'),
+      chromePaths: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'],
+    },
+    {
+      userDataDir: path.join(home, 'Library', 'Application Support', 'Chromium'),
+      chromePaths: ['/Applications/Chromium.app/Contents/MacOS/Chromium'],
+    },
+    {
+      userDataDir: path.join(home, 'Library', 'Application Support', 'BraveSoftware', 'Brave-Browser'),
+      chromePaths: ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'],
+    },
+    {
+      userDataDir: path.join(home, 'Library', 'Application Support', 'Microsoft Edge'),
+      chromePaths: ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'],
+    },
+  ];
+
+  for (const candidate of candidates) {
+    if (!exists(candidate.userDataDir)) {
+      continue;
+    }
+    const profileName = resolveProfileName(candidate.userDataDir);
+    const cookiePath = resolveCookiePath(candidate.userDataDir, profileName);
+    const chromePath = findFirstExisting(candidate.chromePaths);
+    return {
+      userDataDir: candidate.userDataDir,
+      profileName,
+      cookiePath,
+      chromePath: chromePath ?? undefined,
+      source: 'local',
+    };
+  }
+  return null;
+}
+
+function discoverLinuxProfile(): DiscoveredBrowserProfile | null {
+  const home = os.homedir();
+  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+    {
+      userDataDir: path.join(home, '.config', 'google-chrome'),
+      chromePaths: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
+    },
+    {
+      userDataDir: path.join(home, '.config', 'chromium'),
+      chromePaths: ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
+    },
+    {
+      userDataDir: path.join(home, '.config', 'BraveSoftware', 'Brave-Browser'),
+      chromePaths: ['/usr/bin/brave-browser', '/usr/bin/brave'],
+    },
+    {
+      userDataDir: path.join(home, '.config', 'microsoft-edge'),
+      chromePaths: ['/usr/bin/microsoft-edge', '/usr/bin/microsoft-edge-stable'],
+    },
+  ];
+
+  for (const candidate of candidates) {
+    if (!exists(candidate.userDataDir)) {
+      continue;
+    }
+    const profileName = resolveProfileName(candidate.userDataDir);
+    const cookiePath = resolveCookiePath(candidate.userDataDir, profileName);
+    const chromePath = findFirstExisting(candidate.chromePaths);
+    return {
+      userDataDir: candidate.userDataDir,
+      profileName,
+      cookiePath,
+      chromePath: chromePath ?? undefined,
+      source: 'local',
+    };
+  }
+  return null;
+}
+
+function discoverWin32Profile(): DiscoveredBrowserProfile | null {
+  const localAppData = process.env.LOCALAPPDATA;
+  if (!localAppData) {
+    return null;
+  }
+  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+    {
+      userDataDir: path.join(localAppData, 'Google', 'Chrome', 'User Data'),
+      chromePaths: [
+        'C:/Program Files/Google/Chrome/Application/chrome.exe',
+        'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe',
+      ],
+    },
+    {
+      userDataDir: path.join(localAppData, 'Microsoft', 'Edge', 'User Data'),
+      chromePaths: [
+        'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
+        'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
+      ],
+    },
+    {
+      userDataDir: path.join(localAppData, 'BraveSoftware', 'Brave-Browser', 'User Data'),
+      chromePaths: [
+        'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe',
+        'C:/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe',
+      ],
+    },
+    {
+      userDataDir: path.join(localAppData, 'Chromium', 'User Data'),
+      chromePaths: [
+        'C:/Program Files/Chromium/Application/chrome.exe',
+        'C:/Program Files (x86)/Chromium/Application/chrome.exe',
+      ],
+    },
+  ];
+
+  for (const candidate of candidates) {
+    if (!exists(candidate.userDataDir)) {
+      continue;
+    }
+    const profileName = resolveProfileName(candidate.userDataDir);
+    const cookiePath = resolveCookiePath(candidate.userDataDir, profileName);
+    const chromePath = findFirstExisting(candidate.chromePaths);
+    return {
+      userDataDir: candidate.userDataDir,
+      profileName,
+      cookiePath,
+      chromePath: chromePath ?? undefined,
+      source: 'windows',
+    };
+  }
+  return null;
 }
 
 function discoverWslProfile(): DiscoveredBrowserProfile | null {
@@ -148,16 +290,43 @@ function resolveProfileName(userDataDir: string): string {
   return 'Default';
 }
 
-function resolveCookiePath(userDataDir: string, profileName: string): string | undefined {
-  const networkPath = path.join(userDataDir, profileName, 'Network', 'Cookies');
+export function resolveCookiePath(userDataDir: string, profileName: string): string | undefined {
+  const resolvedProfile = resolveProfileDirectoryName(userDataDir, profileName);
+  const networkPath = path.join(userDataDir, resolvedProfile, 'Network', 'Cookies');
   if (exists(networkPath)) {
     return networkPath;
   }
-  const legacyPath = path.join(userDataDir, profileName, 'Cookies');
+  const legacyPath = path.join(userDataDir, resolvedProfile, 'Cookies');
   if (exists(legacyPath)) {
     return legacyPath;
   }
   return undefined;
+}
+
+export function resolveProfileDirectoryName(userDataDir: string, profileName: string): string {
+  const trimmed = profileName.trim();
+  if (!trimmed) return profileName;
+  if (exists(path.join(userDataDir, trimmed))) {
+    return trimmed;
+  }
+  const localStatePath = path.join(userDataDir, 'Local State');
+  try {
+    const raw = fs.readFileSync(localStatePath, 'utf8');
+    const parsed = JSON.parse(raw) as { profile?: { info_cache?: Record<string, { name?: string; shortcut_name?: string; user_name?: string }> } };
+    const infoCache = parsed?.profile?.info_cache;
+    if (infoCache && typeof infoCache === 'object') {
+      const target = trimmed.toLowerCase();
+      for (const [dirName, info] of Object.entries(infoCache)) {
+        const candidates = [info?.name, info?.shortcut_name, info?.user_name].filter(Boolean) as string[];
+        if (candidates.some((value) => value.toLowerCase() === target)) {
+          return dirName;
+        }
+      }
+    }
+  } catch {
+    // ignore parse errors
+  }
+  return profileName;
 }
 
 function resolveWindowsUsers(usersRoot: string): string[] {

@@ -15,6 +15,11 @@ const GROK_MODEL_BUTTON_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.mod
 const GROK_MENU_ITEM_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.menuItem);
 const GROK_ASSISTANT_BUBBLE_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.assistantBubble);
 const GROK_ASSISTANT_ROLE_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.assistantRole);
+const GROK_MENU_CONTAINER_SELECTORS = JSON.stringify([
+  '[data-radix-dropdown-menu-content]',
+  '[data-radix-menu-content]',
+  'div[data-state="open"]',
+]);
 
 export async function navigateToGrok(
   Page: ChromeClient['Page'],
@@ -153,7 +158,11 @@ export async function selectGrokMode(
   }
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const items = ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS)};
+      const menuSelectors = ${GROK_MENU_CONTAINER_SELECTORS};
+      const menu = menuSelectors.map((selector) => document.querySelector(selector)).find(Boolean);
+      const items = menu
+        ? ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS, 'menuItemSelectors')}.filter((el) => menu.contains(el))
+        : ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS)};
       const target = items.find((el) => (el.textContent || '').replace(/\\s+/g, ' ').trim().startsWith(${JSON.stringify(label)}));
       if (!target) return false;
       target.click();
@@ -333,7 +342,13 @@ async function waitForMenuItems(
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const outcome = await Runtime.evaluate({
-      expression: `(() => ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS)}.length > 0)()`,
+      expression: `(() => {
+        const menuSelectors = ${GROK_MENU_CONTAINER_SELECTORS};
+        const menu = menuSelectors.map((selector) => document.querySelector(selector)).find(Boolean);
+        if (!menu) return false;
+        const items = ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS, 'menuItemSelectors')};
+        return items.some((el) => menu.contains(el));
+      })()`,
       returnByValue: true,
     });
     if (outcome.result?.value) return true;

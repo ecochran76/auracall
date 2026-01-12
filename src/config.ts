@@ -3,6 +3,8 @@ import path from 'node:path';
 import JSON5 from 'json5';
 import { getOracleHomeDir } from './oracleHome.js';
 import { ConfigSchema, type OracleConfig } from './schema/types.js';
+import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
+import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 
 export type UserConfig = OracleConfig;
 
@@ -65,6 +67,12 @@ export async function loadUserConfig(
   }
   projectConfigs.reverse();
   configs.push(...projectConfigs);
+  if (configs.length === 0) {
+    const scaffolded = await scaffoldDefaultConfigFile({ path: userPath, force: false });
+    if (scaffolded) {
+      configs.push(scaffolded);
+    }
+  }
   const merged = configs.reduce<UserConfig>((acc, next) => mergeConfig(acc, next.config), {} as UserConfig);
   const loaded = configs.length > 0;
   return {
@@ -114,6 +122,50 @@ function mergeConfig(base: UserConfig, override: UserConfig): UserConfig {
     }
   }
   return merged as UserConfig;
+}
+
+export async function scaffoldDefaultConfigFile(options: {
+  path?: string;
+  force?: boolean;
+} = {}): Promise<{ path: string; config: UserConfig } | null> {
+  const userPath = options.path ?? resolveUserConfigPath();
+  const force = Boolean(options.force);
+  if (!force) {
+    try {
+      await fs.access(userPath);
+      return null;
+    } catch {
+      // continue
+    }
+  }
+
+  const discovered = discoverDefaultBrowserProfile({ preference: 'auto' });
+  const browser: Record<string, unknown> = {
+    chromePath: discovered?.chromePath,
+    profilePath: discovered?.userDataDir,
+    profileName: discovered?.profileName,
+    cookiePath: discovered?.cookiePath,
+  };
+  const profile: Record<string, unknown> = {
+    engine: 'browser',
+    defaultService: 'chatgpt',
+    browser,
+  };
+  const scaffolded: UserConfig = {
+    oracleProfile: 'default',
+    services: {
+      chatgpt: { url: CHATGPT_URL },
+      gemini: { url: 'https://gemini.google.com/app' },
+      grok: { url: GROK_URL },
+    },
+    oracleProfiles: {
+      default: profile,
+    },
+  } as UserConfig;
+
+  await fs.mkdir(path.dirname(userPath), { recursive: true });
+  await fs.writeFile(userPath, JSON.stringify(scaffolded, null, 2) + '\n', 'utf8');
+  return { path: userPath, config: scaffolded };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {

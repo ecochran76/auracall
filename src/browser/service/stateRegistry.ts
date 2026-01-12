@@ -1,7 +1,8 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { getOracleHomeDir } from '../oracleHome.js';
-import { isChromeAlive } from './processCheck.js';
+import { getOracleHomeDir } from '../../oracleHome.js';
+import { isChromeAlive } from '../processCheck.js';
+import { resolveProfileDirectoryName } from './profile.js';
 
 export interface BrowserInstance {
   pid: number;
@@ -48,7 +49,7 @@ async function saveRegistry(registry: BrowserStateRegistry): Promise<void> {
 
 export async function registerInstance(instance: BrowserInstance): Promise<void> {
   const registry = await loadRegistry();
-  const profileName = instance.profileName ?? 'Default';
+  const profileName = resolveProfileDirectoryName(instance.profilePath, instance.profileName ?? 'Default');
   const key = buildRegistryKey(instance.profilePath, profileName);
   registry.instances[key] = { ...instance, profileName };
   await saveRegistry(registry);
@@ -56,7 +57,8 @@ export async function registerInstance(instance: BrowserInstance): Promise<void>
 
 export async function unregisterInstance(profilePath: string, profileName?: string | null): Promise<void> {
   const registry = await loadRegistry();
-  const key = buildRegistryKey(profilePath, profileName ?? undefined);
+  const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+  const key = buildRegistryKey(profilePath, resolvedProfile);
   if (registry.instances[key]) {
     delete registry.instances[key];
     await saveRegistry(registry);
@@ -68,7 +70,7 @@ export async function findActiveInstance(
   profileName?: string | null,
 ): Promise<BrowserInstance | null> {
   const registry = await loadRegistry();
-  const normalizedName = profileName ?? 'Default';
+  const normalizedName = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
   const key = buildRegistryKey(profilePath, normalizedName);
   let instance = registry.instances[key];
   if (!instance) {
@@ -123,7 +125,7 @@ function normalizeRegistry(
   const normalized: BrowserStateRegistry = { instances: {} };
   let changed = false;
   for (const [key, instance] of Object.entries(registry.instances ?? {})) {
-    const profileName = instance.profileName ?? 'Default';
+    const profileName = resolveProfileDirectoryName(instance.profilePath, instance.profileName ?? 'Default');
     const normalizedKey = buildRegistryKey(instance.profilePath, profileName);
     normalized.instances[normalizedKey] = { ...instance, profileName };
     if (normalizedKey !== key) {

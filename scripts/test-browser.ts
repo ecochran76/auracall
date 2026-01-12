@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Lightweight browser connectivity smoke test.
- * - Launches Chrome headful with a fixed DevTools port (default 45871 or env ORACLE_BROWSER_PORT/ORACLE_BROWSER_DEBUG_PORT).
+ * - Reuses an existing DevTools port when available, otherwise launches Chrome on a fallback port.
  * - Verifies the DevTools /json/version endpoint responds.
  * - Prints a WSL-friendly firewall hint if the port is unreachable.
  */
@@ -9,18 +9,11 @@
 import { setTimeout as sleep } from 'node:timers/promises';
 import { launch } from 'chrome-launcher';
 import { resolveWslHost, buildWslFirewallHint } from '../src/browser/chromeLifecycle.js';
+import { resolveScriptBrowserTarget } from './browser-target.js';
 
 const DEFAULT_PORT = 45871;
-const port = normalizePort(process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT) ?? DEFAULT_PORT;
 const hostHint = resolveWslHost();
 const targetHost = hostHint ?? '127.0.0.1';
-
-function normalizePort(raw?: string | null): number | null {
-  if (!raw) return null;
-  const value = Number.parseInt(raw, 10);
-  if (!Number.isFinite(value) || value <= 0 || value > 65535) return null;
-  return value;
-}
 
 async function fetchVersion(host: string, devtoolsPort: number): Promise<boolean> {
   const controller = new AbortController();
@@ -38,13 +31,20 @@ async function fetchVersion(host: string, devtoolsPort: number): Promise<boolean
 }
 
 async function main() {
+  const { host, port } = await resolveScriptBrowserTarget({ fallbackPort: DEFAULT_PORT });
+  let ok = await fetchVersion(host, port);
+  if (ok) {
+    console.log(`[browser-test] PASS: DevTools responding on ${host}:${port}`);
+    process.exit(0);
+  }
+
   console.log(`[browser-test] launching Chrome on ${targetHost}:${port} (headful)…`);
   const chrome = await launch({
     port,
     chromeFlags: ['--remote-debugging-address=0.0.0.0'],
   });
 
-  let ok = await fetchVersion(targetHost, chrome.port);
+  ok = await fetchVersion(targetHost, chrome.port);
   if (!ok) {
     await sleep(500);
     ok = await fetchVersion(targetHost, chrome.port);

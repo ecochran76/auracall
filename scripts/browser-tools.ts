@@ -19,7 +19,7 @@ import puppeteer from 'puppeteer-core';
 import { loadUserConfig } from '../src/config.js';
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { launchManualLoginSession } from '../src/browser/manualLogin.js';
-import { resolveBrowserListPort } from '../src/browser/portResolution.js';
+import { BrowserService } from '../src/browser/service/browserService.js';
 import {
   DEFAULT_DEBUG_PORT,
   DEFAULT_DEBUG_PORT_RANGE,
@@ -59,9 +59,10 @@ async function resolvePortOrLaunch(options: {
     return options.port;
   }
   const { config: userConfig } = await loadUserConfig();
-  const registryPort = await resolveBrowserListPort(userConfig);
-  if (registryPort) {
-    return registryPort;
+  const browserService = BrowserService.fromConfig(userConfig);
+  const target = await browserService.resolveDevToolsTarget({ ensurePort: false });
+  if (target.port) {
+    return target.port;
   }
   const resolved = resolveBrowserConfig(userConfig.browser);
   const baseDir =

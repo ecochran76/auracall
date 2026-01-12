@@ -33,6 +33,15 @@ export interface BrowserProviderListOptions {
   includeHistory?: boolean;
   historyLimit?: number;
   historySince?: string;
+  browserService?: import('../service/types.js').BrowserServiceHandle;
+}
+
+export interface ProviderUserIdentity {
+  id?: string;
+  name?: string;
+  handle?: string;
+  email?: string;
+  source?: string;
 }
 
 export interface BrowserProvider {
@@ -43,6 +52,7 @@ export interface BrowserProvider {
   resolveConversationUrl?: (conversationId: string, projectId?: string) => string;
   listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
   listConversations?: (projectId?: string, options?: BrowserProviderListOptions) => Promise<unknown>;
+  getUserIdentity?: (options?: BrowserProviderListOptions) => Promise<ProviderUserIdentity | null>;
   openConversation?: (conversationId: string) => Promise<void>;
   readConversationContext?: (conversationId: string) => Promise<unknown>;
   updateProjectInstructions?: (projectId: string, content: string) => Promise<void>;

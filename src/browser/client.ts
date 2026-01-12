@@ -1,27 +1,29 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import os from 'node:os';
 import type { UserConfig } from '../config.js';
 import type { ChromeClient } from './types.js';
 import type { BrowserProvider, BrowserProviderListOptions } from './providers/types.js';
 import { getProvider } from './providers/index.js';
-import { resolveBrowserListTarget } from './portResolution.js';
 import { diagnoseProvider, type DiagnosisReport } from '../inspector/doctor.js';
 import { CRAWLER_SCRIPT } from '../inspector/crawler.js';
 import CDP from 'chrome-remote-interface';
 import type { BrowserLoginOptions } from './login.js';
 import { runBrowserLogin } from './login.js';
-import { resolveBrowserConfig } from './config.js';
-import { launchManualLoginSession } from './manualLogin.js';
-import { isDevToolsResponsive } from './processCheck.js';
+import { BrowserService } from './service/browserService.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'grok';
   readonly provider: BrowserProvider;
+  private readonly browserService: BrowserService;
 
-  private constructor(private readonly userConfig: UserConfig, target: 'chatgpt' | 'grok') {
+  private constructor(
+    private readonly userConfig: UserConfig,
+    target: 'chatgpt' | 'grok',
+    browserService: BrowserService,
+  ) {
     this.target = target;
     this.provider = getProvider(target);
+    this.browserService = browserService;
   }
 
   static async fromConfig(
@@ -32,9 +34,9 @@ export class BrowserAutomationClient {
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const { pruneRegistry } = await import('./stateRegistry.js');
-    await pruneRegistry().catch(() => undefined);
-    return new BrowserAutomationClient(userConfig, target);
+    const browserService = BrowserService.fromConfig(userConfig);
+    await browserService.pruneRegistry().catch(() => undefined);
+    return new BrowserAutomationClient(userConfig, target, browserService);
   }
 
   getConfiguredUrl(): string | null {
@@ -47,54 +49,24 @@ export class BrowserAutomationClient {
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},
   ): Promise<BrowserProviderListOptions> {
-    const resolvedConfig = resolveBrowserConfig(this.userConfig.browser);
-    const remoteChrome = resolvedConfig.remoteChrome ?? null;
-    let port = overrides.port ?? remoteChrome?.port;
-    let host = overrides.host ?? remoteChrome?.host;
-    if (!port) {
-      const target = await resolveBrowserListTarget(this.userConfig);
-      port = target?.port;
-      host ??= target?.host;
-    }
-    if (options.ensurePort && port) {
-      const candidateHost = host ?? '127.0.0.1';
-      const reachable = await isDevToolsResponsive({
-        host: candidateHost,
-        port,
-        attempts: 2,
-        timeoutMs: 1000,
-      });
-      if (!reachable) {
-        port = undefined;
-      }
-    }
-    if (!port && options.ensurePort) {
-      const userDataDir =
-        resolvedConfig.manualLoginProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile');
-      const profileName = resolvedConfig.chromeProfile ?? 'Default';
-      const url =
-        overrides.configuredUrl ??
-        this.getConfiguredUrl() ??
-        (this.target === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
-      const { chrome } = await launchManualLoginSession({
-        chromePath: resolvedConfig.chromePath ?? 'google-chrome',
-        profileName,
-        userDataDir,
-        url,
-        logger: () => undefined,
-        debugPortRange: resolvedConfig.debugPortRange ?? undefined,
-        debugPort: resolvedConfig.debugPort ?? undefined,
-        detach: true,
-      });
-      port = chrome.port;
-      host = chrome.host ?? host;
-    }
     const configuredUrl = overrides.configuredUrl ?? this.getConfiguredUrl();
+    const launchUrl =
+      configuredUrl ??
+      (this.target === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
+    const target = await this.browserService.resolveDevToolsTarget({
+      host: overrides.host,
+      port: overrides.port,
+      ensurePort: options.ensurePort,
+      launchUrl,
+    });
+    const port = target.port;
+    const host = target.host;
     return {
       ...overrides,
       port,
       host,
       configuredUrl,
+      browserService: this.browserService,
     };
   }
 
@@ -115,6 +87,14 @@ export class BrowserAutomationClient {
     return this.provider.listConversations(projectId, listOptions);
   }
 
+  async getUserIdentity(
+    options?: BrowserProviderListOptions,
+  ): Promise<import('./providers/types.js').ProviderUserIdentity | null> {
+    if (!this.provider.getUserIdentity) return null;
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    return this.provider.getUserIdentity(listOptions);
+  }
+
   async renameConversation(
     conversationId: string,
     newTitle: string,
@@ -129,14 +109,7 @@ export class BrowserAutomationClient {
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {
-    const target = await resolveBrowserListTarget(this.userConfig);
-    if (!target?.port) {
-      throw new Error(
-        'No DevTools port found. Launch a browser run to register the active session or set ORACLE_BROWSER_PORT.',
-      );
-    }
-    const client = await CDP({ port: target.port, host: target.host });
-    return { client, port: target.port };
+    return this.browserService.connectDevTools();
   }
 
   async diagnose(options: { basePath?: string; saveSnapshot?: boolean } = {}): Promise<{

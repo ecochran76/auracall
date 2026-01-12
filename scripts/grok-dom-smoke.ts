@@ -1,9 +1,6 @@
 #!/usr/bin/env tsx
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import puppeteer from 'puppeteer-core';
-import { getOracleHomeDir } from '../src/oracleHome.js';
-import { isDevToolsResponsive } from '../src/browser/processCheck.js';
+import { resolveScriptBrowserTarget } from './browser-target.js';
 
 const DEFAULT_URL = 'https://grok.com/';
 const DEFAULT_MODE = 'Grok 4.1 Thinking';
@@ -16,42 +13,7 @@ const FILE_INPUT_SELECTOR = 'input[type="file"]';
 const MENU_ITEM_SELECTOR = '[role="menuitem"]';
 
 async function resolveTarget(): Promise<{ host: string; port: number }> {
-  const raw = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT;
-  if (!raw) return findTargetFromRegistry();
-  const parsed = Number.parseInt(raw, 10);
-  if (Number.isFinite(parsed) && parsed > 0) {
-    return { host: '127.0.0.1', port: parsed };
-  }
-  return findTargetFromRegistry();
-}
-
-async function findTargetFromRegistry(): Promise<{ host: string; port: number }> {
-  const registryPath = path.join(getOracleHomeDir(), 'browser-state.json');
-  try {
-    const raw = await fs.readFile(registryPath, 'utf8');
-    const registry = JSON.parse(raw) as {
-      instances?: Record<string, { host?: string; port?: number; lastSeenAt?: string; launchedAt?: string }>;
-    };
-    const candidates = Object.values(registry.instances ?? {})
-      .filter((instance) => typeof instance.port === 'number' && instance.port > 0)
-      .sort((a, b) => {
-        const aTime = Date.parse(a.lastSeenAt || a.launchedAt || '') || 0;
-        const bTime = Date.parse(b.lastSeenAt || b.launchedAt || '') || 0;
-        return bTime - aTime;
-      });
-    for (const instance of candidates) {
-      const host = instance.host || '127.0.0.1';
-      const port = instance.port as number;
-      if (await isDevToolsResponsive({ host, port, attempts: 2, timeoutMs: 750 })) {
-        return { host, port };
-      }
-    }
-  } catch {
-    // ignore registry read errors
-  }
-  throw new Error(
-    'No DevTools port found. Set ORACLE_BROWSER_PORT or launch Grok via oracle so it registers.',
-  );
+  return resolveScriptBrowserTarget();
 }
 
 function resolveUrl(): string {

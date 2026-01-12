@@ -2,65 +2,67 @@
 
 Oracle reads layered config files (system → user → project tree). Files use JSON5 parsing, so trailing commas and comments are allowed.
 
+If no config file exists, Oracle scaffolds a default `oracleProfile` using your detected browser profile. You can also run `oracle profile scaffold` to regenerate it.
+
 ## Example (`~/.oracle/config.json`)
 
 ```json5
 {
-  // Default engine when neither CLI flag nor env decide
-  engine: "api",           // or "browser"
-  model: "gpt-5.1-pro",    // API alias → gpt-5.2-pro
-  search: "on",            // "on" | "off"
+  // Select which oracleProfile to use by default
+  oracleProfile: "default",
 
-  notify: {
-    enabled: true,          // default notifications (still auto-mutes in CI/SSH unless forced on)
-    sound: false,           // play a sound on completion
-    muteIn: ["CI", "SSH"], // auto-disable when these env vars are set
+  // Optional global service URL defaults (override per profile)
+  services: {
+    chatgpt: { url: "https://chatgpt.com/" },
+    gemini: { url: "https://gemini.google.com/app" },
+    grok: { url: "https://grok.com/" },
   },
 
-  browser: {
-    target: "chatgpt", // chatgpt | gemini | grok (sets default browser target + model)
-    chromeProfile: "Default",
-    chromePath: null,
-    chromeCookiePath: null,
-    projectId: null, // optional project scope for browser runs
-    projectName: null, // optional project name (resolved via cache)
-    conversationId: null, // optional conversation scope for browser runs
-    conversationName: null, // optional conversation title (resolved via cache)
-    geminiUrl: "https://gemini.google.com/app",
-    grokUrl: "https://grok.com/",
-    chatgptUrl: "https://chatgpt.com/", // root is fine; folder URLs also work
-    url: null, // alias for chatgptUrl (kept for back-compat)
-    debugPort: null,          // fixed DevTools port (env-only override; prefer debugPortRange)
-    debugPortRange: [45000, 45100], // optional range for spawning new Chrome instances
-    timeoutMs: 1200000,
-    inputTimeoutMs: 30000,
-    cookieSyncWaitMs: 0,      // wait (ms) before retrying cookie sync when Chrome cookies are empty/locked
-    modelStrategy: "select", // select | current | ignore (ChatGPT only; ignored for Gemini web)
-    thinkingTime: "extended", // light | standard | extended | heavy (ChatGPT Thinking/Pro models)
-    manualLogin: false,        // set true to reuse a persistent automation profile and sign in once (Windows defaults to true when unset)
-    manualLoginProfileDir: null, // override profile dir (or set ORACLE_BROWSER_PROFILE_DIR); legacy name pending profile refactor
-    headless: false,
-    hideWindow: false,
-    keepBrowser: false,
-    manualLoginCookieSync: false, // allow cookie sync even in manual-login mode
-    list: {
-      includeHistory: false,
-      historyLimit: 200,
-      historySince: null,
-      filter: null,
-      refresh: false,
-    },
-    cache: {
-      refresh: false,
-      includeHistory: false,
-      historyLimit: 200,
-      historySince: null,
-    },
-    sessionOpen: {
-      openConversation: false,
-      printUrl: false,
-      browserPath: null,
-      browserProfile: null,
+  // Optional dev-only port range for new Chrome spawns
+  dev: {
+    browserPortRange: [45000, 45100],
+  },
+
+  oracleProfiles: {
+    default: {
+      // Profile-scoped defaults
+      engine: "browser",     // or "api"
+      search: "on",          // "on" | "off"
+      defaultService: "chatgpt",
+      keepBrowser: false,
+
+      browser: {
+        chromePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        profilePath: "/Users/me/Library/Application Support/Google/Chrome",
+        profileName: "Default",
+        cookiePath: "/Users/me/Library/Application Support/Google/Chrome/Default/Network/Cookies",
+        headless: false,
+        hideWindow: false,
+      },
+
+      services: {
+        chatgpt: {
+          identity: { email: "me@example.com" },
+          projectName: "Oracle",
+          model: "gpt-5.2-pro",
+          thinkingTime: "extended",
+          manualLogin: false,
+          manualLoginProfileDir: "/Users/me/.oracle/browser-profile",
+        },
+        grok: {
+          identity: { email: "me@example.com" },
+        },
+      },
+
+      cache: {
+        refresh: false,
+        includeHistory: false,
+        historyLimit: 200,
+        historySince: null,
+        rootDir: null,
+        refreshHours: 6,
+        useDetectedIdentity: false,
+      },
     },
   },
 
@@ -98,23 +100,27 @@ Config layers are merged in this order (later wins):
 
 Within each file, later CLI flags still override config, and environment variables continue to override defaults where documented.
 
-- `engine`, `model`, `search`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
+- `engine`/`search` can be set globally or inside an `oracleProfile`; profile values apply when `oracleProfile` is selected and no CLI flag overrides them.
+- Use `--oracle-profile <name>` to switch profiles for a single run (overrides config).
+- `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Oracle reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.
 - Remote browser defaults follow the same order: `--remote-host/--remote-token` win, then `remote.host` / `remote.token` (or `remoteHost` / `remoteToken`) in the config, then `ORACLE_REMOTE_HOST` / `ORACLE_REMOTE_TOKEN` if still unset.
 - `OPENAI_API_KEY` only influences engine selection when neither the CLI nor `config.json` specify an engine (API when present, otherwise browser).
 - `ORACLE_NOTIFY*` env vars still layer on top of the config’s `notify` block.
 - `sessionRetentionHours` controls the default value for `--retain-hours`. When unset, `ORACLE_RETAIN_HOURS` (if present) becomes the fallback, and the CLI flag still wins over both.
-- `browser.chatgptUrl` accepts either the root ChatGPT URL (`https://chatgpt.com/`) or a folder/workspace URL (e.g., `https://chatgpt.com/g/.../project`); `browser.url` remains as a legacy alias.
-- `browser.geminiUrl` overrides the Gemini web destination (e.g., a specific Gem URL).
-- `browser.grokUrl` overrides the Grok web destination (e.g., a project URL).
-- `browser.projectId` / `browser.projectName` / `browser.conversationId` / `browser.conversationName` let you scope browser runs to a specific project or conversation without changing the default URL (conversation wins if both are set).
-- `browser.list.*` sets defaults for `oracle conversations` (history + filter + refresh).
-- `browser.cache.*` sets defaults for `oracle cache --refresh`.
-- `browser.sessionOpen.*` sets defaults for `oracle session <id> --open-conversation` (URL printing and browser overrides).
-- `browser.target` lets you choose the default browser destination when no explicit model is provided: `chatgpt` uses `gpt-5.2`, `gemini` uses `gemini-3-pro`, `grok` uses `grok-4.1`.
-- `browser.debugPortRange` restricts the DevTools port range used when spawning new Chrome instances. It does not affect attachment to existing sessions or `--remote-chrome`.
-- `browser.debugPort` pins the DevTools port for new Chrome spawns. Environment overrides (`ORACLE_BROWSER_PORT` / `ORACLE_BROWSER_DEBUG_PORT`) still take priority. Use this when you need a stable port (e.g., firewall rules).
-- Browser automation defaults can be set under `browser.*`, including `browser.manualLogin`, `browser.manualLoginProfileDir` (legacy naming), and `browser.thinkingTime` (CLI override: `--browser-thinking-time`). On Windows, `browser.manualLogin` defaults to `true` when omitted.
+- `services.<service>.url` defines global service URL defaults; `oracleProfiles.<name>.services.<service>.url` can override them per profile.
+- `services.<service>.manualLogin` can set a global login mode default; `oracleProfiles.<name>.services.<service>.manualLogin` overrides it per profile (legacy `browser.manualLogin` still works).
+- `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for manual login.
+- Manual login will be renamed to `interactiveLogin` (or `loginMode`) in a future config update; legacy keys will keep working with deprecation warnings.
+- Headless/headful settings belong to the browser layer; keep using `browser.headless` and `browser.hideWindow` until the rename lands.
+- `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `oracleProfiles.<name>.browser.thinkingTime` when set).
+- `oracleProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `oracleProfiles.<name>.cache.useDetectedIdentity` is set.
+- `oracleProfiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Oracle 2`).
+- `oracleProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
+- `oracleProfiles.<name>.cache.*` sets defaults for `oracle cache --refresh` (including `refreshHours` and `rootDir`).
+- `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
+- `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).
+- `browser.blockingProfileAction` controls how Oracle handles a running Chrome profile without DevTools (`fail`, `restart`, `restart-oracle`). Default is `restart-oracle` (only restarts Oracle-managed profiles).
 
 If the config is missing or invalid, Oracle falls back to defaults and prints a warning for parse errors.
 

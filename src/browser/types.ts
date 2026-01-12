@@ -22,6 +22,8 @@ export interface BrowserAutomationConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  display?: string | null;
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
   target?: 'chatgpt' | 'gemini' | 'grok';
   projectId?: string | null;
   conversationId?: string | null;
@@ -96,6 +98,8 @@ export type ResolvedBrowserConfig = Required<
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  display?: string | null;
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
   desiredModel?: string | null;
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;

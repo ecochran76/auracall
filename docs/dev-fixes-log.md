@@ -43,6 +43,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification: Pending (rerun Grok conversation list after patch).
 
 - Date: 2026-01-10
+- Area: Grok browser conversation timestamps (history + list)
+- Symptom: `updatedAt` missing when Grok rendered short relative times (e.g., `2h`, `3d`) or when history dialog stayed open after scraping.
+- Root cause: Timestamp parsing only handled “X hours ago” wording and didn’t recognize short unit tokens; dialog close relied on generic modal close paths only.
+- Fix: Parse short relative units (`2h`, `3d`, `5w`, `2mo`, etc.) and add a history-toggle fallback when closing dialogs.
+- Verification: Pending (rerun Grok conversation list/history with `--include-history` and confirm `updatedAt` populated + dialog closed).
+
+- Date: 2026-01-11
+- Area: Browser session reattach (dangling sessions)
+- Symptom: `oracle session <id> --render` hangs when the browser instance died, even though the session still exists.
+- Root cause: Reattach path assumes an active DevTools port and does not validate liveness before waiting.
+- Fix: Pending (add fast liveness check against registry/port and fail with a clear message + relaunch hint).
+- Verification: Pending (reattach should fail fast when Chrome is closed).
+
+- Date: 2026-01-10
 - Area: Grok assistant selectors (doctor + response polling)
 - Symptom: `oracle doctor --target grok` failed `assistantBubble`, `assistantRole`, and `copyButton` when using the new Grok UI classes.
 - Root cause: Message rows no longer use `.message-bubble` classes; assistant rows are now `div.relative.group.flex.flex-col.items-start`, with action buttons (Copy) nested under the same row.

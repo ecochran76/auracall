@@ -7,6 +7,7 @@ export const CLI_MAPPING: Record<string, string> = {
   'timeout': 'timeout',
   'file': 'file',
   'filesReport': 'filesReport',
+  'oracleProfile': 'oracleProfile',
   
   // Output
   'writeOutput': 'writeOutput',
@@ -25,11 +26,13 @@ export const CLI_MAPPING: Record<string, string> = {
   'browserManualLogin': 'browser.manualLogin',
   'browserManualLoginProfileDir': 'browser.manualLoginProfileDir',
   'browserWslChrome': 'browser.wslChromePreference',
+  'browserBlockingProfile': 'browser.blockingProfileAction',
   
   // Browser - Connection/Chrome
   'browserChromeProfile': 'browser.chromeProfile',
   'browserChromePath': 'browser.chromePath',
   'browserCookiePath': 'browser.chromeCookiePath',
+  'browserDisplay': 'browser.display',
   'browserPort': 'browser.debugPort',
   'browserDebugPort': 'browser.debugPort', // alias
   'remoteChrome': 'browser.remoteChrome',

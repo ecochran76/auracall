@@ -58,6 +58,7 @@ export interface BrowserFlagOptions {
   remoteChrome?: string;
   browserPort?: number;
   browserDebugPort?: number;
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-oracle';
   model: ModelName;
   verbose?: boolean;
 }
@@ -144,6 +145,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     conversationId: options.conversationId ?? null,
     url,
     debugPort: selectBrowserPort(options),
+    blockingProfileAction: options.browserBlockingProfile ?? undefined,
     timeoutMs: options.browserTimeout ? parseDuration(options.browserTimeout, DEFAULT_BROWSER_TIMEOUT_MS) : undefined,
     inputTimeoutMs: options.browserInputTimeout
       ? parseDuration(options.browserInputTimeout, DEFAULT_BROWSER_INPUT_TIMEOUT_MS)

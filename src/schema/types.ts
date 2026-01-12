@@ -33,11 +33,43 @@ export const BrowserListConfigSchema = z.object({
   refresh: z.boolean().optional(),
 });
 
+export const ServiceIdentitySchema = z.object({
+  name: z.string().optional(),
+  handle: z.string().optional(),
+  email: z.string().optional(),
+});
+
+export const ServiceConfigSchema = z.object({
+  url: z.string().optional(),
+  identity: ServiceIdentitySchema.optional(),
+  projectId: z.string().optional(),
+  projectName: z.string().optional(),
+  conversationId: z.string().optional(),
+  conversationName: z.string().optional(),
+  model: z.string().optional(),
+  modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
+  manualLogin: z.boolean().optional(),
+  manualLoginProfileDir: z.string().optional(),
+  thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+});
+
 export const BrowserCacheConfigSchema = z.object({
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
   historyLimit: z.number().optional(),
   historySince: z.string().optional(),
+  identityKey: z.string().optional(),
+  identity: z
+    .object({
+      id: z.string().optional(),
+      name: z.string().optional(),
+      handle: z.string().optional(),
+      email: z.string().optional(),
+    })
+    .optional(),
+  rootDir: z.string().optional(),
+  useDetectedIdentity: z.boolean().optional(),
+  refreshHours: z.number().optional(),
 });
 
 export const BrowserSessionOpenConfigSchema = z.object({
@@ -67,6 +99,8 @@ export const BrowserConfigSchema = z.object({
   chromeProfile: z.string().optional(),
   chromePath: z.string().optional(),
   chromeCookiePath: z.string().optional(),
+  display: z.string().optional(),
+  blockingProfileAction: z.enum(['fail', 'restart', 'restart-oracle']).optional(),
   headless: z.boolean().optional(),
   hideWindow: z.boolean().optional(),
   keepBrowser: z.boolean().optional(),
@@ -102,6 +136,76 @@ export const BrowserConfigSchema = z.object({
   list: BrowserListConfigSchema.optional(),
   cache: BrowserCacheConfigSchema.optional(),
   sessionOpen: BrowserSessionOpenConfigSchema.optional(),
+});
+
+export const OracleProfileBrowserSchema = z.object({
+  chromePath: z.string().optional(),
+  profilePath: z.string().optional(),
+  profileName: z.string().optional(),
+  cookiePath: z.string().optional(),
+  display: z.string().optional(),
+  blockingProfileAction: z.enum(['fail', 'restart', 'restart-oracle']).optional(),
+  manualLogin: z.boolean().optional(),
+  manualLoginProfileDir: z.string().optional(),
+  headless: z.boolean().optional(),
+  hideWindow: z.boolean().optional(),
+  keepBrowser: z.boolean().optional(),
+  debugPort: z.number().optional(),
+  debugPortRange: z.tuple([z.number(), z.number()]).optional(),
+  remoteChrome: z.object({ host: z.string(), port: z.number() }).optional().or(z.string().optional()),
+  thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+  modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
+  attachments: z.enum(['auto', 'never', 'always']).optional(),
+  inlineFiles: z.boolean().optional(),
+  bundleFiles: z.boolean().optional(),
+  cookieNames: z.array(z.string()).optional().or(z.string().optional()),
+  inlineCookies: z.string().optional(),
+  inlineCookiesFile: z.string().optional(),
+  allowCookieErrors: z.boolean().optional(),
+  noCookieSync: z.boolean().optional(),
+  cookieSyncWaitMs: DurationMs.optional(),
+  wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
+});
+
+export const OracleProfileCacheSchema = z.object({
+  refresh: z.boolean().optional(),
+  includeHistory: z.boolean().optional(),
+  historyLimit: z.number().optional(),
+  historySince: z.string().optional(),
+  rootDir: z.string().optional(),
+  useDetectedIdentity: z.boolean().optional(),
+  refreshHours: z.number().optional(),
+});
+
+export const OracleProfileSchema = z.object({
+  engine: z.enum(['api', 'browser']).optional(),
+  search: z.union([z.enum(['on', 'off']), z.boolean()])
+    .transform((val) => {
+      if (typeof val === 'boolean') return val ? 'on' : 'off';
+      return val;
+    })
+    .optional(),
+  defaultService: z.enum(['chatgpt', 'gemini', 'grok']).optional(),
+  keepBrowser: z.boolean().optional(),
+  browser: OracleProfileBrowserSchema.optional(),
+  services: z
+    .object({
+      chatgpt: ServiceConfigSchema.optional(),
+      gemini: ServiceConfigSchema.optional(),
+      grok: ServiceConfigSchema.optional(),
+    })
+    .optional(),
+  cache: OracleProfileCacheSchema.optional(),
+});
+
+export const OracleServicesSchema = z.object({
+  chatgpt: ServiceConfigSchema.optional(),
+  gemini: ServiceConfigSchema.optional(),
+  grok: ServiceConfigSchema.optional(),
+});
+
+export const OracleDevConfigSchema = z.object({
+  browserPortRange: z.tuple([z.number(), z.number()]).optional(),
 });
 
 export const ConfigSchema = z.object({
@@ -149,6 +253,12 @@ export const ConfigSchema = z.object({
   background: z.boolean().optional(),
   heartbeatSeconds: z.number().optional(),
   
+  // Profiles + services
+  oracleProfile: z.string().optional(),
+  oracleProfiles: z.record(z.string(), OracleProfileSchema).optional(),
+  services: OracleServicesSchema.optional(),
+  dev: OracleDevConfigSchema.optional(),
+
   // Nested
   browser: BrowserConfigSchema.default({}),
 });
