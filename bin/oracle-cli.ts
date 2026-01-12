@@ -1370,22 +1370,36 @@ configCommand
   .option('--dry-run', 'Print the migrated config instead of writing it.', false)
   .option('--strip-legacy', 'Drop legacy browser/oracleProfiles keys from output.', false)
   .option('--force', 'Overwrite an existing output file.', false)
-  .action(async (commandOptions) => {
-    if (commandOptions.output && commandOptions.inPlace) {
+  .action(async (commandOptions, command) => {
+    const cmd = command?.opts ? command : (commandOptions as unknown as Command);
+    const opts = cmd?.opts?.() ?? commandOptions;
+    if (opts.output && opts.inPlace) {
       throw new Error('Do not combine --output with --in-place.');
     }
-    const inputPath = commandOptions.path ?? configPath();
+    const inputPath = opts.path ?? configPath();
     const raw = await fs.readFile(inputPath, 'utf8');
     const parsed = JSON5.parse(raw) as UserConfig;
-    const migrated = materializeConfigV2(parsed, { stripLegacy: Boolean(commandOptions.stripLegacy) });
-    if (commandOptions.dryRun) {
+    const migrated = materializeConfigV2(parsed, { stripLegacy: Boolean(opts.stripLegacy) });
+    const envDryRun =
+      process.env.npm_config_dry_run === 'true' || process.env.npm_config_dry_run === '1';
+    const flagValue =
+      opts.dryRun === true
+        ? true
+        : cmd?.optsWithGlobals?.().dryRun === true
+          ? true
+          : cmd?.parent?.opts?.().dryRun === true
+            ? true
+            : process.argv.includes('--dry-run') || envDryRun;
+    const dryRun = Boolean(flagValue);
+    if (dryRun) {
+      console.log('Dry run: printing migrated config (no file written).');
       console.log(JSON.stringify(migrated, null, 2));
       return;
     }
-    const outputPath = commandOptions.inPlace
+    const outputPath = opts.inPlace
       ? inputPath
-      : commandOptions.output ?? `${inputPath}.v2`;
-    if (!commandOptions.force && outputPath !== inputPath) {
+      : opts.output ?? `${inputPath}.v2`;
+    if (!opts.force && outputPath !== inputPath) {
       try {
         await fs.access(outputPath);
         throw new Error(`Refusing to overwrite ${outputPath}. Use --force to overwrite.`);
