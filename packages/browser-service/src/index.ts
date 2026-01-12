@@ -9,6 +9,7 @@ export * from './types.js';
 export * from './utils.js';
 export * from './service/profile.js';
 export * from './service/profileDiscovery.js';
+export * from './service/portResolution.js';
 export * from './service/stateRegistry.js';
 export * from './service/types.js';
 export * from './service/ui.js';

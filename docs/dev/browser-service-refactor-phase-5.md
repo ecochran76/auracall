@@ -34,6 +34,7 @@
     moved into `packages/browser-service/` with oracle-side re-export stubs for now.
   - Generic service helpers (profile discovery + UI helpers) moved into the package; oracle keeps thin re-exports.
   - Registry implementation moved into the package with an oracle wrapper that binds the registry path.
+  - Port resolution core moved into the package with an oracle wrapper to supply env/config defaults.
 
   3) Extraction plan + package layout
 
