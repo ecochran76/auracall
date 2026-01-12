@@ -75,5 +75,5 @@ Systematically replace the body of each command with `BrowserAutomationClient` u
 ## Status (2026-01-10)
 *   Phase 1: Complete (client added in `src/browser/client.ts`).
 *   Phase 2: Complete (port resolution + login helpers centralized).
-*   Phase 3: Complete (projects/conversations/rename/login/doctor use client; manual login flows consolidated via shared helper; cache refresh routed via client).
+*   Phase 3: Complete (projects/conversations/rename/login/doctor use client; cache refresh/name resolution routed via LlmService; model picker fallback emits warning on failure).
 *   Phase 4: Complete (legacy helper cleanup + import pruning).

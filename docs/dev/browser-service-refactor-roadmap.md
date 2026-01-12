@@ -28,7 +28,7 @@ Status: complete (2026-01-12). Phase 2 utilities and adapters now route through 
 - Centralize cache refresh policy and name/id resolution.
 - Provide standard lifecycle hooks for list/refresh/rename/open flows.
 
-Status: in progress (CLI list/resolve flows moving to `llmService`, model selection fallback pending).
+Status: complete (CLI list/resolve flows now use `llmService`; model picker fallback warns on failure).
 
 ### Phase 4: Port existing services
 - Implement Grok/ChatGPT/Gemini as `llmService` subclasses.

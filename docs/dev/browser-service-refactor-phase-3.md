@@ -41,5 +41,5 @@ Introduce the `llmService` layer that centralizes LLM-domain primitives (project
 - Behavior matches prior cache refresh + name resolution flows.
 
 ## Status (2026-01-12)
-- In progress: `LlmService` is in place and CLI commands are being migrated.
-- Remaining: verify model-selection fallback updates and finish Phase 3 validation checklist.
+- Complete: `LlmService` is in place and CLI commands route through it.
+- Model picker fallback emits a warning when selection fails.
