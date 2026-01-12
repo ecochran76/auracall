@@ -73,6 +73,12 @@ node --import tsx bin/oracle-cli.ts config migrate --dry-run
           thinkingTime: "extended",
           interactiveLogin: false,
           manualLoginProfileDir: "/Users/me/.oracle/browser-profile",
+          features: {
+            web_search: true,
+            deep_research: false,
+            company_knowledge: false,
+            apps: ["projects", "gpts"]
+          }
         },
         grok: {
           identity: { email: "me@example.com" },
@@ -137,6 +143,10 @@ Within each file, later CLI flags still override config, and environment variabl
 - `services.<service>.interactiveLogin` can set a global login mode default; `profiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
 - `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
+- `services.<service>.features` holds provider-specific feature flags. Typical keys:
+  - `chatgpt`: `web_search`, `deep_research`, `company_knowledge`, `apps`
+  - `grok`: `search`, `sources`, `apps`
+  - `gemini`: `search`, `grounding`, `apps`
 - Headless/headful settings belong to the browser layer; keep using `browser.headless` and `browser.hideWindow` until the rename lands.
 - `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `profiles.<name>.browser.thinkingTime` when set).
 - `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
