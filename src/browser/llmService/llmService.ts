@@ -60,6 +60,23 @@ export abstract class LlmService {
       : this.userConfig.browser?.chatgptUrl ?? this.userConfig.browser?.url ?? null;
   }
 
+  resolveLaunchUrl(options: {
+    configuredUrl?: string | null;
+    projectId?: string | null;
+    conversationId?: string | null;
+  } = {}): string | null {
+    const configuredUrl = options.configuredUrl ?? this.getConfiguredUrl();
+    const conversationId = options.conversationId ?? null;
+    const projectId = options.projectId ?? null;
+    if (conversationId && this.provider.resolveConversationUrl) {
+      return this.provider.resolveConversationUrl(conversationId, projectId ?? undefined) ?? configuredUrl ?? null;
+    }
+    if (projectId && this.provider.resolveProjectUrl) {
+      return this.provider.resolveProjectUrl(projectId) ?? configuredUrl ?? null;
+    }
+    return configuredUrl ?? null;
+  }
+
   async buildListOptions(
     overrides: BrowserProviderListOptions = {},
     options: { ensurePort?: boolean } = {},

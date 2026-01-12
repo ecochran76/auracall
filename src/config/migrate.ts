@@ -2,7 +2,19 @@ import type { OracleConfig } from './schema.js';
 
 type MutableConfig = Record<string, unknown>;
 
+export type ConfigAliasRule = {
+  path: string;
+  from: string;
+  to: string;
+};
+
 const KNOWN_SERVICES = new Set(['chatgpt', 'gemini', 'grok']);
+
+const DEFAULT_ALIAS_RULES: ConfigAliasRule[] = [
+  { path: 'browser', from: 'profileConflictAction', to: 'blockingProfileAction' },
+  { path: 'browserDefaults', from: 'profileConflictAction', to: 'blockingProfileAction' },
+  { path: 'profiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction' },
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -18,7 +30,40 @@ function mergeRecords(base: Record<string, unknown>, overlay: Record<string, unk
   return { ...base, ...overlay };
 }
 
-export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
+function applyAliasRule(config: MutableConfig, rule: ConfigAliasRule): void {
+  const segments = rule.path.split('.');
+  const walk = (node: unknown, index: number): void => {
+    if (!isRecord(node)) return;
+    if (index >= segments.length) {
+      if (node[rule.to] === undefined && node[rule.from] !== undefined) {
+        node[rule.to] = node[rule.from];
+      }
+      return;
+    }
+    const key = segments[index];
+    if (key === '*') {
+      for (const value of Object.values(node)) {
+        walk(value, index + 1);
+      }
+      return;
+    }
+    if (Object.hasOwn(node, key)) {
+      walk(node[key], index + 1);
+    }
+  };
+  walk(config, 0);
+}
+
+export function applyConfigAliases(config: MutableConfig, rules: ConfigAliasRule[]): void {
+  for (const rule of rules) {
+    applyAliasRule(config, rule);
+  }
+}
+
+export function normalizeConfigV1toV2(
+  config: OracleConfig,
+  options: { aliasRules?: ConfigAliasRule[] } = {},
+): OracleConfig {
   if (!isRecord(config)) return config;
 
   const normalized: MutableConfig = { ...config };
@@ -26,12 +71,6 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
 
   if (browserDefaults) {
     const browserDefaultsRecord = browserDefaults as Record<string, unknown>;
-    if (
-      browserDefaultsRecord.profileConflictAction &&
-      browserDefaultsRecord.blockingProfileAction === undefined
-    ) {
-      browserDefaultsRecord.blockingProfileAction = browserDefaultsRecord.profileConflictAction;
-    }
     const existingBrowser = isRecord(normalized.browser) ? normalized.browser : {};
     normalized.browser = mergeRecords(browserDefaultsRecord, existingBrowser);
   }
@@ -82,12 +121,6 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
       if (isRecord(profileValue.browser)) {
         const legacyBrowser = isRecord(legacyProfile.browser) ? legacyProfile.browser : {};
         const profileBrowser = profileValue.browser as Record<string, unknown>;
-        if (
-          profileBrowser.profileConflictAction &&
-          profileBrowser.blockingProfileAction === undefined
-        ) {
-          profileBrowser.blockingProfileAction = profileBrowser.profileConflictAction;
-        }
         legacyProfile.browser = mergeRecords(legacyBrowser, profileBrowser);
       }
 
@@ -139,6 +172,8 @@ export function normalizeConfigV1toV2(config: OracleConfig): OracleConfig {
     }
     normalized.oracleProfiles = oracleProfiles;
   }
+
+  applyConfigAliases(normalized, options.aliasRules ?? DEFAULT_ALIAS_RULES);
 
   return normalized as OracleConfig;
 }

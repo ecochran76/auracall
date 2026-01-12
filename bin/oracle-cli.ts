@@ -1252,6 +1252,43 @@ async function buildBrowserContext({
   };
 }
 
+function applyBrowserLaunchUrl({
+  browserConfig,
+  userConfig,
+  model,
+}: {
+  browserConfig?: BrowserSessionConfig;
+  userConfig: UserConfig;
+  model: string;
+}): void {
+  if (!browserConfig) return;
+  const target = browserConfig.target ?? (model.toLowerCase().startsWith('grok') ? 'grok' : 'chatgpt');
+  if (target === 'gemini') {
+    return;
+  }
+  const configuredUrl =
+    target === 'grok'
+      ? browserConfig.grokUrl ?? userConfig.browser?.grokUrl ?? null
+      : browserConfig.chatgptUrl ??
+        browserConfig.url ??
+        userConfig.browser?.chatgptUrl ??
+        userConfig.browser?.url ??
+        null;
+  const llmService = createLlmService(target, userConfig);
+  const resolvedUrl = llmService.resolveLaunchUrl({
+    configuredUrl,
+    projectId: browserConfig.projectId ?? null,
+    conversationId: browserConfig.conversationId ?? null,
+  });
+  if (!resolvedUrl) return;
+  if (target === 'grok') {
+    browserConfig.grokUrl = resolvedUrl;
+  } else {
+    browserConfig.url = resolvedUrl;
+    browserConfig.chatgptUrl = resolvedUrl;
+  }
+}
+
 program
   .command('login')
   .description('Launch the configured browser profile for ChatGPT, Gemini, or Grok sign-in.')
@@ -1860,6 +1897,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
           browserCookieWait: config.browser.cookieSyncWaitMs ? String(config.browser.cookieSyncWaitMs) : undefined,
         })
       : undefined;
+  applyBrowserLaunchUrl({ browserConfig, userConfig, model: resolvedModel });
   const browserContext = await buildBrowserContext({
     options,
     userConfig,

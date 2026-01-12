@@ -1,5 +1,4 @@
 import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, GROK_URL } from './constants.js';
-import { resolveProviderUrl } from './providers/service.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
@@ -55,16 +54,10 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     target === 'grok'
       ? config?.grokUrl ?? config?.url ?? GROK_URL
       : config?.chatgptUrl ?? config?.url ?? DEFAULT_BROWSER_CONFIG.url;
-  const resolved = resolveProviderUrl({
-    provider: target === 'grok' ? 'grok' : 'chatgpt',
-    configuredUrl: rawUrl ?? null,
-    projectId: (config as { projectId?: string } | undefined)?.projectId,
-    conversationId: (config as { conversationId?: string } | undefined)?.conversationId,
-  });
   const normalizedUrl =
     target === 'grok'
-      ? (resolved.url ?? GROK_URL)
-      : normalizeChatgptUrl(resolved.url ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
+      ? (rawUrl ?? GROK_URL)
+      : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
   const desiredModel = config?.desiredModel ?? DEFAULT_BROWSER_CONFIG.desiredModel ?? DEFAULT_MODEL_TARGET;
   const modelStrategy =
     normalizeBrowserModelStrategy(config?.modelStrategy) ??
