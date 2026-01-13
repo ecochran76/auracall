@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import * as registry from '../../packages/browser-service/src/service/stateRegistry.js';
+import { resolveTab } from '../../packages/browser-service/src/service/instanceScanner.js';
 
 vi.mock('../../packages/browser-service/src/processCheck.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../packages/browser-service/src/processCheck.js')>();
@@ -69,5 +70,14 @@ describe('stateRegistry (package)', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  test('resolveTab prefers matching URL', () => {
+    const tabs = [
+      { targetId: 'a', url: 'https://example.com', title: 'Example', type: 'page' },
+      { targetId: 'b', url: 'https://grok.com', title: 'Grok', type: 'page' },
+    ];
+    const tab = resolveTab(tabs, { matchUrl: (url) => url.includes('grok.com') });
+    expect(tab?.targetId).toBe('b');
   });
 });

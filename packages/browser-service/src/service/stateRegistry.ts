@@ -118,6 +118,23 @@ export async function pruneRegistry(options: RegistryOptions): Promise<void> {
   }
 }
 
+export async function updateInstance(
+  options: RegistryOptions,
+  profilePath: string,
+  profileName: string | null | undefined,
+  updates: Partial<BrowserInstance>,
+): Promise<void> {
+  const registry = await loadRegistry(options);
+  const resolvedProfile = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+  const key = buildRegistryKey(profilePath, resolvedProfile);
+  const existing = registry.instances[key];
+  if (!existing) {
+    return;
+  }
+  registry.instances[key] = { ...existing, ...updates, profileName: resolvedProfile };
+  await saveRegistry(options, registry);
+}
+
 function buildRegistryKey(profilePath: string, profileName?: string): string {
   const normalizedPath = path.normalize(profilePath);
   const normalizedName = (profileName ?? 'Default').trim().toLowerCase();
