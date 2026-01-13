@@ -5,6 +5,7 @@ import { BrowserService } from '../src/browser/service/browserService.js';
 export async function resolveScriptBrowserTarget(options?: {
   fallbackPort?: number;
 }): Promise<{ host: string; port: number }> {
+  // Oracle-only helper: uses Oracle config resolution + BrowserService wrapper.
   const userConfig = await resolveConfig({}, process.cwd(), process.env);
   const browserService = BrowserService.fromConfig(userConfig);
   const target = await browserService.resolveDevToolsTarget();

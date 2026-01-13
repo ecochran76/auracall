@@ -31,6 +31,7 @@ async function fetchVersion(host: string, devtoolsPort: number): Promise<boolean
 }
 
 async function main() {
+  // Oracle-only tool: keep using Oracle's browser-service wrappers for config + registry lookup.
   const { host, port } = await resolveScriptBrowserTarget({ fallbackPort: DEFAULT_PORT });
   let ok = await fetchVersion(host, port);
   if (ok) {

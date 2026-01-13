@@ -34,4 +34,20 @@ describe('portSelection', () => {
       await new Promise<void>((resolve) => server.close(() => resolve()));
     }
   });
+
+  test('chooses the first free port in the range', async () => {
+    const server = await listenEphemeral();
+    const logs: string[] = [];
+    try {
+      const chosen = await pickAvailableDebugPort(
+        server.port,
+        (message) => logs.push(message),
+        [server.port, server.port + 2],
+      );
+      expect(chosen).toBe(server.port + 1);
+      expect(logs.length).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
 });

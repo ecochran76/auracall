@@ -41,6 +41,25 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - `runBrowserSessionExecutionCore`
 - `profileDiscovery` helpers + registry utilities
 
+## Example (External Use)
+```ts
+import { BrowserService } from '@ecochran76/browser-service';
+
+const service = new BrowserService(resolvedConfig, {
+  resolveBrowserListTarget: async () => undefined,
+  pruneRegistry: async () => {},
+  launchManualLoginSession: async () => {
+    throw new Error('Implement launchManualLoginSession for your host app.');
+  },
+});
+
+const target = await service.resolveDevToolsTarget({ ensurePort: true });
+if (target.port) {
+  const { client } = await service.connectDevTools();
+  await client.close();
+}
+```
+
 ## API Stability
 - Stable: chrome lifecycle + port selection + registry/profile helpers, `BrowserService`, core types.
 - Provisional: login helpers, manual login workflow, session runner core, browser client core.
