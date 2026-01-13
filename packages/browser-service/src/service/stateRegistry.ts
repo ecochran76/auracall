@@ -103,6 +103,17 @@ export async function findActiveInstance(
   return null;
 }
 
+export async function getInstance(
+  options: RegistryOptions,
+  profilePath: string,
+  profileName?: string | null,
+): Promise<BrowserInstance | null> {
+  const registry = await loadRegistry(options);
+  const normalizedName = resolveProfileDirectoryName(profilePath, profileName ?? 'Default');
+  const key = buildRegistryKey(profilePath, normalizedName);
+  return registry.instances[key] ?? null;
+}
+
 export async function pruneRegistry(options: RegistryOptions): Promise<void> {
   const registry = await loadRegistry(options);
   let changed = false;
@@ -116,6 +127,11 @@ export async function pruneRegistry(options: RegistryOptions): Promise<void> {
   if (changed) {
     await saveRegistry(options, registry);
   }
+}
+
+export async function listInstances(options: RegistryOptions): Promise<BrowserInstance[]> {
+  const registry = await loadRegistry(options);
+  return Object.values(registry.instances ?? {});
 }
 
 export async function updateInstance(

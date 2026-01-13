@@ -677,12 +677,56 @@ async function connectToGrokTab(
 }> {
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
+  if (options?.tabTargetId && port) {
+    const client = await CDP({ host, port, target: options.tabTargetId });
+    await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    return {
+      client,
+      targetId: options.tabTargetId,
+      shouldClose: false,
+      host,
+      port,
+      usedExisting: true,
+    };
+  }
+  const serviceResolver = options?.browserService as
+    | (import('../service/browserService.js').BrowserService & {
+        resolveServiceTarget?: (options: {
+          serviceId: 'grok';
+          configuredUrl?: string | null;
+          ensurePort?: boolean;
+        }) => Promise<{ host?: string; port?: number; tab?: { targetId?: string } | null }>;
+      })
+    | undefined;
+  const preferredUrl = urlOverride ?? options?.configuredUrl ?? 'https://grok.com/';
+  if ((!port || !host) && serviceResolver?.resolveServiceTarget) {
+    const target = await serviceResolver.resolveServiceTarget({
+      serviceId: 'grok',
+      configuredUrl: preferredUrl,
+      ensurePort: true,
+    });
+    host = target.host ?? host;
+    port = target.port ?? port;
+    const resolvedPort = target.port ?? port;
+    if (target.tab?.targetId && resolvedPort) {
+      const client = await CDP({ host, port: resolvedPort, target: target.tab.targetId });
+      await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+      return {
+        client,
+        targetId: target.tab.targetId,
+        shouldClose: false,
+        host,
+        port: resolvedPort,
+        usedExisting: true,
+      };
+    }
+  }
   if ((!port || !host) && options?.browserService) {
     const target = await options.browserService.resolveDevToolsTarget({
       host,
       port: port ?? undefined,
       ensurePort: true,
-      launchUrl: urlOverride ?? options?.configuredUrl ?? 'https://grok.com/',
+      launchUrl: preferredUrl,
     });
     host = target.host ?? host;
     port = target.port ?? port;
@@ -693,7 +737,6 @@ async function connectToGrokTab(
   const resolvedPort = port;
   const targets = await CDP.List({ host, port: resolvedPort });
   const candidates = targets.filter((target) => target.type === 'page' && target.url?.includes('grok.com'));
-  const preferredUrl = urlOverride ?? options?.configuredUrl;
   const preferred = preferredUrl
     ? candidates.find((target) => target.url?.includes(preferredUrl ?? ''))
     : undefined;
@@ -738,6 +781,49 @@ async function connectToGrokProjectTab(
 }> {
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
+  if (options?.tabTargetId && port) {
+    const client = await CDP({ host, port, target: options.tabTargetId });
+    await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    return {
+      client,
+      targetId: options.tabTargetId,
+      shouldClose: false,
+      host,
+      port,
+      usedExisting: true,
+    };
+  }
+  const serviceResolver = options?.browserService as
+    | (import('../service/browserService.js').BrowserService & {
+        resolveServiceTarget?: (options: {
+          serviceId: 'grok';
+          configuredUrl?: string | null;
+          ensurePort?: boolean;
+        }) => Promise<{ host?: string; port?: number; tab?: { targetId?: string } | null }>;
+      })
+    | undefined;
+  if ((!port || !host) && serviceResolver?.resolveServiceTarget) {
+    const target = await serviceResolver.resolveServiceTarget({
+      serviceId: 'grok',
+      configuredUrl: projectUrl,
+      ensurePort: true,
+    });
+    host = target.host ?? host;
+    port = target.port ?? port;
+    const resolvedPort = target.port ?? port;
+    if (target.tab?.targetId && resolvedPort) {
+      const client = await CDP({ host, port: resolvedPort, target: target.tab.targetId });
+      await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+      return {
+        client,
+        targetId: target.tab.targetId,
+        shouldClose: false,
+        host,
+        port: resolvedPort,
+        usedExisting: true,
+      };
+    }
+  }
   if ((!port || !host) && options?.browserService) {
     const target = await options.browserService.resolveDevToolsTarget({
       host,

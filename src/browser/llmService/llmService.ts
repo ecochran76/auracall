@@ -119,17 +119,18 @@ export abstract class LlmService {
       : this.getConfiguredUrl();
     const launchUrl =
       configuredUrl ?? (this.providerId === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
-    const target = await this.browserService.resolveDevToolsTarget({
-      host: overrides.host,
-      port: overrides.port,
+    const target = await this.browserService.resolveServiceTarget({
+      serviceId: this.providerId,
+      configuredUrl,
       ensurePort: options.ensurePort,
-      launchUrl,
     });
     return {
       ...overrides,
       port: target.port ?? overrides.port,
       host: target.host ?? overrides.host,
       configuredUrl,
+      tabTargetId: target.tab?.targetId,
+      tabUrl: target.tab?.url ?? undefined,
       browserService: this.browserService,
     };
   }

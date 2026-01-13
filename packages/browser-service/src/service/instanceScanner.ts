@@ -1,6 +1,6 @@
 import CDP from 'chrome-remote-interface';
 import type { BrowserInstance, RegistryOptions } from './stateRegistry.js';
-import { findActiveInstance, updateInstance } from './stateRegistry.js';
+import { getInstance, updateInstance } from './stateRegistry.js';
 import type { BrowserLogger } from '../types.js';
 
 export type TabDescriptor = {
@@ -40,8 +40,9 @@ export async function scanRegisteredInstance(
   profilePath: string,
   profileName: string | null | undefined,
   logger?: BrowserLogger,
+  updates: Partial<BrowserInstance> = {},
 ): Promise<InstanceScanResult | null> {
-  const instance = await findActiveInstance(options, profilePath, profileName);
+  const instance = await getInstance(options, profilePath, profileName);
   if (!instance) return null;
   const scan = await scanInstanceTabs(instance, logger);
   if (!scan) return null;
@@ -50,6 +51,7 @@ export async function scanRegisteredInstance(
     tabs: scan.tabs,
     lastKnownUrls: urls.length ? urls : undefined,
     lastSeenAt: new Date().toISOString(),
+    ...updates,
   });
   return scan;
 }

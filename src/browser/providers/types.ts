@@ -30,6 +30,8 @@ export interface BrowserProviderListOptions {
   host?: string;
   port?: number;
   configuredUrl?: string | null;
+  tabTargetId?: string;
+  tabUrl?: string | null;
   includeHistory?: boolean;
   historyLimit?: number;
   historySince?: string;
