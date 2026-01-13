@@ -107,9 +107,25 @@ export class BrowserService extends BrowserServiceCore {
         { services: Array.from(merged) },
       );
     }
-    const matchUrl = options.configuredUrl
-      ? (url: string) => url.includes(options.configuredUrl ?? '')
-      : (url: string) => url.includes(`${options.serviceId}.`) || url.includes(`/${options.serviceId}`);
+    const matchers: Array<(url: string) => boolean> = [];
+    if (options.configuredUrl) {
+      try {
+        const host = new URL(options.configuredUrl).host;
+        if (host) {
+          matchers.push((url) => url.includes(host));
+        }
+      } catch {
+        matchers.push((url) => url.includes(options.configuredUrl ?? ''));
+      }
+    }
+    if (options.serviceId === 'chatgpt') {
+      matchers.push((url) => url.includes('chatgpt.com') || url.includes('chat.openai.com'));
+    } else if (options.serviceId === 'gemini') {
+      matchers.push((url) => url.includes('gemini.google.com'));
+    } else {
+      matchers.push((url) => url.includes('grok.com'));
+    }
+    const matchUrl = (url: string) => matchers.some((matcher) => matcher(url));
     const tab = scan?.tabs ? resolveTab(scan.tabs, { matchUrl }) : null;
     return { host: target.host, port: target.port, tab, tabs: scan?.tabs };
   }
