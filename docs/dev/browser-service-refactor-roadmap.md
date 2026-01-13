@@ -40,6 +40,11 @@ Status: complete (CLI list/resolve flows now use `llmService`; model picker fall
 - Extract browserService into a reusable package with minimal dependencies.
 - Version and document the stable API for external automation projects.
 
+### Phase 6: Package hardening + integration cleanup
+- Stabilize the browser-service public API and documentation.
+- Move remaining generic helpers out of Oracle into browser-service.
+- Add unit tests for browser-service core utilities.
+
 ## Deliverables
 - `browserService` base class + supporting utilities.
 - `llmService` base class + common cache/refresh logic.
