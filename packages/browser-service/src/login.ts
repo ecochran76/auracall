@@ -12,19 +12,20 @@ import {
 import { resolveWslHost } from './chromeLifecycle.js';
 import { pickAvailableDebugPort, DEFAULT_DEBUG_PORT, DEFAULT_DEBUG_PORT_RANGE } from './portSelection.js';
 
-export type LoginTarget = 'chatgpt' | 'gemini' | 'grok';
-
 export interface BrowserLoginOptions {
-  target: LoginTarget;
   chromePath: string;
   chromeProfile: string;
   manualLoginProfileDir: string;
   cookiePath?: string;
-  chatgptUrl?: string | null;
-  geminiUrl?: string | null;
-  grokUrl?: string | null;
+  loginUrl: string;
+  loginLabel?: string;
   exportCookies?: boolean;
-  defaultUrlResolver: (target: LoginTarget) => string;
+  preferCookieProfile?: boolean;
+  cookieExport?: {
+    urls: string[];
+    requiredCookies?: string[];
+    timeoutMs?: number;
+  };
   onRegisterInstance?: (options: {
     userDataDir: string;
     profileName: string;
@@ -45,30 +46,23 @@ export interface BrowserLoginOptions {
 
 export async function runBrowserLogin(options: BrowserLoginOptions): Promise<void> {
   const {
-    target,
     chromePath,
     chromeProfile,
     manualLoginProfileDir,
     cookiePath,
-    chatgptUrl,
-    geminiUrl,
-    grokUrl,
+    loginUrl,
+    loginLabel,
     exportCookies,
-    defaultUrlResolver,
+    preferCookieProfile = true,
+    cookieExport,
     onRegisterInstance,
     launchManualLoginSession,
     onCookiesExported,
   } = options;
-  const url =
-    target === 'gemini'
-      ? geminiUrl ?? defaultUrlResolver('gemini')
-      : target === 'grok'
-        ? grokUrl ?? defaultUrlResolver('grok')
-        : chatgptUrl ?? defaultUrlResolver('chatgpt');
 
-  const inferred = cookiePath ? inferProfileFromCookiePath(cookiePath) : null;
-  const userDataDir = target === 'chatgpt' ? manualLoginProfileDir : inferred?.userDataDir ?? manualLoginProfileDir;
-  const profileName = target === 'chatgpt' ? chromeProfile : inferred?.profileDir ?? chromeProfile;
+  const inferred = cookiePath && preferCookieProfile ? inferProfileFromCookiePath(cookiePath) : null;
+  const userDataDir = inferred?.userDataDir ?? manualLoginProfileDir;
+  const profileName = inferred?.profileDir ?? chromeProfile;
   const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
   const debugHost = wslWindowsChrome ? (resolveWslHost() ?? '127.0.0.1') : '127.0.0.1';
   const debugPort = await pickAvailableDebugPort(
@@ -78,8 +72,8 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
   );
 
   if (exportCookies) {
-    if (target !== 'gemini') {
-      throw new Error('Cookie export currently supports Gemini login only.');
+    if (!cookieExport?.urls?.length) {
+      throw new Error('Cookie export requires cookieExport.urls to be set.');
     }
     if (process.platform !== 'win32' || isWsl()) {
       console.log(
@@ -92,14 +86,14 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       `--profile-directory=${profileName}`,
       '--remote-allow-origins=*',
       `--remote-debugging-port=${debugPort}`,
-      url,
+      loginUrl,
     ];
     if (wslWindowsChrome) {
       args.splice(args.length - 1, 0, '--remote-debugging-address=0.0.0.0');
     }
-    const cookieUrls = ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'];
-    const requiredCookies = ['__Secure-1PSID', '__Secure-1PSIDTS'];
-    const timeoutMs = 120_000;
+    const cookieUrls = cookieExport.urls;
+    const requiredCookies = cookieExport.requiredCookies ?? [];
+    const timeoutMs = cookieExport.timeoutMs ?? 120_000;
 
     if (wslWindowsChrome) {
       const winChromePath = toWindowsPath(chromePath);
@@ -121,19 +115,25 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
         chromePath,
         profileName,
         userDataDir,
-        url,
+        url: loginUrl,
         debugPort,
         logger: () => undefined,
       });
       chrome.process?.unref?.();
     }
 
-    console.log(`Opened ${target} login in ${chromePath}`);
+    const label = loginLabel ?? 'browser';
+    console.log(`Opened ${label} login in ${chromePath}`);
     console.log(`Profile: ${userDataDir} (${profileName})`);
-    console.log(`URL: ${url}`);
-    console.log('Waiting for Gemini cookies...');
+    console.log(`URL: ${loginUrl}`);
+    console.log('Waiting for cookies...');
 
-    const cookies = await exportCookiesFromCdp({ port: debugPort, requiredNames: requiredCookies, urls: cookieUrls, timeoutMs });
+    const cookies = await exportCookiesFromCdp({
+      port: debugPort,
+      requiredNames: requiredCookies,
+      urls: cookieUrls,
+      timeoutMs,
+    });
     await onCookiesExported?.(cookies);
     return;
   }
@@ -149,7 +149,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     `--profile-directory=${profileName}`,
     '--remote-allow-origins=*',
     `--remote-debugging-port=${debugPort}`,
-    url,
+    loginUrl,
   ];
   if (wslWindowsChrome) {
     args.splice(args.length - 1, 0, '--remote-debugging-address=0.0.0.0');
@@ -175,14 +175,15 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       chromePath,
       profileName,
       userDataDir,
-      url,
+      url: loginUrl,
       debugPort,
       logger: () => undefined,
     });
     chrome.process?.unref?.();
   }
-  console.log(`Opened ${target} login in ${chromePath}`);
+  const label = loginLabel ?? 'browser';
+  console.log(`Opened ${label} login in ${chromePath}`);
   console.log(`Profile: ${userDataDir} (${profileName})`);
-  console.log(`URL: ${url}`);
+  console.log(`URL: ${loginUrl}`);
   console.log(`Args: ${args.join(' ')}`);
 }

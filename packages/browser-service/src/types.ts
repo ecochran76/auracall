@@ -49,7 +49,8 @@ export interface BrowserSessionConfig {
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
-  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  managedProfileRoot?: string | null;
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-managed';
 }
 
 export interface BrowserAutomationConfig {
@@ -58,7 +59,7 @@ export interface BrowserAutomationConfig {
   chromeCookiePath?: string | null;
   display?: string | null;
   profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
-  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-managed';
   url?: string;
   timeoutMs?: number;
   debugPort?: number | null;
@@ -79,6 +80,7 @@ export interface BrowserAutomationConfig {
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
+  managedProfileRoot?: string | null;
 }
 
 export interface BrowserRunOptions {
@@ -127,7 +129,7 @@ export type ResolvedBrowserConfig = Required<
   chromePath?: string | null;
   chromeCookiePath?: string | null;
   display?: string | null;
-  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-managed';
   profileConflictAction?: 'fail' | 'terminate-existing' | 'attach-existing';
   debugPort?: number | null;
   debugPortRange?: [number, number] | null;
@@ -139,4 +141,5 @@ export type ResolvedBrowserConfig = Required<
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
+  managedProfileRoot?: string | null;
 };

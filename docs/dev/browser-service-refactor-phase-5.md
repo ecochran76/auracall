@@ -31,8 +31,8 @@
   - Add explicit hooks/overrides for provider-specific aliases (ex: profileConflictAction) and config alias mapping.
 
   Progress notes:
-  - Core utilities (constants/utils/types/portSelection/processCheck/profileState/cookies/domDebug/reattachHelpers)
-    moved into `packages/browser-service/` with oracle-side re-export stubs for now.
+  - Core utilities (constants/utils/types/portSelection/processCheck/profileState) moved into
+    `packages/browser-service/`; ChatGPT-specific DOM helpers (cookies/domDebug/reattachHelpers) stay in oracle.
   - Generic service helpers (profile discovery + UI helpers) moved into the package; oracle keeps thin re-exports.
   - Registry implementation moved into the package with an oracle wrapper that binds the registry path.
   - Port resolution core moved into the package with an oracle wrapper to supply env/config defaults.
@@ -41,7 +41,7 @@
   - manualLogin core moved into the package with oracle providing default config injection.
   - Added generic `BROWSER_SERVICE_*` env aliases for package-level cookies and browser runtime settings.
   - session runner core moved into the package; oracle wrapper injects prompt assembly + error handling.
-  - reattach core moved into the package; oracle wrapper injects page actions + config defaults.
+  - Reattach core remains in oracle (ChatGPT-specific flow); only helpers are injected.
   - ChatGPT-specific helpers (constants, cookies, domDebug, reattachHelpers) moved back into oracle.
   - Browser-service types trimmed to browser-only fields; LLM-specific config now lives in oracle types.
   - Login helpers (WSL/path/cookie export utilities) moved into the package for reuse.

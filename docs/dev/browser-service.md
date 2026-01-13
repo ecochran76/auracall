@@ -24,13 +24,14 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - CLI behaviors and logging conventions
 - Oracle-specific config parsing and defaults
 - ChatGPT-specific selectors, cookies, and DOM debugging helpers
+- Session reattach flows and ChatGPT recovery logic
 
 ## Integration Notes
 - Oracle keeps thin wrappers for registry path and default profile directory ("~/.oracle").
 - Package APIs accept injected defaults to avoid coupling to Oracle config.
 - Environment variables:
   - Preferred: `BROWSER_SERVICE_*`
-  - Backward compatible (Oracle): `ORACLE_*`
+  - Backward compatible (Oracle): `ORACLE_*` (do not remove yet; still referenced by existing configs/scripts)
 
 ## Current Exports (Partial)
 - `launchChrome`, `connectToChrome`, `resolveWslHost`
@@ -38,7 +39,6 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - `loginHelpers` (WSL/path helpers, cookie export helpers)
 - `BrowserService` (core)
 - `runBrowserSessionExecutionCore`
-- `resumeBrowserSessionCore`
 - `profileDiscovery` helpers + registry utilities
 
 ## Non-Goals

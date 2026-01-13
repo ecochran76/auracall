@@ -11,7 +11,8 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chromePath: null,
   chromeCookiePath: null,
   display: null,
-  blockingProfileAction: 'restart-oracle',
+  blockingProfileAction: 'restart-managed',
+  managedProfileRoot: path.join(os.homedir(), '.oracle'),
   target: 'chatgpt',
   projectId: null,
   conversationId: null,
@@ -101,14 +102,22 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     if (value === 'attach-existing') return 'fail';
     return value;
   };
+  const normalizeBlockingProfileAction = (
+    value: BrowserAutomationConfig['blockingProfileAction'] | undefined,
+  ): ResolvedBrowserConfig['blockingProfileAction'] | undefined => {
+    if (!value) return undefined;
+    if (value === 'restart-oracle') return 'restart-managed';
+    return value as ResolvedBrowserConfig['blockingProfileAction'];
+  };
   const blockingProfileAction =
-    config?.blockingProfileAction ??
-    mapProfileConflictAction(config?.profileConflictAction) ??
+    normalizeBlockingProfileAction(config?.blockingProfileAction) ??
+    normalizeBlockingProfileAction(mapProfileConflictAction(config?.profileConflictAction)) ??
     DEFAULT_BROWSER_CONFIG.blockingProfileAction;
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
     blockingProfileAction,
+    managedProfileRoot: config?.managedProfileRoot ?? DEFAULT_BROWSER_CONFIG.managedProfileRoot,
     target,
     url: normalizedUrl,
     chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,

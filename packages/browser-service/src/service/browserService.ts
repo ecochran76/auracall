@@ -92,7 +92,7 @@ export class BrowserService {
     const target = await this.deps.resolveBrowserListTarget();
     if (!target?.port) {
       throw new Error(
-        'No DevTools port found. Launch a browser run to register the active session or set ORACLE_BROWSER_PORT.',
+        'No DevTools port found. Launch a browser run to register the active session or set BROWSER_SERVICE_BROWSER_PORT.',
       );
     }
     const client = await CDP({ port: target.port, host: target.host });

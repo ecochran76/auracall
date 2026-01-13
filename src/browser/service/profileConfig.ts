@@ -54,6 +54,9 @@ function applyBrowserProfileDefaults(browser: MutableBrowserConfig, profileBrows
   if (browser.display === undefined && profileBrowser.display) {
     browser.display = profileBrowser.display;
   }
+  if (browser.managedProfileRoot === undefined && profileBrowser.managedProfileRoot !== undefined) {
+    browser.managedProfileRoot = profileBrowser.managedProfileRoot;
+  }
   if (browser.blockingProfileAction === undefined && profileBrowser.blockingProfileAction !== undefined) {
     browser.blockingProfileAction = profileBrowser.blockingProfileAction;
   }

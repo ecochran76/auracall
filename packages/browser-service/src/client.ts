@@ -34,7 +34,7 @@ export class BrowserAutomationClientCore {
           returnByValue: true,
         });
         if (result.value) {
-          const dumpPath = path.join(basePath, `oracle-snapshot-${Date.now()}.json`);
+          const dumpPath = path.join(basePath, `browser-service-snapshot-${Date.now()}.json`);
           await fs.writeFile(dumpPath, JSON.stringify(result.value, null, 2));
           report.snapshotPath = dumpPath;
         }

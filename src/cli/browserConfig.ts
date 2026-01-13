@@ -58,7 +58,7 @@ export interface BrowserFlagOptions {
   remoteChrome?: string;
   browserPort?: number;
   browserDebugPort?: number;
-  browserBlockingProfile?: 'fail' | 'restart' | 'restart-oracle';
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-oracle';
   model: ModelName;
   verbose?: boolean;
 }
@@ -145,7 +145,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     conversationId: options.conversationId ?? null,
     url,
     debugPort: selectBrowserPort(options),
-    blockingProfileAction: options.browserBlockingProfile ?? undefined,
+    blockingProfileAction: normalizeBlockingProfileAction(options.browserBlockingProfile),
     timeoutMs: options.browserTimeout ? parseDuration(options.browserTimeout, DEFAULT_BROWSER_TIMEOUT_MS) : undefined,
     inputTimeoutMs: options.browserInputTimeout
       ? parseDuration(options.browserInputTimeout, DEFAULT_BROWSER_INPUT_TIMEOUT_MS)
@@ -201,6 +201,14 @@ export function resolveBrowserModelLabel(input: string | undefined, model: Model
     return mapModelToBrowserLabel(model);
   }
   return trimmed;
+}
+
+function normalizeBlockingProfileAction(
+  value: BrowserFlagOptions['browserBlockingProfile'],
+): BrowserSessionConfig['blockingProfileAction'] | undefined {
+  if (!value) return undefined;
+  if (value === 'restart-oracle') return 'restart-managed';
+  return value;
 }
 
 function resolveGrokModeLabel(override: string | undefined, model: ModelName): string {

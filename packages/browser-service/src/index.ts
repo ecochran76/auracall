@@ -4,7 +4,6 @@ export * from './loginHelpers.js';
 export * from './login.js';
 export * from './client.js';
 export * from './sessionRunner.js';
-export * from './reattach.js';
 export * from './portSelection.js';
 export * from './processCheck.js';
 export * from './profileState.js';

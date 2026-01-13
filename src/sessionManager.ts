@@ -42,7 +42,8 @@ export interface BrowserSessionConfig {
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
-  blockingProfileAction?: 'fail' | 'restart' | 'restart-oracle';
+  managedProfileRoot?: string | null;
+  blockingProfileAction?: 'fail' | 'restart' | 'restart-managed';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   thinkingTime?: ThinkingTimeLevel;
 }

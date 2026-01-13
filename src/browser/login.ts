@@ -36,22 +36,30 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     grokUrl,
     exportCookies,
   } = options;
+  if (exportCookies && target !== 'gemini') {
+    throw new Error('Cookie export currently supports Gemini login only.');
+  }
+  const resolvedUrl =
+    target === 'gemini'
+      ? geminiUrl ?? 'https://gemini.google.com/app'
+      : target === 'grok'
+        ? grokUrl ?? GROK_URL
+        : chatgptUrl ?? CHATGPT_URL;
   const coreOptions: BrowserLoginCoreOptions = {
-    target,
     chromePath,
     chromeProfile,
     manualLoginProfileDir,
     cookiePath,
-    chatgptUrl,
-    geminiUrl,
-    grokUrl,
+    loginUrl: resolvedUrl,
+    loginLabel: target,
     exportCookies,
-    defaultUrlResolver: (service) =>
-      service === 'gemini'
-        ? 'https://gemini.google.com/app'
-        : service === 'grok'
-          ? GROK_URL
-          : CHATGPT_URL,
+    preferCookieProfile: target !== 'chatgpt',
+    cookieExport: exportCookies
+      ? {
+          urls: ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'],
+          requiredCookies: ['__Secure-1PSID', '__Secure-1PSIDTS'],
+        }
+      : undefined,
     onRegisterInstance: async ({ userDataDir, profileName, port, host }) => {
       await registerLoginInstance(userDataDir, profileName, port, undefined, host);
     },

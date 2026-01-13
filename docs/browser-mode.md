@@ -71,7 +71,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - If you want Oracle to share an already-running Chrome profile, that Chrome must have been launched with `--remote-debugging-port`. Otherwise Oracle cannot attach to it. This is less safe than a dedicated Oracle profile because any local user/process can control the browser via that port.
   - Linux/macOS: `ps -ax | rg \"chrome.*remote-debugging-port\"` or `tr \"\\0\" \" \" < /proc/<pid>/cmdline | rg remote-debugging-port` to discover the active port.
   - Windows: `wmic process where \"name='chrome.exe'\" get ProcessId,CommandLine` or `Get-CimInstance Win32_Process -Filter \"Name = 'chrome.exe'\" | Select-Object ProcessId,CommandLine` to find the port flag.
-- `--browser-blocking-profile <fail|restart|restart-oracle>`: choose what happens if Chrome is already running with the target profile but DevTools is not enabled. `restart-oracle` (default) only restarts Oracle-managed profiles.
+- `--browser-blocking-profile <fail|restart|restart-managed>`: choose what happens if Chrome is already running with the target profile but DevTools is not enabled. `restart-managed` (default) only restarts Oracle-managed profiles. (`restart-oracle` remains a supported alias.)
 - `--browser-no-cookie-sync`, `--browser-manual-login` (persistent automation profile + user-driven login), `--browser-headless`, `--browser-hide-window`, `--browser-keep-browser`, and the global `-v/--verbose` flag for detailed automation logs.
 - `--browser-url`: override ChatGPT base URL if needed.
 - `--browser-attachments <auto|never|always>`: control how `--file` inputs are delivered in browser mode. Default `auto` pastes file contents inline up to ~60k characters and switches to uploads above that.

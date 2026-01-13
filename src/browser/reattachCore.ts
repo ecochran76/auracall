@@ -2,8 +2,9 @@ import CDP from 'chrome-remote-interface';
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, mkdir, rm } from 'node:fs/promises';
-import type { BrowserRuntimeMetadata, BrowserSessionConfig } from './types.js';
-import type { BrowserLogger, ChromeClient, ResolvedBrowserConfig } from './types.js';
+import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfig } from './types.js';
+import type { BrowserLogger, ChromeClient } from './types.js';
+
 export type ReattachTargetInfo = {
   targetId?: string;
   url?: string;
@@ -14,11 +15,17 @@ export type ReattachTargetInfo = {
 export interface ReattachDeps {
   listTargets?: () => Promise<ReattachTargetInfo[]>;
   connect?: (options?: unknown) => Promise<ChromeClient>;
-  waitForAssistantResponse?: (Runtime: ChromeClient['Runtime'], timeoutMs: number, logger: BrowserLogger, minTurn?: number) => Promise<{
-    text: string;
-    meta?: unknown;
-  }>;
-  captureAssistantMarkdown?: (Runtime: ChromeClient['Runtime'], meta: unknown, logger: BrowserLogger) => Promise<string | null>;
+  waitForAssistantResponse?: (
+    Runtime: ChromeClient['Runtime'],
+    timeoutMs: number,
+    logger: BrowserLogger,
+    minTurn?: number,
+  ) => Promise<{ text: string; meta?: unknown }>;
+  captureAssistantMarkdown?: (
+    Runtime: ChromeClient['Runtime'],
+    meta: unknown,
+    logger: BrowserLogger,
+  ) => Promise<string | null>;
   recoverSession?: (runtime: ReattachRuntime, config: BrowserSessionConfig | undefined) => Promise<ReattachResult>;
   promptPreview?: string;
   helpers?: ReattachHelperDeps;
@@ -38,8 +45,15 @@ export type ReattachHelperDeps = {
   extractConversationIdFromUrl: (url: string) => string | null | undefined;
   buildConversationUrl: (runtime: { tabUrl?: string; conversationId?: string }, baseUrl: string) => string | null;
   withTimeout: <T>(promise: Promise<T>, timeoutMs: number, message: string) => Promise<T>;
-  openConversationFromSidebar: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }) => Promise<boolean>;
-  openConversationFromSidebarWithRetry: (Runtime: ChromeClient['Runtime'], options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string }, timeoutMs: number) => Promise<boolean>;
+  openConversationFromSidebar: (
+    Runtime: ChromeClient['Runtime'],
+    options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+  ) => Promise<boolean>;
+  openConversationFromSidebarWithRetry: (
+    Runtime: ChromeClient['Runtime'],
+    options: { conversationId?: string | null; preferProjects?: boolean; promptPreview?: string },
+    timeoutMs: number,
+  ) => Promise<boolean>;
   waitForLocationChange: (Runtime: ChromeClient['Runtime'], timeoutMs: number) => Promise<void>;
   readConversationTurnIndex: (Runtime: ChromeClient['Runtime'], logger: BrowserLogger) => Promise<number | null>;
   buildPromptEchoMatcher: (preview?: string | null) => unknown;
@@ -61,7 +75,11 @@ export type ReattachHelperDeps = {
 
 export interface ReattachRuntimeDeps {
   resolveBrowserConfig: (config: BrowserSessionConfig) => ResolvedBrowserConfig;
-  launchChrome: (config: ResolvedBrowserConfig, userDataDir: string, logger: BrowserLogger) => Promise<{
+  launchChrome: (
+    config: ResolvedBrowserConfig,
+    userDataDir: string,
+    logger: BrowserLogger,
+  ) => Promise<{
     port: number;
     kill: () => Promise<void>;
     host?: string;
@@ -69,18 +87,45 @@ export interface ReattachRuntimeDeps {
   }>;
   connectToChrome: (port: number, logger: BrowserLogger, host?: string) => Promise<ChromeClient>;
   hideChromeWindow: (chrome: { port: number; host?: string }, logger: BrowserLogger) => Promise<void>;
-  syncCookies: (Network: ChromeClient['Network'], url: string | null, profile: string | null, logger: BrowserLogger, options: {
-    allowErrors?: boolean;
-    filterNames?: string[] | null;
-    inlineCookies?: unknown[] | null;
-    cookiePath?: string | null;
-    waitMs?: number;
-  }) => Promise<number>;
-  cleanupStaleProfileState: (userDataDir: string, logger: BrowserLogger, options: { lockRemovalMode?: 'never' | 'if_oracle_pid_dead' }) => Promise<void>;
-  navigateToChatGPT: (Page: ChromeClient['Page'], Runtime: ChromeClient['Runtime'], url: string, logger: BrowserLogger) => Promise<void>;
-  ensureNotBlocked: (Runtime: ChromeClient['Runtime'], headless: boolean | null | undefined, logger: BrowserLogger) => Promise<void>;
-  ensureLoggedIn: (Runtime: ChromeClient['Runtime'], logger: BrowserLogger, options?: { appliedCookies?: number }) => Promise<void>;
-  ensurePromptReady: (Runtime: ChromeClient['Runtime'], timeoutMs: number | undefined, logger: BrowserLogger) => Promise<void>;
+  syncCookies: (
+    Network: ChromeClient['Network'],
+    url: string | null,
+    profile: string | null,
+    logger: BrowserLogger,
+    options: {
+      allowErrors?: boolean;
+      filterNames?: string[] | null;
+      inlineCookies?: unknown[] | null;
+      cookiePath?: string | null;
+      waitMs?: number;
+    },
+  ) => Promise<number>;
+  cleanupStaleProfileState: (
+    userDataDir: string,
+    logger: BrowserLogger,
+    options: { lockRemovalMode?: 'never' | 'if_recorded_pid_dead' },
+  ) => Promise<void>;
+  navigateToChatGPT: (
+    Page: ChromeClient['Page'],
+    Runtime: ChromeClient['Runtime'],
+    url: string,
+    logger: BrowserLogger,
+  ) => Promise<void>;
+  ensureNotBlocked: (
+    Runtime: ChromeClient['Runtime'],
+    headless: boolean | null | undefined,
+    logger: BrowserLogger,
+  ) => Promise<void>;
+  ensureLoggedIn: (
+    Runtime: ChromeClient['Runtime'],
+    logger: BrowserLogger,
+    options?: { appliedCookies?: number },
+  ) => Promise<void>;
+  ensurePromptReady: (
+    Runtime: ChromeClient['Runtime'],
+    timeoutMs: number | undefined,
+    logger: BrowserLogger,
+  ) => Promise<void>;
 }
 
 export async function resumeBrowserSessionCore(
@@ -173,11 +218,12 @@ export async function resumeBrowserSessionCore(
       'Reattach response timed out',
     );
     const recovered = await helpers.recoverPromptEcho(Runtime, answer, promptEcho, logger, minTurnIndex, timeoutMs);
-    const markdown = (await helpers.withTimeout(
-      captureMarkdown(Runtime, recovered.meta, logger),
-      15_000,
-      'Reattach markdown capture timed out',
-    )) ?? recovered.text;
+    const markdown =
+      (await helpers.withTimeout(
+        captureMarkdown(Runtime, recovered.meta, logger),
+        15_000,
+        'Reattach markdown capture timed out',
+      )) ?? recovered.text;
     const aligned = helpers.alignPromptEchoMarkdown(recovered.text, markdown, promptEcho, logger);
 
     if (client && typeof client.close === 'function') {
@@ -210,7 +256,7 @@ async function resumeBrowserSessionViaNewChrome(
   const resolved = runtimeDeps.resolveBrowserConfig(config ?? {});
   const manualLogin = Boolean(resolved.manualLogin);
   const userDataDir = manualLogin
-    ? resolved.manualLoginProfileDir ?? path.join(os.homedir(), '.browser-service', 'browser-profile')
+    ? resolved.manualLoginProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile')
     : await mkdtemp(path.join(os.tmpdir(), 'browser-reattach-'));
   if (manualLogin) {
     await mkdir(userDataDir, { recursive: true });
@@ -238,11 +284,11 @@ async function resumeBrowserSessionViaNewChrome(
       resolved.chromeProfile ?? null,
       logger,
       {
-      allowErrors: resolved.allowCookieErrors,
-      filterNames: resolved.cookieNames ?? undefined,
-      inlineCookies: resolved.inlineCookies ?? undefined,
-      cookiePath: resolved.chromeCookiePath ?? undefined,
-      waitMs: resolved.cookieSyncWaitMs ?? 0,
+        allowErrors: resolved.allowCookieErrors,
+        filterNames: resolved.cookieNames ?? undefined,
+        inlineCookies: resolved.inlineCookies ?? undefined,
+        cookiePath: resolved.chromeCookiePath ?? undefined,
+        waitMs: resolved.cookieSyncWaitMs ?? 0,
       },
     );
   }
@@ -307,7 +353,9 @@ async function resumeBrowserSessionViaNewChrome(
       // ignore
     }
     if (manualLogin) {
-      await runtimeDeps.cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(() => undefined);
+      await runtimeDeps.cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(
+        () => undefined,
+      );
     } else {
       await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
     }

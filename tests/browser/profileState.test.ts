@@ -53,7 +53,7 @@ describe('profileState', () => {
 
       // Alive pid => keep locks
       await profileState.writeChromePid(dir, process.pid);
-      await profileState.cleanupStaleProfileState(dir, undefined, { lockRemovalMode: 'if_oracle_pid_dead' });
+      await profileState.cleanupStaleProfileState(dir, undefined, { lockRemovalMode: 'if_recorded_pid_dead' });
       expect(existsSync(path.join(dir, 'DevToolsActivePort'))).toBe(false);
       for (const lock of lockFiles) {
         expect(existsSync(lock)).toBe(true);
@@ -66,7 +66,7 @@ describe('profileState', () => {
       const child = spawn(process.execPath, ['-e', 'process.exit(0)'], { stdio: 'ignore' });
       await once(child, 'exit');
       await profileState.writeChromePid(dir, child.pid ?? 0);
-      await profileState.cleanupStaleProfileState(dir, undefined, { lockRemovalMode: 'if_oracle_pid_dead' });
+      await profileState.cleanupStaleProfileState(dir, undefined, { lockRemovalMode: 'if_recorded_pid_dead' });
       for (const lock of lockFiles) {
         expect(existsSync(lock)).toBe(false);
       }

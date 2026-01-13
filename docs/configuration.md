@@ -155,7 +155,8 @@ Within each file, later CLI flags still override config, and environment variabl
 - `profiles.<name>.cache.*` sets defaults for `oracle cache --refresh` (including `refreshHours` and `rootDir`).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).
-- `browser.blockingProfileAction` controls how Oracle handles a running Chrome profile without DevTools (`fail`, `restart`, `restart-oracle`). Default is `restart-oracle` (only restarts Oracle-managed profiles).
+- `browser.blockingProfileAction` controls how Oracle handles a running Chrome profile without DevTools (`fail`, `restart`, `restart-managed`). Default is `restart-managed` (only restarts Oracle-managed profiles). (`restart-oracle` is still accepted as an alias.)
+- `browser.managedProfileRoot` sets the profile root considered Oracle-managed when `blockingProfileAction=restart-managed`.
 
 If the config is missing or invalid, Oracle falls back to defaults and prints a warning for parse errors.
 

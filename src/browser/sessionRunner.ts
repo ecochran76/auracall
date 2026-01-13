@@ -32,8 +32,20 @@ export async function runBrowserSessionExecution(
   { runOptions, browserConfig, cwd, log }: RunBrowserSessionArgs,
   deps: BrowserSessionRunnerDeps = {},
 ): Promise<BrowserExecutionResult> {
-  const assemblePrompt = async (options: { model: string; verbose?: boolean; silent?: boolean; file?: string[]; heartbeatIntervalMs?: number }, context: { cwd: string }) =>
-    (deps.assemblePrompt ?? assembleBrowserPrompt)(options as RunOracleOptions, { cwd: context.cwd });
+  const assemblePrompt = async (
+    options: { runLabel: string; verbose?: boolean; silent?: boolean; file?: string[]; heartbeatIntervalMs?: number },
+    context: { cwd: string },
+  ) => {
+    const assembledOptions: RunOracleOptions = {
+      ...runOptions,
+      model: options.runLabel,
+      verbose: options.verbose ?? runOptions.verbose,
+      silent: options.silent ?? runOptions.silent,
+      file: options.file ?? runOptions.file,
+      heartbeatIntervalMs: options.heartbeatIntervalMs ?? runOptions.heartbeatIntervalMs,
+    };
+    return (deps.assemblePrompt ?? assembleBrowserPrompt)(assembledOptions, { cwd: context.cwd });
+  };
   const executeBrowser = async (options: {
     prompt: string;
     attachments: Array<{ path: string; displayPath: string; sizeBytes?: number }>;
@@ -53,14 +65,15 @@ export async function runBrowserSessionExecution(
     } as Parameters<typeof runBrowserMode>[0]);
   };
   const persistRuntimeHint = deps.persistRuntimeHint;
+  const runOptionsForCore = { ...runOptions, runLabel: runOptions.model };
 
   return runBrowserSessionExecutionCore(
-    { runOptions, browserConfig, cwd, log },
+    { runOptions: runOptionsForCore, browserConfig, cwd, log },
     {
       assemblePrompt,
       executeBrowser,
       formatTokenCount,
-      formatFinishLine,
+      formatFinishLine: (options) => formatFinishLine({ ...options, model: options.label }),
       runtimeExtras: (result) => ({
         conversationId: (result as { conversationId?: string }).conversationId,
       }),

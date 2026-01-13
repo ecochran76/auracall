@@ -85,17 +85,23 @@ function normalizeBrowserConfig(
   config: BrowserRunOptions['config'],
 ): RemoteRunPayload['browserConfig'] {
   if (!config) return {};
+  const normalizedBlockingProfileAction =
+    config.blockingProfileAction === 'restart-oracle'
+      ? 'restart-managed'
+      : config.blockingProfileAction;
   const remoteChrome = config.remoteChrome;
   if (typeof remoteChrome === 'string') {
     const parsed = parseRemoteChromeTarget(remoteChrome);
     return {
       ...config,
       remoteChrome: parsed ?? null,
+      blockingProfileAction: normalizedBlockingProfileAction,
     };
   }
   return {
     ...config,
     remoteChrome: remoteChrome ?? null,
+    blockingProfileAction: normalizedBlockingProfileAction,
   };
 }
 

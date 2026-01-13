@@ -135,7 +135,7 @@ interface CliOptions extends OptionValues {
   grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
-  browserBlockingProfile?: 'fail' | 'restart' | 'restart-oracle';
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-oracle';
   projectId?: string;
   projectName?: string;
   noProject?: boolean;
@@ -390,8 +390,8 @@ program
   .addOption(
     new Option(
       '--browser-blocking-profile <mode>',
-      'Handle a blocking Chrome profile (fail, restart, restart-oracle).',
-    ).choices(['fail', 'restart', 'restart-oracle']),
+      'Handle a blocking Chrome profile (fail, restart, restart-managed).',
+    ).choices(['fail', 'restart', 'restart-managed', 'restart-oracle']),
   )
   .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))

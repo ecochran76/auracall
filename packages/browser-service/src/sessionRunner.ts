@@ -16,7 +16,7 @@ export interface BrowserPromptArtifacts {
 }
 
 export interface RunOptionsLike {
-  model: string;
+  runLabel: string;
   verbose?: boolean;
   silent?: boolean;
   file?: string[];
@@ -54,7 +54,7 @@ export interface BrowserSessionRunnerDeps {
   formatTokenCount: (value: number) => string;
   formatFinishLine: (options: {
     elapsedMs: number;
-    model: string;
+    label: string;
     tokensPart: string;
     detailParts: Array<string | null>;
   }) => { line1: string; line2?: string };
@@ -109,7 +109,7 @@ export async function runBrowserSessionExecutionCore(
       ),
     );
   }
-  const headerLine = `Launching browser mode (${runOptions.model}) with ~${promptArtifacts.estimatedInputTokens.toLocaleString()} tokens.`;
+  const headerLine = `Launching browser mode (${runOptions.runLabel}) with ~${promptArtifacts.estimatedInputTokens.toLocaleString()} tokens.`;
   const automationLogger: BrowserLogger = ((message?: string) => {
     if (typeof message !== 'string') return;
     const shouldAlwaysPrint = message.startsWith('[browser] ') && /fallback|retry/i.test(message);
@@ -177,7 +177,7 @@ export async function runBrowserSessionExecutionCore(
   })();
   const { line1, line2 } = deps.formatFinishLine({
     elapsedMs: browserResult.tookMs,
-    model: `${runOptions.model}[browser]`,
+    label: `${runOptions.runLabel}[browser]`,
     tokensPart,
     detailParts: [runOptions.file && runOptions.file.length > 0 ? `files=${runOptions.file.length}` : null],
   });

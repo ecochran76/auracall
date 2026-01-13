@@ -33,7 +33,7 @@ import {
   resumeBrowserSessionCore,
   type ReattachDeps,
   type ReattachResult,
-} from '../../packages/browser-service/src/reattach.js';
+} from './reattachCore.js';
 
 export async function resumeBrowserSession(
   runtime: BrowserRuntimeMetadata,

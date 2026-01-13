@@ -42,9 +42,13 @@ export async function launchChrome(
   // 2. Legacy Fallback: check if this profile is already active via OS/FS
   const existingPid = await findChromePidUsingUserDataDir(userDataDir);
   if (existingPid) {
-    const oracleHome = path.resolve(os.homedir(), '.oracle');
-    const isOracleManagedProfile = path.resolve(userDataDir).startsWith(oracleHome + path.sep);
-    const blockingAction = config.blockingProfileAction ?? 'restart-oracle';
+    const managedProfileRoot = config.managedProfileRoot
+      ? path.resolve(config.managedProfileRoot)
+      : null;
+    const isManagedProfile = managedProfileRoot
+      ? path.resolve(userDataDir).startsWith(managedProfileRoot + path.sep)
+      : false;
+    const blockingAction = config.blockingProfileAction ?? 'restart-managed';
     const requestedProfile = resolvedProfileName.trim();
     const isDefaultProfile = requestedProfile.toLowerCase() === 'default';
     const activePort = await readDevToolsPort(userDataDir);
@@ -72,10 +76,10 @@ export async function launchChrome(
           host: connectHost,
         } as unknown as LaunchedChrome & { host?: string };
       }
-      if (blockingAction === 'fail' || (blockingAction === 'restart-oracle' && !isOracleManagedProfile)) {
+      if (blockingAction === 'fail' || (blockingAction === 'restart-managed' && !isManagedProfile)) {
         throw new Error(
-          `Chrome is already running with profile ${userDataDir}, but Oracle needs profile "${requestedProfile}". ` +
-          `Close Chrome and retry so Oracle can launch the correct profile.`,
+          `Chrome is already running with profile ${userDataDir}, but the automation needs profile "${requestedProfile}". ` +
+          `Close Chrome and retry so it can launch the correct profile.`,
         );
       }
       logger(
@@ -83,13 +87,13 @@ export async function launchChrome(
       );
       await terminateChromeProcess(existingPid, logger);
     }
-    if (blockingAction === 'fail' || (blockingAction === 'restart-oracle' && !isOracleManagedProfile)) {
+    if (blockingAction === 'fail' || (blockingAction === 'restart-managed' && !isManagedProfile)) {
       throw new Error(
         `Chrome is already running with profile ${userDataDir}, but DevTools is not enabled. ` +
-        `Close Chrome and retry so Oracle can relaunch with remote debugging enabled.`,
+        `Close Chrome and retry so it can relaunch with remote debugging enabled.`,
       );
     }
-    if (!isOracleManagedProfile && blockingAction === 'restart') {
+    if (!isManagedProfile && blockingAction === 'restart') {
       logger(`Forcing restart of user-managed Chrome profile ${userDataDir} (blockingProfileAction=restart).`);
     }
     logger(`Chrome (pid ${existingPid}) is running with profile ${userDataDir} but DevTools port is unreachable. Killing it to release lock.`);
@@ -262,7 +266,7 @@ export function registerTerminationHooks(
         // Ensure reattach hints are written before we exit.
         await opts?.emitRuntimeHint?.().catch(() => undefined);
         if (inFlight) {
-          logger('Session still in flight; reattach with "oracle session <slug>" to continue.');
+          logger('Session still in flight; use your reattach command to continue.');
         }
       } else {
         try {

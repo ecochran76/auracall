@@ -21,9 +21,19 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   conversationId?: string;
 };
 
-export type BrowserSessionConfig = BaseTypes.BrowserSessionConfig & LlmBrowserFields;
+type BrowserBlockingProfileAction =
+  | BaseTypes.BrowserAutomationConfig['blockingProfileAction']
+  | 'restart-oracle';
 
-export type BrowserAutomationConfig = BaseTypes.BrowserAutomationConfig & LlmBrowserFields;
+export type BrowserSessionConfig = Omit<BaseTypes.BrowserSessionConfig, 'blockingProfileAction'> &
+  LlmBrowserFields & {
+    blockingProfileAction?: BrowserBlockingProfileAction;
+  };
+
+export type BrowserAutomationConfig = Omit<BaseTypes.BrowserAutomationConfig, 'blockingProfileAction'> &
+  LlmBrowserFields & {
+    blockingProfileAction?: BrowserBlockingProfileAction;
+  };
 
 export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'runtimeHintCb'> & {
   config?: BrowserAutomationConfig;

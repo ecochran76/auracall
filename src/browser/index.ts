@@ -218,7 +218,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         logger(
           `DevTools connection failed (${message}); clearing stale profile state and relaunching Chrome.`,
         );
-        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
         try {
           await chrome.kill();
         } catch {
@@ -935,7 +935,7 @@ async function maybeReuseRunningChrome(userDataDir: string, logger: BrowserLogge
   if (!probe) {
     logger(`DevToolsActivePort found for ${userDataDir} but unreachable; launching new Chrome.`);
     // Safe cleanup: remove stale DevToolsActivePort; only remove lock files if this was an Oracle-owned pid that died.
-    await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+    await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
     return null;
   }
 
@@ -1579,7 +1579,7 @@ async function runGrokBrowserMode({
       // ignore cleanup errors
     }
     if (manualLogin) {
-      await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+      await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
     }
     effectiveConfig = { ...effectiveConfig, debugPort: fallbackPort };
     chrome = await launchChrome(
@@ -1625,7 +1625,7 @@ async function runGrokBrowserMode({
         client = await connectToChrome(chrome.port, logger, chromeHost);
       } else if (manualLogin) {
         logger(`DevTools connection failed (${message}); clearing stale profile state and relaunching Chrome.`);
-        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+        await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
         try {
           await chrome.kill();
         } catch {
@@ -1797,7 +1797,7 @@ async function runGrokBrowserMode({
           connectionClosedUnexpectedly,
         });
         if (shouldCleanup) {
-          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_oracle_pid_dead' });
+          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
         }
       }
     } else {
