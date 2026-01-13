@@ -1,4 +1,4 @@
-import { rm } from 'node:fs/promises';
+import { rm, mkdir } from 'node:fs/promises';
 import { readFileSync, existsSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,7 +8,7 @@ import { promisify } from 'node:util';
 import CDP from 'chrome-remote-interface';
 import { launch, Launcher, type LaunchedChrome } from 'chrome-launcher';
 import type { BrowserLogger, ResolvedBrowserConfig, ChromeClient } from './types.js';
-import { cleanupStaleProfileState, readDevToolsPort } from './profileState.js';
+import { cleanupStaleProfileState, readDevToolsPort, readChromePid } from './profileState.js';
 import { isDevToolsResponsive, findChromePidUsingUserDataDir } from './processCheck.js';
 import { findActiveInstance, registerInstance, unregisterInstance } from './service/stateRegistry.js';
 import { resolveProfileDirectoryName } from './service/profile.js';
@@ -326,6 +326,53 @@ export async function hideChromeWindow(chrome: LaunchedChrome, logger: BrowserLo
     const message = error instanceof Error ? error.message : String(error);
     logger(`Failed to hide Chrome window: ${message}`);
   }
+}
+
+export async function reuseRunningChromeProfile(
+  userDataDir: string,
+  logger: BrowserLogger,
+): Promise<LaunchedChrome | null> {
+  const port = await readDevToolsPort(userDataDir);
+  if (!port) return null;
+
+  const probe = await isDevToolsResponsive({ port });
+  if (!probe) {
+    logger(`DevToolsActivePort found for ${userDataDir} but unreachable; launching new Chrome.`);
+    // Safe cleanup: remove stale DevToolsActivePort; only remove lock files if recorded pid is dead.
+    await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
+    return null;
+  }
+
+  const pid = await readChromePid(userDataDir);
+  logger(
+    `Found running Chrome for ${userDataDir}; reusing (DevTools port ${port}${pid ? `, pid ${pid}` : ''})`,
+  );
+  return {
+    port,
+    pid: pid ?? undefined,
+    kill: async () => {},
+    process: undefined,
+  } as unknown as LaunchedChrome;
+}
+
+export async function resolveUserDataBaseDir(): Promise<string> {
+  // On WSL, Chrome launched via Windows can choke on UNC paths; prefer a Windows-backed temp folder.
+  if (isWsl()) {
+    const candidates = [
+      '/mnt/c/Users/Public/AppData/Local/Temp',
+      '/mnt/c/Temp',
+      '/mnt/c/Windows/Temp',
+    ];
+    for (const candidate of candidates) {
+      try {
+        await mkdir(candidate, { recursive: true });
+        return candidate;
+      } catch {
+        // try next
+      }
+    }
+  }
+  return os.tmpdir();
 }
 
 export async function connectToChrome(port: number, logger: BrowserLogger, host?: string): Promise<ChromeClient> {

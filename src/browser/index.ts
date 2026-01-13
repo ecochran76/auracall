@@ -11,6 +11,9 @@ import {
   connectToChrome,
   connectToRemoteChrome,
   closeRemoteChromeTarget,
+  buildWslFirewallHint,
+  reuseRunningChromeProfile,
+  resolveUserDataBaseDir,
 } from './chromeLifecycle.js';
 import { syncCookies } from './cookies.js';
 import {
@@ -51,8 +54,6 @@ import { BrowserAutomationError } from '../oracle/errors.js';
 import { alignPromptEchoPair, buildPromptEchoMatcher } from './reattachHelpers.js';
 import {
   cleanupStaleProfileState,
-  readChromePid,
-  readDevToolsPort,
   shouldCleanupManualLoginProfileState,
   writeChromePid,
   writeDevToolsActivePort,
@@ -159,7 +160,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   logger(`Browser profile selection: ${userDataDir}`);
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
-  const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
+  const reusedChrome = manualLogin ? await reuseRunningChromeProfile(userDataDir, logger) : null;
   let chrome =
     reusedChrome ??
     (await launchChrome(
@@ -237,7 +238,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         client = await connectToChrome(chrome.port, logger, chromeHost);
       }
     } catch (error) {
-      const hint = describeDevtoolsFirewallHint(chromeHost, chrome.port);
+      const hint = buildWslFirewallHint(chromeHost, chrome.port);
       if (hint) {
         logger(hint);
       }
@@ -927,30 +928,6 @@ async function _assertNavigatedToHttp(
   });
 }
 
-async function maybeReuseRunningChrome(userDataDir: string, logger: BrowserLogger): Promise<LaunchedChrome | null> {
-  const port = await readDevToolsPort(userDataDir);
-  if (!port) return null;
-
-  const probe = await isDevToolsResponsive({ port });
-  if (!probe) {
-    logger(`DevToolsActivePort found for ${userDataDir} but unreachable; launching new Chrome.`);
-    // Safe cleanup: remove stale DevToolsActivePort; only remove lock files if this was an Oracle-owned pid that died.
-    await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
-    return null;
-  }
-
-  const pid = await readChromePid(userDataDir);
-  logger(
-    `Found running Chrome for ${userDataDir}; reusing (DevTools port ${port}${pid ? `, pid ${pid}` : ''})`,
-  );
-  return {
-    port,
-    pid: pid ?? undefined,
-    kill: async () => {},
-    process: undefined,
-  } as unknown as LaunchedChrome;
-}
-
 async function runRemoteBrowserMode(
   promptText: string,
   attachments: BrowserAttachment[],
@@ -1541,7 +1518,7 @@ async function runGrokBrowserMode({
   logger(`Browser profile selection: ${userDataDir}`);
 
   const effectiveKeepBrowser = Boolean(launchConfig.keepBrowser);
-  const reusedChrome = manualLogin ? await maybeReuseRunningChrome(userDataDir, logger) : null;
+  const reusedChrome = manualLogin ? await reuseRunningChromeProfile(userDataDir, logger) : null;
   let effectiveConfig = launchConfig;
   chrome =
     reusedChrome ??
@@ -1873,25 +1850,6 @@ async function gracefulShutdownChrome(
   await chrome.kill();
 }
 
-function describeDevtoolsFirewallHint(host: string, port: number): string | null {
-  if (!isWsl()) return null;
-  return [
-    `DevTools port ${host}:${port} is blocked from WSL.`,
-    '',
-    'PowerShell (admin):',
-    `New-NetFirewallRule -DisplayName 'Chrome DevTools ${port}' -Direction Inbound -Action Allow -Protocol TCP -LocalPort ${port}`,
-    "New-NetFirewallRule -DisplayName 'Chrome DevTools (chrome.exe)' -Direction Inbound -Action Allow -Program 'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe' -Protocol TCP",
-    '',
-    'Re-run the same oracle command after adding the rule.',
-  ].join('\n');
-}
-
-function isWsl(): boolean {
-  if (process.platform !== 'linux') return false;
-  if (process.env.WSL_DISTRO_NAME) return true;
-  return os.release().toLowerCase().includes('microsoft');
-}
-
 function extractConversationIdFromUrl(url: string): string | undefined {
   try {
     const parsed = new URL(url);
@@ -1904,26 +1862,6 @@ function extractConversationIdFromUrl(url: string): string | undefined {
   }
   const match = url.match(/\/c\/([a-zA-Z0-9-]+)/);
   return match?.[1];
-}
-
-async function resolveUserDataBaseDir(): Promise<string> {
-  // On WSL, Chrome launched via Windows can choke on UNC paths; prefer a Windows-backed temp folder.
-  if (isWsl()) {
-    const candidates = [
-      '/mnt/c/Users/Public/AppData/Local/Temp',
-      '/mnt/c/Temp',
-      '/mnt/c/Windows/Temp',
-    ];
-    for (const candidate of candidates) {
-      try {
-        await mkdir(candidate, { recursive: true });
-        return candidate;
-      } catch {
-        // try next
-      }
-    }
-  }
-  return os.tmpdir();
 }
 
 function buildThinkingStatusExpression(): string {

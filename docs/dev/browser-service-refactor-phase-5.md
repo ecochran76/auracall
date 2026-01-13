@@ -42,6 +42,7 @@
   - Added generic `BROWSER_SERVICE_*` env aliases for package-level cookies and browser runtime settings.
   - session runner core moved into the package; oracle wrapper injects prompt assembly + error handling.
   - Reattach core remains in oracle (ChatGPT-specific flow); only helpers are injected.
+  - Manual-login reuse + WSL temp profile helpers moved into browser-service chromeLifecycle utilities.
   - ChatGPT-specific helpers (constants, cookies, domDebug, reattachHelpers) moved back into oracle.
   - Browser-service types trimmed to browser-only fields; LLM-specific config now lives in oracle types.
   - Login helpers (WSL/path/cookie export utilities) moved into the package for reuse.

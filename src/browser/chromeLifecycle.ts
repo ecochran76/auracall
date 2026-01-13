@@ -9,6 +9,8 @@ import {
   closeRemoteChromeTarget,
   resolveWslHost,
   buildWslFirewallHint,
+  reuseRunningChromeProfile,
+  resolveUserDataBaseDir,
 } from '../../packages/browser-service/src/chromeLifecycle.js';
 import type { BrowserLogger, ResolvedBrowserConfig } from './types.js';
 
@@ -30,4 +32,6 @@ export {
   closeRemoteChromeTarget,
   resolveWslHost,
   buildWslFirewallHint,
+  reuseRunningChromeProfile,
+  resolveUserDataBaseDir,
 };

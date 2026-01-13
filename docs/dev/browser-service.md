@@ -34,7 +34,7 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
   - Backward compatible (Oracle): `ORACLE_*` (do not remove yet; still referenced by existing configs/scripts)
 
 ## Current Exports (Partial)
-- `launchChrome`, `connectToChrome`, `resolveWslHost`
+- `launchChrome`, `connectToChrome`, `resolveWslHost`, `resolveUserDataBaseDir`, `reuseRunningChromeProfile`
 - `launchManualLoginSession`
 - `loginHelpers` (WSL/path helpers, cookie export helpers)
 - `BrowserService` (core)
