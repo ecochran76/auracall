@@ -41,6 +41,11 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - `runBrowserSessionExecutionCore`
 - `profileDiscovery` helpers + registry utilities
 
+## API Stability
+- Stable: chrome lifecycle + port selection + registry/profile helpers, `BrowserService`, core types.
+- Provisional: login helpers, manual login workflow, session runner core, browser client core.
+- Oracle wrappers should prefer stable APIs unless a provisional feature is required.
+
 ## Non-Goals
 - No LLM-specific caching, project/conversation logic, or DOM selectors.
 - No CLI parsing or end-user prompts.
