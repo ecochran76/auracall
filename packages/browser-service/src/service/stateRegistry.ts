@@ -12,10 +12,15 @@ export interface BrowserInstance {
   type: 'chrome' | 'chromium';
   launchedAt: string;
   lastSeenAt: string;
+  args?: string[];
+  services?: string[];
+  tabs?: Array<{ targetId?: string; url?: string; title?: string; type?: string }>;
+  lastKnownUrls?: string[];
 }
 
 export interface BrowserStateRegistry {
   instances: Record<string, BrowserInstance>;
+  version?: number;
 }
 
 export type RegistryOptions = {
@@ -41,7 +46,7 @@ async function saveRegistry(options: RegistryOptions, registry: BrowserStateRegi
   const file = options.registryPath;
   await fs.mkdir(path.dirname(file), { recursive: true });
   const temp = `${file}.tmp.${Math.random().toString(36).slice(2)}`;
-  await fs.writeFile(temp, JSON.stringify(registry, null, 2), 'utf8');
+  await fs.writeFile(temp, JSON.stringify({ ...registry, version: 2 }, null, 2), 'utf8');
   await fs.rename(temp, file);
 }
 
@@ -122,7 +127,7 @@ function buildRegistryKey(profilePath: string, profileName?: string): string {
 function normalizeRegistry(
   registry: BrowserStateRegistry,
 ): { registry: BrowserStateRegistry; changed: boolean } {
-  const normalized: BrowserStateRegistry = { instances: {} };
+  const normalized: BrowserStateRegistry = { instances: {}, version: 2 };
   let changed = false;
   for (const [key, instance] of Object.entries(registry.instances ?? {})) {
     const profileName = resolveProfileDirectoryName(instance.profilePath, instance.profileName ?? 'Default');
@@ -131,6 +136,9 @@ function normalizeRegistry(
     if (normalizedKey !== key) {
       changed = true;
     }
+  }
+  if ((registry.version ?? 1) !== 2) {
+    changed = true;
   }
   if (!changed) {
     return { registry, changed };

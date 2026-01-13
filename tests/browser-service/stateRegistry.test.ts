@@ -28,11 +28,14 @@ describe('stateRegistry (package)', () => {
           type: 'chrome',
           launchedAt: new Date().toISOString(),
           lastSeenAt: new Date().toISOString(),
+          args: ['--remote-debugging-port=9222'],
+          services: ['grok'],
         },
       );
       const instance = await registry.findActiveInstance({ registryPath }, '/tmp/profile', 'Default');
       expect(instance?.port).toBe(9222);
       expect(instance?.profileName).toBe('Default');
+      expect(instance?.args).toEqual(['--remote-debugging-port=9222']);
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
@@ -61,6 +64,7 @@ describe('stateRegistry (package)', () => {
 
       const raw = await readFile(registryPath, 'utf8');
       const parsed = JSON.parse(raw) as registry.BrowserStateRegistry;
+      expect(parsed.version).toBe(2);
       expect(Object.keys(parsed.instances)).toHaveLength(0);
     } finally {
       await rm(dir, { recursive: true, force: true });
