@@ -2,6 +2,7 @@ export * from './chromeLifecycle.js';
 export * from './manualLogin.js';
 export * from './loginHelpers.js';
 export * from './login.js';
+export * from './client.js';
 export * from './sessionRunner.js';
 export * from './reattach.js';
 export * from './portSelection.js';

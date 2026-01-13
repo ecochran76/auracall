@@ -1,5 +1,3 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
 import type { ResolvedUserConfig } from '../config.js';
 import type { ChromeClient } from './types.js';
 import type { BrowserProvider, BrowserProviderListOptions } from './providers/types.js';
@@ -10,12 +8,14 @@ import { runBrowserLogin } from './login.js';
 import { BrowserService } from './service/browserService.js';
 import { createLlmService } from './llmService/index.js';
 import type { LlmService } from './llmService/llmService.js';
+import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'grok';
   readonly provider: BrowserProvider;
   private readonly browserService: BrowserService;
   private readonly llmService: LlmService;
+  private readonly core: BrowserAutomationClientCore;
 
   private constructor(
     readonly userConfig: ResolvedUserConfig,
@@ -26,6 +26,12 @@ export class BrowserAutomationClient {
     this.browserService = browserService;
     this.llmService = createLlmService(target, userConfig, { browserService });
     this.provider = this.llmService.provider;
+    this.core = new BrowserAutomationClientCore(this.provider, {
+      connectDevTools: () => this.connectDevTools(),
+      diagnoseProvider: (client, config, basePath) =>
+        diagnoseProvider(client, config as typeof this.provider.config, basePath),
+      crawlerScript: CRAWLER_SCRIPT,
+    });
   }
 
   static async fromConfig(
@@ -84,26 +90,8 @@ export class BrowserAutomationClient {
     report: DiagnosisReport;
     port: number;
   }> {
-    const basePath = options.basePath ?? process.cwd();
-    const { client, port } = await this.connectDevTools();
-    try {
-      await Promise.all([client.Runtime.enable(), client.DOM.enable()]);
-      const report = await diagnoseProvider(client, this.provider.config, basePath);
-      if (options.saveSnapshot && !report.snapshotPath) {
-        const { result } = await client.Runtime.evaluate({
-          expression: CRAWLER_SCRIPT,
-          returnByValue: true,
-        });
-        if (result.value) {
-          const dumpPath = path.join(basePath, `oracle-snapshot-${this.target}-${Date.now()}.json`);
-          await fs.writeFile(dumpPath, JSON.stringify(result.value, null, 2));
-          report.snapshotPath = dumpPath;
-        }
-      }
-      return { report, port };
-    } finally {
-      await client.close().catch(() => undefined);
-    }
+    const { report, port } = await this.core.diagnose(options);
+    return { report: report as DiagnosisReport, port };
   }
 
   async login(options: BrowserLoginOptions): Promise<void> {
