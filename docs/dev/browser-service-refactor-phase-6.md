@@ -44,6 +44,7 @@
 - Confirm Oracle wrappers are thin adapters (no duplicate logic).
 - Update `docs/dev/browser-service.md` and `docs/dev/browser-service-refactor-phase-5.md` with any API changes.
 - Add a short usage snippet in the docs that shows external use (connect + resolve port).
+ - Record wrapper audit results (no duplicate generic logic found; wrappers only bind registry path/config defaults).
 
 ### 5) Verification
 - Run `pnpm run typecheck`.

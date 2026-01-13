@@ -1,9 +1,5 @@
+// Stable surface
 export * from './chromeLifecycle.js';
-export * from './manualLogin.js';
-export * from './loginHelpers.js';
-export * from './login.js';
-export * from './client.js';
-export * from './sessionRunner.js';
 export * from './portSelection.js';
 export * from './processCheck.js';
 export * from './profileState.js';
@@ -16,3 +12,10 @@ export * from './service/browserService.js';
 export * from './service/stateRegistry.js';
 export * from './service/types.js';
 export * from './service/ui.js';
+
+// Provisional surface
+export * from './manualLogin.js';
+export * from './loginHelpers.js';
+export * from './login.js';
+export * from './client.js';
+export * from './sessionRunner.js';
