@@ -5,10 +5,16 @@ import {
   readConversationCache,
   readConversationContextCache,
   readConversationFilesCache,
+  readConversationAttachmentsCache,
+  readProjectKnowledgeCache,
+  readProjectInstructionsCache,
   writeProjectCache,
   writeConversationCache,
   writeConversationContextCache,
   writeConversationFilesCache,
+  writeConversationAttachmentsCache,
+  writeProjectKnowledgeCache,
+  writeProjectInstructionsCache,
 } from '../../providers/cache.js';
 import { resolveCacheEntryPath, upsertCacheIndexEntry } from './index.js';
 
@@ -34,6 +40,33 @@ export interface CacheStore {
     context: ProviderCacheContext,
     conversationId: string,
     files: FileRef[],
+  ): Promise<void>;
+  readConversationAttachments(
+    context: ProviderCacheContext,
+    conversationId: string,
+  ): Promise<CacheReadResult<FileRef[]>>;
+  writeConversationAttachments(
+    context: ProviderCacheContext,
+    conversationId: string,
+    files: FileRef[],
+  ): Promise<void>;
+  readProjectKnowledge(
+    context: ProviderCacheContext,
+    projectId: string,
+  ): Promise<CacheReadResult<FileRef[]>>;
+  writeProjectKnowledge(
+    context: ProviderCacheContext,
+    projectId: string,
+    files: FileRef[],
+  ): Promise<void>;
+  readProjectInstructions(
+    context: ProviderCacheContext,
+    projectId: string,
+  ): Promise<CacheReadResult<{ content: string; format: 'md' }>>;
+  writeProjectInstructions(
+    context: ProviderCacheContext,
+    projectId: string,
+    content: string,
   ): Promise<void>;
 }
 
@@ -104,6 +137,75 @@ export class JsonCacheStore implements CacheStore {
       kind: 'conversation-files',
       path: resolveCacheEntryPath(context, `conversation-files/${conversationId}.json`),
       conversationId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readConversationAttachments(
+    context: ProviderCacheContext,
+    conversationId: string,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return readConversationAttachmentsCache(context, conversationId);
+  }
+
+  async writeConversationAttachments(
+    context: ProviderCacheContext,
+    conversationId: string,
+    files: FileRef[],
+  ): Promise<void> {
+    await writeConversationAttachmentsCache(context, conversationId, files);
+    await upsertCacheIndexEntry(context, {
+      kind: 'conversation-attachments',
+      path: resolveCacheEntryPath(context, `conversation-attachments/${conversationId}/manifest.json`),
+      conversationId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readProjectKnowledge(
+    context: ProviderCacheContext,
+    projectId: string,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return readProjectKnowledgeCache(context, projectId);
+  }
+
+  async writeProjectKnowledge(
+    context: ProviderCacheContext,
+    projectId: string,
+    files: FileRef[],
+  ): Promise<void> {
+    await writeProjectKnowledgeCache(context, projectId, files);
+    await upsertCacheIndexEntry(context, {
+      kind: 'project-knowledge',
+      path: resolveCacheEntryPath(context, `project-knowledge/${projectId}/manifest.json`),
+      projectId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readProjectInstructions(
+    context: ProviderCacheContext,
+    projectId: string,
+  ): Promise<CacheReadResult<{ content: string; format: 'md' }>> {
+    return readProjectInstructionsCache(context, projectId);
+  }
+
+  async writeProjectInstructions(
+    context: ProviderCacheContext,
+    projectId: string,
+    content: string,
+  ): Promise<void> {
+    await writeProjectInstructionsCache(context, projectId, content);
+    await upsertCacheIndexEntry(context, {
+      kind: 'project-instructions',
+      path: resolveCacheEntryPath(context, `project-instructions/${projectId}.md`),
+      projectId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+    await upsertCacheIndexEntry(context, {
+      kind: 'project-instructions',
+      path: resolveCacheEntryPath(context, `project-instructions/${projectId}.json`),
+      projectId,
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }

@@ -106,6 +106,70 @@ export async function writeConversationFilesCache(
   await writeProviderCache(context, `conversation-files/${conversationId}.json`, files);
 }
 
+export async function readConversationAttachmentsCache(
+  context: ProviderCacheContext,
+  conversationId: string,
+): Promise<CacheReadResult<FileRef[]>> {
+  return readProviderCache<FileRef[]>(
+    context,
+    `conversation-attachments/${conversationId}/manifest.json`,
+    [],
+  );
+}
+
+export async function writeConversationAttachmentsCache(
+  context: ProviderCacheContext,
+  conversationId: string,
+  files: FileRef[],
+): Promise<void> {
+  await writeProviderCache(context, `conversation-attachments/${conversationId}/manifest.json`, files);
+}
+
+export async function readProjectKnowledgeCache(
+  context: ProviderCacheContext,
+  projectId: string,
+): Promise<CacheReadResult<FileRef[]>> {
+  return readProviderCache<FileRef[]>(
+    context,
+    `project-knowledge/${projectId}/manifest.json`,
+    [],
+  );
+}
+
+export async function writeProjectKnowledgeCache(
+  context: ProviderCacheContext,
+  projectId: string,
+  files: FileRef[],
+): Promise<void> {
+  await writeProviderCache(context, `project-knowledge/${projectId}/manifest.json`, files);
+}
+
+export async function readProjectInstructionsCache(
+  context: ProviderCacheContext,
+  projectId: string,
+): Promise<CacheReadResult<{ content: string; format: 'md' }>> {
+  return readProviderCache<{ content: string; format: 'md' }>(
+    context,
+    `project-instructions/${projectId}.json`,
+    { content: '', format: 'md' },
+  );
+}
+
+export async function writeProjectInstructionsCache(
+  context: ProviderCacheContext,
+  projectId: string,
+  content: string,
+): Promise<void> {
+  await writeProviderCache(context, `project-instructions/${projectId}.json`, {
+    content,
+    format: 'md',
+  });
+  const { cacheDir } = resolveProviderCachePath(context, `project-instructions/${projectId}.json`);
+  const mdPath = path.join(cacheDir, 'project-instructions', `${projectId}.md`);
+  await fs.mkdir(path.dirname(mdPath), { recursive: true });
+  await fs.writeFile(mdPath, `${content.trim()}\n`, 'utf8');
+}
+
 export function matchProjectByName(projects: Project[], name: string): CacheNameMatch<Project> {
   return matchByName(projects, name, (project) => project.name || project.id);
 }
