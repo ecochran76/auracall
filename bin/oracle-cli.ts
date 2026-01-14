@@ -812,7 +812,7 @@ program
     }
   });
 
-program
+const cacheCommand = program
   .command('cache')
   .description('Show cached browser project/conversation lists.')
   .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
@@ -955,6 +955,76 @@ program
       }
     }
     console.log(JSON.stringify(output, null, 2));
+  });
+
+cacheCommand
+  .command('export')
+  .description('Export cached project/conversation data.')
+  .option('--provider <chatgpt|grok>', 'Limit export to a provider (chatgpt or grok).')
+  .option('--scope <projects|conversations|conversation>', 'Export scope (default conversations).')
+  .option('--format <json|md|html|csv|zip>', 'Export format (default json).')
+  .option('--project-id <id>', 'Project ID for project-scoped exports.')
+  .option('--conversation-id <id>', 'Conversation ID for conversation-scoped exports.')
+  .option('--output <path>', 'Output directory or zip path (default is timestamped under ~/.oracle/cache/exports).')
+  .action(async (commandOptions) => {
+    const providers = new Set(['chatgpt', 'grok']);
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const provider =
+      (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
+    if (!providers.has(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    }
+
+    const scope =
+      typeof commandOptions.scope === 'string' && commandOptions.scope.trim().length > 0
+        ? commandOptions.scope.trim()
+        : 'conversations';
+    const format =
+      typeof commandOptions.format === 'string' && commandOptions.format.trim().length > 0
+        ? commandOptions.format.trim()
+        : 'json';
+    if (!['projects', 'conversations', 'conversation'].includes(scope)) {
+      throw new Error('scope must be projects, conversations, or conversation.');
+    }
+    if (!['json', 'md', 'html', 'csv', 'zip'].includes(format)) {
+      throw new Error('format must be json, md, html, csv, or zip.');
+    }
+
+    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl:
+        provider === 'grok'
+          ? userConfig.browser?.grokUrl ?? null
+          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+    });
+    const cacheContext = await llmService.resolveCacheContext(listOptions);
+    assertCacheIdentity(cacheContext, provider);
+    const exportRoot = path.join(getOracleHomeDir(), 'cache', 'exports');
+    const defaultDir = path.join(
+      exportRoot,
+      provider,
+      cacheContext.identityKey,
+      new Date().toISOString().replace(/[:.]/g, '-'),
+    );
+    const outputDir = commandOptions.output ? String(commandOptions.output) : defaultDir;
+
+    const { runCacheExport } = await import('../src/browser/llmService/cache/export.js');
+    const result = await runCacheExport(cacheContext, {
+      format: format as 'json' | 'md' | 'html' | 'csv' | 'zip',
+      scope: scope as 'projects' | 'conversations' | 'conversation',
+      projectId: commandOptions.projectId ?? undefined,
+      conversationId: commandOptions.conversationId ?? undefined,
+      outputDir,
+    });
+
+    if (format === 'zip') {
+      console.log(`Exported ${result.entries} entries to ${result.outputPath}`);
+    } else {
+      console.log(`Exported ${result.entries} entries into ${result.outputPath}`);
+    }
   });
 
 program
