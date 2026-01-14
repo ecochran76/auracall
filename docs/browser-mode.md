@@ -62,7 +62,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `oracle login --target grok`: opens the configured browser profile for Grok sign-in.
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).
   - `--browser-cookie-path`: explicit path to the Chrome/Chromium/Edge `Cookies` SQLite DB. Handy when you launch a fork via `--browser-chrome-path` and want to copy its session cookies; see [docs/chromium-forks.md](chromium-forks.md) for examples.
-  - `--project-name` / `--conversation-name`: resolve browser project/conversation by cached name before starting a run.
+- `--project-name` / `--conversation-name`: resolve browser project/conversation by cached name before starting a run. `--conversation-name` also accepts selectors like `latest` or `latest-1`.
 - `--chatgpt-url`: override the ChatGPT base URL. Works with the root homepage (`https://chatgpt.com/`) **or** a specific workspace/folder link such as `https://chatgpt.com/g/.../project`. `--browser-url` stays as a hidden alias.
 - `--browser-timeout`, `--browser-input-timeout`: `1200s (20m)`/`30s` defaults. Durations accept `ms`, `s`, `m`, or `h` and can be chained (`1h2m10s`).
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)

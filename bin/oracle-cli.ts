@@ -399,7 +399,12 @@ program
   .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
   .addOption(new Option('--project-name <name>', 'Resolve browser project by cached name.'))
   .addOption(new Option('--no-project', 'Ignore configured project defaults for this run.'))
-  .addOption(new Option('--conversation-name <name>', 'Resolve browser conversation by cached title.'))
+  .addOption(
+    new Option(
+      '--conversation-name <name>',
+      'Resolve browser conversation by cached title or selector (e.g., latest, latest-1).',
+    ),
+  )
   .addOption(
     new Option(
       '--chatgpt-url <url>',
@@ -631,7 +636,10 @@ program
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
   .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
-  .option('--conversation-name <name>', 'Resolve a conversation by cached title.')
+  .option(
+    '--conversation-name <name>',
+    'Resolve a conversation by cached title or selector (e.g., latest, latest-1).',
+  )
   .option('--include-history', 'Include the History dialog results when listing conversations.')
   .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
@@ -722,7 +730,7 @@ program
           ? parentOptions.conversationName.trim()
           : '';
     if (conversationName) {
-      const conversationMatch = await llmService.resolveConversationByName(conversationName, {
+      const conversationMatch = await llmService.resolveConversationSelector(conversationName, {
         projectId,
         forceRefresh,
         listOptions: normalizedListOptions,
