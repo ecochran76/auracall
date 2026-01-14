@@ -16,6 +16,10 @@ and run the live API suite before shipping major transport changes.
 
 ## Test Cases
 
+### Grok browser smoke (live)
+
+See the Grok smoke checklist in `docs/dev/smoke-tests.md`. Keep that file updated as the browser automation evolves.
+
 ### Quick browser port smoke
 
 - `pnpm test:browser` — launches headful Chrome and checks the DevTools endpoint is reachable. Set `ORACLE_BROWSER_PORT` (or `ORACLE_BROWSER_DEBUG_PORT`) to reuse a fixed port when you’ve already opened a firewall rule.
