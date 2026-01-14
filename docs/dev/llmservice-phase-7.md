@@ -41,6 +41,7 @@
   - `JsonCacheStore` (current layout + index files)
   - `SqliteCacheStore` (optional future, feature-flagged)
 - Documented cache schema + index layout (`docs/dev/cache-schema.md`).
+  - Includes project instruction markdown + metadata, knowledge manifest + files, and conversation attachment storage.
 - Export tools:
   - `oracle cache export --scope project|conversation --format json|md|zip|html|csv`
   - Include attachments and optional transcript indexes

@@ -9,13 +9,16 @@ export type CacheIndexKind =
   | 'conversations'
   | 'context'
   | 'conversation-files'
-  | 'project-files'
-  | 'project-instructions';
+  | 'project-instructions'
+  | 'project-knowledge'
+  | 'conversation-attachments'
+  | 'exports';
 
 export interface CacheIndexEntry {
   kind: CacheIndexKind;
   path: string;
   updatedAt: string;
+  fileId?: string;
   projectId?: string;
   conversationId?: string;
   sourceUrl?: string | null;

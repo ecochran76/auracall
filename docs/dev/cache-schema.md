@@ -15,15 +15,32 @@ All cache data is keyed by provider + identity.
     <conversationId>.json
   conversation-files/
     <conversationId>.json
-  project-files/
-    <projectId>.json
   project-instructions/
     <projectId>.md
+    <projectId>.json
+  project-knowledge/
+    <projectId>/
+      manifest.json
+      files/
+        <fileId>/<originalName>
+  conversation-attachments/
+    <conversationId>/
+      manifest.json
+      files/
+        <fileId>/<originalName>
+  exports/
+    conversations/
+      <conversationId>/
+        transcript.md
+        transcript.html
+        metadata.csv
 ```
 
 Notes:
 - `identityKey` is derived from service identity (email/handle/name) or configured override.
-- `project-files/` and `project-instructions/` are reserved for Phase 7 project knowledge CRUD.
+- `project-instructions/<projectId>.md` is the canonical sync target for instructions.
+- `project-instructions/<projectId>.json` stores cache metadata for the instruction file.
+- `project-knowledge/` and `conversation-attachments/` store manifests + binary files.
 - `contexts/` stores full conversation transcripts.
 
 ## Index File
@@ -53,7 +70,7 @@ Notes:
 
 ## Cache Entry Formats
 
-All cache files are stored as `ProviderCache<T>`:
+JSON cache files are stored as `ProviderCache<T>`:
 
 ```json
 {
@@ -69,6 +86,11 @@ All cache files are stored as `ProviderCache<T>`:
 - `conversations.json`: `Conversation[]` wrapped in cache metadata.
 - `contexts/<id>.json`: `ConversationContext` wrapped in cache metadata.
 - `conversation-files/<id>.json`: `FileRef[]` wrapped in cache metadata.
+- `project-instructions/<projectId>.json`: `{ content: string, format: "md" }` wrapped in cache metadata.
+- `project-knowledge/<projectId>/manifest.json`: `FileRef[]` wrapped in cache metadata.
+- `conversation-attachments/<conversationId>/manifest.json`: `FileRef[]` wrapped in cache metadata.
+
+Binary files (knowledge/attachments) are stored under `files/` using the file ID as the directory name; the original filename is preserved as the leaf.
 
 ## Export Targets
 
