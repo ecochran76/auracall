@@ -1249,11 +1249,12 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
   }
   if (!options.conversationId && conversationName) {
     try {
-      const match = await llmService.resolveConversationByName(conversationName, {
+      const match = await llmService.resolveConversationSelector(conversationName, {
         projectId: options.projectId ?? undefined,
         forceRefresh: conversationNameFromConfig,
         allowAutoRefresh: !options.dryRun,
         listOptions: normalizedListOptions,
+        noProject: disableProject,
       });
       console.log(chalk.dim(`Resolved conversation "${conversationName}" to ${match.id}`));
       options.conversationId = match.id;
@@ -1846,7 +1847,9 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     waitPreference = true;
   }
 
-  await resolveBrowserNameHints(options, userConfig as any);
+  if (engine === 'browser' || userForcedBrowser) {
+    await resolveBrowserNameHints(options, userConfig as any);
+  }
 
   if (await handleStatusFlag(options, { attachSession, showStatus })) {
     return;
@@ -1980,6 +1983,40 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     const filesToValidate = isBrowserMode ? options.file.filter((f: string) => !isMediaFile(f)) : options.file;
     if (filesToValidate.length > 0) {
       await readFiles(filesToValidate, { cwd: process.cwd() });
+    }
+  }
+
+  if (engine === 'browser' || userForcedBrowser) {
+    const modelName = resolvedModel.toLowerCase();
+    const target = modelName.startsWith('grok')
+      ? 'grok'
+      : modelName.startsWith('gemini')
+        ? 'gemini'
+        : options.browserTarget ?? userConfig.browser?.target ?? 'chatgpt';
+    if (target !== 'gemini') {
+      const configuredUrl =
+        target === 'grok'
+          ? options.grokUrl ?? userConfig.browser?.grokUrl ?? null
+          : options.chatgptUrl ??
+            options.browserUrl ??
+            userConfig.browser?.chatgptUrl ??
+            userConfig.browser?.url ??
+            null;
+      const llmService = createLlmService(target, userConfig, {
+        identityPrompt: promptForCacheIdentity,
+      });
+      const plan = await llmService.planPrompt({
+        configuredUrl,
+        projectId: options.projectId ?? null,
+        projectName: options.projectName ?? null,
+        conversationId: options.conversationId ?? null,
+        conversationName: options.conversationName ?? null,
+        noProject: disableProject,
+        allowAutoRefresh: !options.dryRun,
+        listOptions: { configuredUrl },
+      });
+      options.projectId = plan.projectId ?? undefined;
+      options.conversationId = plan.conversationId ?? undefined;
     }
   }
 

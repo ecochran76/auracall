@@ -132,6 +132,7 @@
 - Live smoke:
   - Use `docs/dev/smoke-tests.md` as baseline.
   - Add Grok project rename, knowledge CRUD, conversation rename/delete to smoke list.
+  - TODO: rerun `oracle cache export --format md|html` after context scraping is implemented (requires cached contexts).
 
 ## Phase 7 Output
 - Grok feature suite complete for prompt/projects/conversations + cache mirroring.

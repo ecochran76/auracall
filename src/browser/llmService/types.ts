@@ -37,3 +37,13 @@ export type ProjectListResult = Project[];
 export type ConversationListResult = Conversation[];
 
 export type IdentityPrompt = (provider: ProviderId) => Promise<ProviderUserIdentity | null>;
+
+export type PromptReusePolicy = 'new' | 'reuse';
+
+export type PromptPlan = {
+  targetUrl: string | null;
+  projectId: string | null;
+  conversationId: string | null;
+  reusePolicy: PromptReusePolicy;
+  promptMode: 'new' | 'reuse';
+};

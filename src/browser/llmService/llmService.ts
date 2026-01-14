@@ -16,6 +16,7 @@ import type {
   IdentityPrompt,
   LlmCapabilities,
   LlmServiceAdapter,
+  PromptPlan,
   ProjectListResult,
 } from './types.js';
 import type { CacheStore } from './cache/store.js';
@@ -75,6 +76,61 @@ export abstract class LlmService {
       return this.provider.resolveProjectUrl(projectId) ?? configuredUrl ?? null;
     }
     return configuredUrl ?? null;
+  }
+
+  async planPrompt(options: {
+    configuredUrl?: string | null;
+    projectId?: string | null;
+    projectName?: string | null;
+    conversationId?: string | null;
+    conversationName?: string | null;
+    noProject?: boolean;
+    allowAutoRefresh?: boolean;
+    forceProjectRefresh?: boolean;
+    forceConversationRefresh?: boolean;
+    listOptions?: BrowserProviderListOptions;
+  }): Promise<PromptPlan> {
+    const configuredUrl = options.configuredUrl ?? this.getConfiguredUrl();
+    const noProject = options.noProject === true;
+    const projectName = noProject ? null : options.projectName?.trim() || null;
+    const conversationName = options.conversationName?.trim() || null;
+    let projectId = noProject ? null : options.projectId ?? null;
+    let conversationId = options.conversationId ?? null;
+    const allowAutoRefresh = options.allowAutoRefresh ?? true;
+
+    if (!projectId && projectName) {
+      projectId = await this.resolveProjectIdByName(projectName, {
+        forceRefresh: options.forceProjectRefresh,
+        allowAutoRefresh,
+        allowFallback: this.providerId === 'grok',
+        listOptions: options.listOptions,
+      });
+    }
+
+    if (!conversationId && conversationName) {
+      const match = await this.resolveConversationSelector(conversationName, {
+        projectId: projectId ?? undefined,
+        forceRefresh: options.forceConversationRefresh,
+        allowAutoRefresh,
+        listOptions: options.listOptions,
+        noProject,
+      });
+      conversationId = match.id;
+    }
+
+    const targetUrl = this.resolveLaunchUrl({
+      configuredUrl,
+      projectId,
+      conversationId,
+    });
+    const reusePolicy = conversationId ? 'reuse' : 'new';
+    return {
+      targetUrl,
+      projectId,
+      conversationId,
+      reusePolicy,
+      promptMode: reusePolicy === 'reuse' ? 'reuse' : 'new',
+    };
   }
 
   deriveProjectsFromConfig(options: { configuredUrl?: string | null; projectId?: string | null } = {}): Project[] {
@@ -256,6 +312,32 @@ export abstract class LlmService {
     throw new Error(`No cached conversation named "${conversationName}". Run "oracle conversations" to refresh.`);
   }
 
+  async resolveConversationSelector(
+    selector: string,
+    options?: {
+      projectId?: string;
+      forceRefresh?: boolean;
+      allowAutoRefresh?: boolean;
+      listOptions?: BrowserProviderListOptions;
+      noProject?: boolean;
+    },
+  ): Promise<Conversation> {
+    const normalized = selector.trim();
+    const latestOffset = parseLatestSelector(normalized);
+    if (latestOffset !== null) {
+      return this.resolveLatestConversation(latestOffset, {
+        projectId: options?.noProject ? undefined : options?.projectId,
+        listOptions: options?.listOptions,
+      });
+    }
+    return this.resolveConversationByName(normalized, {
+      projectId: options?.projectId,
+      forceRefresh: options?.forceRefresh,
+      allowAutoRefresh: options?.allowAutoRefresh,
+      listOptions: options?.listOptions,
+    });
+  }
+
   async resolveCacheContext(
     listOptions: BrowserProviderListOptions,
     options: { prompt?: boolean } = {},
@@ -431,6 +513,27 @@ export abstract class LlmService {
     return null;
   }
 
+  private async resolveLatestConversation(
+    offset: number,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<Conversation> {
+    if (!this.provider.listConversations) {
+      throw new Error(`${this.providerId} does not support conversation listing yet.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    const items = await this.listConversations(options?.projectId, {
+      ...listOptions,
+      includeHistory: true,
+      historyLimit: DEFAULT_HISTORY_LIMIT,
+    });
+    if (!items.length) {
+      throw new Error(`No conversations available to resolve latest for ${this.providerId}.`);
+    }
+    const sorted = sortConversationsByRecency(items);
+    const clamped = Math.max(0, Math.min(offset, sorted.length - 1));
+    return sorted[clamped];
+  }
+
   protected async withRetry<T>(
     fn: () => Promise<T>,
     options: { action: string; retries?: number } = { action: 'operation' },
@@ -456,4 +559,29 @@ export abstract class LlmService {
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+}
+
+function parseLatestSelector(value: string): number | null {
+  const match = value.trim().match(/^latest(?:-(\d+))?$/i);
+  if (!match) return null;
+  const offset = match[1] ? Number.parseInt(match[1], 10) : 0;
+  if (!Number.isFinite(offset) || offset < 0) return null;
+  return offset;
+}
+
+function sortConversationsByRecency(items: Conversation[]): Conversation[] {
+  return items
+    .map((item, index) => {
+      const timestamp = item.updatedAt ? Date.parse(item.updatedAt) : NaN;
+      return { item, index, timestamp };
+    })
+    .sort((a, b) => {
+      const aValid = Number.isFinite(a.timestamp);
+      const bValid = Number.isFinite(b.timestamp);
+      if (aValid && bValid) return b.timestamp - a.timestamp;
+      if (aValid && !bValid) return -1;
+      if (!aValid && bValid) return 1;
+      return a.index - b.index;
+    })
+    .map((entry) => entry.item);
 }
