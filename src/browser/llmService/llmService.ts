@@ -4,11 +4,7 @@ import type { Conversation, Project, ProviderId } from '../providers/domain.js';
 import {
   matchConversationByTitle,
   matchProjectByName,
-  readConversationCache,
-  readProjectCache,
   resolveProviderCacheKey,
-  writeConversationCache,
-  writeProjectCache,
   PROVIDER_CACHE_TTL_MS,
 } from '../providers/cache.js';
 import type { BrowserService } from '../service/browserService.js';
@@ -22,6 +18,8 @@ import type {
   LlmServiceAdapter,
   ProjectListResult,
 } from './types.js';
+import type { CacheStore } from './cache/store.js';
+import { createCacheStore } from './cache/store.js';
 
 const DEFAULT_HISTORY_LIMIT = 200;
 
@@ -29,18 +27,20 @@ export abstract class LlmService {
   readonly provider: LlmServiceAdapter;
   readonly providerId: ProviderId;
   private readonly browserService: BrowserService;
+  private readonly cacheStore: CacheStore;
   private readonly identityPrompt?: IdentityPrompt;
 
   protected constructor(
     private readonly userConfig: ResolvedUserConfig,
     provider: LlmServiceAdapter,
     browserService: BrowserService,
-    options?: { identityPrompt?: IdentityPrompt },
+    options?: { identityPrompt?: IdentityPrompt; cacheStore?: CacheStore },
   ) {
     this.provider = provider;
     this.providerId = provider.id;
     this.browserService = browserService;
     this.identityPrompt = options?.identityPrompt;
+    this.cacheStore = options?.cacheStore ?? createCacheStore();
   }
 
   getCapabilities(): LlmCapabilities {
@@ -164,13 +164,13 @@ export abstract class LlmService {
   ): Promise<string> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     const cacheContext = await this.resolveCacheContext(listOptions);
-    let cached = await readProjectCache(cacheContext);
+    let cached = await this.cacheStore.readProjects(cacheContext);
     const allowAutoRefresh = options?.allowAutoRefresh ?? true;
     let didRefresh = false;
     const canList = Boolean(this.provider.listProjects);
     if ((options?.forceRefresh || (allowAutoRefresh && cached.stale)) && canList) {
       const items = await this.listProjects(listOptions);
-      await writeProjectCache(cacheContext, items);
+      await this.cacheStore.writeProjects(cacheContext, items);
       cached = { items, fetchedAt: Date.now(), stale: false };
       didRefresh = true;
     }
@@ -180,7 +180,7 @@ export abstract class LlmService {
     }
     if (!didRefresh && allowAutoRefresh && canList) {
       const items = await this.listProjects(listOptions);
-      await writeProjectCache(cacheContext, items);
+      await this.cacheStore.writeProjects(cacheContext, items);
       const retry = matchProjectByName(items, projectName);
       if (retry.match) {
         return retry.match.id;
@@ -219,7 +219,7 @@ export abstract class LlmService {
   ): Promise<Conversation> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     const cacheContext = await this.resolveCacheContext(listOptions);
-    let cached = await readConversationCache(cacheContext);
+    let cached = await this.cacheStore.readConversations(cacheContext);
     const allowAutoRefresh = options?.allowAutoRefresh ?? true;
     let didRefresh = false;
     const canList = Boolean(this.provider.listConversations);
@@ -229,7 +229,7 @@ export abstract class LlmService {
         includeHistory: true,
         historyLimit: DEFAULT_HISTORY_LIMIT,
       });
-      await writeConversationCache(cacheContext, items);
+      await this.cacheStore.writeConversations(cacheContext, items);
       cached = { items, fetchedAt: Date.now(), stale: false };
       didRefresh = true;
     }
@@ -243,7 +243,7 @@ export abstract class LlmService {
         includeHistory: true,
         historyLimit: DEFAULT_HISTORY_LIMIT,
       });
-      await writeConversationCache(cacheContext, items);
+      await this.cacheStore.writeConversations(cacheContext, items);
       const retry = matchConversationByTitle(items, conversationName);
       if (retry.match) {
         return retry.match;

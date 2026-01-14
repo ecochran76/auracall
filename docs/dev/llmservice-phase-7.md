@@ -144,6 +144,7 @@
 - Project knowledge is durable; conversation files are ephemeral and should be reconciled.
 - Conversation CRUD must include moving conversations between projects.
 - Cache sync supports both destructive sync and additive merge.
-- Open: default cache backend choice (JSON+index vs SQLite).
+- Cache backend: JSON + index by default; SQLite optional later.
 - Decision: `--force` only bypasses duplicate prompt guard; reuse/new conversation is controlled separately.
+- Prompt reuse policy: reuse only when an explicit conversation selector is provided; otherwise start new.
 - Open: branching context representation (raw transcript only vs transcript + normalized context).
