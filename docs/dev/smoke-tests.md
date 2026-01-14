@@ -40,16 +40,24 @@ DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts conversations --target grok --refresh --
 DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --model grok-4.1-thinking --project-name "SABER" --force --browser-keep-browser
 ```
 
+5) Conversation selectors (project scope + global scope)
+
+```sh
+DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts --engine browser --model grok-4.1-thinking --project-name "Oracle" --conversation-name latest --prompt "ping" --wait --verbose
+DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts --engine browser --model grok-4.1-thinking --project-name "Oracle" --conversation-name latest-1 --prompt "ping" --wait --verbose
+DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts --engine browser --model grok-4.1-thinking --no-project --conversation-name latest --prompt "ping" --wait --verbose
+```
+
 ## Session + Registry
 
-5) Reattach flow (keep Chrome open)
+6) Reattach flow (keep Chrome open)
 
 ```sh
 pnpm tsx bin/oracle-cli.ts session
 pnpm tsx bin/oracle-cli.ts session <id> --render
 ```
 
-6) Registry sanity (ports + tabs + services)
+7) Registry sanity (ports + tabs + services)
 
 ```sh
 python3 - <<'PY'
