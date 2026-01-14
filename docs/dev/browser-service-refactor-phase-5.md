@@ -1,5 +1,5 @@
 
-  Status: planned
+  Status: complete
 
   1) Packaging decision + scope guardrails
 
@@ -71,3 +71,4 @@
 
   Status update (Phase 5.2):
   - Added `docs/dev/browser-service.md` to capture package responsibilities + integration guidance.
+  - Phase 5 scope complete; ongoing API hardening tracked in Phase 6.

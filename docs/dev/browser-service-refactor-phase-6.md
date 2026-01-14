@@ -1,5 +1,7 @@
 # Phase 6: Browser-Service Hardening + Integration Cleanup
 
+Status: complete
+
 ## Goals
 - Stabilize the public API surface of `@ecochran76/browser-service`.
 - Remove remaining generic browser helpers from Oracle where they do not depend on LLM DOM logic.
@@ -57,3 +59,8 @@
 - Oracle wrappers call into browser-service for all generic session/profile helpers.
 - Tests passing for browser-service core helpers.
 - Docs updated and reflect the final API surface.
+
+## Completion Notes
+- Browser-service exports audited and documented (stable vs provisional).
+- Oracle wrappers confirmed thin (registry path/default profile binding only).
+- Package-level unit tests cover registry, port selection, profile state, and instance scan paths.

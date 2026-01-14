@@ -33,13 +33,20 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
   - Preferred: `BROWSER_SERVICE_*`
   - Backward compatible (Oracle): `ORACLE_*` (do not remove yet; still referenced by existing configs/scripts)
 
-## Current Exports (Partial)
-- `launchChrome`, `connectToChrome`, `resolveWslHost`, `resolveUserDataBaseDir`, `reuseRunningChromeProfile`
-- `launchManualLoginSession`
-- `loginHelpers` (WSL/path helpers, cookie export helpers)
-- `BrowserService` (core)
-- `runBrowserSessionExecutionCore`
-- `profileDiscovery` helpers + registry utilities
+## Current Exports
+
+Stable:
+- `chromeLifecycle` helpers: `launchChrome`, `connectToChrome`, `registerTerminationHooks`,
+  `resolveWslHost`, `resolveUserDataBaseDir`, `reuseRunningChromeProfile`
+- `portSelection`, `processCheck`, `profileState`, `utils`
+- `service`: `BrowserService`, `stateRegistry`, `instanceScanner`, `profile`, `profileDiscovery`,
+  `portResolution`, `ui`, `types`
+- Core `types`
+
+Provisional:
+- `manualLogin`, `loginHelpers`, `login`
+- `client`
+- `sessionRunner`
 
 ## Example (External Use)
 ```ts
@@ -64,6 +71,10 @@ if (target.port) {
 - Stable: chrome lifecycle + port selection + registry/profile helpers, `BrowserService`, core types.
 - Provisional: login helpers, manual login workflow, session runner core, browser client core.
 - Oracle wrappers should prefer stable APIs unless a provisional feature is required.
+
+## Wrapper Audit (Oracle)
+- Oracle wrappers bind registry path and default profile directory, but do not reimplement browser-service logic.
+- Any non-LLM generic browser helpers should remain in this package.
 
 ## Non-Goals
 - No LLM-specific caching, project/conversation logic, or DOM selectors.
