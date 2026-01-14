@@ -15,6 +15,12 @@ These are real end-to-end checks for the Grok browser path. Keep them updated as
 DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --model grok-4.1-thinking --force --browser-keep-browser
 ```
 
+1b) Basic prompt with explicit target routing
+
+```sh
+DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --browser-target grok --model grok-4.1-thinking --force --browser-keep-browser
+```
+
 2) Projects refresh + cache
 
 ```sh
@@ -31,7 +37,7 @@ DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts conversations --target grok --refresh --
 4) Prompt inside project (uses cached project, resolves slug)
 
 ```sh
-DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --target grok --project-name "SABER" --force --browser-keep-browser
+DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --model grok-4.1-thinking --project-name "SABER" --force --browser-keep-browser
 ```
 
 ## Session + Registry

@@ -20,6 +20,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 ## Entries
 
+- Date: 2026-01-14
+- Area: Grok smoke tests + cache CLI usage
+- Symptom: Smoke checklist referenced `oracle cache --target grok`, which is not a supported flag (command failed).
+- Root cause: Cache CLI is provider-agnostic and does not accept a target override.
+- Fix: Updated smoke checklist to use `oracle cache` and added an explicit `--browser-target grok` prompt variant.
+- Verification: Live Grok smoke run completed (prompt, projects refresh, conversations list, project prompt, reattach, registry).
+
 - Date: 2026-01-09
 - Area: Grok browser conversation scraping (history dialog)
 - Symptom: `oracle conversations --target grok --include-history` returned empty results with `SyntaxError` from `Runtime.evaluate`.
