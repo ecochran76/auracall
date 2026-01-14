@@ -60,7 +60,7 @@
 ### 2) Prompt Flow & Session Management (LlmService-level)
 **Scope**
 - Define deterministic behavior for:
-  - `--force` (when does it reuse vs spawn new?)
+  - `--force` (bypass duplicate prompt guard only; reuse policy is separate)
   - Conversation selection (`id`, `name`, `latest`, `latest-1`, etc.).
   - Project resolution via cache or live refresh.
 - Consistent prompt pipeline:
@@ -73,7 +73,7 @@
   - Provider hooks for URL templates:
     - project URL
     - conversation URL
-- `--force` rules documented and enforced in one place.
+- `--force` rules documented and enforced in one place (duplicate prompt guard only).
 - Standard response post-processing hook (provider-specific):
   - e.g., Grok’s elapsed time suffix trimming.
 
@@ -145,5 +145,5 @@
 - Conversation CRUD must include moving conversations between projects.
 - Cache sync supports both destructive sync and additive merge.
 - Open: default cache backend choice (JSON+index vs SQLite).
-- Open: `--force` reuse policy (need to inspect legacy Oracle).
+- Decision: `--force` only bypasses duplicate prompt guard; reuse/new conversation is controlled separately.
 - Open: branching context representation (raw transcript only vs transcript + normalized context).

@@ -77,6 +77,7 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-attachments <auto|never|always>`: control how `--file` inputs are delivered in browser mode. Default `auto` pastes file contents inline up to ~60k characters and switches to uploads above that.
 - `--browser-inline-files`: alias for `--browser-attachments never` (forces inline paste; never uploads attachments).
 - `--browser-bundle-files`: bundle all resolved attachments into a single temp file before uploading (only used when uploads are enabled/selected).
+- `--force`: bypass the duplicate prompt guard if an identical prompt is already running. This does not control conversation reuse (a separate policy will handle reuse vs new conversation).
 - sqlite bindings: automatic rebuilds now require `ORACLE_ALLOW_SQLITE_REBUILD=1`. Without it, the CLI logs instructions instead of running `pnpm rebuild` on your behalf.
 - `--model`: the same flag used for API runs is accepted. ChatGPT automation supports **GPT-5.2** variants (Auto/Thinking/Instant/Pro): use `gpt-5.2`, `gpt-5.2-thinking`, `gpt-5.2-instant`, or `gpt-5.2-pro`. Grok automation supports `grok-4.1` (uses the Grok model picker). Other GPT families still require API mode.
 - Cookie sync is mandatory—if we can’t copy cookies from Chrome, the run exits early. Use the hidden `--browser-allow-cookie-errors` flag only when you’re intentionally running logged out (it skips the early exit but still warns).
