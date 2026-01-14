@@ -71,10 +71,11 @@ describe('loadUserConfig', () => {
     expect(result.config.remoteToken).toBe('secret');
   });
 
-  it('returns empty config when file is missing', async () => {
+  it('scaffolds a default config when file is missing', async () => {
     const result = await loadUserConfig(tempDir);
-    expect(result.loaded).toBe(false);
-    expect(result.config).toEqual({});
+    expect(result.loaded).toBe(true);
+    expect(result.config.version).toBe(2);
+    expect(result.config.profiles?.default).toBeDefined();
   });
 
   afterAll(() => {

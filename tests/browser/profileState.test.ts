@@ -7,8 +7,8 @@ import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import * as profileState from '../../src/browser/profileState.js';
 
-vi.mock('../../src/browser/processCheck.js', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../../src/browser/processCheck.js')>();
+vi.mock('../../packages/browser-service/src/processCheck.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../packages/browser-service/src/processCheck.js')>();
   return {
     ...actual,
     isChromeAlive: vi.fn(async (pid) => {

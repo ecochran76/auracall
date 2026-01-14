@@ -114,7 +114,7 @@ describe('reattach helpers', () => {
 
   test('extracts conversation id from a chat URL', () => {
     expect(extractConversationIdFromUrl('https://chatgpt.com/c/abc-123')).toBe('abc-123');
-    expect(extractConversationIdFromUrl('')).toBeUndefined();
+    expect(extractConversationIdFromUrl('')).toBeNull();
   });
 
   test('builds conversation URL from tabUrl or conversationId', () => {

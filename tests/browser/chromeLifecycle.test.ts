@@ -1,8 +1,8 @@
 import { describe, expect, test, vi } from 'vitest';
 
-vi.doMock('../../src/browser/profileState.js', async () => {
-  const original = await vi.importActual<typeof import('../../src/browser/profileState.js')>(
-    '../../src/browser/profileState.js',
+vi.doMock('../../packages/browser-service/src/profileState.js', async () => {
+  const original = await vi.importActual<typeof import('../../packages/browser-service/src/profileState.js')>(
+    '../../packages/browser-service/src/profileState.js',
   );
   return {
     ...original,
@@ -13,7 +13,7 @@ vi.doMock('../../src/browser/profileState.js', async () => {
 describe('registerTerminationHooks', () => {
   test('clears stale DevToolsActivePort hints when preserving userDataDir', async () => {
     const { registerTerminationHooks } = await import('../../src/browser/chromeLifecycle.js');
-    const profileState = await import('../../src/browser/profileState.js');
+    const profileState = await import('../../packages/browser-service/src/profileState.js');
     const cleanupMock = vi.mocked(profileState.cleanupStaleProfileState);
 
     const chrome = {
