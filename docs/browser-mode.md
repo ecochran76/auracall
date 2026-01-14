@@ -106,6 +106,11 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 - `oracle session <id> --open-conversation [--print-url] [--browser-path <path>] [--browser-profile <name>]`: open the provider conversation linked to a stored session (uses the saved context, not the cache). Use `--print-url` to emit the URL only, `--browser-path` to override the browser binary, and `--browser-profile` to override the profile directory.
 - `oracle conversations [--project-id <id>] [--project-name <name>] [--conversation-name <name>] [--include-history] [--history-limit <count>] [--history-since <date>] [--filter <text>] [--refresh]`: list conversations for a provider (uses the registry or `ORACLE_BROWSER_PORT`, and spawns a manual-login Chrome session when no DevTools target is available). Use `--include-history` if you want the History dialog opened to pull older conversations; use `--history-limit` (default 200) and/or `--history-since` to scroll deeper; use `--filter` to match title/id text; use `--refresh` to force cache updates.
 - Browser project/conversation lists are cached under `~/.oracle/cache/providers/<provider>/<username-or-email>/` (identity-scoped, stale after ~6h or when the configured URL changes). Cache identity comes from `profiles.<name>.services.<service>.identity` unless `profiles.<name>.cache.useDetectedIdentity` is enabled.
+
+Latest selectors
+- `--conversation-name latest` selects the most recent conversation (scoped to `--project-id`/`--project-name` when provided).
+- `--conversation-name latest-1` selects the second-most recent conversation.
+- `--no-project` forces global scope; for ChatGPT this means the most recent conversation outside a project.
 - Grok conversation listing reads the `/c/<id>` links in the project Conversations panel. If the History dialog opens during scraping, Oracle auto-closes it; if the UI still looks blocked, click the backdrop once to dismiss.
 - When listing conversations with `--project-id`, Oracle prefers an already-open Grok project tab (to avoid History bleed-through) and verifies the URL matches the requested project before scraping.
 

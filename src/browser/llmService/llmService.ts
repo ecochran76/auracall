@@ -328,6 +328,7 @@ export abstract class LlmService {
       return this.resolveLatestConversation(latestOffset, {
         projectId: options?.noProject ? undefined : options?.projectId,
         listOptions: options?.listOptions,
+        noProject: options?.noProject,
       });
     }
     return this.resolveConversationByName(normalized, {
@@ -515,7 +516,7 @@ export abstract class LlmService {
 
   private async resolveLatestConversation(
     offset: number,
-    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; noProject?: boolean },
   ): Promise<Conversation> {
     if (!this.provider.listConversations) {
       throw new Error(`${this.providerId} does not support conversation listing yet.`);
@@ -526,10 +527,14 @@ export abstract class LlmService {
       includeHistory: true,
       historyLimit: DEFAULT_HISTORY_LIMIT,
     });
-    if (!items.length) {
+    const filtered = filterConversationsForScope(items, {
+      providerId: this.providerId,
+      noProject: options?.noProject ?? false,
+    });
+    if (!filtered.length) {
       throw new Error(`No conversations available to resolve latest for ${this.providerId}.`);
     }
-    const sorted = sortConversationsByRecency(items);
+    const sorted = sortConversationsByRecency(filtered);
     const clamped = Math.max(0, Math.min(offset, sorted.length - 1));
     return sorted[clamped];
   }
@@ -584,4 +589,15 @@ function sortConversationsByRecency(items: Conversation[]): Conversation[] {
       return a.index - b.index;
     })
     .map((entry) => entry.item);
+}
+
+function filterConversationsForScope(
+  items: Conversation[],
+  options: { providerId: ProviderId; noProject: boolean },
+): Conversation[] {
+  if (!options.noProject) return items;
+  if (options.providerId === 'chatgpt') {
+    return items.filter((item) => !item.projectId);
+  }
+  return items;
 }

@@ -2025,6 +2025,15 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       });
       options.projectId = plan.projectId ?? undefined;
       options.conversationId = plan.conversationId ?? undefined;
+      if (options.verbose) {
+        const projectLabel = plan.projectId ?? (disableProject ? 'none' : 'none');
+        const conversationLabel = plan.conversationId ?? 'new';
+        console.log(
+          chalk.dim(
+            `[browser] target project=${projectLabel} conversation=${conversationLabel} url=${plan.targetUrl ?? 'default'}`,
+          ),
+        );
+      }
     }
   }
 
