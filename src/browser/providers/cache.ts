@@ -161,19 +161,38 @@ function matchByName<T>(
   return { match: null, candidates: fuzzy };
 }
 
+export function resolveProviderCachePath(
+  context: ProviderCacheContext,
+  fileName: string,
+): {
+  cacheDir: string;
+  cacheFile: string;
+  configuredUrl: string | null;
+} {
+  const cacheRoot = context.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+  const key = resolveProviderCacheKey(context);
+  const cacheDir = path.join(cacheRoot, context.provider, key);
+  const cacheFile = path.join(cacheDir, fileName);
+  return {
+    cacheDir,
+    cacheFile,
+    configuredUrl: context.listOptions.configuredUrl ?? null,
+  };
+}
+
 async function readProviderCache<T>(
   context: ProviderCacheContext,
   fileName: string,
   fallback: T,
 ): Promise<CacheReadResult<T>> {
-  const { cacheFile, configuredUrl } = resolveCachePath(context, fileName);
+  const { cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
   try {
     const raw = await fs.readFile(cacheFile, 'utf8');
     const parsed = JSON.parse(raw) as ProviderCache<T>;
     const fetchedAt = parsed?.fetchedAt ? Date.parse(parsed.fetchedAt) : NaN;
-  const now = Date.now();
-  const ttlMs = resolveCacheTtl(context);
-  const tooOld = Number.isFinite(fetchedAt) ? now - fetchedAt > ttlMs : true;
+    const now = Date.now();
+    const ttlMs = resolveCacheTtl(context);
+    const tooOld = Number.isFinite(fetchedAt) ? now - fetchedAt > ttlMs : true;
     const urlMismatch =
       typeof configuredUrl === 'string' &&
       configuredUrl.length > 0 &&
@@ -210,7 +229,7 @@ async function writeProviderCache<T>(
   fileName: string,
   items: T,
 ): Promise<void> {
-  const { cacheDir, cacheFile, configuredUrl } = resolveCachePath(context, fileName);
+  const { cacheDir, cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
   await fs.mkdir(cacheDir, { recursive: true });
   const identity = sanitizeUserIdentity(context.userIdentity ?? null);
   const payload: ProviderCache<T> = {
@@ -221,22 +240,6 @@ async function writeProviderCache<T>(
     identityKey: resolveIdentityKey(context),
   };
   await fs.writeFile(cacheFile, JSON.stringify(payload, null, 2), 'utf8');
-}
-
-function resolveCachePath(context: ProviderCacheContext, fileName: string): {
-  cacheDir: string;
-  cacheFile: string;
-  configuredUrl: string | null;
-} {
-  const cacheRoot = context.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
-  const key = resolveProviderCacheKey(context);
-  const cacheDir = path.join(cacheRoot, context.provider, key);
-  const cacheFile = path.join(cacheDir, fileName);
-  return {
-    cacheDir,
-    cacheFile,
-    configuredUrl: context.listOptions.configuredUrl ?? null,
-  };
 }
 
 function resolveIdentityKey(context: ProviderCacheContext): string {
