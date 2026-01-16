@@ -7,6 +7,7 @@ import {
   buildFindFirstSelectorExpression,
   buildSelectorArrayLiteral,
 } from '../providers/shared.js';
+import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from '../providers/grokModelMenu.js';
 
 const GROK_SELECTORS = GROK_PROVIDER.selectors;
 const GROK_INPUT_SELECTORS = buildSelectorArrayLiteral(GROK_SELECTORS.input);
@@ -151,6 +152,7 @@ export async function selectGrokMode(
   label: string,
   logger: BrowserLogger,
 ): Promise<void> {
+  const normalizedLabel = normalizeGrokModelLabel(label);
   const menuOpened = await openGrokModelMenu(Runtime, Input);
   if (!menuOpened) {
     logger('Unable to open Grok model menu via click or keyboard.');
@@ -158,12 +160,13 @@ export async function selectGrokMode(
   }
   const outcome = await Runtime.evaluate({
     expression: `(() => {
+      const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
       const menuSelectors = ${GROK_MENU_CONTAINER_SELECTORS};
       const menu = menuSelectors.map((selector) => document.querySelector(selector)).find(Boolean);
       const items = menu
         ? ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS, 'menuItemSelectors')}.filter((el) => menu.contains(el))
         : ${buildFindAllSelectorsExpression(GROK_MENU_ITEM_SELECTORS)};
-      const target = items.find((el) => (el.textContent || '').replace(/\\s+/g, ' ').trim().startsWith(${JSON.stringify(label)}));
+      const target = items.find((el) => normalize(el.textContent || '').startsWith(${JSON.stringify(normalizedLabel)}));
       if (!target) return false;
       target.click();
       return true;
@@ -171,10 +174,10 @@ export async function selectGrokMode(
     returnByValue: true,
   });
   if (!outcome.result?.value) {
-    logger(`Unable to find Grok mode "${label}" in menu.`);
+    logger(`Unable to find Grok mode "${normalizedLabel}" in menu.`);
     return;
   }
-  logger(`Selected Grok mode: ${label}`);
+  logger(`Selected Grok mode: ${normalizedLabel}`);
 }
 
 export async function waitForGrokAssistantResponse(

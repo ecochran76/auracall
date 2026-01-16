@@ -15,6 +15,8 @@
 - Generic behavior belongs in `llmService` and shared cache modules.
 - UI/DOM selectors and URL templates belong in provider services.
 - Cache is a mirror of the remote account, keyed by `service + identity`.
+- Follow the browser automation playbook for recon, scoping, and verification:
+  - `docs/dev/browser-automation-playbook.md`
 
 ## Sequencing (Dependencies)
 - Phase 7.1: Cache + identity foundation (schema, store interface, export formats).
@@ -83,6 +85,7 @@
 **Scope**
 - Full project listing (already implemented, harden).
 - Project rename.
+- Project clone.
 - Project instructions CRUD.
 - Knowledge file CRUD.
 - Pull/push to workspace.
@@ -94,6 +97,12 @@
 - `grokService` implements:
   - UI flows for each operation.
   - DOM selectors isolated to grok adapter.
+
+**TODO**
+- Grok project clone: menu button lookup still fails in clone flow even though project rename works.
+  - Clone flow should share the same menu-button selection logic as rename.
+  - Add DOM probe instructions if selectors don’t resolve.
+- Grok project instructions read: Edit Instructions button is brittle; add probe output if selector fails.
 
 ### 4) Conversation Support (GrokService + LlmService)
 **Scope**
@@ -133,6 +142,7 @@
   - Use `docs/dev/smoke-tests.md` as baseline.
   - Add Grok project rename, knowledge CRUD, conversation rename/delete to smoke list.
   - TODO: rerun `oracle cache export --format md|html` after context scraping is implemented (requires cached contexts).
+  - Sidebar/history helpers: ensure `ensureMainSidebarOpen` runs before history modal flows and use sidebar-toggle helpers for Grok.
 
 ## Phase 7 Output
 - Grok feature suite complete for prompt/projects/conversations + cache mirroring.

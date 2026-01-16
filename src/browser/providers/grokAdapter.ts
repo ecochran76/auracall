@@ -2,17 +2,46 @@ import CDP from 'chrome-remote-interface';
 import type { Project, Conversation } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { ChromeClient } from '../types.js';
+import { ensureServicesRegistry } from '../../services/registry.js';
+import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from './grokModelMenu.js';
 import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   findAndClickByLabel,
   isDialogOpen,
   waitForDialog,
+  waitForSelector,
 } from '../service/ui.js';
 
 export function createGrokAdapter(): Pick<
   BrowserProvider,
-  'listProjects' | 'listConversations' | 'getUserIdentity' | 'capabilities' | 'renameConversation'
+  | 'capabilities'
+  | 'listProjects'
+  | 'listConversations'
+  | 'getUserIdentity'
+  | 'renameConversation'
+  | 'renameProject'
+  | 'cloneProject'
+  | 'selectRenameProjectItem'
+  | 'selectCloneProjectItem'
+  | 'selectRemoveProjectItem'
+  | 'pushProjectRemoveConfirmation'
+  | 'validateProjectUrl'
+  | 'validateConversationUrl'
+  | 'openCreateProjectModal'
+  | 'setCreateProjectFields'
+  | 'clickCreateProjectNext'
+  | 'clickCreateProjectAttach'
+  | 'clickCreateProjectUploadFile'
+  | 'clickCreateProjectConfirm'
+  | 'toggleProjectSidebar'
+  | 'toggleMainSidebar'
+  | 'clickHistoryItem'
+  | 'clickHistorySeeAll'
+  | 'clickChatArea'
+  | 'openProjectMenu'
+  | 'updateProjectInstructions'
+  | 'getProjectInstructions'
 > {
   return {
     capabilities: {
@@ -506,6 +535,9 @@ export function createGrokAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await navigateToProject(client, targetUrl);
+        if (!(await isValidConversationUrl(client))) {
+          throw new Error('Conversation URL is invalid or missing.');
+        }
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
         // Wait a bit for the sidebar to reflect the active conversation
@@ -524,10 +556,22 @@ export function createGrokAdapter(): Pick<
               };
 
               try {
-                const dialog = document.querySelector('[role="dialog"]') || document.querySelector('dialog') || document.querySelector('[aria-modal="true"]');
-                const sidebar = document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\\/sidebar-wrapper');
+                const dialog =
+                  document.querySelector('[role="dialog"]') ||
+                  document.querySelector('dialog') ||
+                  document.querySelector('[aria-modal="true"]');
+                const sidebar =
+                  document.querySelector('nav') ||
+                  document.querySelector('aside') ||
+                  document.querySelector('.group\\\\/sidebar-wrapper');
                 const roots = [];
-                if (preferDialog && dialog) roots.push(dialog);
+                if (preferDialog) {
+                  if (dialog) {
+                    roots.push(dialog);
+                  } else {
+                    return { success: false, error: 'History dialog not found', logs };
+                  }
+                }
                 if (sidebar) roots.push(sidebar);
                 if (!preferDialog && dialog) roots.push(dialog);
                 const root = roots[0] || document;
@@ -542,21 +586,26 @@ export function createGrokAdapter(): Pick<
 
                 log('Searching for conversation row for chatId: ' + chatId);
                 let item = null;
+                const matchedItems = [];
                 for (const selector of selectors) {
-                  const items = Array.from(root.querySelectorAll(selector));
-                  if (items.length) {
-                    item = items[0];
-                    break;
+                  matchedItems.push(...Array.from(root.querySelectorAll(selector)));
+                }
+                if (root !== document) {
+                  for (const selector of selectors) {
+                    matchedItems.push(...Array.from(document.querySelectorAll(selector)));
                   }
                 }
-                if (!item && root !== document) {
-                  for (const selector of selectors) {
-                    const items = Array.from(document.querySelectorAll(selector));
-                    if (items.length) {
-                      item = items[0];
-                      break;
-                    }
-                  }
+                if (matchedItems.length > 0) {
+                  const preferred = matchedItems.find((candidate) => {
+                    const candidateRow =
+                      candidate.closest('div.grid') ||
+                      candidate.closest('div[class*="rounded"]') ||
+                      candidate.closest('div');
+                    if (!candidateRow) return false;
+                    const className = candidateRow.className || '';
+                    return className.includes('grid') && className.includes('rounded');
+                  });
+                  item = preferred || matchedItems[0];
                 }
 
                 if (!item) {
@@ -565,7 +614,12 @@ export function createGrokAdapter(): Pick<
                 }
                 log('Found item: ' + item.tagName);
 
-                const row = item.closest('div.grid') || item.closest('li') || item.closest('div[class*="rounded"]') || item.parentElement;
+                const row =
+                  item.closest('div.grid') ||
+                  item.closest('div[class*="rounded"]') ||
+                  item.closest('li') ||
+                  item.closest('div') ||
+                  item.parentElement;
                 log('Found row: ' + (row ? row.className : 'null'));
 
                 if (!row) throw new Error('Could not find row container for conversation');
@@ -575,32 +629,73 @@ export function createGrokAdapter(): Pick<
                 row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
                 await new Promise(r => setTimeout(r, 500));
 
-                log('Searching for menu button');
-                const menuBtn = row.querySelector('button[aria-label*="option" i], button[aria-label*="menu" i], [aria-haspopup="menu"]');
+                const visibleRect = (el) => {
+                  const rect = el.getBoundingClientRect();
+                  return rect.width > 0 && rect.height > 0 ? rect : null;
+                };
+                const rowRect = visibleRect(row);
+                const distanceToRow = (rect) => {
+                  if (!rowRect) return 0;
+                  const dx = Math.abs(rect.x - rowRect.x);
+                  const dy = Math.abs(rect.y - rowRect.y);
+                  return dx + dy;
+                };
 
-                if (!menuBtn) {
-                  const buttons = Array.from(row.querySelectorAll('button'));
-                  const btnDebug = buttons.map(b => ({ tag: b.tagName, label: b.getAttribute('aria-label') || b.textContent }));
-                  log('Available buttons in row: ' + JSON.stringify(btnDebug));
-                  log('Menu button not found in row. Row HTML: ' + row.innerHTML.slice(0, 300));
-                  throw new Error('Menu button not found for conversation');
+                log('Searching for rename button');
+                const renameCandidates = Array.from(root.querySelectorAll('button[aria-label="Rename"]'));
+                const renameButtons = renameCandidates.filter((btn) => visibleRect(btn));
+                let renameBtn = renameButtons.find((btn) => row.contains(btn)) || null;
+                if (!renameBtn && renameButtons.length > 0 && rowRect) {
+                  renameBtn = renameButtons
+                    .map((btn) => ({ btn, rect: visibleRect(btn) }))
+                    .filter((entry) => entry.rect)
+                    .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.btn || null;
                 }
-                log('Clicking menu button');
-                menuBtn.click();
-                await new Promise(r => setTimeout(r, 800));
-
-                const menuItems = Array.from(document.querySelectorAll('[role="menuitem"], button, a'));
-                const renameBtn = menuItems.find(el => (el.textContent || '').toLowerCase().includes('rename'));
-
                 if (!renameBtn) {
-                  log('Rename option not found in menu. Found ' + menuItems.length + ' candidates.');
-                  throw new Error('Rename option not found in menu');
+                  const hiddenCandidate = renameCandidates.find((btn) => row.contains(btn));
+                  if (hiddenCandidate) {
+                    hiddenCandidate.classList.remove('hidden');
+                    hiddenCandidate.style.display = 'flex';
+                    hiddenCandidate.style.opacity = '1';
+                    hiddenCandidate.style.pointerEvents = 'auto';
+                    renameBtn = hiddenCandidate;
+                  }
+                }
+                if (!renameBtn) {
+                  log('Rename button not found. Attempting menu fallback.');
+                  const menuBtn = row.querySelector('button[aria-label*="option" i], button[aria-label*="menu" i], [aria-haspopup="menu"]');
+                  if (!menuBtn) {
+                    throw new Error('Menu button not found for conversation');
+                  }
+                  menuBtn.click();
+                  await new Promise(r => setTimeout(r, 800));
+                  const menuItems = Array.from(document.querySelectorAll('[role="menuitem"], [data-radix-collection-item], button, a'));
+                  renameBtn = menuItems.find(el => (el.textContent || '').toLowerCase().includes('rename')) || null;
+                  if (!renameBtn) {
+                    throw new Error('Rename option not found in menu');
+                  }
                 }
                 log('Clicking rename button');
                 renameBtn.click();
-                await new Promise(r => setTimeout(r, 800));
+                await new Promise(r => setTimeout(r, 600));
 
-                const input = row.querySelector('input, [contenteditable="true"]');
+                const inputs = Array.from(root.querySelectorAll('input, [contenteditable="true"]'));
+                const visibleInputs = inputs.filter((el) => visibleRect(el));
+                const active = document.activeElement;
+                let input =
+                  (active && (active.tagName === 'INPUT' || active.getAttribute('contenteditable') === 'true'))
+                    ? active
+                    : null;
+                if (!input) {
+                  input =
+                    visibleInputs.find((el) => row.contains(el)) ||
+                    (rowRect
+                      ? visibleInputs
+                          .map((el) => ({ el, rect: visibleRect(el) }))
+                          .filter((entry) => entry.rect)
+                          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.el
+                      : null);
+                }
                 if (!input) {
                   log('Rename input/contenteditable not found in row after clicking rename');
                   throw new Error('Rename input not found');
@@ -609,7 +704,12 @@ export function createGrokAdapter(): Pick<
 
                 if (input.tagName === 'INPUT') {
                   input.focus();
-                  input.value = newTitle;
+                  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+                  if (setter) {
+                    setter.call(input, newTitle);
+                  } else {
+                    input.value = newTitle;
+                  }
                   input.dispatchEvent(new Event('input', { bubbles: true }));
                   input.dispatchEvent(new Event('change', { bubbles: true }));
                 } else {
@@ -618,9 +718,30 @@ export function createGrokAdapter(): Pick<
                   input.dispatchEvent(new Event('input', { bubbles: true }));
                 }
 
+                const saveButtons = Array.from(root.querySelectorAll('button[aria-label="Save"]')).filter((button) => visibleRect(button));
+                const saveButton =
+                  saveButtons.find((button) => row.contains(button)) ||
+                  (rowRect
+                    ? saveButtons
+                        .map((button) => ({ button, rect: visibleRect(button) }))
+                        .filter((entry) => entry.rect)
+                        .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.button
+                    : null);
+                if (saveButton) {
+                  saveButton.click();
+                  await new Promise(r => setTimeout(r, 600));
+                }
+
                 log('Submitting with Enter');
                 input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+                input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
                 await new Promise(r => setTimeout(r, 1000));
+
+                const titleNode = row.querySelector('span.truncate') || row.querySelector('span');
+                const currentTitle = (titleNode?.textContent || '').trim();
+                if (currentTitle && currentTitle !== newTitle.trim()) {
+                  return { success: false, error: 'Rename did not apply (saw "' + currentTitle + '")', logs };
+                }
 
                 return { success: true, logs };
               } catch (e) {
@@ -641,12 +762,21 @@ export function createGrokAdapter(): Pick<
           return evalResult.result?.value || { success: false, error: 'Empty result from browser', logs: [] };
         };
 
-        let info = await performRename(false);
-        if (!info || !info.success) {
+        let info;
+        if (!projectId) {
           const opened = await openHistoryDialog(client);
           if (opened) {
             await expandHistoryDialog(client);
-            info = await performRename(true);
+          }
+          info = await performRename(true);
+        } else {
+          info = await performRename(false);
+          if (!info || !info.success) {
+            const opened = await openHistoryDialog(client);
+            if (opened) {
+              await expandHistoryDialog(client);
+              info = await performRename(true);
+            }
           }
         }
         if (!info || !info.success) {
@@ -659,8 +789,813 @@ export function createGrokAdapter(): Pick<
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+    },
+
+    async renameProject(
+      projectId: string,
+      newTitle: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuAndSelect(client, 'Rename', { logPrefix: 'browser-rename-project' });
+
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const projectId = ${JSON.stringify(projectId)};
+            const newTitle = ${JSON.stringify(newTitle)};
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-rename-project] ' + msg);
+            };
+
+            const linkSelectors = [
+              'a[href="/project/' + projectId + '"]',
+              'a[href*="/project/' + projectId + '"]',
+            ];
+            let projectLink = null;
+            for (let attempt = 0; attempt < 10; attempt += 1) {
+              for (const selector of linkSelectors) {
+                projectLink = document.querySelector(selector);
+                if (projectLink) break;
+              }
+              if (projectLink) break;
+              await new Promise(r => setTimeout(r, 400));
+            }
+
+            if (!projectLink) {
+              log('Project link not found for id: ' + projectId);
+            }
+
+            const row = projectLink || null;
+            if (row) {
+              row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
+              row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
+              await new Promise(r => setTimeout(r, 400));
+            }
+
+            await new Promise(r => setTimeout(r, 400));
+
+            const active = document.activeElement;
+            let input =
+              (active && (active.tagName === 'INPUT' || active.getAttribute('contenteditable') === 'true')) ? active : null;
+            if (!input) {
+              input = Array.from(document.querySelectorAll('input[aria-label]')).find((candidate) => {
+                const label = (candidate.getAttribute('aria-label') || '').toLowerCase();
+                if (label !== 'project name') return false;
+                const rect = candidate.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+              }) || null;
+            }
+            if (!input) {
+              input = document.querySelector('input, [contenteditable="true"]');
+            }
+            if (!input) {
+              return { success: false, error: 'Rename input not found', logs };
+            }
+
+            if (input.tagName === 'INPUT') {
+              input.focus();
+              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+              if (setter) {
+                setter.call(input, newTitle);
+              } else {
+                input.value = newTitle;
+              }
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+              input.dispatchEvent(new Event('change', { bubbles: true }));
+            } else {
+              input.focus();
+              input.textContent = newTitle;
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            log('Submitting rename');
+            input.dispatchEvent(
+              new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+            );
+            input.dispatchEvent(
+              new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+            );
+
+            const form = input.closest('form');
+            if (form && typeof form.requestSubmit === 'function') {
+              form.requestSubmit();
+            } else if (form) {
+              form.submit();
+            }
+
+            const scoped = input.closest('div,header,section') || document;
+            const saveButton = Array.from(scoped.querySelectorAll('button[type="submit"][aria-label="Save"]')).find((button) => {
+              const rect = button.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            }) || null;
+            if (saveButton) {
+              saveButton.click();
+            }
+            await new Promise(r => setTimeout(r, 800));
+
+            const stillEditing = Boolean(
+              Array.from(document.querySelectorAll('input[aria-label]')).find((candidate) => {
+                const label = (candidate.getAttribute('aria-label') || '').toLowerCase();
+                if (label !== 'project name') return false;
+                const rect = candidate.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+              }),
+            );
+            if (stillEditing) {
+              log('Still in edit mode after Enter');
+              return { success: false, error: 'Project rename stayed in edit mode', logs };
+            }
+
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Rename project failed');
+        }
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async cloneProject(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-clone-project' });
+        await new Promise((resolve) => setTimeout(resolve, 800));
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async openProjectMenu(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuButton(client, { logPrefix: 'browser-open-project-menu' });
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async selectRenameProjectItem(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuAndSelect(client, 'Rename', { logPrefix: 'browser-select-rename-project' });
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async selectCloneProjectItem(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-select-clone-project' });
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async selectRemoveProjectItem(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await openProjectMenuAndSelect(client, 'Remove', { logPrefix: 'browser-select-remove-project' });
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async pushProjectRemoveConfirmation(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const maxAttempts = 3;
+        let lastError: unknown = null;
+        for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+          try {
+            await waitForDocumentReady(client, 10_000);
+            await ensureMainSidebarOpen(client, { logPrefix: 'browser-remove-project' });
+            await closeHistoryHoverMenu(client, { logPrefix: 'browser-remove-project' });
+            await ensureSidebarOpen(client);
+            await openProjectMenuAndSelect(client, 'Remove', { logPrefix: 'browser-remove-project' });
+            await waitForProjectRemoveDialog(client, 5_000);
+            await clickProjectRemoveConfirmation(client, { logPrefix: 'browser-remove-project' });
+            lastError = null;
+            break;
+          } catch (error) {
+            lastError = error;
+            const message = error instanceof Error ? error.message : String(error);
+            if (!message.includes('Execution context was destroyed')) {
+              throw error;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 500));
+          }
+        }
+        if (lastError) {
+          throw lastError;
+        }
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async validateProjectUrl(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokTab(options);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const { result } = await client.Runtime.evaluate({
+          expression: `location.href`,
+          returnByValue: true,
+        });
+        const href = typeof result?.value === 'string' ? result.value : '';
+        if (href.includes(`/project/${projectId}`)) {
+          if (!(await isValidProjectUrl(client))) {
+            throw new Error('Project URL is invalid or points to a deleted project.');
+          }
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async validateConversationUrl(
+      conversationId: string,
+      projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const targetUrl = projectId
+        ? `https://grok.com/project/${projectId}?chat=${conversationId}`
+        : `https://grok.com/c/${conversationId}`;
+      const connection = await connectToGrokTab(options);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const { result } = await client.Runtime.evaluate({
+          expression: `location.href`,
+          returnByValue: true,
+        });
+        const href = typeof result?.value === 'string' ? result.value : '';
+        if (href.includes(targetUrl)) {
+          if (!(await isValidConversationUrl(client))) {
+            throw new Error('Conversation URL is invalid or missing.');
+          }
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async openCreateProjectModal(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+
+            const visible = (el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            };
+
+            const buttons = Array.from(document.querySelectorAll('button[aria-label]')).filter(visible);
+            const createBtn = buttons.find((button) => {
+              const label = (button.getAttribute('aria-label') || '').toLowerCase();
+              return label === 'create new project';
+            }) || null;
+            if (!createBtn) {
+              return { success: false, error: 'Create new project button not found', logs };
+            }
+            createBtn.click();
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project modal not opened');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async setCreateProjectFields(
+      fields: { name?: string; instructions?: string; modelLabel?: string },
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+
+            const visible = (el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            };
+
+            const nameValue = ${JSON.stringify(fields.name ?? '')};
+            const instructionsValue = ${JSON.stringify(fields.instructions ?? '')};
+            const modelLabel = ${JSON.stringify(fields.modelLabel ?? '')};
+            const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
+
+            if (nameValue) {
+              const input = Array.from(document.querySelectorAll('input[placeholder]'))
+                .find((el) => (el.getAttribute('placeholder') || '').toLowerCase().includes('project name')) || null;
+              if (!input) {
+                return { success: false, error: 'Project name input not found', logs };
+              }
+              input.focus();
+              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+              if (setter) {
+                setter.call(input, nameValue);
+              } else {
+                input.value = nameValue;
+              }
+              input.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (instructionsValue) {
+              const textarea = Array.from(document.querySelectorAll('textarea')).find(visible) || null;
+              if (!textarea) {
+                return { success: false, error: 'Project instructions textarea not found', logs };
+              }
+              textarea.focus();
+              textarea.value = instructionsValue;
+              textarea.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+
+            if (modelLabel) {
+              const trigger = document.querySelector('#model-select-trigger');
+              if (!trigger) {
+                return { success: false, error: 'Model select trigger not found', logs };
+              }
+              trigger.click();
+              await new Promise(r => setTimeout(r, 300));
+              const items = Array.from(
+                document.querySelectorAll('[role="option"], [data-radix-collection-item]')
+              );
+              const normalizedTarget = normalize(modelLabel);
+              const match = items.find((item) => normalize(item.textContent || '') === normalizedTarget) || null;
+              if (!match) {
+                return { success: false, error: 'Model option not found', logs };
+              }
+              match.click();
+            }
+
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project fields failed');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickCreateProjectNext(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const nextBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'next') || null;
+            if (!nextBtn) {
+              return { success: false, error: 'Next button not found', logs };
+            }
+            nextBtn.click();
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project next failed');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickCreateProjectAttach(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+            const buttons = Array.from(document.querySelectorAll('button[aria-label]'));
+            const attachBtn = buttons.find((button) => (button.getAttribute('aria-label') || '').toLowerCase() === 'attach') || null;
+            if (!attachBtn) {
+              return { success: false, error: 'Attach button not found', logs };
+            }
+            attachBtn.click();
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project attach failed');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickCreateProjectUploadFile(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+            const items = Array.from(document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]'));
+            const uploadItem = items.find((item) => (item.textContent || '').trim().toLowerCase() === 'upload a file') || null;
+            if (!uploadItem) {
+              return { success: false, error: 'Upload file menu item not found', logs };
+            }
+            uploadItem.click();
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project upload failed');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickCreateProjectConfirm(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-create] ' + msg);
+            };
+            const buttons = Array.from(document.querySelectorAll('button'));
+            const createBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'create') || null;
+            if (!createBtn) {
+              return { success: false, error: 'Create button not found', logs };
+            }
+            createBtn.click();
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Create project confirm failed');
+        }
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async toggleProjectSidebar(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await clickProjectSidebarToggle(client, { logPrefix: 'browser-toggle-project-sidebar' });
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async toggleMainSidebar(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await clickMainSidebarToggle(client, { logPrefix: 'browser-toggle-main-sidebar' });
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickHistoryItem(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await clickHistoryMenuItem(client, { logPrefix: 'browser-history-item' });
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickHistorySeeAll(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await clickHistorySeeAll(client, { logPrefix: 'browser-history-see-all' });
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async clickChatArea(options?: BrowserProviderListOptions): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await clickChatArea(client, { logPrefix: 'browser-chat-area' });
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async updateProjectInstructions(
+      projectId: string,
+      instructions: string,
+      options?: BrowserProviderListOptions,
+      modelLabel?: string,
+    ): Promise<void> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await pushProjectInstructionsEditButton(client);
+        await resolveProjectInstructionsModal(client, {
+          text: instructions,
+          modelLabel,
+          serviceId: 'grok',
+        });
+
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(async () => {
+            const logs = [];
+            const log = (msg) => {
+              logs.push(msg);
+              console.log('[browser-project-instructions] ' + msg);
+            };
+
+            const visible = (el) => {
+              const rect = el.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            };
+
+            const findSaveButton = () =>
+              Array.from(document.querySelectorAll('button'))
+                .filter(visible)
+                .find((button) => (button.textContent || '').trim().toLowerCase() === 'save') || null;
+
+            let saveButton = null;
+            for (let attempt = 0; attempt < 12; attempt += 1) {
+              saveButton = findSaveButton();
+              if (saveButton && !saveButton.disabled) break;
+              await new Promise(r => setTimeout(r, 250));
+            }
+
+            if (!saveButton) {
+              return { success: false, error: 'Save button not found', logs };
+            }
+
+            if (saveButton.disabled) {
+              return { success: false, error: 'Save button is disabled', logs };
+            }
+
+            saveButton.click();
+            await new Promise(r => setTimeout(r, 800));
+
+            const nextSave = findSaveButton();
+            if (nextSave && !nextSave.disabled) {
+              return { success: false, error: 'Save did not apply', logs };
+            }
+
+            return { success: true, logs };
+          })()`,
+          awaitPromise: true,
+          returnByValue: true,
+        });
+
+        if (evalResult.exceptionDetails) {
+          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        }
+        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+        if (!info?.success) {
+          throw new Error(info?.error || 'Update instructions failed');
+        }
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async getProjectInstructions(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<{ text: string; model?: string | null }> {
+      const targetUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, targetUrl);
+        await ensureSidebarOpen(client);
+        await closeHistoryDialog(client);
+        await pushProjectInstructionsEditButton(client);
+        const info = await resolveProjectInstructionsModal(client, {
+          serviceId: 'grok',
+        });
+        return { text: info.text, model: info.model };
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
     }
-,
+
   };
 }
 
@@ -871,7 +1806,14 @@ function resolvePortFromEnv(): number | null {
 
 async function navigateToProject(client: ChromeClient, url: string): Promise<void> {
   await client.Page.navigate({ url });
-  const deadline = Date.now() + 15_000;
+  await waitForDocumentReady(client, 15_000);
+  if (!(await isValidProjectUrl(client))) {
+    throw new Error('Project URL is invalid or points to a deleted project.');
+  }
+}
+
+async function waitForDocumentReady(client: ChromeClient, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const { result } = await client.Runtime.evaluate({
       expression: 'document.readyState',
@@ -881,6 +1823,729 @@ async function navigateToProject(client: ChromeClient, url: string): Promise<voi
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+}
+
+export async function openProjectMenuButton(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-open-project-menu';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const findMenuButton = () => {
+        const root =
+          document.querySelector('div.group\\\\/sidebar-wrapper') ||
+          document.querySelector('[data-sidebar="sidebar"]') ||
+          document.body;
+        const scopedButtons = Array.from(root.querySelectorAll('button[aria-label]')).filter(visible);
+        const labeled = scopedButtons.find((button) => {
+          const label = (button.getAttribute('aria-label') || '').toLowerCase();
+          return label === 'open menu' || label === 'options';
+        });
+        if (labeled) return labeled;
+        const menus = Array.from(root.querySelectorAll('button[aria-haspopup="menu"]')).filter(visible);
+        const ellipsis = menus.find((button) => button.querySelector('svg.lucide-ellipsis'));
+        if (ellipsis) return ellipsis;
+        return (
+          menus.find((button) => {
+            const label = (button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
+            return label.includes('menu') || label.includes('options') || label.includes('more');
+          }) || null
+        );
+      };
+
+      let menuBtn = null;
+      for (let attempt = 0; attempt < 16; attempt += 1) {
+        menuBtn = findMenuButton();
+        if (menuBtn) break;
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      if (!menuBtn) {
+        const labels = Array.from(document.querySelectorAll('button[aria-label]'))
+          .map((button) => button.getAttribute('aria-label'))
+          .filter(Boolean)
+          .slice(0, 12);
+        return { success: false, error: 'Project menu button not found (labels: ' + labels.join(', ') + ')', logs };
+      }
+
+      menuBtn.scrollIntoView({ block: 'center', inline: 'center' });
+      const pointerOpts = { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 };
+      menuBtn.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
+      menuBtn.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
+      menuBtn.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
+      menuBtn.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
+      menuBtn.dispatchEvent(new MouseEvent('click', pointerOpts));
+
+      let menuItemCount = 0;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        menuItemCount = document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]').length;
+        if (menuItemCount > 0) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (menuItemCount === 0) {
+        return { success: false, error: 'Project menu opened, but no menu items found', logs };
+      }
+
+      log('Project menu opened');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Project menu button not found');
+  }
+}
+
+export async function clickProjectMenuItem(
+  client: ChromeClient,
+  label: string,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-project-menu-item';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const target = ${JSON.stringify(label)}.trim().toLowerCase();
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const findItem = () => {
+        const items = Array.from(
+          document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]')
+        ).filter(visible);
+        const match = items.find((el) => (el.textContent || '').trim().toLowerCase() === target);
+        return { match, items };
+      };
+
+      let match = null;
+      let items = [];
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const result = findItem();
+        match = result.match;
+        items = result.items;
+        if (match) break;
+        await new Promise(r => setTimeout(r, 200));
+      }
+
+      if (!match) {
+        const labels = items.map((el) => (el.textContent || '').trim()).filter(Boolean).slice(0, 10);
+        return { success: false, error: 'Menu item not found: ' + target + ' (items: ' + labels.join(', ') + ')', logs };
+      }
+
+      match.click();
+      log('Clicked menu item: ' + target);
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || `Menu item not found: ${label}`);
+  }
+}
+
+async function openProjectMenuAndSelect(
+  client: ChromeClient,
+  label: string,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  await openProjectMenuButton(client, options);
+  await clickProjectMenuItem(client, label, options);
+}
+
+export async function clickProjectRemoveConfirmation(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-project-remove-confirm';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const findButton = () => {
+        const dialog = document.querySelector('div[role="dialog"][data-state="open"]');
+        const scope = dialog || document;
+        const buttons = Array.from(scope.querySelectorAll('button')).filter(visible);
+        const match = buttons.find((button) => {
+          const text = (button.textContent || '').trim().toLowerCase();
+          return text === 'delete project' || text === 'remove project';
+        });
+        return { match, buttons, dialog: Boolean(dialog) };
+      };
+
+      let match = null;
+      let buttons = [];
+      let dialogFound = false;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        const result = findButton();
+        match = result.match;
+        buttons = result.buttons;
+        dialogFound = result.dialog;
+        if (match) break;
+        await new Promise(r => setTimeout(r, 250));
+      }
+
+      if (!match) {
+        const labels = buttons
+          .map((button) => (button.textContent || '').trim())
+          .filter(Boolean)
+          .slice(0, 10);
+        return {
+          success: false,
+          error:
+            'Remove confirmation not found (dialog=' +
+            dialogFound +
+            ', buttons: ' +
+            labels.join(', ') +
+            ')',
+          logs,
+        };
+      }
+
+      match.click();
+      log('Clicked delete project confirmation');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Remove confirmation not found');
+  }
+}
+
+export async function ensureProjectSidebarOpen(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-project-sidebar-open';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      if (!location.pathname.includes('/project/')) {
+        return { success: false, error: 'Not on a project page', logs };
+      }
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const findButton = () => {
+        const buttons = Array.from(document.querySelectorAll('button[aria-label]')).filter(visible);
+        const collapse = buttons.find((button) =>
+          (button.getAttribute('aria-label') || '').toLowerCase() === 'collapse side panel'
+        );
+        if (collapse) return { state: 'open', button: collapse };
+        const expand = buttons.find((button) =>
+          (button.getAttribute('aria-label') || '').toLowerCase() === 'expand side panel'
+        );
+        if (expand) return { state: 'closed', button: expand };
+        return { state: 'unknown', button: null };
+      };
+
+      let info = findButton();
+      if (info.state === 'open') {
+        return { success: true, logs };
+      }
+      if (info.state === 'closed' && info.button) {
+        info.button.click();
+        await new Promise(r => setTimeout(r, 600));
+        info = findButton();
+        if (info.state === 'open') {
+          log('Project sidebar opened');
+          return { success: true, logs };
+        }
+        return { success: false, error: 'Project sidebar did not open', logs };
+      }
+
+      return { success: false, error: 'Project sidebar toggle not found', logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Project sidebar did not open');
+  }
+}
+
+async function waitForProjectRemoveDialog(
+  client: ChromeClient,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
+        if (!dialog) return false;
+        const text = (dialog.textContent || '').toLowerCase();
+        return text.includes('delete project') || text.includes('are you sure');
+      })()`,
+      returnByValue: true,
+    });
+    if (result?.value) return true;
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
+export async function clickMainSidebarToggle(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-main-sidebar-toggle';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      let match =
+        document.querySelector('button[data-sidebar="trigger"]') ||
+        document.querySelector('button[aria-label="Toggle Sidebar"]');
+      if (!match) {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        match = buttons.find((button) => {
+          const text = (button.textContent || '').trim().toLowerCase();
+          const label = (button.getAttribute('aria-label') || '').trim().toLowerCase();
+          return label === 'toggle sidebar' || text === 'toggle sidebar';
+        }) || null;
+      }
+
+      if (!match) {
+        return { success: false, error: 'Main sidebar toggle not found', logs };
+      }
+
+      match.scrollIntoView({ block: 'center', inline: 'center' });
+      if (visible(match)) {
+        match.click();
+      } else {
+        match.click();
+      }
+      log('Toggled main sidebar');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Main sidebar toggle not found');
+  }
+}
+
+export async function ensureMainSidebarOpen(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  await waitForDocumentReady(client, 10_000);
+  await waitForSelector(client.Runtime, 'button[data-sidebar="trigger"]', 10_000);
+  if (await isMainSidebarOpen(client)) {
+    return;
+  }
+  await clickMainSidebarToggle(client, options);
+  await new Promise((resolve) => setTimeout(resolve, 1000));
+  if (!(await isMainSidebarOpen(client))) {
+    throw new Error('Main sidebar did not open');
+  }
+}
+
+export async function isMainSidebarOpen(client: ChromeClient): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const trigger = document.querySelector('button[data-sidebar="trigger"]');
+      if (trigger) {
+        const icon = trigger.querySelector('svg.lucide-chevrons-right');
+        if (icon) {
+          return icon.classList.contains('rotate-180');
+        }
+      }
+      const sidebar = document.querySelector('div.z-20.bg-surface-base.border-r');
+      if (!sidebar) return false;
+      const rect = sidebar.getBoundingClientRect();
+      return rect.width > 120 && rect.right > 40;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
+}
+
+export async function isValidProjectUrl(client: ChromeClient): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const errorCard = document.querySelector('div.flex.flex-col.max-w-xl.text-center.items-center.justify-center');
+      if (!errorCard) return true;
+      const text = (errorCard.textContent || '').toLowerCase();
+      if (text.includes('there was an issue finding id')) return false;
+      if (text.includes('error') && text.includes('return home')) return false;
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
+}
+
+export async function isValidConversationUrl(client: ChromeClient): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const errorCard = document.querySelector('div.flex.flex-col.max-w-xl.text-center.items-center.justify-center');
+      if (!errorCard) return true;
+      const text = (errorCard.textContent || '').toLowerCase();
+      if (text.includes('page not found')) return false;
+      if (text.includes('there was an error loading this page')) return false;
+      if (text.includes('return to home')) return false;
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
+}
+
+export async function closeHistoryHoverMenu(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-history-hover-close';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const dialog = document.querySelector('div[role=\"dialog\"][data-side]');
+      if (!dialog) {
+        return { success: true, logs };
+      }
+      dialog.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+      dialog.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, cancelable: true }));
+      dialog.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
+      log('Closed history hover menu');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'History hover menu did not close');
+  }
+}
+
+export async function clickProjectSidebarToggle(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-project-sidebar-toggle';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      if (!location.pathname.includes('/project/')) {
+        log('Not on a project page; skipping project sidebar toggle.');
+        return { success: true, logs };
+      }
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      let match = null;
+      const container =
+        document.querySelector('div.absolute.start-3.top-3') ||
+        document.querySelector('div.absolute.left-3.top-3') ||
+        document.querySelector('[data-sidebar="sidebar"]');
+      if (container) {
+        const containerButtons = Array.from(container.querySelectorAll('button')).filter(visible);
+        match =
+          containerButtons.find((button) => {
+            const label = (button.getAttribute('aria-label') || '').toLowerCase();
+            return label === 'collapse side panel' || label === 'expand side panel';
+          }) ||
+          containerButtons.find((button) => {
+            const label = (button.getAttribute('aria-label') || '').toLowerCase();
+            return label.includes('side panel');
+          }) ||
+          null;
+      }
+      if (!match) {
+        const buttons = Array.from(document.querySelectorAll('button[aria-label]')).filter(visible);
+        match = buttons.find((button) => {
+          const label = (button.getAttribute('aria-label') || '').toLowerCase();
+          return label === 'collapse side panel' || label === 'expand side panel';
+        }) || buttons.find((button) => {
+          const label = (button.getAttribute('aria-label') || '').toLowerCase();
+          return label.includes('side panel');
+        }) || null;
+      }
+
+      if (!match) {
+        return { success: false, error: 'Project sidebar toggle not found', logs };
+      }
+
+      match.click();
+      log('Toggled project sidebar');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Project sidebar toggle not found');
+  }
+}
+
+export async function clickHistoryMenuItem(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<boolean> {
+  const logPrefix = options?.logPrefix ?? 'browser-history-item';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const candidates = Array.from(document.querySelectorAll('[role="button"], button, a, [role="link"]')).filter(visible);
+      const match = candidates.find((el) => {
+        const label = (el.getAttribute('aria-label') || '').trim().toLowerCase();
+        const text = (el.textContent || '').trim().toLowerCase();
+        return label === 'history' || text === 'history';
+      }) || null;
+
+      if (!match) {
+        return { success: false, logs };
+      }
+      match.click();
+      log('Clicked history item');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean } | undefined;
+  return Boolean(info?.success);
+}
+
+export async function clickHistorySeeAll(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-history-see-all';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const dialog =
+        document.querySelector('div[role="dialog"][data-state="open"]') ||
+        document.querySelector('[role="dialog"][aria-modal="true"]') ||
+        document.querySelector('dialog[open]');
+      const scope = dialog || document;
+      const buttons = Array.from(scope.querySelectorAll('button, [role="button"], div')).filter(visible);
+      const match = buttons.find((el) => {
+        const text = (el.textContent || '').trim().toLowerCase();
+        return text === 'see all' || text === 'show all';
+      }) || null;
+
+      if (!match) {
+        const labels = buttons
+          .map((button) => (button.textContent || '').trim())
+          .filter(Boolean)
+          .slice(0, 10);
+        return { success: false, error: 'History see-all not found (buttons: ' + labels.join(', ') + ')', logs };
+      }
+
+      match.click();
+      log('Clicked history see-all');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    await clickMainSidebarToggle(client, { logPrefix: options?.logPrefix ?? 'browser-history-see-all' });
+    const retry = await client.Runtime.evaluate({
+      expression: `(async () => {
+        const visible = (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const dialog =
+          document.querySelector('div[role="dialog"][data-state="open"]') ||
+          document.querySelector('[role="dialog"][aria-modal="true"]') ||
+          document.querySelector('dialog[open]');
+        const scope = dialog || document;
+        const buttons = Array.from(scope.querySelectorAll('button, [role="button"], div')).filter(visible);
+        const match = buttons.find((el) => {
+          const text = (el.textContent || '').trim().toLowerCase();
+          return text === 'see all' || text === 'show all';
+        }) || null;
+        if (!match) return { success: false };
+        match.click();
+        return { success: true };
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (!(retry.result?.value as { success: boolean } | undefined)?.success) {
+      throw new Error(info?.error || 'History see-all not found');
+    }
+  }
+}
+
+export async function clickChatArea(
+  client: ChromeClient,
+  options?: { logPrefix?: string },
+): Promise<void> {
+  const logPrefix = options?.logPrefix ?? 'browser-chat-area';
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const overlays = Array.from(
+        document.querySelectorAll('div[data-aria-hidden="true"][aria-hidden="true"].fixed.inset-0')
+      ).filter(visible);
+      const target =
+        overlays[0] ||
+        Array.from(document.querySelectorAll('div.w-full.h-full.overflow-y-auto')).filter(visible)[0] ||
+        null;
+      if (!target) {
+        return { success: false, error: 'Chat area not found', logs };
+      }
+      const opts = { bubbles: true, cancelable: true };
+      target.dispatchEvent(new MouseEvent('mousedown', opts));
+      target.dispatchEvent(new MouseEvent('mouseup', opts));
+      target.dispatchEvent(new MouseEvent('click', opts));
+      log('Clicked chat area');
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Chat area not found');
   }
 }
 
@@ -1324,7 +2989,7 @@ async function getIdentityFromSettingsMenu(client: ChromeClient): Promise<Provid
 
 async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
   const { result } = await client.Runtime.evaluate({
-    expression: `(() => Boolean(document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\\/sidebar-wrapper')))()`,
+    expression: `(() => Boolean(document.querySelector('nav') || document.querySelector('aside') || document.querySelector('.group\\\\/sidebar-wrapper')))()`,
     returnByValue: true,
   });
   if (result?.value) return;
@@ -1339,30 +3004,50 @@ async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
 }
 
 async function expandHistoryDialog(client: ChromeClient): Promise<void> {
-  await findAndClickByLabel(client.Runtime, {
-    selectors: ['button', 'a', '[role="button"]', '[role="link"]', '[role="option"]', 'div.cursor-pointer'],
-    rootSelectors: [...DEFAULT_DIALOG_SELECTORS],
-    match: {
-      includeAll: ['show', 'all'],
-      includeAny: ['show all'],
-    },
-  });
+  await clickHistorySeeAll(client, { logPrefix: 'browser-history-expand' });
   await new Promise((resolve) => setTimeout(resolve, 2000));
 }
 
+export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
+      if (!dialog) return false;
+      const text = (dialog.textContent || '').toLowerCase();
+      if (text.includes('show all')) return true;
+      if (text.includes('history')) return true;
+      const hasConversationLink = Boolean(dialog.querySelector('a[href*="/c/"], [data-value^="conversation:"]'));
+      return hasConversationLink;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
+}
+
+export async function waitForHistoryDialogOpen(
+  client: ChromeClient,
+  timeoutMs: number,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await isHistoryDialogOpen(client)) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
-  if (await isDialogOpen(client.Runtime, DEFAULT_DIALOG_SELECTORS)) {
+  if (await isHistoryDialogOpen(client)) {
     return true;
   }
 
+  await closeHistoryHoverMenu(client, { logPrefix: 'browser-history-open' });
+  await ensureMainSidebarOpen(client, { logPrefix: 'browser-history-open' });
+
   const findAndClickHistory = async () => {
-    const clicked = await findAndClickByLabel(client.Runtime, {
-      selectors: ['a', 'button', '[role="button"]', '[role="link"]'],
-      match: {
-        includeAny: ['history'],
-        includeAll: ['hi', 'tory'],
-      },
-    });
+    const clicked = await clickHistoryMenuItem(client, { logPrefix: 'browser-history-open' });
     if (!clicked && process.env.ORACLE_DEBUG_GROK === '1') {
       console.log('[DEBUG] History button not found.');
     }
@@ -1370,42 +3055,282 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
   };
 
   if (await findAndClickHistory()) {
-    return waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    return opened ? isHistoryDialogOpen(client) : false;
   }
 
-  // Try opening the sidebar/menu
-  await client.Runtime.evaluate({
-    expression: `(() => {
-      const menus = Array.from(document.querySelectorAll('button[aria-label="Toggle Menu"]'));
-      if (menus[0]) {
-        menus[0].click();
-      }
-    })()`,
-  });
+  // Try opening the main sidebar/menu
+  await clickMainSidebarToggle(client, { logPrefix: 'browser-history-open' });
   await new Promise((resolve) => setTimeout(resolve, 1000));
 
   if (await findAndClickHistory()) {
-    return waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    return opened ? isHistoryDialogOpen(client) : false;
   }
 
   return false;
 }
 
+export async function pushProjectInstructionsEditButton(
+  client: ChromeClient,
+): Promise<void> {
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[browser-project-instructions] ' + msg);
+      };
 
-async function closeHistoryDialog(client: ChromeClient): Promise<void> {
-  await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS);
-  if (!(await isDialogOpen(client.Runtime, DEFAULT_DIALOG_SELECTORS))) {
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      if (!location.pathname.includes('/project/')) {
+        return { success: false, error: 'Not on a project page', logs };
+      }
+
+      const root =
+        document.querySelector('div.group\\\\/sidebar-wrapper') ||
+        document.querySelector('[data-sidebar="sidebar"]') ||
+        document.querySelector('main') ||
+        document.body;
+      if (!root) {
+        return { success: false, error: 'Project root not found', logs };
+      }
+
+      let editButton = null;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        editButton = Array.from(root.querySelectorAll('button[aria-label]'))
+          .filter(visible)
+          .find((button) => (button.getAttribute('aria-label') || '').toLowerCase().includes('edit instructions')) || null;
+        if (editButton) break;
+        await new Promise(r => setTimeout(r, 300));
+      }
+      if (!editButton) {
+        const labels = Array.from(root.querySelectorAll('button[aria-label]'))
+          .map((button) => button.getAttribute('aria-label'))
+          .filter(Boolean)
+          .slice(0, 12);
+        return { success: false, error: 'Edit instructions button not found (labels: ' + labels.join(', ') + ')', logs };
+      }
+
+      editButton.click();
+      await new Promise(r => setTimeout(r, 400));
+
+      let textarea = null;
+      for (let attempt = 0; attempt < 16; attempt += 1) {
+        textarea =
+          Array.from(root.querySelectorAll('textarea')).find(visible) ||
+          Array.from(document.querySelectorAll('textarea')).find(visible) ||
+          null;
+        if (textarea) break;
+        await new Promise(r => setTimeout(r, 300));
+      }
+      if (!textarea) {
+        return { success: false, error: 'Instructions textarea not found', logs };
+      }
+
+      return { success: true, logs };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Edit instructions button failed');
+  }
+}
+
+export async function resolveProjectInstructionsModal(
+  client: ChromeClient,
+  options: {
+    text?: string;
+    modelLabel?: string;
+    serviceId: 'grok';
+  },
+): Promise<{ text: string; model?: string | null }> {
+  const safeJson = (value: unknown) =>
+    JSON.stringify(value)
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+
+  const expression = `(async () => {
+      const desiredText = ${safeJson(options.text ?? null)};
+      const desiredModel = ${safeJson(options.modelLabel ?? null)};
+      const logs = [];
+      const log = (msg) => {
+        logs.push(msg);
+        console.log('[browser-project-instructions] ' + msg);
+      };
+
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const root =
+        document.querySelector('[data-state="open"][id^="radix-"]') ||
+        document.querySelector('[role="dialog"][data-state="open"]') ||
+        document.querySelector('div.group\\\\/sidebar-wrapper') ||
+        document.querySelector('main') ||
+        document.body;
+      if (!root) {
+        return { success: false, error: 'Project instructions modal not found', logs };
+      }
+
+      const trigger =
+        root.querySelector('#model-select-trigger') ||
+        root.querySelector('button[data-slot="select-trigger"]') ||
+        null;
+
+      const readSelectedModel = () => {
+        if (!trigger) return null;
+        const valueNode = trigger.querySelector('[data-slot="select-value"]');
+        const text = (valueNode?.textContent || trigger.textContent || '').trim();
+        return text || null;
+      };
+
+      const openModelMenu = async () => {
+        if (!trigger) return [];
+        trigger.click();
+        await new Promise(r => setTimeout(r, 300));
+        const viewport =
+          document.querySelector('[data-radix-select-viewport]') ||
+          document.querySelector('[role="listbox"]') ||
+          null;
+        const scope = viewport || document;
+        const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
+        const items = Array.from(scope.querySelectorAll('[role="option"]'))
+          .map(el => normalize(el.textContent || ''))
+          .filter(Boolean);
+        return items;
+      };
+
+      const closeModelMenu = async () => {
+        if (!trigger) return;
+        trigger.click();
+        await new Promise(r => setTimeout(r, 200));
+      };
+
+      let availableModels = [];
+      if (trigger) {
+        availableModels = await openModelMenu();
+        if (desiredModel) {
+          const viewport =
+            document.querySelector('[data-radix-select-viewport]') ||
+            document.querySelector('[role="listbox"]') ||
+            null;
+          const scope = viewport || document;
+          const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
+          const match = Array.from(scope.querySelectorAll('[role="option"]'))
+            .find(el => normalize(el.textContent || '').toLowerCase().startsWith(desiredModel.toLowerCase()));
+          if (match) {
+            match.click();
+            await new Promise(r => setTimeout(r, 300));
+          }
+        }
+        await closeModelMenu();
+      }
+
+      let textarea = null;
+      for (let attempt = 0; attempt < 12; attempt += 1) {
+        textarea =
+          Array.from(root.querySelectorAll('textarea')).find(visible) ||
+          Array.from(document.querySelectorAll('textarea')).find(visible) ||
+          null;
+        if (textarea) break;
+        await new Promise(r => setTimeout(r, 300));
+      }
+      if (!textarea) {
+        return { success: false, error: 'Instructions textarea not found', logs };
+      }
+
+      if (desiredText !== null) {
+        const setter = Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')?.set;
+        if (setter) {
+          setter.call(textarea, desiredText);
+        } else {
+          textarea.value = desiredText;
+        }
+        textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        textarea.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      const text = textarea.value || '';
+      const normalizeLabel = ${GROK_MODEL_LABEL_NORMALIZER};
+      const model = normalizeLabel(readSelectedModel() || '') || null;
+
+      return { success: true, text, model, availableModels, logs };
+    })()`;
+  if (process.env.ORACLE_DEBUG_GROK === '1') {
+    console.log('[oracle] project instructions modal expression:\\n' + expression);
+  }
+
+  const evalResult = await client.Runtime.evaluate({
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as {
+    success: boolean;
+    error?: string;
+    text?: string;
+    model?: string | null;
+    availableModels?: string[];
+  } | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Project instructions modal failed');
+  }
+
+  const registry = await ensureServicesRegistry();
+  const expected = registry.services[options.serviceId]?.models?.map((model) => model.label) ?? [];
+  const availableRaw = info.availableModels ?? [];
+  const available = availableRaw.map((label) => {
+    const normalized = normalizeGrokModelLabel(label);
+    const match = expected.find((expectedLabel) =>
+      normalized.toLowerCase().startsWith(expectedLabel.toLowerCase()),
+    );
+    return match ?? normalized;
+  });
+  if (expected.length > 0) {
+    const missingInUi = expected.filter((label) => !available.some((item) => item.toLowerCase() === label.toLowerCase()));
+    const missingInRegistry = available.filter(
+      (label) => !expected.some((item) => item.toLowerCase() === label.toLowerCase()),
+    );
+    if (missingInUi.length > 0 || missingInRegistry.length > 0) {
+      console.warn(
+        `[oracle] Grok model list mismatch (missing in UI: ${missingInUi.join(', ') || 'none'}; missing in registry: ${missingInRegistry.join(', ') || 'none'})`,
+      );
+    }
+  }
+
+  return { text: info.text ?? '', model: info.model ?? null };
+}
+
+
+export async function closeHistoryDialog(client: ChromeClient): Promise<void> {
+  if (!(await isHistoryDialogOpen(client))) {
     return;
   }
-  await findAndClickByLabel(client.Runtime, {
-    selectors: ['a', 'button', '[role="button"]', '[role="link"]'],
-    match: {
-      includeAny: ['history'],
-      includeAll: ['hi', 'tory'],
-    },
-  });
-  await new Promise((resolve) => setTimeout(resolve, 500));
-  await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS);
+  await clickHistoryMenuItem(client, { logPrefix: 'browser-history-close' });
+  await new Promise((resolve) => setTimeout(resolve, 400));
+  if (await isHistoryDialogOpen(client)) {
+    await clickChatArea(client, { logPrefix: 'browser-history-close' });
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  if (await isHistoryDialogOpen(client)) {
+    await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS);
+  }
 }
 
 async function listOpenConversations(

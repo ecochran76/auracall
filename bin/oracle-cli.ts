@@ -58,6 +58,7 @@ import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../src/browser/providers/types.js';
+import type { ProjectListResult } from '../src/browser/llmService/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -526,6 +527,21 @@ program
   .addOption(new Option('--no-wait').default(undefined).hideHelp())
   .showHelpAfterError('(use --help for usage)');
 
+async function resolveProjectIdArg(
+  llmService: LlmService,
+  projectArg: string,
+  listOptions?: BrowserProviderListOptions,
+): Promise<string> {
+  const trimmed = projectArg.trim();
+  if (trimmed.length === 0) {
+    throw new Error('Project identifier is required.');
+  }
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return await llmService.resolveProjectIdByName(trimmed, { listOptions, allowAutoRefresh: true });
+}
+
 program.addHelpText(
   'after',
   `
@@ -557,7 +573,7 @@ program
     });
   });
 
-program
+const projectsCommand = program
   .command('projects')
   .description('List available projects/workspaces for the active browser provider.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
@@ -630,11 +646,231 @@ program
     }
   });
 
+projectsCommand
+  .command('rename')
+  .description('Rename a project/workspace for the active browser provider.')
+  .argument('<id>', 'Project identifier or name')
+  .argument('<name>', 'New project name')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, newName, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    await llmService.renameProject(resolvedId, newName);
+    console.log(`Renamed project ${resolvedId} to "${newName}".`);
+  });
+
+projectsCommand
+  .command('clone')
+  .description('Clone a project/workspace for the active browser provider.')
+  .argument('<id>', 'Project identifier or name')
+  .argument('[name]', 'Optional new name for the clone.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, newName, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const cacheContext = await llmService.resolveCacheContext(listOptions);
+    assertCacheIdentity(cacheContext, target);
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    let originalName: string | undefined;
+    if (newName) {
+      try {
+        const projects = await llmService.listProjects(listOptions);
+        const match = Array.isArray(projects) ? projects.find((proj) => proj.id === resolvedId) : undefined;
+        originalName = match?.name;
+      } catch (error) {
+        console.warn(`Failed to resolve original project name: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+    await llmService.cloneProject(resolvedId);
+    console.log(`Cloned project ${resolvedId}.`);
+
+    let refreshed: ProjectListResult | null = null;
+    try {
+      refreshed = await llmService.listProjects(listOptions);
+      if (Array.isArray(refreshed)) {
+        try {
+          await writeProjectCache(cacheContext, refreshed);
+        } catch (error) {
+          console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
+        }
+      }
+    } catch (error) {
+      console.warn(`Project refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
+
+    if (newName) {
+      try {
+        const projects = refreshed ?? (await llmService.listProjects(listOptions));
+        const cloneName = originalName ? `${originalName} (Clone)` : undefined;
+        const candidate = Array.isArray(projects)
+          ? projects.find((proj) => proj.id !== resolvedId && (proj.name === cloneName || /\(clone\)$/i.test(proj.name)))
+          : undefined;
+        if (candidate?.id) {
+          await llmService.renameProject(candidate.id, newName);
+          console.log(`Renamed cloned project to "${newName}".`);
+        } else {
+          console.warn('Clone created but could not resolve its ID to rename.');
+        }
+      } catch (error) {
+        console.warn(`Clone rename failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  });
+
+projectsCommand
+  .command('remove')
+  .alias('delete')
+  .description('Remove a project/workspace for the active browser provider.')
+  .argument('<id>', 'Project identifier or name')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      projectId.trim(),
+    );
+    const resolvedId = isUuid
+      ? projectId.trim()
+      : await llmService.resolveProjectIdByName(projectId, {
+          listOptions,
+          forceRefresh: true,
+          allowAutoRefresh: true,
+        });
+    await llmService.selectRemoveProjectItem(resolvedId);
+    await llmService.pushProjectRemoveConfirmation(resolvedId);
+    console.log(`Removed project ${resolvedId}.`);
+    try {
+      console.log('Refreshing project list...');
+      const cacheContext = await llmService.resolveCacheContext(listOptions);
+      assertCacheIdentity(cacheContext, target);
+      const refreshed = await llmService.listProjects(listOptions);
+      if (Array.isArray(refreshed)) {
+        await writeProjectCache(cacheContext, refreshed);
+        console.log('Project cache refreshed.');
+      }
+    } catch (error) {
+      console.warn(`Failed to refresh project cache: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+const projectInstructionsCommand = projectsCommand
+  .command('instructions')
+  .description('Manage project instructions.');
+
+projectInstructionsCommand
+  .command('set <id>')
+  .description('Replace project instructions.')
+  .option('--file <path>', 'Read instructions from a file.')
+  .option('--text <value>', 'Use raw instructions text.')
+  .option('--model <label>', 'Set the preferred model for the project instructions.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const textValue = typeof commandOptions.text === 'string' && commandOptions.text.trim().length > 0
+      ? commandOptions.text
+      : null;
+    const filePath = typeof commandOptions.file === 'string' && commandOptions.file.trim().length > 0
+      ? commandOptions.file.trim()
+      : null;
+    if (!textValue && !filePath) {
+      throw new Error('Provide --text or --file for instructions.');
+    }
+    const instructions = textValue ?? await fs.readFile(filePath as string, 'utf8');
+    const modelLabel =
+      typeof commandOptions.model === 'string' && commandOptions.model.trim().length > 0
+        ? commandOptions.model.trim()
+        : undefined;
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    await llmService.updateProjectInstructions(resolvedId, instructions, { modelLabel });
+    console.log(`Updated instructions for project ${resolvedId}.`);
+  });
+
+projectInstructionsCommand
+  .command('get <id>')
+  .description('Read project instructions.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    const instructions = await llmService.getProjectInstructions(resolvedId);
+    if (process.stdout.isTTY) {
+      if (instructions.model) {
+        console.log(`# Model: ${instructions.model}`);
+      }
+      console.log(instructions.text);
+    } else {
+      console.log(JSON.stringify(instructions, null, 2));
+    }
+  });
+
 program
   .command('conversations')
   .description('List conversations for the active browser provider.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
-  .option('--project-id <id>', 'Limit conversations to a specific project/workspace.')
+  .option('--project-id <id>', 'Limit conversations to a specific project/workspace (ID or name).')
   .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
   .option(
     '--conversation-name <name>',
@@ -717,7 +953,9 @@ program
           ? parentOptions.projectName.trim()
           : '';
     const forceRefresh = refreshFlag;
-    if (!projectId && projectName) {
+    if (projectId) {
+      projectId = await resolveProjectIdArg(llmService, projectId, normalizedListOptions);
+    } else if (projectName) {
       projectId = await llmService.resolveProjectIdByName(projectName, {
         forceRefresh,
         listOptions: normalizedListOptions,
@@ -795,7 +1033,7 @@ program
   .command('rename <id> <name>')
   .description('Rename a conversation.')
   .option('--target <chatgpt|grok>', 'Choose which provider to use.')
-  .option('--project-id <id>', 'Project ID (if conversation is in a project).')
+  .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
   .action(async (id, name, commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
@@ -809,7 +1047,9 @@ program
     }
     
     // Resolve project ID if needed (e.g. from name via existing logic? for now direct ID)
-    const projectId = commandOptions.projectId ?? userConfig.browser?.projectId;
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const projectArg = commandOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
     console.log(`Renaming conversation ${id} to "${name}"...`);
     try {
       await llmService.renameConversation(id, name, projectId);
@@ -971,7 +1211,7 @@ cacheCommand
   .option('--provider <chatgpt|grok>', 'Limit export to a provider (chatgpt or grok).')
   .option('--scope <projects|conversations|conversation>', 'Export scope (default conversations).')
   .option('--format <json|md|html|csv|zip>', 'Export format (default json).')
-  .option('--project-id <id>', 'Project ID for project-scoped exports.')
+  .option('--project-id <id>', 'Project ID or name for project-scoped exports.')
   .option('--conversation-id <id>', 'Conversation ID for conversation-scoped exports.')
   .option('--output <path>', 'Output directory or zip path (default is timestamped under ~/.oracle/cache/exports).')
   .action(async (commandOptions) => {
@@ -1010,6 +1250,10 @@ cacheCommand
     });
     const cacheContext = await llmService.resolveCacheContext(listOptions);
     assertCacheIdentity(cacheContext, provider);
+    let resolvedProjectId: string | undefined;
+    if (commandOptions.projectId) {
+      resolvedProjectId = await resolveProjectIdArg(llmService, String(commandOptions.projectId), listOptions);
+    }
     const exportRoot = path.join(getOracleHomeDir(), 'cache', 'exports');
     const defaultDir = path.join(
       exportRoot,
@@ -1023,7 +1267,7 @@ cacheCommand
     const result = await runCacheExport(cacheContext, {
       format: format as 'json' | 'md' | 'html' | 'csv' | 'zip',
       scope: scope as 'projects' | 'conversations' | 'conversation',
-      projectId: commandOptions.projectId ?? undefined,
+      projectId: resolvedProjectId ?? undefined,
       conversationId: commandOptions.conversationId ?? undefined,
       outputDir,
     });
@@ -1230,6 +1474,21 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
           `Failed to refresh projects before resolving "${projectName}": ${error instanceof Error ? error.message : String(error)}`,
         ),
       );
+    }
+  }
+
+  if (options.projectId) {
+    const projectInput = options.projectId;
+    try {
+      options.projectId = await resolveProjectIdArg(llmService, projectInput, normalizedListOptions);
+      console.log(chalk.dim(`Resolved project "${projectInput}" to ${options.projectId}`));
+    } catch (error) {
+      console.warn(
+        chalk.yellow(
+          `Skipping project "${projectInput}" (not in cache). Run "oracle projects" to refresh.`,
+        ),
+      );
+      options.projectId = undefined;
     }
   }
 

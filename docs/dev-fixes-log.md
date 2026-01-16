@@ -84,3 +84,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Fix: Centralized cache identity/context and name resolution in `src/browser/llmService/llmService.ts`, routing CLI list/resolve flows through it.
 - Verification: Pending (rerun `oracle projects`, `oracle conversations`, and `oracle cache --refresh`).
 - Follow-ups: Validate model-selection fallback in Phase 3.
+
+- Date: 2026-01-12
+- Area: Grok main sidebar state detection (history workflows)
+- Symptom: Sidebar open/closed detection reported inverted states during toggle smoke tests.
+- Root cause: Width-based checks can be inverted depending on layout/scroll state; the toggle icon state is more reliable.
+- Fix: Detect open state via `button[data-sidebar="trigger"] svg.lucide-chevrons-right.rotate-180` (open). Keep width/right-edge check (`rect.width > 120 && rect.right > 40`) as a fallback if SVG changes.
+- Verification: `scripts/verify-grok-main-sidebar-toggle.ts` reports correct state transitions.
+
+- Date: 2026-01-12
+- Area: Browser-service DOM wait helpers
+- Symptom: Sidebar open check occasionally failed right after navigation; time-based sleeps were brittle.
+- Root cause: Waits were time-based instead of selector-based, so the toggle could be queried before it was in the DOM.
+- Fix: Added `waitForSelector` to `packages/browser-service/src/service/ui.ts` and used it in `ensureMainSidebarOpen` to wait for `button[data-sidebar="trigger"]`.
+- Verification: `scripts/verify-grok-project-remove-steps.ts 2 <projectId>` no longer fails due to missing sidebar toggle.

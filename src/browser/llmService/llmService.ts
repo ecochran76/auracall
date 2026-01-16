@@ -209,6 +209,320 @@ export abstract class LlmService {
     options?: BrowserProviderListOptions,
   ): Promise<ProviderUserIdentity | null>;
 
+  async renameProject(
+    projectId: string,
+    newTitle: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.renameProject) {
+      throw new Error(`Project rename is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.ensureValidProjectUrl(projectId, { listOptions });
+    await this.withRetry(
+      () => this.provider.renameProject?.(projectId, newTitle, listOptions) as Promise<void>,
+      { action: 'renameProject' },
+    );
+  }
+
+  async cloneProject(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.cloneProject) {
+      throw new Error(`Project clone is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.ensureValidProjectUrl(projectId, { listOptions });
+    await this.withRetry(
+      () => this.provider.cloneProject?.(projectId, listOptions) as Promise<void>,
+      { action: 'cloneProject' },
+    );
+  }
+
+  async openProjectMenu(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.openProjectMenu) {
+      throw new Error(`Project menu is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.openProjectMenu?.(projectId, listOptions) as Promise<void>,
+      { action: 'openProjectMenu' },
+    );
+  }
+
+  async selectRenameProjectItem(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.selectRenameProjectItem) {
+      throw new Error(`Project rename menu item is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.selectRenameProjectItem?.(projectId, listOptions) as Promise<void>,
+      { action: 'selectRenameProjectItem' },
+    );
+  }
+
+  async selectCloneProjectItem(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.selectCloneProjectItem) {
+      throw new Error(`Project clone menu item is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.selectCloneProjectItem?.(projectId, listOptions) as Promise<void>,
+      { action: 'selectCloneProjectItem' },
+    );
+  }
+
+  async selectRemoveProjectItem(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.selectRemoveProjectItem) {
+      throw new Error(`Project remove menu item is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.ensureValidProjectUrl(projectId, { listOptions });
+    await this.withRetry(
+      () => this.provider.selectRemoveProjectItem?.(projectId, listOptions) as Promise<void>,
+      { action: 'selectRemoveProjectItem' },
+    );
+  }
+
+  async pushProjectRemoveConfirmation(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.pushProjectRemoveConfirmation) {
+      throw new Error(`Project remove confirmation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.pushProjectRemoveConfirmation?.(projectId, listOptions) as Promise<void>,
+      { action: 'pushProjectRemoveConfirmation' },
+    );
+  }
+
+  async ensureValidProjectUrl(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.validateProjectUrl) return;
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.validateProjectUrl?.(projectId, listOptions) as Promise<void>,
+      { action: 'validateProjectUrl' },
+    );
+  }
+
+  async ensureValidConversationUrl(
+    conversationId: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.validateConversationUrl) return;
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () =>
+        this.provider.validateConversationUrl?.(
+          conversationId,
+          options?.projectId,
+          listOptions,
+        ) as Promise<void>,
+      { action: 'validateConversationUrl' },
+    );
+  }
+
+  async openCreateProjectModal(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.openCreateProjectModal) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.openCreateProjectModal?.(listOptions) as Promise<void>,
+      { action: 'openCreateProjectModal' },
+    );
+  }
+
+  async setCreateProjectFields(
+    fields: { name?: string; instructions?: string; modelLabel?: string },
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.setCreateProjectFields) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.setCreateProjectFields?.(fields, listOptions) as Promise<void>,
+      { action: 'setCreateProjectFields' },
+    );
+  }
+
+  async clickCreateProjectNext(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickCreateProjectNext) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickCreateProjectNext?.(listOptions) as Promise<void>,
+      { action: 'clickCreateProjectNext' },
+    );
+  }
+
+  async clickCreateProjectAttach(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickCreateProjectAttach) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickCreateProjectAttach?.(listOptions) as Promise<void>,
+      { action: 'clickCreateProjectAttach' },
+    );
+  }
+
+  async clickCreateProjectUploadFile(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickCreateProjectUploadFile) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickCreateProjectUploadFile?.(listOptions) as Promise<void>,
+      { action: 'clickCreateProjectUploadFile' },
+    );
+  }
+
+  async clickCreateProjectConfirm(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickCreateProjectConfirm) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickCreateProjectConfirm?.(listOptions) as Promise<void>,
+      { action: 'clickCreateProjectConfirm' },
+    );
+  }
+
+  async toggleProjectSidebar(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.toggleProjectSidebar) {
+      throw new Error(`Project sidebar toggle is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.toggleProjectSidebar?.(listOptions) as Promise<void>,
+      { action: 'toggleProjectSidebar' },
+    );
+  }
+
+  async toggleMainSidebar(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.toggleMainSidebar) {
+      throw new Error(`Main sidebar toggle is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.toggleMainSidebar?.(listOptions) as Promise<void>,
+      { action: 'toggleMainSidebar' },
+    );
+  }
+
+  async clickHistoryItem(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickHistoryItem) {
+      throw new Error(`History item is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickHistoryItem?.(listOptions) as Promise<void>,
+      { action: 'clickHistoryItem' },
+    );
+  }
+
+  async clickHistorySeeAll(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickHistorySeeAll) {
+      throw new Error(`History see-all is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickHistorySeeAll?.(listOptions) as Promise<void>,
+      { action: 'clickHistorySeeAll' },
+    );
+  }
+
+  async clickChatArea(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.clickChatArea) {
+      throw new Error(`Chat area click is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.clickChatArea?.(listOptions) as Promise<void>,
+      { action: 'clickChatArea' },
+    );
+  }
+
+  async updateProjectInstructions(
+    projectId: string,
+    instructions: string,
+    options?: { listOptions?: BrowserProviderListOptions; modelLabel?: string },
+  ): Promise<void> {
+    if (!this.provider.updateProjectInstructions) {
+      throw new Error(`Project instructions update is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () =>
+        this.provider.updateProjectInstructions?.(
+          projectId,
+          instructions,
+          listOptions,
+          options?.modelLabel,
+        ) as Promise<void>,
+      { action: 'updateProjectInstructions' },
+    );
+  }
+
+  async getProjectInstructions(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<{ text: string; model?: string | null }> {
+    if (!this.provider.getProjectInstructions) {
+      throw new Error(`Project instructions read is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    return await this.withRetry(
+      () =>
+        this.provider.getProjectInstructions?.(projectId, listOptions) as Promise<{
+          text: string;
+          model?: string | null;
+        }>,
+      { action: 'getProjectInstructions' },
+    );
+  }
+
   async resolveProjectIdByName(
     projectName: string,
     options?: {

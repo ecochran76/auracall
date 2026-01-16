@@ -42,6 +42,25 @@ export async function waitForDialog(
   return false;
 }
 
+export async function waitForSelector(
+  Runtime: ChromeClient['Runtime'],
+  selector: string,
+  timeoutMs = 10_000,
+): Promise<boolean> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await Runtime.evaluate({
+      expression: `Boolean(document.querySelector(${JSON.stringify(selector)}))`,
+      returnByValue: true,
+    });
+    if (result?.value) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return false;
+}
+
 export async function findAndClickByLabel(
   Runtime: ChromeClient['Runtime'],
   options: FindAndClickOptions,

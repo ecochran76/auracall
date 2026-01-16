@@ -57,6 +57,7 @@ export class GrokService extends LlmService {
       throw new Error(`Rename is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    await this.ensureValidConversationUrl(conversationId, { projectId, listOptions });
     await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
   }
 

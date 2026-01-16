@@ -15,6 +15,7 @@ export const GROK_PROVIDER: BrowserProviderConfig = {
       'button[type="submit"]',
     ],
     modelButton: [
+      '#model-select-trigger',
       'button[aria-label="Model select"]',
       'button[aria-label*="Model"]',
       'button[aria-haspopup="menu"][aria-label*="Model"]',
