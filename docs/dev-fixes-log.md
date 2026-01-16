@@ -98,3 +98,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Root cause: Waits were time-based instead of selector-based, so the toggle could be queried before it was in the DOM.
 - Fix: Added `waitForSelector` to `packages/browser-service/src/service/ui.ts` and used it in `ensureMainSidebarOpen` to wait for `button[data-sidebar="trigger"]`.
 - Verification: `scripts/verify-grok-project-remove-steps.ts 2 <projectId>` no longer fails due to missing sidebar toggle.
+
+- Date: 2026-01-12
+- Area: Dev workflow hygiene
+- Note: Keep commits tight and scoped; stage new scripts/docs intentionally, and clean up/commit before switching phases to avoid losing automation learnings.
