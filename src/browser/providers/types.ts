@@ -101,4 +101,5 @@ export interface BrowserProvider {
   listConversationFiles?: (conversationId: string) => Promise<unknown>;
   downloadConversationFile?: (conversationId: string, fileId: string, destPath: string) => Promise<void>;
   renameConversation?: (conversationId: string, newTitle: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
+  deleteConversation?: (conversationId: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
 }

@@ -98,6 +98,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Root cause: Waits were time-based instead of selector-based, so the toggle could be queried before it was in the DOM.
 - Fix: Added `waitForSelector` to `packages/browser-service/src/service/ui.ts` and used it in `ensureMainSidebarOpen` to wait for `button[data-sidebar="trigger"]`.
 - Verification: `scripts/verify-grok-project-remove-steps.ts 2 <projectId>` no longer fails due to missing sidebar toggle.
+- Fix: Grok project-create model picker needed `pointerdown`/`mousedown` before `click()` to open the Radix listbox. Added this in `resolveProjectInstructionsModal` and `verify-grok-project-create-model-picker.ts`.
+- Verification: `pnpm tsx scripts/verify-grok-project-create-steps.ts 2 "My Project" "Instructions here" "Grok 4.1 Thinking"` sets the model correctly.
+- Docs: Added `docs/dev/browser-service-tools.md` to centralize reusable browser-service UI helpers and patterns.
+- Fix: Project instructions get/set now ensure project sidebar open and wait for the Edit Instructions button via `waitForSelector` before clicking.
+- Fix: Project instructions get no longer fails when the edit dialog is already open; we short-circuit on textarea presence and skip model-menu inspection unless a model change is requested.
+- Fix: Grok history rename flow required real mouse hover. Added `hoverElement` to browser-service (CDP mouse move + `elementFromPoint` verification) and used it to reveal hover-only controls in the history dialog.
+- Verification: `pnpm tsx scripts/verify-grok-history-rename-steps.ts 4 <conversationId>` shows Rename/Delete controls consistently; CLI rename succeeds.
 
 - Date: 2026-01-12
 - Area: Dev workflow hygiene

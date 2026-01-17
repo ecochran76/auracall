@@ -93,10 +93,32 @@ async function resolvePortOrLaunch(options: {
   return chrome.port;
 }
 
-async function getActivePage(port: number) {
+async function getActivePage(port: number, options?: { urlContains?: string }) {
   const browser = await connectBrowser(port);
   const pages = await browser.pages();
-  const page = pages.at(-1);
+  const byUrl = (matcher: (url: string) => boolean) =>
+    pages.find((candidate) => {
+      const url = candidate.url();
+      return url && matcher(url);
+    });
+  let focusedPage: (typeof pages)[number] | undefined;
+  for (const candidate of pages) {
+    try {
+      const hasFocus = await candidate.evaluate(() => document.hasFocus());
+      if (hasFocus) {
+        focusedPage = candidate;
+        break;
+      }
+    } catch {
+      // ignore pages that cannot be evaluated
+    }
+  }
+  const urlContains = options?.urlContains?.trim();
+  const page =
+    focusedPage ||
+    (urlContains ? byUrl((url) => url.includes(urlContains)) : undefined) ||
+    byUrl((url) => url !== 'about:blank' && !url.startsWith('chrome://')) ||
+    pages.at(-1);
   if (!page) {
     await browser.disconnect();
     throw new Error('No active tab found');
@@ -172,10 +194,11 @@ program
   .command('eval <code...>')
   .description('Evaluate JavaScript in the active page context.')
   .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+  .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
   .action(async (code: string[], options) => {
     const snippet = code.join(' ');
     const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
-    const { browser, page } = await getActivePage(port);
+    const { browser, page } = await getActivePage(port, { urlContains: options.urlContains as string | undefined });
     try {
       const result = await page.evaluate((body) => {
         const ASYNC_FN = Object.getPrototypeOf(async () => {}).constructor as AsyncFunctionCtor;
@@ -227,20 +250,63 @@ program
   .command('pick <message...>')
   .description('Interactive DOM picker that prints metadata for clicked elements.')
   .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+  .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
+  .option('--multi', 'Allow multiple selections without Cmd/Ctrl.', false)
+  .option('--cycle [mode]', 'Cycle mode: on|off|auto (auto when --multi).')
+  .option('--no-cycle', 'Disable cycle mode.')
+  .option('--include-hover', 'Include the last hovered element in the output.', false)
+  .option('--mode <mode>', 'Selection mode: click, hover, or both.', 'click')
+  .option('--max <count>', 'Auto-finish after N selections.', (value) => Number.parseInt(value, 10))
+  .option('--timeout <ms>', 'Auto-cancel after N milliseconds.', (value) => Number.parseInt(value, 10))
   .action(async (messageParts: string[], options) => {
     const message = messageParts.join(' ');
     const port = await resolvePortOrLaunch({ port: options.port as number | undefined });
-    const { browser, page } = await getActivePage(port);
+    const { browser, page } = await getActivePage(port, { urlContains: options.urlContains as string | undefined });
     try {
+      const cycleValue = options.cycle;
+      const normalizedCycle =
+        typeof cycleValue === 'string'
+          ? cycleValue.toLowerCase()
+          : typeof cycleValue === 'boolean'
+            ? cycleValue
+            : undefined;
+      const cycle =
+        normalizedCycle === 'on' || normalizedCycle === true
+          ? true
+          : normalizedCycle === 'off' || normalizedCycle === false
+            ? false
+            : undefined;
+      const pickOptions = {
+        multi: Boolean(options.multi),
+        cycle,
+        includeHover: Boolean(options.includeHover),
+        mode: (options.mode as string) || 'click',
+        max: Number.isFinite(options.max as number) ? (options.max as number) : undefined,
+        timeout: Number.isFinite(options.timeout as number) ? (options.timeout as number) : undefined,
+      };
       const pickScript = `
 (() => {
   const scope = globalThis;
   scope.pickOverlayInjected = true;
   scope.pickOverlayVersion = '2';
-  scope.pick = (prompt) =>
+  scope.pick = (prompt, options) =>
     new Promise((resolve) => {
       const selections = [];
       const selectedElements = new Set();
+      let lastHover = null;
+      let finished = false;
+      let paused = false;
+      const mode = (options && options.mode) || 'click';
+      const allowHover = mode === 'hover' || mode === 'both';
+      const allowClick = mode === 'click' || mode === 'both';
+      const multi = Boolean(options && options.multi);
+      const cycle =
+        options && Object.prototype.hasOwnProperty.call(options, 'cycle')
+          ? Boolean(options.cycle)
+          : multi;
+      const includeHover = Boolean(options && options.includeHover);
+      const max = options && Number.isFinite(options.max) ? options.max : null;
+      const timeout = options && Number.isFinite(options.timeout) ? options.timeout : null;
 
       const overlay = document.createElement('div');
       overlay.style.cssText =
@@ -256,10 +322,22 @@ program
         'position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#1f2937;color:#fff;padding:12px 24px;border-radius:8px;font:14px system-ui;box-shadow:0 4px 12px rgba(0,0,0,0.3);pointer-events:auto;z-index:2147483647';
 
       const updateBanner = () => {
-        banner.textContent = prompt + ' (' + selections.length + ' selected, Cmd/Ctrl+click to add, Enter to finish, ESC to cancel)';
+        const modeLabel = allowHover && allowClick ? 'click/hover' : allowHover ? 'hover' : 'click';
+        const multiLabel = multi ? 'multi-click' : 'click';
+        banner.textContent =
+          prompt +
+          ' (' +
+          selections.length +
+          ' selected, mode=' +
+          modeLabel +
+          ', ' +
+          multiLabel +
+          ', Enter=finish, ESC=cancel)';
       };
 
       const cleanup = () => {
+        if (finished) return;
+        finished = true;
         document.removeEventListener('mousemove', onMove, true);
         document.removeEventListener('click', onClick, true);
         document.removeEventListener('keydown', onKey, true);
@@ -270,7 +348,28 @@ program
         });
       };
 
-      const serialize = (el) => {
+      const pause = () => {
+        if (paused || finished) return;
+        paused = true;
+        document.removeEventListener('mousemove', onMove, true);
+        document.removeEventListener('click', onClick, true);
+        document.removeEventListener('keydown', onKey, true);
+        overlay.style.display = 'none';
+        banner.style.display = 'none';
+      };
+
+      const resume = () => {
+        if (!paused || finished) return;
+        paused = false;
+        document.addEventListener('mousemove', onMove, true);
+        document.addEventListener('click', onClick, true);
+        document.addEventListener('keydown', onKey, true);
+        overlay.style.display = '';
+        banner.style.display = '';
+        updateBanner();
+      };
+
+      const serialize = (el, source) => {
         const parents = [];
         let current = el.parentElement;
         while (current && current !== document.body) {
@@ -280,6 +379,7 @@ program
           current = current.parentElement;
         }
         return {
+          source,
           tag: el.tagName.toLowerCase(),
           id: el.id || null,
           class: el.className || null,
@@ -290,6 +390,7 @@ program
       };
 
       const onMove = (event) => {
+        if (paused) return;
         const node = document.elementFromPoint(event.clientX, event.clientY);
         if (!node || overlay.contains(node) || banner.contains(node)) return;
         const rect = node.getBoundingClientRect();
@@ -303,25 +404,53 @@ program
           'px;height:' +
           rect.height +
           'px';
+        if (allowHover) {
+          lastHover = node;
+        }
       };
       const onClick = (event) => {
+        if (!allowClick) return;
         if (banner.contains(event.target)) return;
-        event.preventDefault();
-        event.stopPropagation();
+        if (!cycle) {
+          event.preventDefault();
+          event.stopPropagation();
+        }
         const node = document.elementFromPoint(event.clientX, event.clientY);
         if (!node || overlay.contains(node) || banner.contains(node)) return;
 
-        if (event.metaKey || event.ctrlKey) {
+        if (multi || event.metaKey || event.ctrlKey) {
           if (!selectedElements.has(node)) {
             selectedElements.add(node);
             node.style.outline = '3px solid #10b981';
-            selections.push(serialize(node));
+            selections.push(serialize(node, 'click'));
             updateBanner();
+            if (max && selections.length >= max) {
+              finalize();
+              return;
+            }
+            if (cycle) {
+              pause();
+              setTimeout(resume, 150);
+            }
           }
         } else {
-          cleanup();
-          const info = serialize(node);
-          resolve(selections.length > 0 ? selections : info);
+          finalize(node);
+        }
+      };
+
+      const finalize = (node) => {
+        const output = selections.length > 0 ? selections.slice() : [];
+        if (node && !selectedElements.has(node)) {
+          output.push(serialize(node, 'click'));
+        }
+        if (includeHover && lastHover && !selectedElements.has(lastHover)) {
+          output.push(serialize(lastHover, 'hover'));
+        }
+        cleanup();
+        if (output.length > 0) {
+          resolve(output.length === 1 ? output[0] : output);
+        } else {
+          resolve(null);
         }
       };
 
@@ -329,9 +458,8 @@ program
         if (event.key === 'Escape') {
           cleanup();
           resolve(null);
-        } else if (event.key === 'Enter' && selections.length > 0) {
-          cleanup();
-          resolve(selections);
+        } else if (event.key === 'Enter') {
+          finalize();
         }
       };
 
@@ -341,20 +469,39 @@ program
 
       document.body.append(overlay, banner);
       updateBanner();
+
+      if (timeout && timeout > 0) {
+        setTimeout(() => {
+          if (!finished) {
+            cleanup();
+            resolve(null);
+          }
+        }, timeout);
+      }
     });
 })();
 `;
       await page.evaluate((script) => {
         (0, eval)(script);
       }, pickScript);
+      const injected = await page.evaluate(() => (globalThis as { pickOverlayInjected?: boolean }).pickOverlayInjected);
+      if (!injected) {
+        console.log('⚠️ Picker overlay did not inject. Try focusing the tab and re-run with --timeout 60000.');
+      }
 
-      const result = await page.evaluate((msg) => {
-        const pickFn = (window as Window & { pick?: (message: string) => Promise<unknown> }).pick;
+      const result = await page.evaluate((msg, pickOpts) => {
+        const pickFn = (window as Window & { pick?: (message: string, options: unknown) => Promise<unknown> }).pick;
         if (!pickFn) {
           return null;
         }
-        return pickFn(msg);
-      }, message);
+        return pickFn(msg, pickOpts);
+      }, message, {
+        multi: pickOptions.multi,
+        includeHover: pickOptions.includeHover,
+        mode: pickOptions.mode,
+        max: pickOptions.max ?? null,
+        timeout: pickOptions.timeout ?? null,
+      });
 
       if (Array.isArray(result)) {
         result.forEach((entry, index) => {

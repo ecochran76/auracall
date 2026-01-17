@@ -7,6 +7,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 1) **Recon first**
    - Use `scripts/browser-tools.ts eval` to list visible elements, labels, and positions.
    - Prefer `aria-label`, `role`, and obvious text nodes over brittle class selectors.
+   - Check `docs/dev/browser-service-tools.md` for reusable helpers before writing new DOM logic.
 
 2) **Scope selectors**
    - If the workflow uses a dialog, scope queries to the dialog root.
@@ -19,6 +20,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 4) **Interact like a user**
    - Hover over rows to surface hidden controls.
    - Use pointer events when click handlers are picky.
+   - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
 
 5) **Set inputs reliably**
    - For inputs, use the native setter + `input`/`change` events.

@@ -57,6 +57,18 @@ export class ChatgptService extends LlmService {
     await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
   }
 
+  async deleteConversation(
+    conversationId: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<void> {
+    if (!this.provider.deleteConversation) {
+      throw new Error(`Delete is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    await this.provider.deleteConversation(conversationId, projectId, listOptions);
+  }
+
   async getUserIdentity(
     options?: BrowserProviderListOptions,
   ): Promise<ProviderUserIdentity | null> {

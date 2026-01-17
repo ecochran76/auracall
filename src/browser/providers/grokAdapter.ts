@@ -8,8 +8,11 @@ import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   findAndClickByLabel,
+  hoverElement,
   isDialogOpen,
+  pressButton,
   waitForDialog,
+  waitForNotSelector,
   waitForSelector,
 } from '../service/ui.js';
 
@@ -20,6 +23,7 @@ export function createGrokAdapter(): Pick<
   | 'listConversations'
   | 'getUserIdentity'
   | 'renameConversation'
+  | 'deleteConversation'
   | 'renameProject'
   | 'cloneProject'
   | 'selectRenameProjectItem'
@@ -524,13 +528,31 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = projectId
-        ? `https://grok.com/project/${projectId}?chat=${conversationId}`
-        : `https://grok.com/c/${conversationId}`;
+      if (!projectId) {
+        const connection = await connectToGrokTab(options, 'https://grok.com/');
+        const { client, targetId, shouldClose, host, port } = connection;
+        try {
+          await ensureMainSidebarOpen(client, { logPrefix: 'browser-rename' });
+          const opened = await openHistoryDialog(client);
+          if (!opened) {
+            throw new Error('History dialog did not open');
+          }
+          await expandHistoryDialog(client);
+          await closeHistoryHoverMenu(client, { logPrefix: 'browser-rename' });
+          await renameConversationInHistoryDialog(client, conversationId, newTitle);
+        } finally {
+          await closeHistoryDialog(client);
+          await client.close();
+          if (shouldClose && targetId) {
+            await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+          }
+        }
+        return;
+      }
 
-      const connection = projectId
-        ? await connectToGrokProjectTab(options, projectId, targetUrl)
-        : await connectToGrokTab(options, targetUrl);
+      const targetUrl = `https://grok.com/project/${projectId}?chat=${conversationId}`;
+
+      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
 
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -540,6 +562,7 @@ export function createGrokAdapter(): Pick<
         }
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
+        await closeHistoryHoverMenu(client, { logPrefix: 'browser-rename' });
         // Wait a bit for the sidebar to reflect the active conversation
         await new Promise(r => setTimeout(r, 2000));
 
@@ -663,7 +686,13 @@ export function createGrokAdapter(): Pick<
                 }
                 if (!renameBtn) {
                   log('Rename button not found. Attempting menu fallback.');
-                  const menuBtn = row.querySelector('button[aria-label*="option" i], button[aria-label*="menu" i], [aria-haspopup="menu"]');
+                  let menuBtn = row.querySelector('button[aria-label*="option" i], button[aria-label*="menu" i], [aria-haspopup="menu"]');
+                  if (!menuBtn) {
+                    const ellipsis = row.querySelector('svg.lucide-ellipsis');
+                    if (ellipsis) {
+                      menuBtn = ellipsis.closest('button');
+                    }
+                  }
                   if (!menuBtn) {
                     throw new Error('Menu button not found for conversation');
                   }
@@ -763,25 +792,43 @@ export function createGrokAdapter(): Pick<
         };
 
         let info;
-        if (!projectId) {
+        info = await performRename(false);
+        if (!info || !info.success) {
           const opened = await openHistoryDialog(client);
           if (opened) {
             await expandHistoryDialog(client);
-          }
-          info = await performRename(true);
-        } else {
-          info = await performRename(false);
-          if (!info || !info.success) {
-            const opened = await openHistoryDialog(client);
-            if (opened) {
-              await expandHistoryDialog(client);
-              info = await performRename(true);
-            }
+            await closeHistoryHoverMenu(client, { logPrefix: 'browser-rename' });
+            info = await performRename(true);
           }
         }
         if (!info || !info.success) {
           throw new Error(info?.error || 'Rename failed');
         }
+      } finally {
+        await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async deleteConversation(
+      conversationId: string,
+      projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await ensureMainSidebarOpen(client, { logPrefix: 'browser-delete' });
+        const opened = await openHistoryDialog(client);
+        if (!opened) {
+          throw new Error('History dialog did not open');
+        }
+        await expandHistoryDialog(client);
+        await closeHistoryHoverMenu(client, { logPrefix: 'browser-delete' });
+        await deleteConversationInHistoryDialog(client, conversationId);
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -899,20 +946,6 @@ export function createGrokAdapter(): Pick<
             if (saveButton) {
               saveButton.click();
             }
-            await new Promise(r => setTimeout(r, 800));
-
-            const stillEditing = Boolean(
-              Array.from(document.querySelectorAll('input[aria-label]')).find((candidate) => {
-                const label = (candidate.getAttribute('aria-label') || '').toLowerCase();
-                if (label !== 'project name') return false;
-                const rect = candidate.getBoundingClientRect();
-                return rect.width > 0 && rect.height > 0;
-              }),
-            );
-            if (stillEditing) {
-              log('Still in edit mode after Enter');
-              return { success: false, error: 'Project rename stayed in edit mode', logs };
-            }
 
             return { success: true, logs };
           })()`,
@@ -926,6 +959,10 @@ export function createGrokAdapter(): Pick<
         const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
         if (!info?.success) {
           throw new Error(info?.error || 'Rename project failed');
+        }
+        const closed = await waitForNotSelector(client.Runtime, 'input[aria-label="Project name"]', 3000);
+        if (!closed) {
+          throw new Error('Project rename stayed in edit mode');
         }
       } finally {
         await closeHistoryDialog(client);
@@ -948,7 +985,7 @@ export function createGrokAdapter(): Pick<
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
         await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-clone-project' });
-        await new Promise((resolve) => setTimeout(resolve, 800));
+        await waitForNotSelector(client.Runtime, '[role="menuitem"], [data-radix-collection-item]', 2000);
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -1144,39 +1181,21 @@ export function createGrokAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(async () => {
-            const logs = [];
-            const log = (msg) => {
-              logs.push(msg);
-              console.log('[browser-project-create] ' + msg);
-            };
-
-            const visible = (el) => {
-              const rect = el.getBoundingClientRect();
-              return rect.width > 0 && rect.height > 0;
-            };
-
-            const buttons = Array.from(document.querySelectorAll('button[aria-label]')).filter(visible);
-            const createBtn = buttons.find((button) => {
-              const label = (button.getAttribute('aria-label') || '').toLowerCase();
-              return label === 'create new project';
-            }) || null;
-            if (!createBtn) {
-              return { success: false, error: 'Create new project button not found', logs };
-            }
-            createBtn.click();
-            return { success: true, logs };
-          })()`,
-          awaitPromise: true,
-          returnByValue: true,
+        const pressed = await pressButton(client.Runtime, {
+          match: { exact: ['create new project'] },
+          rootSelectors: ['div.group\\\\/sidebar-wrapper', '[data-sidebar="sidebar"]', 'nav', 'aside'],
+          timeoutMs: 5000,
         });
-        if (evalResult.exceptionDetails) {
-          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        if (!pressed.ok) {
+          throw new Error(pressed.reason || 'Create project modal not opened');
         }
-        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-        if (!info?.success) {
-          throw new Error(info?.error || 'Create project modal not opened');
+        const ready = await waitForSelector(
+          client.Runtime,
+          'input[placeholder*="project name" i]',
+          5000,
+        );
+        if (!ready) {
+          throw new Error('Create project modal did not render');
         }
       } finally {
         await client.close();
@@ -1193,25 +1212,24 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, 'https://grok.com/');
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(async () => {
-            const logs = [];
-            const log = (msg) => {
-              logs.push(msg);
-              console.log('[browser-project-create] ' + msg);
-            };
+        await waitForSelector(
+          client.Runtime,
+          'input[placeholder*="project name" i], textarea[placeholder*="instruction" i]',
+          5000,
+        );
+        if (fields.name) {
+          const evalResult = await client.Runtime.evaluate({
+            expression: `(async () => {
+              const logs = [];
+              const log = (msg) => {
+                logs.push(msg);
+                console.log('[browser-project-create] ' + msg);
+              };
 
-            const visible = (el) => {
-              const rect = el.getBoundingClientRect();
-              return rect.width > 0 && rect.height > 0;
-            };
-
-            const nameValue = ${JSON.stringify(fields.name ?? '')};
-            const instructionsValue = ${JSON.stringify(fields.instructions ?? '')};
-            const modelLabel = ${JSON.stringify(fields.modelLabel ?? '')};
-            const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
-
-            if (nameValue) {
+              const nameValue = ${JSON.stringify(fields.name ?? '')};
+              if (!nameValue) {
+                return { success: true, logs };
+              }
               const input = Array.from(document.querySelectorAll('input[placeholder]'))
                 .find((el) => (el.getAttribute('placeholder') || '').toLowerCase().includes('project name')) || null;
               if (!input) {
@@ -1225,48 +1243,25 @@ export function createGrokAdapter(): Pick<
                 input.value = nameValue;
               }
               input.dispatchEvent(new Event('input', { bubbles: true }));
-            }
+              return { success: true, logs };
+            })()`,
+            awaitPromise: true,
+            returnByValue: true,
+          });
+          if (evalResult.exceptionDetails) {
+            throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+          }
+          const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+          if (!info?.success) {
+            throw new Error(info?.error || 'Create project name failed');
+          }
+        }
 
-            if (instructionsValue) {
-              const textarea = Array.from(document.querySelectorAll('textarea')).find(visible) || null;
-              if (!textarea) {
-                return { success: false, error: 'Project instructions textarea not found', logs };
-              }
-              textarea.focus();
-              textarea.value = instructionsValue;
-              textarea.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-
-            if (modelLabel) {
-              const trigger = document.querySelector('#model-select-trigger');
-              if (!trigger) {
-                return { success: false, error: 'Model select trigger not found', logs };
-              }
-              trigger.click();
-              await new Promise(r => setTimeout(r, 300));
-              const items = Array.from(
-                document.querySelectorAll('[role="option"], [data-radix-collection-item]')
-              );
-              const normalizedTarget = normalize(modelLabel);
-              const match = items.find((item) => normalize(item.textContent || '') === normalizedTarget) || null;
-              if (!match) {
-                return { success: false, error: 'Model option not found', logs };
-              }
-              match.click();
-            }
-
-            return { success: true, logs };
-          })()`,
-          awaitPromise: true,
-          returnByValue: true,
+        await resolveProjectInstructionsModal(client, {
+          serviceId: 'grok',
+          text: fields.instructions,
+          modelLabel: fields.modelLabel,
         });
-        if (evalResult.exceptionDetails) {
-          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-        }
-        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-        if (!info?.success) {
-          throw new Error(info?.error || 'Create project fields failed');
-        }
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1500,6 +1495,7 @@ export function createGrokAdapter(): Pick<
       try {
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
+        await ensureProjectSidebarOpen(client);
         await closeHistoryDialog(client);
         await pushProjectInstructionsEditButton(client);
         await resolveProjectInstructionsModal(client, {
@@ -1562,6 +1558,7 @@ export function createGrokAdapter(): Pick<
         if (!info?.success) {
           throw new Error(info?.error || 'Update instructions failed');
         }
+        await waitForNotSelector(client.Runtime, '[role="dialog"]', 5000);
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -1581,6 +1578,7 @@ export function createGrokAdapter(): Pick<
       try {
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
+        await ensureProjectSidebarOpen(client);
         await closeHistoryDialog(client);
         await pushProjectInstructionsEditButton(client);
         const info = await resolveProjectInstructionsModal(client, {
@@ -1831,6 +1829,11 @@ export async function openProjectMenuButton(
   options?: { logPrefix?: string },
 ): Promise<void> {
   const logPrefix = options?.logPrefix ?? 'browser-open-project-menu';
+  await waitForSelector(
+    client.Runtime,
+    'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
+    5000,
+  );
   const evalResult = await client.Runtime.evaluate({
     expression: `(async () => {
       const logs = [];
@@ -1866,12 +1869,7 @@ export async function openProjectMenuButton(
         );
       };
 
-      let menuBtn = null;
-      for (let attempt = 0; attempt < 16; attempt += 1) {
-        menuBtn = findMenuButton();
-        if (menuBtn) break;
-        await new Promise(r => setTimeout(r, 250));
-      }
+      const menuBtn = findMenuButton();
 
       if (!menuBtn) {
         const labels = Array.from(document.querySelectorAll('button[aria-label]'))
@@ -1889,17 +1887,6 @@ export async function openProjectMenuButton(
       menuBtn.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
       menuBtn.dispatchEvent(new MouseEvent('click', pointerOpts));
 
-      let menuItemCount = 0;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        menuItemCount = document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]').length;
-        if (menuItemCount > 0) break;
-        await new Promise(r => setTimeout(r, 200));
-      }
-
-      if (menuItemCount === 0) {
-        return { success: false, error: 'Project menu opened, but no menu items found', logs };
-      }
-
       log('Project menu opened');
       return { success: true, logs };
     })()`,
@@ -1914,6 +1901,14 @@ export async function openProjectMenuButton(
   if (!info?.success) {
     throw new Error(info?.error || 'Project menu button not found');
   }
+  const opened = await waitForSelector(
+    client.Runtime,
+    '[role="menuitem"], [data-radix-collection-item]',
+    3000,
+  );
+  if (!opened) {
+    throw new Error('Project menu opened, but no menu items found');
+  }
 }
 
 export async function clickProjectMenuItem(
@@ -1922,6 +1917,11 @@ export async function clickProjectMenuItem(
   options?: { logPrefix?: string },
 ): Promise<void> {
   const logPrefix = options?.logPrefix ?? 'browser-project-menu-item';
+  await waitForSelector(
+    client.Runtime,
+    '[role="menuitem"], [data-radix-collection-item]',
+    3000,
+  );
   const evalResult = await client.Runtime.evaluate({
     expression: `(async () => {
       const target = ${JSON.stringify(label)}.trim().toLowerCase();
@@ -1944,15 +1944,9 @@ export async function clickProjectMenuItem(
         return { match, items };
       };
 
-      let match = null;
-      let items = [];
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        const result = findItem();
-        match = result.match;
-        items = result.items;
-        if (match) break;
-        await new Promise(r => setTimeout(r, 200));
-      }
+      const result = findItem();
+      const match = result.match;
+      const items = result.items;
 
       if (!match) {
         const labels = items.map((el) => (el.textContent || '').trim()).filter(Boolean).slice(0, 10);
@@ -1990,6 +1984,7 @@ export async function clickProjectRemoveConfirmation(
   options?: { logPrefix?: string },
 ): Promise<void> {
   const logPrefix = options?.logPrefix ?? 'browser-project-remove-confirm';
+  await waitForDialog(client.Runtime, 5000, DEFAULT_DIALOG_SELECTORS);
   const evalResult = await client.Runtime.evaluate({
     expression: `(async () => {
       const logs = [];
@@ -2014,17 +2009,10 @@ export async function clickProjectRemoveConfirmation(
         return { match, buttons, dialog: Boolean(dialog) };
       };
 
-      let match = null;
-      let buttons = [];
-      let dialogFound = false;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        const result = findButton();
-        match = result.match;
-        buttons = result.buttons;
-        dialogFound = result.dialog;
-        if (match) break;
-        await new Promise(r => setTimeout(r, 250));
-      }
+      const result = findButton();
+      const match = result.match;
+      const buttons = result.buttons;
+      const dialogFound = result.dialog;
 
       if (!match) {
         const labels = buttons
@@ -2095,19 +2083,13 @@ export async function ensureProjectSidebarOpen(
         return { state: 'unknown', button: null };
       };
 
-      let info = findButton();
+      const info = findButton();
       if (info.state === 'open') {
-        return { success: true, logs };
+        return { success: true, logs, clicked: false };
       }
       if (info.state === 'closed' && info.button) {
         info.button.click();
-        await new Promise(r => setTimeout(r, 600));
-        info = findButton();
-        if (info.state === 'open') {
-          log('Project sidebar opened');
-          return { success: true, logs };
-        }
-        return { success: false, error: 'Project sidebar did not open', logs };
+        return { success: true, logs, clicked: true };
       }
 
       return { success: false, error: 'Project sidebar toggle not found', logs };
@@ -2119,9 +2101,15 @@ export async function ensureProjectSidebarOpen(
   if (evalResult.exceptionDetails) {
     throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
   }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
+  const info = evalResult.result?.value as { success: boolean; error?: string; clicked?: boolean } | undefined;
   if (!info?.success) {
     throw new Error(info?.error || 'Project sidebar did not open');
+  }
+  if (info.clicked) {
+    const opened = await waitForSelector(client.Runtime, 'button[aria-label="Collapse side panel"]', 3000);
+    if (!opened) {
+      throw new Error('Project sidebar did not open');
+    }
   }
 }
 
@@ -2129,76 +2117,36 @@ async function waitForProjectRemoveDialog(
   client: ChromeClient,
   timeoutMs: number,
 ): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
-        const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
-        if (!dialog) return false;
-        const text = (dialog.textContent || '').toLowerCase();
-        return text.includes('delete project') || text.includes('are you sure');
-      })()`,
-      returnByValue: true,
-    });
-    if (result?.value) return true;
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  return false;
+  const opened = await waitForDialog(client.Runtime, timeoutMs, DEFAULT_DIALOG_SELECTORS);
+  if (!opened) return false;
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const dialog = document.querySelector('div[role="dialog"][data-state="open"], [role="dialog"][aria-modal="true"], dialog[open]');
+      if (!dialog) return false;
+      const text = (dialog.textContent || '').toLowerCase();
+      return text.includes('delete project') || text.includes('are you sure');
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
 }
 
 export async function clickMainSidebarToggle(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  const logPrefix = options?.logPrefix ?? 'browser-main-sidebar-toggle';
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
-      };
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      let match =
-        document.querySelector('button[data-sidebar="trigger"]') ||
-        document.querySelector('button[aria-label="Toggle Sidebar"]');
-      if (!match) {
-        const buttons = Array.from(document.querySelectorAll('button'));
-        match = buttons.find((button) => {
-          const text = (button.textContent || '').trim().toLowerCase();
-          const label = (button.getAttribute('aria-label') || '').trim().toLowerCase();
-          return label === 'toggle sidebar' || text === 'toggle sidebar';
-        }) || null;
-      }
-
-      if (!match) {
-        return { success: false, error: 'Main sidebar toggle not found', logs };
-      }
-
-      match.scrollIntoView({ block: 'center', inline: 'center' });
-      if (visible(match)) {
-        match.click();
-      } else {
-        match.click();
-      }
-      log('Toggled main sidebar');
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const pressed = await pressButton(client.Runtime, {
+    selector: 'button[data-sidebar="trigger"]',
+    timeoutMs: 5000,
   });
-
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-  }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Main sidebar toggle not found');
+  if (!pressed.ok) {
+    const fallback = await pressButton(client.Runtime, {
+      match: { exact: ['toggle sidebar'] },
+      timeoutMs: 5000,
+    });
+    if (!fallback.ok) {
+      throw new Error(fallback.reason || pressed.reason || 'Main sidebar toggle not found');
+    }
   }
 }
 
@@ -2212,7 +2160,11 @@ export async function ensureMainSidebarOpen(
     return;
   }
   await clickMainSidebarToggle(client, options);
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await waitForSelector(
+    client.Runtime,
+    'button[data-sidebar="trigger"] svg.lucide-chevrons-right.rotate-180',
+    3000,
+  );
   if (!(await isMainSidebarOpen(client))) {
     throw new Error('Main sidebar did not open');
   }
@@ -2382,122 +2334,41 @@ export async function clickHistoryMenuItem(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<boolean> {
-  const logPrefix = options?.logPrefix ?? 'browser-history-item';
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
-      };
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      const candidates = Array.from(document.querySelectorAll('[role="button"], button, a, [role="link"]')).filter(visible);
-      const match = candidates.find((el) => {
-        const label = (el.getAttribute('aria-label') || '').trim().toLowerCase();
-        const text = (el.textContent || '').trim().toLowerCase();
-        return label === 'history' || text === 'history';
-      }) || null;
-
-      if (!match) {
-        return { success: false, logs };
-      }
-      match.click();
-      log('Clicked history item');
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const result = await pressButton(client.Runtime, {
+    match: { includeAny: ['history'] },
+    timeoutMs: 3000,
   });
-
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  if (result.ok) {
+    return true;
   }
-  const info = evalResult.result?.value as { success: boolean } | undefined;
-  return Boolean(info?.success);
+  await ensureMainSidebarOpen(client, { logPrefix: options?.logPrefix ?? 'browser-history-item' });
+  const retry = await pressButton(client.Runtime, {
+    match: { includeAny: ['history'] },
+    timeoutMs: 3000,
+  });
+  return Boolean(retry.ok);
 }
 
 export async function clickHistorySeeAll(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  const logPrefix = options?.logPrefix ?? 'browser-history-see-all';
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
-      };
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      const dialog =
-        document.querySelector('div[role="dialog"][data-state="open"]') ||
-        document.querySelector('[role="dialog"][aria-modal="true"]') ||
-        document.querySelector('dialog[open]');
-      const scope = dialog || document;
-      const buttons = Array.from(scope.querySelectorAll('button, [role="button"], div')).filter(visible);
-      const match = buttons.find((el) => {
-        const text = (el.textContent || '').trim().toLowerCase();
-        return text === 'see all' || text === 'show all';
-      }) || null;
-
-      if (!match) {
-        const labels = buttons
-          .map((button) => (button.textContent || '').trim())
-          .filter(Boolean)
-          .slice(0, 10);
-        return { success: false, error: 'History see-all not found (buttons: ' + labels.join(', ') + ')', logs };
-      }
-
-      match.click();
-      log('Clicked history see-all');
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const dialogSelectors = ['div[role="dialog"][data-state="open"]', '[role="dialog"][aria-modal="true"]', 'dialog[open]'];
+  const first = await pressButton(client.Runtime, {
+    match: { exact: ['see all', 'show all'] },
+    rootSelectors: dialogSelectors,
+    timeoutMs: 3000,
   });
-
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  if (first.ok) {
+    return;
   }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    await clickMainSidebarToggle(client, { logPrefix: options?.logPrefix ?? 'browser-history-see-all' });
-    const retry = await client.Runtime.evaluate({
-      expression: `(async () => {
-        const visible = (el) => {
-          const rect = el.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        const dialog =
-          document.querySelector('div[role="dialog"][data-state="open"]') ||
-          document.querySelector('[role="dialog"][aria-modal="true"]') ||
-          document.querySelector('dialog[open]');
-        const scope = dialog || document;
-        const buttons = Array.from(scope.querySelectorAll('button, [role="button"], div')).filter(visible);
-        const match = buttons.find((el) => {
-          const text = (el.textContent || '').trim().toLowerCase();
-          return text === 'see all' || text === 'show all';
-        }) || null;
-        if (!match) return { success: false };
-        match.click();
-        return { success: true };
-      })()`,
-      awaitPromise: true,
-      returnByValue: true,
-    });
-    if (!(retry.result?.value as { success: boolean } | undefined)?.success) {
-      throw new Error(info?.error || 'History see-all not found');
-    }
+  await clickMainSidebarToggle(client, { logPrefix: options?.logPrefix ?? 'browser-history-see-all' });
+  const retry = await pressButton(client.Runtime, {
+    match: { exact: ['see all', 'show all'] },
+    timeoutMs: 3000,
+  });
+  if (!retry.ok) {
+    throw new Error(retry.reason || first.reason || 'History see-all not found');
   }
 }
 
@@ -2619,7 +2490,473 @@ async function openConversationList(client: ChromeClient): Promise<void> {
       return false;
     })()`,
   });
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  await waitForSelector(client.Runtime, 'a[href*="/c/"], [data-value^="conversation:"]', 5000);
+}
+
+async function renameConversationInHistoryDialog(
+  client: ChromeClient,
+  conversationId: string,
+  newTitle: string,
+): Promise<void> {
+  const ready = await waitForSelector(
+    client.Runtime,
+    '[role="dialog"] a[href*="/c/"], [role="dialog"] [data-value^="conversation:"]',
+    5000,
+  );
+  if (!ready) {
+    throw new Error('History dialog did not render conversation rows');
+  }
+
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const chatId = ${JSON.stringify(conversationId)};
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog');
+      if (!dialog) {
+        return { success: false, error: 'History dialog not found' };
+      }
+
+      const selectors = [
+        '[data-value="conversation:' + chatId + '"]',
+        '[data-value*="' + chatId + '"]',
+        'a[href="/c/' + chatId + '"]',
+        'a[href*="' + chatId + '"]',
+      ];
+      let item = null;
+      let itemSelector = null;
+      for (const selector of selectors) {
+        item = dialog.querySelector(selector);
+        if (item) {
+          itemSelector = selector;
+          break;
+        }
+      }
+      if (!item) {
+        const link = dialog.querySelector('a.col-start-1.col-end-2.row-start-1.row-end-2[href*="/c/"]');
+        if (link) {
+          const href = link.getAttribute('href') || '';
+          if (href.includes(chatId)) {
+            item = link;
+            itemSelector = 'a[href="/c/' + chatId + '"]';
+          }
+        }
+      }
+      if (!item || !itemSelector) {
+        return { success: false, error: 'Conversation row not found in history dialog' };
+      }
+
+      const row =
+        item.closest('div.grid') ||
+        item.closest('div[class*="rounded"]') ||
+        item.closest('li') ||
+        item.closest('div') ||
+        item.parentElement;
+      if (!row) {
+        return { success: false, error: 'Conversation row container not found' };
+      }
+
+      const target = item.tagName === 'A' ? item : row;
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = target.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        return { success: false, error: 'Conversation row not visible' };
+      }
+
+      return { success: true, itemSelector };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as
+    | { success: boolean; error?: string; itemSelector?: string }
+    | undefined;
+  if (!info?.success) {
+    throw new Error(info?.error || 'Rename flow failed');
+  }
+
+  if (!info.itemSelector) {
+    throw new Error('Rename hover target missing');
+  }
+
+  const hoverResult = await hoverElement(client.Runtime, client.Input, {
+    selector: info.itemSelector,
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    timeoutMs: 1500,
+  });
+  if (!hoverResult.ok) {
+    throw new Error(hoverResult.reason || 'Rename hover failed');
+  }
+
+  const renameReady = await waitForSelector(
+    client.Runtime,
+    '[role="dialog"] button[aria-label="Rename"], [role="dialog"] button[aria-label*="rename" i]',
+    1000,
+  );
+  if (!renameReady) {
+    throw new Error('Rename button not found after hover');
+  }
+
+  const clickResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const selector = ${JSON.stringify(info.itemSelector)};
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog');
+      if (!dialog) return { success: false, error: 'History dialog not found' };
+      const item = dialog.querySelector(selector);
+      if (!item) return { success: false, error: 'Conversation row not found' };
+      const row =
+        item.closest('div.grid') ||
+        item.closest('div[class*="rounded"]') ||
+        item.closest('li') ||
+        item.closest('div') ||
+        item.parentElement;
+      if (!row) return { success: false, error: 'Conversation row container not found' };
+
+      const visibleRect = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 ? rect : null;
+      };
+      const rowRect = visibleRect(row);
+      const distanceToRow = (rect) => {
+        if (!rowRect) return 0;
+        const dx = Math.abs(rect.x - rowRect.x);
+        const dy = Math.abs(rect.y - rowRect.y);
+        return dx + dy;
+      };
+      const candidates = [
+        ...Array.from(row.querySelectorAll('button[aria-label="Rename"], button[aria-label*="rename" i]')),
+        ...Array.from(dialog.querySelectorAll('button[aria-label="Rename"], button[aria-label*="rename" i]')),
+      ].filter((btn, idx, arr) => arr.indexOf(btn) === idx);
+      if (candidates.length === 0) {
+        return { success: false, error: 'Rename button not found in row' };
+      }
+      const pickClosest = (items) => {
+        if (!rowRect) return items[0] || null;
+        return items
+          .map((btn) => ({ btn, rect: visibleRect(btn) }))
+          .filter((entry) => entry.rect)
+          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.btn || null;
+      };
+      const renameBtn = candidates.find((btn) => row.contains(btn)) || pickClosest(candidates);
+      if (!renameBtn) return { success: false, error: 'Rename button not found in row' };
+      renameBtn.click();
+      return { success: true };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (clickResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${clickResult.exceptionDetails.exception?.description}`);
+  }
+  const clickInfo = clickResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!clickInfo?.success) {
+    throw new Error(clickInfo?.error || 'Rename click failed');
+  }
+
+  const inputReady = await waitForSelector(client.Runtime, 'input[aria-label="Rename"]', 3000);
+  if (!inputReady) {
+    throw new Error('Rename input not found');
+  }
+
+  const commitResult = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const value = ${JSON.stringify(newTitle)};
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog') ||
+        document;
+      const input = dialog.querySelector('input[aria-label="Rename"]');
+      if (!input) return { success: false, error: 'Rename input missing' };
+      input.focus();
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      if (setter) {
+        setter.call(input, value);
+      } else {
+        input.value = value;
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
+      const saveCandidates = Array.from(dialog.querySelectorAll('button[aria-label="Save"]'));
+      const saveBtn =
+        saveCandidates.find((btn) => input.closest('div')?.contains(btn)) ||
+        saveCandidates[0] ||
+        null;
+      if (saveBtn) saveBtn.click();
+      return { success: true };
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+
+  if (commitResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${commitResult.exceptionDetails.exception?.description}`);
+  }
+  const commitInfo = commitResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!commitInfo?.success) {
+    throw new Error(commitInfo?.error || 'Rename submit failed');
+  }
+
+  const closed = await waitForNotSelector(client.Runtime, 'input[aria-label="Rename"]', 3000);
+  if (!closed) {
+    throw new Error('Rename input did not close');
+  }
+}
+
+async function deleteConversationInHistoryDialog(
+  client: ChromeClient,
+  conversationRef: string,
+): Promise<void> {
+  const ready = await waitForSelector(
+    client.Runtime,
+    '[role="dialog"] a[href*="/c/"], [role="dialog"] [data-value^="conversation:"]',
+    5000,
+  );
+  if (!ready) {
+    throw new Error('History dialog did not render conversation rows');
+  }
+
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const input = ${JSON.stringify(conversationRef)};
+      const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(input);
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog');
+      if (!dialog) {
+        return { success: false, error: 'History dialog not found' };
+      }
+
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const ignored = new Set(['new tab', 'rename', 'delete', 'hide conversation previews']);
+
+      const extractTitle = (row) => {
+        const titleNode =
+          row.querySelector('[class*="line-clamp"]') ||
+          row.querySelector('[class*="truncate"]') ||
+          row.querySelector('span') ||
+          row.querySelector('div');
+        const candidate = normalize(titleNode?.textContent || row.textContent || '');
+        if (!candidate) return '';
+        const buttonLabels = Array.from(row.querySelectorAll('button')).map((btn) =>
+          normalize(btn.getAttribute('aria-label') || btn.textContent || ''),
+        );
+        let cleaned = candidate;
+        for (const label of buttonLabels) {
+          if (!label) continue;
+          cleaned = cleaned.replace(label, ' ');
+        }
+        for (const word of ignored) {
+          cleaned = cleaned.replace(word, ' ');
+        }
+        return normalize(cleaned);
+      };
+
+      const anchors = Array.from(dialog.querySelectorAll('a[href*="/c/"]'));
+      const rows = anchors
+        .map((anchor) => {
+          const row =
+            anchor.closest('div.grid') ||
+            anchor.closest('div[class*="rounded"]') ||
+            anchor.closest('li') ||
+            anchor.closest('div') ||
+            anchor.parentElement;
+          const href = anchor.getAttribute('href') || '';
+          const match = href.match(/\\/c\\/([^/?#]+)/);
+          const id = match?.[1] || '';
+          return { anchor, row, id, title: row ? extractTitle(row) : '' };
+        })
+        .filter((entry) => Boolean(entry.row && entry.id));
+
+      let itemSelector = null;
+      if (isUuid) {
+        const matched = rows.find((entry) => entry.id.toLowerCase() === input.toLowerCase());
+        if (matched) {
+          itemSelector = 'a[href="/c/' + matched.id + '"]';
+        }
+      } else {
+        const desired = normalize(input);
+        const matches = rows.filter((entry) => entry.title && entry.title === desired);
+        if (matches.length === 1) {
+          itemSelector = 'a[href="/c/' + matches[0].id + '"]';
+        } else if (matches.length > 1) {
+          return {
+            success: false,
+            error: 'Multiple conversations match name',
+            matches: matches.map((entry) => ({ id: entry.id, title: entry.title })),
+          };
+        }
+      }
+
+      if (!itemSelector) {
+        return {
+          success: false,
+          error: isUuid
+            ? 'Conversation row not found in history dialog'
+            : 'Conversation name not found in history dialog',
+        };
+      }
+
+      return { success: true, itemSelector };
+    })()`,
+    returnByValue: true,
+  });
+
+  if (evalResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  }
+  const info = evalResult.result?.value as
+    | { success: boolean; error?: string; itemSelector?: string; matches?: Array<{ id: string; title: string }> }
+    | undefined;
+  if (!info?.success) {
+    if (info?.matches?.length) {
+      const summary = info.matches.map((match) => `${match.title} (${match.id})`).join(', ');
+      throw new Error(`${info.error || 'Delete flow failed'}: ${summary}`);
+    }
+    throw new Error(info?.error || 'Delete flow failed');
+  }
+  if (!info.itemSelector) {
+    throw new Error('Delete hover target missing');
+  }
+
+  const hoverResult = await hoverElement(client.Runtime, client.Input, {
+    selector: info.itemSelector,
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    timeoutMs: 1500,
+  });
+  if (!hoverResult.ok) {
+    throw new Error(hoverResult.reason || 'Delete hover failed');
+  }
+
+  const deleteReady = await waitForSelector(
+    client.Runtime,
+    '[role="dialog"] button[aria-label="Delete"], [role="dialog"] button[aria-label*="delete" i]',
+    1000,
+  );
+  if (!deleteReady) {
+    throw new Error('Delete button not found after hover');
+  }
+
+  const deleteClick = await client.Runtime.evaluate({
+    expression: `(() => {
+      const selector = ${JSON.stringify(info.itemSelector)};
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog');
+      if (!dialog) return { success: false, error: 'History dialog not found' };
+      const item = dialog.querySelector(selector);
+      if (!item) return { success: false, error: 'Conversation row not found' };
+      const row =
+        item.closest('div.grid') ||
+        item.closest('div[class*="rounded"]') ||
+        item.closest('li') ||
+        item.closest('div') ||
+        item.parentElement;
+      if (!row) return { success: false, error: 'Conversation row container not found' };
+
+      const visibleRect = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 ? rect : null;
+      };
+      const rowRect = visibleRect(row);
+      const distanceToRow = (rect) => {
+        if (!rowRect) return 0;
+        const dx = Math.abs(rect.x - rowRect.x);
+        const dy = Math.abs(rect.y - rowRect.y);
+        return dx + dy;
+      };
+      const candidates = [
+        ...Array.from(row.querySelectorAll('button[aria-label="Delete"], button[aria-label*="delete" i]')),
+        ...Array.from(dialog.querySelectorAll('button[aria-label="Delete"], button[aria-label*="delete" i]')),
+      ].filter((btn, idx, arr) => arr.indexOf(btn) === idx);
+      if (candidates.length === 0) {
+        return { success: false, error: 'Delete button not found in row' };
+      }
+      const pickClosest = (items) => {
+        if (!rowRect) return items[0] || null;
+        return items
+          .map((btn) => ({ btn, rect: visibleRect(btn) }))
+          .filter((entry) => entry.rect)
+          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.btn || null;
+      };
+      const deleteBtn = candidates.find((btn) => row.contains(btn)) || pickClosest(candidates);
+      if (!deleteBtn) return { success: false, error: 'Delete button not found in row' };
+      deleteBtn.click();
+      return { success: true };
+    })()`,
+    returnByValue: true,
+  });
+
+  if (deleteClick.exceptionDetails) {
+    throw new Error(`JS Exception: ${deleteClick.exceptionDetails.exception?.description}`);
+  }
+  const deleteInfo = deleteClick.result?.value as { success: boolean; error?: string } | undefined;
+  if (!deleteInfo?.success) {
+    throw new Error(deleteInfo?.error || 'Delete click failed');
+  }
+
+  const confirmReady = await waitForSelector(
+    client.Runtime,
+    '[role="dialog"] button',
+    1000,
+  );
+  if (!confirmReady) {
+    throw new Error('Delete confirmation not found');
+  }
+
+  const confirmResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const dialog =
+        document.querySelector('[role="dialog"]') ||
+        document.querySelector('[aria-modal="true"]') ||
+        document.querySelector('dialog');
+      if (!dialog) return { success: false, error: 'History dialog not found' };
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const buttons = Array.from(dialog.querySelectorAll('button'));
+      const candidates = buttons.filter((btn) => {
+        const label = normalize(btn.getAttribute('aria-label'));
+        const text = normalize(btn.textContent);
+        return label === 'delete' || text === 'delete' || label.includes('delete') || text.includes('delete');
+      });
+      if (candidates.length === 0) {
+        return { success: false, error: 'Delete confirmation not found' };
+      }
+      const confirm = candidates[candidates.length - 1];
+      confirm.click();
+      return { success: true };
+    })()`,
+    returnByValue: true,
+  });
+
+  if (confirmResult.exceptionDetails) {
+    throw new Error(`JS Exception: ${confirmResult.exceptionDetails.exception?.description}`);
+  }
+  const confirmInfo = confirmResult.result?.value as { success: boolean; error?: string } | undefined;
+  if (!confirmInfo?.success) {
+    throw new Error(confirmInfo?.error || 'Delete confirmation failed');
+  }
+
+  const deleted = await waitForNotSelector(
+    client.Runtime,
+    `[role="dialog"] ${info.itemSelector}`,
+    4000,
+  );
+  if (!deleted) {
+    throw new Error('Conversation row did not disappear after delete');
+  }
 }
 
 async function listHistoryConversations(
@@ -3000,12 +3337,16 @@ async function ensureSidebarOpen(client: ChromeClient): Promise<void> {
       includeAny: ['toggle menu'],
     },
   });
-  await new Promise((resolve) => setTimeout(resolve, 800));
+  await waitForSelector(client.Runtime, 'nav, aside, .group\\\\/sidebar-wrapper', 3000);
 }
 
 async function expandHistoryDialog(client: ChromeClient): Promise<void> {
   await clickHistorySeeAll(client, { logPrefix: 'browser-history-expand' });
-  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await waitForSelector(
+    client.Runtime,
+    'div[role="dialog"] a[href*="/c/"], div[role="dialog"] [data-value^="conversation:"]',
+    5000,
+  );
 }
 
 export async function isHistoryDialogOpen(client: ChromeClient): Promise<boolean> {
@@ -3028,14 +3369,9 @@ export async function waitForHistoryDialogOpen(
   client: ChromeClient,
   timeoutMs: number,
 ): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await isHistoryDialogOpen(client)) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  return false;
+  const opened = await waitForDialog(client.Runtime, timeoutMs, DEFAULT_DIALOG_SELECTORS);
+  if (!opened) return false;
+  return isHistoryDialogOpen(client);
 }
 
 async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
@@ -3056,15 +3392,21 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
 
   if (await findAndClickHistory()) {
     const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    if (opened) {
+      await closeHistoryHoverMenu(client, { logPrefix: 'browser-history-open' });
+    }
     return opened ? isHistoryDialogOpen(client) : false;
   }
 
   // Try opening the main sidebar/menu
   await clickMainSidebarToggle(client, { logPrefix: 'browser-history-open' });
-  await new Promise((resolve) => setTimeout(resolve, 1000));
+  await waitForSelector(client.Runtime, '[aria-label="History"]', 3000);
 
   if (await findAndClickHistory()) {
     const opened = await waitForDialog(client.Runtime, 10_000, DEFAULT_DIALOG_SELECTORS);
+    if (opened) {
+      await closeHistoryHoverMenu(client, { logPrefix: 'browser-history-open' });
+    }
     return opened ? isHistoryDialogOpen(client) : false;
   }
 
@@ -3074,6 +3416,15 @@ async function openHistoryDialog(client: ChromeClient): Promise<boolean> {
 export async function pushProjectInstructionsEditButton(
   client: ChromeClient,
 ): Promise<void> {
+  const openDialog = await waitForSelector(
+    client.Runtime,
+    'div[role="dialog"][data-state="open"] textarea, dialog[open] textarea',
+    1000,
+  );
+  if (openDialog) {
+    return;
+  }
+  await waitForSelector(client.Runtime, 'button[aria-label*="Edit instructions" i]', 5000);
   const evalResult = await client.Runtime.evaluate({
     expression: `(async () => {
       const logs = [];
@@ -3100,14 +3451,16 @@ export async function pushProjectInstructionsEditButton(
         return { success: false, error: 'Project root not found', logs };
       }
 
-      let editButton = null;
-      for (let attempt = 0; attempt < 12; attempt += 1) {
-        editButton = Array.from(root.querySelectorAll('button[aria-label]'))
-          .filter(visible)
-          .find((button) => (button.getAttribute('aria-label') || '').toLowerCase().includes('edit instructions')) || null;
-        if (editButton) break;
-        await new Promise(r => setTimeout(r, 300));
+      const dialog = document.querySelector('[role="dialog"][data-state="open"], dialog[open]');
+      const dialogHasTextarea = Boolean(dialog && dialog.querySelector('textarea'));
+      if (dialogHasTextarea) {
+        log('Instructions dialog already open');
+        return { success: true, logs };
       }
+
+      const editButton = Array.from(root.querySelectorAll('button[aria-label]'))
+        .filter(visible)
+        .find((button) => (button.getAttribute('aria-label') || '').toLowerCase().includes('edit instructions')) || null;
       if (!editButton) {
         const labels = Array.from(root.querySelectorAll('button[aria-label]'))
           .map((button) => button.getAttribute('aria-label'))
@@ -3117,20 +3470,6 @@ export async function pushProjectInstructionsEditButton(
       }
 
       editButton.click();
-      await new Promise(r => setTimeout(r, 400));
-
-      let textarea = null;
-      for (let attempt = 0; attempt < 16; attempt += 1) {
-        textarea =
-          Array.from(root.querySelectorAll('textarea')).find(visible) ||
-          Array.from(document.querySelectorAll('textarea')).find(visible) ||
-          null;
-        if (textarea) break;
-        await new Promise(r => setTimeout(r, 300));
-      }
-      if (!textarea) {
-        return { success: false, error: 'Instructions textarea not found', logs };
-      }
 
       return { success: true, logs };
     })()`,
@@ -3145,6 +3484,10 @@ export async function pushProjectInstructionsEditButton(
   if (!info?.success) {
     throw new Error(info?.error || 'Edit instructions button failed');
   }
+  const ready = await waitForSelector(client.Runtime, 'textarea', 5000);
+  if (!ready) {
+    throw new Error('Instructions textarea not found');
+  }
 }
 
 export async function resolveProjectInstructionsModal(
@@ -3153,8 +3496,66 @@ export async function resolveProjectInstructionsModal(
     text?: string;
     modelLabel?: string;
     serviceId: 'grok';
+    inspectModels?: boolean;
   },
 ): Promise<{ text: string; model?: string | null }> {
+  const registry = await ensureServicesRegistry();
+  const expected = registry.services[options.serviceId]?.models?.map((model) => model.label) ?? [];
+  let preopenedListId: string | null = null;
+  if (options.modelLabel) {
+    const preflight = await client.Runtime.evaluate({
+      expression: `(async () => {
+        const dialogs = Array.from(document.querySelectorAll('[role="dialog"][data-state="open"], dialog[open]'));
+        const dialogWithProjectName = dialogs.find((dialog) =>
+          dialog.querySelector('input[placeholder*="Project name" i]'),
+        );
+        const dialogWithInstructions = dialogs.find((dialog) =>
+          dialog.querySelector('textarea[placeholder*="instruction" i]') || dialog.querySelector('textarea'),
+        );
+        const root =
+          dialogWithProjectName ||
+          dialogWithInstructions ||
+          document.querySelector('#model-select-trigger')?.closest('div[role="dialog"]') ||
+          document.querySelector('[role="dialog"][data-state="open"]') ||
+          document.querySelector('div.group\\\\/sidebar-wrapper') ||
+          document.querySelector('main') ||
+          document.body;
+        if (!root) {
+          return { success: false, error: 'Project instructions modal not found' };
+        }
+        const trigger =
+          root.querySelector('#model-select-trigger') ||
+          root.querySelector('button[aria-label="Model select"]') ||
+          root.querySelector('button[data-slot="select-trigger"]') ||
+          null;
+        if (!trigger) {
+          return { success: false, error: 'Model select trigger not found' };
+        }
+        try {
+          trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+          trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+        } catch {}
+        trigger.click();
+        return { success: true, listId: trigger.getAttribute('aria-controls') || '' };
+      })()`,
+      awaitPromise: true,
+      returnByValue: true,
+    });
+    if (preflight.exceptionDetails) {
+      throw new Error(`JS Exception: ${preflight.exceptionDetails.exception?.description}`);
+    }
+    const info = preflight.result?.value as { success: boolean; error?: string; listId?: string } | undefined;
+    if (!info?.success) {
+      throw new Error(info?.error || 'Project instructions modal preflight failed');
+    }
+    if (info.listId) {
+      await waitForSelector(client.Runtime, `#${info.listId}`, 3000);
+      preopenedListId = info.listId;
+    } else {
+      await waitForSelector(client.Runtime, '[role="listbox"]', 3000);
+    }
+  }
+
   const safeJson = (value: unknown) =>
     JSON.stringify(value)
       .replace(/\u2028/g, '\\u2028')
@@ -3163,6 +3564,9 @@ export async function resolveProjectInstructionsModal(
   const expression = `(async () => {
       const desiredText = ${safeJson(options.text ?? null)};
       const desiredModel = ${safeJson(options.modelLabel ?? null)};
+      const expectedModels = ${safeJson(expected)};
+      const preopenedListId = ${safeJson(preopenedListId)};
+      const inspectModels = ${safeJson(options.inspectModels ?? false)};
       const logs = [];
       const log = (msg) => {
         logs.push(msg);
@@ -3174,8 +3578,17 @@ export async function resolveProjectInstructionsModal(
         return rect.width > 0 && rect.height > 0;
       };
 
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"][data-state="open"], dialog[open]'));
+      const dialogWithProjectName = dialogs.find((dialog) =>
+        dialog.querySelector('input[placeholder*="Project name" i]'),
+      );
+      const dialogWithInstructions = dialogs.find((dialog) =>
+        dialog.querySelector('textarea[placeholder*="instruction" i]') || dialog.querySelector('textarea'),
+      );
       const root =
-        document.querySelector('[data-state="open"][id^="radix-"]') ||
+        dialogWithProjectName ||
+        dialogWithInstructions ||
+        document.querySelector('#model-select-trigger')?.closest('div[role="dialog"]') ||
         document.querySelector('[role="dialog"][data-state="open"]') ||
         document.querySelector('div.group\\\\/sidebar-wrapper') ||
         document.querySelector('main') ||
@@ -3186,6 +3599,7 @@ export async function resolveProjectInstructionsModal(
 
       const trigger =
         root.querySelector('#model-select-trigger') ||
+        root.querySelector('button[aria-label="Model select"]') ||
         root.querySelector('button[data-slot="select-trigger"]') ||
         null;
 
@@ -3196,17 +3610,57 @@ export async function resolveProjectInstructionsModal(
         return text || null;
       };
 
+      const resolveListbox = () => {
+        if (!trigger) return null;
+        const listId = preopenedListId || trigger.getAttribute('aria-controls') || '';
+        if (listId) {
+          const byId = document.getElementById(listId);
+          if (byId) return byId;
+        }
+        const listboxes = Array.from(document.querySelectorAll('[role="listbox"]'));
+        if (listboxes.length === 0) return null;
+        const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
+        const desired = normalize(desiredModel || '');
+        const expected = (expectedModels || []).map((label) => normalize(label)).filter(Boolean);
+        const matchesExpected = (box) => {
+          const labels = Array.from(
+            box.querySelectorAll('[role="option"], [data-radix-collection-item], [data-slot="select-item"]'),
+          )
+            .map((el) => normalize(el.textContent || ''))
+            .filter(Boolean);
+          if (desired) {
+            return labels.some((label) => label.startsWith(desired));
+          }
+          if (expected.length > 0) {
+            return labels.some((label) => expected.some((expectedLabel) => label.startsWith(expectedLabel)));
+          }
+          return false;
+        };
+        return listboxes.find(matchesExpected) || listboxes[0];
+      };
+
       const openModelMenu = async () => {
         if (!trigger) return [];
-        trigger.click();
-        await new Promise(r => setTimeout(r, 300));
-        const viewport =
-          document.querySelector('[data-radix-select-viewport]') ||
-          document.querySelector('[role="listbox"]') ||
-          null;
-        const scope = viewport || document;
+        if (trigger.getAttribute('aria-expanded') !== 'true') {
+          try {
+            trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
+            trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
+          } catch {}
+          trigger.click();
+        }
+        let listbox = null;
+        for (let attempt = 0; attempt < 8; attempt += 1) {
+          listbox = resolveListbox();
+          if (listbox) break;
+          await new Promise(r => setTimeout(r, 150));
+        }
+        if (!listbox) return [];
+        const viewport = listbox.querySelector('[data-radix-select-viewport]') || listbox;
+        const scope = viewport || listbox;
         const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
-        const items = Array.from(scope.querySelectorAll('[role="option"]'))
+        const items = Array.from(
+          scope.querySelectorAll('[role="option"], [data-radix-collection-item], [data-slot="select-item"]'),
+        )
           .map(el => normalize(el.textContent || ''))
           .filter(Boolean);
         return items;
@@ -3214,25 +3668,36 @@ export async function resolveProjectInstructionsModal(
 
       const closeModelMenu = async () => {
         if (!trigger) return;
-        trigger.click();
-        await new Promise(r => setTimeout(r, 200));
+        const isExpanded = () => trigger.getAttribute('aria-expanded') === 'true';
+        const listId = trigger.getAttribute('aria-controls') || '';
+        const listboxExists = () =>
+          (listId ? Boolean(document.getElementById(listId)) : Boolean(document.querySelector('[role="listbox"]')));
+        if (isExpanded() || listboxExists()) {
+          trigger.click();
+          await new Promise(r => setTimeout(r, 200));
+        }
       };
 
       let availableModels = [];
-      if (trigger) {
+      if (trigger && (desiredModel || inspectModels)) {
         availableModels = await openModelMenu();
         if (desiredModel) {
-          const viewport =
-            document.querySelector('[data-radix-select-viewport]') ||
-            document.querySelector('[role="listbox"]') ||
-            null;
-          const scope = viewport || document;
+          const listbox = resolveListbox();
+          const viewport = listbox?.querySelector('[data-radix-select-viewport]') || listbox;
+          const scope = viewport || listbox || document;
           const normalize = ${GROK_MODEL_LABEL_NORMALIZER};
-          const match = Array.from(scope.querySelectorAll('[role="option"]'))
-            .find(el => normalize(el.textContent || '').toLowerCase().startsWith(desiredModel.toLowerCase()));
+          const target = normalize(desiredModel || '');
+          const match = Array.from(scope.querySelectorAll('[role="option"], [data-radix-collection-item], [data-slot="select-item"]'))
+            .find(el => normalize(el.textContent || '').startsWith(target));
           if (match) {
             match.click();
             await new Promise(r => setTimeout(r, 300));
+            const selectedNow = normalize(readSelectedModel() || '');
+            if (selectedNow && target && !selectedNow.startsWith(target)) {
+              return { success: false, error: 'Model selection did not update', logs };
+            }
+          } else {
+            return { success: false, error: 'Model option not found', logs };
           }
         }
         await closeModelMenu();
@@ -3292,8 +3757,6 @@ export async function resolveProjectInstructionsModal(
     throw new Error(info?.error || 'Project instructions modal failed');
   }
 
-  const registry = await ensureServicesRegistry();
-  const expected = registry.services[options.serviceId]?.models?.map((model) => model.label) ?? [];
   const availableRaw = info.availableModels ?? [];
   const available = availableRaw.map((label) => {
     const normalized = normalizeGrokModelLabel(label);
@@ -3302,7 +3765,7 @@ export async function resolveProjectInstructionsModal(
     );
     return match ?? normalized;
   });
-  if (expected.length > 0) {
+  if (expected.length > 0 && availableRaw.length > 0) {
     const missingInUi = expected.filter((label) => !available.some((item) => item.toLowerCase() === label.toLowerCase()));
     const missingInRegistry = available.filter(
       (label) => !expected.some((item) => item.toLowerCase() === label.toLowerCase()),
@@ -3322,11 +3785,18 @@ export async function closeHistoryDialog(client: ChromeClient): Promise<void> {
   if (!(await isHistoryDialogOpen(client))) {
     return;
   }
-  await clickHistoryMenuItem(client, { logPrefix: 'browser-history-close' });
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      document.body.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+      document.body.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }));
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  await waitForNotSelector(client.Runtime, '[role="dialog"]', 2000);
   if (await isHistoryDialogOpen(client)) {
     await clickChatArea(client, { logPrefix: 'browser-history-close' });
-    await new Promise((resolve) => setTimeout(resolve, 400));
+    await waitForNotSelector(client.Runtime, '[role="dialog"]', 2000);
   }
   if (await isHistoryDialogOpen(client)) {
     await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS);

@@ -205,6 +205,12 @@ export abstract class LlmService {
     options?: BrowserProviderListOptions,
   ): Promise<void>;
 
+  abstract deleteConversation(
+    conversationId: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<void>;
+
   abstract getUserIdentity(
     options?: BrowserProviderListOptions,
   ): Promise<ProviderUserIdentity | null>;

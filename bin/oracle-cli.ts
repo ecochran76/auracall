@@ -1034,7 +1034,9 @@ program
   .description('Rename a conversation.')
   .option('--target <chatgpt|grok>', 'Choose which provider to use.')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
-  .action(async (id, name, commandOptions) => {
+  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
+  .action(async (id, name, commandOptions, command) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
@@ -1047,7 +1049,26 @@ program
     }
     
     // Resolve project ID if needed (e.g. from name via existing logic? for now direct ID)
-    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const cacheDefaults = userConfig.browser?.cache;
+    const historyLimit =
+      (command.getOptionValueSource?.('historyLimit') === 'cli')
+        ? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined)
+        : cacheDefaults?.historyLimit ?? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined);
+    const historySince =
+      (command.getOptionValueSource?.('historySince') === 'cli')
+        ? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined)
+        : cacheDefaults?.historySince ?? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined);
+
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl: userConfig.browser?.url ?? null,
+      includeHistory: true,
+      historyLimit,
+      historySince,
+    });
     const projectArg = commandOptions.projectId ?? userConfig.browser?.projectId;
     const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
     console.log(`Renaming conversation ${id} to "${name}"...`);
@@ -1203,6 +1224,145 @@ const cacheCommand = program
       }
     }
     console.log(JSON.stringify(output, null, 2));
+  });
+
+program
+  .command('delete <id>')
+  .alias('remove')
+  .description('Delete a conversation (ID or name when supported by the provider).')
+  .option('--target <chatgpt|grok>', 'Choose which provider to use.')
+  .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
+  .option('--match <exact|glob|regex>', 'Match mode for conversation names (default exact).')
+  .option('--all', 'Delete all matching conversations (otherwise only one match is allowed).')
+  .option('--yes', 'Skip confirmation prompt.')
+  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
+  .action(async (id, commandOptions, command) => {
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const llmService = createLlmService(target, userConfig);
+    const provider = llmService.provider;
+
+    if (!provider.deleteConversation) {
+      console.error(`Delete is not supported for ${target}.`);
+      process.exit(1);
+    }
+
+    const cacheDefaults = userConfig.browser?.cache;
+    const historyLimit =
+      (command.getOptionValueSource?.('historyLimit') === 'cli')
+        ? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined)
+        : cacheDefaults?.historyLimit ?? (commandOptions.historyLimit ? Number.parseInt(commandOptions.historyLimit, 10) : undefined);
+    const historySince =
+      (command.getOptionValueSource?.('historySince') === 'cli')
+        ? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined)
+        : cacheDefaults?.historySince ?? (typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+            ? commandOptions.historySince.trim()
+            : undefined);
+
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl: userConfig.browser?.url ?? null,
+      includeHistory: true,
+      historyLimit,
+      historySince,
+    });
+    const projectArg = commandOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const matchMode = (commandOptions.match ?? 'exact') as string;
+    const deleteAll = Boolean(commandOptions.all);
+    const skipConfirm = Boolean(commandOptions.yes);
+
+    const normalize = (value: string) => value.toLowerCase().replace(/\s+/g, ' ').trim();
+    const compileRegex = (pattern: string): RegExp => {
+      if (pattern.startsWith('/') && pattern.lastIndexOf('/') > 0) {
+        const lastSlash = pattern.lastIndexOf('/');
+        const body = pattern.slice(1, lastSlash);
+        const flags = pattern.slice(lastSlash + 1) || 'i';
+        return new RegExp(body, flags);
+      }
+      return new RegExp(pattern, 'i');
+    };
+    const globToRegex = (pattern: string): RegExp => {
+      const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+      const regex = '^' + escaped.replace(/\*/g, '.*').replace(/\?/g, '.') + '$';
+      return new RegExp(regex, 'i');
+    };
+
+    const conversationList = await llmService.listConversations(projectId, listOptions);
+    const pattern = String(id || '');
+    const matchId = normalize(pattern);
+    const matcher =
+      matchMode === 'regex'
+        ? compileRegex(pattern)
+        : matchMode === 'glob'
+          ? globToRegex(pattern)
+          : null;
+    const matches = conversationList.filter((item) => {
+      const title = normalize(item.title ?? '');
+      const idMatch = normalize(item.id) === matchId;
+      if (matchMode === 'exact') {
+        return idMatch || title === matchId;
+      }
+      if (!matcher) {
+        return idMatch || title === matchId;
+      }
+      return matcher.test(item.title ?? '') || matcher.test(item.id);
+    });
+
+    if (matches.length === 0) {
+      console.error(`No conversations matched "${id}".`);
+      process.exit(1);
+    }
+
+    if (!deleteAll && matches.length > 1) {
+      console.error(
+        `Multiple conversations matched "${id}". Use --all to delete all matches or refine the pattern.`,
+      );
+      matches.slice(0, 10).forEach((item) => {
+        console.error(`- ${item.title ?? item.id} (${item.id})`);
+      });
+      process.exit(1);
+    }
+
+    const preview = matches.map((item) => `- ${item.title ?? item.id} (${item.id})`).join('\n');
+    console.log(`Deleting ${matches.length} conversation(s):\n${preview}`);
+
+    if (!skipConfirm) {
+      const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+      const answer = (await rl.question('Proceed? [y/N] ')).trim().toLowerCase();
+      rl.close();
+      if (answer !== 'y' && answer !== 'yes') {
+        console.log('Aborted.');
+        process.exit(0);
+      }
+    }
+
+    for (const item of matches) {
+      console.log(`Deleting conversation ${item.id}...`);
+      try {
+        await llmService.deleteConversation(item.id, projectId);
+      } catch (error) {
+        console.error(`Delete failed for ${item.id}: ${error instanceof Error ? error.message : String(error)}`);
+        process.exit(1);
+      }
+    }
+    console.log(chalk.green('Deleted successfully.'));
+
+    try {
+      console.log('Refreshing conversation cache...');
+      const cacheContext = await llmService.resolveCacheContext(listOptions);
+      assertCacheIdentity(cacheContext, target);
+      const refreshed = await llmService.listConversations(projectId, listOptions);
+      if (Array.isArray(refreshed)) {
+        await writeConversationCache(cacheContext, refreshed);
+        console.log('Conversation cache refreshed.');
+      }
+    } catch (error) {
+      console.warn(`Failed to refresh conversation cache: ${error instanceof Error ? error.message : String(error)}`);
+    }
   });
 
 cacheCommand

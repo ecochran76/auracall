@@ -61,6 +61,24 @@ export class GrokService extends LlmService {
     await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
   }
 
+  async deleteConversation(
+    conversationId: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<void> {
+    if (!this.provider.deleteConversation) {
+      throw new Error(`Delete is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      conversationId,
+    );
+    if (isUuid) {
+      await this.ensureValidConversationUrl(conversationId, { projectId, listOptions });
+    }
+    await this.provider.deleteConversation(conversationId, projectId, listOptions);
+  }
+
   async getUserIdentity(
     options?: BrowserProviderListOptions,
   ): Promise<ProviderUserIdentity | null> {
