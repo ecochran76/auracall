@@ -11,6 +11,7 @@ import {
   hoverElement,
   isDialogOpen,
   openAndSelectMenuItem,
+  openAndSelectListbox,
   openMenu,
   pressDialogButton,
   pressRowAction,
@@ -3236,58 +3237,28 @@ export async function resolveProjectInstructionsModal(
   const registry = await ensureServicesRegistry();
   const expected = registry.services[options.serviceId]?.models?.map((model) => model.label) ?? [];
   let preopenedListId: string | null = null;
+  let desiredModelForEval = options.modelLabel ?? null;
   if (options.modelLabel) {
-    const preflight = await client.Runtime.evaluate({
-      expression: `(async () => {
-        const dialogs = Array.from(document.querySelectorAll('[role="dialog"][data-state="open"], dialog[open]'));
-        const dialogWithProjectName = dialogs.find((dialog) =>
-          dialog.querySelector('input[placeholder*="Project name" i]'),
-        );
-        const dialogWithInstructions = dialogs.find((dialog) =>
-          dialog.querySelector('textarea[placeholder*="instruction" i]') || dialog.querySelector('textarea'),
-        );
-        const root =
-          dialogWithProjectName ||
-          dialogWithInstructions ||
-          document.querySelector('#model-select-trigger')?.closest('div[role="dialog"]') ||
-          document.querySelector('[role="dialog"][data-state="open"]') ||
-          document.querySelector('div.group\\\\/sidebar-wrapper') ||
-          document.querySelector('main') ||
-          document.body;
-        if (!root) {
-          return { success: false, error: 'Project instructions modal not found' };
-        }
-        const trigger =
-          root.querySelector('#model-select-trigger') ||
-          root.querySelector('button[aria-label="Model select"]') ||
-          root.querySelector('button[data-slot="select-trigger"]') ||
-          null;
-        if (!trigger) {
-          return { success: false, error: 'Model select trigger not found' };
-        }
-        try {
-          trigger.dispatchEvent(new MouseEvent('pointerdown', { bubbles: true, cancelable: true }));
-          trigger.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, cancelable: true }));
-        } catch {}
-        trigger.click();
-        return { success: true, listId: trigger.getAttribute('aria-controls') || '' };
-      })()`,
-      awaitPromise: true,
-      returnByValue: true,
+    const normalized = normalizeGrokModelLabel(options.modelLabel).toLowerCase();
+    const selected = await openAndSelectListbox(client.Runtime, {
+      trigger: {
+        selector: '#model-select-trigger, button[aria-label="Model select"], button[data-slot="select-trigger"]',
+        rootSelectors: [
+          '[role="dialog"][data-state="open"]',
+          'dialog[open]',
+          'div.group\\/sidebar-wrapper',
+          'main',
+        ],
+      },
+      itemMatch: { startsWith: [normalized] },
+      listboxSelector: '[role="listbox"]',
+      timeoutMs: 5000,
+      closeAfter: true,
     });
-    if (preflight.exceptionDetails) {
-      throw new Error(`JS Exception: ${preflight.exceptionDetails.exception?.description}`);
+    if (!selected) {
+      throw new Error('Model option not found');
     }
-    const info = preflight.result?.value as { success: boolean; error?: string; listId?: string } | undefined;
-    if (!info?.success) {
-      throw new Error(info?.error || 'Project instructions modal preflight failed');
-    }
-    if (info.listId) {
-      await waitForSelector(client.Runtime, `#${info.listId}`, 3000);
-      preopenedListId = info.listId;
-    } else {
-      await waitForSelector(client.Runtime, '[role="listbox"]', 3000);
-    }
+    desiredModelForEval = null;
   }
 
   const safeJson = (value: unknown) =>
@@ -3297,7 +3268,7 @@ export async function resolveProjectInstructionsModal(
 
   const expression = `(async () => {
       const desiredText = ${safeJson(options.text ?? null)};
-      const desiredModel = ${safeJson(options.modelLabel ?? null)};
+      const desiredModel = ${safeJson(desiredModelForEval)};
       const expectedModels = ${safeJson(expected)};
       const preopenedListId = ${safeJson(preopenedListId)};
       const inspectModels = ${safeJson(options.inspectModels ?? false)};
