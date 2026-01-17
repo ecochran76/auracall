@@ -597,7 +597,7 @@ export function createGrokAdapter(): Pick<
                   if (dialog) {
                     roots.push(dialog);
                   } else {
-                    return { success: false, error: 'History dialog not found', logs };
+                    return { success: false, error: 'History dialog not found', logs, preferDialog };
                   }
                 }
                 if (sidebar) roots.push(sidebar);
@@ -638,7 +638,7 @@ export function createGrokAdapter(): Pick<
 
                 if (!item) {
                   log('Conversation item not found for selectors.');
-                  return { success: false, logs };
+                  return { success: false, logs, preferDialog };
                 }
                 log('Found item: ' + item.tagName);
 
@@ -711,75 +711,11 @@ export function createGrokAdapter(): Pick<
                 }
                 log('Clicking rename button');
                 renameBtn.click();
-                await new Promise(r => setTimeout(r, 600));
+                await new Promise(r => setTimeout(r, 300));
 
-                const inputs = Array.from(root.querySelectorAll('input, [contenteditable="true"]'));
-                const visibleInputs = inputs.filter((el) => visibleRect(el));
-                const active = document.activeElement;
-                let input =
-                  (active && (active.tagName === 'INPUT' || active.getAttribute('contenteditable') === 'true'))
-                    ? active
-                    : null;
-                if (!input) {
-                  input =
-                    visibleInputs.find((el) => row.contains(el)) ||
-                    (rowRect
-                      ? visibleInputs
-                          .map((el) => ({ el, rect: visibleRect(el) }))
-                          .filter((entry) => entry.rect)
-                          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.el
-                      : null);
-                }
-                if (!input) {
-                  log('Rename input/contenteditable not found in row after clicking rename');
-                  throw new Error('Rename input not found');
-                }
-                log('Found input: ' + input.tagName);
-
-                if (input.tagName === 'INPUT') {
-                  input.focus();
-                  const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-                  if (setter) {
-                    setter.call(input, newTitle);
-                  } else {
-                    input.value = newTitle;
-                  }
-                  input.dispatchEvent(new Event('input', { bubbles: true }));
-                  input.dispatchEvent(new Event('change', { bubbles: true }));
-                } else {
-                  input.focus();
-                  input.textContent = newTitle;
-                  input.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-
-                const saveButtons = Array.from(root.querySelectorAll('button[aria-label="Save"]')).filter((button) => visibleRect(button));
-                const saveButton =
-                  saveButtons.find((button) => row.contains(button)) ||
-                  (rowRect
-                    ? saveButtons
-                        .map((button) => ({ button, rect: visibleRect(button) }))
-                        .filter((entry) => entry.rect)
-                        .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.button
-                    : null);
-                if (saveButton) {
-                  saveButton.click();
-                  await new Promise(r => setTimeout(r, 600));
-                }
-
-                log('Submitting with Enter');
-                input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-                input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-                await new Promise(r => setTimeout(r, 1000));
-
-                const titleNode = row.querySelector('span.truncate') || row.querySelector('span');
-                const currentTitle = (titleNode?.textContent || '').trim();
-                if (currentTitle && currentTitle !== newTitle.trim()) {
-                  return { success: false, error: 'Rename did not apply (saw "' + currentTitle + '")', logs };
-                }
-
-                return { success: true, logs };
+                return { success: true, logs, preferDialog };
               } catch (e) {
-                return { success: false, error: e.message, logs };
+                return { success: false, error: e.message, logs, preferDialog };
               }
             })()`,
             awaitPromise: true,
@@ -808,6 +744,18 @@ export function createGrokAdapter(): Pick<
         }
         if (!info || !info.success) {
           throw new Error(info?.error || 'Rename failed');
+        }
+
+        const renameCommit = await submitInlineRename(client.Runtime, {
+          value: newTitle,
+          rootSelectors: info?.preferDialog
+            ? DEFAULT_DIALOG_SELECTORS
+            : ['nav', 'aside', '.group\\/sidebar-wrapper'],
+          saveButtonMatch: { exact: ['save'] },
+          timeoutMs: 5000,
+        });
+        if (!renameCommit.ok) {
+          throw new Error(renameCommit.reason || 'Rename submit failed');
         }
       } finally {
         await closeHistoryDialog(client);

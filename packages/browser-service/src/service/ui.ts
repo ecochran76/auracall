@@ -869,11 +869,24 @@ export async function submitInlineRename(
         input = root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null);
       } else {
         const match = { includeAny, includeAll, startsWith, exact };
+        const hasMatch =
+          match.includeAny.length || match.includeAll.length || match.startsWith.length || match.exact.length;
         const candidates = Array.from(root.querySelectorAll('input, textarea, [contenteditable=\"true\"]')).filter(visible);
-        input = candidates.find((el) => {
-          const label = normalize(el.getAttribute?.('aria-label') || el.getAttribute?.('placeholder') || el.textContent || '');
-          return matchesLabel(label, match);
-        }) || null;
+        const active = document.activeElement;
+        const activeValid =
+          active &&
+          (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true') &&
+          visible(active);
+        if (activeValid) {
+          input = active;
+        } else if (hasMatch) {
+          input = candidates.find((el) => {
+            const label = normalize(el.getAttribute?.('aria-label') || el.getAttribute?.('placeholder') || el.textContent || '');
+            return matchesLabel(label, match);
+          }) || null;
+        } else {
+          input = candidates[0] || null;
+        }
       }
       if (!input) return { ok: false, reason: 'Rename input not found' };
 

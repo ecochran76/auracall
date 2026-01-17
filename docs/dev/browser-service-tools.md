@@ -70,6 +70,7 @@ faster to implement.
 
 - `submitInlineRename(Runtime, options)`
   - Sets inline rename input value, submits via Enter, optionally clicks Save, and can wait for close.
+  - When no selector/match is provided, it prefers the active element and falls back to the first visible input.
 
 ## Patterns to follow
 
