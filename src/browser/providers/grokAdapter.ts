@@ -15,6 +15,7 @@ import {
   pressDialogButton,
   pressRowAction,
   pressButton,
+  submitInlineRename,
   waitForDialog,
   waitForNotSelector,
   waitForSelector,
@@ -2557,55 +2558,16 @@ async function renameConversationInHistoryDialog(
     throw new Error(clickInfo.reason || 'Rename click failed');
   }
 
-  const inputReady = await waitForSelector(client.Runtime, 'input[aria-label="Rename"]', 3000);
-  if (!inputReady) {
-    throw new Error('Rename input not found');
-  }
-
-  const commitResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const value = ${JSON.stringify(newTitle)};
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('[aria-modal="true"]') ||
-        document.querySelector('dialog') ||
-        document;
-      const input = dialog.querySelector('input[aria-label="Rename"]');
-      if (!input) return { success: false, error: 'Rename input missing' };
-      input.focus();
-      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-      if (setter) {
-        setter.call(input, value);
-      } else {
-        input.value = value;
-      }
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-      input.dispatchEvent(new Event('change', { bubbles: true }));
-      input.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-      input.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }));
-      const saveCandidates = Array.from(dialog.querySelectorAll('button[aria-label="Save"]'));
-      const saveBtn =
-        saveCandidates.find((btn) => input.closest('div')?.contains(btn)) ||
-        saveCandidates[0] ||
-        null;
-      if (saveBtn) saveBtn.click();
-      return { success: true };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const commitInfo = await submitInlineRename(client.Runtime, {
+    value: newTitle,
+    inputSelector: 'input[aria-label="Rename"]',
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    saveButtonMatch: { exact: ['save'] },
+    closeSelector: 'input[aria-label="Rename"]',
+    timeoutMs: 3000,
   });
-
-  if (commitResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${commitResult.exceptionDetails.exception?.description}`);
-  }
-  const commitInfo = commitResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!commitInfo?.success) {
-    throw new Error(commitInfo?.error || 'Rename submit failed');
-  }
-
-  const closed = await waitForNotSelector(client.Runtime, 'input[aria-label="Rename"]', 3000);
-  if (!closed) {
-    throw new Error('Rename input did not close');
+  if (!commitInfo.ok) {
+    throw new Error(commitInfo.reason || 'Rename submit failed');
   }
 }
 
