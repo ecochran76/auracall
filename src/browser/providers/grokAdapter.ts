@@ -10,6 +10,8 @@ import {
   findAndClickByLabel,
   hoverElement,
   isDialogOpen,
+  pressDialogButton,
+  pressRowAction,
   pressButton,
   waitForDialog,
   waitForNotSelector,
@@ -2602,64 +2604,14 @@ async function renameConversationInHistoryDialog(
     throw new Error('Rename button not found after hover');
   }
 
-  const clickResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const selector = ${JSON.stringify(info.itemSelector)};
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('[aria-modal="true"]') ||
-        document.querySelector('dialog');
-      if (!dialog) return { success: false, error: 'History dialog not found' };
-      const item = dialog.querySelector(selector);
-      if (!item) return { success: false, error: 'Conversation row not found' };
-      const row =
-        item.closest('div.grid') ||
-        item.closest('div[class*="rounded"]') ||
-        item.closest('li') ||
-        item.closest('div') ||
-        item.parentElement;
-      if (!row) return { success: false, error: 'Conversation row container not found' };
-
-      const visibleRect = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 ? rect : null;
-      };
-      const rowRect = visibleRect(row);
-      const distanceToRow = (rect) => {
-        if (!rowRect) return 0;
-        const dx = Math.abs(rect.x - rowRect.x);
-        const dy = Math.abs(rect.y - rowRect.y);
-        return dx + dy;
-      };
-      const candidates = [
-        ...Array.from(row.querySelectorAll('button[aria-label="Rename"], button[aria-label*="rename" i]')),
-        ...Array.from(dialog.querySelectorAll('button[aria-label="Rename"], button[aria-label*="rename" i]')),
-      ].filter((btn, idx, arr) => arr.indexOf(btn) === idx);
-      if (candidates.length === 0) {
-        return { success: false, error: 'Rename button not found in row' };
-      }
-      const pickClosest = (items) => {
-        if (!rowRect) return items[0] || null;
-        return items
-          .map((btn) => ({ btn, rect: visibleRect(btn) }))
-          .filter((entry) => entry.rect)
-          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.btn || null;
-      };
-      const renameBtn = candidates.find((btn) => row.contains(btn)) || pickClosest(candidates);
-      if (!renameBtn) return { success: false, error: 'Rename button not found in row' };
-      renameBtn.click();
-      return { success: true };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const clickInfo = await pressRowAction(client.Runtime, {
+    anchorSelector: info.itemSelector,
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    actionMatch: { exact: ['rename'] },
+    timeoutMs: 1000,
   });
-
-  if (clickResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${clickResult.exceptionDetails.exception?.description}`);
-  }
-  const clickInfo = clickResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!clickInfo?.success) {
-    throw new Error(clickInfo?.error || 'Rename click failed');
+  if (!clickInfo.ok) {
+    throw new Error(clickInfo.reason || 'Rename click failed');
   }
 
   const inputReady = await waitForSelector(client.Runtime, 'input[aria-label="Rename"]', 3000);
@@ -2849,63 +2801,14 @@ async function deleteConversationInHistoryDialog(
     throw new Error('Delete button not found after hover');
   }
 
-  const deleteClick = await client.Runtime.evaluate({
-    expression: `(() => {
-      const selector = ${JSON.stringify(info.itemSelector)};
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('[aria-modal="true"]') ||
-        document.querySelector('dialog');
-      if (!dialog) return { success: false, error: 'History dialog not found' };
-      const item = dialog.querySelector(selector);
-      if (!item) return { success: false, error: 'Conversation row not found' };
-      const row =
-        item.closest('div.grid') ||
-        item.closest('div[class*="rounded"]') ||
-        item.closest('li') ||
-        item.closest('div') ||
-        item.parentElement;
-      if (!row) return { success: false, error: 'Conversation row container not found' };
-
-      const visibleRect = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 ? rect : null;
-      };
-      const rowRect = visibleRect(row);
-      const distanceToRow = (rect) => {
-        if (!rowRect) return 0;
-        const dx = Math.abs(rect.x - rowRect.x);
-        const dy = Math.abs(rect.y - rowRect.y);
-        return dx + dy;
-      };
-      const candidates = [
-        ...Array.from(row.querySelectorAll('button[aria-label="Delete"], button[aria-label*="delete" i]')),
-        ...Array.from(dialog.querySelectorAll('button[aria-label="Delete"], button[aria-label*="delete" i]')),
-      ].filter((btn, idx, arr) => arr.indexOf(btn) === idx);
-      if (candidates.length === 0) {
-        return { success: false, error: 'Delete button not found in row' };
-      }
-      const pickClosest = (items) => {
-        if (!rowRect) return items[0] || null;
-        return items
-          .map((btn) => ({ btn, rect: visibleRect(btn) }))
-          .filter((entry) => entry.rect)
-          .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0]?.btn || null;
-      };
-      const deleteBtn = candidates.find((btn) => row.contains(btn)) || pickClosest(candidates);
-      if (!deleteBtn) return { success: false, error: 'Delete button not found in row' };
-      deleteBtn.click();
-      return { success: true };
-    })()`,
-    returnByValue: true,
+  const deleteInfo = await pressRowAction(client.Runtime, {
+    anchorSelector: info.itemSelector,
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    actionMatch: { exact: ['delete'] },
+    timeoutMs: 1000,
   });
-
-  if (deleteClick.exceptionDetails) {
-    throw new Error(`JS Exception: ${deleteClick.exceptionDetails.exception?.description}`);
-  }
-  const deleteInfo = deleteClick.result?.value as { success: boolean; error?: string } | undefined;
-  if (!deleteInfo?.success) {
-    throw new Error(deleteInfo?.error || 'Delete click failed');
+  if (!deleteInfo.ok) {
+    throw new Error(deleteInfo.reason || 'Delete click failed');
   }
 
   const confirmReady = await waitForSelector(
@@ -2917,36 +2820,14 @@ async function deleteConversationInHistoryDialog(
     throw new Error('Delete confirmation not found');
   }
 
-  const confirmResult = await client.Runtime.evaluate({
-    expression: `(() => {
-      const dialog =
-        document.querySelector('[role="dialog"]') ||
-        document.querySelector('[aria-modal="true"]') ||
-        document.querySelector('dialog');
-      if (!dialog) return { success: false, error: 'History dialog not found' };
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const buttons = Array.from(dialog.querySelectorAll('button'));
-      const candidates = buttons.filter((btn) => {
-        const label = normalize(btn.getAttribute('aria-label'));
-        const text = normalize(btn.textContent);
-        return label === 'delete' || text === 'delete' || label.includes('delete') || text.includes('delete');
-      });
-      if (candidates.length === 0) {
-        return { success: false, error: 'Delete confirmation not found' };
-      }
-      const confirm = candidates[candidates.length - 1];
-      confirm.click();
-      return { success: true };
-    })()`,
-    returnByValue: true,
+  const confirmInfo = await pressDialogButton(client.Runtime, {
+    match: { includeAny: ['delete'] },
+    rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    preferLast: true,
+    timeoutMs: 1000,
   });
-
-  if (confirmResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${confirmResult.exceptionDetails.exception?.description}`);
-  }
-  const confirmInfo = confirmResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!confirmInfo?.success) {
-    throw new Error(confirmInfo?.error || 'Delete confirmation failed');
+  if (!confirmInfo.ok) {
+    throw new Error(confirmInfo.reason || 'Delete confirmation failed');
   }
 
   const deleted = await waitForNotSelector(

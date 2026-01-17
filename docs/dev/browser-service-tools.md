@@ -55,6 +55,13 @@ faster to implement.
   - Scrolls an element into view, computes a stable hover point, and moves the mouse there.
   - Verifies the hover point with `elementFromPoint` to ensure hover-driven controls appear.
 
+- `pressRowAction(Runtime, options)`
+  - Finds a row action button (Rename/Delete/etc.) near an anchor element and clicks it.
+  - Uses proximity to the row to disambiguate buttons outside the row.
+
+- `pressDialogButton(Runtime, options)`
+  - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.
+
 ## Patterns to follow
 
 - Prefer event-driven waits (`waitForSelector`, `waitForDialog`) over fixed

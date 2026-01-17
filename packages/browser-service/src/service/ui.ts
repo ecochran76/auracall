@@ -76,6 +76,20 @@ export type HoverElementResult = {
   element?: { tag?: string | null; ariaLabel?: string | null; className?: string | null; id?: string | null };
 };
 
+export type PressRowActionOptions = {
+  anchorSelector: string;
+  actionMatch: LabelMatchOptions;
+  rootSelectors?: string[];
+  timeoutMs?: number;
+};
+
+export type PressDialogButtonOptions = {
+  match: LabelMatchOptions;
+  rootSelectors?: string[];
+  timeoutMs?: number;
+  preferLast?: boolean;
+};
+
 export async function isDialogOpen(
   Runtime: ChromeClient['Runtime'],
   dialogSelectors: readonly string[] = DEFAULT_DIALOG_SELECTORS,
@@ -223,6 +237,159 @@ export async function hoverElement(
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   return { ok: false, reason: lastError || 'Hover target not found' };
+}
+
+export async function pressRowAction(
+  Runtime: ChromeClient['Runtime'],
+  options: PressRowActionOptions,
+): Promise<{ ok: boolean; reason?: string; matchedLabel?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await Runtime.evaluate({
+      expression: `(() => {
+        const anchorSelector = ${JSON.stringify(options.anchorSelector)};
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+        const includeAny = ${JSON.stringify(options.actionMatch.includeAny ?? [])};
+        const includeAll = ${JSON.stringify(options.actionMatch.includeAll ?? [])};
+        const startsWith = ${JSON.stringify(options.actionMatch.startsWith ?? [])};
+        const exact = ${JSON.stringify(options.actionMatch.exact ?? [])};
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const matches = (label) => {
+          if (!label) return false;
+          if (exact.length && exact.includes(label)) return true;
+          if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
+          if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
+          if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
+          return false;
+        };
+
+        const roots = rootSelectors.length
+          ? rootSelectors.map((selector) => document.querySelector(selector)).filter(Boolean)
+          : [document];
+        const root = roots[0] || document;
+        let anchor = root.querySelector(anchorSelector);
+        if (!anchor && root !== document) {
+          anchor = document.querySelector(anchorSelector);
+        }
+        if (!anchor) {
+          return { ok: false, reason: 'Anchor not found' };
+        }
+        const row =
+          anchor.closest('div.grid') ||
+          anchor.closest('div[class*="rounded"]') ||
+          anchor.closest('li') ||
+          anchor.closest('div') ||
+          anchor.parentElement;
+        if (!row) {
+          return { ok: false, reason: 'Row container not found' };
+        }
+
+        const visibleRect = (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0 ? rect : null;
+        };
+        const rowRect = visibleRect(row);
+        const distanceToRow = (rect) => {
+          if (!rowRect) return 0;
+          const dx = Math.abs(rect.x - rowRect.x);
+          const dy = Math.abs(rect.y - rowRect.y);
+          return dx + dy;
+        };
+
+        const candidates = Array.from(
+          row.querySelectorAll('button, [role="button"]'),
+        ).concat(Array.from(root.querySelectorAll('button, [role="button"]')));
+
+        const matching = candidates
+          .map((button) => ({
+            button,
+            label: normalize(button.getAttribute?.('aria-label') || button.textContent || ''),
+          }))
+          .filter((entry) => matches(entry.label));
+
+        if (matching.length === 0) {
+          return { ok: false, reason: 'Action button not found' };
+        }
+
+        let target =
+          matching.find((entry) => row.contains(entry.button)) ||
+          null;
+        if (!target && rowRect) {
+          target =
+            matching
+              .map((entry) => ({ ...entry, rect: visibleRect(entry.button) }))
+              .filter((entry) => entry.rect)
+              .sort((a, b) => distanceToRow(a.rect) - distanceToRow(b.rect))[0] || null;
+        }
+        if (!target) {
+          target = matching[0];
+        }
+        target.button.click();
+        return { ok: true, matchedLabel: target.label };
+      })()`,
+      returnByValue: true,
+    });
+    const info = result?.value as { ok: boolean; reason?: string; matchedLabel?: string } | undefined;
+    if (info?.ok) {
+      return info;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return { ok: false, reason: 'Action button not found' };
+}
+
+export async function pressDialogButton(
+  Runtime: ChromeClient['Runtime'],
+  options: PressDialogButtonOptions,
+): Promise<{ ok: boolean; reason?: string; matchedLabel?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await Runtime.evaluate({
+      expression: `(() => {
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? DEFAULT_DIALOG_SELECTORS)};
+        const includeAny = ${JSON.stringify(options.match.includeAny ?? [])};
+        const includeAll = ${JSON.stringify(options.match.includeAll ?? [])};
+        const startsWith = ${JSON.stringify(options.match.startsWith ?? [])};
+        const exact = ${JSON.stringify(options.match.exact ?? [])};
+        const preferLast = ${JSON.stringify(Boolean(options.preferLast))};
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const matches = (label) => {
+          if (!label) return false;
+          if (exact.length && exact.includes(label)) return true;
+          if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
+          if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
+          if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
+          return false;
+        };
+        const roots = rootSelectors
+          .map((selector) => document.querySelector(selector))
+          .filter(Boolean);
+        const root = roots[0] || document;
+        const buttons = Array.from(root.querySelectorAll('button, [role="button"]'));
+        const matchesList = buttons
+          .map((button) => ({
+            button,
+            label: normalize(button.getAttribute?.('aria-label') || button.textContent || ''),
+          }))
+          .filter((entry) => matches(entry.label));
+        if (matchesList.length === 0) {
+          return { ok: false, reason: 'Dialog button not found' };
+        }
+        const target = preferLast ? matchesList[matchesList.length - 1] : matchesList[0];
+        target.button.click();
+        return { ok: true, matchedLabel: target.label };
+      })()`,
+      returnByValue: true,
+    });
+    const info = result?.value as { ok: boolean; reason?: string; matchedLabel?: string } | undefined;
+    if (info?.ok) {
+      return info;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  return { ok: false, reason: 'Dialog button not found' };
 }
 
 export async function findAndClickByLabel(

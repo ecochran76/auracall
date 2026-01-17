@@ -21,6 +21,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - Hover over rows to surface hidden controls.
    - Use pointer events when click handlers are picky.
    - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
+   - Use `pressRowAction` for hover-revealed Rename/Delete actions instead of scanning the whole dialog.
 
 5) **Set inputs reliably**
    - For inputs, use the native setter + `input`/`change` events.
