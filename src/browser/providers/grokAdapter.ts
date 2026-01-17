@@ -10,6 +10,8 @@ import {
   findAndClickByLabel,
   hoverElement,
   isDialogOpen,
+  openAndSelectMenuItem,
+  openMenu,
   pressDialogButton,
   pressRowAction,
   pressButton,
@@ -1830,86 +1832,16 @@ export async function openProjectMenuButton(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  const logPrefix = options?.logPrefix ?? 'browser-open-project-menu';
-  await waitForSelector(
-    client.Runtime,
-    'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
-    5000,
-  );
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
-      };
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      const findMenuButton = () => {
-        const root =
-          document.querySelector('div.group\\\\/sidebar-wrapper') ||
-          document.querySelector('[data-sidebar="sidebar"]') ||
-          document.body;
-        const scopedButtons = Array.from(root.querySelectorAll('button[aria-label]')).filter(visible);
-        const labeled = scopedButtons.find((button) => {
-          const label = (button.getAttribute('aria-label') || '').toLowerCase();
-          return label === 'open menu' || label === 'options';
-        });
-        if (labeled) return labeled;
-        const menus = Array.from(root.querySelectorAll('button[aria-haspopup="menu"]')).filter(visible);
-        const ellipsis = menus.find((button) => button.querySelector('svg.lucide-ellipsis'));
-        if (ellipsis) return ellipsis;
-        return (
-          menus.find((button) => {
-            const label = (button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
-            return label.includes('menu') || label.includes('options') || label.includes('more');
-          }) || null
-        );
-      };
-
-      const menuBtn = findMenuButton();
-
-      if (!menuBtn) {
-        const labels = Array.from(document.querySelectorAll('button[aria-label]'))
-          .map((button) => button.getAttribute('aria-label'))
-          .filter(Boolean)
-          .slice(0, 12);
-        return { success: false, error: 'Project menu button not found (labels: ' + labels.join(', ') + ')', logs };
-      }
-
-      menuBtn.scrollIntoView({ block: 'center', inline: 'center' });
-      const pointerOpts = { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 };
-      menuBtn.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
-      menuBtn.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
-      menuBtn.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
-      menuBtn.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
-      menuBtn.dispatchEvent(new MouseEvent('click', pointerOpts));
-
-      log('Project menu opened');
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const pressed = await openMenu(client.Runtime, {
+    trigger: {
+      selector: 'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
+      rootSelectors: ['div.group\\/sidebar-wrapper', '[data-sidebar="sidebar"]'],
+    },
+    menuSelector: '[role="menuitem"], [data-radix-collection-item]',
+    timeoutMs: 5000,
   });
-
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-  }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Project menu button not found');
-  }
-  const opened = await waitForSelector(
-    client.Runtime,
-    '[role="menuitem"], [data-radix-collection-item]',
-    3000,
-  );
-  if (!opened) {
-    throw new Error('Project menu opened, but no menu items found');
+  if (!pressed.ok) {
+    throw new Error('Project menu button not found');
   }
 }
 
@@ -1977,8 +1909,19 @@ async function openProjectMenuAndSelect(
   label: string,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  await openProjectMenuButton(client, options);
-  await clickProjectMenuItem(client, label, options);
+  const clicked = await openAndSelectMenuItem(client.Runtime, {
+    trigger: {
+      selector: 'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
+      rootSelectors: ['div.group\\/sidebar-wrapper', '[data-sidebar="sidebar"]'],
+    },
+    itemMatch: { exact: [label.toLowerCase()] },
+    menuSelector: '[role="menuitem"], [data-radix-collection-item]',
+    timeoutMs: 5000,
+    closeMenuAfter: true,
+  });
+  if (!clicked) {
+    throw new Error(`Menu item not found: ${label}`);
+  }
 }
 
 export async function clickProjectRemoveConfirmation(

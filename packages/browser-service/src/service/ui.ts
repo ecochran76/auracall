@@ -55,6 +55,14 @@ export type SelectFromListboxOptions = {
   closeAfter?: boolean;
 };
 
+export type OpenAndSelectMenuItemOptions = {
+  trigger: PressButtonOptions;
+  itemMatch: LabelMatchOptions;
+  menuSelector?: string;
+  timeoutMs?: number;
+  closeMenuAfter?: boolean;
+};
+
 export type TogglePanelOptions = {
   trigger: PressButtonOptions;
   isOpenSelector: string;
@@ -626,8 +634,12 @@ export async function openMenu(
         return { ok: false };
       }
       const listId = match.getAttribute?.('aria-controls') || '';
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-      match.dispatchEvent(clickEvent);
+      const pointerOpts = { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 };
+      match.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
+      match.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
+      match.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
+      match.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
+      match.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
       return { ok: true, listId };
     })()`,
     returnByValue: true,
@@ -643,6 +655,27 @@ export async function openMenu(
     timeoutMs,
   );
   return ready ? { ok: true, menuSelector } : { ok: false };
+}
+
+export async function openAndSelectMenuItem(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenAndSelectMenuItemOptions,
+): Promise<boolean> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const opened = await openMenu(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.menuSelector,
+    timeoutMs,
+  });
+  if (!opened.ok) return false;
+  const menuSelector = opened.menuSelector || options.menuSelector;
+  const clicked = await selectMenuItem(Runtime, {
+    menuSelector,
+    itemMatch: options.itemMatch,
+    timeoutMs,
+    closeMenuAfter: options.closeMenuAfter,
+  });
+  return clicked;
 }
 
 export async function selectMenuItem(

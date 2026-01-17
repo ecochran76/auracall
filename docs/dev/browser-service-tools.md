@@ -45,6 +45,9 @@ faster to implement.
 - `selectFromListbox(Runtime, options)`
   - Opens a listbox via trigger and selects an option.
 
+- `openAndSelectMenuItem(Runtime, options)`
+  - Opens a menu via trigger, selects an item, and optionally waits for close.
+
 - `setInputValue(Runtime, options)`
   - Sets input/textarea/contenteditable value with input/change events.
 
