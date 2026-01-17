@@ -48,6 +48,9 @@ faster to implement.
 - `openAndSelectMenuItem(Runtime, options)`
   - Opens a menu via trigger, selects an item, and optionally waits for close.
 
+- `openAndSelectListbox(Runtime, options)`
+  - Opens a listbox via trigger, selects an option, and optionally waits for close.
+
 - `setInputValue(Runtime, options)`
   - Sets input/textarea/contenteditable value with input/change events.
 
@@ -64,6 +67,9 @@ faster to implement.
 
 - `pressDialogButton(Runtime, options)`
   - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.
+
+- `submitInlineRename(Runtime, options)`
+  - Sets inline rename input value, submits via Enter, optionally clicks Save, and can wait for close.
 
 ## Patterns to follow
 

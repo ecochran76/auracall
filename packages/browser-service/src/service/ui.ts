@@ -63,6 +63,14 @@ export type OpenAndSelectMenuItemOptions = {
   closeMenuAfter?: boolean;
 };
 
+export type OpenAndSelectListboxOptions = {
+  trigger: PressButtonOptions;
+  itemMatch: LabelMatchOptions;
+  listboxSelector?: string;
+  timeoutMs?: number;
+  closeAfter?: boolean;
+};
+
 export type TogglePanelOptions = {
   trigger: PressButtonOptions;
   isOpenSelector: string;
@@ -96,6 +104,16 @@ export type PressDialogButtonOptions = {
   rootSelectors?: string[];
   timeoutMs?: number;
   preferLast?: boolean;
+};
+
+export type SubmitInlineRenameOptions = {
+  value: string;
+  inputSelector?: string;
+  inputMatch?: LabelMatchOptions;
+  rootSelectors?: string[];
+  saveButtonMatch?: LabelMatchOptions;
+  timeoutMs?: number;
+  closeSelector?: string;
 };
 
 export async function isDialogOpen(
@@ -721,6 +739,13 @@ export async function selectFromListbox(
   return true;
 }
 
+export async function openAndSelectListbox(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenAndSelectListboxOptions,
+): Promise<boolean> {
+  return selectFromListbox(Runtime, options);
+}
+
 export async function setInputValue(
   Runtime: ChromeClient['Runtime'],
   options: SetInputValueOptions,
@@ -795,6 +820,119 @@ export async function setInputValue(
     returnByValue: true,
   });
   return Boolean((result.result?.value as { ok?: boolean } | undefined)?.ok);
+}
+
+export async function submitInlineRename(
+  Runtime: ChromeClient['Runtime'],
+  options: SubmitInlineRenameOptions,
+): Promise<{ ok: boolean; reason?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  if (options.inputSelector) {
+    const ready = await waitForSelector(Runtime, options.inputSelector, timeoutMs);
+    if (!ready) return { ok: false, reason: 'Rename input not found' };
+  }
+
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const value = ${JSON.stringify(options.value)};
+      const selector = ${JSON.stringify(options.inputSelector ?? null)};
+      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+      const includeAny = ${JSON.stringify(options.inputMatch?.includeAny ?? [])};
+      const includeAll = ${JSON.stringify(options.inputMatch?.includeAll ?? [])};
+      const startsWith = ${JSON.stringify(options.inputMatch?.startsWith ?? [])};
+      const exact = ${JSON.stringify(options.inputMatch?.exact ?? [])};
+      const saveIncludeAny = ${JSON.stringify(options.saveButtonMatch?.includeAny ?? [])};
+      const saveIncludeAll = ${JSON.stringify(options.saveButtonMatch?.includeAll ?? [])};
+      const saveStartsWith = ${JSON.stringify(options.saveButtonMatch?.startsWith ?? [])};
+      const saveExact = ${JSON.stringify(options.saveButtonMatch?.exact ?? [])};
+
+      const normalize = (v) => String(v || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const matchesLabel = (label, match) => {
+        if (!label) return false;
+        if (match.exact.length && match.exact.includes(label)) return true;
+        if (match.startsWith.length && match.startsWith.some((token) => label.startsWith(token))) return true;
+        if (match.includeAll.length && match.includeAll.every((token) => label.includes(token))) return true;
+        if (match.includeAny.length && match.includeAny.some((token) => label.includes(token))) return true;
+        return false;
+      };
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const roots = rootSelectors.length
+        ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+        : [document];
+      const root = roots[0] || document;
+
+      let input = null;
+      if (selector) {
+        input = root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null);
+      } else {
+        const match = { includeAny, includeAll, startsWith, exact };
+        const candidates = Array.from(root.querySelectorAll('input, textarea, [contenteditable=\"true\"]')).filter(visible);
+        input = candidates.find((el) => {
+          const label = normalize(el.getAttribute?.('aria-label') || el.getAttribute?.('placeholder') || el.textContent || '');
+          return matchesLabel(label, match);
+        }) || null;
+      }
+      if (!input) return { ok: false, reason: 'Rename input not found' };
+
+      input.focus();
+      if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
+        const proto = input.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
+        const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+        if (setter) {
+          setter.call(input, value);
+        } else {
+          input.value = value;
+        }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        input.textContent = value;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+
+      const saveMatch = {
+        includeAny: saveIncludeAny,
+        includeAll: saveIncludeAll,
+        startsWith: saveStartsWith,
+        exact: saveExact,
+      };
+      if (saveMatch.includeAny.length || saveMatch.includeAll.length || saveMatch.startsWith.length || saveMatch.exact.length) {
+        const saveButtons = Array.from(root.querySelectorAll('button[aria-label], button')).filter(visible);
+        const saveBtn = saveButtons.find((btn) => {
+          const label = normalize(btn.getAttribute?.('aria-label') || btn.textContent || '');
+          return matchesLabel(label, saveMatch);
+        }) || null;
+        if (saveBtn) {
+          saveBtn.click();
+        }
+      }
+
+      input.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+      );
+      input.dispatchEvent(
+        new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+      );
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+
+  const info = result.result?.value as { ok: boolean; reason?: string } | undefined;
+  if (!info?.ok) {
+    return { ok: false, reason: info?.reason || 'Rename submit failed' };
+  }
+
+  if (options.closeSelector) {
+    const closed = await waitForNotSelector(Runtime, options.closeSelector, timeoutMs);
+    if (!closed) {
+      return { ok: false, reason: 'Rename input did not close' };
+    }
+  }
+  return { ok: true };
 }
 
 export async function togglePanel(

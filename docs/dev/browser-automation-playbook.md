@@ -26,6 +26,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 5) **Set inputs reliably**
    - For inputs, use the native setter + `input`/`change` events.
    - For contenteditable, set `textContent` + `input` event.
+   - Prefer `submitInlineRename` for inline rename flows to handle save + close logic.
 
 6) **Verify state changes**
    - Confirm edit mode exits.
