@@ -104,6 +104,13 @@ faster to implement.
   toggles, menu open/close), and keep Grok-specific selectors only in the
   adapter.
 
+## Triage workflow (for new UI flows)
+
+1) Start with a scoped `queryRowsByText` to confirm the row/section exists.
+2) If actions are hover-only, use `hoverRowAndClickAction` before adding new selectors.
+3) If the list is collapsible, add `ensureCollapsibleExpanded` before any row queries.
+4) Only add raw selectors after the above helpers are proven insufficient.
+
 ## Cookbook
 
 - Open a modal and wait for it to render

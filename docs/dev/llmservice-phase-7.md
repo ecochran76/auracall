@@ -89,6 +89,7 @@
 - Project instructions CRUD.
 - Knowledge file CRUD.
 - Pull/push to workspace.
+- Project file list/add/remove (sources tab).
 
 **Deliverables**
 - `llmService` project API:
@@ -97,12 +98,18 @@
 - `grokService` implements:
   - UI flows for each operation.
   - DOM selectors isolated to grok adapter.
+- File operations:
+  - `listProjectFiles`, `uploadProjectFiles`, `deleteProjectFile` (Grok Sources tab).
+  - Reuse shared UI helpers for hover actions and collapsible lists.
 
 **TODO**
 - Grok project clone: menu button lookup still fails in clone flow even though project rename works.
   - Clone flow should share the same menu-button selection logic as rename.
   - Add DOM probe instructions if selectors don’t resolve.
 - Grok project instructions read: Edit Instructions button is brittle; add probe output if selector fails.
+- File operations:
+  - Confirm sources tab flow is stable after model/prompt changes.
+  - Add explicit handling when the Files section is collapsed.
 
 ### 4) Conversation Support (GrokService + LlmService)
 **Scope**
@@ -126,11 +133,15 @@
 - Detect UI changes:
   - missing model picker entries
   - changed selectors
+- Detect cache mismatches after mutations (create/rename/clone/delete).
 
 **Deliverables**
 - Consistent error taxonomy (`LlmServiceError`, `NavigationError`, `AuthError`, `UiMismatchError`).
 - Provider hooks to map UI failures to typed errors.
 - Diagnostic hints in CLI output + `oracle doctor` hooks.
+- Post-mutation verification checklist:
+  - Confirm URL change and extract ID after create/clone/rename flows.
+  - Update cache deterministically when the URL confirms the new target.
 
 ### 6) Tests & Smoke
 **Scope**
@@ -161,3 +172,4 @@
 - Decision: `--force` only bypasses duplicate prompt guard; reuse/new conversation is controlled separately.
 - Prompt reuse policy: reuse only when an explicit conversation selector is provided; otherwise start new.
 - Open: branching context representation (raw transcript only vs transcript + normalized context).
+- Open: file operation defaults (fail fast when project name resolves to a different ID vs warn/confirm).
