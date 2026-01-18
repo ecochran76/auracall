@@ -825,12 +825,17 @@ export async function openMenu(
     return { ok: false };
   }
   const menuSelector = info.listId ? `#${info.listId}` : options.menuSelector;
-  const ready = await waitForSelector(
-    Runtime,
-    menuSelector || '[role="menu"], [role="listbox"], [data-radix-collection-item]',
-    timeoutMs,
-  );
-  return ready ? { ok: true, menuSelector } : { ok: false };
+  const fallbackSelector =
+    options.menuSelector || '[role="menu"], [role="listbox"], [data-radix-collection-item]';
+  const primaryReady = await waitForSelector(Runtime, menuSelector || fallbackSelector, timeoutMs);
+  if (primaryReady) {
+    return { ok: true, menuSelector };
+  }
+  if (menuSelector && fallbackSelector && menuSelector !== fallbackSelector) {
+    const fallbackReady = await waitForSelector(Runtime, fallbackSelector, timeoutMs);
+    return fallbackReady ? { ok: true, menuSelector: fallbackSelector } : { ok: false };
+  }
+  return { ok: false };
 }
 
 export async function openAndSelectMenuItem(

@@ -958,16 +958,33 @@ export function createGrokAdapter(): Pick<
     async cloneProject(
       projectId: string,
       options?: BrowserProviderListOptions,
-    ): Promise<void> {
+    ): Promise<Project | null> {
       const targetUrl = `https://grok.com/project/${projectId}`;
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
+      let created: Project | null = null;
       try {
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
+        const { result: beforeResult } = await client.Runtime.evaluate({
+          expression: 'location.href',
+          returnByValue: true,
+        });
+        const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
         await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-clone-project' });
         await waitForNotSelector(client.Runtime, '[role="menuitem"], [data-radix-collection-item]', 2000);
+        const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
+        const match = projectUrl?.match(/\/project\/([^/?#]+)/);
+        const name = await readProjectNameFromPage(client);
+        if (match?.[1]) {
+          created = {
+            id: match[1],
+            name: name ?? match[1],
+            provider: 'grok',
+            url: projectUrl ?? undefined,
+          };
+        }
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -975,6 +992,7 @@ export function createGrokAdapter(): Pick<
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+      return created;
     },
 
     async openProjectMenu(
@@ -2605,6 +2623,23 @@ async function waitForProjectUrl(
   return null;
 }
 
+async function readProjectNameFromPage(client: ChromeClient): Promise<string | null> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const input = document.querySelector('input[aria-label="Project name"]');
+      if (input && input.value) return String(input.value || '').trim();
+      const header = document.querySelector('h1, h2, header h1, header h2');
+      if (header && header.textContent) return String(header.textContent || '').trim();
+      const title = document.title || '';
+      if (!title) return null;
+      return title.replace(/\\s*-\\s*Grok\\s*$/i, '').trim();
+    })()`,
+    returnByValue: true,
+  });
+  const name = typeof result?.value === 'string' ? result.value.trim() : '';
+  return name.length > 0 ? name : null;
+}
+
 async function connectToGrokProjectTab(
   options: BrowserProviderListOptions | undefined,
   projectId: string | null,
@@ -2733,15 +2768,94 @@ export async function openProjectMenuButton(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<void> {
+  await waitForSelector(client.Runtime, 'button[aria-label="Open menu"]', 5000);
+  const projectName = await readProjectNameFromPage(client);
+  const tagResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const name = ${JSON.stringify(projectName ?? '')};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const target = normalize(name);
+      const candidates = Array.from(document.querySelectorAll('button[aria-label="Open menu"], button[aria-haspopup="menu"]'));
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      if (target) {
+        const textNodes = Array.from(document.querySelectorAll('h1, h2, h3, div, span'))
+          .filter((el) => visible(el))
+          .filter((el) => normalize(el.textContent || '') === target);
+        for (const node of textNodes) {
+          let container = node.closest('header, section, div') || node.parentElement;
+          for (let i = 0; i < 4 && container; i += 1) {
+            const button = container.querySelector('button[aria-label="Open menu"]');
+            if (button && visible(button)) {
+              container.setAttribute('data-oracle-project-menu-root', 'true');
+              return { ok: true };
+            }
+            container = container.parentElement;
+          }
+        }
+      }
+      const tablist = document.querySelector('[role="tablist"]');
+      if (tablist) {
+        let node = tablist;
+        for (let i = 0; i < 6 && node; i += 1) {
+          const container = node.closest('div') || node.parentElement;
+          if (container) {
+            const button = container.querySelector('button[aria-label="Open menu"]');
+            if (button && visible(button)) {
+              container.setAttribute('data-oracle-project-menu-root', 'true');
+              return { ok: true };
+            }
+          }
+          node = node.parentElement;
+        }
+      }
+      const match = candidates.find((button) => {
+        if (!visible(button)) return false;
+        if (!target) return false;
+        const container = button.closest('header, section, div') || button.parentElement;
+        const text = normalize(container?.textContent || '');
+        return text.includes(target);
+      });
+      if (!match) return { ok: false };
+      const root = match.closest('header, section, div') || match.parentElement || document.body;
+      root.setAttribute('data-oracle-project-menu-root', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const tagged = tagResult.result?.value as { ok?: boolean } | undefined;
+  if (tagged?.ok) {
+    const opened = await openMenu(client.Runtime, {
+      trigger: {
+        match: { exact: ['open menu'] },
+        rootSelectors: ['[data-oracle-project-menu-root="true"]'],
+      },
+      menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+      timeoutMs: 5000,
+    });
+    if (opened.ok) {
+      return;
+    }
+  }
   const pressed = await openMenu(client.Runtime, {
     trigger: {
-      selector: 'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
+      match: { exact: ['open menu'], includeAny: ['options'] },
       rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
     },
-    menuSelector: '[role="menuitem"], [data-radix-collection-item]',
+    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
     timeoutMs: 5000,
   });
-  if (!pressed.ok) {
+  if (pressed.ok) {
+    return;
+  }
+  const globalOpen = await openMenu(client.Runtime, {
+    trigger: { match: { exact: ['open menu'], includeAny: ['options'] } },
+    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    timeoutMs: 5000,
+  });
+  if (!globalOpen.ok) {
     throw new Error('Project menu button not found');
   }
 }
@@ -2775,7 +2889,10 @@ export async function clickProjectMenuItem(
         const items = Array.from(
           document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]')
         ).filter(visible);
-        const match = items.find((el) => (el.textContent || '').trim().toLowerCase() === target);
+        const match = items.find((el) => {
+          const text = (el.textContent || '').trim().toLowerCase();
+          return text === target || text.includes(target);
+        });
         return { match, items };
       };
 
@@ -2810,19 +2927,8 @@ async function openProjectMenuAndSelect(
   label: string,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  const clicked = await openAndSelectMenuItem(client.Runtime, {
-    trigger: {
-      selector: 'button[aria-label="Open menu"], button[aria-label="Options"], button[aria-haspopup="menu"]',
-      rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
-    },
-    itemMatch: { exact: [label.toLowerCase()] },
-    menuSelector: '[role="menuitem"], [data-radix-collection-item]',
-    timeoutMs: 5000,
-    closeMenuAfter: true,
-  });
-  if (!clicked) {
-    throw new Error(`Menu item not found: ${label}`);
-  }
+  await openProjectMenuButton(client, options);
+  await clickProjectMenuItem(client, label, options);
 }
 
 export async function clickProjectRemoveConfirmation(

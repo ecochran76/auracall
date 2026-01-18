@@ -58,7 +58,7 @@ export interface BrowserProvider {
   listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
   listConversations?: (projectId?: string, options?: BrowserProviderListOptions) => Promise<unknown>;
   renameProject?: (projectId: string, newTitle: string, options?: BrowserProviderListOptions) => Promise<void>;
-  cloneProject?: (projectId: string, options?: BrowserProviderListOptions) => Promise<void>;
+  cloneProject?: (projectId: string, options?: BrowserProviderListOptions) => Promise<Project | null>;
   openProjectMenu?: (projectId: string, options?: BrowserProviderListOptions) => Promise<void>;
   selectRenameProjectItem?: (projectId: string, options?: BrowserProviderListOptions) => Promise<void>;
   selectCloneProjectItem?: (projectId: string, options?: BrowserProviderListOptions) => Promise<void>;

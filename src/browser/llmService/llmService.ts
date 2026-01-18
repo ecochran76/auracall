@@ -238,16 +238,17 @@ export abstract class LlmService {
   async cloneProject(
     projectId: string,
     options?: { listOptions?: BrowserProviderListOptions },
-  ): Promise<void> {
+  ): Promise<Project | null> {
     if (!this.provider.cloneProject) {
       throw new Error(`Project clone is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     await this.ensureValidProjectUrl(projectId, { listOptions });
-    await this.withRetry(
-      () => this.provider.cloneProject?.(projectId, listOptions) as Promise<void>,
+    const created = await this.withRetry(
+      () => this.provider.cloneProject?.(projectId, listOptions) as Promise<Project | null>,
       { action: 'cloneProject' },
     );
+    return created ?? null;
   }
 
   async openProjectMenu(

@@ -21,6 +21,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-01-14
+- Area: Grok project menu (clone/rename) + menu helpers
+- Symptom: `projects clone` opened the user/profile menu (items like Settings/Help) and failed to find Clone; rename failed right after clone.
+- Root cause: `openMenu` trusted `aria-controls` and did not fall back when the id was missing; project menu detection used broad `aria-haspopup="menu"` and raced DOM readiness.
+- Fix: `openMenu` now falls back to the provided menu selector when `aria-controls` resolves to a missing element; `openProjectMenuButton` waits for `button[aria-label="Open menu"]` and matches by label (avoids profile menu).
+- Verification: `pnpm tsx bin/oracle-cli.ts projects clone "My Project" "My Project Clone 2" --target grok` and `projects rename <id> "My Project Clone"` succeeded.
+
+- Date: 2026-01-14
 - Area: Grok smoke tests + cache CLI usage
 - Symptom: Smoke checklist referenced `oracle cache --target grok`, which is not a supported flag (command failed).
 - Root cause: Cache CLI is provider-agnostic and does not accept a target override.

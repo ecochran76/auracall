@@ -84,55 +84,10 @@ faster to implement.
 - `openRadixMenu(Runtime, options)`
   - Alias for `openMenu` when targeting Radix menus; keeps the naming consistent in adapters.
 
-## Patterns to follow
+## Usage notes
 
 - Prefer selector helpers from `packages/browser-service/src/service/selectors.ts`.
   - Use `cssClassContains('group/sidebar-wrapper')` instead of fragile `.group/sidebar-wrapper`.
   - Use attribute selectors (`[class*="..."]`, `[aria-label="..."]`) to avoid escaping issues.
-
-- Prefer event-driven waits (`waitForSelector`, `waitForDialog`) over fixed
-  delays. If a delay is unavoidable, keep it short and document why.
-- Scope queries to the active dialog or sidebar when possible to avoid matching
-  unrelated UI (e.g., `dialog` + `input[placeholder*="Project name"]`).
-- When a menu is tied to `aria-controls`, click the trigger, then wait for the
-  listbox by id before selecting items.
-- Avoid Escape unless you are certain it only closes the menu; some modals
-  interpret Escape as a full dialog close.
-- When closing a dialog or overlay, prefer `waitForNotSelector` over fixed
-  delays to avoid racing UI transitions.
-- Keep reusable UI helpers in browser-service or llmService (e.g., sidebar
-  toggles, menu open/close), and keep Grok-specific selectors only in the
-  adapter.
-
-## Triage workflow (for new UI flows)
-
-1) Start with a scoped `queryRowsByText` to confirm the row/section exists.
-2) If actions are hover-only, use `hoverRowAndClickAction` before adding new selectors.
-3) If the list is collapsible, add `ensureCollapsibleExpanded` before any row queries.
-4) Only add raw selectors after the above helpers are proven insufficient.
-
-## Cookbook
-
-- Open a modal and wait for it to render
-  - Click the trigger, then `await waitForSelector(Runtime, 'input[...]', 5000)`.
-  - Prefer a unique field in that modal (project name, search input, etc.).
-
-- Open a Radix/portal listbox tied to `aria-controls`
-  - Dispatch pointerdown/mousedown + click on the trigger.
-  - `await waitForSelector(Runtime, '#<aria-controls>', 3000)` before scanning items.
-  - Close by toggling the trigger, not Escape.
-
-- Avoid cross-scope selector collisions
-  - Pick the active dialog as your root.
-  - Query inside `dialog` first, then widen to `main`/`document` only if needed.
-
-- Keep retries centralized
-  - Prefer `waitForSelector` over `setTimeout` loops in adapters.
-  - If you must loop, wrap it in a single helper and document why.
-
-## Recent example
-
-- Grok project-create model picker:
-  - Required a pointer event sequence (pointerdown/mousedown + click) to open.
-  - Wait for the listbox via `aria-controls` + `waitForSelector` before selecting.
-  - Close the menu via trigger toggle (avoid Escape to keep modal open).
+- Keep reusable UI helpers in browser-service or llmService; keep Grok-specific selectors only in adapters.
+- For workflow guidance, see `docs/dev/browser-automation-playbook.md`.

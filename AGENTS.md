@@ -2,7 +2,7 @@
 
 Oracle-specific notes:
 - Before digging into a task, review recent git commit logs and scan relevant dev docs (start with `README.md`, `docs/testing.md`, and the newest entries in `docs/dev-fixes-log.md`).
-- Skim `docs/dev/` (especially current phase plans and browser-service tools) before making behavioral changes.
+- Skim `docs/dev/` (current phase plans, `docs/dev/browser-service-tools.md`, `docs/dev/browser-automation-playbook.md`) before making behavioral changes.
 - Maintain the running journal in `docs/dev/dev-journal.md` with progress, current focus, and problems/solutions.
 - Keep `docs/dev-fixes-log.md` and related dev docs up to date as you fix issues or learn new failure modes.
 - ChatGPT project URLs: steipete@gmail.com -> https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project; studpete@gmail.com -> https://chatgpt.com/g/g-p-69505ed97e3081918a275477a647a682/project. Prefer studpete URL if steipete project not found.

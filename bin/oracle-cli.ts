@@ -58,7 +58,6 @@ import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../src/browser/providers/types.js';
-import type { ProjectListResult } from '../src/browser/llmService/types.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -89,6 +88,7 @@ import { LlmService, createLlmService } from '../src/browser/llmService/index.js
 import {
   PROVIDER_CACHE_TTL_MS,
   resolveProviderCacheKey,
+  readProjectCache,
   writeConversationCache,
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
@@ -723,7 +723,7 @@ projectsCommand
       const cacheContext = await llmService.resolveCacheContext(listOptions);
       assertCacheIdentity(cacheContext, target);
       if (createdProject) {
-        await writeProjectCache(cacheContext, [createdProject]);
+        await upsertProjectCacheEntry(cacheContext, createdProject);
       } else {
         console.warn('Created project but could not resolve its URL for cache update.');
       }
@@ -782,49 +782,29 @@ projectsCommand
     const cacheContext = await llmService.resolveCacheContext(listOptions);
     assertCacheIdentity(cacheContext, target);
     const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
-    let originalName: string | undefined;
-    if (newName) {
-      try {
-        const projects = await llmService.listProjects(listOptions);
-        const match = Array.isArray(projects) ? projects.find((proj) => proj.id === resolvedId) : undefined;
-        originalName = match?.name;
-      } catch (error) {
-        console.warn(`Failed to resolve original project name: ${error instanceof Error ? error.message : String(error)}`);
-      }
-    }
-    await llmService.cloneProject(resolvedId);
+    const created = await llmService.cloneProject(resolvedId, { listOptions });
     console.log(`Cloned project ${resolvedId}.`);
-
-    let refreshed: ProjectListResult | null = null;
-    try {
-      refreshed = await llmService.listProjects(listOptions);
-      if (Array.isArray(refreshed)) {
-        try {
-          await writeProjectCache(cacheContext, refreshed);
-        } catch (error) {
-          console.warn(`Failed to write project cache: ${error instanceof Error ? error.message : String(error)}`);
-        }
-      }
-    } catch (error) {
-      console.warn(`Project refresh failed: ${error instanceof Error ? error.message : String(error)}`);
+    if (created) {
+      await upsertProjectCacheEntry(cacheContext, created);
+    } else {
+      console.warn('Clone created but could not resolve its URL for cache update.');
     }
 
-    if (newName) {
+    if (newName && created?.id) {
       try {
-        const projects = refreshed ?? (await llmService.listProjects(listOptions));
-        const cloneName = originalName ? `${originalName} (Clone)` : undefined;
-        const candidate = Array.isArray(projects)
-          ? projects.find((proj) => proj.id !== resolvedId && (proj.name === cloneName || /\(clone\)$/i.test(proj.name)))
-          : undefined;
-        if (candidate?.id) {
-          await llmService.renameProject(candidate.id, newName);
-          console.log(`Renamed cloned project to "${newName}".`);
-        } else {
-          console.warn('Clone created but could not resolve its ID to rename.');
-        }
+        await llmService.renameProject(created.id, newName, { listOptions });
+        console.log(`Renamed cloned project to "${newName}".`);
+        await upsertProjectCacheEntry(cacheContext, {
+          id: created.id,
+          name: newName,
+          provider: created.provider,
+          url: created.url,
+        });
       } catch (error) {
         console.warn(`Clone rename failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+    } else if (newName) {
+      console.warn('Clone created but could not resolve its ID to rename.');
     }
   });
 
@@ -1736,6 +1716,21 @@ function assertCacheIdentity(
         'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Oracle can detect it.',
     );
   }
+}
+
+async function upsertProjectCacheEntry(
+  cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>,
+  project: { id: string; name: string; provider: 'chatgpt' | 'grok'; url?: string },
+): Promise<void> {
+  const current = await readProjectCache(cacheContext);
+  const items = Array.isArray(current.items) ? [...current.items] : [];
+  const idx = items.findIndex((entry) => entry.id === project.id);
+  if (idx >= 0) {
+    items[idx] = { ...items[idx], ...project };
+  } else {
+    items.push(project);
+  }
+  await writeProjectCache(cacheContext, items);
 }
 
 function filterConversationsByQuery<T extends Array<{ id?: string; title?: string }>>(
