@@ -12,6 +12,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 2) **Scope selectors**
    - If the workflow uses a dialog, scope queries to the dialog root.
    - If the workflow uses a list row, scope queries to the row container.
+   - Prefer selector helpers (`cssClassContains`, `cssAttrContains`) to avoid escaping bugs.
 
 3) **Use visible element filters**
    - Filter candidates with `getBoundingClientRect()` so hidden hover-only controls are ignored.

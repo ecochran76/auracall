@@ -175,18 +175,22 @@ export abstract class LlmService {
       : this.getConfiguredUrl();
     const launchUrl =
       configuredUrl ?? (this.providerId === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
-    const target = await this.browserService.resolveServiceTarget({
-      serviceId: this.providerId,
-      configuredUrl,
-      ensurePort: options.ensurePort,
-    });
+    const target = overrides.tabTargetId
+      ? null
+      : await this.browserService.resolveServiceTarget({
+          serviceId: this.providerId,
+          configuredUrl,
+          ensurePort: options.ensurePort,
+        });
+    const host = target?.host ?? overrides.host;
+    const port = target?.port ?? overrides.port;
     return {
       ...overrides,
-      port: target.port ?? overrides.port,
-      host: target.host ?? overrides.host,
+      port,
+      host,
       configuredUrl,
-      tabTargetId: target.tab?.targetId,
-      tabUrl: target.tab?.url ?? undefined,
+      tabTargetId: overrides.tabTargetId ?? target?.tab?.targetId,
+      tabUrl: overrides.tabUrl ?? target?.tab?.url ?? undefined,
       browserService: this.browserService,
     };
   }
@@ -412,6 +416,20 @@ export abstract class LlmService {
     );
   }
 
+  async uploadCreateProjectFiles(
+    paths: string[],
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.uploadCreateProjectFiles) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.uploadCreateProjectFiles?.(paths, listOptions) as Promise<void>,
+      { action: 'uploadCreateProjectFiles' },
+    );
+  }
+
   async clickCreateProjectConfirm(
     options?: { listOptions?: BrowserProviderListOptions },
   ): Promise<void> {
@@ -423,6 +441,26 @@ export abstract class LlmService {
       () => this.provider.clickCreateProjectConfirm?.(listOptions) as Promise<void>,
       { action: 'clickCreateProjectConfirm' },
     );
+  }
+
+  async createProject(
+    input: {
+      name: string;
+      instructions?: string;
+      modelLabel?: string;
+      files?: string[];
+    },
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<Project | null> {
+    if (!this.provider.createProject) {
+      throw new Error(`Project creation is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    const created = await this.withRetry(
+      () => this.provider.createProject?.(input, listOptions) as Promise<Project | null>,
+      { action: 'createProject' },
+    );
+    return created ?? null;
   }
 
   async toggleProjectSidebar(

@@ -12,6 +12,7 @@ export * from './service/browserService.js';
 export * from './service/stateRegistry.js';
 export * from './service/instanceScanner.js';
 export * from './service/types.js';
+export * from './service/selectors.js';
 export * from './service/ui.js';
 
 // Provisional surface

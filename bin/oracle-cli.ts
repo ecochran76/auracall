@@ -647,6 +647,92 @@ const projectsCommand = program
   });
 
 projectsCommand
+  .command('create')
+  .description('Create a project/workspace for the active browser provider.')
+  .argument('<name>', 'Project name')
+  .option('--instructions-file <path>', 'Read instructions from a file.')
+  .option('--instructions-text <value>', 'Use raw instructions text.')
+  .option('--model <label>', 'Preferred model label for the project.')
+  .option('-f, --file <paths...>', 'Files to attach to the project.', collectPaths, [])
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectName, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const textValue = typeof commandOptions.instructionsText === 'string' && commandOptions.instructionsText.trim().length > 0
+      ? commandOptions.instructionsText
+      : null;
+    const filePath = typeof commandOptions.instructionsFile === 'string' && commandOptions.instructionsFile.trim().length > 0
+      ? commandOptions.instructionsFile
+      : null;
+    const instructions = textValue ?? (filePath ? await fs.readFile(filePath, 'utf8') : undefined);
+    const modelLabel = typeof commandOptions.model === 'string' && commandOptions.model.trim().length > 0
+      ? commandOptions.model.trim()
+      : undefined;
+    const rootOptions = program.opts?.() ?? {};
+    const mergedFileInputs = mergePathLikeOptions(
+      commandOptions.file,
+      (parentOptions as CliOptions).file,
+      (rootOptions as CliOptions).file,
+      (commandOptions as CliOptions).include,
+      (commandOptions as CliOptions).files,
+      (commandOptions as CliOptions).path,
+      (commandOptions as CliOptions).paths,
+    );
+    const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
+    if (duplicates.length > 0) {
+      const preview = duplicates.slice(0, 8).join(', ');
+      const suffix = duplicates.length > 8 ? ` (+${duplicates.length - 8} more)` : '';
+      console.log(chalk.dim(`Ignoring duplicate --file inputs: ${preview}${suffix}`));
+    }
+    let createdProject: import('../src/browser/providers/domain.js').Project | null = null;
+    if (llmService.createProject) {
+      createdProject = await llmService.createProject(
+        {
+          name: projectName,
+          instructions: instructions ?? undefined,
+          modelLabel,
+          files: deduped,
+        },
+        { listOptions },
+      );
+    } else {
+      await llmService.openCreateProjectModal({ listOptions });
+      await llmService.setCreateProjectFields({ name: projectName, instructions, modelLabel }, { listOptions });
+      await llmService.clickCreateProjectNext({ listOptions });
+      if (deduped.length > 0) {
+        await llmService.clickCreateProjectAttach({ listOptions });
+        await llmService.clickCreateProjectUploadFile({ listOptions });
+        await llmService.uploadCreateProjectFiles(deduped, { listOptions });
+      }
+      await llmService.clickCreateProjectConfirm({ listOptions });
+    }
+    console.log(`Created project "${projectName}".`);
+    try {
+      const cacheContext = await llmService.resolveCacheContext(listOptions);
+      assertCacheIdentity(cacheContext, target);
+      if (createdProject) {
+        await writeProjectCache(cacheContext, [createdProject]);
+      } else {
+        console.warn('Created project but could not resolve its URL for cache update.');
+      }
+    } catch (error) {
+      console.warn(`Failed to update project cache: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  });
+
+projectsCommand
   .command('rename')
   .description('Rename a project/workspace for the active browser provider.')
   .argument('<id>', 'Project identifier or name')

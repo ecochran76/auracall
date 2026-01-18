@@ -74,6 +74,10 @@ faster to implement.
 
 ## Patterns to follow
 
+- Prefer selector helpers from `packages/browser-service/src/service/selectors.ts`.
+  - Use `cssClassContains('group/sidebar-wrapper')` instead of fragile `.group/sidebar-wrapper`.
+  - Use attribute selectors (`[class*="..."]`, `[aria-label="..."]`) to avoid escaping issues.
+
 - Prefer event-driven waits (`waitForSelector`, `waitForDialog`) over fixed
   delays. If a delay is unavoidable, keep it short and document why.
 - Scope queries to the active dialog or sidebar when possible to avoid matching

@@ -1,3 +1,5 @@
+import type { Project } from './domain.js';
+
 export type SelectorList = readonly string[];
 
 export interface ProviderSelectorConfig {
@@ -76,7 +78,17 @@ export interface BrowserProvider {
   clickCreateProjectNext?: (options?: BrowserProviderListOptions) => Promise<void>;
   clickCreateProjectAttach?: (options?: BrowserProviderListOptions) => Promise<void>;
   clickCreateProjectUploadFile?: (options?: BrowserProviderListOptions) => Promise<void>;
+  uploadCreateProjectFiles?: (paths: string[], options?: BrowserProviderListOptions) => Promise<void>;
   clickCreateProjectConfirm?: (options?: BrowserProviderListOptions) => Promise<void>;
+  createProject?: (
+    input: {
+      name: string;
+      instructions?: string;
+      modelLabel?: string;
+      files?: string[];
+    },
+    options?: BrowserProviderListOptions,
+  ) => Promise<Project | null>;
   toggleProjectSidebar?: (options?: BrowserProviderListOptions) => Promise<void>;
   toggleMainSidebar?: (options?: BrowserProviderListOptions) => Promise<void>;
   clickHistoryItem?: (options?: BrowserProviderListOptions) => Promise<void>;
