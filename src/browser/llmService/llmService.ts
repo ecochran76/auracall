@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
-import type { Conversation, Project, ProviderId } from '../providers/domain.js';
+import type { Conversation, FileRef, Project, ProviderId } from '../providers/domain.js';
 import {
   matchConversationByTitle,
   matchProjectByName,
@@ -428,6 +428,51 @@ export abstract class LlmService {
       () => this.provider.uploadCreateProjectFiles?.(paths, listOptions) as Promise<void>,
       { action: 'uploadCreateProjectFiles' },
     );
+  }
+
+  async uploadProjectFiles(
+    projectId: string,
+    paths: string[],
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.uploadProjectFiles) {
+      throw new Error(`Project file upload is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.uploadProjectFiles?.(projectId, paths, listOptions) as Promise<void>,
+      { action: 'uploadProjectFiles' },
+    );
+  }
+
+  async deleteProjectFile(
+    projectId: string,
+    fileName: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.deleteProjectFile) {
+      throw new Error(`Project file deletion is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.deleteProjectFile?.(projectId, fileName, listOptions) as Promise<void>,
+      { action: 'deleteProjectFile' },
+    );
+  }
+
+  async listProjectFiles(
+    projectId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef[]> {
+    if (!this.provider.listProjectFiles) {
+      throw new Error(`Project file listing is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    const files = await this.withRetry(
+      () => this.provider.listProjectFiles?.(projectId, listOptions) as Promise<FileRef[]>,
+      { action: 'listProjectFiles' },
+    );
+    return Array.isArray(files) ? files : [];
   }
 
   async clickCreateProjectConfirm(

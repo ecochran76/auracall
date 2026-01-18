@@ -101,6 +101,9 @@ All options are persisted with the session so reruns (`oracle exec <id>`) reuse 
 
 - `oracle projects`: list available projects/workspaces (provider must implement it; currently scaffolding only).
 - `oracle projects [--refresh]`: list browser projects/workspaces (use `--refresh` to force a cache update).
+- `oracle projects files list <id>`: list files for a project/workspace.
+- `oracle projects files add <id> -f <paths...>`: upload files to a project/workspace.
+- `oracle projects files remove <id> <file...>`: remove files from a project/workspace.
 - `oracle cache [--provider <chatgpt|grok>] [--refresh] [--include-history] [--history-limit <count>] [--history-since <date>]`: show cached project/conversation lists with timestamps and stale status; `--refresh` updates the cache for the active provider.
 - `oracle cache export --scope <projects|conversations|conversation> --format <json|md|html|csv|zip> [--project-id <id>] [--conversation-id <id>] [--output <path>]`: export cached data to a directory or zip file.
 - `oracle session <id> --open-conversation [--print-url] [--browser-path <path>] [--browser-profile <name>]`: open the provider conversation linked to a stored session (uses the saved context, not the cache). Use `--print-url` to emit the URL only, `--browser-path` to override the browser binary, and `--browser-profile` to override the profile directory.

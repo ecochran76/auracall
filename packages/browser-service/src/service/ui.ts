@@ -34,11 +34,41 @@ export type SetInputValueOptions = {
   timeoutMs?: number;
 };
 
+export type QueryRowMatch = {
+  text: string;
+  caseSensitive?: boolean;
+};
+
+export type EnsureCollapsibleExpandedOptions = {
+  rootSelector: string;
+  rowSelector: string;
+  toggleSelector?: string;
+  toggleMatch?: LabelMatchOptions;
+  timeoutMs?: number;
+};
+
+export type HoverRowActionOptions = {
+  rootSelector: string;
+  rowSelector: string;
+  match: QueryRowMatch;
+  actionMatch: LabelMatchOptions;
+  timeoutMs?: number;
+};
+
+export type RowMatchInfo = {
+  ok: boolean;
+  reason?: string;
+  selector?: string;
+  text?: string;
+};
+
 export type OpenMenuOptions = {
   trigger: PressButtonOptions;
   menuSelector?: string;
   timeoutMs?: number;
 };
+
+export type OpenRadixMenuOptions = OpenMenuOptions;
 
 export type SelectMenuItemOptions = {
   menuSelector?: string;
@@ -582,6 +612,134 @@ export async function pressButton(
     }
   }
   return { ok: true, matchedLabel: info.matchedLabel };
+}
+
+export async function queryRowsByText(
+  Runtime: ChromeClient['Runtime'],
+  options: { rootSelector: string; rowSelector: string; match: QueryRowMatch },
+): Promise<RowMatchInfo> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector(${JSON.stringify(options.rootSelector)});
+      if (!root) return { ok: false, reason: 'Root not found' };
+      const rows = Array.from(root.querySelectorAll(${JSON.stringify(options.rowSelector)}));
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const target = ${JSON.stringify(options.match.text)};
+      const needle = ${JSON.stringify(options.match.caseSensitive ? null : options.match.text.toLowerCase())};
+      const matchRow = rows.find((row) => {
+        const text = normalize(row.textContent || '');
+        if (!text) return false;
+        if (${JSON.stringify(Boolean(options.match.caseSensitive))}) {
+          return text.includes(target);
+        }
+        return text.toLowerCase().includes(needle);
+      });
+      if (!matchRow) return { ok: false, reason: 'Row not found' };
+      const selector = matchRow.getAttribute('data-oracle-row-selector') || '';
+      return { ok: true, text: normalize(matchRow.textContent || ''), selector };
+    })()`,
+    returnByValue: true,
+  });
+  const info = result.result?.value as RowMatchInfo | undefined;
+  return info ?? { ok: false, reason: 'Row not found' };
+}
+
+export async function ensureCollapsibleExpanded(
+  Runtime: ChromeClient['Runtime'],
+  options: EnsureCollapsibleExpandedOptions,
+): Promise<void> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector(${JSON.stringify(options.rootSelector)});
+      if (!root) return { ok: false, reason: 'Root not found' };
+      const rows = root.querySelectorAll(${JSON.stringify(options.rowSelector)});
+      return { ok: rows.length > 0 };
+    })()`,
+    returnByValue: true,
+  });
+  if (result.result?.value?.ok) {
+    return;
+  }
+  const pressed = await pressButton(Runtime, {
+    selector: options.toggleSelector,
+    match: options.toggleMatch,
+    rootSelectors: options.toggleSelector ? undefined : [options.rootSelector],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!pressed.ok) {
+    throw new Error(pressed.reason || 'Collapsible toggle not found');
+  }
+  const ready = await waitForSelector(Runtime, options.rowSelector, timeoutMs);
+  if (!ready) {
+    throw new Error('Collapsible rows did not appear');
+  }
+}
+
+export async function hoverRowAndClickAction(
+  Runtime: ChromeClient['Runtime'],
+  Input: ChromeClient['Input'],
+  options: HoverRowActionOptions,
+): Promise<void> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const rectResult = await Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector(${JSON.stringify(options.rootSelector)});
+      if (!root) return { ok: false, reason: 'Root not found' };
+      const rows = Array.from(root.querySelectorAll(${JSON.stringify(options.rowSelector)}));
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const target = ${JSON.stringify(options.match.text)};
+      const needle = ${JSON.stringify(options.match.caseSensitive ? null : options.match.text.toLowerCase())};
+      const row = rows.find((el) => {
+        const text = normalize(el.textContent || '');
+        if (!text) return false;
+        if (${JSON.stringify(Boolean(options.match.caseSensitive))}) {
+          return text.includes(target);
+        }
+        return text.toLowerCase().includes(needle);
+      });
+      if (!row) return { ok: false, reason: 'Row not found' };
+      row.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = row.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || rect.height <= 0) {
+        return { ok: false, reason: 'Row not visible' };
+      }
+      return {
+        ok: true,
+        center: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 },
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const rectInfo = rectResult.result?.value as
+    | { ok: true; center: { x: number; y: number } }
+    | { ok: false; reason?: string }
+    | undefined;
+  if (!rectInfo?.ok) {
+    throw new Error(rectInfo?.reason || 'Row not found');
+  }
+  const x = Math.round(rectInfo.center.x);
+  const y = Math.round(rectInfo.center.y);
+  await Input.dispatchMouseEvent({ type: 'mouseMoved', x, y });
+  await Input.dispatchMouseEvent({ type: 'mouseMoved', x: x + 1, y: y + 1 });
+
+  const clicked = await pressButton(Runtime, {
+    match: options.actionMatch,
+    rootSelectors: [options.rootSelector],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!clicked.ok) {
+    throw new Error(clicked.reason || 'Row action not found');
+  }
+}
+
+export async function openRadixMenu(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenRadixMenuOptions,
+): Promise<{ ok: boolean; menuSelector?: string }> {
+  return openMenu(Runtime, options);
 }
 
 export async function openDialog(

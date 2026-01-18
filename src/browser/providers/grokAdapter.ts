@@ -1,6 +1,6 @@
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
-import type { Project, Conversation } from './domain.js';
+import type { Project, Conversation, FileRef } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { ChromeClient } from '../types.js';
 import { ensureServicesRegistry } from '../../services/registry.js';
@@ -10,6 +10,7 @@ import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTran
 import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
+  ensureCollapsibleExpanded,
   findAndClickByLabel,
   hoverElement,
   isDialogOpen,
@@ -17,10 +18,13 @@ import {
   selectMenuItem,
   openAndSelectListbox,
   openMenu,
+  openRadixMenu,
   pressDialogButton,
   pressRowAction,
   pressButton,
+  hoverRowAndClickAction,
   submitInlineRename,
+  queryRowsByText,
   waitForDialog,
   waitForNotSelector,
   waitForSelector,
@@ -37,6 +41,8 @@ const GROK_TRUNCATE_SELECTOR = cssClassContains('truncate');
 const GROK_TITLE_SELECTOR = `${GROK_LINE_CLAMP_SELECTOR}, ${GROK_TRUNCATE_SELECTOR}`;
 const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
+const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
+const GROK_ASSET_ROW_SELECTOR = `div${cssClassContains('group/asset-row')}`;
 
 export function createGrokAdapter(): Pick<
   BrowserProvider,
@@ -70,11 +76,15 @@ export function createGrokAdapter(): Pick<
   | 'openProjectMenu'
   | 'updateProjectInstructions'
   | 'getProjectInstructions'
+  | 'uploadProjectFiles'
+  | 'listProjectFiles'
+  | 'deleteProjectFile'
 > {
   return {
     capabilities: {
       projects: true,
       conversations: true,
+      files: true,
     },
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
       const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
@@ -1567,8 +1577,13 @@ export function createGrokAdapter(): Pick<
             input.files.map((filePath) => path.basename(filePath)),
           );
         }
+        const { result: beforeResult } = await client.Runtime.evaluate({
+          expression: 'location.href',
+          returnByValue: true,
+        });
+        const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
         await clickCreateProjectConfirmWithClient(client);
-        const projectUrl = await waitForProjectUrl(client, 20_000);
+        const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
         const match = projectUrl?.match(/\/project\/([^/?#]+)/);
         if (match?.[1]) {
           created = {
@@ -1585,6 +1600,116 @@ export function createGrokAdapter(): Pick<
         }
       }
       return created;
+    },
+
+    async uploadProjectFiles(
+      projectId: string,
+      filePaths: string[],
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      if (filePaths.length === 0) return;
+      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, projectUrl);
+        await waitForProjectSourcesTab(client);
+        await clickProjectSourcesAttachWithClient(client);
+        await clickProjectSourcesUploadFileWithClient(client);
+        await uploadProjectSourceFilesWithClient(client, filePaths);
+        await waitForProjectSourcesUploadsComplete(
+          client,
+          filePaths.map((filePath) => path.basename(filePath)),
+        );
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async listProjectFiles(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, projectUrl);
+        await waitForProjectSourcesTab(client);
+        await ensureProjectSourcesFilesExpanded(client);
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(() => {
+            const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+            const rows = Array.from(root.querySelectorAll(${JSON.stringify(GROK_ASSET_ROW_SELECTOR)}));
+            const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+            const sizeMatch = (text) => {
+              const match = text.match(/(\\d+(?:\\.\\d+)?)\\s*(kb|mb|gb|b)/i);
+              if (!match) return null;
+              const amount = Number.parseFloat(match[1]);
+              const unit = match[2].toLowerCase();
+              if (!Number.isFinite(amount)) return null;
+              const multiplier = unit === 'gb' ? 1024 ** 3 : unit === 'mb' ? 1024 ** 2 : unit === 'kb' ? 1024 : 1;
+              return Math.round(amount * multiplier);
+            };
+            const files = rows.map((row) => {
+              const text = normalize(row.textContent || '');
+              if (!text) return null;
+              const size = sizeMatch(text);
+              const name = text.replace(/\\s*(\\d+(?:\\.\\d+)?)\\s*(kb|mb|gb|b)\\s*$/i, '').trim();
+              return { name: name || text, size };
+            }).filter(Boolean);
+            return { files };
+          })()`,
+          returnByValue: true,
+        });
+        const info = evalResult.result?.value as { files?: { name: string; size?: number | null }[] } | undefined;
+        const files = Array.isArray(info?.files) ? info?.files : [];
+        const seen = new Set<string>();
+        return files
+          .filter((file) => {
+            const key = file.name.toLowerCase();
+            if (seen.has(key)) return false;
+            seen.add(key);
+            return true;
+          })
+          .map((file) => ({
+            id: file.name,
+            name: file.name,
+            provider: 'grok',
+            source: 'project',
+            size: file.size ?? undefined,
+          }));
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async deleteProjectFile(
+      projectId: string,
+      fileName: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToProject(client, projectUrl);
+        await waitForProjectSourcesTab(client);
+        await ensureProjectSourcesFilesExpanded(client);
+        await removeProjectSourceFileWithClient(client, fileName);
+        await waitForProjectSourceFileRemoved(client, fileName);
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
     },
 
     async toggleProjectSidebar(options?: BrowserProviderListOptions): Promise<void> {
@@ -2130,7 +2255,7 @@ async function uploadCreateProjectFilesWithClient(
       'input[type="file"][data-oracle-project-upload="true"]',
     );
     const name = path.basename(attachment.displayPath ?? attachment.path);
-    const deadline = Date.now() + 5000;
+    const deadline = Date.now() + 15000;
     let confirmed = false;
     while (Date.now() < deadline) {
       const status = await client.Runtime.evaluate({
@@ -2171,7 +2296,7 @@ async function uploadCreateProjectFilesWithClient(
 async function waitForProjectUploadsComplete(
   client: ChromeClient,
   fileNames: string[],
-  timeoutMs = 10_000,
+  timeoutMs = 20_000,
 ): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const normalized = fileNames.map((name) => name.toLowerCase());
@@ -2217,6 +2342,221 @@ async function waitForProjectUploadsComplete(
   throw new Error('Project uploads did not finish before timeout.');
 }
 
+async function waitForProjectSourcesTab(client: ChromeClient): Promise<void> {
+  const ready = await waitForSelector(client.Runtime, GROK_SOURCES_CONTENT_SELECTOR, 10_000);
+  if (!ready) {
+    throw new Error('Project sources tab did not load.');
+  }
+}
+
+async function ensureProjectSourcesFilesExpanded(client: ChromeClient): Promise<void> {
+  const directSelector = `${GROK_SOURCES_CONTENT_SELECTOR} div${cssClassContains('group/collapsible-row')} button`;
+  await ensureCollapsibleExpanded(client.Runtime, {
+    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
+    rowSelector: GROK_ASSET_ROW_SELECTOR,
+    toggleSelector: directSelector,
+    toggleMatch: { includeAny: ['files'] },
+    timeoutMs: 5000,
+  });
+}
+
+async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promise<void> {
+  await ensureProjectSourcesFilesExpanded(client);
+  const waitForAttach = await waitForSelector(
+    client.Runtime,
+    `${GROK_SOURCES_CONTENT_SELECTOR} button[aria-label="Attach"]`,
+    3000,
+  );
+  if (!waitForAttach) {
+    throw new Error('Project sources attach button not found');
+  }
+  const opened = await openRadixMenu(client.Runtime, {
+    trigger: {
+      selector: 'button[aria-label="Attach"]',
+      rootSelectors: [GROK_SOURCES_CONTENT_SELECTOR],
+      requireVisible: true,
+    },
+    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    timeoutMs: 2000,
+  });
+  if (!opened.ok) {
+    throw new Error('Project sources attach menu did not open');
+  }
+}
+
+async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Promise<void> {
+  const clicked = await selectMenuItem(client.Runtime, {
+    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
+    closeMenuAfter: false,
+    timeoutMs: 2000,
+  });
+  if (clicked) return;
+  await clickProjectSourcesAttachWithClient(client);
+  const retried = await selectMenuItem(client.Runtime, {
+    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
+    closeMenuAfter: false,
+    timeoutMs: 2000,
+  });
+  if (!retried) {
+    throw new Error('Upload file menu item not found');
+  }
+}
+
+async function uploadProjectSourceFilesWithClient(
+  client: ChromeClient,
+  paths: string[],
+): Promise<void> {
+  const attachments = paths.map((filePath) => ({
+    path: filePath,
+    displayPath: filePath,
+    source: 'project-sources',
+  }));
+  const tagResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+      const input = root.querySelector('input[type="file"]') || document.querySelector('input[type="file"]');
+      if (!input) return { ok: false };
+      input.setAttribute('data-oracle-project-upload', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const tagged = tagResult.result?.value as { ok?: boolean } | undefined;
+  if (!tagged?.ok) {
+    throw new Error('Project sources upload input not found');
+  }
+  for (const attachment of attachments) {
+    await transferAttachmentViaDataTransfer(
+      client.Runtime,
+      attachment,
+      'input[type="file"][data-oracle-project-upload="true"]',
+    );
+    const name = path.basename(attachment.displayPath ?? attachment.path);
+    const deadline = Date.now() + 5000;
+    let confirmed = false;
+    while (Date.now() < deadline) {
+      const status = await client.Runtime.evaluate({
+        expression: `(() => {
+          const name = ${JSON.stringify(name)};
+          const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+          const rows = Array.from(root.querySelectorAll('div')).filter((node) =>
+            (node.textContent || '').includes(name),
+          );
+          for (const row of rows) {
+            const text = (row.textContent || '').trim();
+            if (!text) continue;
+            if (text.includes('0 B')) continue;
+            return { ok: true, text };
+          }
+          return { ok: false };
+        })()`,
+        returnByValue: true,
+      });
+      const ok = status.result?.value?.ok;
+      if (ok) {
+        confirmed = true;
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (!confirmed) {
+      throw new Error(`Attachment "${name}" did not finish uploading (still 0 B).`);
+    }
+  }
+}
+
+async function waitForProjectSourcesUploadsComplete(
+  client: ChromeClient,
+  fileNames: string[],
+  timeoutMs = 10_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  const normalized = fileNames.map((name) => name.toLowerCase());
+  while (Date.now() < deadline) {
+    const result = await client.Runtime.evaluate({
+      expression: `(() => {
+        const names = ${JSON.stringify(normalized)};
+        const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+        const text = (root.textContent || '').toLowerCase();
+        const missing = [];
+        for (const name of names) {
+          if (!text.includes(name)) missing.push(name);
+        }
+        if (missing.length > 0) {
+          return { ok: false, reason: 'missing', missing };
+        }
+        const zeroByte = names.find((name) => {
+          const idx = text.indexOf(name);
+          if (idx === -1) return false;
+          const snippet = text.slice(idx, idx + 80);
+          return snippet.includes('0 b');
+        });
+        if (zeroByte) {
+          return { ok: false, reason: 'size', name: zeroByte };
+        }
+        if (text.includes('uploading') || text.includes('processing')) {
+          return { ok: false, reason: 'busy' };
+        }
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    if (result.result?.value?.ok) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error('Project source uploads did not finish before timeout.');
+}
+
+async function removeProjectSourceFileWithClient(
+  client: ChromeClient,
+  fileName: string,
+): Promise<void> {
+  const rowInfo = await queryRowsByText(client.Runtime, {
+    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
+    rowSelector: GROK_ASSET_ROW_SELECTOR,
+    match: { text: fileName },
+  });
+  if (!rowInfo.ok) {
+    throw new Error(rowInfo.reason || 'File row not found');
+  }
+  await hoverRowAndClickAction(client.Runtime, client.Input, {
+    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
+    rowSelector: GROK_ASSET_ROW_SELECTOR,
+    match: { text: fileName },
+    actionMatch: { includeAny: ['remove', 'delete'] },
+    timeoutMs: 5000,
+  });
+}
+
+async function waitForProjectSourceFileRemoved(
+  client: ChromeClient,
+  fileName: string,
+  timeoutMs = 10_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  const needle = fileName.toLowerCase();
+  while (Date.now() < deadline) {
+    const result = await client.Runtime.evaluate({
+      expression: `(() => {
+        const name = ${JSON.stringify(needle)};
+        const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+        const text = (root.textContent || '').toLowerCase();
+        return { exists: text.includes(name) };
+      })()`,
+      returnByValue: true,
+    });
+    if (!result.result?.value?.exists) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  throw new Error(`Project file "${fileName}" was not removed before timeout.`);
+}
+
 async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promise<void> {
   const evalResult = await client.Runtime.evaluate({
     expression: `(async () => {
@@ -2245,7 +2585,11 @@ async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promis
   }
 }
 
-async function waitForProjectUrl(client: ChromeClient, timeoutMs: number): Promise<string | null> {
+async function waitForProjectUrl(
+  client: ChromeClient,
+  timeoutMs: number,
+  previousHref?: string,
+): Promise<string | null> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
     const { result } = await client.Runtime.evaluate({
@@ -2253,7 +2597,7 @@ async function waitForProjectUrl(client: ChromeClient, timeoutMs: number): Promi
       returnByValue: true,
     });
     const href = typeof result?.value === 'string' ? result.value : '';
-    if (href.includes('/project/')) {
+    if (href.includes('/project/') && (!previousHref || href !== previousHref)) {
       return href;
     }
     await new Promise((resolve) => setTimeout(resolve, 250));

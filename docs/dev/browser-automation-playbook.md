@@ -23,6 +23,8 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - Use pointer events when click handlers are picky.
    - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
    - Use `pressRowAction` for hover-revealed Rename/Delete actions instead of scanning the whole dialog.
+   - For hover-only row actions (files/conversations), prefer `hoverRowAndClickAction`.
+   - For collapsible panels (Files/Sources), use `ensureCollapsibleExpanded` before searching rows.
 
 5) **Set inputs reliably**
    - For inputs, use the native setter + `input`/`change` events.

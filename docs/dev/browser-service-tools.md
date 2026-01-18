@@ -72,6 +72,18 @@ faster to implement.
   - Sets inline rename input value, submits via Enter, optionally clicks Save, and can wait for close.
   - When no selector/match is provided, it prefers the active element and falls back to the first visible input.
 
+- `queryRowsByText(Runtime, options)`
+  - Locates rows by visible text in a scoped root. Useful for lists that reorder or virtualize.
+
+- `ensureCollapsibleExpanded(Runtime, options)`
+  - Ensures a collapsible list is open by checking for row selectors and clicking a toggle if needed.
+
+- `hoverRowAndClickAction(Runtime, Input, options)`
+  - Scrolls a row into view, hovers via bounding box, and clicks a row action (Rename/Delete).
+
+- `openRadixMenu(Runtime, options)`
+  - Alias for `openMenu` when targeting Radix menus; keeps the naming consistent in adapters.
+
 ## Patterns to follow
 
 - Prefer selector helpers from `packages/browser-service/src/service/selectors.ts`.

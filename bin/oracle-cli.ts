@@ -880,6 +880,114 @@ const projectInstructionsCommand = projectsCommand
   .command('instructions')
   .description('Manage project instructions.');
 
+const projectFilesCommand = projectsCommand
+  .command('files')
+  .description('Manage project files.');
+
+projectFilesCommand
+  .command('add <id>')
+  .description('Upload files to a project.')
+  .option('-f, --file <paths...>', 'Files to attach to the project.', collectPaths, [])
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const mergedFileInputs = mergePathLikeOptions(
+      commandOptions.file,
+      (parentOptions as CliOptions).file,
+      (program.opts?.() as CliOptions | undefined)?.file,
+      (commandOptions as CliOptions).include,
+      (commandOptions as CliOptions).files,
+      (commandOptions as CliOptions).path,
+      (commandOptions as CliOptions).paths,
+    );
+    const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
+    if (duplicates.length > 0) {
+      const preview = duplicates.slice(0, 8).join(', ');
+      const suffix = duplicates.length > 8 ? ` (+${duplicates.length - 8} more)` : '';
+      console.log(chalk.dim(`Ignoring duplicate --file inputs: ${preview}${suffix}`));
+    }
+    if (deduped.length === 0) {
+      throw new Error('Provide one or more --file paths to upload.');
+    }
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    await llmService.uploadProjectFiles(resolvedId, deduped, { listOptions });
+    console.log(`Uploaded ${deduped.length} file(s) to project ${resolvedId}.`);
+  });
+
+projectFilesCommand
+  .command('list <id>')
+  .description('List files for a project.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    const files = await llmService.listProjectFiles(resolvedId, { listOptions });
+    if (files.length === 0) {
+      console.log(`No files found for project ${resolvedId}.`);
+      return;
+    }
+    for (const file of files) {
+      const suffix = typeof file.size === 'number' ? ` (${file.size} B)` : '';
+      console.log(`${file.name}${suffix}`);
+    }
+  });
+
+projectFilesCommand
+  .command('remove <id> <file...>')
+  .alias('delete')
+  .description('Remove files from a project.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (projectId, fileNames, commandOptions) => {
+    const parentOptions = projectsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    if (!Array.isArray(fileNames) || fileNames.length === 0) {
+      throw new Error('Provide one or more file names to remove.');
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
+    for (const fileName of fileNames) {
+      await llmService.deleteProjectFile(resolvedId, fileName, { listOptions });
+      console.log(`Removed "${fileName}" from project ${resolvedId}.`);
+    }
+  });
+
 projectInstructionsCommand
   .command('set <id>')
   .description('Replace project instructions.')

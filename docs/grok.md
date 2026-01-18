@@ -42,6 +42,12 @@ Oracle supports full browser automation for Grok, including manual login persist
     oracle projects --target grok
     oracle conversations --target grok --refresh --include-history
     ```
+    Manage project files:
+    ```bash
+    oracle projects files list <id> --target grok
+    oracle projects files add <id> -f path/to/file --target grok
+    oracle projects files remove <id> <file-name> --target grok
+    ```
 
 -   **Targeting Specific Projects:**
     Run a query within a specific project context (overrides config defaults):

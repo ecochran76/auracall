@@ -107,8 +107,21 @@ export interface BrowserProvider {
   getUserIdentity?: (options?: BrowserProviderListOptions) => Promise<ProviderUserIdentity | null>;
   openConversation?: (conversationId: string) => Promise<void>;
   readConversationContext?: (conversationId: string) => Promise<unknown>;
-  listProjectFiles?: (projectId: string) => Promise<unknown>;
+  listProjectFiles?: (
+    projectId: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<unknown>;
   uploadProjectFile?: (projectId: string, filePath: string) => Promise<unknown>;
+  uploadProjectFiles?: (
+    projectId: string,
+    filePaths: string[],
+    options?: BrowserProviderListOptions,
+  ) => Promise<void>;
+  deleteProjectFile?: (
+    projectId: string,
+    fileName: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<void>;
   downloadProjectFile?: (projectId: string, fileId: string, destPath: string) => Promise<void>;
   listConversationFiles?: (conversationId: string) => Promise<unknown>;
   downloadConversationFile?: (conversationId: string, fileId: string, destPath: string) => Promise<void>;
