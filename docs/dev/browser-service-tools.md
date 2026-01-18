@@ -39,6 +39,12 @@ faster to implement.
 - `openMenu(Runtime, options)`
   - Clicks a trigger and waits for the menu/listbox to appear (aria-controls aware).
 
+- `waitForMenuOpen(Runtime, options)`
+  - Waits for menu/listbox selectors, with fallback selectors when the primary id is missing.
+
+- `pressMenuButtonByAriaLabel(Runtime, options)`
+  - Opens a menu by aria-label match and waits for the menu to render.
+
 - `selectMenuItem(Runtime, options)`
   - Clicks a menu item and optionally waits for the menu to close.
 

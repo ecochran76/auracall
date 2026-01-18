@@ -72,9 +72,16 @@ export type OpenRadixMenuOptions = OpenMenuOptions;
 
 export type SelectMenuItemOptions = {
   menuSelector?: string;
+  menuRootSelectors?: string[];
   itemMatch: LabelMatchOptions;
   timeoutMs?: number;
   closeMenuAfter?: boolean;
+};
+
+export type WaitForMenuOpenOptions = {
+  menuSelector?: string;
+  fallbackSelectors?: string[];
+  timeoutMs?: number;
 };
 
 export type SelectFromListboxOptions = {
@@ -89,6 +96,7 @@ export type OpenAndSelectMenuItemOptions = {
   trigger: PressButtonOptions;
   itemMatch: LabelMatchOptions;
   menuSelector?: string;
+  menuRootSelectors?: string[];
   timeoutMs?: number;
   closeMenuAfter?: boolean;
 };
@@ -105,6 +113,13 @@ export type TogglePanelOptions = {
   trigger: PressButtonOptions;
   isOpenSelector: string;
   open: boolean;
+  timeoutMs?: number;
+};
+
+export type PressMenuButtonByAriaLabelOptions = {
+  label: string;
+  rootSelectors?: string[];
+  menuSelector?: string;
   timeoutMs?: number;
 };
 
@@ -825,17 +840,51 @@ export async function openMenu(
     return { ok: false };
   }
   const menuSelector = info.listId ? `#${info.listId}` : options.menuSelector;
-  const fallbackSelector =
-    options.menuSelector || '[role="menu"], [role="listbox"], [data-radix-collection-item]';
-  const primaryReady = await waitForSelector(Runtime, menuSelector || fallbackSelector, timeoutMs);
+  const ready = await waitForMenuOpen(Runtime, {
+    menuSelector,
+    fallbackSelectors: options.menuSelector
+      ? [options.menuSelector, '[role="menu"], [role="listbox"], [data-radix-collection-item]']
+      : ['[role="menu"], [role="listbox"], [data-radix-collection-item]'],
+    timeoutMs,
+  });
+  return ready.ok ? { ok: true, menuSelector: ready.menuSelector } : { ok: false };
+}
+
+export async function waitForMenuOpen(
+  Runtime: ChromeClient['Runtime'],
+  options: WaitForMenuOpenOptions,
+): Promise<{ ok: boolean; menuSelector?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const fallbackSelectors = options.fallbackSelectors ?? [
+    '[role="menu"], [role="listbox"], [data-radix-collection-item]',
+  ];
+  const primarySelector = options.menuSelector ?? fallbackSelectors[0];
+  const primaryReady = await waitForSelector(Runtime, primarySelector, timeoutMs);
   if (primaryReady) {
-    return { ok: true, menuSelector };
+    return { ok: true, menuSelector: primarySelector };
   }
-  if (menuSelector && fallbackSelector && menuSelector !== fallbackSelector) {
-    const fallbackReady = await waitForSelector(Runtime, fallbackSelector, timeoutMs);
-    return fallbackReady ? { ok: true, menuSelector: fallbackSelector } : { ok: false };
+  for (const selector of fallbackSelectors) {
+    if (selector === primarySelector) continue;
+    const ready = await waitForSelector(Runtime, selector, timeoutMs);
+    if (ready) {
+      return { ok: true, menuSelector: selector };
+    }
   }
   return { ok: false };
+}
+
+export async function pressMenuButtonByAriaLabel(
+  Runtime: ChromeClient['Runtime'],
+  options: PressMenuButtonByAriaLabelOptions,
+): Promise<{ ok: boolean; menuSelector?: string }> {
+  return openMenu(Runtime, {
+    trigger: {
+      match: { exact: [options.label.toLowerCase()] },
+      rootSelectors: options.rootSelectors,
+    },
+    menuSelector: options.menuSelector,
+    timeoutMs: options.timeoutMs,
+  });
 }
 
 export async function openAndSelectMenuItem(
@@ -852,6 +901,7 @@ export async function openAndSelectMenuItem(
   const menuSelector = opened.menuSelector || options.menuSelector;
   const clicked = await selectMenuItem(Runtime, {
     menuSelector,
+    menuRootSelectors: options.menuRootSelectors,
     itemMatch: options.itemMatch,
     timeoutMs,
     closeMenuAfter: options.closeMenuAfter,
@@ -873,7 +923,7 @@ export async function selectMenuItem(
   const clicked = await findAndClickByLabel(Runtime, {
     selectors: ['[role="menuitem"]', '[data-radix-collection-item]', 'button', 'a'],
     match: options.itemMatch,
-    rootSelectors: options.menuSelector ? [options.menuSelector] : undefined,
+    rootSelectors: options.menuRootSelectors ?? (options.menuSelector ? [options.menuSelector] : undefined),
   });
   if (!clicked) return false;
   if (options.closeMenuAfter) {
