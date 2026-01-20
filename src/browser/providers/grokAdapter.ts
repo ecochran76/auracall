@@ -2015,82 +2015,93 @@ async function connectToGrokTab(
 async function openCreateProjectModalWithClient(client: ChromeClient): Promise<void> {
   await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
   const rootSelectors = [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'nav', 'aside'];
-  const tagResult = await client.Runtime.evaluate({
-    expression: `(() => {
-      const roots = ${JSON.stringify(rootSelectors)}
-        .map((sel) => document.querySelector(sel))
-        .filter(Boolean);
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const pickRoot = () => {
-        for (const candidate of roots) {
-          const count = candidate.querySelectorAll(
-            ${JSON.stringify(GROK_MENU_BUTTON_SELECTOR)},
-          ).length;
-          if (count > 0) return candidate;
-        }
-        return document;
-      };
-      const root = pickRoot();
-      const links = Array.from(
-        root.querySelectorAll(${JSON.stringify(GROK_MENU_BUTTON_SELECTOR)}),
-      );
-      const itemLink = links.find((link) => normalize(link.textContent || '').includes('projects')) || null;
-      const item = itemLink
-        ? itemLink.closest(${JSON.stringify(GROK_MENU_ITEM_SELECTOR)}) ||
-          itemLink.parentElement
-        : null;
-      if (!item || !itemLink) {
-        const labels = links.map((link) => normalize(link.textContent || '')).filter(Boolean).slice(0, 8);
-        return { ok: false, reason: 'Projects menu item not found', labels };
-      }
-      item.setAttribute('data-oracle-projects-row', 'true');
-      return { ok: true };
-    })()`,
-    returnByValue: true,
-  });
-  const tagInfo = tagResult.result?.value as { ok: boolean; reason?: string; labels?: string[] } | undefined;
-  if (!tagInfo?.ok) {
-    throw new Error(tagInfo?.reason || 'Create project modal not opened');
-  }
-
-  let tagged = false;
-  let lastReason = 'Create project button not revealed';
-  for (let attempt = 0; attempt < 6; attempt += 1) {
-    const hoverResult = await hoverElement(client.Runtime, client.Input, {
-      selector: '[data-oracle-projects-row="true"]',
-      rootSelectors,
-      timeoutMs: 1500,
-    });
-    if (!hoverResult.ok) {
-      lastReason = hoverResult.reason || lastReason;
-      await new Promise((resolve) => setTimeout(resolve, 150));
-      continue;
-    }
-    const buttonTag = await client.Runtime.evaluate({
+  const tryRevealCreateButton = async (): Promise<{ ok: boolean; reason?: string }> => {
+    const tagResult = await client.Runtime.evaluate({
       expression: `(() => {
-        const row = document.querySelector('[data-oracle-projects-row="true"]');
-        if (!row) return { ok: false, reason: 'Projects row missing' };
-        const button =
-          row.querySelector('span.absolute button') ||
-          row.querySelector('button.group-hover\\\\/menu-item\\\\:opacity-100') ||
-          row.querySelector('button') ||
-          row.querySelector('[role="button"]') ||
-          null;
-        if (!button) return { ok: false, reason: 'Create project button not found' };
-        button.setAttribute('data-oracle-create-project', 'true');
+        const roots = ${JSON.stringify(rootSelectors)}
+          .map((sel) => document.querySelector(sel))
+          .filter(Boolean);
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const pickRoot = () => {
+          for (const candidate of roots) {
+            const count = candidate.querySelectorAll(
+              ${JSON.stringify(GROK_MENU_BUTTON_SELECTOR)},
+            ).length;
+            if (count > 0) return candidate;
+          }
+          return document;
+        };
+        const root = pickRoot();
+        const links = Array.from(
+          root.querySelectorAll(${JSON.stringify(GROK_MENU_BUTTON_SELECTOR)}),
+        );
+        const itemLink = links.find((link) => normalize(link.textContent || '').includes('projects')) || null;
+        const item = itemLink
+          ? itemLink.closest(${JSON.stringify(GROK_MENU_ITEM_SELECTOR)}) ||
+            itemLink.parentElement
+          : null;
+        if (!item || !itemLink) {
+          const labels = links.map((link) => normalize(link.textContent || '')).filter(Boolean).slice(0, 8);
+          return { ok: false, reason: 'Projects menu item not found', labels };
+        }
+        item.setAttribute('data-oracle-projects-row', 'true');
         return { ok: true };
       })()`,
       returnByValue: true,
     });
-    const buttonInfo = buttonTag.result?.value as { ok: boolean; reason?: string } | undefined;
-    if (buttonInfo?.ok) {
-      tagged = true;
-      break;
+    const tagInfo = tagResult.result?.value as { ok: boolean; reason?: string } | undefined;
+    if (!tagInfo?.ok) {
+      return { ok: false, reason: tagInfo?.reason || 'Projects row not found' };
     }
-    lastReason = buttonInfo?.reason || lastReason;
-    await new Promise((resolve) => setTimeout(resolve, 150));
+
+    let lastReason = 'Create project button not revealed';
+    for (let attempt = 0; attempt < 6; attempt += 1) {
+      const hoverResult = await hoverElement(client.Runtime, client.Input, {
+        selector: '[data-oracle-projects-row="true"]',
+        rootSelectors,
+        timeoutMs: 1500,
+      });
+      if (!hoverResult.ok) {
+        lastReason = hoverResult.reason || lastReason;
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        continue;
+      }
+      const buttonTag = await client.Runtime.evaluate({
+        expression: `(() => {
+          const row = document.querySelector('[data-oracle-projects-row="true"]');
+          if (!row) return { ok: false, reason: 'Projects row missing' };
+          const button =
+            row.querySelector('span.absolute button') ||
+            row.querySelector('button.group-hover\\\\/menu-item\\\\:opacity-100') ||
+            row.querySelector('button') ||
+            row.querySelector('[role="button"]') ||
+            null;
+          if (!button) return { ok: false, reason: 'Create project button not found' };
+          button.setAttribute('data-oracle-create-project', 'true');
+          return { ok: true };
+        })()`,
+        returnByValue: true,
+      });
+      const buttonInfo = buttonTag.result?.value as { ok: boolean; reason?: string } | undefined;
+      if (buttonInfo?.ok) {
+        return { ok: true };
+      }
+      lastReason = buttonInfo?.reason || lastReason;
+      await new Promise((resolve) => setTimeout(resolve, 150));
+    }
+    return { ok: false, reason: lastReason };
+  };
+
+  let revealed = await tryRevealCreateButton();
+  if (!revealed.ok) {
+    await client.Page.navigate({ url: 'https://grok.com/' });
+    await waitForDocumentReady(client, 15_000);
+    await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
+    await closeHistoryDialog(client);
+    revealed = await tryRevealCreateButton();
   }
-  if (!tagged) {
+
+  if (!revealed.ok) {
     const debug = await client.Runtime.evaluate({
       expression: `(() => {
         const row = document.querySelector('[data-oracle-projects-row="true"]');
@@ -2102,7 +2113,7 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
       returnByValue: true,
     });
     const debugInfo = debug.result?.value as { rowFound?: boolean; html?: string | null } | undefined;
-    throw new Error(`${lastReason || 'Create project modal not opened'} (rowFound=${debugInfo?.rowFound}, html=${debugInfo?.html || 'n/a'})`);
+    throw new Error(`${revealed.reason || 'Create project modal not opened'} (rowFound=${debugInfo?.rowFound}, html=${debugInfo?.html || 'n/a'})`);
   }
 
   const pressed = await pressButton(client.Runtime, {
@@ -2229,6 +2240,10 @@ async function clickCreateProjectUploadFileWithClient(client: ChromeClient): Pro
       requireVisible: true,
     },
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    menuRootSelectors: [
+      '[role="menu"][data-state="open"]',
+      '[data-radix-menu-content][data-state="open"]',
+    ],
     itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
     closeMenuAfter: false,
     timeoutMs: 2000,
@@ -2405,6 +2420,10 @@ async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promis
 async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Promise<void> {
   const clicked = await selectMenuItem(client.Runtime, {
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    menuRootSelectors: [
+      '[role="menu"][data-state="open"]',
+      '[data-radix-menu-content][data-state="open"]',
+    ],
     itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
     closeMenuAfter: false,
     timeoutMs: 2000,
@@ -2413,6 +2432,10 @@ async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Pr
   await clickProjectSourcesAttachWithClient(client);
   const retried = await selectMenuItem(client.Runtime, {
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+    menuRootSelectors: [
+      '[role="menu"][data-state="open"]',
+      '[data-radix-menu-content][data-state="open"]',
+    ],
     itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
     closeMenuAfter: false,
     timeoutMs: 2000,
