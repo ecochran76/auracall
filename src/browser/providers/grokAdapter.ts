@@ -1227,8 +1227,8 @@ export function createGrokAdapter(): Pick<
         let tagged = false;
         let lastReason = 'Create project button not revealed';
         for (let attempt = 0; attempt < 6; attempt += 1) {
-          const hoverResult = await hoverElement(client.Runtime, client.Input, {
-            selector: '[data-oracle-projects-row="true"]',
+          const hoverResult = await hoverAndReveal(client.Runtime, client.Input, {
+            rowSelector: '[data-oracle-projects-row="true"]',
             rootSelectors,
             timeoutMs: 1500,
           });
@@ -2062,8 +2062,8 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
 
     let lastReason = 'Create project button not revealed';
     for (let attempt = 0; attempt < 6; attempt += 1) {
-      const hoverResult = await hoverElement(client.Runtime, client.Input, {
-        selector: '[data-oracle-projects-row="true"]',
+      const hoverResult = await hoverAndReveal(client.Runtime, client.Input, {
+        rowSelector: '[data-oracle-projects-row="true"]',
         rootSelectors,
         timeoutMs: 1500,
       });
