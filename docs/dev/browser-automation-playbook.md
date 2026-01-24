@@ -8,6 +8,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - Use `scripts/browser-tools.ts eval` to list visible elements, labels, and positions.
    - Prefer `aria-label`, `role`, and obvious text nodes over brittle class selectors.
    - Check `docs/dev/browser-service-tools.md` for reusable helpers before writing new DOM logic.
+   - If no DevTools port is active, run `pnpm tsx scripts/start-devtools-session.ts --url=https://grok.com`.
 
 2) **Scope selectors**
    - If the workflow uses a dialog, scope queries to the dialog root.
