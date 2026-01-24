@@ -110,6 +110,7 @@
 - File operations:
   - Confirm sources tab flow is stable after model/prompt changes.
   - Add explicit handling when the Files section is collapsed.
+  - ✅ Implemented list/add/remove via Sources tab with collapsible handling + hover actions.
 
 ### 4) Conversation Support (GrokService + LlmService)
 **Scope**
