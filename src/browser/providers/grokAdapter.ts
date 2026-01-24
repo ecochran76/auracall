@@ -1637,6 +1637,7 @@ export function createGrokAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await navigateToProject(client, projectUrl);
+        await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
         await clickProjectSourcesAttachWithClient(client);
         await clickProjectSourcesUploadFileWithClient(client);
@@ -1662,6 +1663,7 @@ export function createGrokAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await navigateToProject(client, projectUrl);
+        await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
         await ensureProjectSourcesFilesExpanded(client);
         const evalResult = await client.Runtime.evaluate({
@@ -1724,6 +1726,7 @@ export function createGrokAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await navigateToProject(client, projectUrl);
+        await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
         await ensureProjectSourcesFilesExpanded(client);
         await removeProjectSourceFileWithClient(client, fileName);
@@ -2386,6 +2389,44 @@ async function waitForProjectSourcesTab(client: ChromeClient): Promise<void> {
   if (!ready) {
     throw new Error('Project sources tab did not load.');
   }
+}
+
+async function ensureProjectSourcesTabSelected(client: ChromeClient): Promise<void> {
+  await waitForSelector(client.Runtime, '[role="tablist"]', 5000);
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const tabs = Array.from(document.querySelectorAll('[role="tab"]'));
+      const sources = tabs.find((tab) => normalize(tab.textContent || '') === 'sources');
+      if (!sources) {
+        const sourcesContent = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)});
+        return sourcesContent ? { ok: true, active: true } : { ok: false, reason: 'Sources tab not found' };
+      }
+      const active =
+        sources.getAttribute('aria-selected') === 'true' ||
+        sources.getAttribute('data-state') === 'active';
+      return { ok: true, active };
+    })()`,
+    returnByValue: true,
+  });
+  const info = evalResult.result?.value as { ok?: boolean; active?: boolean; reason?: string } | undefined;
+  if (!info?.ok) {
+    throw new Error(info?.reason || 'Sources tab not found');
+  }
+  if (info.active) {
+    return;
+  }
+  const pressed = await pressButton(client.Runtime, {
+    match: { exact: ['sources'] },
+    rootSelectors: ['[role="tablist"]'],
+    timeoutMs: 5000,
+    postSelector: GROK_SOURCES_CONTENT_SELECTOR,
+    logCandidatesOnMiss: true,
+  });
+  if (!pressed.ok) {
+    throw new Error(pressed.reason || 'Failed to activate Sources tab');
+  }
+  await waitForProjectSourcesTab(client);
 }
 
 async function ensureProjectSourcesFilesExpanded(client: ChromeClient): Promise<void> {

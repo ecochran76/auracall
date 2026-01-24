@@ -27,6 +27,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Fix: `openMenu` now falls back to the provided menu selector when `aria-controls` resolves to a missing element; `openProjectMenuButton` waits for `button[aria-label="Open menu"]` and matches by label (avoids profile menu).
 - Verification: `pnpm tsx bin/oracle-cli.ts projects clone "My Project" "My Project Clone 2" --target grok` and `projects rename <id> "My Project Clone"` succeeded.
 
+- Date: 2026-01-24
+- Area: Grok project sources tab selection
+- Symptom: `projects files list <id>` failed with “Sources tab not found” even on `?tab=sources`.
+- Root cause: Sources tablist can lag or be missing; when content is already rendered, there’s no tab to click.
+- Fix: `ensureProjectSourcesTabSelected` now waits for a tablist but treats a rendered sources container as success; only throws if neither tab nor content exists.
+- Verification: `pnpm tsx bin/oracle-cli.ts projects files list <projectId> --target grok` returned file names.
+
 - Date: 2026-01-14
 - Area: Grok smoke tests + cache CLI usage
 - Symptom: Smoke checklist referenced `oracle cache --target grok`, which is not a supported flag (command failed).
