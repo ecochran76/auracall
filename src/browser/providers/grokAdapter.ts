@@ -19,10 +19,12 @@ import {
   openAndSelectListbox,
   openMenu,
   openRadixMenu,
+  pressMenuButtonByAriaLabel,
   pressDialogButton,
   pressRowAction,
   pressButton,
   hoverRowAndClickAction,
+  hoverAndReveal,
   submitInlineRename,
   queryRowsByText,
   waitForDialog,
@@ -1434,6 +1436,10 @@ export function createGrokAdapter(): Pick<
             requireVisible: true,
           },
           menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+          menuRootSelectors: [
+            '[role="menu"][data-state="open"]',
+            '[data-radix-menu-content][data-state="open"]',
+          ],
           itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
           closeMenuAfter: false,
           timeoutMs: 2000,
@@ -2850,11 +2856,9 @@ export async function openProjectMenuButton(
   });
   const tagged = tagResult.result?.value as { ok?: boolean } | undefined;
   if (tagged?.ok) {
-    const opened = await openMenu(client.Runtime, {
-      trigger: {
-        match: { exact: ['open menu'] },
-        rootSelectors: ['[data-oracle-project-menu-root="true"]'],
-      },
+    const opened = await pressMenuButtonByAriaLabel(client.Runtime, {
+      label: 'Open menu',
+      rootSelectors: ['[data-oracle-project-menu-root="true"]'],
       menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
       timeoutMs: 5000,
     });
@@ -2862,19 +2866,17 @@ export async function openProjectMenuButton(
       return;
     }
   }
-  const pressed = await openMenu(client.Runtime, {
-    trigger: {
-      match: { exact: ['open menu'], includeAny: ['options'] },
-      rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
-    },
+  const pressed = await pressMenuButtonByAriaLabel(client.Runtime, {
+    label: 'Open menu',
+    rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
     timeoutMs: 5000,
   });
   if (pressed.ok) {
     return;
   }
-  const globalOpen = await openMenu(client.Runtime, {
-    trigger: { match: { exact: ['open menu'], includeAny: ['options'] } },
+  const globalOpen = await pressMenuButtonByAriaLabel(client.Runtime, {
+    label: 'Open menu',
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
     timeoutMs: 5000,
   });
@@ -3559,22 +3561,14 @@ async function renameConversationInHistoryDialog(
     throw new Error('Rename hover target missing');
   }
 
-  const hoverResult = await hoverElement(client.Runtime, client.Input, {
-    selector: info.itemSelector,
+  const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
+    rowSelector: info.itemSelector,
     rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    actionMatch: { exact: ['rename'] },
     timeoutMs: 1500,
   });
-  if (!hoverResult.ok) {
-    throw new Error(hoverResult.reason || 'Rename hover failed');
-  }
-
-  const renameReady = await waitForSelector(
-    client.Runtime,
-    '[role="dialog"] button[aria-label="Rename"], [role="dialog"] button[aria-label*="rename" i]',
-    1000,
-  );
-  if (!renameReady) {
-    throw new Error('Rename button not found after hover');
+  if (!revealResult.ok) {
+    throw new Error(revealResult.reason || 'Rename hover failed');
   }
 
   const clickInfo = await pressRowAction(client.Runtime, {
@@ -3717,22 +3711,14 @@ async function deleteConversationInHistoryDialog(
     throw new Error('Delete hover target missing');
   }
 
-  const hoverResult = await hoverElement(client.Runtime, client.Input, {
-    selector: info.itemSelector,
+  const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
+    rowSelector: info.itemSelector,
     rootSelectors: DEFAULT_DIALOG_SELECTORS,
+    actionMatch: { exact: ['delete'] },
     timeoutMs: 1500,
   });
-  if (!hoverResult.ok) {
-    throw new Error(hoverResult.reason || 'Delete hover failed');
-  }
-
-  const deleteReady = await waitForSelector(
-    client.Runtime,
-    '[role="dialog"] button[aria-label="Delete"], [role="dialog"] button[aria-label*="delete" i]',
-    1000,
-  );
-  if (!deleteReady) {
-    throw new Error('Delete button not found after hover');
+  if (!revealResult.ok) {
+    throw new Error(revealResult.reason || 'Delete hover failed');
   }
 
   const deleteInfo = await pressRowAction(client.Runtime, {

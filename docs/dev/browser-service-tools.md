@@ -32,6 +32,7 @@ faster to implement.
 - `pressButton(Runtime, options)`
   - Clicks a button by selector or label match and waits for post conditions.
   - Supports scoped roots, visibility filtering, and post selectors.
+  - Use `logCandidatesOnMiss` to include visible labels in failure messages.
 
 - `openDialog(Runtime, options)`
   - Uses `pressButton` then waits for a dialog and optional ready selector.
@@ -66,6 +67,9 @@ faster to implement.
 - `hoverElement(Runtime, Input, options)`
   - Scrolls an element into view, computes a stable hover point, and moves the mouse there.
   - Verifies the hover point with `elementFromPoint` to ensure hover-driven controls appear.
+
+- `hoverAndReveal(Runtime, Input, options)`
+  - Hover a row and optionally verify that a specific action is revealed.
 
 - `pressRowAction(Runtime, options)`
   - Finds a row action button (Rename/Delete/etc.) near an anchor element and clicks it.

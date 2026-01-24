@@ -12,6 +12,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-01-24
+- Focus: UI helper upgrades + Grok menu/hover reliability.
+- Progress: Added `waitForMenuOpen`, `pressMenuButtonByAriaLabel`, `hoverAndReveal`, and `pressButton` diagnostics; scoped menu selection with `menuRootSelectors`; adopted helpers in Grok project menu + history rename/delete; added fallback navigation when create-project hover fails.
+- Issues: Local smoke scripts require a live DevTools port; no active port caused verify scripts to fail.
+- Next: Finish UI helper adoption pass, then resume Phase 7 CRUD (project sources + conversations).
+
 - Date: 2026-01-15
 - Focus: Grok project sources file management + UI helper extraction.
 - Progress: Added project file add/list/remove CLI; hardened Sources tab attach/upload/remove flows; extracted reusable helpers (`ensureCollapsibleExpanded`, `hoverRowAndClickAction`, `queryRowsByText`, `openRadixMenu`) and updated docs.

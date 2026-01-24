@@ -22,6 +22,7 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - Hover over rows to surface hidden controls.
    - Use pointer events when click handlers are picky.
    - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
+   - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
    - For menu buttons, prefer `aria-label="Open menu"` to avoid picking the profile/user menu.
    - If a menu uses `aria-controls`, wait for the referenced element id but fall back to a generic
      menu selector when the id is missing.

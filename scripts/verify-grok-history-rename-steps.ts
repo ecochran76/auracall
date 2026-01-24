@@ -1,7 +1,7 @@
 import CDP from 'chrome-remote-interface';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 import { clickHistoryMenuItem, clickHistorySeeAll } from '../src/browser/providers/grokAdapter.js';
-import { DEFAULT_DIALOG_SELECTORS, hoverElement, waitForDialog, waitForSelector } from '../src/browser/service/ui.js';
+import { DEFAULT_DIALOG_SELECTORS, hoverAndReveal, waitForDialog, waitForSelector } from '../src/browser/service/ui.js';
 
 async function main() {
   const stepArg = process.argv[2];
@@ -108,9 +108,10 @@ async function main() {
     }
 
     if (step >= 4) {
-      const hover = await hoverElement(client.Runtime, client.Input, {
-        selector: `a[href="/c/${conversationId}"], a[href*="${conversationId}"], [data-value="conversation:${conversationId}"], [data-value*="${conversationId}"]`,
+      const hover = await hoverAndReveal(client.Runtime, client.Input, {
+        rowSelector: `a[href="/c/${conversationId}"], a[href*="${conversationId}"], [data-value="conversation:${conversationId}"], [data-value*="${conversationId}"]`,
         rootSelectors: DEFAULT_DIALOG_SELECTORS,
+        actionMatch: { exact: ['rename'] },
         timeoutMs: 1500,
       });
       if (!hover.ok) {

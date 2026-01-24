@@ -23,6 +23,7 @@ export type PressButtonOptions = {
   timeoutMs?: number;
   postSelector?: string;
   postGoneSelector?: string;
+  logCandidatesOnMiss?: boolean;
 };
 
 export type SetInputValueOptions = {
@@ -135,6 +136,21 @@ export type HoverElementResult = {
   point?: { x: number; y: number };
   rect?: { x: number; y: number; width: number; height: number };
   element?: { tag?: string | null; ariaLabel?: string | null; className?: string | null; id?: string | null };
+};
+
+export type HoverAndRevealOptions = {
+  rowSelector: string;
+  actionMatch?: LabelMatchOptions;
+  rootSelectors?: string[];
+  timeoutMs?: number;
+};
+
+export type HoverAndRevealResult = {
+  ok: boolean;
+  reason?: string;
+  point?: { x: number; y: number };
+  row?: { selector: string };
+  actions?: { label: string }[];
 };
 
 export type PressRowActionOptions = {
@@ -308,6 +324,78 @@ export async function hoverElement(
     await new Promise((resolve) => setTimeout(resolve, 150));
   }
   return { ok: false, reason: lastError || 'Hover target not found' };
+}
+
+export async function hoverAndReveal(
+  Runtime: ChromeClient['Runtime'],
+  Input: ChromeClient['Input'],
+  options: HoverAndRevealOptions,
+): Promise<HoverAndRevealResult> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const hoverResult = await hoverElement(Runtime, Input, {
+    selector: options.rowSelector,
+    rootSelectors: options.rootSelectors,
+    timeoutMs,
+  });
+  if (!hoverResult.ok) {
+    return { ok: false, reason: hoverResult.reason };
+  }
+
+  const evalResult = await Runtime.evaluate({
+    expression: `(() => {
+      const selector = ${JSON.stringify(options.rowSelector)};
+      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+      const matchOptions = ${JSON.stringify(options.actionMatch ?? {})};
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const roots = rootSelectors.length
+        ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+        : [document];
+      const root = roots[0] || document;
+      const row = root.querySelector(selector);
+      if (!row) return { ok: false, reason: 'Row not found' };
+      const actions = Array.from(row.querySelectorAll('button,[role="button"],a'))
+        .map((el) => ({ label: normalize(el.getAttribute?.('aria-label') || el.textContent || '') }))
+        .filter((entry) => entry.label);
+      const matches = (label) => {
+        if (!label) return false;
+        const exact = (matchOptions.exact || []).map(normalize);
+        const startsWith = (matchOptions.startsWith || []).map(normalize);
+        const includeAll = (matchOptions.includeAll || []).map(normalize);
+        const includeAny = (matchOptions.includeAny || []).map(normalize);
+        if (exact.length && exact.includes(label)) return true;
+        if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
+        if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
+        if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
+        return false;
+      };
+      if (
+        matchOptions.exact ||
+        matchOptions.startsWith ||
+        matchOptions.includeAll ||
+        matchOptions.includeAny
+      ) {
+        const match = actions.find((entry) => matches(entry.label));
+        if (!match) {
+          return { ok: false, reason: 'Action not revealed', actions };
+        }
+      }
+      return { ok: true, actions };
+    })()`,
+    returnByValue: true,
+  });
+  const info = evalResult.result?.value as
+    | { ok: true; actions?: { label: string }[] }
+    | { ok: false; reason?: string; actions?: { label: string }[] }
+    | undefined;
+  if (!info?.ok) {
+    return { ok: false, reason: info?.reason, actions: info?.actions };
+  }
+  return {
+    ok: true,
+    point: hoverResult.point,
+    row: { selector: options.rowSelector },
+    actions: info?.actions,
+  };
 }
 
 export async function pressRowAction(
@@ -600,6 +688,13 @@ export async function pressButton(
         }) || null;
       }
       if (!match) {
+        if (${JSON.stringify(options.logCandidatesOnMiss ?? false)}) {
+          const labels = visibleCandidates
+            .map((el) => normalize(el.getAttribute?.('aria-label') || el.textContent || ''))
+            .filter(Boolean)
+            .slice(0, 12);
+          return { ok: false, reason: 'Button not found (candidates: ' + labels.join(', ') + ')' };
+        }
         return { ok: false, reason: 'Button not found' };
       }
       const label = normalize(match.getAttribute?.('aria-label') || match.textContent || '');
