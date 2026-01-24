@@ -101,3 +101,10 @@ faster to implement.
   - Use attribute selectors (`[class*="..."]`, `[aria-label="..."]`) to avoid escaping issues.
 - Keep reusable UI helpers in browser-service or llmService; keep Grok-specific selectors only in adapters.
 - For workflow guidance, see `docs/dev/browser-automation-playbook.md`.
+
+## Smoke helpers
+
+- `pnpm tsx scripts/verify-grok-project-sources-steps.ts <step|all> <projectId|current> [file... ] [--delete <fileName>]`
+  - Steps 1–6 are independent; use `all` to run the full flow.
+  - `current` resolves the project id from the active grok tab.
+  - Step 5 uploads files; step 6 removes a single file.

@@ -28,8 +28,10 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - If a menu uses `aria-controls`, wait for the referenced element id but fall back to a generic
      menu selector when the id is missing.
    - Use `pressRowAction` for hover-revealed Rename/Delete actions instead of scanning the whole dialog.
-   - For hover-only row actions (files/conversations), prefer `hoverRowAndClickAction`.
-   - For collapsible panels (Files/Sources), use `ensureCollapsibleExpanded` before searching rows.
+- For hover-only row actions (files/conversations), prefer `hoverRowAndClickAction`.
+- For collapsible panels (Files/Sources), use `ensureCollapsibleExpanded` before searching rows.
+- For project Sources workflows, use `ensureProjectSourcesTabSelected` + `ensureProjectSourcesFilesExpanded`
+  and the `verify-grok-project-sources-steps.ts` script to validate the attach/upload/delete sequence.
 
 5) **Set inputs reliably**
    - For inputs, use the native setter + `input`/`change` events.

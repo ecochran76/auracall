@@ -20,6 +20,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 ## Entries
 
+- Date: 2026-01-24
+- Area: Grok project sources (Files collapsible + uploads)
+- Symptom: `projects files add/remove` failed when the Files list was empty; helper threw `Button not found` and attach menu never opened.
+- Root cause: The Files collapsible toggle is sometimes absent when there are no rows; strict toggle matching caused a hard failure.
+- Fix: `ensureProjectSourcesFilesExpanded` now tolerates a missing toggle and only expands when a toggle is visible; added a stepwise smoke script to validate sources flows.
+- Verification: `pnpm tsx scripts/verify-grok-project-sources-steps.ts 1 <projectId>` and step 5/6 upload+remove succeed.
+
 - Date: 2026-01-14
 - Area: Grok project menu (clone/rename) + menu helpers
 - Symptom: `projects clone` opened the user/profile menu (items like Settings/Help) and failed to find Clone; rename failed right after clone.

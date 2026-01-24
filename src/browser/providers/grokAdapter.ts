@@ -2391,7 +2391,7 @@ async function waitForProjectSourcesTab(client: ChromeClient): Promise<void> {
   }
 }
 
-async function ensureProjectSourcesTabSelected(client: ChromeClient): Promise<void> {
+export async function ensureProjectSourcesTabSelected(client: ChromeClient): Promise<void> {
   await waitForSelector(client.Runtime, '[role="tablist"]', 5000);
   const evalResult = await client.Runtime.evaluate({
     expression: `(() => {
@@ -2429,18 +2429,26 @@ async function ensureProjectSourcesTabSelected(client: ChromeClient): Promise<vo
   await waitForProjectSourcesTab(client);
 }
 
-async function ensureProjectSourcesFilesExpanded(client: ChromeClient): Promise<void> {
+export async function ensureProjectSourcesFilesExpanded(client: ChromeClient): Promise<void> {
   const directSelector = `${GROK_SOURCES_CONTENT_SELECTOR} div${cssClassContains('group/collapsible-row')} button`;
-  await ensureCollapsibleExpanded(client.Runtime, {
-    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
-    rowSelector: GROK_ASSET_ROW_SELECTOR,
-    toggleSelector: directSelector,
-    toggleMatch: { includeAny: ['files'] },
-    timeoutMs: 5000,
+  const hasRows = await waitForSelector(client.Runtime, GROK_ASSET_ROW_SELECTOR, 500);
+  if (hasRows) {
+    return;
+  }
+  const pressed = await pressButton(client.Runtime, {
+    selector: directSelector,
+    match: { includeAny: ['files'] },
+    rootSelectors: [GROK_SOURCES_CONTENT_SELECTOR],
+    requireVisible: true,
+    timeoutMs: 2000,
   });
+  if (!pressed.ok) {
+    return;
+  }
+  await waitForSelector(client.Runtime, GROK_ASSET_ROW_SELECTOR, 2000);
 }
 
-async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promise<void> {
+export async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promise<void> {
   await ensureProjectSourcesFilesExpanded(client);
   const waitForAttach = await waitForSelector(
     client.Runtime,
@@ -2464,7 +2472,7 @@ async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promis
   }
 }
 
-async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Promise<void> {
+export async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Promise<void> {
   const clicked = await selectMenuItem(client.Runtime, {
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
     menuRootSelectors: [
@@ -2492,7 +2500,7 @@ async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Pr
   }
 }
 
-async function uploadProjectSourceFilesWithClient(
+export async function uploadProjectSourceFilesWithClient(
   client: ChromeClient,
   paths: string[],
 ): Promise<void> {
@@ -2599,7 +2607,7 @@ async function waitForProjectSourcesUploadsComplete(
   throw new Error('Project source uploads did not finish before timeout.');
 }
 
-async function removeProjectSourceFileWithClient(
+export async function removeProjectSourceFileWithClient(
   client: ChromeClient,
   fileName: string,
 ): Promise<void> {
@@ -3070,64 +3078,35 @@ export async function ensureProjectSidebarOpen(
   client: ChromeClient,
   options?: { logPrefix?: string },
 ): Promise<void> {
-  const logPrefix = options?.logPrefix ?? 'browser-project-sidebar-open';
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[' + ${JSON.stringify(logPrefix)} + '] ' + msg);
-      };
+  if (!await client.Runtime.evaluate({ expression: 'location.pathname.includes("/project/")', returnByValue: true })) {
+    throw new Error('Not on a project page');
+  }
 
-      if (!location.pathname.includes('/project/')) {
-        return { success: false, error: 'Not on a project page', logs };
-      }
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      const findButton = () => {
-        const buttons = Array.from(document.querySelectorAll('button[aria-label]')).filter(visible);
-        const collapse = buttons.find((button) =>
-          (button.getAttribute('aria-label') || '').toLowerCase() === 'collapse side panel'
-        );
-        if (collapse) return { state: 'open', button: collapse };
-        const expand = buttons.find((button) =>
-          (button.getAttribute('aria-label') || '').toLowerCase() === 'expand side panel'
-        );
-        if (expand) return { state: 'closed', button: expand };
-        return { state: 'unknown', button: null };
-      };
-
-      const info = findButton();
-      if (info.state === 'open') {
-        return { success: true, logs, clicked: false };
-      }
-      if (info.state === 'closed' && info.button) {
-        info.button.click();
-        return { success: true, logs, clicked: true };
-      }
-
-      return { success: false, error: 'Project sidebar toggle not found', logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const rootSelectors = [GROK_SIDEBAR_WRAPPER_SELECTOR, 'main'];
+  const collapse = await pressButton(client.Runtime, {
+    match: { exact: ['collapse side panel'] },
+    rootSelectors,
+    requireVisible: true,
+    timeoutMs: 3000,
+    logCandidatesOnMiss: true,
   });
+  if (collapse.ok) {
+    return;
+  }
 
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  const expand = await pressButton(client.Runtime, {
+    match: { exact: ['expand side panel'] },
+    rootSelectors,
+    requireVisible: true,
+    timeoutMs: 3000,
+    logCandidatesOnMiss: true,
+  });
+  if (!expand.ok) {
+    throw new Error(expand.reason || 'Project sidebar toggle not found');
   }
-  const info = evalResult.result?.value as { success: boolean; error?: string; clicked?: boolean } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Project sidebar did not open');
-  }
-  if (info.clicked) {
-    const opened = await waitForSelector(client.Runtime, 'button[aria-label="Collapse side panel"]', 3000);
-    if (!opened) {
-      throw new Error('Project sidebar did not open');
-    }
+  const opened = await waitForSelector(client.Runtime, 'button[aria-label="Collapse side panel"]', 3000);
+  if (!opened) {
+    throw new Error('Project sidebar did not open');
   }
 }
 
@@ -4270,65 +4249,15 @@ export async function pushProjectInstructionsEditButton(
   if (openDialog) {
     return;
   }
-  await waitForSelector(client.Runtime, 'button[aria-label*="Edit instructions" i]', 5000);
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[browser-project-instructions] ' + msg);
-      };
-
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-
-      if (!location.pathname.includes('/project/')) {
-        return { success: false, error: 'Not on a project page', logs };
-      }
-
-      const root =
-        document.querySelector(${JSON.stringify(GROK_SIDEBAR_WRAPPER_SELECTOR)}) ||
-        document.querySelector('[data-sidebar="sidebar"]') ||
-        document.querySelector('main') ||
-        document.body;
-      if (!root) {
-        return { success: false, error: 'Project root not found', logs };
-      }
-
-      const dialog = document.querySelector('[role="dialog"][data-state="open"], dialog[open]');
-      const dialogHasTextarea = Boolean(dialog && dialog.querySelector('textarea'));
-      if (dialogHasTextarea) {
-        log('Instructions dialog already open');
-        return { success: true, logs };
-      }
-
-      const editButton = Array.from(root.querySelectorAll('button[aria-label]'))
-        .filter(visible)
-        .find((button) => (button.getAttribute('aria-label') || '').toLowerCase().includes('edit instructions')) || null;
-      if (!editButton) {
-        const labels = Array.from(root.querySelectorAll('button[aria-label]'))
-          .map((button) => button.getAttribute('aria-label'))
-          .filter(Boolean)
-          .slice(0, 12);
-        return { success: false, error: 'Edit instructions button not found (labels: ' + labels.join(', ') + ')', logs };
-      }
-
-      editButton.click();
-
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
+  const pressed = await pressButton(client.Runtime, {
+    match: { includeAny: ['edit instructions'] },
+    rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'main'],
+    requireVisible: true,
+    timeoutMs: 5000,
+    logCandidatesOnMiss: true,
   });
-
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-  }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Edit instructions button failed');
+  if (!pressed.ok) {
+    throw new Error(pressed.reason || 'Edit instructions button failed');
   }
   const ready = await waitForSelector(client.Runtime, 'textarea', 5000);
   if (!ready) {

@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-01-24
+- Focus: Grok Sources tab CRUD smoke + helper exports.
+- Progress: Exported Sources helpers for direct smoke scripts; added `verify-grok-project-sources-steps.ts` for per-step testing; made Sources file expansion tolerant when the list is empty.
+- Issues: Step runner originally chained steps unintentionally; fixed to run only the requested step.
+- Next: Commit Sources smoke + helper exports, then finish UI helper upgrade integration and smoke in CLI.
+
+- Date: 2026-01-24
 - Focus: UI helper upgrades + Grok menu/hover reliability.
 - Progress: Added `waitForMenuOpen`, `pressMenuButtonByAriaLabel`, `hoverAndReveal`, and `pressButton` diagnostics; scoped menu selection with `menuRootSelectors`; adopted helpers in Grok project menu + history rename/delete; added fallback navigation when create-project hover fails; added `scripts/start-devtools-session.ts` to launch/resolve a DevTools port.
 - Issues: Local smoke scripts require a live DevTools port; no active port caused verify scripts to fail.
