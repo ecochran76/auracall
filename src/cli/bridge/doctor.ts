@@ -55,7 +55,7 @@ export async function runBridgeDoctor(_options: BridgeDoctorCliOptions): Promise
     }
 
     if (!resolvedRemote.token) {
-      fail.push('Remote token is missing. Run `oracle bridge client --connect <...> --write-config` or set ORACLE_REMOTE_TOKEN.');
+      fail.push('Remote token is missing. Run `oracle bridge client --connect <...>` or set ORACLE_REMOTE_TOKEN.');
     } else if (tcp.ok) {
       const health = await checkRemoteHealth({ host: resolvedRemote.host, token: resolvedRemote.token, timeoutMs: 5000 });
       if (health.ok) {

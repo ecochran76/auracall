@@ -39,10 +39,16 @@ Copy the connection artifact from Windows to Linux (example from Windows → Lin
 scp "$env:USERPROFILE\.oracle\bridge-connection.json" user@your-linux-host:~/bridge-connection.json
 ```
 
+If your Linux client is WSL on the same Windows machine, you can skip `scp` and point directly at the Windows file:
+
+```bash
+oracle bridge client --connect /mnt/c/Users/<WindowsUser>/.oracle/bridge-connection.json
+```
+
 Then on the Linux host:
 
 ```bash
-oracle bridge client --connect ~/bridge-connection.json --write-config --test
+oracle bridge client --connect ~/bridge-connection.json
 ```
 
 This writes:
