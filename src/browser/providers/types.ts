@@ -106,7 +106,11 @@ export interface BrowserProvider {
   ) => Promise<{ text: string; model?: string | null }>;
   getUserIdentity?: (options?: BrowserProviderListOptions) => Promise<ProviderUserIdentity | null>;
   openConversation?: (conversationId: string) => Promise<void>;
-  readConversationContext?: (conversationId: string) => Promise<unknown>;
+  readConversationContext?: (
+    conversationId: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<unknown>;
   listProjectFiles?: (
     projectId: string,
     options?: BrowserProviderListOptions,

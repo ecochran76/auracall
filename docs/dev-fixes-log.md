@@ -21,6 +21,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-01-24
+- Area: Conversation context retrieval (Grok + llmService + CLI)
+- Symptom: No end-to-end command existed to retrieve/store conversation context; provider capability was exposed but not implemented.
+- Root cause: `readConversationContext` was declared on provider types but missing in Grok adapter and missing from `LlmService`/CLI command surface.
+- Fix:
+  - Implemented Grok `readConversationContext(conversationId, projectId?, options?)` with route-aware navigation (`/c/<id>` and `/project/<id>?chat=<id>`) and message scraping from response rows.
+  - Added `LlmService.getConversationContext(...)` with cache write-through to `contexts/<conversationId>.json` and cached fallback on live scrape failure.
+  - Added CLI `oracle conversations context get <id>` with `--project-id`, `--cache-only`, and history controls for name/selector resolution.
+  - Added smoke helper: `pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]`.
+- Verification:
+  - `pnpm tsx bin/oracle-cli.ts conversations context get --help`
+  - `pnpm tsx scripts/verify-grok-context-get.ts` (usage/compile path)
+
+- Date: 2026-01-24
 - Area: Grok project files (new Personal Files modal UX)
 - Symptom: `projects files add/list/remove` regressed after UI change; old Sources selectors no longer matched reliably.
 - Root cause: Grok moved file interactions behind a `Personal files` modal (search input + Attach button + hover remove + Save), while old code assumed direct Sources-row controls.

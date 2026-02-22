@@ -24,7 +24,7 @@ const instanceScannerMocks = vi.hoisted(() => ({
       launchedAt: new Date().toISOString(),
       lastSeenAt: new Date().toISOString(),
     },
-    tabs: [],
+    tabs: [] as Array<{ targetId?: string; url?: string; title?: string; type?: string }>,
   })),
 }));
 

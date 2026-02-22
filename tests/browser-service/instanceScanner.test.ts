@@ -34,7 +34,8 @@ describe('instanceScanner (package)', () => {
       );
 
       const { default: cdp } = await import('chrome-remote-interface');
-      (cdp as { List: ReturnType<typeof vi.fn> }).List.mockResolvedValue([
+      const cdpMock = cdp as unknown as { List: ReturnType<typeof vi.fn> };
+      cdpMock.List.mockResolvedValue([
         { targetId: 'tab-1', type: 'page', url: 'https://grok.com', title: 'Grok' },
       ]);
       const scan = await scanRegisteredInstance(

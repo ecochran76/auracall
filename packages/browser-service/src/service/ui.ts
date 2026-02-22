@@ -12,13 +12,13 @@ export type LabelMatchOptions = {
 export type FindAndClickOptions = {
   selectors: string[];
   match: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
 };
 
 export type PressButtonOptions = {
   selector?: string;
   match?: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   requireVisible?: boolean;
   timeoutMs?: number;
   postSelector?: string;
@@ -29,7 +29,7 @@ export type PressButtonOptions = {
 export type SetInputValueOptions = {
   selector?: string;
   match?: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   value: string;
   requireVisible?: boolean;
   timeoutMs?: number;
@@ -73,7 +73,7 @@ export type OpenRadixMenuOptions = OpenMenuOptions;
 
 export type SelectMenuItemOptions = {
   menuSelector?: string;
-  menuRootSelectors?: string[];
+  menuRootSelectors?: readonly string[];
   itemMatch: LabelMatchOptions;
   timeoutMs?: number;
   closeMenuAfter?: boolean;
@@ -97,7 +97,7 @@ export type OpenAndSelectMenuItemOptions = {
   trigger: PressButtonOptions;
   itemMatch: LabelMatchOptions;
   menuSelector?: string;
-  menuRootSelectors?: string[];
+  menuRootSelectors?: readonly string[];
   timeoutMs?: number;
   closeMenuAfter?: boolean;
 };
@@ -119,14 +119,14 @@ export type TogglePanelOptions = {
 
 export type PressMenuButtonByAriaLabelOptions = {
   label: string;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   menuSelector?: string;
   timeoutMs?: number;
 };
 
 export type HoverElementOptions = {
   selector: string;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   timeoutMs?: number;
 };
 
@@ -141,7 +141,7 @@ export type HoverElementResult = {
 export type HoverAndRevealOptions = {
   rowSelector: string;
   actionMatch?: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   timeoutMs?: number;
 };
 
@@ -156,13 +156,13 @@ export type HoverAndRevealResult = {
 export type PressRowActionOptions = {
   anchorSelector: string;
   actionMatch: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   timeoutMs?: number;
 };
 
 export type PressDialogButtonOptions = {
   match: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   timeoutMs?: number;
   preferLast?: boolean;
 };
@@ -171,7 +171,7 @@ export type SubmitInlineRenameOptions = {
   value: string;
   inputSelector?: string;
   inputMatch?: LabelMatchOptions;
-  rootSelectors?: string[];
+  rootSelectors?: readonly string[];
   saveButtonMatch?: LabelMatchOptions;
   timeoutMs?: number;
   closeSelector?: string;

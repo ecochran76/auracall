@@ -682,13 +682,23 @@ projectsCommand
       : undefined;
     const rootOptions = program.opts?.() ?? {};
     const mergedFileInputs = mergePathLikeOptions(
-      commandOptions.file,
-      (parentOptions as CliOptions).file,
-      (rootOptions as CliOptions).file,
-      (commandOptions as CliOptions).include,
-      (commandOptions as CliOptions).files,
-      (commandOptions as CliOptions).path,
-      (commandOptions as CliOptions).paths,
+      collectPaths(commandOptions.file, collectPaths((parentOptions as CliOptions).file, collectPaths((rootOptions as CliOptions).file, []))),
+      collectPaths(
+        (commandOptions as CliOptions).include,
+        collectPaths((parentOptions as CliOptions).include, collectPaths((rootOptions as CliOptions).include, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).files,
+        collectPaths((parentOptions as CliOptions).files, collectPaths((rootOptions as CliOptions).files, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).path,
+        collectPaths((parentOptions as CliOptions).path, collectPaths((rootOptions as CliOptions).path, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).paths,
+        collectPaths((parentOptions as CliOptions).paths, collectPaths((rootOptions as CliOptions).paths, [])),
+      ),
     );
     const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
     if (duplicates.length > 0) {
@@ -884,14 +894,25 @@ projectFilesCommand
       identityPrompt: promptForCacheIdentity,
     });
     const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const rootOptions: CliOptions = (program.opts?.() as CliOptions | undefined) ?? ({} as CliOptions);
     const mergedFileInputs = mergePathLikeOptions(
-      commandOptions.file,
-      (parentOptions as CliOptions).file,
-      (program.opts?.() as CliOptions | undefined)?.file,
-      (commandOptions as CliOptions).include,
-      (commandOptions as CliOptions).files,
-      (commandOptions as CliOptions).path,
-      (commandOptions as CliOptions).paths,
+      collectPaths(commandOptions.file, collectPaths((parentOptions as CliOptions).file, collectPaths(rootOptions.file, []))),
+      collectPaths(
+        (commandOptions as CliOptions).include,
+        collectPaths((parentOptions as CliOptions).include, collectPaths(rootOptions.include, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).files,
+        collectPaths((parentOptions as CliOptions).files, collectPaths(rootOptions.files, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).path,
+        collectPaths((parentOptions as CliOptions).path, collectPaths(rootOptions.path, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).paths,
+        collectPaths((parentOptions as CliOptions).paths, collectPaths(rootOptions.paths, [])),
+      ),
     );
     const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
     if (duplicates.length > 0) {
@@ -1040,7 +1061,7 @@ projectInstructionsCommand
     }
   });
 
-program
+const conversationsCommand = program
   .command('conversations')
   .description('List conversations for the active browser provider.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
@@ -1201,6 +1222,77 @@ program
     } else {
       console.log(JSON.stringify(filtered, null, 2));
     }
+  });
+
+const conversationContextCommand = conversationsCommand
+  .command('context')
+  .description('Read cached/live conversation context payloads.');
+
+conversationContextCommand
+  .command('get <id>')
+  .description('Retrieve conversation context by ID or cached title/selector.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
+  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
+  .option('--refresh', 'Force live refresh (default).')
+  .option('--cache-only', 'Read from cache only (skip live browser retrieval).')
+  .action(async (id, commandOptions, command) => {
+    const parentOptions = command.parent?.parent?.opts?.() ?? {};
+    const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
+      | 'chatgpt'
+      | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const cacheDefaults = userConfig.browser?.cache;
+    const historyLimit =
+      commandOptions.historyLimit
+        ? Number.parseInt(commandOptions.historyLimit, 10)
+        : cacheDefaults?.historyLimit ?? 200;
+    const historySince =
+      typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
+        ? commandOptions.historySince.trim()
+        : cacheDefaults?.historySince;
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl: userConfig.browser?.url ?? null,
+      includeHistory: true,
+      historyLimit,
+      historySince,
+    });
+    if (typeof listOptions.historyLimit === 'number' && (!Number.isFinite(listOptions.historyLimit) || listOptions.historyLimit <= 0)) {
+      throw new Error('history-limit must be a positive number.');
+    }
+    if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
+      throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
+    }
+    const projectArg =
+      commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const selector = String(id || '').trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selector);
+    const conversationId = isUuid
+      ? selector
+      : (
+          await llmService.resolveConversationSelector(selector, {
+            projectId,
+            forceRefresh: true,
+            listOptions,
+          })
+        ).id;
+    const refresh = commandOptions.cacheOnly ? false : true;
+    const context = await llmService.getConversationContext(conversationId, {
+      projectId,
+      refresh,
+      cacheOnly: Boolean(commandOptions.cacheOnly),
+      listOptions,
+    });
+    console.log(JSON.stringify(context, null, 2));
   });
 
 program

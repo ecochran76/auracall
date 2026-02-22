@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-01-24
+- Focus: Conversation context retrieval plumbing (provider + llmService + CLI).
+- Progress: Added Grok `readConversationContext` scraping, `LlmService.getConversationContext` with cache write-through + cached fallback, and `oracle conversations context get <id>` plus `scripts/verify-grok-context-get.ts`.
+- Issues: Context retrieval needs resilient scraping for both `/c/<id>` and `/project/<id>?chat=<id>` routes; added explicit invalid-URL checks and message-presence validation to fail clearly.
+- Next: Run live Grok context smoke from CLI and confirm cache entries under `contexts/<conversationId>.json`.
+
+- Date: 2026-01-24
 - Focus: Grok project file flows after Personal Files UX change.
 - Progress: Migrated add/remove/list flows to Personal Files modal interactions; added pending-remove verification (line-through/Undo/opacity) before Save; validated CLI add/remove stability.
 - Issues: File listing semantics were briefly inconsistent during transition between old Sources-root and new modal-root selectors.

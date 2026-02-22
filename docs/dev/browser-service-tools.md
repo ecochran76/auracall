@@ -108,3 +108,6 @@ faster to implement.
   - Steps 1–6 are independent; use `all` to run the full flow.
   - `current` resolves the project id from the active grok tab.
   - Step 5 uploads files; step 6 removes a single file.
+
+- `pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]`
+  - Fetches conversation context through the Grok adapter path and prints message count.

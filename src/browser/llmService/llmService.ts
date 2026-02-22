@@ -1,6 +1,13 @@
 import type { ResolvedUserConfig } from '../../config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
-import type { Conversation, FileRef, Project, ProviderId } from '../providers/domain.js';
+import type {
+  Conversation,
+  ConversationContext,
+  ConversationMessage,
+  FileRef,
+  Project,
+  ProviderId,
+} from '../providers/domain.js';
 import {
   matchConversationByTitle,
   matchProjectByName,
@@ -613,6 +620,56 @@ export abstract class LlmService {
     );
   }
 
+  async getConversationContext(
+    conversationId: string,
+    options?: {
+      projectId?: string;
+      refresh?: boolean;
+      cacheOnly?: boolean;
+      listOptions?: BrowserProviderListOptions;
+    },
+  ): Promise<ConversationContext> {
+    if (!this.provider.readConversationContext) {
+      throw new Error(`Conversation context retrieval is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, {
+      ensurePort: options?.cacheOnly ? false : true,
+    });
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    const refresh = options?.refresh !== false;
+    if (!refresh) {
+      const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
+      if (cached.items.messages.length > 0) {
+        return cached.items;
+      }
+      if (options?.cacheOnly) {
+        throw new Error(
+          `No cached conversation context for "${conversationId}". Run without --cache-only to fetch live context.`,
+        );
+      }
+    }
+    try {
+      const context = await this.withRetry(
+        () =>
+          this.provider.readConversationContext?.(
+            conversationId,
+            options?.projectId,
+            listOptions,
+          ) as Promise<unknown>,
+        { action: 'readConversationContext' },
+      );
+      const normalized = this.normalizeConversationContext(context, conversationId);
+      await this.cacheStore.writeConversationContext(cacheContext, conversationId, normalized);
+      return normalized;
+    } catch (error) {
+      const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
+      if (cached.items.messages.length > 0) {
+        return cached.items;
+      }
+      throw error;
+    }
+  }
+
   async resolveProjectIdByName(
     projectName: string,
     options?: {
@@ -916,6 +973,45 @@ export abstract class LlmService {
       return null;
     }
     return null;
+  }
+
+  private normalizeConversationContext(payload: unknown, conversationId: string): ConversationContext {
+    const fallback: ConversationContext = {
+      provider: this.providerId,
+      conversationId,
+      messages: [],
+    };
+    if (!payload || typeof payload !== 'object') {
+      return fallback;
+    }
+    const raw = payload as Partial<ConversationContext> & { messages?: unknown[] };
+    const normalizedMessages: ConversationMessage[] = [];
+    if (Array.isArray(raw.messages)) {
+      for (const entry of raw.messages) {
+        if (!entry || typeof entry !== 'object') continue;
+        const candidate = entry as Partial<ConversationMessage>;
+        const role =
+          candidate.role === 'assistant' || candidate.role === 'system' || candidate.role === 'user'
+            ? candidate.role
+            : null;
+        const text = typeof candidate.text === 'string' ? candidate.text.trim() : '';
+        if (!role || !text) continue;
+        normalizedMessages.push({
+          role,
+          text,
+          time: typeof candidate.time === 'string' ? candidate.time : undefined,
+        });
+      }
+    }
+    return {
+      provider: this.providerId,
+      conversationId:
+        typeof raw.conversationId === 'string' && raw.conversationId.trim().length > 0
+          ? raw.conversationId.trim()
+          : conversationId,
+      messages: normalizedMessages,
+      files: Array.isArray(raw.files) ? raw.files : undefined,
+    };
   }
 
   private async resolveLatestConversation(

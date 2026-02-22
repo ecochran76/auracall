@@ -1,6 +1,6 @@
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
-import type { Project, Conversation, FileRef } from './domain.js';
+import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { ChromeClient } from '../types.js';
 import { ensureServicesRegistry } from '../../services/registry.js';
@@ -84,6 +84,7 @@ export function createGrokAdapter(): Pick<
   | 'openProjectMenu'
   | 'updateProjectInstructions'
   | 'getProjectInstructions'
+  | 'readConversationContext'
   | 'uploadProjectFiles'
   | 'listProjectFiles'
   | 'deleteProjectFile'
@@ -1915,6 +1916,95 @@ export function createGrokAdapter(): Pick<
         return { text: info.text, model: info.model };
       } finally {
         await closeHistoryDialog(client);
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async readConversationContext(
+      conversationId: string,
+      projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<ConversationContext> {
+      const cleanProjectId = typeof projectId === 'string' && projectId.trim().length > 0 ? projectId.trim() : undefined;
+      const targetUrl = cleanProjectId
+        ? `https://grok.com/project/${cleanProjectId}?chat=${conversationId}`
+        : `https://grok.com/c/${conversationId}`;
+      const connection = cleanProjectId
+        ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
+        : await connectToGrokTab(options, targetUrl);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        if (cleanProjectId) {
+          await navigateToProject(client, targetUrl);
+        } else {
+          await client.Page.navigate({ url: targetUrl });
+          await waitForDocumentReady(client, 15_000);
+          if (!(await isValidConversationUrl(client))) {
+            throw new Error('Conversation URL is invalid or missing.');
+          }
+        }
+
+        const ready = await waitForSelector(
+          client.Runtime,
+          'main [id^="response-"], main div.message-bubble, main [class*="response-content-markdown"]',
+          10_000,
+        );
+        if (!ready) {
+          throw new Error('Conversation content not found');
+        }
+
+        const evalResult = await client.Runtime.evaluate({
+          expression: `(() => {
+            const normalize = (value) => String(value || '').replace(/\\r\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
+            const rows = Array.from(document.querySelectorAll('main [id^="response-"]'));
+            const messages = [];
+
+            const pushFromRow = (row) => {
+              const classText = String(row.getAttribute('class') || '');
+              const role = classText.includes('items-end') ? 'user' : classText.includes('items-start') ? 'assistant' : null;
+              if (!role) return;
+              const markdown = row.querySelector('[class*="response-content-markdown"]');
+              const bubble = row.querySelector('div.message-bubble');
+              const text = normalize((markdown && markdown.textContent) || (bubble && bubble.textContent) || '');
+              if (!text) return;
+              messages.push({ role, text });
+            };
+
+            for (const row of rows) {
+              pushFromRow(row);
+            }
+
+            if (messages.length === 0) {
+              const fallbackRows = Array.from(document.querySelectorAll('div.message-bubble'));
+              for (const bubble of fallbackRows) {
+                const row = bubble.closest('div[class*="items-start"], div[class*="items-end"]');
+                const classText = String(row?.getAttribute('class') || bubble.getAttribute('class') || '');
+                const role = classText.includes('items-end') ? 'user' : classText.includes('items-start') ? 'assistant' : null;
+                if (!role) continue;
+                const text = normalize(bubble.textContent || '');
+                if (!text) continue;
+                messages.push({ role, text });
+              }
+            }
+
+            return { ok: true, messages };
+          })()`,
+          returnByValue: true,
+        });
+        const info = evalResult.result?.value as { ok?: boolean; messages?: Array<{ role: 'user' | 'assistant'; text: string }> } | undefined;
+        const messages = Array.isArray(info?.messages) ? info.messages : [];
+        if (messages.length === 0) {
+          throw new Error('Conversation messages not found');
+        }
+        return {
+          provider: 'grok',
+          conversationId,
+          messages,
+        };
+      } finally {
         await client.close();
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
