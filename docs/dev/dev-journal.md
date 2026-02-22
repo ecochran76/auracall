@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-01-24
+- Focus: Grok project file flows after Personal Files UX change.
+- Progress: Migrated add/remove/list flows to Personal Files modal interactions; added pending-remove verification (line-through/Undo/opacity) before Save; validated CLI add/remove stability.
+- Issues: File listing semantics were briefly inconsistent during transition between old Sources-root and new modal-root selectors.
+- Next: Keep CLI file flows stable and continue Phase 7 project/conversation CRUD tasks.
+
+- Date: 2026-01-24
 - Focus: Grok Sources tab CRUD smoke + helper exports.
 - Progress: Exported Sources helpers for direct smoke scripts; added `verify-grok-project-sources-steps.ts` for per-step testing; made Sources file expansion tolerant when the list is empty.
 - Issues: Step runner originally chained steps unintentionally; fixed to run only the requested step.

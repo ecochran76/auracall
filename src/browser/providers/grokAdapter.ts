@@ -44,7 +44,13 @@ const GROK_TITLE_SELECTOR = `${GROK_LINE_CLAMP_SELECTOR}, ${GROK_TRUNCATE_SELECT
 const GROK_TIME_SELECTOR = cssClassContains('time');
 const GROK_TIMESTAMP_SELECTOR = cssClassContains('timestamp');
 const GROK_SOURCES_CONTENT_SELECTOR = 'div[id*="content-sources"]';
+const GROK_SOURCES_ROOT_SELECTOR = `${GROK_SOURCES_CONTENT_SELECTOR}, main`;
 const GROK_ASSET_ROW_SELECTOR = `div${cssClassContains('group/asset-row')}`;
+const GROK_SOURCES_FILES_ROW_SELECTOR = `div${cssClassContains('group/collapsible-row')}`;
+const GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssClassContains('ms-[1px]')}`;
+const GROK_PERSONAL_FILES_SEARCH_SELECTOR = 'input[placeholder*="Search"][placeholder*="files"], input[placeholder*="Search files"]';
+const GROK_PERSONAL_FILES_ROW_SELECTOR = `div${cssClassContains('hover:bg-surface-l1')}${cssClassContains('group')}`;
+const GROK_PERSONAL_FILES_MODAL_MARKER = 'data-oracle-personal-files-modal';
 
 export function createGrokAdapter(): Pick<
   BrowserProvider,
@@ -1639,13 +1645,12 @@ export function createGrokAdapter(): Pick<
         await navigateToProject(client, projectUrl);
         await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
-        await clickProjectSourcesAttachWithClient(client);
-        await clickProjectSourcesUploadFileWithClient(client);
         await uploadProjectSourceFilesWithClient(client, filePaths);
         await waitForProjectSourcesUploadsComplete(
           client,
           filePaths.map((filePath) => path.basename(filePath)),
         );
+        await clickPersonalFilesSaveWithClient(client);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1666,10 +1671,11 @@ export function createGrokAdapter(): Pick<
         await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
         await ensureProjectSourcesFilesExpanded(client);
+        await ensurePersonalFilesModalOpen(client);
         const evalResult = await client.Runtime.evaluate({
           expression: `(() => {
-            const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
-            const rows = Array.from(root.querySelectorAll(${JSON.stringify(GROK_ASSET_ROW_SELECTOR)}));
+            const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
+            const rows = Array.from(root.querySelectorAll(${JSON.stringify(GROK_PERSONAL_FILES_ROW_SELECTOR)}));
             const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
             const sizeMatch = (text) => {
               const match = text.match(/(\\d+(?:\\.\\d+)?)\\s*(kb|mb|gb|b)/i);
@@ -1730,7 +1736,8 @@ export function createGrokAdapter(): Pick<
         await waitForProjectSourcesTab(client);
         await ensureProjectSourcesFilesExpanded(client);
         await removeProjectSourceFileWithClient(client, fileName);
-        await waitForProjectSourceFileRemoved(client, fileName);
+        await waitForProjectSourceFileMarkedRemoved(client, fileName);
+        await clickPersonalFilesSaveWithClient(client);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -2385,10 +2392,97 @@ async function waitForProjectUploadsComplete(
 }
 
 async function waitForProjectSourcesTab(client: ChromeClient): Promise<void> {
-  const ready = await waitForSelector(client.Runtime, GROK_SOURCES_CONTENT_SELECTOR, 10_000);
+  const ready = await waitForSelector(
+    client.Runtime,
+    `${GROK_SOURCES_CONTENT_SELECTOR}, ${GROK_SOURCES_FILES_ROW_SELECTOR}`,
+    10_000,
+  );
   if (!ready) {
     throw new Error('Project sources tab did not load.');
   }
+}
+
+async function tagPersonalFilesModalRoot(client: ChromeClient): Promise<boolean> {
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      for (const node of document.querySelectorAll('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]')) {
+        node.removeAttribute('${GROK_PERSONAL_FILES_MODAL_MARKER}');
+      }
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const input = Array.from(document.querySelectorAll(${JSON.stringify(GROK_PERSONAL_FILES_SEARCH_SELECTOR)}))
+        .find((node) => visible(node));
+      if (!input) return { ok: false };
+      const root =
+        input.closest('div[id^="radix-"]') ||
+        input.closest('div[role="dialog"]') ||
+        input.closest('div');
+      if (!root) return { ok: false };
+      root.setAttribute('${GROK_PERSONAL_FILES_MODAL_MARKER}', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(evalResult.result?.value?.ok);
+}
+
+async function ensurePersonalFilesModalOpen(client: ChromeClient): Promise<void> {
+  if (await tagPersonalFilesModalRoot(client)) {
+    return;
+  }
+  const clicked = await pressButton(client.Runtime, {
+    match: { includeAny: ['personal files'] },
+    rootSelectors: ['main'],
+    requireVisible: true,
+    timeoutMs: 5000,
+    logCandidatesOnMiss: true,
+  });
+  if (!clicked.ok) {
+    throw new Error(clicked.reason || 'Personal files opener not found');
+  }
+  const opened = await waitForSelector(client.Runtime, GROK_PERSONAL_FILES_SEARCH_SELECTOR, 5000);
+  if (!opened || !(await tagPersonalFilesModalRoot(client))) {
+    throw new Error('Personal files modal not found');
+  }
+}
+
+async function clickPersonalFilesSaveWithClient(client: ChromeClient): Promise<void> {
+  const clicked = await pressButton(client.Runtime, {
+    match: { exact: ['save'] },
+    rootSelectors: [`[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`],
+    requireVisible: true,
+    timeoutMs: 4000,
+    logCandidatesOnMiss: true,
+  });
+  if (!clicked.ok) {
+    throw new Error(clicked.reason || 'Personal files Save button not found');
+  }
+  await waitForNotSelector(client.Runtime, `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`, 5000);
+}
+
+async function setPersonalFilesSearchQuery(client: ChromeClient, query: string): Promise<void> {
+  await ensurePersonalFilesModalOpen(client);
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]');
+      if (!root) return { ok: false };
+      const input = root.querySelector(${JSON.stringify(GROK_PERSONAL_FILES_SEARCH_SELECTOR)});
+      if (!input) return { ok: false };
+      const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+      if (setter) setter.call(input, ${JSON.stringify(query)});
+      else input.value = ${JSON.stringify(query)};
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  if (!result.result?.value?.ok) {
+    throw new Error('Personal files search input not found');
+  }
+  await new Promise((resolve) => setTimeout(resolve, 250));
 }
 
 export async function ensureProjectSourcesTabSelected(client: ChromeClient): Promise<void> {
@@ -2400,7 +2494,14 @@ export async function ensureProjectSourcesTabSelected(client: ChromeClient): Pro
       const sources = tabs.find((tab) => normalize(tab.textContent || '') === 'sources');
       if (!sources) {
         const sourcesContent = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)});
-        return sourcesContent ? { ok: true, active: true } : { ok: false, reason: 'Sources tab not found' };
+        if (sourcesContent) return { ok: true, active: true };
+        const filesRow = Array.from(document.querySelectorAll('div')).find((node) => {
+          const text = normalize(node.textContent || '');
+          if (text !== 'files' && !text.startsWith('files')) return false;
+          const klass = (node.getAttribute('class') || '').toLowerCase();
+          return klass.includes('group/collapsible-row');
+        });
+        return filesRow ? { ok: true, active: true } : { ok: false, reason: 'Sources tab not found' };
       }
       const active =
         sources.getAttribute('aria-selected') === 'true' ||
@@ -2411,6 +2512,10 @@ export async function ensureProjectSourcesTabSelected(client: ChromeClient): Pro
   });
   const info = evalResult.result?.value as { ok?: boolean; active?: boolean; reason?: string } | undefined;
   if (!info?.ok) {
+    const filesReady = await waitForSelector(client.Runtime, GROK_SOURCES_FILES_ROW_SELECTOR, 5000);
+    if (filesReady) {
+      return;
+    }
     throw new Error(info?.reason || 'Sources tab not found');
   }
   if (info.active) {
@@ -2430,7 +2535,7 @@ export async function ensureProjectSourcesTabSelected(client: ChromeClient): Pro
 }
 
 export async function ensureProjectSourcesFilesExpanded(client: ChromeClient): Promise<void> {
-  const directSelector = `${GROK_SOURCES_CONTENT_SELECTOR} div${cssClassContains('group/collapsible-row')} button`;
+  const directSelector = `${GROK_SOURCES_ROOT_SELECTOR} div${cssClassContains('group/collapsible-row')} button`;
   const hasRows = await waitForSelector(client.Runtime, GROK_ASSET_ROW_SELECTOR, 500);
   if (hasRows) {
     return;
@@ -2438,7 +2543,7 @@ export async function ensureProjectSourcesFilesExpanded(client: ChromeClient): P
   const pressed = await pressButton(client.Runtime, {
     selector: directSelector,
     match: { includeAny: ['files'] },
-    rootSelectors: [GROK_SOURCES_CONTENT_SELECTOR],
+    rootSelectors: [GROK_SOURCES_ROOT_SELECTOR],
     requireVisible: true,
     timeoutMs: 2000,
   });
@@ -2450,18 +2555,12 @@ export async function ensureProjectSourcesFilesExpanded(client: ChromeClient): P
 
 export async function clickProjectSourcesAttachWithClient(client: ChromeClient): Promise<void> {
   await ensureProjectSourcesFilesExpanded(client);
-  const waitForAttach = await waitForSelector(
-    client.Runtime,
-    `${GROK_SOURCES_CONTENT_SELECTOR} button[aria-label="Attach"]`,
-    3000,
-  );
-  if (!waitForAttach) {
-    throw new Error('Project sources attach button not found');
-  }
+  await ensurePersonalFilesModalOpen(client);
   const opened = await openRadixMenu(client.Runtime, {
     trigger: {
-      selector: 'button[aria-label="Attach"]',
-      rootSelectors: [GROK_SOURCES_CONTENT_SELECTOR],
+      selector: 'button',
+      rootSelectors: [`[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`],
+      match: { exact: ['attach'] },
       requireVisible: true,
     },
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
@@ -2473,37 +2572,63 @@ export async function clickProjectSourcesAttachWithClient(client: ChromeClient):
 }
 
 export async function clickProjectSourcesUploadFileWithClient(client: ChromeClient): Promise<void> {
-  const clicked = await selectMenuItem(client.Runtime, {
-    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-    menuRootSelectors: [
-      '[role="menu"][data-state="open"]',
-      '[data-radix-menu-content][data-state="open"]',
-    ],
-    itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
-    closeMenuAfter: false,
-    timeoutMs: 2000,
-  });
-  if (clicked) return;
-  await clickProjectSourcesAttachWithClient(client);
-  const retried = await selectMenuItem(client.Runtime, {
-    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-    menuRootSelectors: [
-      '[role="menu"][data-state="open"]',
-      '[data-radix-menu-content][data-state="open"]',
-    ],
-    itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
-    closeMenuAfter: false,
-    timeoutMs: 2000,
-  });
-  if (!retried) {
-    throw new Error('Upload file menu item not found');
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    await clickProjectSourcesAttachWithClient(client);
+    await waitForSelector(
+      client.Runtime,
+      '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+      3000,
+    );
+    const clicked = await selectMenuItem(client.Runtime, {
+      menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
+      menuRootSelectors: [
+        '[role="menu"][data-state="open"]',
+        '[data-radix-menu-content][data-state="open"]',
+      ],
+      itemMatch: { exact: ['upload a file'], includeAny: ['upload a file'] },
+      closeMenuAfter: false,
+      timeoutMs: 3000,
+    });
+    if (clicked) return;
   }
+  const labelsEval = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const items = Array.from(document.querySelectorAll('[role="menuitem"], [data-radix-collection-item]'))
+        .filter((el) => visible(el))
+        .map((el) => (el.textContent || '').replace(/\\s+/g, ' ').trim())
+        .filter(Boolean)
+        .slice(0, 20);
+      return { items };
+    })()`,
+    returnByValue: true,
+  });
+  const items = (labelsEval.result?.value?.items as string[] | undefined) ?? [];
+  throw new Error(
+    `Upload file menu item not found (visible menu items: ${items.join(', ')})`,
+  );
 }
 
 export async function uploadProjectSourceFilesWithClient(
   client: ChromeClient,
   paths: string[],
 ): Promise<void> {
+  await ensurePersonalFilesModalOpen(client);
+  const ensureInput = async (): Promise<void> => {
+    const hasInput = await client.Runtime.evaluate({
+      expression: `(() => {
+        const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
+        return { ok: Boolean(root.querySelector('input[type="file"]') || document.querySelector('input[type="file"]')) };
+      })()`,
+      returnByValue: true,
+    });
+    if (hasInput.result?.value?.ok) return;
+    await clickProjectSourcesUploadFileWithClient(client);
+  };
+  await ensureInput();
   const attachments = paths.map((filePath) => ({
     path: filePath,
     displayPath: filePath,
@@ -2511,7 +2636,7 @@ export async function uploadProjectSourceFilesWithClient(
   }));
   const tagResult = await client.Runtime.evaluate({
     expression: `(() => {
-      const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+      const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
       const input = root.querySelector('input[type="file"]') || document.querySelector('input[type="file"]');
       if (!input) return { ok: false };
       input.setAttribute('data-oracle-project-upload', 'true');
@@ -2536,14 +2661,14 @@ export async function uploadProjectSourceFilesWithClient(
       const status = await client.Runtime.evaluate({
         expression: `(() => {
           const name = ${JSON.stringify(name)};
-          const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+          const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
           const rows = Array.from(root.querySelectorAll('div')).filter((node) =>
             (node.textContent || '').includes(name),
           );
           for (const row of rows) {
             const text = (row.textContent || '').trim();
             if (!text) continue;
-            if (text.includes('0 B')) continue;
+            if (text.includes('0 B') || text.includes('0 b')) continue;
             return { ok: true, text };
           }
           return { ok: false };
@@ -2574,7 +2699,7 @@ async function waitForProjectSourcesUploadsComplete(
     const result = await client.Runtime.evaluate({
       expression: `(() => {
         const names = ${JSON.stringify(normalized)};
-        const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
+        const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
         const text = (root.textContent || '').toLowerCase();
         const missing = [];
         for (const name of names) {
@@ -2611,46 +2736,70 @@ export async function removeProjectSourceFileWithClient(
   client: ChromeClient,
   fileName: string,
 ): Promise<void> {
-  const rowInfo = await queryRowsByText(client.Runtime, {
-    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
-    rowSelector: GROK_ASSET_ROW_SELECTOR,
-    match: { text: fileName },
-  });
+  await ensurePersonalFilesModalOpen(client);
+  await setPersonalFilesSearchQuery(client, fileName);
+  const deadline = Date.now() + 5000;
+  let rowInfo: { ok: boolean; reason?: string } = { ok: false, reason: 'Row not found' };
+  while (Date.now() < deadline) {
+    rowInfo = await queryRowsByText(client.Runtime, {
+      rootSelector: `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+      rowSelector: GROK_PERSONAL_FILES_ROW_SELECTOR,
+      match: { text: fileName },
+    });
+    if (rowInfo.ok) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
   if (!rowInfo.ok) {
     throw new Error(rowInfo.reason || 'File row not found');
   }
   await hoverRowAndClickAction(client.Runtime, client.Input, {
-    rootSelector: GROK_SOURCES_CONTENT_SELECTOR,
-    rowSelector: GROK_ASSET_ROW_SELECTOR,
+    rootSelector: `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+    rowSelector: GROK_PERSONAL_FILES_ROW_SELECTOR,
     match: { text: fileName },
     actionMatch: { includeAny: ['remove', 'delete'] },
     timeoutMs: 5000,
   });
 }
 
-async function waitForProjectSourceFileRemoved(
+async function waitForProjectSourceFileMarkedRemoved(
   client: ChromeClient,
   fileName: string,
   timeoutMs = 10_000,
 ): Promise<void> {
+  await ensurePersonalFilesModalOpen(client);
+  await setPersonalFilesSearchQuery(client, fileName);
   const deadline = Date.now() + timeoutMs;
   const needle = fileName.toLowerCase();
   while (Date.now() < deadline) {
     const result = await client.Runtime.evaluate({
       expression: `(() => {
-        const name = ${JSON.stringify(needle)};
-        const root = document.querySelector(${JSON.stringify(GROK_SOURCES_CONTENT_SELECTOR)}) || document;
-        const text = (root.textContent || '').toLowerCase();
-        return { exists: text.includes(name) };
+        const target = ${JSON.stringify(needle)};
+        const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
+        const rows = Array.from(root.querySelectorAll('div')).filter((node) => {
+          const text = String(node.textContent || '').toLowerCase();
+          return text.includes(target);
+        });
+        for (const row of rows) {
+          const classText = String(row.getAttribute('class') || '').toLowerCase();
+          const hasOpacity = classText.includes('opacity-50');
+          const hasUndo = Boolean(row.querySelector('button[aria-label="Undo"]'));
+          const hasLineThrough = Boolean(row.querySelector('span.line-through'));
+          if (hasOpacity || hasUndo || hasLineThrough) {
+            return { ok: true, hasOpacity, hasUndo, hasLineThrough };
+          }
+        }
+        return { ok: false };
       })()`,
       returnByValue: true,
     });
-    if (!result.result?.value?.exists) {
+    if (result.result?.value?.ok) {
       return;
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  throw new Error(`Project file "${fileName}" was not removed before timeout.`);
+  throw new Error(`Project file "${fileName}" did not enter pending-remove state before timeout.`);
 }
 
 async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promise<void> {

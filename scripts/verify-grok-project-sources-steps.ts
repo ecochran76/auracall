@@ -62,7 +62,11 @@ async function main() {
       await client.Page.navigate({ url: projectUrl });
       await client.Page.loadEventFired();
       await ensureProjectSourcesTabSelected(client);
-      const ready = await waitForSelector(client.Runtime, 'div[id*="content-sources"]', 10_000);
+      const ready = await waitForSelector(
+        client.Runtime,
+        'div[id*="content-sources"], div[class*="group/collapsible-row"]',
+        10_000,
+      );
       if (!ready) {
         throw new Error('Sources content not found');
       }

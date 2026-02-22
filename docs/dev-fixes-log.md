@@ -21,6 +21,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-01-24
+- Area: Grok project files (new Personal Files modal UX)
+- Symptom: `projects files add/list/remove` regressed after UI change; old Sources selectors no longer matched reliably.
+- Root cause: Grok moved file interactions behind a `Personal files` modal (search input + Attach button + hover remove + Save), while old code assumed direct Sources-row controls.
+- Fix: Reworked Grok file flows to the new modal lifecycle:
+  - open `Personal files` modal from project Sources context
+  - upload via modal attach/file-input path
+  - delete via hover row action, verify pending-remove state (`opacity-50`, `line-through`, `Undo`), then commit with modal `Save`
+  - list from modal rows for current UI variant
+- Verification:
+  - `pnpm tsx bin/oracle-cli.ts projects files add <projectId> -f <file> --target grok`
+  - `pnpm tsx bin/oracle-cli.ts projects files remove <projectId> <fileName> --target grok`
+  - `pnpm tsx bin/oracle-cli.ts projects files list <projectId> --target grok`
+
+- Date: 2026-01-24
 - Area: Grok project sources (Files collapsible + uploads)
 - Symptom: `projects files add/remove` failed when the Files list was empty; helper threw `Button not found` and attach menu never opened.
 - Root cause: The Files collapsible toggle is sometimes absent when there are no rows; strict toggle matching caused a hard failure.
