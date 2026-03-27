@@ -1957,10 +1957,47 @@ export function createGrokAdapter(): Pick<
         }
 
         const evalResult = await client.Runtime.evaluate({
-          expression: `(() => {
+          expression: `(async () => {
             const normalize = (value) => String(value || '').replace(/\\r\\n/g, '\\n').replace(/\\n{3,}/g, '\\n\\n').trim();
+            const normalizeUrl = (value) => {
+              if (!value) return '';
+              try {
+                const parsed = new URL(String(value), window.location.origin);
+                if (!/^https?:$/i.test(parsed.protocol)) return '';
+                if (parsed.origin === window.location.origin) return '';
+                return parsed.href;
+              } catch {
+                return '';
+              }
+            };
+            const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
             const rows = Array.from(document.querySelectorAll('main [id^="response-"]'));
             const messages = [];
+            const sources = [];
+            const seenSourceKeys = new Set();
+            const rowMessageIndex = new WeakMap();
+            const pushSource = (anchor, messageIndex, sourceGroup) => {
+              if (!anchor) return;
+              const href = normalizeUrl(anchor.getAttribute('href') || anchor.href || '');
+              if (!href) return;
+              const indexPart = Number.isFinite(messageIndex) ? String(messageIndex) : 'n/a';
+              const groupPart = typeof sourceGroup === 'string' ? sourceGroup.trim() : 'n/a';
+              const key = \`\${indexPart}::\${groupPart}::\${href}\`;
+              if (seenSourceKeys.has(key)) return;
+              seenSourceKeys.add(key);
+              let domain = '';
+              try {
+                domain = new URL(href).hostname || '';
+              } catch {}
+              const title = normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
+              sources.push({
+                url: href,
+                title: title || undefined,
+                domain: domain || undefined,
+                messageIndex,
+                sourceGroup: groupPart !== 'n/a' ? groupPart : undefined,
+              });
+            };
 
             const pushFromRow = (row) => {
               const classText = String(row.getAttribute('class') || '');
@@ -1971,6 +2008,14 @@ export function createGrokAdapter(): Pick<
               const text = normalize((markdown && markdown.textContent) || (bubble && bubble.textContent) || '');
               if (!text) return;
               messages.push({ role, text });
+              rowMessageIndex.set(row, messages.length - 1);
+              if (role === 'assistant') {
+                const messageIndex = messages.length - 1;
+                const links = Array.from(row.querySelectorAll('a[href]'));
+                for (const link of links) {
+                  pushSource(link, messageIndex);
+                }
+              }
             };
 
             for (const row of rows) {
@@ -1987,15 +2032,125 @@ export function createGrokAdapter(): Pick<
                 const text = normalize(bubble.textContent || '');
                 if (!text) continue;
                 messages.push({ role, text });
+                if (row) rowMessageIndex.set(row, messages.length - 1);
+                if (role === 'assistant') {
+                  const messageIndex = messages.length - 1;
+                  const links = Array.from((row || bubble).querySelectorAll('a[href]'));
+                  for (const link of links) {
+                    pushSource(link, messageIndex);
+                  }
+                }
               }
             }
 
-            return { ok: true, messages };
+            const clickElement = (element) => {
+              if (!element) return;
+              const events = ['pointerdown', 'mousedown', 'mouseup', 'click'];
+              for (const type of events) {
+                element.dispatchEvent(
+                  new MouseEvent(type, {
+                    bubbles: true,
+                    cancelable: true,
+                    view: window,
+                  }),
+                );
+              }
+            };
+
+            const isVisible = (element) => {
+              if (!(element instanceof HTMLElement)) return false;
+              const rect = element.getBoundingClientRect();
+              if (rect.width <= 0 || rect.height <= 0) return false;
+              const style = window.getComputedStyle(element);
+              if (!style) return true;
+              if (style.display === 'none') return false;
+              if (style.visibility === 'hidden') return false;
+              if (style.pointerEvents === 'none') return false;
+              return true;
+            };
+
+            const findAccordionButtons = () =>
+              Array.from(document.querySelectorAll('button[aria-controls][aria-expanded]')).filter((button) =>
+                /searched/i.test((button.textContent || '').trim()),
+              );
+
+            const collectAccordionLinks = async (messageIndex) => {
+              const accordionButtons = findAccordionButtons();
+              for (const button of accordionButtons) {
+                const groupLabel = normalize(button.textContent || '');
+                if (button.getAttribute('aria-expanded') !== 'true') {
+                  clickElement(button);
+                  await sleep(70);
+                }
+                const panelId = button.getAttribute('aria-controls') || '';
+                const panel = panelId ? document.getElementById(panelId) : null;
+                if (!panel) continue;
+                const anchors = Array.from(panel.querySelectorAll('a[href]'));
+                for (const anchor of anchors) {
+                  pushSource(anchor, messageIndex, groupLabel || undefined);
+                }
+              }
+            };
+
+            const findSourceChips = () =>
+              Array.from(document.querySelectorAll('button, [role="button"]')).filter((element) => {
+                const label = normalize(element.getAttribute('aria-label') || '');
+                const text = normalize(element.textContent || '');
+                const combined = normalize(\`\${label} \${text}\`);
+                if (!/\\bsources?\\b/i.test(combined)) return false;
+                if (/\\bsearched\\b/i.test(text)) return false;
+                if (!isVisible(element)) return false;
+                return true;
+              });
+
+            const waitForAccordionButtons = async (timeoutMs) => {
+              const deadline = Date.now() + timeoutMs;
+              while (Date.now() < deadline) {
+                if (findAccordionButtons().length > 0) return true;
+                await sleep(50);
+              }
+              return findAccordionButtons().length > 0;
+            };
+
+            let openedSidebar = findAccordionButtons().length > 0;
+            if (!openedSidebar) {
+              const sourceChips = findSourceChips();
+              for (const chip of sourceChips) {
+                clickElement(chip);
+                if (await waitForAccordionButtons(800)) {
+                  openedSidebar = true;
+                  break;
+                }
+              }
+            }
+
+            if (openedSidebar) {
+              await collectAccordionLinks(undefined);
+              document.dispatchEvent(
+                new KeyboardEvent('keydown', {
+                  key: 'Escape',
+                  code: 'Escape',
+                  bubbles: true,
+                  cancelable: true,
+                }),
+              );
+              await sleep(60);
+            } else {
+              await collectAccordionLinks(undefined);
+            }
+
+            return { ok: true, messages, sources };
           })()`,
           returnByValue: true,
+          awaitPromise: true,
         });
-        const info = evalResult.result?.value as { ok?: boolean; messages?: Array<{ role: 'user' | 'assistant'; text: string }> } | undefined;
+        const info = evalResult.result?.value as {
+          ok?: boolean;
+          messages?: Array<{ role: 'user' | 'assistant'; text: string }>;
+          sources?: Array<{ url: string; title?: string; domain?: string; messageIndex?: number; sourceGroup?: string }>;
+        } | undefined;
         const messages = Array.isArray(info?.messages) ? info.messages : [];
+        const sources = Array.isArray(info?.sources) ? info.sources : [];
         if (messages.length === 0) {
           throw new Error('Conversation messages not found');
         }
@@ -2003,6 +2158,7 @@ export function createGrokAdapter(): Pick<
           provider: 'grok',
           conversationId,
           messages,
+          sources,
         };
       } finally {
         await client.close();
@@ -4035,7 +4191,7 @@ async function listHistoryConversations(
   try {
     if (!opened) return [];
     await expandHistoryDialog(client);
-    const maxItems = Math.max(1, options?.historyLimit ?? 200);
+    const maxItems = Math.max(1, options?.historyLimit ?? 2000);
     const cutoffMs = options?.historySince ? Date.parse(options.historySince) : NaN;
     const entries = new Map<string, { id: string; title: string; url?: string; timestamp?: number | null }>();
     let idleCount = 0;
@@ -4488,6 +4644,7 @@ export async function pushProjectInstructionsEditButton(
   if (openDialog) {
     return;
   }
+
   const pressed = await pressButton(client.Runtime, {
     match: { includeAny: ['edit instructions'] },
     rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'main'],
@@ -4495,9 +4652,54 @@ export async function pushProjectInstructionsEditButton(
     timeoutMs: 5000,
     logCandidatesOnMiss: true,
   });
+
   if (!pressed.ok) {
-    throw new Error(pressed.reason || 'Edit instructions button failed');
+    const fallbackEval = await client.Runtime.evaluate({
+      expression: `(() => {
+        const visible = (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+
+        const sections = Array.from(document.querySelectorAll('div'))
+          .filter((el) =>
+            visible(el) &&
+            (el.getAttribute('class') || '').includes('group/side-panel-section'),
+          );
+        if (sections.length === 0) {
+          return { ok: false, reason: 'Instructions section not found' };
+        }
+
+        const target =
+          sections.find((section) => normalize(section.textContent || '').includes('instructions')) ||
+          sections[0];
+        if (!target) {
+          return { ok: false, reason: 'Instructions section not found' };
+        }
+
+        const pointerOpts = {
+          bubbles: true,
+          cancelable: true,
+          pointerType: 'mouse',
+          button: 0,
+          buttons: 1,
+        };
+        target.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
+        target.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
+        target.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
+        target.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
+        target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    const fallbackInfo = fallbackEval.result?.value as { ok?: boolean; reason?: string } | undefined;
+    if (!fallbackInfo?.ok) {
+      throw new Error(pressed.reason || fallbackInfo?.reason || 'Edit instructions button failed');
+    }
   }
+
   const ready = await waitForSelector(client.Runtime, 'textarea', 5000);
   if (!ready) {
     throw new Error('Instructions textarea not found');

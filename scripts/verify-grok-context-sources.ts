@@ -6,27 +6,24 @@ async function main() {
   const conversationId = process.argv[2];
   const projectId = process.argv[3] || undefined;
   if (!conversationId) {
-    console.error('Usage: pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]');
+    console.error('Usage: pnpm tsx scripts/verify-grok-context-sources.ts <conversationId> [projectId]');
     process.exit(1);
   }
 
   const { host, port } = await resolveScriptBrowserTarget();
-  console.log(`Connecting to ${host}:${port}...`);
+  console.error(`Connecting to ${host}:${port}...`);
 
   const adapter = createGrokAdapter();
   if (!adapter.readConversationContext) {
     throw new Error('readConversationContext not supported by grok adapter.');
   }
+
   const context = (await adapter.readConversationContext(conversationId, projectId, {
     host,
     port,
   })) as ConversationContext;
-  const first = context.messages[0];
-  const last = context.messages[context.messages.length - 1];
-  const sourceCount = Array.isArray(context.sources) ? context.sources.length : 0;
-  console.log(
-    `✅ Context loaded (${context.messages.length} messages, ${sourceCount} sources). first=${first?.role ?? 'n/a'} last=${last?.role ?? 'n/a'}`,
-  );
+  const sources = Array.isArray(context.sources) ? context.sources : [];
+  console.log(JSON.stringify({ conversationId, sourceCount: sources.length, sources }, null, 2));
 }
 
 void main();

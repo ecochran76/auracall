@@ -294,7 +294,7 @@ async function writeProviderCache<T>(
   items: T,
 ): Promise<void> {
   const { cacheDir, cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
-  await fs.mkdir(cacheDir, { recursive: true });
+  await fs.mkdir(path.dirname(cacheFile), { recursive: true });
   const identity = sanitizeUserIdentity(context.userIdentity ?? null);
   const payload: ProviderCache<T> = {
     fetchedAt: new Date().toISOString(),

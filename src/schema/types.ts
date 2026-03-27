@@ -88,10 +88,13 @@ export const LlmDefaultsSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const BrowserCacheConfigSchema = z.object({
+  store: z.enum(['json', 'sqlite', 'dual']).optional(),
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
+  includeProjectOnlyConversations: z.boolean().optional(),
   historyLimit: z.number().optional(),
   historySince: z.string().optional(),
+  cleanupDays: z.number().optional(),
   identityKey: z.string().optional(),
   identity: z
     .object({
@@ -212,10 +215,13 @@ export const OracleProfileBrowserSchema = z.object({
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileCacheSchema = z.object({
+  store: z.enum(['json', 'sqlite', 'dual']).optional(),
   refresh: z.boolean().optional(),
   includeHistory: z.boolean().optional(),
+  includeProjectOnlyConversations: z.boolean().optional(),
   historyLimit: z.number().optional(),
   historySince: z.string().optional(),
+  cleanupDays: z.number().optional(),
   rootDir: z.string().optional(),
   useDetectedIdentity: z.boolean().optional(),
   refreshHours: z.number().optional(),

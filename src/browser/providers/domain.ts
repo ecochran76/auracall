@@ -22,6 +22,11 @@ export interface FileRef {
   provider: ProviderId;
   source: 'project' | 'conversation';
   size?: number;
+  mimeType?: string;
+  remoteUrl?: string;
+  localPath?: string;
+  checksumSha256?: string;
+  metadata?: Record<string, unknown>;
 }
 
 export interface ConversationMessage {
@@ -30,9 +35,18 @@ export interface ConversationMessage {
   time?: string;
 }
 
+export interface ConversationSource {
+  url: string;
+  title?: string;
+  domain?: string;
+  messageIndex?: number;
+  sourceGroup?: string;
+}
+
 export interface ConversationContext {
   provider: ProviderId;
   conversationId: string;
   messages: ConversationMessage[];
   files?: FileRef[];
+  sources?: ConversationSource[];
 }

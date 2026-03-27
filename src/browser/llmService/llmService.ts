@@ -4,6 +4,7 @@ import type {
   Conversation,
   ConversationContext,
   ConversationMessage,
+  ConversationSource,
   FileRef,
   Project,
   ProviderId,
@@ -26,10 +27,10 @@ import type {
   PromptPlan,
   ProjectListResult,
 } from './types.js';
-import type { CacheStore } from './cache/store.js';
-import { createCacheStore } from './cache/store.js';
+import type { CacheStore, CachedConversationContextEntry } from './cache/store.js';
+import { createCacheStore, type CacheStoreKind } from './cache/store.js';
 
-const DEFAULT_HISTORY_LIMIT = 200;
+const DEFAULT_HISTORY_LIMIT = 2000;
 
 export abstract class LlmService {
   readonly provider: LlmServiceAdapter;
@@ -48,7 +49,9 @@ export abstract class LlmService {
     this.providerId = provider.id;
     this.browserService = browserService;
     this.identityPrompt = options?.identityPrompt;
-    this.cacheStore = options?.cacheStore ?? createCacheStore();
+    const configuredStore = this.userConfig.browser?.cache?.store;
+    this.cacheStore =
+      options?.cacheStore ?? createCacheStore(resolveCacheStoreKind(configuredStore));
   }
 
   getCapabilities(): LlmCapabilities {
@@ -670,6 +673,55 @@ export abstract class LlmService {
     }
   }
 
+  async listCachedConversationContexts(options?: {
+    listOptions?: BrowserProviderListOptions;
+  }): Promise<CachedConversationContextEntry[]> {
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    return this.cacheStore.listConversationContexts(cacheContext);
+  }
+
+  async getCachedConversationContext(
+    selector: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<{
+    conversationId: string;
+    fetchedAt: string | null;
+    stale: boolean;
+    context: ConversationContext;
+  }> {
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    const raw = selector.trim();
+    if (!raw) {
+      throw new Error('Conversation selector is required.');
+    }
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
+    let conversationId = raw;
+    if (!isUuid) {
+      const cachedConversations = await this.cacheStore.readConversations(cacheContext);
+      const match = matchConversationByTitle(cachedConversations.items ?? [], raw);
+      if (!match.match) {
+        throw new Error(
+          `No cached conversation matched "${raw}". Run "oracle conversations --refresh" first.`,
+        );
+      }
+      conversationId = match.match.id;
+    }
+    const cached = await this.cacheStore.readConversationContext(cacheContext, conversationId);
+    if (!cached.items.messages.length) {
+      throw new Error(
+        `No cached context found for "${conversationId}". Run "oracle conversations context get ${conversationId} --target ${this.providerId}" first.`,
+      );
+    }
+    return {
+      conversationId,
+      fetchedAt: cached.fetchedAt ? new Date(cached.fetchedAt).toISOString() : null,
+      stale: cached.stale,
+      context: cached.items,
+    };
+  }
+
   async resolveProjectIdByName(
     projectName: string,
     options?: {
@@ -1003,6 +1055,31 @@ export abstract class LlmService {
         });
       }
     }
+    const normalizedSources: ConversationSource[] = [];
+    const seenSources = new Set<string>();
+    const rawSourcesCandidate = (raw as { sources?: unknown[] }).sources;
+    const rawSources = Array.isArray(rawSourcesCandidate) ? rawSourcesCandidate : [];
+    for (const entry of rawSources) {
+      if (!entry || typeof entry !== 'object') continue;
+      const candidate = entry as Partial<ConversationSource>;
+      const url = typeof candidate.url === 'string' ? candidate.url.trim() : '';
+      const messageIndex =
+        typeof candidate.messageIndex === 'number' && Number.isFinite(candidate.messageIndex)
+          ? candidate.messageIndex
+          : undefined;
+      const sourceKey = `${messageIndex ?? 'n/a'}::${url}`;
+      if (!url || seenSources.has(sourceKey)) continue;
+      seenSources.add(sourceKey);
+      normalizedSources.push({
+        url,
+        title: typeof candidate.title === 'string' ? candidate.title.trim() : undefined,
+        domain: typeof candidate.domain === 'string' ? candidate.domain.trim() : undefined,
+        messageIndex,
+        sourceGroup:
+          typeof candidate.sourceGroup === 'string' ? candidate.sourceGroup.trim() : undefined,
+      });
+    }
+
     return {
       provider: this.providerId,
       conversationId:
@@ -1011,6 +1088,7 @@ export abstract class LlmService {
           : conversationId,
       messages: normalizedMessages,
       files: Array.isArray(raw.files) ? raw.files : undefined,
+      sources: normalizedSources.length > 0 ? normalizedSources : undefined,
     };
   }
 
@@ -1072,6 +1150,13 @@ function parseLatestSelector(value: string): number | null {
   const offset = match[1] ? Number.parseInt(match[1], 10) : 0;
   if (!Number.isFinite(offset) || offset < 0) return null;
   return offset;
+}
+
+function resolveCacheStoreKind(value: unknown): CacheStoreKind {
+  if (value === 'json' || value === 'sqlite' || value === 'dual') {
+    return value;
+  }
+  return 'dual';
 }
 
 function sortConversationsByRecency(items: Conversation[]): Conversation[] {

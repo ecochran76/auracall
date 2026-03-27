@@ -209,17 +209,29 @@ function applyCacheDefaults(browser: MutableBrowserConfig, cache: unknown): void
   if (!isRecord(cache)) return;
   browser.cache = browser.cache ?? {};
   const targetCache = browser.cache as Record<string, unknown>;
+  if (targetCache.store === undefined && cache.store !== undefined) {
+    targetCache.store = cache.store;
+  }
   if (targetCache.refresh === undefined && cache.refresh !== undefined) {
     targetCache.refresh = cache.refresh;
   }
   if (targetCache.includeHistory === undefined && cache.includeHistory !== undefined) {
     targetCache.includeHistory = cache.includeHistory;
   }
+  if (
+    targetCache.includeProjectOnlyConversations === undefined &&
+    cache.includeProjectOnlyConversations !== undefined
+  ) {
+    targetCache.includeProjectOnlyConversations = cache.includeProjectOnlyConversations;
+  }
   if (targetCache.historyLimit === undefined && cache.historyLimit !== undefined) {
     targetCache.historyLimit = cache.historyLimit;
   }
   if (targetCache.historySince === undefined && cache.historySince !== undefined) {
     targetCache.historySince = cache.historySince;
+  }
+  if (targetCache.cleanupDays === undefined && cache.cleanupDays !== undefined) {
+    targetCache.cleanupDays = cache.cleanupDays;
   }
   if (targetCache.rootDir === undefined && cache.rootDir !== undefined) {
     targetCache.rootDir = cache.rootDir;

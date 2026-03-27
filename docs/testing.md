@@ -4,6 +4,36 @@
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `ORACLE_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but hides the window by default unless Chrome forces focus.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Oracle browser registry or `ORACLE_BROWSER_PORT`).
+- Grok context sources smoke: `pnpm tsx scripts/verify-grok-context-sources.ts <conversationId> [projectId]` (validates `sources[]` extraction from inline links + Sources sidebar accordions).
+- Grok context CLI source parity smoke:
+  - live: `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts conversations context get <conversationId> --target grok --json-only | jq '.sources | length'`
+  - cache: `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache context get <conversationId> --provider grok | jq '.context.sources | length'`
+- Cache context list smoke (bounded + bannerless for automation): `pnpm tsx bin/oracle-cli.ts cache context list --provider grok --limit 5 --json-only`
+- Cache context keyword search smoke: `pnpm tsx bin/oracle-cli.ts cache context search "oracle" --provider grok --limit 5`.
+- Cache context semantic search smoke: `OPENAI_API_KEY=... pnpm tsx bin/oracle-cli.ts cache context semantic-search "oracle" --provider grok --limit 5`.
+- Cache source catalog smoke: `pnpm tsx bin/oracle-cli.ts cache sources list --provider grok --limit 10`.
+- Cache file catalog smoke: `pnpm tsx bin/oracle-cli.ts cache files list --provider grok --limit 10`.
+- Cache file pointer resolve smoke: `pnpm tsx bin/oracle-cli.ts cache files resolve --provider grok --limit 20` (use `--missing-only` to focus orphan/missing local paths).
+- Cache integrity doctor smoke: `pnpm tsx bin/oracle-cli.ts cache doctor --provider grok --json` (use `--strict` to fail on warnings).
+- Cache repair smoke:
+  - dry-run: `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --actions all --json`
+  - apply single action: `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions rebuild-index --apply --yes --json`
+  - parity drift actions:
+    - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-source-links --json`
+    - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-file-bindings --json`
+- Cache clear/compact/cleanup smoke:
+  - clear dry-run: `pnpm tsx bin/oracle-cli.ts cache clear --provider grok --identity-key <key> --dataset context --json`
+  - compact: `pnpm tsx bin/oracle-cli.ts cache compact --provider grok --identity-key <key> --json`
+  - cleanup dry-run: `pnpm tsx bin/oracle-cli.ts cache cleanup --provider grok --identity-key <key> --days 30 --json`
+- Cache refresh hydration modes smoke:
+  - conservative (existing IDs only): `pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh --include-history --history-limit 200`
+  - opt-in project-only insertion: `pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh --include-history --history-limit 200 --include-project-only-conversations`
+  - regression assertion script: `pnpm tsx scripts/verify-cache-refresh-modes.ts --provider grok --history-limit 200 [--project-id <id>]`
+- Cache export SQL-first smoke:
+  - standard: `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope conversation --conversation-id <id> --format json --out /tmp/oracle-export-smoke/json`
+  - no-index resilience: temporarily move `cache-index.json` aside for that identity, rerun the same export command, confirm output exists, then restore `cache-index.json`.
+- Cache export parity matrix smoke (recommended): `pnpm tsx scripts/verify-cache-export-parity.ts --provider grok --conversation-id <id>` (runs `json|csv|md|html|zip` for conversation scope plus broader json scopes and performs a no-index SQL-first check).
+- SQL catalog smoke: `pnpm tsx scripts/verify-cache-sql-catalog.ts --provider <grok|chatgpt> [conversationId]` (verifies `cache.sqlite` catalog tables and row counts; optional conversation drill-down).
 - To start a DevTools session manually, run `pnpm tsx scripts/start-devtools-session.ts --url=https://grok.com` (prints the host/port and launches Chrome if needed).
 - Verify scripts now auto-start a DevTools session via BrowserService; `ORACLE_BROWSER_PORT` is optional.
 - Live API smokes: `ORACLE_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:live` (excludes OpenAI pro), `ORACLE_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:pro` (OpenAI pro live). Expect real usage/cost.

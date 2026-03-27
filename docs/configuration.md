@@ -86,10 +86,13 @@ node --import tsx bin/oracle-cli.ts config migrate --dry-run
       },
 
       cache: {
+        store: "dual", // json | sqlite | dual
         refresh: false,
-        includeHistory: false,
-        historyLimit: 200,
+        includeHistory: true,
+        includeProjectOnlyConversations: true,
+        historyLimit: 2000,
         historySince: null,
+        cleanupDays: 365,
         rootDir: null,
         refreshHours: 6,
         useDetectedIdentity: false,
@@ -152,7 +155,16 @@ Within each file, later CLI flags still override config, and environment variabl
 - `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
 - `profiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Oracle 2`).
 - `profiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
-- `profiles.<name>.cache.*` sets defaults for `oracle cache --refresh` (including `refreshHours` and `rootDir`).
+- `profiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
+- For mirror-oriented cache defaults, prefer:
+  - `includeHistory: true`
+  - `includeProjectOnlyConversations: true`
+  - `historyLimit: 2000`
+  - `cleanupDays: 365`
+- `profiles.<name>.cache.store` controls cache backend:
+  - `json`: legacy JSON files only.
+  - `sqlite`: SQLite only (`cache.sqlite` per provider+identity).
+  - `dual`: read/write SQLite + JSON mirror (recommended migration mode).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).
 - `browser.blockingProfileAction` controls how Oracle handles a running Chrome profile without DevTools (`fail`, `restart`, `restart-managed`). Default is `restart-managed` (only restarts Oracle-managed profiles). (`restart-oracle` is still accepted as an alias.)

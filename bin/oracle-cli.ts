@@ -58,6 +58,7 @@ import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../src/browser/providers/types.js';
+import type { Conversation, Project } from '../src/browser/providers/domain.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -85,6 +86,12 @@ import path from 'node:path';
 import { getOracleHomeDir } from '../src/oracleHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
 import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
+import { createCacheStore, type CacheStoreKind } from '../src/browser/llmService/cache/store.js';
+import {
+  searchCachedContextsByKeyword,
+  searchCachedContextsSemantically,
+} from '../src/browser/llmService/cache/search.js';
+import { listCachedFiles, listCachedSources, resolveCachedFiles } from '../src/browser/llmService/cache/catalog.js';
 import {
   PROVIDER_CACHE_TTL_MS,
   resolveProviderCacheKey,
@@ -199,10 +206,17 @@ const CLI_ENTRYPOINT = fileURLToPath(import.meta.url);
 const rawCliArgs = process.argv.slice(2);
 const userCliArgs = rawCliArgs[0] === CLI_ENTRYPOINT ? rawCliArgs.slice(1) : rawCliArgs;
 const isTty = process.stdout.isTTY;
+const suppressIntroBanner =
+  userCliArgs.includes('--json-only') ||
+  userCliArgs.includes('--silent') ||
+  process.env.ORACLE_NO_BANNER === '1';
+const DEFAULT_CACHE_HISTORY_LIMIT = 2000;
+const DEFAULT_CACHE_CLEANUP_DAYS = 365;
 
 const program = new Command();
 let introPrinted = false;
 program.hook('preAction', () => {
+  if (suppressIntroBanner) return;
   if (introPrinted) return;
   console.log(formatIntroLine(VERSION, { env: process.env, richTty: isTty }));
   introPrinted = true;
@@ -1072,7 +1086,7 @@ const conversationsCommand = program
     'Resolve a conversation by cached title or selector (e.g., latest, latest-1).',
   )
   .option('--include-history', 'Include the History dialog results when listing conversations.')
-  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .option('--filter <text>', 'Filter conversations by title/id substring (case-insensitive).')
   .option('--refresh', 'Force refresh of cached project/conversation data.')
@@ -1233,10 +1247,11 @@ conversationContextCommand
   .description('Retrieve conversation context by ID or cached title/selector.')
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
-  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .option('--refresh', 'Force live refresh (default).')
   .option('--cache-only', 'Read from cache only (skip live browser retrieval).')
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.')
   .action(async (id, commandOptions, command) => {
     const parentOptions = command.parent?.parent?.opts?.() ?? {};
     const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
@@ -1254,7 +1269,7 @@ conversationContextCommand
     const historyLimit =
       commandOptions.historyLimit
         ? Number.parseInt(commandOptions.historyLimit, 10)
-        : cacheDefaults?.historyLimit ?? 200;
+        : cacheDefaults?.historyLimit ?? DEFAULT_CACHE_HISTORY_LIMIT;
     const historySince =
       typeof commandOptions.historySince === 'string' && commandOptions.historySince.trim().length > 0
         ? commandOptions.historySince.trim()
@@ -1300,7 +1315,7 @@ program
   .description('Rename a conversation.')
   .option('--target <chatgpt|grok>', 'Choose which provider to use.')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
-  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .action(async (id, name, commandOptions, command) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
@@ -1353,7 +1368,11 @@ const cacheCommand = program
   .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
   .option('--refresh', 'Refresh cache entries for the active provider.')
   .option('--include-history', 'Include the History dialog results when refreshing conversations.')
-  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option(
+    '--include-project-only-conversations',
+    'When refreshing, include conversation IDs discovered only via project-scoped conversation lists.',
+  )
+  .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .action(async (commandOptions, command) => {
     const providers = new Set(['chatgpt', 'grok']);
@@ -1387,6 +1406,10 @@ const cacheCommand = program
       (command.getOptionValueSource?.('refresh') === 'cli')
         ? Boolean(commandOptions.refresh)
         : Boolean(cacheDefaults?.refresh ?? commandOptions.refresh);
+    const includeProjectOnlyConversations =
+      (command.getOptionValueSource?.('includeProjectOnlyConversations') === 'cli')
+        ? Boolean(commandOptions.includeProjectOnlyConversations)
+        : Boolean(cacheDefaults?.includeProjectOnlyConversations ?? commandOptions.includeProjectOnlyConversations);
     if (refreshFlag) {
       const target = (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
       if (!providers.has(target)) {
@@ -1407,7 +1430,7 @@ const cacheCommand = program
       if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
         throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
       }
-      await refreshProviderCache(llmService, listOptions);
+      await refreshProviderCache(llmService, listOptions, { includeProjectOnlyConversations });
     }
     const cacheSettings = createLlmService(
       (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok',
@@ -1492,6 +1515,476 @@ const cacheCommand = program
     console.log(JSON.stringify(output, null, 2));
   });
 
+cacheCommand
+  .command('search <query>')
+  .description('Keyword search cached conversation contexts (alias of `cache context search`).')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter search to one conversation ID.')
+  .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
+  .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
+  .action(async (query, commandOptions) => {
+    await runCacheContextKeywordSearch(String(query ?? ''), commandOptions as OptionValues);
+  });
+
+cacheCommand
+  .command('semantic-search <query>')
+  .description('Semantic search cached contexts (alias of `cache context semantic-search`).')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter search to one conversation ID.')
+  .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
+  .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
+  .option('--model <id>', 'Embedding model (default text-embedding-3-small).')
+  .option('--max-chunks <count>', 'Maximum chunks to embed/score (default 400).', parseIntOption)
+  .option('--min-score <value>', 'Minimum cosine score threshold (-1..1).', parseFloatOption)
+  .option('--openai-api-key <key>', 'Override OPENAI_API_KEY for this command.')
+  .option('--openai-base-url <url>', 'Override embeddings API base URL (default https://api.openai.com/v1).')
+  .action(async (query, commandOptions) => {
+    await runCacheContextSemanticSearch(String(query ?? ''), commandOptions as OptionValues);
+  });
+
+const cacheSourcesCommand = cacheCommand
+  .command('sources')
+  .description('Inspect cached normalized source-link catalog.');
+
+cacheSourcesCommand
+  .command('list')
+  .description('List cached source links (SQL-first, JSON fallback).')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter to a single conversation ID.')
+  .option('--domain <domain>', 'Filter by exact source domain.')
+  .option('--source-group <group>', 'Filter by source group (for example "Searched web").')
+  .option('--query <text>', 'Match against url/title/domain text.')
+  .option('--limit <count>', 'Maximum rows to return (default 50, max 500).', parseIntOption)
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const resolved = await resolveCacheSearchContext(commandOptions);
+    const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+    const domain = readStringOption(commandOptions, ['domain']);
+    const sourceGroup = readStringOption(commandOptions, ['sourceGroup', 'source-group']);
+    const query = readStringOption(commandOptions, ['query']);
+    const limit = readNumberOption(commandOptions, ['limit']);
+    const rows = await listCachedSources(resolved.cacheContext, {
+      conversationId,
+      domain,
+      sourceGroup,
+      query,
+      limit,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          provider: resolved.provider,
+          identityKey: resolved.cacheContext.identityKey,
+          filters: {
+            conversationId: conversationId ?? null,
+            domain: domain ?? null,
+            sourceGroup: sourceGroup ?? null,
+            query: query ?? null,
+            limit: limit ?? null,
+          },
+          count: rows.length,
+          rows,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+const cacheFilesCommand = cacheCommand
+  .command('files')
+  .description('Inspect cached normalized file-binding catalog.');
+
+cacheFilesCommand
+  .command('list')
+  .description('List cached file bindings (SQL-first, JSON fallback).')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter to a single conversation ID.')
+  .option('--project-id <id>', 'Filter to a single project ID.')
+  .option(
+    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge>',
+    'Filter by cached dataset type.',
+  )
+  .option('--query <text>', 'Match against display name/id/url/path text.')
+  .option('--limit <count>', 'Maximum rows to return (default 50, max 500).', parseIntOption)
+  .option('--resolve-paths', 'Resolve cache-relative local paths to absolute filesystem paths.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const resolved = await resolveCacheSearchContext(commandOptions);
+    const dataset = parseCacheFileDataset(readOptionRaw(commandOptions, ['dataset']));
+    const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+    const projectId = readStringOption(commandOptions, ['projectId', 'project-id']);
+    const query = readStringOption(commandOptions, ['query']);
+    const limit = readNumberOption(commandOptions, ['limit']);
+    const resolvePaths = Boolean(readOptionRaw(commandOptions, ['resolvePaths', 'resolve-paths']));
+    const rows = await listCachedFiles(resolved.cacheContext, {
+      conversationId,
+      projectId,
+      dataset,
+      query,
+      limit,
+      resolvePaths,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          provider: resolved.provider,
+          identityKey: resolved.cacheContext.identityKey,
+          filters: {
+            conversationId: conversationId ?? null,
+            projectId: projectId ?? null,
+            dataset: dataset ?? null,
+            query: query ?? null,
+            limit: limit ?? null,
+            resolvePaths,
+          },
+          count: rows.length,
+          rows,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+cacheFilesCommand
+  .command('resolve')
+  .description('Resolve cached file pointers and report missing/orphaned local paths.')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter to a single conversation ID.')
+  .option('--project-id <id>', 'Filter to a single project ID.')
+  .option(
+    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge>',
+    'Filter by cached dataset type.',
+  )
+  .option('--query <text>', 'Match against display name/id/url/path text.')
+  .option('--limit <count>', 'Maximum rows to return (default 50, max 500).', parseIntOption)
+  .option('--missing-only', 'Only return rows with missing local files.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const resolved = await resolveCacheSearchContext(commandOptions);
+    const dataset = parseCacheFileDataset(readOptionRaw(commandOptions, ['dataset']));
+    const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+    const projectId = readStringOption(commandOptions, ['projectId', 'project-id']);
+    const query = readStringOption(commandOptions, ['query']);
+    const limit = readNumberOption(commandOptions, ['limit']);
+    const missingOnly = Boolean(readOptionRaw(commandOptions, ['missingOnly', 'missing-only']));
+    const rows = await resolveCachedFiles(resolved.cacheContext, {
+      conversationId,
+      projectId,
+      dataset,
+      query,
+      limit,
+      missingOnly,
+    });
+    const summary = rows.reduce(
+      (acc, row) => {
+        acc.total += 1;
+        if (row.pathState === 'local_exists') acc.localExists += 1;
+        if (row.pathState === 'missing_local') acc.missingLocal += 1;
+        if (row.pathState === 'external_path') acc.externalPath += 1;
+        if (row.pathState === 'remote_only') acc.remoteOnly += 1;
+        if (row.pathState === 'unknown') acc.unknown += 1;
+        return acc;
+      },
+      {
+        total: 0,
+        localExists: 0,
+        missingLocal: 0,
+        externalPath: 0,
+        remoteOnly: 0,
+        unknown: 0,
+      },
+    );
+    console.log(
+      JSON.stringify(
+        {
+          provider: resolved.provider,
+          identityKey: resolved.cacheContext.identityKey,
+          filters: {
+            conversationId: conversationId ?? null,
+            projectId: projectId ?? null,
+            dataset: dataset ?? null,
+            query: query ?? null,
+            limit: limit ?? null,
+            missingOnly,
+          },
+          summary,
+          rows,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+cacheCommand
+  .command('doctor')
+  .description('Run cache integrity checks (SQLite + file-pointer health).')
+  .option('--provider <chatgpt|grok>', 'Limit checks to one provider.')
+  .option('--identity-key <key>', 'Limit checks to one identity key.')
+  .option('--missing-limit <count>', 'Max missing-file rows to include per identity.', parseIntOption, 25)
+  .option('--strict', 'Exit non-zero on warnings (not just errors).')
+  .option('--json', 'Emit machine-readable JSON report.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const report = await runCacheDoctor(commandOptions);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      for (const entry of report.entries) {
+        const sqliteStatus = entry.sqlite?.ok ? 'ok' : 'failed';
+        console.log(
+          `${entry.provider}/${entry.identityKey}: sqlite=${sqliteStatus}, missingLocal=${entry.filePointerHealth.missingLocalCount}, parity(index->sql=${entry.parity.missingInSqlCount}, sql->index=${entry.parity.missingInIndexCount})`,
+        );
+        for (const finding of entry.findings) {
+          const prefix = finding.severity.toUpperCase();
+          console.log(`  [${prefix}] ${finding.check}: ${finding.message}`);
+        }
+      }
+      console.log(
+        `Doctor summary: checked=${report.summary.checked}, warnings=${report.summary.warnings}, errors=${report.summary.errors}`,
+      );
+    }
+    const shouldFail = report.summary.errors > 0 || (Boolean(commandOptions.strict) && report.summary.warnings > 0);
+    if (shouldFail) {
+      process.exit(1);
+    }
+  });
+
+cacheCommand
+  .command('repair')
+  .description('Run cache repair actions (dry-run by default).')
+  .option('--provider <chatgpt|grok>', 'Limit repair to one provider.')
+  .option('--identity-key <key>', 'Limit repair to one identity key.')
+  .option(
+    '--actions <list>',
+    'Comma-separated actions: sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,mark-missing-local,all',
+    'all',
+  )
+  .option('--apply', 'Apply mutations (default: dry-run preview).')
+  .option('--yes', 'Confirm mutating repair actions when --apply is set.')
+  .option('--json', 'Emit machine-readable JSON report.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+
+    if (Boolean(commandOptions.apply) && !Boolean(commandOptions.yes)) {
+      throw new Error('Refusing to mutate cache without confirmation. Re-run with --apply --yes.');
+    }
+
+    const report = await runCacheRepair(commandOptions);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(
+        `Repair mode: ${report.mode}; actions=${report.actions.join(', ')}; targets=${report.summary.checked}`,
+      );
+      for (const entry of report.entries) {
+        console.log(`${entry.provider}/${entry.identityKey}:`);
+        for (const action of entry.actions) {
+          const status = action.applied ? 'applied' : action.skipped;
+          console.log(`  - ${action.name}: ${status} (${action.message})`);
+        }
+      }
+      console.log(
+        `Repair summary: touched=${report.summary.touched}, backups=${report.summary.backups}, warnings=${report.summary.warnings}, errors=${report.summary.errors}`,
+      );
+    }
+
+    if (report.summary.errors > 0) {
+      process.exit(1);
+    }
+  });
+
+cacheCommand
+  .command('clear')
+  .description('Clear cached datasets (dry-run by default; requires --yes to mutate).')
+  .option('--provider <chatgpt|grok>', 'Limit clear to one provider.')
+  .option('--identity-key <key>', 'Limit clear to one identity key.')
+  .option(
+    '--dataset <all|projects|conversations|context|conversation-files|conversation-attachments|project-knowledge|project-instructions>',
+    'Dataset to clear.',
+    'all',
+  )
+  .option('--older-than <date>', 'Only clear records/files older than this date (YYYY-MM-DD or ISO).')
+  .option('--include-blobs', 'Also clear attachment/knowledge file blobs (not only manifests).')
+  .option('--yes', 'Apply clear mutations (default is dry-run).')
+  .option('--json', 'Emit machine-readable JSON report.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const report = await runCacheClear(commandOptions);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(`Clear mode: ${report.mode}; dataset=${report.dataset}; targets=${report.summary.checked}`);
+      for (const entry of report.entries) {
+        console.log(
+          `${entry.provider}/${entry.identityKey}: files=${entry.fileTargetsMatched} sqlRows=${entry.sql.cacheEntriesMatched}`,
+        );
+      }
+      console.log(
+        `Clear summary: touched=${report.summary.touched}, warnings=${report.summary.warnings}, errors=${report.summary.errors}`,
+      );
+    }
+    if (report.summary.errors > 0) process.exit(1);
+  });
+
+cacheCommand
+  .command('compact')
+  .description('Compact cache SQLite databases (VACUUM + ANALYZE).')
+  .option('--provider <chatgpt|grok>', 'Limit compact to one provider.')
+  .option('--identity-key <key>', 'Limit compact to one identity key.')
+  .option('--json', 'Emit machine-readable JSON report.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const report = await runCacheCompact(commandOptions);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      for (const entry of report.entries) {
+        console.log(
+          `${entry.provider}/${entry.identityKey}: sqlite=${entry.sqliteExists ? 'yes' : 'no'} before=${entry.beforeBytes} after=${entry.afterBytes}`,
+        );
+      }
+      console.log(
+        `Compact summary: checked=${report.summary.checked}, compacted=${report.summary.compacted}, warnings=${report.summary.warnings}, errors=${report.summary.errors}`,
+      );
+    }
+    if (report.summary.errors > 0) process.exit(1);
+  });
+
+cacheCommand
+  .command('cleanup')
+  .description('Cleanup stale cache artifacts (dry-run by default; requires --yes to mutate).')
+  .option('--provider <chatgpt|grok>', 'Limit cleanup to one provider.')
+  .option('--identity-key <key>', 'Limit cleanup to one identity key.')
+  .option('--older-than <date>', 'Cleanup entries/files older than this date (YYYY-MM-DD or ISO).')
+  .option(
+    '--days <n>',
+    `Cleanup entries/files older than N days (default ${DEFAULT_CACHE_CLEANUP_DAYS}, override with profiles.<name>.cache.cleanupDays).`,
+    parseIntOption,
+  )
+  .option('--include-blobs', 'Also cleanup attachment/knowledge file blobs.')
+  .option('--yes', 'Apply cleanup mutations (default is dry-run).')
+  .option('--json', 'Emit machine-readable JSON report.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const report = await runCacheCleanup(commandOptions);
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+    } else {
+      console.log(`Cleanup mode: ${report.mode}; cutoff=${report.cutoffIso}; targets=${report.summary.checked}`);
+      for (const entry of report.entries) {
+        console.log(
+          `${entry.provider}/${entry.identityKey}: staleFiles=${entry.clear.fileTargetsMatched} staleSql=${entry.clear.sql.cacheEntriesMatched} prunedIndex=${entry.indexPruned} prunedBackups=${entry.backupsPruned} prunedBlobs=${entry.blobFilesPruned}`,
+        );
+      }
+      console.log(
+        `Cleanup summary: touched=${report.summary.touched}, warnings=${report.summary.warnings}, errors=${report.summary.errors}`,
+      );
+    }
+    if (report.summary.errors > 0) process.exit(1);
+  });
+
 program
   .command('delete <id>')
   .alias('remove')
@@ -1501,7 +1994,7 @@ program
   .option('--match <exact|glob|regex>', 'Match mode for conversation names (default exact).')
   .option('--all', 'Delete all matching conversations (otherwise only one match is allowed).')
   .option('--yes', 'Skip confirmation prompt.')
-  .option('--history-limit <count>', 'Maximum History conversations to fetch (default 200).')
+  .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .action(async (id, commandOptions, command) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
@@ -1635,12 +2128,26 @@ cacheCommand
   .command('export')
   .description('Export cached project/conversation data.')
   .option('--provider <chatgpt|grok>', 'Limit export to a provider (chatgpt or grok).')
-  .option('--scope <projects|conversations|conversation>', 'Export scope (default conversations).')
+  .option('--scope <projects|conversations|conversation|contexts>', 'Export scope (default conversations).')
   .option('--format <json|md|html|csv|zip>', 'Export format (default json).')
   .option('--project-id <id>', 'Project ID or name for project-scoped exports.')
   .option('--conversation-id <id>', 'Conversation ID for conversation-scoped exports.')
-  .option('--output <path>', 'Output directory or zip path (default is timestamped under ~/.oracle/cache/exports).')
-  .action(async (commandOptions) => {
+  .option('--out, --output <path>', 'Output directory or zip path (default is timestamped under ~/.oracle/cache/exports).')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
     const providers = new Set(['chatgpt', 'grok']);
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
@@ -1658,8 +2165,8 @@ cacheCommand
       typeof commandOptions.format === 'string' && commandOptions.format.trim().length > 0
         ? commandOptions.format.trim()
         : 'json';
-    if (!['projects', 'conversations', 'conversation'].includes(scope)) {
-      throw new Error('scope must be projects, conversations, or conversation.');
+    if (!['projects', 'conversations', 'conversation', 'contexts'].includes(scope)) {
+      throw new Error('scope must be projects, conversations, conversation, or contexts.');
     }
     if (!['json', 'md', 'html', 'csv', 'zip'].includes(format)) {
       throw new Error('format must be json, md, html, csv, or zip.');
@@ -1676,9 +2183,11 @@ cacheCommand
     });
     const cacheContext = await llmService.resolveCacheContext(listOptions);
     assertCacheIdentity(cacheContext, provider);
+    const projectSelector = readStringOption(commandOptions, ['projectId', 'project-id']);
+    const conversationSelector = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
     let resolvedProjectId: string | undefined;
-    if (commandOptions.projectId) {
-      resolvedProjectId = await resolveProjectIdArg(llmService, String(commandOptions.projectId), listOptions);
+    if (projectSelector) {
+      resolvedProjectId = await resolveProjectIdArg(llmService, projectSelector, listOptions);
     }
     const exportRoot = path.join(getOracleHomeDir(), 'cache', 'exports');
     const defaultDir = path.join(
@@ -1687,14 +2196,15 @@ cacheCommand
       cacheContext.identityKey,
       new Date().toISOString().replace(/[:.]/g, '-'),
     );
-    const outputDir = commandOptions.output ? String(commandOptions.output) : defaultDir;
+    const requestedOutput = (commandOptions.out ?? commandOptions.output) as string | undefined;
+    const outputDir = requestedOutput ? String(requestedOutput) : defaultDir;
 
     const { runCacheExport } = await import('../src/browser/llmService/cache/export.js');
     const result = await runCacheExport(cacheContext, {
       format: format as 'json' | 'md' | 'html' | 'csv' | 'zip',
-      scope: scope as 'projects' | 'conversations' | 'conversation',
+      scope: scope as 'projects' | 'conversations' | 'conversation' | 'contexts',
       projectId: resolvedProjectId ?? undefined,
-      conversationId: commandOptions.conversationId ?? undefined,
+      conversationId: conversationSelector,
       outputDir,
     });
 
@@ -1703,6 +2213,174 @@ cacheCommand
     } else {
       console.log(`Exported ${result.entries} entries into ${result.outputPath}`);
     }
+  });
+
+const cacheContextCommand = cacheCommand
+  .command('context')
+  .description('Read cached conversation contexts for agents and local workflows.');
+
+cacheContextCommand
+  .command('list')
+  .description('List cached conversation context IDs.')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--limit <count>', 'Maximum rows to return (default: all).', parseIntOption)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.')
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    };
+    const providers = new Set(['chatgpt', 'grok']);
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
+    if (!providers.has(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl:
+        provider === 'grok'
+          ? userConfig.browser?.grokUrl ?? null
+          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+    });
+    const cacheContext = await llmService.resolveCacheContext(listOptions);
+    assertCacheIdentity(cacheContext, provider);
+    const entries = await llmService.listCachedConversationContexts({ listOptions });
+    const limit =
+      typeof commandOptions.limit === 'number' && Number.isFinite(commandOptions.limit)
+        ? Math.max(0, Math.trunc(commandOptions.limit))
+        : null;
+    const visibleEntries = limit === null ? entries : limit > 0 ? entries.slice(0, limit) : [];
+    const payload = visibleEntries.map((entry) => ({
+      conversationId: entry.conversationId,
+      updatedAt: entry.updatedAt,
+      path: entry.path,
+    }));
+    console.log(JSON.stringify(payload, null, 2));
+  });
+
+cacheContextCommand
+  .command('get <id>')
+  .description('Read a cached conversation context by ID or cached title.')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--out, --output <path>', 'Optional output path for JSON payload.')
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.')
+  .action(async (id, ...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const providers = new Set(['chatgpt', 'grok']);
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
+    if (!providers.has(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl:
+        provider === 'grok'
+          ? userConfig.browser?.grokUrl ?? null
+          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+    });
+    const cacheContext = await llmService.resolveCacheContext(listOptions);
+    assertCacheIdentity(cacheContext, provider);
+    const result = await llmService.getCachedConversationContext(String(id || '').trim(), {
+      listOptions,
+    });
+    const payload = {
+      conversationId: result.conversationId,
+      provider,
+      fetchedAt: result.fetchedAt,
+      stale: result.stale,
+      context: result.context,
+    };
+    const requestedOutput = (commandOptions.out ?? commandOptions.output) as string | undefined;
+    if (typeof requestedOutput === 'string' && requestedOutput.trim().length > 0) {
+      const outputPath = path.resolve(requestedOutput.trim());
+      await fs.mkdir(path.dirname(outputPath), { recursive: true });
+      await fs.writeFile(outputPath, JSON.stringify(payload, null, 2), 'utf8');
+      console.log(`Wrote cached context to ${outputPath}`);
+      return;
+    }
+    console.log(JSON.stringify(payload, null, 2));
+  });
+
+cacheContextCommand
+  .command('search <query>')
+  .description('Keyword search cached conversation contexts.')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter search to one conversation ID.')
+  .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
+  .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
+  .action(async (query, ...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    await runCacheContextKeywordSearch(String(query ?? ''), commandOptions);
+  });
+
+cacheContextCommand
+  .command('semantic-search <query>')
+  .description('Embedding-based semantic search over cached conversation contexts.')
+  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--conversation-id <id>', 'Filter search to one conversation ID.')
+  .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
+  .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
+  .option('--model <id>', 'Embedding model (default text-embedding-3-small).')
+  .option('--max-chunks <count>', 'Maximum chunks to embed/score (default 400).', parseIntOption)
+  .option('--min-score <value>', 'Minimum cosine score threshold (-1..1).', parseFloatOption)
+  .option('--openai-api-key <key>', 'Override OPENAI_API_KEY for this command.')
+  .option('--openai-base-url <url>', 'Override embeddings API base URL (default https://api.openai.com/v1).')
+  .action(async (query, ...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    await runCacheContextSemanticSearch(String(query ?? ''), commandOptions);
   });
 
 program
@@ -1756,21 +2434,82 @@ program
 async function refreshProviderCache(
   llmService: LlmService,
   listOptions: BrowserProviderListOptions,
+  options: {
+    includeProjectOnlyConversations?: boolean;
+  } = {},
 ): Promise<void> {
   const provider = llmService.provider;
+  const includeProjectOnlyConversations = Boolean(options.includeProjectOnlyConversations);
   const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
   const cacheContext = await llmService.resolveCacheContext(normalizedListOptions);
   assertCacheIdentity(cacheContext, llmService.providerId);
+  const configuredStore = cacheContext.userConfig.browser?.cache?.store;
+  const cacheStoreKind: CacheStoreKind =
+    configuredStore === 'json' || configuredStore === 'sqlite' || configuredStore === 'dual'
+      ? configuredStore
+      : 'dual';
+  const cacheStore = createCacheStore(cacheStoreKind);
+  let refreshedProjects: Project[] = [];
   if (provider.listProjects) {
     const projects = await provider.listProjects(normalizedListOptions);
     if (Array.isArray(projects)) {
-      await writeProjectCache(cacheContext, projects);
+      refreshedProjects = projects;
+      await cacheStore.writeProjects(cacheContext, projects);
     }
   }
   if (provider.listConversations) {
     const conversations = await provider.listConversations(undefined, normalizedListOptions);
     if (Array.isArray(conversations)) {
-      await writeConversationCache(cacheContext, conversations);
+      const conversationById = new Map<string, Conversation>();
+      for (const conversation of conversations) {
+        if (!conversation?.id) continue;
+        conversationById.set(conversation.id, { ...conversation });
+      }
+
+      // Enrich existing global conversations with project associations discovered
+      // via project-scoped conversation lists. By default we only update known IDs.
+      // Optional mode can include project-only IDs discovered from scoped lists.
+      if (provider.listProjects && refreshedProjects.length > 0) {
+        for (const project of refreshedProjects) {
+          if (!project?.id) continue;
+          let scoped: Conversation[] = [];
+          try {
+            const result = await provider.listConversations(project.id, {
+              ...normalizedListOptions,
+              includeHistory: false,
+            });
+            if (Array.isArray(result)) {
+              scoped = result;
+            }
+          } catch {
+            continue;
+          }
+          for (const scopedConversation of scoped) {
+            if (!scopedConversation?.id) continue;
+            const existing = conversationById.get(scopedConversation.id);
+            if (!existing) {
+              if (!includeProjectOnlyConversations) continue;
+              conversationById.set(scopedConversation.id, {
+                ...scopedConversation,
+                projectId: scopedConversation.projectId ?? project.id,
+              });
+              continue;
+            }
+            if (!existing.projectId) {
+              existing.projectId = scopedConversation.projectId ?? project.id;
+            }
+            if (
+              (!existing.url || !existing.url.includes('/project/')) &&
+              typeof scopedConversation.url === 'string' &&
+              scopedConversation.url.includes('/project/')
+            ) {
+              existing.url = scopedConversation.url;
+            }
+          }
+        }
+      }
+
+      await cacheStore.writeConversations(cacheContext, Array.from(conversationById.values()));
     }
   }
 }
@@ -1808,6 +2547,2486 @@ function assertCacheIdentity(
         'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Oracle can detect it.',
     );
   }
+}
+
+async function runCacheContextKeywordSearch(query: string, commandOptions: OptionValues): Promise<void> {
+  const resolved = await resolveCacheSearchContext(commandOptions);
+  const normalizedQuery = String(query ?? '').trim();
+  if (!normalizedQuery) {
+    throw new Error('query is required.');
+  }
+  const role = parseCacheSearchRole(commandOptions.role);
+  const limit =
+    typeof commandOptions.limit === 'number' && Number.isFinite(commandOptions.limit)
+      ? commandOptions.limit
+      : undefined;
+  const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+  const hits = await searchCachedContextsByKeyword(resolved.cacheContext, normalizedQuery, {
+    limit,
+    conversationId,
+    role,
+  });
+  console.log(
+    JSON.stringify(
+      {
+        provider: resolved.provider,
+        identityKey: resolved.cacheContext.identityKey,
+        mode: 'keyword',
+        query: normalizedQuery,
+        filters: {
+          conversationId: conversationId ?? null,
+          role: role ?? null,
+          limit: limit ?? null,
+        },
+        hits,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+async function runCacheContextSemanticSearch(query: string, commandOptions: OptionValues): Promise<void> {
+  const resolved = await resolveCacheSearchContext(commandOptions);
+  const normalizedQuery = String(query ?? '').trim();
+  if (!normalizedQuery) {
+    throw new Error('query is required.');
+  }
+  const role = parseCacheSearchRole(commandOptions.role);
+  const limit =
+    typeof commandOptions.limit === 'number' && Number.isFinite(commandOptions.limit)
+      ? commandOptions.limit
+      : undefined;
+  const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+  const model = readStringOption(commandOptions, ['model']);
+  const maxChunks = readNumberOption(commandOptions, ['maxChunks', 'max-chunks']);
+  const minScore = readNumberOption(commandOptions, ['minScore', 'min-score']);
+  const openaiApiKey = readStringOption(commandOptions, ['openaiApiKey', 'openai-api-key']);
+  const openaiBaseUrl = readStringOption(commandOptions, ['openaiBaseUrl', 'openai-base-url']);
+  const result = await searchCachedContextsSemantically(resolved.cacheContext, normalizedQuery, {
+    limit,
+    conversationId,
+    role,
+    model,
+    maxChunks,
+    minScore,
+    openaiApiKey,
+    openaiBaseUrl,
+  });
+  console.log(
+    JSON.stringify(
+      {
+        provider: resolved.provider,
+        identityKey: resolved.cacheContext.identityKey,
+        mode: 'semantic',
+        query: normalizedQuery,
+        model: result.model,
+        totalChunks: result.totalChunks,
+        embeddedChunks: result.embeddedChunks,
+        filters: {
+          conversationId: conversationId ?? null,
+          role: role ?? null,
+          limit: limit ?? null,
+          maxChunks: maxChunks ?? null,
+          minScore: minScore ?? null,
+        },
+        hits: result.hits,
+      },
+      null,
+      2,
+    ),
+  );
+}
+
+function parseCacheSearchRole(raw: unknown): 'user' | 'assistant' | 'system' | 'source' | undefined {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    return undefined;
+  }
+  const normalized = raw.trim().toLowerCase();
+  if (normalized === 'user' || normalized === 'assistant' || normalized === 'system' || normalized === 'source') {
+    return normalized;
+  }
+  throw new Error('role must be one of: user, assistant, system, source.');
+}
+
+function readOptionRaw(options: OptionValues, keys: string[]): unknown {
+  for (const key of keys) {
+    const value = (options as Record<string, unknown>)[key];
+    if (value !== undefined) return value;
+  }
+  return undefined;
+}
+
+function readStringOption(options: OptionValues, keys: string[]): string | undefined {
+  const raw = readOptionRaw(options, keys);
+  if (typeof raw !== 'string') return undefined;
+  const value = raw.trim();
+  return value.length > 0 ? value : undefined;
+}
+
+function readNumberOption(options: OptionValues, keys: string[]): number | undefined {
+  const raw = readOptionRaw(options, keys);
+  if (typeof raw !== 'number' || !Number.isFinite(raw)) return undefined;
+  return raw;
+}
+
+function parseCacheFileDataset(raw: unknown): string | undefined {
+  if (typeof raw !== 'string' || raw.trim().length === 0) {
+    return undefined;
+  }
+  const normalized = raw.trim();
+  const valid = new Set([
+    'conversation-context',
+    'conversation-files',
+    'conversation-attachments',
+    'project-knowledge',
+  ]);
+  if (!valid.has(normalized)) {
+    throw new Error(
+      'dataset must be one of: conversation-context, conversation-files, conversation-attachments, project-knowledge.',
+    );
+  }
+  return normalized;
+}
+
+type CacheDoctorSeverity = 'warning' | 'error';
+
+type CacheDoctorFinding = {
+  severity: CacheDoctorSeverity;
+  check: string;
+  message: string;
+};
+
+type CacheDoctorEntry = {
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  cacheDir: string;
+  sqlite: {
+    path: string;
+    exists: boolean;
+    ok: boolean;
+    quickCheck: string | null;
+    missingTables: string[];
+  } | null;
+  filePointerHealth: {
+    missingLocalCount: number;
+    sample: Array<{
+      dataset: string;
+      entityId: string;
+      displayName: string;
+      localPath: string | null;
+      pathState: string;
+    }>;
+  };
+  parity: {
+    sqlEntryCount: number | null;
+    indexEntryCount: number | null;
+    missingInSqlCount: number;
+    missingInIndexCount: number;
+    orphanSourceLinksCount: number;
+    orphanFileBindingsCount: number;
+  };
+  findings: CacheDoctorFinding[];
+};
+
+type CacheDoctorReport = {
+  generatedAt: string;
+  filters: {
+    provider: string | null;
+    identityKey: string | null;
+    missingLimit: number;
+  };
+  summary: {
+    checked: number;
+    warnings: number;
+    errors: number;
+  };
+  entries: CacheDoctorEntry[];
+};
+
+async function runCacheDoctor(commandOptions: OptionValues): Promise<CacheDoctorReport> {
+  const providerFilter =
+    typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+      ? commandOptions.provider.trim()
+      : null;
+  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  }
+  const identityFilter =
+    typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
+      ? commandOptions.identityKey.trim()
+      : null;
+  const missingLimit =
+    typeof commandOptions.missingLimit === 'number' && Number.isFinite(commandOptions.missingLimit)
+      ? Math.max(1, Math.min(100, Math.floor(commandOptions.missingLimit)))
+      : 25;
+
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const contexts = await discoverCacheDoctorContexts(userConfig, providerFilter, identityFilter);
+  const entries: CacheDoctorEntry[] = [];
+  let warnings = 0;
+  let errors = 0;
+
+  for (const item of contexts) {
+    const result = await withCacheMaintenanceLock(
+      item.cacheDir,
+      `cache-doctor ${item.provider}/${item.identityKey}`,
+      async () => {
+        const findings: CacheDoctorFinding[] = [];
+        const sqlite = await inspectCacheSqlite(item.cacheDir);
+        if (!sqlite.exists) {
+          findings.push({
+            severity: 'warning',
+            check: 'sqlite.exists',
+            message: 'cache.sqlite not found (JSON-only cache or uninitialized SQL cache).',
+          });
+        } else if (!sqlite.ok) {
+          findings.push({
+            severity: 'error',
+            check: 'sqlite.quick_check',
+            message: sqlite.quickCheck ? `SQLite quick_check failed: ${sqlite.quickCheck}` : 'SQLite quick_check failed.',
+          });
+        }
+        if (sqlite.exists && sqlite.missingTables.length > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'sqlite.tables',
+            message: `Missing expected tables: ${sqlite.missingTables.join(', ')}`,
+          });
+        }
+
+        const missingRows = await resolveCachedFiles(item.cacheContext, {
+          missingOnly: true,
+          limit: missingLimit,
+        });
+        if (missingRows.length > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'files.missing_local',
+            message: `Found ${missingRows.length} missing local file pointer(s).`,
+          });
+        }
+
+        const parity = await inspectCacheParity(item.cacheDir);
+        if (parity.missingInSqlCount > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'parity.index_missing_in_sql',
+            message: `${parity.missingInSqlCount} cache-index entry key(s) are missing from cache_entries.`,
+          });
+        }
+        if (parity.missingInIndexCount > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'parity.sql_missing_in_index',
+            message: `${parity.missingInIndexCount} cache_entries key(s) are missing from cache-index.json.`,
+          });
+        }
+        if (parity.orphanSourceLinksCount > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'parity.orphan_source_links',
+            message: `${parity.orphanSourceLinksCount} source_links row(s) have no matching conversation-context cache entry.`,
+          });
+        }
+        if (parity.orphanFileBindingsCount > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'parity.orphan_file_bindings',
+            message: `${parity.orphanFileBindingsCount} file_bindings row(s) have no matching cache entry dataset/entity.`,
+          });
+        }
+
+        const warningInc = findings.filter((finding) => finding.severity === 'warning').length;
+        const errorInc = findings.filter((finding) => finding.severity === 'error').length;
+        const entry: CacheDoctorEntry = {
+          provider: item.provider,
+          identityKey: item.identityKey,
+          cacheDir: item.cacheDir,
+          sqlite,
+          filePointerHealth: {
+            missingLocalCount: missingRows.length,
+            sample: missingRows.map((row) => ({
+              dataset: row.dataset,
+              entityId: row.entityId,
+              displayName: row.displayName,
+              localPath: row.localPath,
+              pathState: row.pathState,
+            })),
+          },
+          parity,
+          findings,
+        };
+        return { entry, warningInc, errorInc };
+      },
+    );
+    warnings += result.warningInc;
+    errors += result.errorInc;
+    entries.push(result.entry);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    filters: {
+      provider: providerFilter,
+      identityKey: identityFilter,
+      missingLimit,
+    },
+    summary: {
+      checked: entries.length,
+      warnings,
+      errors,
+    },
+    entries,
+  };
+}
+
+async function discoverCacheDoctorContexts(
+  userConfig: ResolvedUserConfig,
+  providerFilter: string | null,
+  identityFilter: string | null,
+): Promise<
+  Array<{
+    provider: 'chatgpt' | 'grok';
+    identityKey: string;
+    cacheDir: string;
+    cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
+  }>
+> {
+  const cacheRoot = path.join(getOracleHomeDir(), 'cache', 'providers');
+  let providerEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
+  try {
+    providerEntries = await fs.readdir(cacheRoot, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const output: Array<{
+    provider: 'chatgpt' | 'grok';
+    identityKey: string;
+    cacheDir: string;
+    cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
+  }> = [];
+  for (const providerEntry of providerEntries) {
+    if (!providerEntry.isDirectory()) continue;
+    if (providerEntry.name !== 'chatgpt' && providerEntry.name !== 'grok') continue;
+    if (providerFilter && providerEntry.name !== providerFilter) continue;
+    const provider = providerEntry.name as 'chatgpt' | 'grok';
+    const llmService = createLlmService(provider, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl:
+        provider === 'grok'
+          ? userConfig.browser?.grokUrl ?? null
+          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+    });
+    const providerDir = path.join(cacheRoot, provider);
+    let identityEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
+    try {
+      identityEntries = await fs.readdir(providerDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const identityEntry of identityEntries) {
+      if (!identityEntry.isDirectory()) continue;
+      if (identityFilter && identityEntry.name !== identityFilter) continue;
+      output.push({
+        provider,
+        identityKey: identityEntry.name,
+        cacheDir: path.join(providerDir, identityEntry.name),
+        cacheContext: {
+          provider,
+          userConfig,
+          listOptions,
+          identityKey: identityEntry.name,
+          userIdentity: null,
+        },
+      });
+    }
+  }
+  return output;
+}
+
+async function inspectCacheSqlite(cacheDir: string): Promise<{
+  path: string;
+  exists: boolean;
+  ok: boolean;
+  quickCheck: string | null;
+  missingTables: string[];
+}> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  try {
+    await fs.access(dbPath);
+  } catch {
+    return {
+      path: dbPath,
+      exists: false,
+      ok: true,
+      quickCheck: null,
+      missingTables: [],
+    };
+  }
+  try {
+    const sqliteModule = await import('node:sqlite');
+    return await withSqliteBusyRetry(`inspect sqlite (${cacheDir})`, async () => {
+      const db = new sqliteModule.DatabaseSync(dbPath);
+      try {
+        const quick = db.prepare('PRAGMA quick_check').all();
+        const quickValue =
+          quick.length > 0 && typeof quick[0].quick_check === 'string' ? quick[0].quick_check : null;
+        const requiredTables = ['cache_entries', 'meta', 'schema_migrations', 'source_links', 'file_bindings', 'file_assets'];
+        const tableRows = db
+          .prepare("SELECT name FROM sqlite_master WHERE type='table'")
+          .all()
+          .map((row) => String(row.name));
+        const missingTables = requiredTables.filter((table) => !tableRows.includes(table));
+        return {
+          path: dbPath,
+          exists: true,
+          ok: quickValue === null || quickValue.toLowerCase() === 'ok',
+          quickCheck: quickValue,
+          missingTables,
+        };
+      } finally {
+        db.close();
+      }
+    });
+  } catch (error) {
+    return {
+      path: dbPath,
+      exists: true,
+      ok: false,
+      quickCheck: `failed to inspect sqlite: ${error instanceof Error ? error.message : String(error)}`,
+      missingTables: [],
+    };
+  }
+}
+
+async function inspectCacheParity(cacheDir: string): Promise<{
+  sqlEntryCount: number | null;
+  indexEntryCount: number | null;
+  missingInSqlCount: number;
+  missingInIndexCount: number;
+  orphanSourceLinksCount: number;
+  orphanFileBindingsCount: number;
+}> {
+  const sqlKeys = await readSqlCacheEntryKeys(cacheDir);
+  const indexKeys = await readIndexEntryKeys(cacheDir);
+  const missingInSqlCount = countMissing(indexKeys, sqlKeys);
+  const missingInIndexCount = countMissing(sqlKeys, indexKeys);
+  const sqliteOrphans = await readSqlOrphanCounts(cacheDir);
+  return {
+    sqlEntryCount: sqlKeys ? sqlKeys.size : null,
+    indexEntryCount: indexKeys ? indexKeys.size : null,
+    missingInSqlCount,
+    missingInIndexCount,
+    orphanSourceLinksCount: sqliteOrphans.orphanSourceLinksCount,
+    orphanFileBindingsCount: sqliteOrphans.orphanFileBindingsCount,
+  };
+}
+
+async function readSqlCacheEntryKeys(cacheDir: string): Promise<Set<string> | null> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  try {
+    await fs.access(dbPath);
+  } catch {
+    return null;
+  }
+  try {
+    const sqliteModule = await import('node:sqlite');
+    return await withSqliteBusyRetry(`doctor parity sql keys (${cacheDir})`, async () => {
+      const db = new sqliteModule.DatabaseSync(dbPath);
+      try {
+        const rows = db
+          .prepare('SELECT dataset, entity_id FROM cache_entries')
+          .all() as Array<{ dataset?: string; entity_id?: string }>;
+        const keys = new Set<string>();
+        for (const row of rows) {
+          const dataset = typeof row.dataset === 'string' ? row.dataset : '';
+          const entityId = typeof row.entity_id === 'string' ? row.entity_id : '';
+          const key = toSqlParityKey(dataset, entityId);
+          if (key) keys.add(key);
+        }
+        return keys;
+      } finally {
+        db.close();
+      }
+    });
+  } catch {
+    return null;
+  }
+}
+
+async function readIndexEntryKeys(cacheDir: string): Promise<Set<string> | null> {
+  const indexPath = path.join(cacheDir, 'cache-index.json');
+  let raw: string;
+  try {
+    raw = await fs.readFile(indexPath, 'utf8');
+  } catch {
+    return null;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const entries = Array.isArray((parsed as { entries?: unknown[] })?.entries)
+    ? ((parsed as { entries?: unknown[] }).entries as unknown[])
+    : [];
+  const keys = new Set<string>();
+  for (const entryRaw of entries) {
+    if (!entryRaw || typeof entryRaw !== 'object') continue;
+    const entry = entryRaw as {
+      kind?: string;
+      path?: string;
+      projectId?: string;
+      conversationId?: string;
+    };
+    const key = toIndexParityKey(entry);
+    if (key) keys.add(key);
+  }
+  return keys;
+}
+
+function toSqlParityKey(datasetRaw: string, entityIdRaw: string): string | null {
+  const dataset = datasetRaw.trim();
+  const entityId = entityIdRaw.trim();
+  if (dataset === 'projects' || dataset === 'conversations') {
+    return `${dataset}::`;
+  }
+  if (!entityId) return null;
+  const map: Record<string, string> = {
+    'conversation-context': 'context',
+    'conversation-files': 'conversation-files',
+    'conversation-attachments': 'conversation-attachments',
+    'project-knowledge': 'project-knowledge',
+    'project-instructions': 'project-instructions',
+  };
+  const kind = map[dataset];
+  if (!kind) return null;
+  return `${kind}::${entityId}`;
+}
+
+function toIndexParityKey(entry: {
+  kind?: string;
+  path?: string;
+  projectId?: string;
+  conversationId?: string;
+}): string | null {
+  const kind = typeof entry.kind === 'string' ? entry.kind.trim() : '';
+  if (!kind) return null;
+  if (kind === 'projects' || kind === 'conversations') {
+    return `${kind}::`;
+  }
+  const pathValue = typeof entry.path === 'string' ? entry.path : '';
+  if (kind === 'context' || kind === 'conversation-files' || kind === 'conversation-attachments') {
+    const explicitId =
+      kind === 'context' || kind === 'conversation-files'
+        ? (entry.conversationId ?? '').trim()
+        : (entry.conversationId ?? '').trim();
+    const parsedId = parseConversationIdFromPath(pathValue, kind);
+    const conversationId = explicitId || parsedId;
+    return conversationId ? `${kind}::${conversationId}` : null;
+  }
+  if (kind === 'project-knowledge' || kind === 'project-instructions') {
+    const explicitId = (entry.projectId ?? '').trim();
+    const parsedId = parseProjectIdFromPath(pathValue, kind);
+    const projectId = explicitId || parsedId;
+    return projectId ? `${kind}::${projectId}` : null;
+  }
+  return null;
+}
+
+function parseConversationIdFromPath(pathValue: string, kind: string): string {
+  if (!pathValue) return '';
+  if (kind === 'context') {
+    const match = pathValue.match(/^contexts\/([^/]+)\.json$/i);
+    return match?.[1] ?? '';
+  }
+  if (kind === 'conversation-files') {
+    const match = pathValue.match(/^conversation-files\/([^/]+)\.json$/i);
+    return match?.[1] ?? '';
+  }
+  const match = pathValue.match(/^conversation-attachments\/([^/]+)\/manifest\.json$/i);
+  return match?.[1] ?? '';
+}
+
+function parseProjectIdFromPath(pathValue: string, kind: string): string {
+  if (!pathValue) return '';
+  if (kind === 'project-knowledge') {
+    const match = pathValue.match(/^project-knowledge\/([^/]+)\/manifest\.json$/i);
+    return match?.[1] ?? '';
+  }
+  const match = pathValue.match(/^project-instructions\/([^/.]+)\.(?:md|json)$/i);
+  return match?.[1] ?? '';
+}
+
+function countMissing(source: Set<string> | null, target: Set<string> | null): number {
+  if (!source || !target) return 0;
+  let count = 0;
+  for (const key of source) {
+    if (!target.has(key)) count += 1;
+  }
+  return count;
+}
+
+async function readSqlOrphanCounts(cacheDir: string): Promise<{
+  orphanSourceLinksCount: number;
+  orphanFileBindingsCount: number;
+}> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  try {
+    await fs.access(dbPath);
+  } catch {
+    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0 };
+  }
+  try {
+    const sqliteModule = await import('node:sqlite');
+    return await withSqliteBusyRetry(`doctor parity orphan counts (${cacheDir})`, async () => {
+      const db = new sqliteModule.DatabaseSync(dbPath);
+      try {
+        const orphanSource = db
+          .prepare(
+            `SELECT COUNT(*) AS c
+               FROM source_links s
+              WHERE NOT EXISTS (
+                SELECT 1
+                  FROM cache_entries c
+                 WHERE c.dataset = 'conversation-context'
+                   AND c.entity_id = s.conversation_id
+              )`,
+          )
+          .get() as { c?: number | bigint };
+        const orphanBindings = db
+          .prepare(
+            `SELECT COUNT(*) AS c
+               FROM file_bindings b
+              WHERE NOT EXISTS (
+                SELECT 1
+                  FROM cache_entries c
+                 WHERE c.dataset = b.dataset
+                   AND c.entity_id = b.entity_id
+              )`,
+          )
+          .get() as { c?: number | bigint };
+        return {
+          orphanSourceLinksCount: numberFromSqlValue(orphanSource.c),
+          orphanFileBindingsCount: numberFromSqlValue(orphanBindings.c),
+        };
+      } finally {
+        db.close();
+      }
+    });
+  } catch {
+    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0 };
+  }
+}
+
+const CACHE_MAINTENANCE_LOCK_FILE = '.oracle-cache-maintenance.lock';
+const CACHE_MAINTENANCE_LOCK_WAIT_MS = 60_000;
+const CACHE_MAINTENANCE_LOCK_STALE_MS = 15 * 60_000;
+const CACHE_MAINTENANCE_LOCK_POLL_MS = 250;
+
+async function withCacheMaintenanceLock<T>(
+  cacheDir: string,
+  label: string,
+  fn: () => Promise<T>,
+): Promise<T> {
+  await fs.mkdir(cacheDir, { recursive: true });
+  const lockPath = path.join(cacheDir, CACHE_MAINTENANCE_LOCK_FILE);
+  const start = Date.now();
+  let handle: Awaited<ReturnType<typeof fs.open>> | null = null;
+  while (!handle) {
+    try {
+      handle = await fs.open(lockPath, 'wx');
+      const payload = {
+        pid: process.pid,
+        label,
+        acquiredAt: new Date().toISOString(),
+        host: os.hostname(),
+      };
+      await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+      break;
+    } catch (error) {
+      const code = (error as { code?: string }).code;
+      if (code !== 'EEXIST') {
+        throw error;
+      }
+      const staleCleared = await clearStaleCacheMaintenanceLock(lockPath);
+      if (staleCleared) {
+        continue;
+      }
+      if (Date.now() - start > CACHE_MAINTENANCE_LOCK_WAIT_MS) {
+        throw new Error(
+          `Timed out waiting for cache maintenance lock at ${lockPath}. Try again after current operation completes.`,
+        );
+      }
+      await sleep(CACHE_MAINTENANCE_LOCK_POLL_MS);
+    }
+  }
+
+  try {
+    return await fn();
+  } finally {
+    try {
+      await handle?.close();
+    } catch {
+      // ignore
+    }
+    try {
+      await fs.unlink(lockPath);
+    } catch {
+      // ignore
+    }
+  }
+}
+
+async function clearStaleCacheMaintenanceLock(lockPath: string): Promise<boolean> {
+  try {
+    const stat = await fs.stat(lockPath);
+    if (Date.now() - stat.mtimeMs <= CACHE_MAINTENANCE_LOCK_STALE_MS) {
+      return false;
+    }
+  } catch {
+    return false;
+  }
+  try {
+    await fs.unlink(lockPath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const SQLITE_BUSY_MAX_ATTEMPTS = 8;
+const SQLITE_BUSY_BASE_DELAY_MS = 120;
+
+async function withSqliteBusyRetry<T>(label: string, fn: () => Promise<T>): Promise<T> {
+  let attempt = 0;
+  while (true) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (!isSqliteBusyError(error) || attempt >= SQLITE_BUSY_MAX_ATTEMPTS - 1) {
+        throw error;
+      }
+      const delay = Math.min(
+        SQLITE_BUSY_BASE_DELAY_MS * Math.pow(2, attempt),
+        1_500,
+      );
+      if (process.env.ORACLE_DEBUG_CACHE === '1') {
+        const message = error instanceof Error ? error.message : String(error);
+        // eslint-disable-next-line no-console
+        console.warn(
+          `[cache] sqlite busy retry (${attempt + 1}/${SQLITE_BUSY_MAX_ATTEMPTS}) for ${label}: ${message}`,
+        );
+      }
+      attempt += 1;
+      await sleep(delay);
+    }
+  }
+}
+
+function isSqliteBusyError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  const normalized = message.toLowerCase();
+  return normalized.includes('database is locked') || normalized.includes('sqlite_busy');
+}
+
+type CacheRepairActionName =
+  | 'sync-sql'
+  | 'rebuild-index'
+  | 'prune-orphan-assets'
+  | 'prune-orphan-source-links'
+  | 'prune-orphan-file-bindings'
+  | 'mark-missing-local';
+
+type CacheRepairActionResult = {
+  name: CacheRepairActionName;
+  applied: boolean;
+  skipped: 'dry-run' | 'no-op' | 'failed';
+  message: string;
+};
+
+type CacheRepairEntry = {
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  cacheDir: string;
+  backupDir: string | null;
+  actions: CacheRepairActionResult[];
+};
+
+type CacheRepairReport = {
+  generatedAt: string;
+  mode: 'dry-run' | 'apply';
+  actions: CacheRepairActionName[];
+  filters: {
+    provider: string | null;
+    identityKey: string | null;
+  };
+  summary: {
+    checked: number;
+    touched: number;
+    backups: number;
+    warnings: number;
+    errors: number;
+  };
+  entries: CacheRepairEntry[];
+};
+
+async function runCacheRepair(commandOptions: OptionValues): Promise<CacheRepairReport> {
+  const providerFilter =
+    typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+      ? commandOptions.provider.trim()
+      : null;
+  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  }
+  const identityFilter =
+    typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
+      ? commandOptions.identityKey.trim()
+      : null;
+  const actions = parseCacheRepairActions(commandOptions.actions);
+  const apply = Boolean(commandOptions.apply);
+  const mode: 'dry-run' | 'apply' = apply ? 'apply' : 'dry-run';
+
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const contexts = await discoverCacheDoctorContexts(userConfig, providerFilter, identityFilter);
+  const entries: CacheRepairEntry[] = [];
+  let touched = 0;
+  let backups = 0;
+  let warnings = 0;
+  let errors = 0;
+
+  for (const context of contexts) {
+    const result = await withCacheMaintenanceLock(
+      context.cacheDir,
+      `cache-repair ${context.provider}/${context.identityKey}`,
+      async () => {
+        const results: CacheRepairActionResult[] = [];
+        let backupDir: string | null = null;
+        const ensureBackup = async () => {
+          if (!apply) return null;
+          if (backupDir) return backupDir;
+          backupDir = await createCacheRepairBackup(context.cacheDir);
+          backups += 1;
+          return backupDir;
+        };
+
+        for (const action of actions) {
+          try {
+            if (action === 'sync-sql') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairSyncSql(context.cacheContext, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+            if (action === 'rebuild-index') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairRebuildIndex(context.cacheContext, context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+            if (action === 'prune-orphan-assets') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairPruneOrphanAssets(context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+            if (action === 'prune-orphan-source-links') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairPruneOrphanSourceLinks(context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+            if (action === 'prune-orphan-file-bindings') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairPruneOrphanFileBindings(context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+            if (action === 'mark-missing-local') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairMarkMissingLocal(context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
+          } catch (error) {
+            errors += 1;
+            results.push({
+              name: action,
+              applied: false,
+              skipped: 'failed',
+              message: error instanceof Error ? error.message : String(error),
+            });
+          }
+        }
+
+        return {
+          provider: context.provider,
+          identityKey: context.identityKey,
+          cacheDir: context.cacheDir,
+          backupDir,
+          actions: results,
+        } as CacheRepairEntry;
+      },
+    );
+
+    entries.push(result);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    mode,
+    actions,
+    filters: {
+      provider: providerFilter,
+      identityKey: identityFilter,
+    },
+    summary: {
+      checked: entries.length,
+      touched,
+      backups,
+      warnings,
+      errors,
+    },
+    entries,
+  };
+}
+
+function parseCacheRepairActions(raw: unknown): CacheRepairActionName[] {
+  const valid = new Set<CacheRepairActionName>([
+    'sync-sql',
+    'rebuild-index',
+    'prune-orphan-assets',
+    'prune-orphan-source-links',
+    'prune-orphan-file-bindings',
+    'mark-missing-local',
+  ]);
+  const source = typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : 'all';
+  const tokens = source
+    .split(',')
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0);
+  if (tokens.includes('all')) {
+    return [
+      'sync-sql',
+      'rebuild-index',
+      'prune-orphan-assets',
+      'prune-orphan-source-links',
+      'prune-orphan-file-bindings',
+      'mark-missing-local',
+    ];
+  }
+  const actions: CacheRepairActionName[] = [];
+  for (const token of tokens) {
+    if (!valid.has(token as CacheRepairActionName)) {
+      throw new Error(
+        `Invalid repair action "${token}". Use sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,mark-missing-local,all.`,
+      );
+    }
+    const casted = token as CacheRepairActionName;
+    if (!actions.includes(casted)) actions.push(casted);
+  }
+  if (actions.length === 0) {
+    return [
+      'sync-sql',
+      'rebuild-index',
+      'prune-orphan-assets',
+      'prune-orphan-source-links',
+      'prune-orphan-file-bindings',
+      'mark-missing-local',
+    ];
+  }
+  return actions;
+}
+
+async function createCacheRepairBackup(cacheDir: string): Promise<string> {
+  const backupDir = path.join(cacheDir, 'backups', new Date().toISOString().replace(/[:.]/g, '-'));
+  await fs.mkdir(backupDir, { recursive: true });
+  for (const fileName of ['cache.sqlite', 'cache-index.json']) {
+    const source = path.join(cacheDir, fileName);
+    try {
+      await fs.access(source);
+    } catch {
+      continue;
+    }
+    await fs.copyFile(source, path.join(backupDir, fileName));
+  }
+  return backupDir;
+}
+
+async function repairSyncSql(
+  cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>,
+  apply: boolean,
+): Promise<CacheRepairActionResult> {
+  if (!apply) {
+    return {
+      name: 'sync-sql',
+      applied: false,
+      skipped: 'dry-run',
+      message: 'Would initialize/sync cache.sqlite from current JSON/SQL cache state.',
+    };
+  }
+  const sqliteStore = createCacheStore('sqlite');
+  await sqliteStore.readProjects(cacheContext);
+  await sqliteStore.readConversations(cacheContext);
+  await sqliteStore.listConversationContexts(cacheContext);
+  return {
+    name: 'sync-sql',
+    applied: true,
+    skipped: 'no-op',
+    message: 'SQLite cache initialized/synchronized.',
+  };
+}
+
+async function repairRebuildIndex(
+  cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>,
+  cacheDir: string,
+  apply: boolean,
+): Promise<CacheRepairActionResult> {
+  const index = await buildCacheIndexFromFilesystem(cacheContext, cacheDir);
+  if (!apply) {
+    return {
+      name: 'rebuild-index',
+      applied: false,
+      skipped: 'dry-run',
+      message: `Would rebuild cache-index.json with ${index.entries.length} entries.`,
+    };
+  }
+  await fs.writeFile(path.join(cacheDir, 'cache-index.json'), JSON.stringify(index, null, 2), 'utf8');
+  return {
+    name: 'rebuild-index',
+    applied: true,
+    skipped: 'no-op',
+    message: `Rebuilt cache-index.json with ${index.entries.length} entries.`,
+  };
+}
+
+async function buildCacheIndexFromFilesystem(
+  cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>,
+  cacheDir: string,
+): Promise<{
+  version: 1;
+  updatedAt: string;
+  entries: Array<{
+    kind:
+      | 'projects'
+      | 'conversations'
+      | 'context'
+      | 'conversation-files'
+      | 'project-instructions'
+      | 'project-knowledge'
+      | 'conversation-attachments'
+      | 'exports';
+    path: string;
+    updatedAt: string;
+    projectId?: string;
+    conversationId?: string;
+    sourceUrl?: string | null;
+  }>;
+}> {
+  const nowIso = new Date().toISOString();
+  const entries: Array<{
+    kind:
+      | 'projects'
+      | 'conversations'
+      | 'context'
+      | 'conversation-files'
+      | 'project-instructions'
+      | 'project-knowledge'
+      | 'conversation-attachments'
+      | 'exports';
+    path: string;
+    updatedAt: string;
+    projectId?: string;
+    conversationId?: string;
+    sourceUrl?: string | null;
+  }> = [];
+  const addIfExists = async (
+    kind:
+      | 'projects'
+      | 'conversations'
+      | 'context'
+      | 'conversation-files'
+      | 'project-instructions'
+      | 'project-knowledge'
+      | 'conversation-attachments'
+      | 'exports',
+    relPath: string,
+    extra?: { projectId?: string; conversationId?: string },
+  ) => {
+    const absolute = path.join(cacheDir, relPath);
+    try {
+      const stat = await fs.stat(absolute);
+      entries.push({
+        kind,
+        path: relPath,
+        updatedAt: stat.mtime.toISOString(),
+        projectId: extra?.projectId,
+        conversationId: extra?.conversationId,
+        sourceUrl: cacheContext.listOptions.configuredUrl ?? null,
+      });
+    } catch {
+      // ignore
+    }
+  };
+
+  await addIfExists('projects', 'projects.json');
+  await addIfExists('conversations', 'conversations.json');
+
+  const walkJsonDir = async (
+    subDir: string,
+    kind: 'context' | 'conversation-files',
+    idKey: 'conversationId',
+  ) => {
+    const absoluteDir = path.join(cacheDir, subDir);
+    let files: Array<{ name: string; isFile: () => boolean }> = [];
+    try {
+      files = await fs.readdir(absoluteDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const file of files) {
+      if (!file.isFile() || !file.name.endsWith('.json')) continue;
+      const id = file.name.replace(/\.json$/i, '');
+      await addIfExists(kind, `${subDir}/${file.name}`, { [idKey]: id });
+    }
+  };
+
+  await walkJsonDir('contexts', 'context', 'conversationId');
+  await walkJsonDir('conversation-files', 'conversation-files', 'conversationId');
+
+  const walkManifestDir = async (
+    subDir: string,
+    kind: 'conversation-attachments' | 'project-knowledge',
+    idKey: 'conversationId' | 'projectId',
+  ) => {
+    const absoluteDir = path.join(cacheDir, subDir);
+    let entriesDir: Array<{ name: string; isDirectory: () => boolean }> = [];
+    try {
+      entriesDir = await fs.readdir(absoluteDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entriesDir) {
+      if (!entry.isDirectory()) continue;
+      const id = entry.name;
+      await addIfExists(kind, `${subDir}/${id}/manifest.json`, { [idKey]: id });
+    }
+  };
+
+  await walkManifestDir('conversation-attachments', 'conversation-attachments', 'conversationId');
+  await walkManifestDir('project-knowledge', 'project-knowledge', 'projectId');
+
+  const projectInstructionsDir = path.join(cacheDir, 'project-instructions');
+  let instructionFiles: Array<{ name: string; isFile: () => boolean }> = [];
+  try {
+    instructionFiles = await fs.readdir(projectInstructionsDir, { withFileTypes: true });
+  } catch {
+    instructionFiles = [];
+  }
+  for (const file of instructionFiles) {
+    if (!file.isFile()) continue;
+    if (!file.name.endsWith('.md') && !file.name.endsWith('.json')) continue;
+    const projectId = file.name.replace(/\.(md|json)$/i, '');
+    await addIfExists('project-instructions', `project-instructions/${file.name}`, { projectId });
+  }
+
+  return {
+    version: 1,
+    updatedAt: nowIso,
+    entries: entries.sort((a, b) => {
+      const ta = Date.parse(a.updatedAt);
+      const tb = Date.parse(b.updatedAt);
+      return tb - ta;
+    }),
+  };
+}
+
+async function repairPruneOrphanAssets(cacheDir: string, apply: boolean): Promise<CacheRepairActionResult> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  const sqliteInfo = await inspectCacheSqlite(cacheDir);
+  if (!sqliteInfo.exists) {
+    return {
+      name: 'prune-orphan-assets',
+      applied: false,
+      skipped: 'no-op',
+      message: 'No cache.sqlite present.',
+    };
+  }
+  const sqliteModule = await import('node:sqlite');
+  return withSqliteBusyRetry(`repair prune orphan assets (${cacheDir})`, async () => {
+    const db = new sqliteModule.DatabaseSync(dbPath);
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) AS c
+             FROM file_assets
+            WHERE asset_id NOT IN (
+              SELECT DISTINCT asset_id FROM file_bindings WHERE asset_id IS NOT NULL
+            )`,
+        )
+        .get() as { c?: number };
+      const count = Number(row?.c ?? 0);
+      if (!apply) {
+        return {
+          name: 'prune-orphan-assets',
+          applied: false,
+          skipped: 'dry-run',
+          message: `Would prune ${count} orphan asset row(s).`,
+        };
+      }
+      if (count <= 0) {
+        return {
+          name: 'prune-orphan-assets',
+          applied: false,
+          skipped: 'no-op',
+          message: 'No orphan asset rows found.',
+        };
+      }
+      db.prepare(
+        `DELETE FROM file_assets
+          WHERE asset_id NOT IN (
+            SELECT DISTINCT asset_id FROM file_bindings WHERE asset_id IS NOT NULL
+          )`,
+      ).run();
+      return {
+        name: 'prune-orphan-assets',
+        applied: true,
+        skipped: 'no-op',
+        message: `Pruned ${count} orphan asset row(s).`,
+      };
+    } finally {
+      db.close();
+    }
+  });
+}
+
+async function repairPruneOrphanSourceLinks(
+  cacheDir: string,
+  apply: boolean,
+): Promise<CacheRepairActionResult> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  const sqliteInfo = await inspectCacheSqlite(cacheDir);
+  if (!sqliteInfo.exists) {
+    return {
+      name: 'prune-orphan-source-links',
+      applied: false,
+      skipped: 'no-op',
+      message: 'No cache.sqlite present.',
+    };
+  }
+  const sqliteModule = await import('node:sqlite');
+  return withSqliteBusyRetry(`repair prune orphan source links (${cacheDir})`, async () => {
+    const db = new sqliteModule.DatabaseSync(dbPath);
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) AS c
+             FROM source_links s
+            WHERE NOT EXISTS (
+              SELECT 1
+                FROM cache_entries c
+               WHERE c.dataset = 'conversation-context'
+                 AND c.entity_id = s.conversation_id
+            )`,
+        )
+        .get() as { c?: number };
+      const count = Number(row?.c ?? 0);
+      if (!apply) {
+        return {
+          name: 'prune-orphan-source-links',
+          applied: false,
+          skipped: 'dry-run',
+          message: `Would prune ${count} orphan source_links row(s).`,
+        };
+      }
+      if (count <= 0) {
+        return {
+          name: 'prune-orphan-source-links',
+          applied: false,
+          skipped: 'no-op',
+          message: 'No orphan source_links rows found.',
+        };
+      }
+      db.prepare(
+        `DELETE FROM source_links
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM cache_entries c
+             WHERE c.dataset = 'conversation-context'
+               AND c.entity_id = source_links.conversation_id
+          )`,
+      ).run();
+      return {
+        name: 'prune-orphan-source-links',
+        applied: true,
+        skipped: 'no-op',
+        message: `Pruned ${count} orphan source_links row(s).`,
+      };
+    } finally {
+      db.close();
+    }
+  });
+}
+
+async function repairPruneOrphanFileBindings(
+  cacheDir: string,
+  apply: boolean,
+): Promise<CacheRepairActionResult> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  const sqliteInfo = await inspectCacheSqlite(cacheDir);
+  if (!sqliteInfo.exists) {
+    return {
+      name: 'prune-orphan-file-bindings',
+      applied: false,
+      skipped: 'no-op',
+      message: 'No cache.sqlite present.',
+    };
+  }
+  const sqliteModule = await import('node:sqlite');
+  return withSqliteBusyRetry(`repair prune orphan file bindings (${cacheDir})`, async () => {
+    const db = new sqliteModule.DatabaseSync(dbPath);
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) AS c
+             FROM file_bindings b
+            WHERE NOT EXISTS (
+              SELECT 1
+                FROM cache_entries c
+               WHERE c.dataset = b.dataset
+                 AND c.entity_id = b.entity_id
+            )`,
+        )
+        .get() as { c?: number };
+      const count = Number(row?.c ?? 0);
+      if (!apply) {
+        return {
+          name: 'prune-orphan-file-bindings',
+          applied: false,
+          skipped: 'dry-run',
+          message: `Would prune ${count} orphan file_bindings row(s).`,
+        };
+      }
+      if (count <= 0) {
+        return {
+          name: 'prune-orphan-file-bindings',
+          applied: false,
+          skipped: 'no-op',
+          message: 'No orphan file_bindings rows found.',
+        };
+      }
+      db.prepare(
+        `DELETE FROM file_bindings
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM cache_entries c
+             WHERE c.dataset = file_bindings.dataset
+               AND c.entity_id = file_bindings.entity_id
+          )`,
+      ).run();
+      return {
+        name: 'prune-orphan-file-bindings',
+        applied: true,
+        skipped: 'no-op',
+        message: `Pruned ${count} orphan file_bindings row(s).`,
+      };
+    } finally {
+      db.close();
+    }
+  });
+}
+
+async function repairMarkMissingLocal(cacheDir: string, apply: boolean): Promise<CacheRepairActionResult> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  const sqliteInfo = await inspectCacheSqlite(cacheDir);
+  if (!sqliteInfo.exists) {
+    return {
+      name: 'mark-missing-local',
+      applied: false,
+      skipped: 'no-op',
+      message: 'No cache.sqlite present.',
+    };
+  }
+  const sqliteModule = await import('node:sqlite');
+  return withSqliteBusyRetry(`repair mark missing local (${cacheDir})`, async () => {
+    const db = new sqliteModule.DatabaseSync(dbPath);
+    try {
+      const rows = db
+        .prepare(
+          `SELECT asset_id, storage_relpath
+             FROM file_assets
+            WHERE status = 'local_cached' AND storage_relpath IS NOT NULL`,
+        )
+        .all() as Array<{ asset_id?: string; storage_relpath?: string }>;
+      const missingAssetIds: string[] = [];
+      for (const row of rows) {
+        const assetId = typeof row.asset_id === 'string' ? row.asset_id : '';
+        const relPath = typeof row.storage_relpath === 'string' ? row.storage_relpath : '';
+        if (!assetId || !relPath) continue;
+        const absolute = path.resolve(cacheDir, relPath);
+        try {
+          await fs.access(absolute);
+        } catch {
+          missingAssetIds.push(assetId);
+        }
+      }
+      if (!apply) {
+        return {
+          name: 'mark-missing-local',
+          applied: false,
+          skipped: 'dry-run',
+          message: `Would mark ${missingAssetIds.length} missing local asset(s).`,
+        };
+      }
+      if (missingAssetIds.length === 0) {
+        return {
+          name: 'mark-missing-local',
+          applied: false,
+          skipped: 'no-op',
+          message: 'No missing local assets found.',
+        };
+      }
+      const stmt = db.prepare(
+        `UPDATE file_assets
+            SET status = 'missing_local', updated_at = ?
+          WHERE asset_id = ?`,
+      );
+      const nowIso = new Date().toISOString();
+      for (const assetId of missingAssetIds) {
+        stmt.run(nowIso, assetId);
+      }
+      return {
+        name: 'mark-missing-local',
+        applied: true,
+        skipped: 'no-op',
+        message: `Marked ${missingAssetIds.length} missing local asset(s).`,
+      };
+    } finally {
+      db.close();
+    }
+  });
+}
+
+type CacheDatasetName =
+  | 'all'
+  | 'projects'
+  | 'conversations'
+  | 'context'
+  | 'conversation-files'
+  | 'conversation-attachments'
+  | 'project-knowledge'
+  | 'project-instructions';
+
+type CacheClearSqlSummary = {
+  cacheEntriesMatched: number;
+  cacheEntriesDeleted: number;
+  sourceLinksMatched: number;
+  sourceLinksDeleted: number;
+  fileBindingsMatched: number;
+  fileBindingsDeleted: number;
+  orphanAssetsMatched: number;
+  orphanAssetsDeleted: number;
+};
+
+type CacheClearEntry = {
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  cacheDir: string;
+  fileTargetsMatched: number;
+  fileTargetsDeleted: number;
+  sql: CacheClearSqlSummary;
+  warnings: string[];
+  errors: string[];
+};
+
+type CacheClearReport = {
+  generatedAt: string;
+  mode: 'dry-run' | 'apply';
+  dataset: CacheDatasetName;
+  cutoffIso: string | null;
+  includeBlobs: boolean;
+  filters: {
+    provider: string | null;
+    identityKey: string | null;
+  };
+  summary: {
+    checked: number;
+    touched: number;
+    warnings: number;
+    errors: number;
+  };
+  entries: CacheClearEntry[];
+};
+
+async function runCacheClear(commandOptions: OptionValues): Promise<CacheClearReport> {
+  const providerFilter =
+    typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+      ? commandOptions.provider.trim()
+      : null;
+  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  }
+  const identityFilter =
+    typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
+      ? commandOptions.identityKey.trim()
+      : null;
+  const dataset = parseCacheDataset(commandOptions.dataset);
+  const cutoff = parseCutoffFromOlderThan(commandOptions.olderThan);
+  const includeBlobs = Boolean(commandOptions.includeBlobs);
+  const apply = Boolean(commandOptions.yes);
+  const mode: 'dry-run' | 'apply' = apply ? 'apply' : 'dry-run';
+
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const contexts = await discoverCacheDoctorContexts(userConfig, providerFilter, identityFilter);
+
+  const entries: CacheClearEntry[] = [];
+  let touched = 0;
+  let warnings = 0;
+  let errors = 0;
+  for (const context of contexts) {
+    const result = await withCacheMaintenanceLock(
+      context.cacheDir,
+      `cache-clear ${context.provider}/${context.identityKey}`,
+      async () =>
+        clearCacheForContext({
+          cacheDir: context.cacheDir,
+          provider: context.provider,
+          identityKey: context.identityKey,
+          dataset,
+          cutoffMs: cutoff?.cutoffMs ?? null,
+          includeBlobs,
+          apply,
+        }),
+    );
+    if (result.fileTargetsDeleted > 0 || result.sql.cacheEntriesDeleted > 0) touched += 1;
+    warnings += result.warnings.length;
+    errors += result.errors.length;
+    entries.push(result);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    mode,
+    dataset,
+    cutoffIso: cutoff?.cutoffIso ?? null,
+    includeBlobs,
+    filters: {
+      provider: providerFilter,
+      identityKey: identityFilter,
+    },
+    summary: {
+      checked: entries.length,
+      touched,
+      warnings,
+      errors,
+    },
+    entries,
+  };
+}
+
+type CacheCompactEntry = {
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  cacheDir: string;
+  sqliteExists: boolean;
+  beforeBytes: number | null;
+  afterBytes: number | null;
+  warnings: string[];
+  errors: string[];
+};
+
+type CacheCompactReport = {
+  generatedAt: string;
+  filters: {
+    provider: string | null;
+    identityKey: string | null;
+  };
+  summary: {
+    checked: number;
+    compacted: number;
+    warnings: number;
+    errors: number;
+  };
+  entries: CacheCompactEntry[];
+};
+
+async function runCacheCompact(commandOptions: OptionValues): Promise<CacheCompactReport> {
+  const providerFilter =
+    typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+      ? commandOptions.provider.trim()
+      : null;
+  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  }
+  const identityFilter =
+    typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
+      ? commandOptions.identityKey.trim()
+      : null;
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const contexts = await discoverCacheDoctorContexts(userConfig, providerFilter, identityFilter);
+  const entries: CacheCompactEntry[] = [];
+  let compacted = 0;
+  let warnings = 0;
+  let errors = 0;
+
+  for (const context of contexts) {
+    const entry = await withCacheMaintenanceLock(
+      context.cacheDir,
+      `cache-compact ${context.provider}/${context.identityKey}`,
+      async () => {
+        const dbPath = path.join(context.cacheDir, 'cache.sqlite');
+        const result: CacheCompactEntry = {
+          provider: context.provider,
+          identityKey: context.identityKey,
+          cacheDir: context.cacheDir,
+          sqliteExists: false,
+          beforeBytes: null,
+          afterBytes: null,
+          warnings: [],
+          errors: [],
+        };
+        try {
+          const before = await fs.stat(dbPath);
+          result.sqliteExists = true;
+          result.beforeBytes = before.size;
+        } catch {
+          result.warnings.push('cache.sqlite not found.');
+          return result;
+        }
+        try {
+          const sqliteModule = await import('node:sqlite');
+          await withSqliteBusyRetry(`cache compact (${context.cacheDir})`, async () => {
+            const db = new sqliteModule.DatabaseSync(dbPath);
+            try {
+              db.exec('VACUUM;');
+              db.exec('ANALYZE;');
+              db.exec('PRAGMA optimize;');
+            } finally {
+              db.close();
+            }
+          });
+          const after = await fs.stat(dbPath);
+          result.afterBytes = after.size;
+          return result;
+        } catch (error) {
+          result.errors.push(error instanceof Error ? error.message : String(error));
+          return result;
+        }
+      },
+    );
+    if (entry.errors.length > 0) errors += entry.errors.length;
+    if (entry.warnings.length > 0) warnings += entry.warnings.length;
+    if (entry.sqliteExists && entry.errors.length === 0) compacted += 1;
+    entries.push(entry);
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    filters: {
+      provider: providerFilter,
+      identityKey: identityFilter,
+    },
+    summary: {
+      checked: entries.length,
+      compacted,
+      warnings,
+      errors,
+    },
+    entries,
+  };
+}
+
+type CacheCleanupEntry = {
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  cacheDir: string;
+  clear: CacheClearEntry;
+  indexPruned: number;
+  backupsPruned: number;
+  blobFilesPruned: number;
+  warnings: string[];
+  errors: string[];
+};
+
+type CacheCleanupReport = {
+  generatedAt: string;
+  mode: 'dry-run' | 'apply';
+  cutoffIso: string;
+  includeBlobs: boolean;
+  filters: {
+    provider: string | null;
+    identityKey: string | null;
+  };
+  summary: {
+    checked: number;
+    touched: number;
+    warnings: number;
+    errors: number;
+  };
+  entries: CacheCleanupEntry[];
+};
+
+async function runCacheCleanup(commandOptions: OptionValues): Promise<CacheCleanupReport> {
+  const providerFilter =
+    typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
+      ? commandOptions.provider.trim()
+      : null;
+  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  }
+  const identityFilter =
+    typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
+      ? commandOptions.identityKey.trim()
+      : null;
+  const includeBlobs = Boolean(commandOptions.includeBlobs);
+  const apply = Boolean(commandOptions.yes);
+  const mode: 'dry-run' | 'apply' = apply ? 'apply' : 'dry-run';
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const cutoff = parseCutoffForCleanup(commandOptions, userConfig.browser?.cache?.cleanupDays);
+  const contexts = await discoverCacheDoctorContexts(userConfig, providerFilter, identityFilter);
+
+  const entries: CacheCleanupEntry[] = [];
+  let touched = 0;
+  let warnings = 0;
+  let errors = 0;
+  for (const context of contexts) {
+    const result = await withCacheMaintenanceLock(
+      context.cacheDir,
+      `cache-cleanup ${context.provider}/${context.identityKey}`,
+      async () => {
+        const clear = await clearCacheForContext({
+          cacheDir: context.cacheDir,
+          provider: context.provider,
+          identityKey: context.identityKey,
+          dataset: 'all',
+          cutoffMs: cutoff.cutoffMs,
+          includeBlobs,
+          apply,
+        });
+        const indexPruned = await pruneCacheIndexEntries(context.cacheDir, cutoff.cutoffMs, apply);
+        const backupsPruned = await pruneOldBackups(context.cacheDir, cutoff.cutoffMs, apply);
+        const blobFilesPruned = await pruneDetachedBlobFiles(context.cacheDir, cutoff.cutoffMs, apply);
+        return { clear, indexPruned, backupsPruned, blobFilesPruned };
+      },
+    );
+    const entryWarnings = [...result.clear.warnings];
+    const entryErrors = [...result.clear.errors];
+    warnings += entryWarnings.length;
+    errors += entryErrors.length;
+    if (
+      result.clear.fileTargetsDeleted > 0 ||
+      result.clear.sql.cacheEntriesDeleted > 0 ||
+      result.indexPruned > 0 ||
+      result.backupsPruned > 0 ||
+      result.blobFilesPruned > 0
+    ) {
+      touched += 1;
+    }
+    entries.push({
+      provider: context.provider,
+      identityKey: context.identityKey,
+      cacheDir: context.cacheDir,
+      clear: result.clear,
+      indexPruned: result.indexPruned,
+      backupsPruned: result.backupsPruned,
+      blobFilesPruned: result.blobFilesPruned,
+      warnings: entryWarnings,
+      errors: entryErrors,
+    });
+  }
+
+  return {
+    generatedAt: new Date().toISOString(),
+    mode,
+    cutoffIso: cutoff.cutoffIso,
+    includeBlobs,
+    filters: {
+      provider: providerFilter,
+      identityKey: identityFilter,
+    },
+    summary: {
+      checked: entries.length,
+      touched,
+      warnings,
+      errors,
+    },
+    entries,
+  };
+}
+
+function parseCacheDataset(raw: unknown): CacheDatasetName {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return 'all';
+  const normalized = raw.trim() as CacheDatasetName;
+  const valid = new Set<CacheDatasetName>([
+    'all',
+    'projects',
+    'conversations',
+    'context',
+    'conversation-files',
+    'conversation-attachments',
+    'project-knowledge',
+    'project-instructions',
+  ]);
+  if (!valid.has(normalized)) {
+    throw new Error(
+      'dataset must be one of: all, projects, conversations, context, conversation-files, conversation-attachments, project-knowledge, project-instructions.',
+    );
+  }
+  return normalized;
+}
+
+function parseCutoffFromOlderThan(raw: unknown): { cutoffMs: number; cutoffIso: string } | null {
+  if (typeof raw !== 'string' || raw.trim().length === 0) return null;
+  const parsed = Date.parse(raw.trim());
+  if (!Number.isFinite(parsed)) {
+    throw new Error('older-than must be a valid date (YYYY-MM-DD or ISO timestamp).');
+  }
+  return { cutoffMs: parsed, cutoffIso: new Date(parsed).toISOString() };
+}
+
+function parseCutoffForCleanup(
+  commandOptions: OptionValues,
+  defaultDaysFromConfig?: unknown,
+): { cutoffMs: number; cutoffIso: string } {
+  const explicit = parseCutoffFromOlderThan(commandOptions.olderThan);
+  if (explicit) return explicit;
+  const configuredDays =
+    typeof defaultDaysFromConfig === 'number' && Number.isFinite(defaultDaysFromConfig)
+      ? Math.max(1, Math.floor(defaultDaysFromConfig))
+      : null;
+  const days =
+    typeof commandOptions.days === 'number' && Number.isFinite(commandOptions.days)
+      ? Math.max(1, Math.floor(commandOptions.days))
+      : (configuredDays ?? DEFAULT_CACHE_CLEANUP_DAYS);
+  const cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  return { cutoffMs, cutoffIso: new Date(cutoffMs).toISOString() };
+}
+
+async function clearCacheForContext(input: {
+  cacheDir: string;
+  provider: 'chatgpt' | 'grok';
+  identityKey: string;
+  dataset: CacheDatasetName;
+  cutoffMs: number | null;
+  includeBlobs: boolean;
+  apply: boolean;
+}): Promise<CacheClearEntry> {
+  const warnings: string[] = [];
+  const errors: string[] = [];
+  const targets = await collectCacheClearTargets(
+    input.cacheDir,
+    input.dataset,
+    input.cutoffMs,
+    input.includeBlobs,
+  );
+  let deletedFiles = 0;
+  if (input.apply) {
+    for (const target of targets) {
+      try {
+        if (target.kind === 'dir') {
+          await fs.rm(target.path, { recursive: true, force: true });
+        } else {
+          await fs.rm(target.path, { force: true });
+        }
+        deletedFiles += 1;
+      } catch (error) {
+        errors.push(`Failed to remove ${target.path}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
+
+  const sql = await clearSqlRows(
+    input.cacheDir,
+    input.dataset,
+    input.cutoffMs,
+    input.apply,
+  );
+  if (!sql.available) {
+    warnings.push('cache.sqlite not found.');
+  }
+  if (sql.error) {
+    errors.push(sql.error);
+  }
+
+  return {
+    provider: input.provider,
+    identityKey: input.identityKey,
+    cacheDir: input.cacheDir,
+    fileTargetsMatched: targets.length,
+    fileTargetsDeleted: deletedFiles,
+    sql: sql.summary,
+    warnings,
+    errors,
+  };
+}
+
+type ClearTarget = { path: string; kind: 'file' | 'dir' };
+
+async function collectCacheClearTargets(
+  cacheDir: string,
+  dataset: CacheDatasetName,
+  cutoffMs: number | null,
+  includeBlobs: boolean,
+): Promise<ClearTarget[]> {
+  const targets: ClearTarget[] = [];
+  const maybeAddFile = async (filePath: string) => {
+    try {
+      const stat = await fs.stat(filePath);
+      if (cutoffMs !== null && stat.mtimeMs >= cutoffMs) return;
+      targets.push({ path: filePath, kind: 'file' });
+    } catch {
+      // ignore missing
+    }
+  };
+  const maybeAddDir = async (dirPath: string, mtimePath?: string) => {
+    try {
+      const stat = await fs.stat(mtimePath ?? dirPath);
+      if (cutoffMs !== null && stat.mtimeMs >= cutoffMs) return;
+      targets.push({ path: dirPath, kind: 'dir' });
+    } catch {
+      // ignore
+    }
+  };
+  const includes = (name: CacheDatasetName) => dataset === 'all' || dataset === name;
+
+  if (includes('projects')) await maybeAddFile(path.join(cacheDir, 'projects.json'));
+  if (includes('conversations')) await maybeAddFile(path.join(cacheDir, 'conversations.json'));
+  if (includes('all')) await maybeAddFile(path.join(cacheDir, 'cache-index.json'));
+
+  const collectJsonDir = async (dirName: string) => {
+    const absDir = path.join(cacheDir, dirName);
+    let files: Array<{ name: string; isFile: () => boolean }> = [];
+    try {
+      files = await fs.readdir(absDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const file of files) {
+      if (!file.isFile() || !file.name.endsWith('.json')) continue;
+      await maybeAddFile(path.join(absDir, file.name));
+    }
+  };
+
+  if (includes('context')) await collectJsonDir('contexts');
+  if (includes('conversation-files')) await collectJsonDir('conversation-files');
+
+  if (includes('project-instructions')) {
+    const dir = path.join(cacheDir, 'project-instructions');
+    let files: Array<{ name: string; isFile: () => boolean }> = [];
+    try {
+      files = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      files = [];
+    }
+    for (const file of files) {
+      if (!file.isFile()) continue;
+      if (!file.name.endsWith('.md') && !file.name.endsWith('.json')) continue;
+      await maybeAddFile(path.join(dir, file.name));
+    }
+  }
+
+  const collectManifestFolders = async (
+    dirName: 'conversation-attachments' | 'project-knowledge',
+  ) => {
+    const root = path.join(cacheDir, dirName);
+    let entries: Array<{ name: string; isDirectory: () => boolean }> = [];
+    try {
+      entries = await fs.readdir(root, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const folder = path.join(root, entry.name);
+      const manifest = path.join(folder, 'manifest.json');
+      if (includeBlobs) {
+        await maybeAddDir(folder, manifest);
+      } else {
+        await maybeAddFile(manifest);
+      }
+    }
+  };
+
+  if (includes('conversation-attachments')) await collectManifestFolders('conversation-attachments');
+  if (includes('project-knowledge')) await collectManifestFolders('project-knowledge');
+
+  return targets;
+}
+
+async function clearSqlRows(
+  cacheDir: string,
+  dataset: CacheDatasetName,
+  cutoffMs: number | null,
+  apply: boolean,
+): Promise<{ available: boolean; error: string | null; summary: CacheClearSqlSummary }> {
+  const summary: CacheClearSqlSummary = {
+    cacheEntriesMatched: 0,
+    cacheEntriesDeleted: 0,
+    sourceLinksMatched: 0,
+    sourceLinksDeleted: 0,
+    fileBindingsMatched: 0,
+    fileBindingsDeleted: 0,
+    orphanAssetsMatched: 0,
+    orphanAssetsDeleted: 0,
+  };
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  try {
+    await fs.access(dbPath);
+  } catch {
+    return { available: false, error: null, summary };
+  }
+  try {
+    const sqliteModule = await import('node:sqlite');
+    await withSqliteBusyRetry(`cache clear sql (${cacheDir})`, async () => {
+      const db = new sqliteModule.DatabaseSync(dbPath);
+      try {
+        const datasetFilter = resolveSqlDatasetFilter(dataset);
+        const cutoffIso = cutoffMs !== null ? new Date(cutoffMs).toISOString() : null;
+        const where = buildSqlWhereClause(datasetFilter, cutoffIso);
+        const candidateRows = db
+          .prepare(`SELECT dataset, entity_id FROM cache_entries ${where.sql}`)
+          .all(...(where.params as any[])) as Array<{ dataset?: string; entity_id?: string }>;
+        summary.cacheEntriesMatched = candidateRows.length;
+        const contextIds = Array.from(
+          new Set(
+            candidateRows
+              .filter((row) => row.dataset === 'conversation-context' && typeof row.entity_id === 'string')
+              .map((row) => row.entity_id as string),
+          ),
+        );
+        const bindingPairs = candidateRows
+          .filter((row) => row.dataset !== 'conversation-context')
+          .map((row) => ({
+            dataset: typeof row.dataset === 'string' ? row.dataset : '',
+            entityId: typeof row.entity_id === 'string' ? row.entity_id : '',
+          }))
+          .filter((row) => row.dataset.length > 0 && row.entityId.length > 0);
+
+        summary.sourceLinksMatched = await countWhereIn(db, 'source_links', 'conversation_id', contextIds);
+        summary.fileBindingsMatched =
+          (await countBindingPairs(db, bindingPairs)) +
+          (await countContextBindingRows(db, contextIds));
+
+        const orphanBefore = db
+          .prepare(
+            `SELECT COUNT(*) AS c
+               FROM file_assets
+              WHERE asset_id NOT IN (
+                SELECT DISTINCT asset_id FROM file_bindings WHERE asset_id IS NOT NULL
+              )`,
+          )
+          .get() as { c?: number };
+        summary.orphanAssetsMatched = Number(orphanBefore.c ?? 0);
+
+        if (apply) {
+          if (summary.cacheEntriesMatched > 0) {
+            db.prepare(`DELETE FROM cache_entries ${where.sql}`).run(...(where.params as any[]));
+            summary.cacheEntriesDeleted = summary.cacheEntriesMatched;
+          }
+          if (contextIds.length > 0) {
+            summary.sourceLinksDeleted = await deleteWhereIn(db, 'source_links', 'conversation_id', contextIds);
+            summary.fileBindingsDeleted += await deleteContextBindingRows(db, contextIds);
+          }
+          if (bindingPairs.length > 0) {
+            summary.fileBindingsDeleted += await deleteBindingPairs(db, bindingPairs);
+          }
+          const orphanDeleted = db.prepare(
+            `DELETE FROM file_assets
+              WHERE asset_id NOT IN (
+                SELECT DISTINCT asset_id FROM file_bindings WHERE asset_id IS NOT NULL
+              )`,
+          ).run() as { changes?: number };
+          summary.orphanAssetsDeleted = Number(orphanDeleted?.changes ?? 0);
+        }
+      } finally {
+        db.close();
+      }
+    });
+    return { available: true, error: null, summary };
+  } catch (error) {
+    return {
+      available: true,
+      error: error instanceof Error ? error.message : String(error),
+      summary,
+    };
+  }
+}
+
+function resolveSqlDatasetFilter(dataset: CacheDatasetName): string[] | null {
+  if (dataset === 'all') return null;
+  const map: Record<Exclude<CacheDatasetName, 'all'>, string> = {
+    projects: 'projects',
+    conversations: 'conversations',
+    context: 'conversation-context',
+    'conversation-files': 'conversation-files',
+    'conversation-attachments': 'conversation-attachments',
+    'project-knowledge': 'project-knowledge',
+    'project-instructions': 'project-instructions',
+  };
+  return [map[dataset]];
+}
+
+function buildSqlWhereClause(
+  datasets: string[] | null,
+  cutoffIso: string | null,
+): { sql: string; params: unknown[] } {
+  const clauses: string[] = [];
+  const params: unknown[] = [];
+  if (datasets && datasets.length > 0) {
+    clauses.push(`dataset IN (${datasets.map(() => '?').join(', ')})`);
+    params.push(...datasets);
+  }
+  if (cutoffIso) {
+    clauses.push('updated_at < ?');
+    params.push(cutoffIso);
+  }
+  if (clauses.length === 0) {
+    return { sql: '', params };
+  }
+  return { sql: `WHERE ${clauses.join(' AND ')}`, params };
+}
+
+async function countWhereIn(
+  db: any,
+  table: string,
+  column: string,
+  values: string[],
+): Promise<number> {
+  if (values.length === 0) return 0;
+  const placeholders = values.map(() => '?').join(', ');
+  const row = (db
+    .prepare(`SELECT COUNT(*) AS c FROM ${table} WHERE ${column} IN (${placeholders})`)
+    .get(...values) ?? {}) as { c?: number | bigint };
+  return numberFromSqlValue(row.c);
+}
+
+async function deleteWhereIn(
+  db: any,
+  table: string,
+  column: string,
+  values: string[],
+): Promise<number> {
+  if (values.length === 0) return 0;
+  const placeholders = values.map(() => '?').join(', ');
+  const result = db.prepare(`DELETE FROM ${table} WHERE ${column} IN (${placeholders})`).run(...values) as {
+    changes?: number | bigint;
+  };
+  return numberFromSqlValue(result.changes);
+}
+
+async function countContextBindingRows(
+  db: any,
+  conversationIds: string[],
+): Promise<number> {
+  if (conversationIds.length === 0) return 0;
+  const placeholders = conversationIds.map(() => '?').join(', ');
+  const row = (db
+    .prepare(
+      `SELECT COUNT(*) AS c FROM file_bindings WHERE dataset = 'conversation-context' AND entity_id IN (${placeholders})`,
+    )
+    .get(...conversationIds) ?? {}) as { c?: number | bigint };
+  return numberFromSqlValue(row.c);
+}
+
+async function deleteContextBindingRows(
+  db: any,
+  conversationIds: string[],
+): Promise<number> {
+  if (conversationIds.length === 0) return 0;
+  const placeholders = conversationIds.map(() => '?').join(', ');
+  const result = db
+    .prepare(
+      `DELETE FROM file_bindings WHERE dataset = 'conversation-context' AND entity_id IN (${placeholders})`,
+    )
+    .run(...conversationIds) as { changes?: number | bigint };
+  return numberFromSqlValue(result.changes);
+}
+
+async function countBindingPairs(
+  db: any,
+  pairs: Array<{ dataset: string; entityId: string }>,
+): Promise<number> {
+  let count = 0;
+  for (const pair of pairs) {
+    const row = (db
+      .prepare('SELECT COUNT(*) AS c FROM file_bindings WHERE dataset = ? AND entity_id = ?')
+      .get(pair.dataset, pair.entityId) ?? {}) as { c?: number | bigint };
+    count += numberFromSqlValue(row.c);
+  }
+  return count;
+}
+
+async function deleteBindingPairs(
+  db: any,
+  pairs: Array<{ dataset: string; entityId: string }>,
+): Promise<number> {
+  let deleted = 0;
+  for (const pair of pairs) {
+    const result = db
+      .prepare('DELETE FROM file_bindings WHERE dataset = ? AND entity_id = ?')
+      .run(pair.dataset, pair.entityId) as { changes?: number | bigint };
+    deleted += numberFromSqlValue(result.changes);
+  }
+  return deleted;
+}
+
+function numberFromSqlValue(value: unknown): number {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
+  if (typeof value === 'bigint') return Number(value);
+  return 0;
+}
+
+async function pruneCacheIndexEntries(cacheDir: string, cutoffMs: number, apply: boolean): Promise<number> {
+  const indexPath = path.join(cacheDir, 'cache-index.json');
+  let raw: string;
+  try {
+    raw = await fs.readFile(indexPath, 'utf8');
+  } catch {
+    return 0;
+  }
+  let parsed: { version?: number; updatedAt?: string; entries?: Array<{ path?: string; updatedAt?: string }> };
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return 0;
+  }
+  const entries = Array.isArray(parsed.entries) ? parsed.entries : [];
+  const keep: typeof entries = [];
+  let pruned = 0;
+  for (const entry of entries) {
+    const relPath = typeof entry.path === 'string' ? entry.path : '';
+    if (!relPath) {
+      pruned += 1;
+      continue;
+    }
+    const fullPath = path.join(cacheDir, relPath);
+    let exists = true;
+    try {
+      await fs.access(fullPath);
+    } catch {
+      exists = false;
+    }
+    const updatedMs =
+      typeof entry.updatedAt === 'string' && Number.isFinite(Date.parse(entry.updatedAt))
+        ? Date.parse(entry.updatedAt)
+        : 0;
+    const tooOld = updatedMs > 0 && updatedMs < cutoffMs;
+    if (!exists || tooOld) {
+      pruned += 1;
+      continue;
+    }
+    keep.push(entry);
+  }
+  if (apply && pruned > 0) {
+    const next = {
+      version: 1,
+      updatedAt: new Date().toISOString(),
+      entries: keep,
+    };
+    await fs.writeFile(indexPath, JSON.stringify(next, null, 2), 'utf8');
+  }
+  return pruned;
+}
+
+async function pruneOldBackups(cacheDir: string, cutoffMs: number, apply: boolean): Promise<number> {
+  const backupsDir = path.join(cacheDir, 'backups');
+  let entries: Array<{ name: string; isDirectory: () => boolean }> = [];
+  try {
+    entries = await fs.readdir(backupsDir, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  let count = 0;
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const folder = path.join(backupsDir, entry.name);
+    let mtimeMs = 0;
+    try {
+      const stat = await fs.stat(folder);
+      mtimeMs = stat.mtimeMs;
+    } catch {
+      continue;
+    }
+    if (mtimeMs >= cutoffMs) continue;
+    count += 1;
+    if (apply) {
+      await fs.rm(folder, { recursive: true, force: true });
+    }
+  }
+  return count;
+}
+
+async function pruneDetachedBlobFiles(cacheDir: string, cutoffMs: number, apply: boolean): Promise<number> {
+  const blobsDir = path.join(cacheDir, 'blobs');
+  let rootStat: Awaited<ReturnType<typeof fs.stat>> | null = null;
+  try {
+    rootStat = await fs.stat(blobsDir);
+  } catch {
+    return 0;
+  }
+  if (!rootStat.isDirectory()) return 0;
+
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  try {
+    await fs.access(dbPath);
+  } catch {
+    return 0;
+  }
+
+  const referencedRelpaths = new Set<string>();
+  try {
+    const sqliteModule = await import('node:sqlite');
+    await withSqliteBusyRetry(`cleanup blob references (${cacheDir})`, async () => {
+      const db = new sqliteModule.DatabaseSync(dbPath);
+      try {
+        const rows = db
+          .prepare(
+            `SELECT storage_relpath
+               FROM file_assets
+              WHERE storage_relpath IS NOT NULL
+                AND storage_relpath LIKE 'blobs/%'`,
+          )
+          .all() as Array<{ storage_relpath?: string }>;
+        for (const row of rows) {
+          const rel = typeof row.storage_relpath === 'string' ? row.storage_relpath.trim() : '';
+          if (rel) referencedRelpaths.add(rel.replace(/\\/g, '/'));
+        }
+      } finally {
+        db.close();
+      }
+    });
+  } catch {
+    return 0;
+  }
+
+  const staleCandidates = await collectBlobFileCandidates(blobsDir, cutoffMs);
+  let pruned = 0;
+  for (const filePath of staleCandidates) {
+    const rel = path.relative(cacheDir, filePath).replace(/\\/g, '/');
+    if (referencedRelpaths.has(rel)) continue;
+    pruned += 1;
+    if (apply) {
+      await fs.rm(filePath, { force: true });
+    }
+  }
+  if (apply && pruned > 0) {
+    await pruneEmptyDirs(blobsDir);
+  }
+  return pruned;
+}
+
+async function collectBlobFileCandidates(root: string, cutoffMs: number): Promise<string[]> {
+  const out: string[] = [];
+  const walk = async (dir: string) => {
+    let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }> = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+        continue;
+      }
+      if (!entry.isFile()) continue;
+      let stat: Awaited<ReturnType<typeof fs.stat>> | null = null;
+      try {
+        stat = await fs.stat(full);
+      } catch {
+        continue;
+      }
+      if (stat.mtimeMs < cutoffMs) {
+        out.push(full);
+      }
+    }
+  };
+  await walk(root);
+  return out;
+}
+
+async function pruneEmptyDirs(root: string): Promise<void> {
+  const walk = async (dir: string): Promise<boolean> => {
+    let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }> = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return false;
+    }
+    let hasFiles = false;
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        const childHasFiles = await walk(full);
+        hasFiles = hasFiles || childHasFiles;
+      } else if (entry.isFile()) {
+        hasFiles = true;
+      }
+    }
+    if (!hasFiles && dir !== root) {
+      try {
+        await fs.rmdir(dir);
+      } catch {
+        // ignore
+      }
+      return false;
+    }
+    return hasFiles;
+  };
+  await walk(root);
+}
+
+async function resolveCacheSearchContext(
+  commandOptions: OptionValues,
+): Promise<{
+  provider: 'chatgpt' | 'grok';
+  cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
+}> {
+  const providers = new Set(['chatgpt', 'grok']);
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
+  if (!providers.has(provider)) {
+    throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+  }
+  const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+    identityPrompt: promptForCacheIdentity,
+  });
+  const listOptions = await llmService.buildListOptions({
+    configuredUrl:
+      provider === 'grok'
+        ? userConfig.browser?.grokUrl ?? null
+        : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+  });
+  const cacheContext = await llmService.resolveCacheContext(listOptions);
+  assertCacheIdentity(cacheContext, provider);
+  return { provider: provider as 'chatgpt' | 'grok', cacheContext };
 }
 
 async function upsertProjectCacheEntry(
@@ -1880,7 +5099,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
     {
       configuredUrl,
       includeHistory: true,
-      historyLimit: 200,
+      historyLimit: DEFAULT_CACHE_HISTORY_LIMIT,
     },
     {
       ensurePort: Boolean(projectName || conversationName),

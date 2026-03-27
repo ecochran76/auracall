@@ -170,6 +170,15 @@ export async function scaffoldDefaultConfigFile(options: {
         browser: {},
         llm: {},
         services: {},
+        cache: {
+          store: 'dual',
+          includeHistory: true,
+          includeProjectOnlyConversations: true,
+          historyLimit: 2000,
+          cleanupDays: 365,
+          refreshHours: 6,
+          useDetectedIdentity: false,
+        },
       },
     },
   };
