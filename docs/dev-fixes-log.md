@@ -21,6 +21,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-27
+- Area: Bastion SQL cache branch merge (`cache-mirror-2026-03-27`)
+- Symptom: The SQL cache/catalog/search/export work landed on a separate Bastion branch based on an older pre-rename CLI/doc surface, so merging it directly onto the live Aura-Call browser/Grok branch risked reviving stale `oracle` naming and older Grok/UI logic.
+- Root cause:
+  - The Bastion branch predated the `oracle-cli` -> `auracall` rename and still referenced `bin/oracle-cli.ts`, `~/.oracle`, and older env-var/docs wording.
+  - Both branches touched `bin/auracall.ts`, cache export/docs, and Grok adapter instructions handling, so a blind merge would have reintroduced older behavior on active browser surfaces.
+- Fix:
+  - Cherry-picked the Bastion cache commit onto the current branch and resolved conflicts in favor of the newer Aura-Call browser/Grok behavior.
+  - Kept the new SQL cache store/catalog/search/export surfaces, but normalized merged CLI/docs paths and command examples to `auracall`/`~/.auracall`.
+  - Kept the current Grok instructions-card fallback instead of the older side-panel click fallback.
+  - Harmonized cache debug logging so both `AURACALL_DEBUG_CACHE` and `ORACLE_DEBUG_CACHE` work during the migration period.
+- Verification:
+  - Conflict-marker sweep over the touched files returned clean.
+  - Stale-name sweep over the merged CLI/docs/export surfaces returned clean for `oracle-cli`, `~/.oracle`, and `getOracleHomeDir`.
+- Follow-ups:
+  - Run full cache/CLI/type validation after the cherry-pick completes.
+  - Clean up remaining legacy compatibility env-var naming in a separate pass instead of mixing it into the merge itself.
+
+- Date: 2026-03-27
 - Area: Browser/tab stockpile cleanup policy configurability
 - Symptom: After centralizing tab reuse and conservative cleanup in browser-service, the behavior was still effectively hardcoded for every Aura-Call profile: keep 3 matching-family tabs, keep 1 blank tab, and always collapse disposable extra windows. That was good as a default but not good enough once multiple long-lived profiles were expected to coexist with different browsing habits.
 - Root cause:
@@ -904,6 +922,467 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `./node_modules/.bin/vitest run tests/browser/pageActions.test.ts tests/browser/pageActionsExpressions.test.ts`
   - `pnpm run check`
+- Date: 2026-02-24
+- Area: Cache default posture for account mirroring
+- Symptom: Default cache behavior was conservative (`historyLimit=200`, no project-only refresh insertion, cleanup default 30 days), which under-captured larger accounts unless users manually passed flags each run.
+- Root cause:
+  - CLI fallback constants and docs were tuned for lightweight refreshes, not mirror-depth ingestion.
+  - `cache --refresh` defaulted `includeProjectOnlyConversations` to false even when profile cache defaults should have been authoritative.
+- Fix:
+  - Promoted mirror-first defaults in CLI/runtime:
+    - history depth default -> `2000`
+    - cleanup default window -> `365` days
+  - Added profile cache keys and propagation:
+    - `includeProjectOnlyConversations`
+    - `cleanupDays`
+  - Updated `cache --refresh` option fallback to read `profiles.<name>.cache.includeProjectOnlyConversations`.
+  - Aligned internal history fallback limits (llmService + Grok history reader) with the new default depth.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh`
+  - `pnpm tsx bin/oracle-cli.ts cache cleanup --provider grok --json`
+- Follow-ups:
+  - Add explicit smoke coverage for profile-driven `cleanupDays` and `includeProjectOnlyConversations` precedence over CLI defaults.
+
+- Date: 2026-02-23
+- Area: Cache maintenance contention (`cache doctor|repair|clear|compact|cleanup`)
+- Symptom: SQLite maintenance operations could intermittently fail with `database is locked` under concurrent activity.
+- Root cause:
+  - Per-identity lock files serialized Oracle maintenance commands, but external SQLite access (or lock races across processes) could still surface transient `SQLITE_BUSY`.
+- Fix:
+  - Added exponential busy-retry wrapper for SQLite maintenance calls.
+  - Applied retry handling to maintenance-critical SQL operations in doctor/repair/clear/compact/cleanup paths.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache doctor --provider grok --json`
+  - `pnpm tsx bin/oracle-cli.ts cache compact --provider grok --identity-key <key> --json`
+  - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions all --json`
+- Follow-ups:
+  - Add optional telemetry counters for retry attempts to identify hotspots.
+
+- Date: 2026-02-23
+- Area: Cache parity diagnostics and targeted repair actions
+- Symptom: Drift between `cache_entries`, `cache-index.json`, and catalog tables could remain silent until exports/search results looked inconsistent.
+- Root cause:
+  - Doctor checks focused on sqlite health + missing local files but lacked cross-store parity checks.
+  - Repair actions lacked catalog-level parity pruning for orphan source/file rows.
+- Fix:
+  - Extended `cache doctor` with parity metrics:
+    - index keys missing in SQL
+    - SQL keys missing in index
+    - orphan `source_links`
+    - orphan `file_bindings`
+  - Added repair actions:
+    - `prune-orphan-source-links`
+    - `prune-orphan-file-bindings`
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache doctor --provider grok --json`
+  - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-source-links --json`
+  - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-file-bindings --json`
+- Follow-ups:
+  - Add migration-marker parity checks (`schema_migrations`/`meta`) and optional auto-repair guidance.
+
+- Date: 2026-02-23
+- Area: WS4 file lifecycle bootstrap (deterministic local blob staging)
+- Symptom: Local file pointers could remain host-specific/external and lacked deterministic cache-local placement for retention workflows.
+- Root cause:
+  - File asset sync stored raw local path pointers when available; no canonical cache blob path existed.
+- Fix:
+  - Added deterministic blob staging in SQL cache store:
+    - local files are copied to `blobs/<sha256>/<filename>` when available,
+    - `file_assets.storage_relpath` and metadata pointers are updated to cache-local paths.
+  - Added detached stale blob pruning during `cache cleanup` (`blobFilesPruned`), guarded by SQL references.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache cleanup --provider grok --identity-key <key> --days 30 --json`
+- Follow-ups:
+  - Add explicit `maxBytes`/`maxAgeDays` retention policy controls and pinned-asset protection.
+
+- Date: 2026-02-23
+- Area: Cache refresh project conversation hydration mode (`cache --refresh`)
+- Symptom: Operators needed two distinct behaviors:
+  - conservative refresh that only enriches already-known global conversations with `projectId`
+  - full project hydration that can include project-only conversation IDs
+- Root cause:
+  - The previous refresh path had only the conservative behavior, so project-only IDs discovered in scoped lists were intentionally dropped.
+- Fix:
+  - Added `oracle cache --refresh --include-project-only-conversations`.
+  - Kept default behavior unchanged (existing-ID enrichment only).
+  - When the flag is set, refresh now inserts scoped-only conversation IDs from project conversation lists, setting `projectId` at insertion time.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh --include-history --history-limit 200`
+  - `pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh --include-history --history-limit 200 --include-project-only-conversations`
+  - Compare conversation totals and `projectId`-linked counts between runs.
+- Follow-ups:
+  - Add an automated smoke script to assert conservative vs opt-in behavior against a fixed fixture identity.
+
+- Date: 2026-02-23
+- Area: Cache refresh project-link enrichment (`cache --refresh`)
+- Symptom: Project-scoped exports/search could miss project linkage because many cached conversations had no `projectId` even though those conversations appeared under project views in Grok.
+- Root cause:
+  - Refresh wrote only the global conversation snapshot.
+  - Project association data from `listConversations(projectId)` was not merged.
+  - Refresh wrote JSON directly, which could diverge from SQL-backed reads in dual/sqlite modes.
+- Fix:
+  - During `refreshProviderCache`, fetch each project’s scoped conversation list and backfill `projectId`/project URL only for IDs already present in the global conversation set.
+  - Keep behavior conservative: do not inject new IDs from project lists.
+  - Write refreshed conversations/projects via cache-store APIs so JSON + SQLite stay synchronized.
+- Verification:
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache --provider grok --refresh --include-history --history-limit 200`
+  - `jq '[.items[] | select(.projectId != null)] | length' ~/.oracle/cache/providers/grok/ez86944@gmail.com/conversations.json` -> `15`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope conversations --project-id 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --format json --out /tmp/oracle-cache-export-smoke/conversations-by-project-post-enrich`
+  - Exported `conversations.json` contains SoyLei conversation rows with `projectId`.
+- Follow-ups:
+  - Optional future mode: allow inserting project-only IDs when explicitly requested for full project hydration.
+
+- Date: 2026-02-23
+- Area: Cache export project filtering (`cache export --project-id`) – resolved
+- Symptom: `--scope projects --project-id <existing-id>` exported `0` entries; `--scope conversations --project-id ...` ignored filters.
+- Root cause:
+  - Planner dropped all `projects` entries when filtering by `entry.projectId` (the `projects` dataset entry has no per-project `projectId` metadata).
+  - Export renderer copied raw `projects.json` / `conversations.json` without applying `projectId` filtering at payload level.
+- Fix:
+  - Kept `projects` index entry when `scope=projects` + `projectId`.
+  - Added payload-level filtering for `projects` and `conversations` exports during materialization/CSV/markdown/html rendering.
+  - Added conversation project-id extraction fallback from URL (`/project/<id>`) when explicit `projectId` is missing.
+  - Added scope-level filtering of conversation-context/file/attachment entries for `scope=conversations` + `projectId`.
+- Verification:
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope projects --project-id 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --format json --out /tmp/oracle-cache-export-smoke/projects-filtered`
+  - `jq '.items | length' /tmp/oracle-cache-export-smoke/projects-filtered/projects.json` -> `1`
+  - `jq '.items[0].id' /tmp/oracle-cache-export-smoke/projects-filtered/projects.json` -> `8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62`
+  - `pnpm tsx scripts/verify-cache-export-parity.ts --provider grok --project-id 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62` -> pass
+- Follow-ups:
+  - For `scope=conversations --project-id`, results depend on cached conversation metadata containing project association (`projectId` or project URL). If absent, filtered `conversations.json` may be empty even when project chats exist.
+
+- Date: 2026-02-23
+- Area: Cache export project filtering (`cache export --project-id`)
+- Symptom: Project-scoped filtering appears ineffective:
+  - `--scope projects --project-id <existing-id>` exports `0` entries.
+  - `--scope conversations --project-id <existing-id>` exports all conversations (unfiltered).
+- Root cause: Superseded by the resolved entry above.
+- Fix: Superseded by the resolved entry above.
+- Verification:
+  - Existing project present in cache:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope projects --format json --out /tmp/oracle-cache-export-smoke/projects-all`
+    - exported `projects.json` includes `8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62`.
+  - Failing filtered export:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope projects --project-id 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --format json --out /tmp/oracle-cache-export-smoke/projects-filtered`
+    - result: `Exported 0 entries`.
+  - Unfiltered conversations despite `--project-id`:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope conversations --project-id 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --format json --out /tmp/oracle-cache-export-smoke/conversations-by-project`
+    - result: full conversation export count.
+- Follow-ups:
+  - See follow-ups in the resolved entry above.
+
+- Date: 2026-02-23
+- Area: Grok project instructions modal opener (`pushProjectInstructionsEditButton`)
+- Symptom: `projects instructions get` intermittently failed with `Button not found` / `Edit instructions button not found` on the updated Grok project sidebar UI.
+- Root cause: The newer sidebar variant often omits a visible labeled "Edit instructions" button; the actionable control is the clickable instructions card (`group/side-panel-section`), so label-only button matching misses.
+- Fix:
+  - Kept the existing label-first path (`edit instructions`) for older layouts.
+  - Added fallback click path that targets the visible instructions side-panel section and dispatches pointer/mouse click sequence.
+  - Preserved modal-ready verification (`textarea` must appear) to fail loudly if the open action did not apply.
+- Verification:
+  - `pnpm tsx scripts/verify-grok-project-instructions-edit.ts`
+  - `pnpm tsx scripts/verify-grok-project-instructions-modal.ts`
+  - `pnpm tsx bin/oracle-cli.ts projects instructions get 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --target grok`
+- Follow-ups:
+  - Consider adding a first-class helper for "click panel card by heading text" in browser-service so adapters do not repeat this pattern.
+
+- Date: 2026-02-23
+- Area: Grok project instructions retrieval (`projects instructions get`)
+- Symptom: Project-level instruction scrape can fail even when project + conversations are accessible, blocking full project cache hydration.
+- Root cause: `ensureProjectSidebarOpen` button matching remains brittle in some Grok layouts/timing states; fallback candidates miss the active project-sidebar opener in this flow.
+- Fix: Initially documented only; now addressed by the newer entry above (`Grok project instructions modal opener`) with a card-click fallback for the updated sidebar UI.
+- Verification:
+  - Failing command:
+    - `pnpm tsx bin/oracle-cli.ts projects instructions get 8d2b61a7-6bcd-496f-ae3a-c20b3bd09e62 --target grok`
+  - Error:
+    - `Button not found (candidates: home page, search, history, ec, toggle sidebar)`
+- Follow-ups:
+  - Reuse the already stable main/project sidebar toggle helpers in instructions path where possible.
+  - Keep a dedicated instructions-open smoke for project URLs with sidebar pre-open/closed states.
+
+- Date: 2026-02-23
+- Area: Cache export (`cache export`) SQL-first discovery + sqlite materialization
+- Symptom: Export planning depended on `cache-index.json` and filesystem mirrors, so sqlite-populated caches could under-export or fail when index/json artifacts were missing.
+- Root cause: `buildCacheExportPlan` was index-first with filesystem fallback only; `exportJson` copied files only and could not synthesize payloads from cache store data.
+- Fix:
+  - Switched export planning order to:
+    1. SQL (`cache.sqlite` `cache_entries`) discovery
+    2. `cache-index.json` compatibility manifest
+    3. filesystem fallback
+  - Added SQL dataset->entry mapping for:
+    - `projects`, `conversations`
+    - `conversation-context`, `conversation-files`, `conversation-attachments`
+    - `project-knowledge`, `project-instructions`
+  - Added store-backed materialization in JSON export for missing source files:
+    - reads through cache store (`json|sqlite|dual`) and writes canonical payload files at export target.
+  - Updated CSV/Markdown/HTML exports to read via cache store instead of JSON mirror readers.
+  - Fixed `cache export` option parsing so dashed flags (`--conversation-id`, `--project-id`) are honored reliably.
+- Verification:
+  - `pnpm run -s check`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache export --provider grok --scope conversation --conversation-id d9845a8e-f357-4969-8b1b-960e73af8989 --format json --out /tmp/oracle-export-smoke/json`
+  - same scope with `--format csv|md|html|zip`
+  - Temporary no-index smoke:
+    - move `~/.oracle/cache/providers/grok/<identity>/cache-index.json` aside
+    - rerun export conversation json
+    - confirm output context file contains expected messages/sources
+    - restore index file
+- Follow-ups:
+  - Add automated parity test matrix for export scopes (`projects|conversations|conversation|contexts`) with SQL-only fixtures.
+
+- Date: 2026-02-23
+- Area: Cache catalog CLI filters (`cache sources/files list|resolve`)
+- Symptom: `--conversation-id` / `--project-id` appeared accepted but were ignored (filters showed `null`, queries returned unfiltered rows).
+- Root cause: Nested Commander actions read only one callback options object; dashed/global flags could land in different option scopes and were not normalized before filter parsing.
+- Fix:
+  - Normalized command options in catalog actions by merging `program.opts()`, parent opts, command opts, and local options.
+  - Added shared option readers that support both camelCase and dashed keys.
+  - Updated filter extraction in sources/files list+resolve and cache context search helpers.
+- Verification:
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache sources list --provider grok --conversation-id 00000000-0000-0000-0000-000000000000 --limit 5` -> `count: 0`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache sources list --provider grok --conversation-id d9845a8e-f357-4969-8b1b-960e73af8989 --limit 2` -> filtered rows only for that conversation
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache files list --provider grok --project-id d3ccca2d-8742-4e6b-b1d2-e96fbc3cdb1f --limit 2` -> `filters.projectId` populated
+- Follow-ups:
+  - Audit remaining nested subcommands for dashed-option parsing consistency.
+
+- Date: 2026-02-23
+- Area: Grok conversation context source extraction (`readConversationContext`)
+- Symptom: `conversations context get` / `cache context get` sometimes returned `sources: []` even when Grok UI showed many sources (for example `27 sources` / `Searched web` + `Searched 𝕏` sidebar sections).
+- Root cause: Source-chip detection only looked for `[role="button"][aria-label*=sources]`, but Grok renders source controls with varying DOM shapes and labels. The extractor often never opened the Sources sidebar, so accordion links were never collected.
+- Fix:
+  - Added robust, visibility-aware source-chip detection over `button, [role="button"]` with text matching for `sources`.
+  - Added sidebar wait loop before scraping accordions.
+  - Kept accordion scraping for `Searched ...` groups and persisted entries with `sourceGroup`.
+  - Preserved dedupe and URL normalization behavior.
+- Verification:
+  - `pnpm tsx scripts/verify-grok-context-sources.ts d9845a8e-f357-4969-8b1b-960e73af8989`
+  - `pnpm tsx scripts/verify-grok-context-get.ts d9845a8e-f357-4969-8b1b-960e73af8989`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts conversations context get d9845a8e-f357-4969-8b1b-960e73af8989 --target grok --json-only | jq '.sources | length'`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache context get d9845a8e-f357-4969-8b1b-960e73af8989 --provider grok | jq '.context.sources | length'`
+- Follow-ups:
+  - Add a dedicated smoke that asserts minimum source count for a known cited conversation fixture.
+  - Continue SQL-first export/discovery work so source-rich contexts remain exportable without JSON-index dependency.
+
+- Date: 2026-02-22
+- Area: Cache operations lifecycle (`cache clear|compact|cleanup`)
+- Symptom: Cache tooling lacked operational lifecycle commands for selective purge, compaction, and stale-data cleanup.
+- Root cause: Only refresh/export/query/doctor/repair surfaces existed; no first-class maintenance operations for ongoing cache hygiene.
+- Fix:
+  - Added `oracle cache clear`:
+    - dataset-scoped, optional `--older-than`, optional `--include-blobs`
+    - dry-run by default, mutate only with `--yes`
+  - Added `oracle cache compact`:
+    - SQLite `VACUUM`, `ANALYZE`, `PRAGMA optimize`
+  - Added `oracle cache cleanup`:
+    - stale clear (`--older-than` / `--days`)
+    - stale index-entry prune
+    - old backup prune
+    - dry-run by default, mutate only with `--yes`
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache clear --provider grok --identity-key <key> --dataset context --json`
+  - `pnpm tsx bin/oracle-cli.ts cache compact --provider grok --identity-key <key> --json`
+  - `pnpm tsx bin/oracle-cli.ts cache cleanup --provider grok --identity-key <key> --days 30 --json`
+- Follow-ups:
+  - Serialize/lock cache maintenance by identity; running clear/compact/cleanup in parallel can trigger transient SQLite `database is locked`.
+
+- Date: 2026-02-22
+- Area: Cache mutation safety + repair operations (`cache repair`)
+- Symptom: Operators had no guided way to perform cache repair actions (index rebuild, orphan pruning, status fixes) with safe defaults.
+- Root cause: Diagnostics existed (`cache doctor`), but no repair command with dry-run/confirmation workflow.
+- Fix:
+  - Added `oracle cache repair` command:
+    - dry-run by default,
+    - mutating mode requires `--apply --yes`,
+    - action selection via `--actions`.
+  - Implemented repair actions:
+    - `sync-sql` (initialize/sync SQLite cache)
+    - `rebuild-index` (regenerate `cache-index.json` from filesystem)
+    - `prune-orphan-assets` (drop unreferenced `file_assets` rows)
+    - `mark-missing-local` (mark missing `local_cached` assets as `missing_local`)
+  - Added automatic per-identity backups before mutation:
+    - `backups/<timestamp>/cache.sqlite`
+    - `backups/<timestamp>/cache-index.json`
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions all --json`
+  - `pnpm tsx bin/oracle-cli.ts cache repair --provider grok --identity-key <key> --actions rebuild-index --apply --yes --json`
+- Follow-ups:
+  - Add explicit catalog re-backfill repair action and parity checks between index entries and SQL datasets.
+
+- Date: 2026-02-22
+- Area: Cache integrity checks (`cache doctor`)
+- Symptom: No unified integrity command existed to validate SQL health + file-pointer health across provider/identity cache trees.
+- Root cause: Migration/backfill and catalog queries existed, but there was no consolidated diagnostic surface for operators/automation.
+- Fix:
+  - Added `oracle cache doctor` command with:
+    - provider/identity scoping (`--provider`, `--identity-key`)
+    - SQLite checks (`cache.sqlite` presence, `PRAGMA quick_check`, expected table presence)
+    - file-pointer health via `resolveCachedFiles(..., missingOnly=true)`
+    - machine-readable output (`--json`) and strict exit mode (`--strict`)
+- Verification:
+  - `pnpm run -s check`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache doctor --provider grok --json`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache doctor --provider grok`
+- Follow-ups:
+  - Add `cache repair` with dry-run and explicit mutation actions.
+
+- Date: 2026-02-22
+- Area: Cache file-pointer diagnostics (`cache files resolve`)
+- Symptom: `cache files list` showed bindings, but there was no built-in way to determine whether bound local files still existed on disk.
+- Root cause: Catalog queries returned metadata only; path-existence checks and status classification were not implemented.
+- Fix:
+  - Added `resolveCachedFiles(...)` in `src/browser/llmService/cache/catalog.ts`.
+  - Added CLI command: `oracle cache files resolve`.
+  - Resolution now classifies each row as:
+    - `local_exists`
+    - `missing_local`
+    - `external_path`
+    - `remote_only`
+    - `unknown`
+  - Added `--missing-only` filter and summary counters in command output.
+- Verification:
+  - `pnpm run -s check`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache files resolve --provider grok --limit 10`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache files resolve --provider grok --missing-only --limit 10`
+- Follow-ups:
+  - Integrate this classification into `cache doctor` so missing local pointers fail integrity checks.
+
+- Date: 2026-02-22
+- Area: SQL cache catalog query surface (sources/files)
+- Symptom: Even after catalog backfill, there was no CLI to read normalized `source_links`/`file_bindings`; users had to inspect `cache.sqlite` manually.
+- Root cause: Cache CLI exposed context object operations (`context list/get/search`) but no direct catalog query commands.
+- Fix:
+  - Added `src/browser/llmService/cache/catalog.ts`:
+    - `listCachedSources(...)` (SQL-first; JSON context fallback)
+    - `listCachedFiles(...)` (SQL-first join `file_bindings` + `file_assets`; JSON manifest/context fallback)
+  - Added CLI commands:
+    - `oracle cache sources list`
+    - `oracle cache files list`
+  - Added filters:
+    - sources: `--conversation-id`, `--domain`, `--source-group`, `--query`, `--limit`
+    - files: `--conversation-id`, `--project-id`, `--dataset`, `--query`, `--resolve-paths`, `--limit`
+- Verification:
+  - `pnpm run -s check`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache sources list --provider grok --limit 3`
+  - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/oracle-cli.ts cache files list --provider grok --limit 3`
+- Follow-ups:
+  - Add `cache files resolve` and orphan/path integrity checks (`cache doctor`) so missing local assets are surfaced explicitly.
+
+- Date: 2026-02-22
+- Area: Cache context retrieval/search (agent + user workflows)
+- Symptom: Cached contexts were listable/gettable but not queryable; there was no CLI search surface for retrieving relevant message/source snippets across cached conversations.
+- Root cause: Cache CLI exposed only object retrieval (`context list/get`) and exports, without chunked context indexing/query logic.
+- Fix:
+  - Added `src/browser/llmService/cache/search.ts`:
+    - keyword search (`searchCachedContextsByKeyword`)
+    - semantic search (`searchCachedContextsSemantically`) with embedding cache table `semantic_embeddings`.
+  - Added CLI commands:
+    - `oracle cache context search <query>`
+    - `oracle cache context semantic-search <query>`
+  - Added filters (`--conversation-id`, `--role`, `--limit`) and semantic options (`--model`, `--max-chunks`, `--min-score`, `--openai-*`).
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache context search "oracle" --provider grok --limit 3`
+  - `pnpm tsx bin/oracle-cli.ts cache context semantic-search "oracle" --provider grok --limit 3` (expected explicit error without `OPENAI_API_KEY`)
+- Follow-ups:
+  - Add top-level cache catalog commands (`cache sources/files list`) to complement context search.
+  - Add quiet/json-output mode that suppresses banner + warning noise for reliable `jq` pipelines.
+
+- Date: 2026-02-22
+- Area: SQLite cache catalog migration/backfill (sources + file pointers)
+- Symptom: Existing `cache.sqlite` files could remain v1-style (`cache_entries`/`meta` only) and lacked normalized source/file metadata even when JSON cache had context/files.
+- Root cause: Earlier migration only backfilled base datasets and did not guarantee a second-pass catalog sync for `source_links`/`file_bindings`/`file_assets`.
+- Fix:
+  - Added schema migration ledger entry for catalog hardening.
+  - Added `backfill_catalog_v2` pass that walks existing `cache_entries` and writes:
+    - context sources -> `source_links`
+    - context/files/attachments/knowledge -> `file_bindings`
+  - Added file-asset pointer write-through:
+    - local file paths now upsert `file_assets` rows with `storage_relpath` when cache-relative,
+    - `file_bindings.metadata_json` now carries path/mime/checksum metadata where present.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx scripts/verify-cache-sql-catalog.ts --provider grok <conversationId>`
+- Follow-ups:
+  - Add SQL-first source/file catalog query commands (beyond context list/get) for agent workflows.
+
+- Date: 2026-02-22
+- Area: Cache context CLI bypassing store abstraction
+- Symptom: `oracle cache context list/get` read directly from `cache-index.json` and raw JSON files, so behavior could diverge from configured cache backend (`json|sqlite|dual`).
+- Root cause: CLI command handlers used provider cache helpers directly instead of llmService/cache-store APIs.
+- Fix:
+  - Added `CacheStore.listConversationContexts(...)`.
+  - Added `LlmService.listCachedConversationContexts(...)` and `LlmService.getCachedConversationContext(...)`.
+  - Updated CLI `cache context list/get` to use the new llmService methods.
+- Verification:
+  - `pnpm run -s check`
+  - Runtime smoke in normal environment:
+    - `pnpm tsx bin/oracle-cli.ts cache context list --provider grok`
+    - `pnpm tsx bin/oracle-cli.ts cache context get <conversationId> --provider grok`
+
+- Date: 2026-01-24
+- Area: Cache JSON mirror writes (nested paths)
+- Symptom: `conversations context get` could return context, but JSON mirror files (`contexts/*.json`) were missing; some flows silently fell back to cached reads.
+- Root cause: `writeProviderCache` created only the provider root directory, not nested path directories (e.g., `contexts/`, `conversation-files/`).
+- Fix: Changed cache writes to `mkdir(path.dirname(cacheFile), { recursive: true })` before writing payload.
+- Verification:
+  - `pnpm tsx bin/oracle-cli.ts conversations context get <id> --target grok --json-only`
+  - Confirmed both:
+    - SQLite row exists in `cache_entries` (`dataset='conversation-context'`)
+    - JSON mirror exists at `~/.oracle/cache/providers/grok/<identity>/contexts/<id>.json`
+
+- Date: 2026-01-24
+- Area: Conversation context completeness (source/citation capture)
+- Symptom: `conversations context get` returned only messages/files; no explicit list of consulted sources/citations.
+- Root cause: `ConversationContext` schema and Grok scraper did not include source link extraction.
+- Fix:
+  - Added `ConversationContext.sources` (`url`, `title`, `domain`, `messageIndex`) to domain types.
+  - Updated Grok `readConversationContext` to collect:
+    - inline external `a[href]` links per assistant row, and
+    - sidebar citations from the `N sources` chip + `Searched web` / `Searched 𝕏` accordions.
+  - Sidebar source extraction now expands accordions and reads linked results from their controlled panels.
+  - Updated llmService normalization to sanitize/dedupe source entries before caching/output.
+  - Updated context smoke script output to report source count.
+- Verification:
+  - `pnpm run -s check`
+  - Live verification: run `oracle conversations context get <conversationId> --target grok` on a conversation with citations and confirm `context.sources` is populated.
+
+- Date: 2026-01-24
+- Area: Cache backend migration (JSON → SQLite)
+- Symptom: Cache store migration introduced fragile path resolution and could fail hard when SQLite support was unavailable, risking regressions in cache-dependent flows.
+- Root cause: Early SQLite integration derived cache directory from relative index paths and assumed `node:sqlite` availability; dual-store behavior did not consistently tolerate primary-store failure.
+- Fix:
+  - Added `browser.cache.store` (`json|sqlite|dual`) to schema/profile config and wired selection into `LlmService`.
+  - Updated SQLite cache dir resolution to use `resolveProviderCachePath(...)` directly.
+  - Hardened `DualCacheStore`:
+    - read fallback to JSON when SQLite read fails,
+    - seed-primary best-effort only,
+    - write-secondary still succeeds when primary fails,
+    - throw only when both stores fail.
+  - Added migration plan doc: `docs/dev/cache-db-migration-plan.md`.
+- Verification:
+  - `pnpm run -s check`
+  - `pnpm tsx bin/oracle-cli.ts cache context list --help`
+  - `pnpm tsx bin/oracle-cli.ts cache context get --help`
+  - `pnpm tsx bin/oracle-cli.ts cache export --help`
+
+- Date: 2026-01-24
+- Area: Cached context access + export ergonomics
+- Symptom: Context JSON was cached on disk but not directly discoverable for agents, and export scope didn’t expose a first-class “contexts” mode.
+- Root cause: CLI cache surfaced projects/conversations/exports broadly, but lacked a dedicated cached-context interface.
+- Fix:
+  - Added `oracle cache context list` and `oracle cache context get <id>` (ID or cached title) to read cached contexts without browser retrieval.
+  - Extended `oracle cache export --scope ...` to include `contexts` for JSON/MD/HTML/CSV/ZIP exports.
+  - Added fallback scanning of `contexts/*.json` when cache-index entries are missing.
+- Verification:
+  - `pnpm tsx bin/oracle-cli.ts cache context list --help`
+  - `pnpm tsx bin/oracle-cli.ts cache context get --help`
+  - `pnpm tsx bin/oracle-cli.ts cache export --help`
 
 - Date: 2026-01-24
 - Area: Conversation context retrieval (Grok + llmService + CLI)

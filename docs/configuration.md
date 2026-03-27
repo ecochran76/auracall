@@ -88,10 +88,13 @@ node --import tsx bin/auracall.ts config migrate --dry-run
       },
 
       cache: {
+        store: "dual", // json | sqlite | dual
         refresh: false,
-        includeHistory: false,
-        historyLimit: 200,
+        includeHistory: true,
+        includeProjectOnlyConversations: true,
+        historyLimit: 2000,
         historySince: null,
+        cleanupDays: 365,
         rootDir: null,
         refreshHours: 6,
         useDetectedIdentity: false,
@@ -155,7 +158,11 @@ Within each file, later CLI flags still override config, and environment variabl
 - `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
 - `profiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Aura-Call 2`).
 - `profiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
-- `profiles.<name>.cache.*` sets defaults for `auracall cache --refresh` (including `refreshHours` and `rootDir`).
+- `profiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
+- `profiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.
+- `profiles.<name>.cache.cleanupDays` sets the default retention window for `auracall cache cleanup --days`.
+- Mirror-oriented cache defaults are usually `includeHistory: true`, `includeProjectOnlyConversations: true`, `historyLimit: 2000`, and `cleanupDays: 365`.
+- `profiles.<name>.cache.store` controls cache backend: `json` keeps legacy JSON files only, `sqlite` uses SQLite only (`cache.sqlite` per provider+identity), and `dual` reads/writes SQLite plus the JSON mirror (recommended migration mode).
 - `dev.browserPortRange` sets the fallback DevTools port range used when spawning new Chrome instances (profile/browser overrides still win).
 - `browser.*` legacy keys are still accepted and override profile defaults when present (CLI flags still win).
 - `browser.debugPortStrategy` controls how Aura-Call chooses a DevTools port when it launches Chrome. `fixed` honors `browser.debugPort` / `AURACALL_BROWSER_PORT`; `auto` lets Chrome choose and then adopts the real endpoint from `DevToolsActivePort`. `AURACALL_BROWSER_PORT_STRATEGY` can override it at runtime. On WSL when `browser.chromePath` points at a Windows Chrome executable, Aura-Call now defaults to `auto`.

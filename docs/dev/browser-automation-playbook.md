@@ -91,3 +91,4 @@ pnpm tsx scripts/browser-tools.ts eval --port <port> \
 - Conversation rename in project list uses `button[aria-label="Rename"]` and row-level `button[aria-label="Save"]`.
 - History dialog actions must be scoped to the dialog root.
 - Project instructions UI can be slow to render; find the Edit Instructions button with a retry loop and avoid relying on a single selector.
+- On newer project sidebars, the instructions editor may open from the clickable instructions card (`group/side-panel-section`) even when a labeled `Edit instructions` button is absent; keep a card-click fallback.
