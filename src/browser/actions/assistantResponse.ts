@@ -44,7 +44,9 @@ export async function waitForAssistantResponse(
       throw { source: 'evaluation' as const, error };
     },
   );
-  const pollerPromise = pollAssistantCompletion(Runtime, timeoutMs, minTurnIndex).then(
+  // Stop the watchdog loop once the observer path wins so we do not keep polling until timeout.
+  const pollerAbort = new AbortController();
+  const pollerPromise = pollAssistantCompletion(Runtime, timeoutMs, minTurnIndex, pollerAbort.signal).then(
     (value) => {
       if (!value) {
         throw { source: 'poll' as const, error: new Error(ASSISTANT_POLL_TIMEOUT_ERROR) };
@@ -65,6 +67,7 @@ export async function waitForAssistantResponse(
       await terminateRuntimeExecution(Runtime);
       return winner.value;
     }
+    pollerAbort.abort();
     evaluation = winner.value;
   } catch (wrappedError) {
     if (wrappedError && typeof wrappedError === 'object' && 'source' in wrappedError && 'error' in wrappedError) {
@@ -199,6 +202,14 @@ export function buildMarkdownFallbackExtractorForTest(minTurnLiteral = '0'): str
   return buildMarkdownFallbackExtractor(minTurnLiteral);
 }
 
+export function getAssistantCompletionWatchdogThresholdsForTest(currentLength: number): {
+  completionStableTarget: number;
+  requiredStableCycles: number;
+  minStableMs: number;
+} {
+  return getAssistantCompletionWatchdogThresholds(currentLength);
+}
+
 export function buildCopyExpressionForTest(
   meta: { messageId?: string | null; turnId?: string | null } = {},
 ): string {
@@ -328,12 +339,16 @@ async function pollAssistantCompletion(
   Runtime: ChromeClient['Runtime'],
   timeoutMs: number,
   minTurnIndex?: number,
+  abortSignal?: AbortSignal,
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> {
   const watchdogDeadline = Date.now() + timeoutMs;
   let previousLength = 0;
   let stableCycles = 0;
   let lastChangeAt = Date.now();
   while (Date.now() < watchdogDeadline) {
+    if (abortSignal?.aborted) {
+      return null;
+    }
     const snapshot = await readAssistantSnapshot(Runtime, minTurnIndex);
     const normalized = normalizeAssistantSnapshot(snapshot);
     if (normalized) {
@@ -349,12 +364,9 @@ async function pollAssistantCompletion(
         isStopButtonVisible(Runtime),
         isCompletionVisible(Runtime),
       ]);
-      const shortAnswer = currentLength > 0 && currentLength < 16;
-      // Learned: short answers need a longer stability window or they truncate.
-      const completionStableTarget = shortAnswer ? 12 : currentLength < 40 ? 8 : 4;
-      const requiredStableCycles = shortAnswer ? 12 : 6;
+      const { completionStableTarget, requiredStableCycles, minStableMs } =
+        getAssistantCompletionWatchdogThresholds(currentLength);
       const stableMs = Date.now() - lastChangeAt;
-      const minStableMs = shortAnswer ? 8000 : 1200;
       // Require stop button to disappear before treating completion as final.
       if (!stopVisible) {
         const stableEnough = stableCycles >= requiredStableCycles && stableMs >= minStableMs;
@@ -383,6 +395,23 @@ async function isStopButtonVisible(Runtime: ChromeClient['Runtime']): Promise<bo
   } catch {
     return false;
   }
+}
+
+function getAssistantCompletionWatchdogThresholds(currentLength: number): {
+  completionStableTarget: number;
+  requiredStableCycles: number;
+  minStableMs: number;
+} {
+  const shortAnswer = currentLength > 0 && currentLength < 16;
+  const mediumAnswer = currentLength >= 16 && currentLength < 40;
+  const longAnswer = currentLength >= 40 && currentLength < 500;
+  // Learned: short answers need a longer stability window or they truncate.
+  // Learned: long streaming responses can pause mid-stream; require a longer stable window.
+  return {
+    completionStableTarget: shortAnswer ? 12 : mediumAnswer ? 8 : longAnswer ? 6 : 8,
+    requiredStableCycles: shortAnswer ? 12 : mediumAnswer ? 8 : longAnswer ? 8 : 10,
+    minStableMs: shortAnswer ? 8000 : mediumAnswer ? 1200 : longAnswer ? 2000 : 3000,
+  };
 }
 
 async function isCompletionVisible(Runtime: ChromeClient['Runtime']): Promise<boolean> {

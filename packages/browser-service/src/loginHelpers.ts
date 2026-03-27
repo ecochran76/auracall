@@ -1,17 +1,23 @@
 import CDP from 'chrome-remote-interface';
-import net from 'node:net';
-import os from 'node:os';
-import path from 'node:path';
 import type { CookieParam } from './types.js';
 import { delay } from './utils.js';
 import { buildWslFirewallHint } from './chromeLifecycle.js';
+import { isPortOpen } from './processCheck.js';
+import {
+  isWindowsPath,
+  isWslEnvironment,
+  toWindowsPath as translateToWindowsPath,
+  toWslPath,
+} from './platformPaths.js';
+import { resolveChromeEndpoint } from './windowsLoopbackRelay.js';
 
 export function inferProfileFromCookiePath(cookiePath: string): { userDataDir: string; profileDir: string } | null {
-  const normalized = path.normalize(cookiePath);
-  const parts = normalized.split(path.sep);
+  const normalized = normalizeCookiePath(cookiePath);
+  const parts = normalized.split('/').filter(Boolean);
   const userDataIndex = parts.findIndex((part) => part.toLowerCase() === 'user data');
   if (userDataIndex !== -1 && userDataIndex + 1 < parts.length) {
-    const userDataDir = parts.slice(0, userDataIndex + 1).join(path.sep);
+    const prefix = normalized.startsWith('/') ? '/' : '';
+    const userDataDir = `${prefix}${parts.slice(0, userDataIndex + 1).join('/')}`;
     const profileDir = parts[userDataIndex + 1];
     if (profileDir) {
       return { userDataDir, profileDir };
@@ -21,7 +27,17 @@ export function inferProfileFromCookiePath(cookiePath: string): { userDataDir: s
   const networkIndex = parts.findIndex((part) => part.toLowerCase() === 'network');
   if (networkIndex > 0 && parts[networkIndex + 1]?.toLowerCase() === 'cookies') {
     const profileDir = parts[networkIndex - 1];
-    const userDataDir = parts.slice(0, networkIndex - 1).join(path.sep);
+    const prefix = normalized.startsWith('/') ? '/' : '';
+    const userDataDir = `${prefix}${parts.slice(0, networkIndex - 1).join('/')}`;
+    if (profileDir && userDataDir) {
+      return { userDataDir, profileDir };
+    }
+  }
+
+  if (parts.at(-1)?.toLowerCase() === 'cookies' && parts.length >= 2) {
+    const profileDir = parts.at(-2);
+    const prefix = normalized.startsWith('/') ? '/' : '';
+    const userDataDir = `${prefix}${parts.slice(0, -2).join('/')}`;
     if (profileDir && userDataDir) {
       return { userDataDir, profileDir };
     }
@@ -30,43 +46,24 @@ export function inferProfileFromCookiePath(cookiePath: string): { userDataDir: s
   return null;
 }
 
+function normalizeCookiePath(cookiePath: string): string {
+  const normalized = isWslEnvironment() ? toWslPath(cookiePath) : cookiePath;
+  return normalized.replace(/\\/g, '/');
+}
+
 export function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
-  }
-  return os.release().toLowerCase().includes('microsoft');
+  return isWslEnvironment();
 }
 
 export function toWindowsPath(value: string): string {
-  if (!isWsl()) {
+  if (!isWslEnvironment()) {
     return value;
   }
-  const normalized = value.replace(/\\/g, '/');
-  const match = normalized.match(/^\/mnt\/([a-z])\/(.*)$/i);
-  if (match) {
-    const drive = match[1].toUpperCase();
-    const rest = match[2].replace(/\//g, '\\');
-    return `${drive}:\\${rest}`;
-  }
-  if (normalized.startsWith('/')) {
-    return `\\\\wsl.localhost\\${process.env.WSL_DISTRO_NAME ?? 'Ubuntu'}${normalized.replace(/\//g, '\\')}`;
-  }
-  return value;
+  return translateToWindowsPath(value);
 }
 
 export function isWindowsChromePath(value: string): boolean {
-  const trimmed = value.trim();
-  if (/^[a-zA-Z]:[\\/]/.test(trimmed)) {
-    return true;
-  }
-  if (trimmed.startsWith('\\\\') || trimmed.startsWith('//')) {
-    return true;
-  }
-  const normalized = trimmed.replace(/\\/g, '/');
-  return normalized.startsWith('/mnt/');
+  return isWindowsPath(value);
 }
 
 export function quotePowerShellLiteral(value: string): string {
@@ -77,22 +74,10 @@ export function quotePowerShellLiteral(value: string): string {
 export async function waitForPortOpen(host: string, port: number, timeoutMs: number): Promise<void> {
   const start = Date.now();
   while (Date.now() - start < timeoutMs) {
-    try {
-      await new Promise<void>((resolve, reject) => {
-        const socket = net.connect(port, host);
-        socket.once('connect', () => {
-          socket.destroy();
-          resolve();
-        });
-        socket.once('error', (err) => {
-          socket.destroy();
-          reject(err);
-        });
-      });
+    if (await isPortOpen(host, port)) {
       return;
-    } catch {
-      await delay(200);
     }
+    await delay(200);
   }
   const hint = buildWslFirewallHint(host, port);
   const message = hint
@@ -103,11 +88,13 @@ export async function waitForPortOpen(host: string, port: number, timeoutMs: num
 
 export async function exportCookiesFromCdp({
   port,
+  host = '127.0.0.1',
   requiredNames,
   urls,
   timeoutMs,
 }: {
   port: number | null;
+  host?: string;
   requiredNames: string[];
   urls: string[];
   timeoutMs: number;
@@ -115,7 +102,8 @@ export async function exportCookiesFromCdp({
   if (!port) {
     throw new Error('Missing Chrome debug port for cookie export.');
   }
-  const client = await CDP({ port });
+  const endpoint = await resolveChromeEndpoint(host, port);
+  const client = await CDP({ port: endpoint.port, host: endpoint.host });
   try {
     await client.Network.enable();
     const start = Date.now();
@@ -130,6 +118,7 @@ export async function exportCookiesFromCdp({
     throw new Error(`Timed out waiting for cookies: ${requiredNames.join(', ')}`);
   } finally {
     await client.close();
+    await endpoint.dispose?.().catch(() => undefined);
   }
 }
 

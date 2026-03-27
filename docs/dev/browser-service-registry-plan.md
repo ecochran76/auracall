@@ -65,14 +65,14 @@ Each registry entry includes:
 ## Smoke Testing Scheme
 ### Local smoke (fast)
 1) Start Chrome with DevTools enabled using Oracle.
-2) Run `oracle status` / `oracle conversations --target grok` and verify:
+2) Run `auracall status` / `auracall conversations --target grok` and verify:
    - Registry updated with current PID/port.
    - Tabs list includes Grok tab URL.
 
 ### Scripted smoke (automation)
 1) Run `pnpm tsx scripts/test-browser.ts` to ensure DevTools connectivity.
-2) Run `pnpm tsx bin/oracle-cli.ts projects --target grok --refresh`.
-3) Run `pnpm tsx bin/oracle-cli.ts conversations --target grok --refresh --include-history`.
+2) Run `pnpm tsx bin/auracall.ts projects --target grok --refresh`.
+3) Run `pnpm tsx bin/auracall.ts conversations --target grok --refresh --include-history`.
 4) Verify registry JSON has updated `tabs` and `lastKnownUrls`.
 
 ### Fault tolerance smoke

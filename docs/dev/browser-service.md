@@ -15,6 +15,11 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - Port selection + registry helpers
 - Profile discovery + cookie path utilities
 - Session helper utilities (generic DOM helpers)
+- DevTools inspection helpers and generic tab-selection diagnostics
+- Explainable tab resolution helpers (`instanceScanner.explainTabResolution`)
+- Generic readiness / hydration waits (`ui.waitForPredicate`, `ui.waitForDocumentReady`)
+- Package-owned developer diagnosis tools (`browserTools tabs`, `probe`, `doctor`)
+- Versioned JSON contracts for package doctor/probe output (`version: 1`)
 - Manual login session helper (config injected by host app)
 - Core browser session runner (host app supplies prompt assembly + error handling)
 
@@ -27,11 +32,11 @@ registry utilities, and low-level DOM helpers. LLM-specific behavior lives in Or
 - Session reattach flows and ChatGPT recovery logic
 
 ## Integration Notes
-- Oracle keeps thin wrappers for registry path and default profile directory ("~/.oracle").
+- Oracle keeps thin wrappers for registry path and default profile directory ("~/.auracall").
 - Package APIs accept injected defaults to avoid coupling to Oracle config.
 - Environment variables:
   - Preferred: `BROWSER_SERVICE_*`
-  - Backward compatible (Oracle): `ORACLE_*` (do not remove yet; still referenced by existing configs/scripts)
+  - Backward compatible (Oracle): `AURACALL_*` (do not remove yet; still referenced by existing configs/scripts)
 
 ## Current Exports
 
@@ -42,6 +47,7 @@ Stable:
 - `service`: `BrowserService`, `stateRegistry`, `instanceScanner`, `profile`, `profileDiscovery`,
   `portResolution`, `ui`, `types`
 - Core `types`
+- Generic DevTools helpers in `browserTools`, including tab census/selection explanation
 
 Provisional:
 - `manualLogin`, `loginHelpers`, `login`
@@ -78,4 +84,5 @@ if (target.port) {
 
 ## Non-Goals
 - No LLM-specific caching, project/conversation logic, or DOM selectors.
-- No CLI parsing or end-user prompts.
+- No product CLI parsing or Aura-Call-specific end-user prompts. Package-owned
+  developer tooling such as `browser-tools` is allowed when it stays generic.

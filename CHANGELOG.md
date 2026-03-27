@@ -2,6 +2,45 @@
 
 ## 0.8.5 — Unreleased
 
+### Added
+- Browser onboarding: add `auracall wizard`, an interactive first-run flow that detects candidate local/WSL/Windows Chromium profiles, writes a profile-scoped Aura-Call config entry, and then hands off to the managed-profile setup/login/verification path.
+- Browser onboarding: add `auracall setup --target <chatgpt|gemini|grok>` to inspect the managed browser profile, open the Aura-Call-managed login browser when needed, and run a real verification prompt against that same profile.
+
+### Changed
+- Product rename: Oracle is now Aura-Call for this fork.
+- Packaging/runtime: npm package name is now `auracall`, the main executable is `auracall`, MCP bin stays `auracall-mcp`, and default local state moves to `~/.auracall`.
+- CLI/MCP/docs: session commands, MCP resource URIs, notifier text, and primary help/examples now use the Aura-Call naming surface so this fork can coexist with upstream Oracle in one environment.
+
+### Fixed
+- Browser/Grok: bring attached Grok tabs to the front before project/sidebar interactions, support the current direct `New Project` row and clickable `Instructions` card, fix false `0 B` upload detection on `50 B` files, and remove stale main-sidebar assumptions from project delete so live Grok project CRUD works again on the authenticated WSL Chrome profile.
+- Browser/Grok: make `projects create` target the real `/project` index, stop printing false success when Grok never resolves a new project page, and surface `/rest/workspaces` backend validation errors directly (for example Grok rejecting phone-number-like project names).
+- Browser/Grok: fix nested conversation-context cache writes and prefer specific conversation titles over generic `Chat` placeholders when Grok merges project/sidebar/history sources, so `conversations context get` works again and project conversation lists converge on the real title.
+- Browser/Grok: move conversation rename/delete off the stale history-dialog assumption and onto the current root-sidebar row `Options` menu, so live Grok conversation CRUD works again on the authenticated WSL Chrome profile.
+- Browser/Tabs: centralize tab reuse in browser-service so repeated login, remote attach, and Grok project flows reuse exact-match tabs, blank tabs, same-origin tabs, and explicit compatible-host families (for example `chatgpt.com` <-> `chat.openai.com`) before opening a fresh one, then conservatively trim matching-family tabs down to 3 total plus 1 spare blank tab and collapse obviously disposable extra windows for the same managed profile. The cleanup caps are now configurable per Aura-Call profile via `browser.serviceTabLimit`, `browser.blankTabLimit`, and `browser.collapseDisposableWindows`.
+- Browser onboarding: make `auracall wizard` prefer WSL Chrome over a fresher Windows Chrome source when running on WSL, suggest `default` for the primary WSL Chrome profile, avoid Inquirer crashes/ugly numeric echo in the browser-source prompt, and resolve the selected Aura-Call managed profile correctly even when an older top-level `browser.manualLoginProfileDir` still points at another profile.
+- Browser/WSL+Windows: normalize Windows drive paths, WSL paths, and `\\wsl.localhost\...` profile inputs consistently across config, profile bootstrap, process matching, and Chrome launch, and prefer the matching Windows browser family (Chrome vs Brave) when auto-discovering host profiles from WSL.
+- Browser/Grok: support the current Grok composer again by ignoring hidden autosize textareas and targeting the visible editor, so managed-profile Grok browser runs can submit prompts successfully.
+- Browser/Grok: capture only the assistant markdown/content region again during Grok browser runs, so elapsed-time chips and follow-up suggestion buttons do not leak into the final answer text.
+- Browser/Grok: detect the signed-in Grok account again from the current Next flight payload and normalize DevTools tab ids correctly, so managed-profile identity checks stop returning `null` for authenticated sessions.
+- Browser/WSL+Windows: add `--remote-chrome windows-loopback:<port>` as a WSL relay path for Windows Chrome loopback DevTools, so Aura-Call can reuse a Windows Chrome on `127.0.0.1:<port>` even when raw WSL->Windows CDP TCP is blocked.
+- Browser/Profile: split runtime cookie-path selection from managed-profile bootstrap source selection, so WSL Chrome can seed Aura-Call’s managed browser profile from another Chromium source such as Windows Brave via `--browser-bootstrap-cookie-path` / `browser.bootstrapCookiePath`.
+- Browser/Profile: switch managed-profile bootstrap to a selective Chromium auth-state copy and tolerate locked/unreadable Windows cookie DB files, so alternate-source bootstrap is fast enough to be practical and no longer aborts on one unreadable `Network/Cookies` file.
+- Browser/Windows: integrated WSL -> Windows Chrome launches now match the exact managed Windows profile/port, probe Windows-local DevTools before waiting on the relay, lift low requested ports into `45891+`, and keep shutdown ownership across Grok runs, so a fresh Aura-Call-managed Windows Chrome profile seeded from the Windows Chrome default profile can complete a real Grok smoke without firewall or `portproxy` setup and exit cleanly afterward.
+- Browser/Profile: when WSL bootstraps a managed Chromium profile from a live Windows source, Aura-Call now falls back to a Windows shared-read copy for locked browser files, scrubs copied crash/session state, and suppresses Chrome’s crash-restore bubble, so imported Windows-managed profiles no longer start with the “Chrome didn’t shut down correctly / restore pages” modal.
+- Browser/Grok: remote Grok identity checks now attach to `--remote-chrome windows-loopback:<port>` sessions through the browser-service endpoint resolver instead of handing `windows-loopback` straight to CDP.
+- Browser/Grok: Grok login/setup now requires a positive signed-in identity instead of treating guest chat as “logged in”, and explicit Windows managed-profile paths are no longer destructively wiped during DevTools port retries.
+- Browser/Doctor: `auracall doctor --local-only --prune-browser-state` now reports the managed browser profile/source-profile state and can clean dead `~/.auracall/browser-state.json` entries without attaching to Chrome.
+- Browser/Doctor: `auracall doctor --local-only` now reports Chrome-level Google-account state from the managed profile `Local State` plus `Default/Preferences`, so Aura-Call can tell the difference between a genuinely signed-in managed browser profile and a copied Windows profile that only preserved stale `active_accounts` markers.
+- Browser/Doctor: non-`--local-only` `auracall doctor` and `auracall setup` now print the detected signed-in ChatGPT/Grok account for the managed browser profile when a live managed browser instance is available.
+- Browser/Doctor: `auracall doctor --json` now emits a versioned `auracall.browser-doctor` contract and embeds the stable `browser-tools.doctor-report` contract when a managed browser instance is alive.
+- Browser/Setup: `auracall setup --json` now emits a versioned `auracall.browser-setup` contract with explicit login/verification step status plus embedded before/after `auracall.browser-doctor` reports.
+- Browser/Doctor: stop falsely classifying the new managed `~/.auracall/browser-profiles/...` paths as legacy `browser-profile` entries.
+- Browser/Profile: `auracall login` and `auracall setup` now refresh stale managed browser profiles from a newer source Chrome profile instead of reusing a guest/stale managed session forever; `--force-reseed-managed-profile` forces a destructive rebuild when needed.
+- Config/Windows browser: selected Aura-Call profiles now override `browserDefaults` correctly in v2 config, profile-browser blocks accept modern `chromeCookiePath` / `chromeProfile` keys, and `auracall login --target ...` now reports/registers the actual launched Windows DevTools endpoint instead of the originally requested port.
+- Browser/Login: manual login now reuses an existing matching login tab or `about:blank` page before opening a new tab, so repeated `auracall login --target ...` runs do not keep piling up duplicate Grok tabs in the same live managed browser profile.
+- Browser/Windows: Windows-from-WSL launch/reuse now recovers a live DevTools endpoint by managed profile instead of trusting only the requested/recorded debug port, fresh Windows launches now use `--remote-debugging-port=0` plus `DevToolsActivePort` discovery instead of a preselected fixed port, and Windows managed-profile liveness now trusts a responsive Windows-local DevTools endpoint even when the original root PID path is misleading, so Aura-Call can distinguish stale-port failures from the stronger "Chrome window exists but CDP is not exposed" failure mode and avoid machine-specific dead fixed ports.
+- Browser/Windows: the config/runtime/docs contract now treats the actual discovered DevTools endpoint as authoritative for WSL -> Windows Chrome. `browser.debugPortStrategy` defaults to `auto` for integrated Windows launches, `--browser-port` remains a fixed-port escape hatch, and the documented happy path is now managed profile + `DevToolsActivePort` discovery + `windows-loopback` relay instead of firewall/`portproxy` setup.
+
 ## 0.8.4 — 2026-01-04
 
 ### Changed
@@ -38,7 +77,7 @@
 ## 0.8.1 — 2025-12-30
 
 ### Added
-- Config: allow `browser.thinkingTime`, `browser.manualLogin`, and `browser.manualLoginProfileDir` defaults in `~/.oracle/config.json`.
+- Config: allow `browser.thinkingTime`, `browser.manualLogin`, and `browser.manualLoginProfileDir` defaults in `~/.auracall/config.json`.
 
 ### Fixed
 - Browser: thinking-time chip selection now recognizes "Pro" labeled composer pills. Original PR #54 by Alex Naidis (@TheCrazyLex) — thank you!
@@ -62,7 +101,7 @@
 - Response capture is more stable: wider selectors, assistant-only copy-turn capture, prompt-echo avoidance, and stop-button/clipboard stability checks.
 - Attachment uploads are idempotent and count-aware (composer + chips + file inputs), with explicit completion waits and stale-input cleanup.
 - Login flow adds richer diagnostics, auto-accepts the “Welcome back” picker, and always logs the active ChatGPT URL.
-- Cookie handling prefers live Chrome over legacy `~/.oracle/cookies.json`; Gemini web can use inline cookies when sync is disabled.
+- Cookie handling prefers live Chrome over legacy `~/.auracall/cookies.json`; Gemini web can use inline cookies when sync is disabled.
 
 ### Fixes
 - CLI: stream Markdown via Markdansi’s block renderer and guard the live renderer for non‑TTY edge cases.
@@ -177,14 +216,14 @@
 ### Fixed
 - API fallback: gpt-5.1-pro API runs now automatically downgrade to gpt-5.0-pro with a one-line notice (5.1 Pro is not yet available via API).
 - Browser uploads: detect ChatGPT’s composer attachment chip (not echoed in the last user turn) to avoid false “Attachment did not appear” failures. Thanks Mariano Belinky (@mbelinky) for the fix.
-- Browser interruption: if the user/agent sends SIGINT/SIGTERM/SIGQUIT while the assistant response is still pending, Oracle leaves Chrome running, writes runtime hints, and logs how to reattach with `oracle session <slug>` instead of killing the browser mid-run.
+- Browser interruption: if the user/agent sends SIGINT/SIGTERM/SIGQUIT while the assistant response is still pending, Oracle leaves Chrome running, writes runtime hints, and logs how to reattach with `auracall session <slug>` instead of killing the browser mid-run.
 - Browser uploads (ChatGPT UI 2025-12): wait for DOM ready, avoid duplicate uploads, and block Send until the attachment chip/file name (or “N files” pill) is visible so files aren’t sent empty or multiple times.
 - Browser i18n: stop-button detection now uses data-testid instead of English `aria-label`; send/input/+ selectors favor data-testid/structural cues to work across localized UIs.
 
 ## 0.5.3 — 2025-12-06
 
 ### Changed
-- `oracle` with no arguments now prints the help/usage banner; launch the interactive UI explicitly via `oracle tui` (keeps `ORACLE_FORCE_TUI` for automation/tests). README updated to match.
+- `oracle` with no arguments now prints the help/usage banner; launch the interactive UI explicitly via `oracle tui` (keeps `AURACALL_FORCE_TUI` for automation/tests). README updated to match.
 - TUI exits gracefully when the terminal drops raw mode (e.g., `setRawMode EIO` after pager issues) instead of looping the paging error; prints a hint to run `stty sane`.
 - Ctrl+C in the TUI menu now exits cleanly without printing the paging error loop.
 - Exit banner is printed once when leaving the TUI (prevents duplicate “Closing the book” messages after SIGINT or exit actions).
@@ -196,7 +235,7 @@
 - Browser click automation now uses a shared pointer/mouse event sequence for send/model/copy/stop buttons, improving reliability with React/ProseMirror UIs. Original fix by community contributor Mike Demarais in PR #30—thank you!
 
 ### Fixed
-- Browser config defaults from `~/.oracle/config.json` now apply when CLI flags are untouched (chromePath/profile/cookiePath), fixing “No Chrome installations found” when a custom browser path is configured.
+- Browser config defaults from `~/.auracall/config.json` now apply when CLI flags are untouched (chromePath/profile/cookiePath), fixing “No Chrome installations found” when a custom browser path is configured.
 - Browser engine now verifies each attachment shows up in the composer before sending (including remote/serve uploads), fixing cases where file selection succeeded but ChatGPT never received the files (e.g., WKWebView blank runs).
 
 ## 0.5.1 — 2025-12-03
@@ -205,7 +244,7 @@
 - Browser runs now auto-click the ChatGPT “Answer now” gate after sending, so workspace prompts continue without manual intervention.
 
 ### Changed
-- `oracle status` uses the same session table formatting as the TUI (status/model/mode/timestamp/chars/cost/slug) for consistent layout.
+- `auracall status` uses the same session table formatting as the TUI (status/model/mode/timestamp/chars/cost/slug) for consistent layout.
 - Browser mode inserts a 500 ms settle before submitting prompts and after clicking gates to avoid subscription/widget races.
 - OpenRouter paths route through the chat/completions API (Responses API avoided); live smokes use `z-ai/glm-4.6`, and the mixed run covers Grok fast path without skips.
 - Docs/guardrails: AGENTS explains sqlite/keytar rebuilds for Node 25 browser runs; changelog notes the browser cookie-sync guard.
@@ -216,7 +255,7 @@
 ## 0.5.0 — 2025-11-25
 
 ### Added
-- Browser sessions now persist Chrome reattach hints (port/host/target/url) and log them inline; `oracle session <id>` can reconnect to a live tab, harvest the assistant turn, and mark the run completed even if the original controller died. Includes a reconnection helper and regression tests for runtime hint capture and reattach.
+- Browser sessions now persist Chrome reattach hints (port/host/target/url) and log them inline; `auracall session <id>` can reconnect to a live tab, harvest the assistant turn, and mark the run completed even if the original controller died. Includes a reconnection helper and regression tests for runtime hint capture and reattach.
 - OpenRouter support: `OPENROUTER_API_KEY` auto-routes API runs (when provider keys are missing or the base URL points at OpenRouter), accepts arbitrary model ids (`minimax/minimax-m2`, `z-ai/glm-4.6`, etc.), mixes with built-in models in `--models`, passes attribution headers (`OPENROUTER_REFERER`/`OPENROUTER_TITLE`), and stores per-model logs with safe slugs.
 - `pnpm test:browser` runs a Chrome DevTools connectivity check plus headless browser smokes across GPT-5.1 / GPT-5.1-Pro / 5.1 Instant.
 
@@ -227,20 +266,20 @@
 - Dependency refresh: openai 6.9.1, clipboardy 5, Vitest 4.0.13 (+ coverage), Biome 2.3.7, puppeteer-core 24.31.0, devtools-protocol 0.0.1548823; pinned zod-to-json-schema to 3.24.1 to stay compatible with zod 3.x.
 
 ### Fixed
-- CLI/TUI now print the intro banner only once; forced TUI launches (`ORACLE_FORCE_TUI` or no args in a TTY) no longer show duplicate 🧿 header lines.
+- CLI/TUI now print the intro banner only once; forced TUI launches (`AURACALL_FORCE_TUI` or no args in a TTY) no longer show duplicate 🧿 header lines.
 - TUI session list cleans up separators, removing the `__disabled__ (Disabled)` placeholder and `(Disabled)` tag on the header row.
-- `oracle session --render` no longer drops answers when the model filter is empty or per-model logs are missing (common for browser runs); stored session output is rendered again.
+- `auracall session --render` no longer drops answers when the model filter is empty or per-model logs are missing (common for browser runs); stored session output is rendered again.
 - Browser uploads no longer time out in ChatGPT project workspaces: file input/send-button selectors are broader, upload completion falls back to attached files when buttons are missing, and we added tests to guard the new selectors.
 - Live tests now call out that `gpt-5.1` must be reached via api.openai.com; OpenRouter’s Responses API endpoint doesn’t expose `openai/gpt-5.1`, so runs will fail there with `model_not_found` until they add it.
-- Browser reattach flow survives controller loss: the controller PID is persisted with the Chrome port/URL so `oracle session <id>` can reconnect, harvest the assistant turn, and mark the run completed even if the original process died.
+- Browser reattach flow survives controller loss: the controller PID is persisted with the Chrome port/URL so `auracall session <id>` can reconnect, harvest the assistant turn, and mark the run completed even if the original process died.
 - Live multi-model smokes force first-party API bases and soft-skip HTML/transport errors (e.g., proxy 404 pages) so missing provider access doesn’t fail the suite.
 - Gemini live coverage confirmed with `gemini-2.5-flash-lite` after refreshing `GEMINI_API_KEY`; multi-model live now passes end-to-end when first-party keys are present.
 - Token usage formatter again emits two-decimal abbreviations for thousands (e.g., 4.25k) to match CLI output and tests.
 
 ### Added
-- `--browser-manual-login` skips cookie copy, reuses a persistent automation profile (`~/.oracle/browser-profile` by default), and waits for manual ChatGPT login—handy on Windows where app-bound cookies can’t be decrypted; works as an opt-in on macOS/Linux too.
+- `--browser-manual-login` skips cookie copy, reuses a persistent automation profile (`~/.auracall/browser-profile` by default), and waits for manual ChatGPT login—handy on Windows where app-bound cookies can’t be decrypted; works as an opt-in on macOS/Linux too.
 - Manual-login browser sessions can reuse an already-running automation Chrome when remote debugging is enabled; point Oracle at it via `--remote-chrome <host:port>` to avoid relaunching/locks.
-- `--browser-port` (alias `--browser-debug-port`, env `ORACLE_BROWSER_PORT`) pins the DevTools port so WSL/Windows users can open a single firewall rule; includes a lightweight `pnpm test:browser` DevTools reachability check.
+- `--browser-port` (alias `--browser-debug-port`, env `AURACALL_BROWSER_PORT`) pins the DevTools port so WSL/Windows users can open a single firewall rule; includes a lightweight `pnpm test:browser` DevTools reachability check.
 
 ### Changed
 - Windows cookie reader now accepts any `v**` AES-GCM prefix (v10/v11/v20) to stay forward compatible.
@@ -264,16 +303,16 @@
 - Per-model search tool selection so Grok can use `web_search` while OpenAI models keep `web_search_preview`.
 - Multi-model coverage now includes Grok in orchestrator tests.
 - Grok “thinking”/non-fast variant is not available via API yet; Oracle aliases `grok` to the fast reasoning model to match what xAI ships today.
-- PTY-driven CLI/TUI harness landed for e2e coverage (browser guard, TUI exit path); PTY suites are opt-in via `ORACLE_ENABLE_PTY_TESTS=1` and stub tokenizers to stay lightweight.
+- PTY-driven CLI/TUI harness landed for e2e coverage (browser guard, TUI exit path); PTY suites are opt-in via `AURACALL_ENABLE_PTY_TESTS=1` and stub tokenizers to stay lightweight.
 
 ### Fixed
-- MCP (global installs): keep the stdio transport alive until the client closes it so `oracle-mcp` doesn’t exit right after `connect()`; npm -g / host-spawned MCP clients now handshake successfully (tarball regression in 0.4.2).
+- MCP (global installs): keep the stdio transport alive until the client closes it so `auracall-mcp` doesn’t exit right after `connect()`; npm -g / host-spawned MCP clients now handshake successfully (tarball regression in 0.4.2).
 
 ## 0.4.2 — 2025-11-21
 
 ### Fixed
-- MCP: `npx @steipete/oracle oracle-mcp` now routes directly to the MCP server (even when npx defaults to the CLI binary) and keeps stdout JSON-only for Cursor/other MCP hosts.
-- Added the missing `@anthropic-ai/tokenizer` runtime dependency so `npx @steipete/oracle oracle-mcp` starts cleanly.
+- MCP: `npx @steipete/oracle auracall-mcp` now routes directly to the MCP server (even when npx defaults to the CLI binary) and keeps stdout JSON-only for Cursor/other MCP hosts.
+- Added the missing `@anthropic-ai/tokenizer` runtime dependency so `npx @steipete/oracle auracall-mcp` starts cleanly.
 
 ## 0.4.1 — 2025-11-21
 
@@ -283,7 +322,7 @@
 ## 0.4.0 — 2025-11-21
 
 ### Added
-- Remote Chrome + remote browser service: `oracle serve` launches Chrome with host/token defaults for cross-machine runs, requires the host profile to be signed in, and supports reusing an existing Chrome via `--remote-chrome <host:port>` (IPv6 with `[host]:port`), including remote attachment uploads and clearer validation errors.
+- Remote Chrome + remote browser service: `auracall serve` launches Chrome with host/token defaults for cross-machine runs, requires the host profile to be signed in, and supports reusing an existing Chrome via `--remote-chrome <host:port>` (IPv6 with `[host]:port`), including remote attachment uploads and clearer validation errors.
 - Linux browser support: Chrome/Chromium/Edge runs now work on Linux (including snap-installed Chromium) with cookie sync picking up the snap profile paths. See [docs/linux.md](docs/linux.md) for paths and display guidance.
 - Browser engine can target Chromium/Edge by pairing `--browser-chrome-path` with the new `--browser-cookie-path` (also configurable via `browser.chromePath` / `browser.chromeCookiePath`). See [docs/chromium-forks.md](docs/chromium-forks.md) for OS-specific paths and setup steps.
 - Markdown bundles render better in the CLI and ChatGPT: each attached file now appears as `### File: <path>` followed by a fenced code block (language inferred), across API bundles, browser bundles (including inline mode), and render/dry-run output; ANSI highlighting still applies on rich TTYs.
@@ -296,7 +335,7 @@
 
 ### Changed
 - Cookie sync covers Chrome, Chromium, Edge, Brave, and Vivaldi profiles; targets chatgpt.com, chat.openai.com, and atlas.openai.com. Windows browser automation is still partial—prefer API or clipboard fallback there.
-- Reject prompts shorter than 10 characters with a friendly hint for pro-tier models (`gpt-5.1-pro`) only (prevents accidental costly runs while leaving cheaper models unblocked). Override via ORACLE_MIN_PROMPT_CHARS for automated environments.
+- Reject prompts shorter than 10 characters with a friendly hint for pro-tier models (`gpt-5.1-pro`) only (prevents accidental costly runs while leaving cheaper models unblocked). Override via AURACALL_MIN_PROMPT_CHARS for automated environments.
 - Browser engine default timeout bumped from 15m (900s) to 20m (1200s) so long GPT-5.x Pro responses don’t get cut off; CLI docs/help text now reflect the new ceiling.
 - Duration flags such as `--browser-timeout`/`--browser-input-timeout` now accept chained units (`1h2m10s`, `3m10s`, etc.) plus `h`, `m`, `s`, or `ms` suffixes, matching the formats we already log.
 - GPT-5.1 Pro and GPT-5 Pro API runs now default to a 60-minute timeout (was 20m) and the “zombie” detector waits the same hour before marking sessions as `error`; CLI messaging/docs updated accordingly so a single “auto” limit covers both behaviors.
@@ -323,7 +362,7 @@
 - Configurable API timeout: `--timeout <seconds|auto>` (auto = 20m for most models, 60m for pro models such as gpt-5.1-pro as of 0.4.0). Enforced for streaming and background runs.
 - OpenAI-compatible base URL override: `--base-url` (or `apiBaseUrl` in config / `OPENAI_BASE_URL`) lets you target LiteLLM proxies, Azure gateways, and other compatible hosts.
 - Help text tip: best results come from 6–30 sentences plus key source files; very short prompts tend to be generic.
-- Browser inline cookies: `--browser-inline-cookies[(-file)]` (or env) accepts JSON/base64 payloads, auto-loads `~/.oracle/cookies.{json,base64}`, adds a cookie allowlist (`--browser-cookie-names`), and dry-run now reports whether cookies come from Chrome or inline sources.
+- Browser inline cookies: `--browser-inline-cookies[(-file)]` (or env) accepts JSON/base64 payloads, auto-loads `~/.auracall/cookies.{json,base64}`, adds a cookie allowlist (`--browser-cookie-names`), and dry-run now reports whether cookies come from Chrome or inline sources.
 - Inline runs now print a single completion line (removed duplicate “Finished” summary), keeping output concise.
 - Gemini runs stay on API (no browser detours), and the CLI logs the resolved model id alongside masked keys when it differs.
 - `--dry-run [summary|json|full]` is now the single preview flag; `--preview` remains as a hidden alias for compatibility.
@@ -338,13 +377,13 @@
 ## 0.2.0 — 2025-11-18
 
 ### Added
-- `oracle-mcp` stdio server (bin) with `consult` and `sessions` tools plus read-only session resources at `oracle-session://{id}/{metadata|log|request}`.
+- `auracall-mcp` stdio server (bin) with `consult` and `sessions` tools plus read-only session resources at `auracall-session://{id}/{metadata|log|request}`.
 - MCP logging notifications for consult streaming (info/debug with byte sizes); browser engine guardrails now check Chrome availability before a browser run starts.
 - Hidden root-level aliases `--message` (prompt) and `--include` (files) to mirror common agent calling conventions.
 - `--preview` now works with `--engine browser`, emitting the composed browser payload (token estimate, attachment list, optional JSON/full dumps) without launching Chrome or requiring an API key.
 - New `--browser-bundle-files` flag to opt into bundling all attachments into a single upload; bundling is still auto-applied when more than 10 files are provided.
 - Desktop session notifications (default on unless CI/SSH) with `--[no-]notify` and optional `--notify-sound`; completed runs announce session name, API cost, and character count via OS-native toasts.
-- Per-user JSON5 config at `~/.oracle/config.json` to set default engine/model, notification prefs (including sound/mute rules), browser defaults, heartbeat, file-reporting, background mode, and prompt suffixes. CLI/env still override config.
+- Per-user JSON5 config at `~/.auracall/config.json` to set default engine/model, notification prefs (including sound/mute rules), browser defaults, heartbeat, file-reporting, background mode, and prompt suffixes. CLI/env still override config.
 - Session lists now show headers plus a cost column for quick scanning.
 
 ### Changed
@@ -368,20 +407,20 @@
     "name": "oracle",
     "type": "stdio",
     "command": "npx",
-    "args": ["-y", "@steipete/oracle", "oracle-mcp"]
+    "args": ["-y", "@steipete/oracle", "auracall-mcp"]
   }
   ```
 - Claude Code (global/user scope):  
-  `claude mcp add --scope user --transport stdio oracle -- oracle-mcp`
+  `claude mcp add --scope user --transport stdio oracle -- auracall-mcp`
 - Project-scoped Claude: drop `.mcp.json` next to the repo root with
   ```json
   {
     "mcpServers": {
-      "oracle": { "type": "stdio", "command": "npx", "args": ["-y", "@steipete/oracle", "oracle-mcp"] }
+      "oracle": { "type": "stdio", "command": "npx", "args": ["-y", "@steipete/oracle", "auracall-mcp"] }
     }
   }
   ```
-- The MCP `consult` tool honors `~/.oracle/config.json` defaults (engine/model/search/prompt suffix/heartbeat/background/filesReport) unless the caller overrides them.
+- The MCP `consult` tool honors `~/.auracall/config.json` defaults (engine/model/search/prompt suffix/heartbeat/background/filesReport) unless the caller overrides them.
 
 ## 0.1.1 — 2025-11-20
 
@@ -393,25 +432,25 @@
 ## 0.1.0 — 2025-11-17
 
 Highlights
-- Markdown rendering for completed sessions (`oracle session|status <id> --render` / `--render-markdown`) with ANSI formatting in rich TTYs; falls back to raw when logs are huge or stdout isn’t a TTY.
-- New `--path` flag on `oracle session <id>` prints the stored session directory plus metadata/request/log files, erroring if anything is missing. Uses soft color in rich terminals for quick scanning.
+- Markdown rendering for completed sessions (`auracall session|status <id> --render` / `--render-markdown`) with ANSI formatting in rich TTYs; falls back to raw when logs are huge or stdout isn’t a TTY.
+- New `--path` flag on `auracall session <id>` prints the stored session directory plus metadata/request/log files, erroring if anything is missing. Uses soft color in rich terminals for quick scanning.
 
 Details
 ### Added
-- `oracle session <id> --path` now prints the on-disk session directory plus metadata/request/log files, exiting with an error when any expected file is missing instead of attaching.
+- `auracall session <id> --path` now prints the on-disk session directory plus metadata/request/log files, exiting with an error when any expected file is missing instead of attaching.
 - When run in a rich TTY, `--path` labels and paths are colorized for easier scanning.
 
 ### Improved
-- `oracle session|status <id> --render` (alias `--render-markdown`) pretty-prints completed session markdown to ANSI in rich TTYs, falls back to raw when non-TTY or oversized logs.
+- `auracall session|status <id> --render` (alias `--render-markdown`) pretty-prints completed session markdown to ANSI in rich TTYs, falls back to raw when non-TTY or oversized logs.
 ## 0.0.10 — 2025-11-17
 
 ### Added
-- Rich terminals that support OSC 9;4 (Ghostty 1.2+, WezTerm, Windows Terminal) now show an inline progress bar while Oracle waits for the OpenAI response; disable with `ORACLE_NO_OSC_PROGRESS=1`, force with `ORACLE_FORCE_OSC_PROGRESS=1`.
+- Rich terminals that support OSC 9;4 (Ghostty 1.2+, WezTerm, Windows Terminal) now show an inline progress bar while Oracle waits for the OpenAI response; disable with `AURACALL_NO_OSC_PROGRESS=1`, force with `AURACALL_FORCE_OSC_PROGRESS=1`.
 
 ## 0.0.9 — 2025-11-16
 
 ### Added
-- `oracle session|status <id> --render` (alias `--render-markdown`) pretty-prints completed session markdown to ANSI in rich TTYs, falls back to raw when non-TTY or oversized logs.
+- `auracall session|status <id> --render` (alias `--render-markdown`) pretty-prints completed session markdown to ANSI in rich TTYs, falls back to raw when non-TTY or oversized logs.
 - Hidden root-level `--session <id>` alias attaches directly to a stored session (for agents/automation).
 - README now recommends preferring API engine for reliability and longer uninterrupted runs when an API key is available.
 - Session rendering now uses Markdansi (micromark/mdast-based), removing markdown-it-terminal and eliminating HTML leakage/crashes during replays.
@@ -422,13 +461,13 @@ Details
 
 ### Changed
 - Help tips call out that Oracle is one-shot and does not remember prior runs, so every query should include full context.
-- `oracle session <id>` now logs a brief notice when extra root-only flags are present (e.g., `--render-markdown`) to make it clear those options are ignored during reattach.
+- `auracall session <id>` now logs a brief notice when extra root-only flags are present (e.g., `--render-markdown`) to make it clear those options are ignored during reattach.
 
 ## 0.0.7 — 2025-11-16
 
 ### Changed
 - Browser-mode thinking monitor now emits a text-only progress bar instead of the "Pro thinking" string.
-- `oracle session <id>` trims preamble/log noise and prints from the first `Answer:` line once a session is finished.
+- `auracall session <id>` trims preamble/log noise and prints from the first `Answer:` line once a session is finished.
 - Help tips now stress sending whole directories and richer project briefings for better answers.
 
 ## 0.0.6 — 2025-11-15
@@ -456,7 +495,7 @@ Details
 - Positional prompt shorthand: `oracle "prompt here"` (and `npx -y @steipete/oracle "..."`) now maps the positional argument to `--prompt` automatically.
 
 ### Fixed
-- `oracle status/session` missing-prompt guard now coexists with the positional prompt path and still shows the cleanup tip when no sessions exist.
+- `auracall status/session` missing-prompt guard now coexists with the positional prompt path and still shows the cleanup tip when no sessions exist.
 
 ## 0.0.1 — 2025-11-15
 
@@ -478,4 +517,4 @@ Details
 - CLI engine resolution is centralized to keep legacy flags, model inference, and environment defaults consistent.
 
 ### Fixed
-- `oracle status` and `oracle session` no longer demand `--prompt` when used directly.
+- `auracall status` and `auracall session` no longer demand `--prompt` when used directly.

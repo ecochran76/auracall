@@ -5,7 +5,7 @@ import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import { createGeminiWebExecutor } from '../../src/gemini-web/executor.js';
 import { getCookies } from '@steipete/sweet-cookie';
 
-const live = process.env.ORACLE_LIVE_TEST === '1';
+const live = process.env.AURACALL_LIVE_TEST === '1';
 
 async function assertHasGeminiChromeCookies(): Promise<boolean> {
   const { cookies } = await getCookies({

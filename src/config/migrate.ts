@@ -135,10 +135,10 @@ export function normalizeConfigV1toV2(
 
   const profiles = isRecord(normalized.profiles) ? normalized.profiles : null;
   if (profiles) {
-    const oracleProfiles = isRecord(normalized.oracleProfiles) ? normalized.oracleProfiles : {};
+    const auracallProfiles = isRecord(normalized.auracallProfiles) ? normalized.auracallProfiles : {};
     for (const [name, profileValue] of Object.entries(profiles)) {
       if (!isRecord(profileValue)) continue;
-      const legacyProfile = isRecord(oracleProfiles[name]) ? oracleProfiles[name] : {};
+      const legacyProfile = isRecord(auracallProfiles[name]) ? auracallProfiles[name] : {};
 
       if (legacyProfile.engine === undefined && profileValue.engine !== undefined) {
         legacyProfile.engine = profileValue.engine;
@@ -230,9 +230,9 @@ export function normalizeConfigV1toV2(
         }
       }
 
-      oracleProfiles[name] = legacyProfile;
+      auracallProfiles[name] = legacyProfile;
     }
-    normalized.oracleProfiles = oracleProfiles;
+    normalized.auracallProfiles = auracallProfiles;
   }
 
   applyConfigAliases(normalized, options.aliasRules ?? DEFAULT_ALIAS_RULES);
@@ -274,12 +274,12 @@ export function materializeConfigV2(
       result.llmDefaults = llmDefaults;
     }
   }
-  if (!isRecord(result.profiles) && isRecord(result.oracleProfiles)) {
-    result.profiles = result.oracleProfiles;
+  if (!isRecord(result.profiles) && isRecord(result.auracallProfiles)) {
+    result.profiles = result.auracallProfiles;
   }
 
   if (options.stripLegacy) {
-    delete result.oracleProfiles;
+    delete result.auracallProfiles;
     delete result.browser;
   }
 

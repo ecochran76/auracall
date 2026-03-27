@@ -6,15 +6,15 @@ import { describe, test, expect, beforeAll, afterAll } from 'vitest';
 
 import type { RunOracleOptions } from '../../src/oracle.ts';
 import type { SessionMetadata } from '../../src/sessionManager.ts';
-import { setOracleHomeDirOverrideForTest } from '../../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 
 const baseUrl = process.env.OPENAI_BASE_URL ?? '';
 const isOpenRouterBase = baseUrl.includes('openrouter');
-const ENABLE_LIVE = process.env.ORACLE_LIVE_TEST === '1' && process.env.OPENAI_API_KEY && !isOpenRouterBase;
+const ENABLE_LIVE = process.env.AURACALL_LIVE_TEST === '1' && process.env.OPENAI_API_KEY && !isOpenRouterBase;
 
 if (!ENABLE_LIVE) {
   describe.skip('write-output live e2e', () => {
-    test('Set ORACLE_LIVE_TEST=1 with a real OPENAI_API_KEY (api.openai.com) to run this suite.', () => {});
+    test('Set AURACALL_LIVE_TEST=1 with a real OPENAI_API_KEY (api.openai.com) to run this suite.', () => {});
   });
 } else {
   describe('write-output live e2e', () => {
@@ -27,14 +27,14 @@ if (!ENABLE_LIVE) {
 
     beforeAll(async () => {
       tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-live-write-'));
-      setOracleHomeDirOverrideForTest(tmpHome);
+      setAuracallHomeDirOverrideForTest(tmpHome);
       ({ performSessionRun } = await import('../../src/cli/sessionRunner.ts'));
       ({ sessionStore } = await import('../../src/sessionStore.ts'));
       ({ getCliVersion } = await import('../../src/version.ts'));
     });
 
     afterAll(async () => {
-      setOracleHomeDirOverrideForTest(null);
+      setAuracallHomeDirOverrideForTest(null);
       await fs.rm(tmpHome, { recursive: true, force: true }).catch(() => {});
     });
 

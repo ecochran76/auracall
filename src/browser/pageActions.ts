@@ -21,5 +21,6 @@ export {
   buildAssistantExtractorForTest,
   buildConversationDebugExpressionForTest,
   buildMarkdownFallbackExtractorForTest,
+  getAssistantCompletionWatchdogThresholdsForTest,
   buildCopyExpressionForTest,
 } from './actions/assistantResponse.js';

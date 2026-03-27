@@ -8,7 +8,7 @@ description: Run the Oracle CLI for ChatGPT browser automation, including config
 ## Quick start
 - Set config values, then run ChatGPT via the browser engine.
 
-Config keys (in `~/.oracle/config.json`):
+Config keys (in `~/.auracall/config.json`):
 - `browser.target: "chatgpt"`
 - `browser.chatgptUrl: "https://chatgpt.com/g/.../project"` (optional)
 - `browser.chromePath: "C:/Program Files/.../brave.exe"`
@@ -25,16 +25,16 @@ oracle --engine browser --model gpt-5.2 -p "Summarize this"
 ## WSL (Linux Chrome recommended)
 - Use a WSL-installed Chrome and force DevTools to localhost.
 
-Config keys (in `~/.oracle/config.json`):
+Config keys (in `~/.auracall/config.json`):
 - `browser.chromePath: "/usr/bin/google-chrome"`
 - `browser.chromeCookiePath: "/home/<you>/.config/google-chrome/Default/Cookies"`
 - `browser.manualLogin: true`
-- `browser.manualLoginProfileDir: "/home/<you>/.oracle/browser-profile"`
+- `browser.manualLoginProfileDir: "/home/<you>/.auracall/browser-profile"`
 
 Run examples:
 ```bash
-ORACLE_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle login --target chatgpt --browser-keep-browser
-ORACLE_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --engine browser -p "Say hello from Chrome (WSL)"
+AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle login --target chatgpt --browser-keep-browser
+AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --engine browser -p "Say hello from Chrome (WSL)"
 ```
 
 ## Login flow
@@ -47,7 +47,7 @@ oracle login --target chatgpt
 ## WSL note
 - If `browser.chromePath` points to a Windows Brave/Chrome path, WSL launches the Windows browser profile.
 - If you point `browser.chromePath` at a Linux browser in WSL, it will use Linux profiles instead.
-- For WSL Chrome automation, set `ORACLE_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1` so the CLI connects to the local DevTools port.
+- For WSL Chrome automation, set `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1` so the CLI connects to the local DevTools port.
 
 ## Troubleshooting
 - If ChatGPT is not signed in, re-run `oracle login --target chatgpt` and sign in.

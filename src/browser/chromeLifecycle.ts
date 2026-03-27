@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { getOracleHomeDir } from '../oracleHome.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   launchChrome as launchChromeCore,
   registerTerminationHooks,
@@ -18,9 +18,17 @@ export async function launchChrome(
   config: ResolvedBrowserConfig,
   userDataDir: string,
   logger: BrowserLogger,
+  options: {
+    onWindowsRetry?: (context: { failedPort: number; nextPort: number; attempt: number }) => Promise<void>;
+    ownedPids?: ReadonlySet<number>;
+    ownedPorts?: ReadonlySet<number>;
+  } = {},
 ) {
   return launchChromeCore(config, userDataDir, logger, {
-    registryPath: path.join(getOracleHomeDir(), 'browser-state.json'),
+    registryPath: path.join(getAuracallHomeDir(), 'browser-state.json'),
+    onWindowsRetry: options.onWindowsRetry,
+    ownedPids: options.ownedPids,
+    ownedPorts: options.ownedPorts,
   });
 }
 

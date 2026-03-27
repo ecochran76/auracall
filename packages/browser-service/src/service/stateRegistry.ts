@@ -94,7 +94,7 @@ export async function findActiveInstance(
   }
   if (!instance) return null;
 
-  const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port);
+  const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port, undefined, instance.host);
   if (alive) {
     return instance;
   }
@@ -118,7 +118,7 @@ export async function pruneRegistry(options: RegistryOptions): Promise<void> {
   const registry = await loadRegistry(options);
   let changed = false;
   for (const [key, instance] of Object.entries(registry.instances)) {
-    const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port);
+    const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port, undefined, instance.host);
     if (!alive) {
       delete registry.instances[key];
       changed = true;

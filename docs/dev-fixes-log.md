@@ -20,6 +20,891 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 ## Entries
 
+- Date: 2026-03-27
+- Area: Browser/tab stockpile cleanup policy configurability
+- Symptom: After centralizing tab reuse and conservative cleanup in browser-service, the behavior was still effectively hardcoded for every Aura-Call profile: keep 3 matching-family tabs, keep 1 blank tab, and always collapse disposable extra windows. That was good as a default but not good enough once multiple long-lived profiles were expected to coexist with different browsing habits.
+- Root cause:
+  - The cleanup limits lived only inside `openOrReuseChromeTarget(...)`.
+  - Aura-Call’s config/schema/profile-merge path did not have fields for the cleanup policy, so profile-specific overrides were impossible even though the runtime behavior was already centralized.
+  - Some runtime call sites (remote attach, manual login, Grok fallback opens) would have ignored profile-level overrides even if the config layer knew about them.
+- Fix:
+  - Added profile-scoped browser config fields:
+    - `browser.serviceTabLimit`
+    - `browser.blankTabLimit`
+    - `browser.collapseDisposableWindows`
+  - Threaded them through the browser-service base types, Aura-Call schema/profile merge path, resolved browser config defaults/validation, remote attach, manual login, and Grok fallback opens.
+  - Kept the existing cleanup behavior as the default so current profiles do not change unless they opt in.
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/schema/resolver.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser/manualLogin.test.ts tests/browser/browserLoginCore.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Follow-ups:
+  - If users actually need one-off experimentation, add explicit CLI flags later. For now these are intentionally profile/config-level knobs.
+
+- Date: 2026-03-27
+- Area: Browser/Grok `projects create` verification and backend validation on WSL Chrome
+- Symptom: `auracall projects create ... --target grok` could still look broken even after the sidebar/modal drift fixes. Some live runs printed a generic “could not be verified” failure, and timestamp-style disposable project names made it look like project creation itself was still unreliable.
+- Root cause:
+  - The create flow was still selecting a generic `grok.com` tab in a browser with many old Grok project tabs open, so create steps could start from the wrong page unless `/project` was targeted explicitly.
+  - The CLI still printed success too early when the provider-backed create path failed to resolve a new `/project/<id>` URL.
+  - The remaining live “failure” turned out to be a real Grok backend validation rule: names like `AuraCall Create Probe 20260327-1033` are rejected by `POST /rest/workspaces` as phone-number-like input (`WKE=form-invalid:contains-phone-number:name`).
+- Fix:
+  - Routed Grok create-modal entry and create-step helpers through the `/project` index instead of a broad `https://grok.com/` match.
+  - Tightened the CLI contract so provider-backed `projects create` now throws when Aura-Call cannot prove a newly created project page instead of printing a false `Created project ...` line.
+  - Added `/rest/workspaces` response capture in `src/browser/providers/grokAdapter.ts` so non-2xx create responses surface the real backend validation error.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - Negative live case: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects create 'AuraCall Create Probe 20260327-1033' --target grok`
+    - now fails with `Create project failed: name: Value contains phone number. [WKE=form-invalid:contains-phone-number:name]`
+  - Positive live case: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects create 'AuraCall Cedar Atlas' --target grok`
+    - listed successfully in `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects --target grok`
+    - removed successfully with `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects remove a3418590-843c-4edb-8976-e67f91667f9b --target grok`
+- Follow-ups:
+  - Avoid timestamp/phone-number-like names in live Grok create smokes.
+  - Grok still leaves duplicate tabs around, but after the exact `/project` targeting changes I could not reproduce the old stale-name list regression in a fresh clone/rename/remove cycle. The next live follow-up should move to conversation CRUD instead of more project-list deduping.
+
+- Date: 2026-03-27
+- Area: Browser/Grok project CRUD on WSL Chrome
+- Symptom: Live Grok project CRUD against the authenticated WSL Chrome profile broke repeatedly on current Grok UI drift: project create failed with `Main sidebar did not open`, upload completion timed out even when the file row showed `50 B`, instructions get/set could not find the old `Edit instructions` affordance, and project delete still tried to reopen the main chat sidebar before using the project-header menu.
+- Root cause:
+  - Aura-Call was attaching to an existing Grok tab but not bringing it to the front before sidebar-dependent interactions. On a hidden tab, Grok's layout/click state diverged enough that sidebar toggles were effectively no-ops.
+  - Grok no longer relies on the older hidden create action inside the `Projects` row; the current UI exposes a direct `New Project` row in the sidebar.
+  - Upload completion checks were using naive substring matching for `0 B`, so `50 B` falsely matched as a zero-byte file.
+  - The project page no longer exposes an `Edit instructions` button in the old place; the live editor opens from a clickable `Instructions` card in the side panel.
+  - Project remove was still carrying an old assumption that the main chat sidebar had to be reopened on a project page before using the project-header menu.
+- Fix:
+  - Added `ensureGrokTabVisible(...)` in `src/browser/providers/grokAdapter.ts` and invoked it before main-sidebar, generic sidebar, and project-page interactions so live CRUD runs operate on a visible Grok tab.
+  - Updated create-project modal opening to prefer the direct `New Project` row and only fall back to the older hover/reveal path if needed.
+  - Tightened upload completion checks to use real zero-byte regex matching instead of `includes('0 b')`, so `50 B` no longer trips the zero-byte guard.
+  - Updated project instructions opening to click the visible `Instructions` card when the old edit button is absent.
+  - Simplified project sidebar and project-menu opening to use the current visible buttons (`Collapse side panel`, `Expand side panel`, `Open menu`) instead of stale root-scoped heuristics.
+  - Removed the unnecessary `ensureMainSidebarOpen(...)` dependency from project remove confirmation on project pages.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - Live Grok project CRUD on WSL Chrome:
+    - `projects clone`
+    - `projects rename`
+    - `projects instructions get`
+    - `projects instructions set --text ...`
+    - `projects files list/add/list/remove/list`
+    - `projects remove`
+- Follow-ups:
+  - `projects create` is no longer blocked by the original sidebar/upload bugs, but it still needs a stricter end-to-end success proof. In the live pass, disposable project CRUD continued on a cloned project because create/list/read still show drift.
+  - Project list/selection still need a better strategy when Grok leaves multiple tabs open for the same project id and one tab has stale title/sidebar state.
+
+- Date: 2026-03-27
+- Area: Browser/Wizard profile naming on WSL
+- Symptom: After switching the preferred WSL runtime back to the old known-good managed profile, `auracall doctor --profile wsl-chrome --local-only` still resolved `~/.auracall/browser-profiles/wsl-chrome/grok` instead of the live `~/.auracall/browser-profiles/default/grok` store, so the CLI reported an uninitialized synthetic profile even though the real WSL Chrome profile was healthy and signed in.
+- Root cause:
+  - This was not a generic resolver merge bug. The merged config really did carry `manualLoginProfileDir: ~/.auracall/browser-profiles/default/grok`.
+  - `resolveManagedProfileDir(...)` intentionally ignores a configured managed-profile dir under the same managed root when its `<auracallProfile>/<service>` segments do not match the selected Aura-Call profile name. That guard exists to stop stale inherited `browser.manualLoginProfileDir` values from silently pointing one profile at another profile's managed store.
+  - We had accidentally made the primary WSL config profile name `wsl-chrome` while still pointing it at the old `default/grok` managed store, so the safety guard correctly treated that as drift.
+- Fix:
+  - Rebased the primary WSL setup back onto `profiles.default` / `auracallProfile: "default"` in `~/.auracall/config.json`, keeping the long-lived managed profile at `~/.auracall/browser-profiles/default/grok`.
+  - Preserved Windows as a separate named profile (`windows-chrome-test`) instead of trying to make both runtimes share one managed-profile namespace.
+  - Updated `src/cli/browserWizard.ts` so WSL Chrome now suggests `default` as the profile name on WSL, matching the managed-profile layout we actually want users to keep.
+- Verification:
+  - `pnpm vitest run tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only --json`
+  - `pnpm tsx bin/auracall.ts --profile windows-chrome-test doctor --target grok --local-only --json`
+  - Verified the default WSL report now resolves `/home/ecochran76/.auracall/browser-profiles/default/grok` and shows the managed registry/account state instead of a synthetic `wsl-chrome/grok` path.
+- Follow-ups:
+  - Keep the WSL-first docs and wizard copy aligned with this rule so we do not recreate the same cross-profile mismatch during onboarding.
+  - If we ever want one named Aura-Call profile to intentionally point at another managed-profile subtree, that needs an explicit opt-in concept instead of weakening the current drift guard.
+
+- Date: 2026-03-26
+- Area: Browser/Windows DevTools endpoint model
+- Symptom: The product path for WSL -> Windows Chrome had already moved to auto-discovered DevTools endpoints, but parts of the code and docs still described browser automation as if a single fixed `debugPort` were the authoritative connection target. That kept the fixed-port/firewall mental model alive even after the working path no longer depended on it.
+- Root cause:
+  - The new Windows behavior (`--remote-debugging-port=0` + `DevToolsActivePort` + `windows-loopback`) was proven in runtime code first, but the type/config surface still treated fixed ports as the default shape.
+  - `discoverWindowsChromeDevToolsPort(...)` also kept older candidate ports around without explicitly prioritizing the current recorded `DevToolsActivePort`, which made the recovery contract less obvious than it should have been.
+  - User docs still described `--browser-port` as the main Windows helper and kept firewall/`portproxy` guidance too close to the happy path.
+- Fix:
+  - Added `debugPortStrategy` (`fixed` | `auto`) to the browser-service/browser/session config surface and threaded it through config resolution, login/manual-login flows, runtime launch, and port resolution.
+  - On WSL when the configured Chrome path points at Windows Chrome, Aura-Call now defaults that strategy to `auto`; explicit `--browser-port` / `browser.debugPort` continues to imply `fixed`.
+  - Updated `discoverWindowsChromeDevToolsPort(...)` to prioritize the current recorded `DevToolsActivePort` before stale requested/advertised ports.
+  - Rewrote the README/browser/testing/windows/config docs so the supported Windows path is now documented as managed profile + auto port + discovered endpoint + relay, with fixed-port/firewall notes demoted to advanced manual direct-CDP debugging.
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/cli/browserConfig.test.ts tests/schema/resolver.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser-service/processCheck.test.ts tests/browser-service/windowsChromeDiscovery.test.ts tests/browser/browserLoginCore.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - If we later expose a user-facing CLI flag for the strategy, it should be positioned as an advanced override, not a normal setup step.
+  - Continue auditing reporting surfaces so they describe the actual discovered endpoint as authoritative instead of treating `debugPort` as if it always reflected the live connection.
+
+- Date: 2026-03-26
+- Area: Browser profile doctor / Chrome-account persistence
+- Symptom: The only reliable onboarding/auth check was provider-specific live identity probing, which forced repeated Grok logins even when the user mainly needed to know whether the managed Chrome profile still carried the browser’s signed-in Google account.
+- Root cause: `auracall doctor --local-only` only inspected managed profile paths/cookies/registry state; it never read Chromium account metadata. A first pass using only `Local State` still produced false negatives on a live Windows-managed profile because Chrome had real `account_info` in `Default/Preferences` while `Local State` still had blank `gaia_*` / `user_name` fields.
+- Fix: Added Chrome-level Google-account inspection in `src/browser/profileDoctor.ts` by parsing both the managed profile `Local State` (`profile.info_cache[profileName]` + `signin.active_accounts`) and `Default/Preferences` (`account_info`, `google.services.last_gaia_id`, `signin.explicit_browser_signin`). Reports now classify the managed profile as `signed-in`, `signed-out`, or `inconclusive` (copied active-account markers without a primary account identity).
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only --json`
+  - `pnpm tsx bin/auracall.ts --profile windows-chrome-test doctor --target grok --local-only --json`
+
+- Date: 2026-03-26
+- Area: Grok auth verification + explicit Windows managed-profile preservation
+- Symptom: Aura-Call could still treat Grok as “logged in” when guest chat was available, and integrated Windows launch retries could wipe an explicitly selected managed Windows profile if DevTools did not appear on the first requested port. That made first-time Windows Chrome validation misleading and could clobber a user-managed login session during verification.
+- Root cause:
+  - `ensureGrokLoggedIn(...)` only relied on negative signals (`loginUrlHints`, not-found copy, and missing early CTAs). Guest-capable Grok pages could still satisfy that check before the real `Sign in` / `Sign up` UI surfaced.
+  - The Windows retry callback in `src/browser/index.ts` treated all managed profiles as disposable bootstrap targets and force-reseeded them on retry, even when the profile path had been explicitly selected for persistent reuse.
+- Fix:
+  - Added `src/browser/providers/grokIdentity.ts` and moved Grok auth probing to a positive-signal contract: visible guest CTAs count as guest state, and authenticated runs now require a real parsed identity before `ensureGrokLoggedIn(...)` passes.
+  - Hardened the Grok identity helpers against undefined CDP eval responses and updated the focused Grok auth tests.
+  - Changed the Windows retry policy so explicit managed profile paths are preserved across DevTools port retries instead of being deleted/reseeded.
+  - Updated local config to use Windows Chrome defaults again and pinned Grok’s managed profile to `profiles.default.services.grok.manualLoginProfileDir = "/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/windows-default-import-4/grok"`, with the Windows Aura-Call profile root as the default managed root.
+- Verification:
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grokIdentity.test.ts tests/browser/profileStore.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser-service/processCheck.test.ts`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only --json`
+  - Direct Windows process match for the pinned profile:
+    - `findChromeProcessUsingUserDataDir('/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/windows-default-import-4/grok')`
+    - returned `pid 203144`, `port 45910`
+  - Safe remote attach against that exact profile on `windows-loopback:45910` now blocks on verified Grok auth and reported `visible Sign in/Sign up controls still present`, which is the correct behavior for a guest-only session.
+- Follow-ups:
+  - The exact pinned Windows-managed Grok profile is now persistent in config, but I could not honestly confirm a signed-in Grok identity on it after the retry-policy fix. The last safe remote attach still saw guest CTAs.
+  - Doctor/runtime registration still has a split-brain issue when a live `windows-loopback` session is attached through the remote path: the active port can be credited to the old WSL profile path instead of the Windows-managed path. That should be fixed separately so `auracall doctor` can probe the live Windows-managed profile without manual registry repair.
+
+- Date: 2026-03-26
+- Area: Windows Chrome Default-profile bootstrap + crash/restore modal handling
+- Symptom: Fresh Windows-managed profiles seeded from a live Windows Chrome Default profile could open with Chrome’s “restore pages / didn’t shut down correctly” UI, destabilize the imported browser session, and fail follow-up auth inspection. Separate Grok identity probes against `windows-loopback:<port>` also failed early with `getaddrinfo EAI_AGAIN windows-loopback`.
+- Root cause:
+  - Managed-profile bootstrap preserved auth-bearing Chromium state, but it did not scrub copied crash/session markers (`profile.exit_type`, `exited_cleanly`, `Sessions`, `Current Session`, `Last Tabs`, etc.).
+  - Live Windows Chromium files such as `Network/Cookies` can be locked when the source profile is open; plain `copyFile(...)`/robocopy is not enough.
+  - Grok’s provider attach path still handed the literal `windows-loopback` host directly to CDP in some target-attach branches instead of routing through the browser-service endpoint resolver.
+- Fix:
+  - Added a Windows shared-read file-copy fallback in `src/browser/profileStore.ts` so WSL bootstrap can copy locked Chromium files through Windows PowerShell when plain file copy fails.
+  - Sanitized copied managed profiles for automation by pruning volatile session artifacts and rewriting `Preferences` / `Local State` to mark clean exit state.
+  - Added `--hide-crash-restore-bubble` to browser-service Chrome launch flags.
+  - Routed Grok provider target attaches through `connectToChromeTarget(...)`, which resolves `windows-loopback` via the browser-service relay before opening the target.
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser-service/chromeLifecycle.test.ts`
+  - `pnpm vitest run tests/browser/grokIdentity.test.ts tests/browser/profileStore.test.ts`
+  - `pnpm run check`
+  - Fresh integrated Windows Grok run with a new managed profile:
+    - `AURACALL_WSL_CHROME=windows AURACALL_BROWSER_PROFILE_DIR='/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/windows-default-import-4/grok' pnpm tsx bin/auracall.ts --engine browser --browser-target grok --browser-port 45891 --browser-keep-browser ... --wait --verbose --force`
+    - completed successfully and left Chrome running on `45891`
+  - Remote identity probe against that live session no longer failed with DNS resolution and returned a concrete result (`identity: null`).
+- Follow-ups:
+  - A stable imported Windows-managed profile still came up guest-only on Grok in the live proof. The live page showed `Sign in` / `Sign up`, so bootstrap/import stability is improved, but first-run Windows Chrome bootstrap still does not guarantee Grok auth on this machine.
+  - `ensureGrokLoggedIn(...)` needs a stronger positive-signal check for setup/doctor flows; absence of an early CTA is not enough.
+
+- Date: 2026-03-26
+- Area: Integrated WSL -> Windows Chrome cleanup after successful Grok runs
+- Symptom: Integrated WSL -> Windows Chrome launches were working, but successful Grok runs could still leave the managed Windows Chrome process alive afterward. The logs showed `Requested Chrome shutdown via DevTools.` immediately followed by `Skipping shutdown of reused Chrome instance.`
+- Root cause:
+  - The shutdown bug was not just Windows PID churn. `runBrowserMode(...)` was launching local Chrome on the generic path before delegating to `runGrokBrowserMode(...)`.
+  - The Grok-specific path then launched/attached again against the same managed Windows profile, which looked like a reused/adopted instance and therefore lost kill ownership.
+  - Separately, Windows Chrome can pivot from the original launcher PID to another browser PID while keeping the same DevTools port, so “current-run ownership” could not rely on PID alone during re-adoption.
+- Fix:
+  - Routed local Grok runs directly into `runGrokBrowserMode(...)` before the generic local Chrome launch path in `src/browser/index.ts`, so Grok no longer double-launches/reattaches through two separate runners.
+  - Updated `packages/browser-service/src/chromeLifecycle.ts` so current-run ownership survives re-adoption by either PID or DevTools port, and kill-capable adopted handles keep shutdown authority instead of degrading to `Skipping shutdown of reused Chrome instance.`
+  - Added focused ownership regressions in `tests/browser-service/chromeLifecycleOwnership.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser-service/chromeLifecycleOwnership.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser-service/processCheck.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts tests/browser/profileStore.test.ts`
+  - `pnpm run check`
+  - Live integrated Windows Chrome proof with a fresh managed profile:
+    - `AURACALL_WSL_CHROME=windows ... --prompt "Reply exactly with: windows cleanup proof 3" --wait --verbose --force`
+    - returned `windows cleanup proof 3`
+    - logged a single launch path (no second generic prelaunch/re-adopt cycle)
+    - Windows process probe for `windows-cleanup-proof-3` returned `[]`
+- Follow-ups:
+  - Consider one more unit regression that asserts local Grok runs only launch once from `runBrowserMode(...)`.
+  - Surface the effective elevated Windows debug port more clearly in the CLI when a low requested port is auto-raised into `45891+`.
+
+- Date: 2026-03-26
+- Area: WSL Windows-profile discovery and path normalization in browser-service
+- Symptom: WSL users still had to reason about three different path forms for the same Chromium profile store (`/mnt/c/...`, `C:\...`, and `\\wsl.localhost\...`), and some paths were normalized too late. In particular, explicit `manualLoginProfileDir` / bootstrap cookie paths could be `path.resolve(...)`'d before they were translated out of UNC or Windows-drive form, and Windows-hosted Chrome/Brave profile discovery still tended to default to the first Windows profile tree instead of the browser family the user actually selected.
+- Root cause:
+  - WSL/Windows path conversion logic was duplicated in `src/browser/config.ts`, `packages/browser-service/src/chromeLifecycle.ts`, `packages/browser-service/src/loginHelpers.ts`, and `packages/browser-service/src/processCheck.ts`, with slightly different rules in each place.
+  - Managed-profile path handling in `src/browser/profileStore.ts` trusted `path.resolve(...)` too early, which turns `\\wsl.localhost\...` into a bogus local POSIX path when called from WSL before normalization.
+  - Browser profile discovery knew about Windows Chrome/Brave locations in general, but it did not prioritize the matching browser family from the configured executable hint, so a Windows Brave run could still discover Chrome state first.
+- Fix:
+  - Added a shared `packages/browser-service/src/platformPaths.ts` helper layer for WSL detection, Windows/WSL path translation, comparable-path normalization, Chromium family detection, and Windows `LocalAppData` inference.
+  - Routed browser config, managed-profile root/directory resolution, cookie-source inference, process matching, and Chrome launch through the shared translator instead of keeping separate ad hoc conversions.
+  - Updated `packages/browser-service/src/service/profileDiscovery.ts` to accept browser/user-data hints, prioritize the matching browser family (`chrome` vs `brave` vs others), and honor direct `AURACALL_WINDOWS_LOCALAPPDATA` / `AURACALL_WINDOWS_USERS_ROOT` overrides when needed.
+- Verification:
+  - Focused tests:
+    - `pnpm vitest run tests/browser-service/platformPaths.test.ts tests/browser-service/profileDiscovery.test.ts tests/browser-service/processCheck.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts tests/browser/profileStore.test.ts`
+    - `pnpm run check`
+  - Added regressions for:
+    - WSL UNC -> Linux managed-profile normalization in `tests/browser/config.test.ts`
+    - Windows drive-path managed-profile-root inference in `tests/browser/config.test.ts`
+    - browser-family-aware Windows profile discovery in `tests/browser-service/profileDiscovery.test.ts`
+    - shared WSL/Windows path translation in `tests/browser-service/platformPaths.test.ts`
+- Follow-ups:
+  - The next likely UX improvement is surfacing the auto-discovered Windows browser/profile source more explicitly in `doctor` / `setup`, so users can see when Aura-Call chose Windows Chrome vs Windows Brave without reading verbose logs.
+
+- Date: 2026-03-25
+- Area: Integrated WSL -> Windows Chrome launch with seeded Aura-Call managed profiles
+- Symptom: Aura-Call could already reuse Windows Chrome through `--remote-chrome windows-loopback:<port>`, but the fully integrated WSL -> Windows launch path still failed for first-run managed profiles seeded from the Windows Chrome default profile. The run launched real Windows Chrome processes, but DevTools never came up and the browser automation bailed after trying `45877-45884`.
+- Root cause:
+  - WSL Windows-profile process detection was wrong. `findChromePidUsingUserDataDir(...)` returned the first `chrome.exe` PID from `tasklist.exe`, not the Chrome instance for the requested managed profile, so Aura-Call could not reliably distinguish “my managed profile is already running” from “some Chrome exists on Windows.”
+  - The launch path also spent a long time proving each bad port was bad through the relay, even when Windows itself was not serving DevTools on that port.
+  - Most importantly, the seeded managed Windows Chrome profile on this machine simply did not expose DevTools on the low pinned band (`45877-45884`). The working ports for manual seeded/empty probes were higher (`45891+`).
+- Fix:
+  - Replaced the WSL Windows-profile PID shortcut with exact Windows `chrome.exe` command-line inspection in `packages/browser-service/src/processCheck.ts`, including remote-debugging-port extraction from the matched process.
+  - Updated `packages/browser-service/src/chromeLifecycle.ts` to reuse the exact matched port when a managed Windows profile is already alive, and to probe Windows-local `127.0.0.1:<port>/json/version` before waiting on the WSL relay.
+  - Added a Windows WSL debug-port floor (`45891`) for integrated launches so Aura-Call no longer starts inside the known-dead low band when the user/config still pins a low port such as `45877`.
+- Verification:
+  - Focused tests:
+    - `pnpm vitest run tests/browser-service/processCheck.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser-service/portSelection.test.ts tests/browser-service/profileState.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts tests/browser/profileStore.test.ts`
+    - `pnpm run check`
+  - Direct Windows sanity probes:
+    - empty Windows profile + `--remote-debugging-port=45891` answered `http://127.0.0.1:45891/json/version`
+    - selectively seeded Aura-Call managed profile + `--remote-debugging-port=45892` also answered `http://127.0.0.1:45892/json/version`
+  - End-to-end live smoke from WSL with a fresh Windows Aura-Call profile:
+    - `AURACALL_WSL_CHROME=windows AURACALL_BROWSER_PROFILE_DIR='/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/windows-proof-8/grok' pnpm tsx bin/auracall.ts --engine browser --browser-target grok --browser-port 45877 --browser-chrome-path '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe' --browser-cookie-path '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies' --browser-bootstrap-cookie-path '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies' --model grok --prompt 'Reply exactly with: windows chrome just works' --wait --verbose --force`
+    - run elevated the requested port to `45891`, attached successfully, passed Grok login/mode selection, and returned `windows chrome just works`
+- Follow-ups:
+  - Successful integrated runs can still leave the Windows Chrome managed profile process alive because the launch path later re-adopts the profile instance and skips the final kill.
+  - The CLI preflight banner still echoes the raw configured `debugPort` even though the runtime launch may elevate it to `45891+`; that user-facing messaging should be aligned.
+
+- Date: 2026-03-25
+- Area: WSL remote Chrome relay for Windows loopback DevTools
+- Symptom: Raw WSL->Windows CDP TCP remained unreliable in the current mirrored/Tailscale setup even after firewall and `portproxy` work. Windows Chrome could expose DevTools on Windows `127.0.0.1:<port>`, but WSL still could not reliably reach any Windows-hosted TCP ingress.
+- Root cause:
+  - The real need for the manual remote-browser case was not “make Windows expose CDP on the network,” but “let WSL talk to a Windows-local Chrome somehow.”
+  - Aura-Call’s existing `--remote-chrome` path assumed a reachable host:port and had no transport layer for “Windows loopback only.”
+- Fix:
+  - Added a new WSL-only `--remote-chrome windows-loopback:<port>` path in `packages/browser-service/src/windowsLoopbackRelay.ts` and `packages/browser-service/src/chromeLifecycle.ts`.
+  - Aura-Call now starts a local WSL TCP relay, and each relay connection spawns a Windows PowerShell helper that opens a TCP socket to Windows Chrome on Windows `127.0.0.1:<port>` and pumps raw bytes over stdio.
+  - Updated remote browser runs to use the relay’s actual local host/port for runtime hints, target cleanup, and error reporting.
+- Verification:
+  - Focused tests:
+    - `pnpm vitest run tests/browser-service/windowsLoopbackRelay.test.ts tests/browser-service/chromeLifecycle.test.ts`
+    - `pnpm run check`
+  - Transport-only live probe:
+    - repeated `fetch('http://127.0.0.1:<relayPort>/json/version')` succeeded through the relay to Windows Chrome `127.0.0.1:45871`
+  - End-to-end live smoke:
+    - `pnpm tsx bin/auracall.ts --engine browser --browser-target grok --remote-chrome windows-loopback:45871 --model grok --prompt "ping" --wait --verbose --force`
+    - run succeeded and returned a real Grok answer through the Windows Chrome session
+- Follow-ups:
+  - Extend the same relay idea into the integrated Windows-launch/manual-login path instead of keeping it remote-mode-only.
+  - Add a dedicated `browser-tools` / `scripts/test-remote-chrome.ts` path for the `windows-loopback` alias so transport verification does not require a full Aura-Call run.
+
+- Date: 2026-03-25
+- Area: WSL -> Windows Chrome DevTools bridge
+- Symptom: After revisiting the old Windows-browser path, it still looked like a generic firewall/host-resolution problem, but the actual failure was narrower and more structural. Aura-Call could launch a dedicated Windows Chrome profile with `--remote-debugging-port=45871`, Windows itself could reach `192.168.50.108:45872` through an existing `v4tov4` portproxy, yet WSL still could not connect to that same `192.168.50.108:45872` endpoint.
+- Root cause:
+  - On this machine WSL is using mirrored networking with Tailscale, and both Windows and WSL report the same LAN IPv4 (`192.168.50.108`).
+  - The existing Windows `portproxy` (`192.168.50.108:45872 -> 127.0.0.1:45871`) is valid from Windows itself, but WSL cannot use that shared IPv4 as a reliable Windows-host ingress.
+  - `resolveWslHost()` is still fundamentally too weak for this case because it falls back to `/etc/resolv.conf` (here `100.100.100.100`) or other guessed IPv4s instead of a deterministic Windows-reachable address.
+  - Chrome also does not solve this by itself: even with `--remote-debugging-address=0.0.0.0` or `--remote-debugging-address=::`, Windows Chrome still listened only on `127.0.0.1`.
+  - There is also a product-shape gap: Aura-Call's integrated Windows launch path has only one `debugPort`, but safe `portproxy` usage needs two ports (`chromePort` on loopback, `connectPort` for WSL).
+- Fix:
+  - No runtime code fix landed yet.
+  - Captured the working/non-working matrix explicitly and narrowed the viable next path to an elevated Windows `v6tov4` portproxy bound on a Windows IPv6 address that WSL can actually reach.
+  - Documented the product gap so future work does not keep trying to force `portproxy` through a single-port launch model.
+- Verification:
+  - WSL negative checks:
+    - `curl http://192.168.50.108:45872/json/version`
+    - `curl http://127.0.0.1:45871/json/version`
+  - Windows positive checks:
+    - `Invoke-WebRequest http://127.0.0.1:45871/json/version`
+    - `Invoke-WebRequest http://192.168.50.108:45872/json/version`
+    - `netstat -ano | findstr 45871` showed Chrome listening on `127.0.0.1:45871`
+    - `netstat -ano | findstr 45872` showed `portproxy` listening on `192.168.50.108:45872`
+  - WSL host reachability:
+    - `ping -6 fd7a:115c:a1e0::1101:b830`
+    - `ping -6 fe80::7400:d6c0:9bc:780d%eth1`
+  - Windows-only success, WSL-only failure on shared IPv6:
+    - elevated `netsh interface portproxy add v6tov4 listenport=45874 listenaddress=fd7a:115c:a1e0::1101:b830 connectport=45871 connectaddress=127.0.0.1`
+    - Windows `Invoke-WebRequest http://[fd7a:115c:a1e0::1101:b830]:45874/json/version` succeeded
+    - WSL `curl -g 'http://[fd7a:115c:a1e0::1101:b830]:45874/json/version'` and `nc -vz fd7a:115c:a1e0::1101:b830 45874` still failed
+  - Chrome IPv6 bind attempt still failed to expose CDP externally:
+    - launched with `--remote-debugging-address=:: --remote-debugging-port=45873`
+    - `netstat` still showed only `127.0.0.1:45873`
+- Follow-ups:
+  - Add a Windows-aware external DevTools connect port concept to Aura-Call/browser-service so launch/login can model `chromePort != connectPort`.
+  - Consider replacing `resolveWslHost()` heuristics with a Windows-interrogated host candidate list plus explicit diagnostics when the chosen host equals a local WSL address or `/etc/resolv.conf` nameserver.
+  - Before assuming `v6tov4` solves the problem, verify that the chosen Windows IPv6 is not also assigned inside WSL. On this machine the obvious Tailscale/link-local IPv6 addresses were shared, so the proxy still was not usable from WSL.
+  - The remaining likely fixes are outside simple firewall tweaking: either a Windows-only relay/tunnel path, or a change to the WSL networking mode so Windows has a distinct ingress address.
+
+- Date: 2026-03-25
+- Area: WSL Brave runtime with Windows Brave bootstrap source
+- Symptom: It was unclear whether the remaining Brave bootstrap failure was caused by using WSL Chrome as the runtime browser instead of Brave itself.
+- Root cause:
+  - The real blocker is not the runtime browser binary.
+  - The managed profile can inherit some Brave browser state (`AF_SESSION`, `afUserId`, preferences, IndexedDB/local storage) from the copied profile data, but the actual Windows Brave `Network/Cookies` DB remains unreadable from WSL.
+  - Without that cookie DB, Grok still treats the session as guest-capable and shows visible `Sign in` / `Sign up` CTAs.
+- Fix:
+  - No code change needed for this specific check.
+  - Verified the behavior explicitly by launching Aura-Call with `/usr/bin/brave-browser` against a fresh managed profile seeded from the Windows Brave source path.
+- Verification:
+  - `auracall login --target grok --browser-chrome-path /usr/bin/brave-browser --browser-bootstrap-cookie-path /mnt/c/.../Brave-Browser/.../Network/Cookies`
+  - Live DOM probe on the Brave-backed session at port `45001`:
+    - `signIn: true`
+    - `signUp: true`
+    - `AF_SESSION` present in localStorage
+    - `afUserId` visible in `document.cookie`
+- Follow-ups:
+  - Surface this mixed state explicitly in `setup` / `doctor`: some auth-related state copied, but the source cookie DB was unreadable, so the managed session is still guest-only.
+  - The practical workaround is still a one-time sign-in in the Aura-Call-managed Brave profile.
+
+- Date: 2026-03-25
+- Area: Selective managed-profile bootstrap for large Windows Chromium sources
+- Symptom: After adding `--browser-bootstrap-cookie-path`, alternate-source bootstrap technically worked, but large Windows Chromium profiles still made `auracall setup` / `auracall login` look stuck because the first-run clone tried to copy too much unrelated browser state. On this machine the Windows Brave profile copy also hit `EACCES` on `Network/Cookies`, which aborted the bootstrap before the user got a clear answer.
+- Root cause:
+  - The initial managed-profile bootstrap still behaved like a broad profile clone with a small denylist.
+  - That pulled in a lot of irrelevant Chromium profile state for onboarding and spent most of its time in large storage buckets.
+  - A locked Windows-side cookie DB (`/mnt/c/.../Network/Cookies`) caused the whole copy to fail even though the rest of the auth-bearing profile state was still accessible.
+- Fix:
+  - Replaced the broad clone with a selective Chromium auth-state subset in `src/browser/profileStore.ts`:
+    - top-level browser state like `Local State`
+    - profile-level auth-bearing state like `Preferences`, `Network`, `Local Storage`, `IndexedDB`, `WebStorage`, and account/web DBs
+  - Added per-entry progress logging so first-run bootstrap shows where time is going.
+  - Made locked/unreadable files (`EACCES`, `EPERM`) recoverable during managed-profile copy instead of fatal, so Aura-Call can still seed non-cookie browser state and continue.
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser/config.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+  - Direct Brave-source bootstrap into a throwaway managed profile completed in about 8 seconds instead of stalling on a near-full-profile clone.
+  - Live Brave-seeded Grok login launched from the throwaway managed profile and showed the expected guest UI (`Sign in` / `Sign up`) instead of crashing the bootstrap path.
+  - Sweet Cookie probe against the Windows Brave cookie DB returned zero cookies with a warning: `Failed to copy Chrome cookie DB ... EACCES`.
+- Follow-ups:
+  - If `bootstrapCookiePath` points at a locked/unreadable Windows cookie DB, surface that explicitly in `setup` / `doctor` instead of making users infer it from guest-mode behavior.
+  - Decide whether `browser-tools doctor` should be fixed next, since it currently hits an unrelated `__name is not defined` regression on live page probes.
+
+- Date: 2026-03-25
+- Area: Managed browser-profile bootstrap from alternate Chromium sources
+- Symptom: On WSL, Aura-Call could run the browser through WSL Chrome, but it could not reliably seed the managed Aura-Call profile from a different source profile like Windows Brave. Explicit Windows cookie paths were being treated as runtime browser inputs and silently rewritten back to the discovered WSL Chrome cookie DB whenever `wslChromePreference: "wsl"` was active.
+- Root cause:
+  - The config layer only had one cookie-path concept: `chromeCookiePath`.
+  - That field was doing double duty as both the runtime cookie source and the managed-profile bootstrap source.
+  - The WSL runtime preference logic intentionally prefers discovered WSL Chrome paths over explicit Windows paths, which is correct for runtime launching but wrong for first-run managed-profile seeding from another browser.
+- Fix:
+  - Added a separate `bootstrapCookiePath` field through the browser-service/Aura-Call types, config schema, CLI mapping, and CLI surface.
+  - Added `--browser-bootstrap-cookie-path` so setup/login/browser runs can seed the managed Aura-Call profile from a different Chromium profile without changing the runtime browser selection.
+  - Updated browser bootstrap, login reseed, and doctor inspection paths to prefer `bootstrapCookiePath` before `chromeCookiePath`.
+  - Kept the existing WSL runtime selection behavior for `chromeCookiePath`, so WSL Chrome remains the runtime browser when requested.
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+  - Live Brave-source probe: `auracall setup/login` and direct `bootstrapManagedProfile(...)` recognized `/mnt/c/Users/ecoch/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Network/Cookies` as the bootstrap source and started cloning it into a throwaway managed profile under `~/.auracall/browser-profiles/...`
+- Follow-ups:
+  - Large Windows Chromium profiles can take long enough to clone that setup/login looks stalled. Add progress reporting or selective-copy bootstrap if that remains a practical onboarding problem.
+
+- Date: 2026-03-25
+- Area: Aura-Call browser setup machine-readable contract
+- Symptom: `auracall setup` had the right onboarding behavior, but only through human-readable output. Agent tooling could not reliably consume the before/after managed-profile state or tell whether login and verification were actually attempted, skipped, or failed.
+- Root cause:
+  - The new stable JSON work stopped at `auracall doctor`.
+  - `setup` reused the normal interactive login/verification path, which prints progress to stdout and therefore would have corrupted any naive JSON output.
+- Fix:
+  - Added `createAuracallBrowserSetupContract(...)` to `src/cli/browserSetup.ts`.
+  - Added `auracall setup --json` in `bin/auracall.ts`.
+  - The JSON report now emits `contract: "auracall.browser-setup", version: 1`.
+  - The setup contract embeds the initial/final `auracall.browser-doctor` contracts and explicit login/verification step status, including verification model/prompt/session id.
+  - During JSON-mode setup, stdout is temporarily redirected to stderr for the login/verification flow so the final contract remains the only stdout payload.
+- Verification:
+  - `pnpm vitest run tests/cli/browserSetup.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts`
+  - `pnpm tsx bin/auracall.ts setup --target grok --skip-login --skip-verify --json`
+  - `pnpm run check`
+- Follow-ups:
+  - Decide whether setup should later embed richer runtime/browser-service probe data, or stay focused on orchestration state.
+  - Add a CRUD-capable verification mode so setup can prove more than “guest prompt works”.
+
+- Date: 2026-03-25
+- Area: Aura-Call browser doctor machine-readable contract
+- Symptom: `auracall doctor` had useful managed-profile/auth output, but only as human-readable text. Agent tooling still had to scrape CLI lines or call lower-level browser-service helpers directly.
+- Root cause:
+  - The stable versioned JSON contract existed in browser-service, but Aura-Call had not consumed it yet.
+  - `auracall doctor` printed local/auth state and selector diagnosis directly, with no versioned host-app envelope.
+  - The normal CLI intro banner would also have corrupted any naive JSON stream.
+- Fix:
+  - Added `createAuracallBrowserDoctorContract(...)` to `src/browser/profileDoctor.ts`.
+  - Added `auracall doctor --json` in `bin/auracall.ts`.
+  - The JSON report now emits `contract: "auracall.browser-doctor", version: 1`.
+  - When a managed browser instance is alive, the report embeds the stable browser-service contract `browser-tools.doctor-report`.
+  - The JSON path also carries selector-diagnosis success/failure separately from the browser-service report, and suppresses the normal CLI intro banner so the stream stays machine-readable.
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only --json`
+  - `pnpm run check`
+- Follow-ups:
+  - Decide whether `auracall setup` should emit the same contract family.
+  - If remote/non-loopback managed DevTools hosts become common, teach the embedded browser-tools report how to connect without assuming localhost.
+
+- Date: 2026-03-25
+- Area: Stable versioned JSON contracts for browser-service doctor/probe output
+- Symptom: The package-owned `doctor` and `probe` commands had useful JSON output, but it was just a raw dump of internal objects. That made it hard for agent tooling to consume the output confidently over time.
+- Root cause:
+  - The first doctor/probe implementation focused on capability, not contract shape.
+  - There was no explicit versioned envelope separating stable top-level fields from the evolving inner report structure.
+- Fix:
+  - Added explicit builders in `packages/browser-service/src/browserTools.ts`:
+    - `createBrowserToolsProbeContract(...)`
+    - `createBrowserToolsDoctorContract(...)`
+  - `probe --json` now emits `contract: "browser-tools.page-probe", version: 1`
+  - `doctor --json` now emits `contract: "browser-tools.doctor-report", version: 1`
+  - Added envelope-shape tests in `tests/browser/browserTools.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Keep the contract additive where possible.
+  - Only bump the version when the top-level JSON shape or semantics actually change.
+
+- Date: 2026-03-25
+- Area: Generic cookie/storage presence probes in browser-service
+- Symptom: The new package-owned `doctor` / `probe` surfaces could report selected-page DOM and script state, but they still could not answer another common browser-debug question: “does this page actually carry the cookie/storage state I expect?”
+- Root cause:
+  - The first probe surface stopped at DOM/script facts.
+  - Agents still would have needed ad hoc `page.cookies()` or storage `eval` snippets to inspect login/session state generically.
+- Fix:
+  - Extended `packages/browser-service/src/browserTools.ts` so selected-page probes now include:
+    - cookie count, sample cookie names, and domains
+    - local/session storage counts and sample keys
+    - exact-name presence checks for `--cookie-any`, `--cookie-all`, `--storage-any`, and `--storage-all`
+  - Added a direct `collectBrowserToolsPageProbe(...)` test in `tests/browser/browserTools.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts`
+  - `pnpm tsx scripts/browser-tools.ts doctor --help`
+  - `pnpm tsx scripts/browser-tools.ts probe --help`
+  - `pnpm run check`
+- Follow-ups:
+  - Consider whether the generic probe layer should support prefix/substring operators later.
+  - Keep provider-specific interpretation of cookie/storage names out of browser-service itself.
+
+- Date: 2026-03-25
+- Area: Package-owned browser-service doctor/report and structured probe surface
+- Symptom: Even after the earlier browser-service upgrades, agents still had to choose between low-level `eval` snippets and app-specific doctor commands. There was no package-owned “tell me what this selected page looks like” surface.
+- Root cause:
+  - `browser-tools` had tab census and basic page utilities, but no structured selected-page report.
+  - The new generic probe ideas only existed as backlog notes until there was a package-owned command surface to carry them.
+- Fix:
+  - Added structured page probes to `packages/browser-service/src/browserTools.ts` for document state, visible selector matches, and script-text token presence.
+  - Added `browser-tools probe` for selected-page probe output.
+  - Added `browser-tools doctor` to combine the tab census/selection explanation with the selected-page probes.
+  - Added summary coverage in `tests/browser/browserTools.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts`
+  - `pnpm tsx scripts/browser-tools.ts doctor --help`
+  - `pnpm tsx scripts/browser-tools.ts probe --help`
+  - `pnpm run check`
+- Follow-ups:
+  - Add storage/cookie presence probes without pulling provider semantics into the package.
+  - Decide whether the doctor/probe JSON shapes should be treated as a stable agent-facing contract.
+
+- Date: 2026-03-25
+- Area: Runtime tab-selection summaries for browser-service callers
+- Symptom: After adding explainable target resolution, the reasoning still mostly lived in tests and the `browser-tools tabs` CLI. Runtime callers could carry the explanation object, but they still lacked a compact summary for targeted debug logs.
+- Root cause:
+  - The package had structured target-selection data but no small formatter for “winner plus nearest losers”.
+  - Aura-Call's browser wrapper accepted a logger, but there was no generic summary string to feed into it.
+- Fix:
+  - Added `summarizeTabResolution(...)` to `packages/browser-service/src/service/instanceScanner.ts`.
+  - Updated `src/browser/service/browserService.ts` to log the summarized target choice when `resolveServiceTarget(...)` receives a logger.
+  - Added focused coverage in `tests/browser-service/stateRegistry.test.ts` and `tests/browser/browserService.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Decide whether a package-owned doctor/report command should consume the same summary helper.
+  - Keep the summary compact; detailed tab census remains the job of `browser-tools tabs`.
+
+- Date: 2026-03-25
+- Area: Visible-selector and script-text waits in browser-service
+- Symptom: After adding the first generic predicate wait, package call sites still had to choose between “selector exists” and writing another custom loop. That was too weak for click readiness and too clumsy for script-payload hydration checks.
+- Root cause:
+  - `waitForSelector(...)` only answered DOM presence, not visibility/clickability.
+  - There was still no generic helper for “wait until bootstrap script text contains X”.
+  - Selector-based click helpers such as `pressButton(...)` therefore could still claim readiness before the target was actually visible.
+- Fix:
+  - Added `waitForVisibleSelector(...)` and `waitForScriptText(...)` to `packages/browser-service/src/service/ui.ts`.
+  - Updated `pressButton(...)` to use the visible-selector wait when `requireVisible` is enabled.
+  - Expanded `tests/browser-service/ui.test.ts` to cover both new helpers and the `pressButton(...)` integration path.
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Surface richer readiness results in targeted debug output instead of collapsing them back to booleans everywhere.
+  - Decide whether the legacy boolean wait helpers should keep their current shape permanently or gain overloads/options later.
+
+- Date: 2026-03-25
+- Area: Generic readiness / hydration waits in browser-service
+- Symptom: The package already had several wait helpers, but they each carried their own polling loop. That made new readiness checks awkward to add and kept hydration waits from sharing one consistent primitive.
+- Root cause:
+  - Generic waits like `waitForSelector(...)` and `waitForDialog(...)` were implemented independently.
+  - There was no package-owned way to poll an arbitrary page predicate or a normalized document-ready condition.
+- Fix:
+  - Added `waitForPredicate(...)` and `waitForDocumentReady(...)` to `packages/browser-service/src/service/ui.ts`.
+  - Rewired `waitForDialog(...)`, `waitForSelector(...)`, and `waitForNotSelector(...)` to use the shared predicate helper.
+  - Added focused tests in `tests/browser-service/ui.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Add generic script-text / visible-selector waits on top of the same primitive.
+  - Surface the richer wait result in targeted debug paths instead of collapsing everything back to booleans.
+
+- Date: 2026-03-25
+- Area: Runtime tab selection diagnostics for browser-service callers
+- Symptom: The package CLI could explain tab choice after the first browser-service upgrade, but runtime callers still only got the winning tab id. That meant higher-level automation paths could still silently pick the wrong tab without exposing why.
+- Root cause:
+  - `instanceScanner.resolveTab(...)` returned only the winner and dropped the scoring context.
+  - Aura-Call's browser wrapper consumed that winner directly, so the explainable selection model stopped at the CLI boundary.
+- Fix:
+  - Added `explainTabResolution(...)` to `packages/browser-service/src/service/instanceScanner.ts`.
+  - Kept `resolveTab(...)` as a compatibility wrapper over the new explanation API.
+  - Updated `src/browser/service/browserService.ts` to return `tabSelection` from `resolveServiceTarget(...)`, so runtime consumers can inspect candidate scores and reasons.
+- Verification:
+  - `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/browserService.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Surface the same `tabSelection` explanation in targeted debug output where wrong-tab errors are common.
+  - Add generic readiness/hydration probes so the next class of ambiguity is “page not ready yet,” not “wrong tab.”
+
+- Date: 2026-03-25
+- Area: Browser-service DevTools tab census and selection explanation
+- Symptom: The package had enough low-level capability to inspect Chrome sessions, but not enough deterministic structure to explain which tab `browser-tools eval` / `pick` / `screenshot` would actually target. That kept turning simple “wrong tab” debugging into repeated ad hoc probes.
+- Root cause:
+  - `browser-tools inspect` listed Chrome processes and URLs, but it did not expose the actual tab-selection rule used by active-page commands.
+  - The selection heuristic itself lived as a small opaque helper, so tests could verify the chosen index but not the reasoning or candidate facts behind it.
+- Fix:
+  - Added exported selection-explanation helpers in `packages/browser-service/src/browserTools.ts`.
+  - Added `browser-tools tabs`, which reports the live tab census for one DevTools browser instance and includes the selected tab plus the rule that chose it.
+  - Extended the page candidate shape with generic facts (`title`, `readyState`, `visibilityState`, internal/blank flags) so debugging can stay structured instead of falling back to raw `eval`.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/stateRegistry.test.ts`
+  - `pnpm run check`
+  - `pnpm tsx scripts/browser-tools.ts tabs --help`
+- Follow-ups:
+  - Reuse the same selection explanation model inside `BrowserService` / `instanceScanner` so non-CLI callers can surface why a tab was chosen.
+  - Add generic structured probes on top of the tab census so agents need fewer one-off DOM snippets.
+
+- Date: 2026-03-25
+- Area: Grok authenticated account detection on managed browser profiles
+- Symptom: Even after the managed Grok profile was genuinely signed in, `BrowserAutomationClient.getUserIdentity()` could still return `null`. That made setup/doctor-style verification look guest-like even when the browser session clearly belonged to a real account.
+- Root cause:
+  - DevTools target scans were storing the CDP page id under `id`, but Aura-Call expected `targetId`, so the resolved Grok tab id could be dropped before provider identity checks reused it.
+  - Grok identity fallback probes were also too eager to sample the serialized Next flight payload immediately; on live tabs the first read could happen before the payload hydrated, producing an empty script list even though the account data appeared moments later.
+- Fix:
+  - Normalized scanned tabs so browser-service always exposes `targetId` even when CDP returns only `id`.
+  - Updated the Grok adapter to use normalized target ids in both the generic tab connector and the project-tab connector, instead of passing raw target objects back into CRI.
+  - Added a short retry window when reading Grok's serialized identity scripts so authenticated tabs have time to hydrate before Aura-Call concludes there is no account payload.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/grokIdentity.test.ts tests/browser/grokActions.test.ts tests/browser/browserService.test.ts tests/browser-service/stateRegistry.test.ts`
+  - `pnpm run check`
+  - Live: `node --import tsx -e "... BrowserAutomationClient ... getUserIdentity() ..."` now returns:
+    - `id: c4d43034-7f30-462b-918b-59779bcba208`
+    - `name: Eric C`
+    - `handle: @SwantonDoug`
+    - `email: ez86944@gmail.com`
+    - `source: next-flight`
+  - Live: `pnpm tsx bin/auracall.ts setup --target grok --skip-login --skip-verify --prune-browser-state` now prints `accountIdentity: Eric C @SwantonDoug <ez86944@gmail.com> [next-flight]`
+- Follow-ups:
+  - Consider surfacing the same identity in `auracall doctor --local-only` without violating the "do not attach to Chrome" expectation, or keep that mode intentionally metadata-only.
+  - Keep using explicit tab ids for Grok browser work; raw `https://grok.com/` URL matches are too ambiguous once many root tabs accumulate in the managed profile.
+
+- Date: 2026-03-25
+- Area: Managed browser profile reseed from a newer source Chrome profile
+- Symptom: Once `~/.auracall/browser-profiles/<profile>/<service>` existed, re-logging the source Chrome profile did not repair a stale/guest Aura-Call-managed service profile. `auracall login --target grok` kept reopening the old managed profile unchanged.
+- Root cause:
+  - The original managed-profile design only cloned from the source Chrome profile on first run.
+  - Later `login` / `setup` calls always reused the managed profile directory unchanged.
+  - That meant source-profile auth repairs stayed trapped in `/home/ecochran76/.config/google-chrome/...` and never propagated into Aura-Call's own managed profile store.
+- Fix:
+  - Extended `src/browser/profileStore.ts` with managed-profile reseed logic.
+  - `auracall login` / `auracall setup` now refresh the managed profile automatically when the configured source cookie DB is newer than the managed cookie DB.
+  - Added `--force-reseed-managed-profile` for a destructive rebuild regardless of timestamps.
+  - Added safety checks so reseed refuses to overwrite an actively running managed profile.
+  - `auracall doctor --local-only` now warns when the source Chrome cookies are newer than the managed profile.
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - `pnpm run check`
+  - Live: closed the stale managed Grok browser, ran `pnpm tsx bin/auracall.ts login --target grok`, observed `[login] Refreshed managed profile from /home/ecochran76/.config/google-chrome (Default).`
+  - Live DOM after reseed no longer showed visible `Sign in` / `Sign up` CTAs on `https://grok.com/`
+  - Managed cookie DB timestamp advanced to match the refreshed profile state
+- Follow-ups:
+  - Improve positive account-name detection for authenticated Grok sessions so doctor/setup can report the actual account instead of only auth-state heuristics.
+  - Fix the separate Grok sidebar/history automation flake (`Main sidebar did not open`) so authenticated provider-path checks are as reliable as the DOM/auth checks.
+
+- Date: 2026-03-25
+- Area: Managed Grok profile reseed expectations
+- Symptom: Re-logging the WSL source Chrome `Default` profile did not make Aura-Call's existing managed Grok profile logged in again.
+- Root cause:
+  - Aura-Call now treats `~/.auracall/browser-profiles/<profile>/<service>` as the long-lived execution profile.
+  - Once the managed Grok profile already exists, `auracall login --target grok` reuses that managed directory; it does not re-clone or re-sync auth state from the source profile automatically.
+  - So changes to `/home/ecochran76/.config/google-chrome/Default` do not repair an already-existing managed Grok profile unless Aura-Call gets an explicit reseed/sync path.
+- Fix:
+  - No code fix landed in this step.
+  - Confirmed the current behavior so onboarding docs and future sync tooling can reflect it accurately.
+- Verification:
+  - `pnpm tsx bin/auracall.ts doctor --target grok --prune-browser-state`
+  - `pnpm tsx bin/auracall.ts login --target grok`
+  - Live managed session on `127.0.0.1:45000` showed visible `Sign in` / `Sign up` CTAs
+  - Live `BrowserAutomationClient.getUserIdentity()` returned `null`
+- Follow-ups:
+  - Add an explicit managed-profile reseed/sync command or destructive rebootstrap flow.
+  - Be clear in onboarding docs that source-profile re-login alone does not refresh an already-created managed service profile.
+
+- Date: 2026-03-25
+- Area: Grok guest session vs identity detection
+- Symptom: On the current Grok web UI, Aura-Call could treat a guest-capable conversation page as if it represented a signed-in user and return `Settings` as the account identity.
+- Root cause:
+  - After fixing `browser-tools` URL scoping, the real Grok conversation tab still showed visible `Sign in` / `Sign up` CTAs.
+  - The prior identity path in `src/browser/providers/grokAdapter.ts` treated the generic top-right settings button as a fallback user label.
+  - The earlier `afUserId` / `AF_SESSION` signals were not actual account identity; they look like analytics/session state.
+- Fix:
+  - Updated `getUserIdentity()` to detect visible guest auth CTAs, suppress low-signal labels like `Settings`, and return `null` for guest-like pages instead of fabricating a user.
+  - Tightened `ensureGrokLoggedIn()` to key off visible auth CTAs rather than any matching text anywhere in the DOM.
+  - Added focused regressions in `tests/browser/grokActions.test.ts` and `tests/browser/grokIdentity.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grokIdentity.test.ts`
+  - Live `BrowserAutomationClient.getUserIdentity()` against the managed Grok tab should now return `null` instead of `Settings`.
+- Follow-ups:
+  - Find a durable positive auth signal for real signed-in Grok sessions so Aura-Call can distinguish guest chat capability from authenticated CRUD capability.
+  - Update onboarding/doctor output once the positive signal is known, so Grok setup stops looking “good enough” when it is only guest-capable.
+
+- Date: 2026-03-25
+- Area: Browser-tools URL-scoped tab selection
+- Symptom: `browser-tools eval --url-contains ...` could still inspect the wrong tab when a different page had focus. In the live Grok identity investigation, a focused `accounts.x.ai` tab could win over the explicitly requested Grok conversation tab, producing misleading DOM results.
+- Root cause:
+  - `packages/browser-service/src/browserTools.ts` selected the focused page before honoring `urlContains`.
+  - That made explicit URL scoping advisory instead of authoritative.
+- Fix:
+  - Changed tab selection so an explicit `urlContains` match wins first.
+  - Added `selectBrowserToolsPageIndex` and a focused regression test in `tests/browser/browserTools.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts`
+  - `pnpm tsx scripts/browser-tools.ts eval --port 45000 --url-contains '/c/' ...`
+- Follow-ups:
+  - Keep explicit tab targeting authoritative in other browser-debug helpers too; focused-tab fallback should only apply when the caller did not request a specific URL.
+
+- Date: 2026-03-25
+- Area: Browser-service tooling ownership
+- Symptom: The `browser-tools` DevTools helper was still implemented as an Aura-Call app script even though its commands (`eval`, `pick`, `cookies`, `inspect`, `kill`, `nav`, `screenshot`, `start`) are generic browser-service functionality.
+- Root cause:
+  - The tool grew in `scripts/browser-tools.ts` before the browser-service split hardened.
+  - That left package-owned browser automation relying on an app-owned CLI implementation, which was the wrong dependency direction.
+- Fix:
+  - Moved the reusable CLI implementation into `packages/browser-service/src/browserTools.ts`.
+  - Exported it from `packages/browser-service/src/index.ts`.
+  - Reduced `scripts/browser-tools.ts` to a thin Aura-Call wrapper that only supplies config-driven port resolution, launch defaults, and optional profile copying.
+  - Updated `docs/dev/browser-service-tools.md` to document the new ownership split.
+- Verification:
+  - `pnpm tsx scripts/browser-tools.ts --help`
+  - `node --import tsx -e "import { createBrowserToolsProgram } from './packages/browser-service/src/browserTools.ts'; const program = createBrowserToolsProgram({ resolvePortOrLaunch: async () => 9222 }); console.log(program.commands.map((cmd) => cmd.name()).join(','));"`
+  - `pnpm run check`
+- Follow-ups:
+  - If other generic browser debug helpers still live under `scripts/`, move them into `packages/browser-service` or make their app-specific coupling explicit.
+
+- Date: 2026-03-25
+- Area: Grok browser auth confirmation vs account identity detection
+- Symptom: A live Aura-Call-managed Grok profile could be clearly operational and authenticated, but account-name confirmation still failed. The managed browser session could answer prompts successfully and exposed authenticated state markers, while Aura-Call's identity lookup returned only `Settings`.
+- Root cause:
+  - The current Grok conversation UI still exposes enough auth state to run chats (`afUserId` cookie, `AF_SESSION` localStorage, successful authenticated conversation runs), but it no longer exposes a stable human-readable account affordance through the older DOM path Aura-Call expects.
+  - `src/browser/providers/grokAdapter.ts` falls back to low-signal DOM labels and an older settings-menu path; against the current layout, that can resolve to the generic settings button instead of an account/profile control.
+  - `accounts.x.ai` is a separate sign-in surface and did not inherit the live Grok session in the managed profile, so it is not a reliable account-name fallback.
+- Fix:
+  - No code fix landed yet in this step.
+  - Confirmed that auth-state verification and account-identity extraction need to be treated as separate problems in the Grok browser path.
+- Verification:
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only`
+  - `node --import tsx` invoking `BrowserAutomationClient.fromConfig(...).getUserIdentity(...)` against `127.0.0.1:45000`
+  - `pnpm tsx scripts/browser-tools.ts eval --port 45000 --url-contains grok.com ...`
+  - Confirmed:
+    - live managed instance: `/home/ecochran76/.auracall/browser-profiles/default/grok`
+    - authenticated session markers: `afUserId` cookie and `AF_SESSION` localStorage
+    - live Grok conversation still answers prompts
+    - identity lookup currently returns `Settings`
+    - `https://accounts.x.ai/` redirects to `sign-in`
+- Follow-ups:
+  - Update Grok identity detection to use a current, durable source for account naming instead of the older settings-menu DOM fallback.
+  - Avoid treating stray `Sign in` / `Sign up` text on Grok pages as an auth failure signal; it is present in the current live conversation UI even when the session is authenticated.
+
+- Date: 2026-03-25
+- Area: Grok browser assistant response extraction
+- Symptom: Managed-profile Grok runs and `auracall setup --target grok` could complete successfully but still return UI-adjacent text in the final answer, for example `live dom marker15.8sExplore DOM Mutation ObserversRelated Virtual DOM Concepts`.
+- Root cause:
+  - `src/browser/actions/grok.ts` captured the last Grok assistant wrapper via raw `textContent`.
+  - The current Grok DOM places the real markdown answer, the `.action-buttons` row (elapsed-time chip), and follow-up suggestion buttons inside that same wrapper.
+  - Because the snapshot logic treated the whole wrapper as answer text, the timing chip and suggested follow-ups leaked into `answerText`.
+- Fix:
+  - Updated Grok snapshot extraction to prefer the `.response-content-markdown` root when present.
+  - Kept a fallback clone/prune path for non-markdown variants, but now strip `.thinking-container`, `.action-buttons`, suggestion markers, and button-only UI before reading `textContent`.
+  - Added focused coverage in `tests/browser/grokActions.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grokModelMenu.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+  - Live verification: `pnpm tsx bin/auracall.ts setup --target grok --skip-login --verify-prompt "Reply exactly with: live dom marker" --prune-browser-state`
+  - The live answer now returns only `live dom marker`.
+- Follow-ups:
+  - If Grok introduces a non-markdown assistant renderer, keep the clone/prune fallback aligned with the new DOM rather than going back to whole-wrapper `textContent`.
+
+- Date: 2026-03-25
+- Area: Browser doctor / setup legacy-profile classification
+- Symptom: `auracall doctor` / `auracall setup` could report a live Aura-Call-managed profile under `~/.auracall/browser-profiles/...` as both `managed` and `legacy`, which was misleading and made the new onboarding output look broken even when the profile path was correct.
+- Root cause:
+  - Legacy detection used substring matching on `browser-profile`.
+  - The new managed profile root `browser-profiles` contains that prefix, so the detector falsely matched the new path family.
+- Fix:
+  - Changed legacy detection to match the old single-profile directory by exact path segment (`.auracall/browser-profile`) and to keep temp-profile detection separate via the basename `auracall-browser-*`.
+  - Added a regression in `tests/browser/profileDoctor.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts`
+  - `pnpm tsx bin/auracall.ts setup --target grok --skip-login --skip-verify --prune-browser-state`
+  - The real managed profile now reports `legacyBrowserStateEntries: 0`.
+- Follow-ups:
+  - None for the managed-profile path family; future legacy detection changes should use path segments instead of substring matching.
+
+- Date: 2026-03-25
+- Area: Browser onboarding / managed-profile guided setup
+- Symptom: Even after adding managed profiles and local doctor inspection, first-time browser onboarding was still too manual: users had to inspect profile state separately, run `auracall login`, reason about which profile path was actually in use, and then remember to run a separate smoke to prove the managed profile worked.
+- Root cause:
+  - The CLI had a login command and a doctor command, but no orchestration layer that tied them together around the managed profile store.
+  - Browser target/model selection for onboarding was implicit and could drift when the configured default model belonged to a different service than the requested setup target.
+  - There was no user-facing pause point between opening the managed login browser and launching a real verification run.
+- Fix:
+  - Added `src/cli/browserSetup.ts` with explicit browser setup target resolution and service-aligned verification model selection.
+  - Added `auracall setup --target <chatgpt|gemini|grok>` to inspect the managed profile, optionally open the managed login browser, wait for sign-in confirmation, and then run a real browser verification session against that same managed profile.
+  - Reused the existing managed-profile doctor report in `setup`, so the command now prints the resolved Aura-Call profile dir, source profile, and browser-state registry before and after verification.
+  - Refactored `auracall login` to share the same managed-profile launch resolution as `setup`.
+- Verification:
+  - `pnpm vitest run tests/cli/browserSetup.test.ts tests/cli/browserConfig.test.ts tests/browser/profileDoctor.test.ts`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts setup --help`
+  - `pnpm tsx bin/auracall.ts setup --target grok --skip-login --verify-prompt ping --prune-browser-state`
+  - Live verification returned a real Grok response from the managed profile at `~/.auracall/browser-profiles/default/grok`.
+- Follow-ups:
+  - Extend the same guided flow with clearer Windows DevTools diagnostics once the Windows-hosted Chrome path is revisited.
+
+- Date: 2026-03-25
+- Area: Browser doctor / managed-profile inspection / browser-state hygiene
+- Symptom: After the managed-profile work landed, there was still no direct CLI surface to answer the practical onboarding questions: which Aura-Call-managed profile is being used, which source Chrome profile will bootstrap it, and whether `~/.auracall/browser-state.json` still contained stale legacy entries from older bring-up attempts.
+- Root cause:
+  - The existing `auracall doctor` command only attached to live Chrome and checked UI selectors.
+  - Managed-profile resolution, source-profile inference, and browser-state cleanup were spread across lower-level helpers with no user-facing inspection command.
+  - Source-profile inference also missed the common Linux cookie path shape `.../Default/Cookies`, so doctor-style reporting could not name the real source profile even when the cookie file was configured correctly.
+- Fix:
+  - Added `src/browser/profileDoctor.ts` to inspect managed profile resolution, bootstrap/source-cookie inputs, and browser-state entries without attaching to Chrome.
+  - Extended `auracall doctor` with `--local-only` and `--prune-browser-state`.
+  - Added stale/legacy browser-state classification plus dead-entry pruning.
+  - Fixed cookie-path profile inference for direct `.../Default/Cookies` paths.
+  - Added focused coverage in `tests/browser/profileDoctor.test.ts` and expanded `tests/browser/profileStore.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser/profileDoctor.test.ts tests/browser/grokActions.test.ts tests/browser/grokModelMenu.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm tsx bin/auracall.ts doctor --target grok --local-only --prune-browser-state`
+  - Output now reports:
+    - managed profile: `~/.auracall/browser-profiles/default/grok`
+    - source profile: `/home/ecochran76/.config/google-chrome (Default)`
+    - pruned stale browser-state entries when present
+- Follow-ups:
+  - Add a guided `setup` command that builds on this local inspection instead of making users piece together login/bootstrap steps manually.
+
+- Date: 2026-03-25
+- Area: Grok browser composer detection with managed-profile reuse
+- Symptom: After switching Aura-Call to managed browser profiles, live Grok runs could still fail with `Grok prompt not ready before timeout`, or they could fill a hidden textarea while the visible submit button stayed disabled.
+- Root cause:
+  - The current Grok homepage exposes a hidden autosize `<textarea>` plus a visible Tiptap/contenteditable composer.
+  - The first selector pass for the new UI matched the hidden textarea before the real editor, so readiness checks and prompt entry targeted the wrong node.
+  - That made the composer look ready but left Grok's form state unchanged, so the submit button never enabled.
+- Fix:
+  - Tightened `src/browser/providers/grok.ts` so textarea selectors only match the explicit visible Grok composer variants.
+  - Added visible-editor resolution in `src/browser/actions/grok.ts` that skips `aria-hidden`, hidden, disabled, and zero-size nodes before selecting an input target.
+  - Kept the textarea/input setter + `input`/`change` event path for future Grok UI variants while preserving the contenteditable path for the current Tiptap editor.
+  - Added focused coverage in `tests/browser/grokActions.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grokModelMenu.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+  - Live managed-profile Grok smoke passed:
+    `pnpm tsx bin/auracall.ts --engine browser --browser-target grok --model grok --prompt "ping" --wait --verbose --force`
+  - Result came from the reused managed profile at `~/.auracall/browser-profiles/default/grok`.
+- Follow-ups:
+  - Clean stale entries in `~/.auracall/browser-state.json` so live diagnostics do not keep mixing legacy profile paths/hosts with the managed store.
+  - Add guided onboarding/inspection commands so users can see which managed profile Aura-Call is bootstrapping/reusing without inspecting logs manually.
+
+- Date: 2026-03-19
+- Area: Browser profile persistence and first-run onboarding
+- Symptom: Local WSL/browser runs could still launch throwaway `/tmp/auracall-browser-*` profiles, while login/manual-login flows and some service helpers still assumed a single legacy `~/.auracall/browser-profile` path. That made onboarding brittle, broke repeatability, and left Aura-Call without its own deterministic browser profile store.
+- Root cause:
+  - Local ChatGPT/Grok browser runs still created disposable Chrome user-data dirs and only copied cookies forward.
+  - Grok login/browser paths had special-case cookie-source logic that could ignore the intended source profile and seed from the wrong directory.
+  - Default/manual-login path selection was split across multiple layers (`config`, browser runtime, reattach, service resolution, remote serve), with stale fallbacks to the old single-profile path.
+- Fix:
+  - Added `src/browser/profileStore.ts` and switched Aura-Call to managed profiles under `~/.auracall/browser-profiles/<auracallProfile>/<service>` by default.
+  - Local runs, reattach, login, browser-service resolution, and `serve` now all target persistent managed profiles instead of `/tmp` automation dirs.
+  - Added first-run bootstrap that clones the configured source Chrome profile into the managed profile store, skipping lock files and cache-only artifacts, and kept cookie sync as a fallback when a managed profile still needs seeding.
+  - Changed `auracall login` to open the managed Aura-Call profile directly (`preferCookieProfile: false`) so source profiles are bootstrap inputs, not long-term execution targets.
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileStore.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser/browserService.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Validate the new managed-profile bootstrap live against real WSL and Windows source profiles for Grok/ChatGPT.
+  - Replace the remaining onboarding rough edges with explicit `doctor/setup` tooling so users do not need to reason about profile roots and cookie sources manually.
+
+- Date: 2026-03-18
+- Area: WSL Chrome fallback selection + local launch
+- Symptom: On WSL, Aura-Call could keep honoring persisted Windows Chrome paths even when WSL Chrome was explicitly requested, and local WSL Chrome launches could still stall because they used Windows-only temp/profile and DevTools host assumptions.
+- Root cause:
+  - `resolveBrowserConfig` let config win over `AURACALL_WSL_CHROME` / `AURACALL_BROWSER_PROFILE_DIR`, and it always preferred configured `chromePath` / `chromeCookiePath` over the WSL-discovered profile.
+  - `auracall login` consumed raw `userConfig.browser.*` values instead of the resolved browser config, so `--browser-wsl-chrome wsl` could still inherit Windows Chrome.
+  - WSL launches always used Windows-backed temp roots and the WSL-to-Windows DevTools host resolver, even when the selected browser was Linux Chrome.
+- Fix:
+  - Flipped env override precedence for `AURACALL_WSL_CHROME` and `AURACALL_BROWSER_PROFILE_DIR`.
+  - When WSL Chrome is explicitly preferred, resolve browser/cookie paths from the WSL-discovered profile instead of persisting Windows paths through to runtime.
+  - Updated `auracall login` and the main browser-config builder to carry the resolved WSL preference forward.
+  - Limited Windows host routing to Windows-hosted Chrome only; WSL Chrome now uses local `127.0.0.1` CDP.
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser/browserService.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+  - Live check at the time: `AURACALL_WSL_CHROME=wsl pnpm tsx bin/auracall.ts --engine browser --browser-target grok --model grok --prompt "ping" --wait --verbose --force` launched `/usr/bin/google-chrome`, connected to local DevTools, passed Grok login, and then failed later at prompt readiness rather than setup/attach. The disposable-profile portion of that path was removed on 2026-03-19.
+- Follow-ups:
+  - Pre-run/session config logging still captures the pre-resolved Windows snapshot even when runtime resolves to WSL Chrome.
+  - Investigate the residual Grok prompt-readiness timeout and the stray `undefined:/Users/undefined/...` log line separately.
+
+- Date: 2026-03-18
+- Area: Grok browser model picker labels
+- Symptom: Grok browser runs got stuck with the model menu open because Aura-Call still targeted the dead `Grok 4.1 Thinking` label while the live UI had moved to `Auto`, `Fast`, `Expert`, and `Heavy`.
+- Root cause: Grok browser mode still hard-coded label resolution in `browserConfig`/`selectGrokMode`, so the selector drifted as soon as xAI renamed the picker entries.
+- Fix:
+  - Moved Grok browser label/alias resolution into `configs/oracle.services.json` via the service registry.
+  - Kept only DOM text normalization in the Grok browser code so concatenated live menu text like `ExpertThinks hard - Grok 4.20` still matches the configured label.
+  - Updated browser config, runtime selection, and project-instructions modal selection to resolve labels through the same registry.
+- Verification:
+  - `pnpm vitest run tests/browser/grokModelMenu.test.ts tests/cli/browserConfig.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - The higher-level CLI model canonicalization still collapses `grok` to `grok-4.1`; if Aura-Call should treat plain `grok` as the current flagship browser mode, that mapping should move into the same registry layer.
+
+- Date: 2026-03-18
+- Area: Prompt commit detection during browser submit / reattach
+- Symptom: Prompt submission could be marked committed too early when the composer cleared and a stop button appeared without a new turn, while the “unknown baseline” path for prompt matching was also less robust than upstream.
+- Root cause: Local `verifyPromptCommitted` had drifted from upstream’s hardened logic: it no longer re-read the turn baseline when absent, and its fallback commit condition allowed `composerCleared + stopVisible` without requiring a new turn.
+- Fix:
+  - Restored baseline turn-count fallback inside `verifyPromptCommitted`.
+  - Tightened fallback commit detection so composer-cleared signals only count after a new turn appears.
+  - Added the upstream-style `tests/browser/promptComposer.test.ts` coverage and exported the internal helper through a test-only surface.
+- Verification:
+  - `./node_modules/.bin/vitest run tests/browser/promptComposer.test.ts tests/browser/browserModeExports.test.ts tests/browser/pageActions.test.ts tests/cli/sessionRunner.test.ts`
+  - `pnpm run check`
+
+- Date: 2026-03-18
+- Area: Browser Cloudflare challenge preservation (ChatGPT/Grok)
+- Symptom: When ChatGPT or Grok hit a Cloudflare interstitial, Oracle could tear down the browser/profile on exit, even though the correct recovery path is to leave the browser open so the user can complete the challenge manually.
+- Root cause: `ensureNotBlocked` threw a plain error instead of a structured browser-automation error, so browser cleanup had no way to distinguish Cloudflare challenges from ordinary failures. Session error updates also dropped runtime metadata for non-connection browser failures.
+- Fix:
+  - Changed `ensureNotBlocked` to throw `BrowserAutomationError` with `stage: cloudflare-challenge`.
+  - Ported upstream-style preserve-on-cloudflare behavior into the ChatGPT run path and applied the same behavior to the Grok path: leave Chrome/profile alive, emit runtime hints, and surface a reuse-profile hint.
+  - Preserved browser runtime metadata in session error updates for browser automation failures that include runtime details.
+- Verification:
+  - `./node_modules/.bin/vitest run tests/browser/pageActions.test.ts tests/browser/browserModeExports.test.ts tests/cli/sessionRunner.test.ts`
+  - `pnpm run check`
+
+- Date: 2026-03-18
+- Area: ChatGPT browser assistant response watchdog
+- Symptom: Browser runs could finalize long streamed answers too early after a short pause, and the watchdog poller could continue running after the observer path had already won.
+- Root cause: `pollAssistantCompletion` used shorter stability thresholds for long answers than upstream’s later fixes, and the background poller was not aborted once `Runtime.evaluate(...awaitPromise)` returned first.
+- Fix:
+  - Ported the upstream watchdog abort pattern so the poller stops once the observer path wins.
+  - Ported the longer stability thresholds for medium/long answers so paused streams are less likely to truncate.
+  - Added a focused threshold unit test to lock the long-answer timing behavior.
+- Verification:
+  - `./node_modules/.bin/vitest run tests/browser/pageActions.test.ts tests/browser/pageActionsExpressions.test.ts`
+  - `pnpm run check`
+
 - Date: 2026-01-24
 - Area: Conversation context retrieval (Grok + llmService + CLI)
 - Symptom: No end-to-end command existed to retrieve/store conversation context; provider capability was exposed but not implemented.
@@ -27,10 +912,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Fix:
   - Implemented Grok `readConversationContext(conversationId, projectId?, options?)` with route-aware navigation (`/c/<id>` and `/project/<id>?chat=<id>`) and message scraping from response rows.
   - Added `LlmService.getConversationContext(...)` with cache write-through to `contexts/<conversationId>.json` and cached fallback on live scrape failure.
-  - Added CLI `oracle conversations context get <id>` with `--project-id`, `--cache-only`, and history controls for name/selector resolution.
+  - Added CLI `auracall conversations context get <id>` with `--project-id`, `--cache-only`, and history controls for name/selector resolution.
   - Added smoke helper: `pnpm tsx scripts/verify-grok-context-get.ts <conversationId> [projectId]`.
 - Verification:
-  - `pnpm tsx bin/oracle-cli.ts conversations context get --help`
+  - `pnpm tsx bin/auracall.ts conversations context get --help`
   - `pnpm tsx scripts/verify-grok-context-get.ts` (usage/compile path)
 
 - Date: 2026-01-24
@@ -43,9 +928,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - delete via hover row action, verify pending-remove state (`opacity-50`, `line-through`, `Undo`), then commit with modal `Save`
   - list from modal rows for current UI variant
 - Verification:
-  - `pnpm tsx bin/oracle-cli.ts projects files add <projectId> -f <file> --target grok`
-  - `pnpm tsx bin/oracle-cli.ts projects files remove <projectId> <fileName> --target grok`
-  - `pnpm tsx bin/oracle-cli.ts projects files list <projectId> --target grok`
+  - `pnpm tsx bin/auracall.ts projects files add <projectId> -f <file> --target grok`
+  - `pnpm tsx bin/auracall.ts projects files remove <projectId> <fileName> --target grok`
+  - `pnpm tsx bin/auracall.ts projects files list <projectId> --target grok`
 
 - Date: 2026-01-24
 - Area: Grok project sources (Files collapsible + uploads)
@@ -59,28 +944,28 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Symptom: `projects clone` opened the user/profile menu (items like Settings/Help) and failed to find Clone; rename failed right after clone.
 - Root cause: `openMenu` trusted `aria-controls` and did not fall back when the id was missing; project menu detection used broad `aria-haspopup="menu"` and raced DOM readiness.
 - Fix: `openMenu` now falls back to the provided menu selector when `aria-controls` resolves to a missing element; `openProjectMenuButton` waits for `button[aria-label="Open menu"]` and matches by label (avoids profile menu).
-- Verification: `pnpm tsx bin/oracle-cli.ts projects clone "My Project" "My Project Clone 2" --target grok` and `projects rename <id> "My Project Clone"` succeeded.
+- Verification: `pnpm tsx bin/auracall.ts projects clone "My Project" "My Project Clone 2" --target grok` and `projects rename <id> "My Project Clone"` succeeded.
 
 - Date: 2026-01-24
 - Area: Grok project sources tab selection
 - Symptom: `projects files list <id>` failed with “Sources tab not found” even on `?tab=sources`.
 - Root cause: Sources tablist can lag or be missing; when content is already rendered, there’s no tab to click.
 - Fix: `ensureProjectSourcesTabSelected` now waits for a tablist but treats a rendered sources container as success; only throws if neither tab nor content exists.
-- Verification: `pnpm tsx bin/oracle-cli.ts projects files list <projectId> --target grok` returned file names.
+- Verification: `pnpm tsx bin/auracall.ts projects files list <projectId> --target grok` returned file names.
 
 - Date: 2026-01-14
 - Area: Grok smoke tests + cache CLI usage
-- Symptom: Smoke checklist referenced `oracle cache --target grok`, which is not a supported flag (command failed).
+- Symptom: Smoke checklist referenced `auracall cache --target grok`, which is not a supported flag (command failed).
 - Root cause: Cache CLI is provider-agnostic and does not accept a target override.
-- Fix: Updated smoke checklist to use `oracle cache` and added an explicit `--browser-target grok` prompt variant.
+- Fix: Updated smoke checklist to use `auracall cache` and added an explicit `--browser-target grok` prompt variant.
 - Verification: Live Grok smoke run completed (prompt, projects refresh, conversations list, project prompt, reattach, registry).
 
 - Date: 2026-01-09
 - Area: Grok browser conversation scraping (history dialog)
-- Symptom: `oracle conversations --target grok --include-history` returned empty results with `SyntaxError` from `Runtime.evaluate`.
+- Symptom: `auracall conversations --target grok --include-history` returned empty results with `SyntaxError` from `Runtime.evaluate`.
 - Root cause: Unescaped backslashes in regex literals inside the injected history-dialog script caused JS parse errors (e.g., `\s` collapsed to `s`, `//c/` became a comment).
 - Fix: Escaped regex literals inside the template string (match and cleanup patterns, `/c/` pathname regex) so the injected script remains valid JavaScript.
-- Verification: Live Grok conversation fetch returned a full list via `pnpm tsx bin/oracle-cli.ts conversations --target grok --refresh --include-history`.
+- Verification: Live Grok conversation fetch returned a full list via `pnpm tsx bin/auracall.ts conversations --target grok --refresh --include-history`.
 - Follow-ups: Ensure `updatedAt` parsing finds timestamps in the current Grok UI.
 
 - Date: 2026-01-10
@@ -88,11 +973,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Symptom: Conversation list rendered but `updatedAt` was always `undefined`.
 - Root cause: History rows render relative time in a plain text element (e.g., a `div` with "1 hour ago"), not in `<time>` or ARIA attributes, so the scraper never parsed it.
 - Fix: Scan descendant text nodes in each history row for short relative/absolute timestamps and parse them before falling back to title cleanup.
-- Verification: Live Grok conversation fetch returned populated `updatedAt` values via `pnpm tsx bin/oracle-cli.ts conversations --target grok --refresh --include-history`.
+- Verification: Live Grok conversation fetch returned populated `updatedAt` values via `pnpm tsx bin/auracall.ts conversations --target grok --refresh --include-history`.
 
 - Date: 2026-01-10
 - Area: Grok browser conversation list (title cleanup)
-- Symptom: `oracle conversations --target grok` returned empty results or a `Runtime.evaluate` `SyntaxError`.
+- Symptom: `auracall conversations --target grok` returned empty results or a `Runtime.evaluate` `SyntaxError`.
 - Root cause: Regex literals inside the injected list script used `\t`/`\n` escapes inside a template string, which injected literal newlines and broke regex parsing in the browser.
 - Fix: Replace the title-cleanup regexes with `\\s`-based patterns so the injected script is valid.
 - Verification: Pending (rerun Grok conversation list after patch).
@@ -106,7 +991,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 - Date: 2026-01-11
 - Area: Browser session reattach (dangling sessions)
-- Symptom: `oracle session <id> --render` hangs when the browser instance died, even though the session still exists.
+- Symptom: `auracall session <id> --render` hangs when the browser instance died, even though the session still exists.
 - Root cause: Reattach path assumes an active DevTools port and does not validate liveness before waiting.
 - Fix: Pending (add fast liveness check against registry/port and fail with a clear message + relaunch hint).
 - Verification: Pending (reattach should fail fast when Chrome is closed).
@@ -128,9 +1013,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Date: 2026-01-12
 - Area: Cache identity + name resolution (llmService)
 - Symptom: Cache refresh/name resolution logic diverged across CLI commands and duplicated LlmService behavior.
-- Root cause: Cache helpers lived in `bin/oracle-cli.ts` instead of the new LlmService layer.
+- Root cause: Cache helpers lived in `bin/auracall.ts` instead of the new LlmService layer.
 - Fix: Centralized cache identity/context and name resolution in `src/browser/llmService/llmService.ts`, routing CLI list/resolve flows through it.
-- Verification: Pending (rerun `oracle projects`, `oracle conversations`, and `oracle cache --refresh`).
+- Verification: Pending (rerun `auracall projects`, `auracall conversations`, and `auracall cache --refresh`).
 - Follow-ups: Validate model-selection fallback in Phase 3.
 
 - Date: 2026-01-12
@@ -157,3 +1042,246 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Date: 2026-01-12
 - Area: Dev workflow hygiene
 - Note: Keep commits tight and scoped; stage new scripts/docs intentionally, and clean up/commit before switching phases to avoid losing automation learnings.
+- 2026-03-26: Aura-Call profile precedence and Windows login endpoint reporting
+  - Symptom: `auracall --profile windows-chrome-test login --target grok` still launched `/usr/bin/google-chrome` with WSL cookie paths even though the config profile clearly specified Windows Chrome/Windows cookies/Windows managed root. Separately, the login path printed `windows-loopback:9222` even when the real managed Windows Chrome session was alive on a different elevated port, which made the product path look broken and obscured the actual live browser.
+  - Root cause: `src/schema/resolver.ts` applied selected Aura-Call profiles after `browserDefaults` had already been merged into `browser`, and `applyBrowserProfileOverrides()` only filled missing fields. That meant the selected profile could not override global browser defaults. On top of that, profile browser parsing still only recognized legacy `cookiePath/profileName` keys, so v2 profile blocks using `chromeCookiePath` were silently dropped. Separately, `packages/browser-service/src/login.ts` registered and printed the requested debug port instead of the actual `chrome.port` returned by the launcher.
+  - Fix:
+    - `src/schema/resolver.ts`
+      - apply selected profiles from both `auracallProfiles` and v2 `profiles`
+      - let selected profile values override global defaults
+      - reapply CLI config after profile application so CLI still wins
+    - `src/browser/service/profileConfig.ts`
+      - add an explicit override mode for profile application
+      - accept modern `chromeCookiePath` / `chromeProfile` aliases when reading profile-browser config
+    - `src/schema/types.ts`
+      - extend `OracleProfileBrowserSchema` with `chromeCookiePath` and `chromeProfile`
+    - `packages/browser-service/src/login.ts`
+      - register and print `chrome.port` / `chrome.host` instead of the originally requested debug port
+  - Verification:
+    - `pnpm vitest run tests/schema/resolver.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserLoginCore.test.ts`
+    - `pnpm tsx /tmp/resolve-profile.mts`
+      - `--profile windows-chrome-test` now resolves Windows Chrome path, Windows cookie DB, Windows managed profile root, `wslChromePreference: "windows"`, and the pinned managed profile dir
+    - live:
+      - `pnpm tsx bin/auracall.ts --profile windows-chrome-test login --target grok`
+      - now prints `Opened grok login in /mnt/c/Program Files/Google/Chrome/Application/chrome.exe`
+      - and `Debug endpoint: windows-loopback:45920`
+  - Additional finding: after cleaning up the broken sibling Windows browser process that used `--user-data-dir= C:\...windows-chrome-test\grok`, the remaining real listener on `127.0.0.1:45920` was the good managed-profile process with `--user-data-dir=C:\...windows-chrome-test\grok`, and its live DevTools tabs showed Grok pages plus `about:blank`, not the stray `file:///...` tab.
+
+- 2026-03-26: Manual-login reuse should not spawn duplicate Grok tabs
+  - Symptom: repeated `auracall --profile windows-chrome-test login --target grok` calls kept adding another `https://grok.com/` page to the live managed Windows profile even when a reusable Grok tab or `about:blank` page already existed.
+  - Root cause: `packages/browser-service/src/manualLogin.ts` always finished manual/login launch with `CDP.New({ url })`, regardless of whether the managed browser already had a matching Grok tab or a reusable `about:blank` page.
+  - Fix:
+    - `packages/browser-service/src/manualLogin.ts`
+      - export and update `openLoginUrl(...)`
+      - reuse an existing matching page target when present
+      - otherwise navigate an existing `about:blank` target
+      - only fall back to `CDP.New(...)` when no reusable page exists
+    - `tests/browser/manualLogin.test.ts`
+      - add coverage for existing-target reuse, `about:blank` reuse, and new-tab fallback
+  - Verification:
+    - `pnpm vitest run tests/browser/manualLogin.test.ts tests/browser/browserLoginCore.test.ts tests/schema/resolver.test.ts tests/browser/profileDoctor.test.ts`
+    - live Windows managed-profile check:
+      - count `https://grok.com/` page targets on `127.0.0.1:45920`
+      - run `pnpm tsx bin/auracall.ts --profile windows-chrome-test login --target grok`
+      - count again
+      - result stayed `4 -> 4`, so login reuse no longer creates a fifth Grok tab
+
+- 2026-03-26: Windows managed-profile CDP rediscovery must be profile-scoped, not requested-port scoped
+  - Symptom: after manually signing into and reopening the Windows Aura-Call-managed Chrome profile, the browser window could be visibly open and signed in while Aura-Call still could not attach. The process command line still advertised `--remote-debugging-port=<requestedPort>`, but that port could be dead or stale, so the failure looked like generic WSL<->Windows networking breakage.
+  - Root cause: Windows-from-WSL launch/reuse trusted the requested or previously recorded DevTools port too much. If the live endpoint moved, or if the recorded port no longer matched any responsive listener, Aura-Call had no profile-scoped fallback and treated the session as dead.
+  - Fix:
+    - `packages/browser-service/src/processCheck.ts`
+      - added `probeWindowsLocalDevToolsPort(...)`
+      - added `findResponsiveWindowsDevToolsPortForUserDataDir(...)`
+      - collect all Windows Chrome processes matching a managed `user-data-dir`, not just the first match
+    - `packages/browser-service/src/chromeLifecycle.ts`
+      - added `discoverWindowsChromeDevToolsPort(...)`
+      - Windows launch/reuse now asks the managed profile for a responsive Windows-local endpoint before declaring the requested port dead
+      - when a different live port is found, Aura-Call rewrites `DevToolsActivePort` and adopts that endpoint
+    - tests
+      - `tests/browser-service/processCheck.test.ts`
+      - `tests/browser-service/windowsChromeDiscovery.test.ts`
+  - Verification:
+    - `pnpm vitest run tests/browser-service/processCheck.test.ts tests/browser-service/windowsChromeDiscovery.test.ts tests/browser-service/chromeLifecycle.test.ts tests/browser/manualLogin.test.ts tests/browser/browserLoginCore.test.ts tests/schema/resolver.test.ts`
+    - `pnpm run check`
+    - live probe:
+      - `pnpm tsx /tmp/check-windows-devtools-discovery.mts`
+      - returned `{"port":null}` for the current `windows-chrome-test/grok` browser root after checking the profile, advertised port, and Windows-local listeners
+  - Additional finding: the current live failure mode is no longer "we picked the wrong port". For the active `windows-chrome-test/grok` session, Windows reported no responsive DevTools port for any Chrome process in that managed profile group. The browser window exists, but CDP is not being exposed at all.
+
+- 2026-03-26: Windows-from-WSL launches should use `--remote-debugging-port=0`, not a preselected fixed port
+  - Symptom: the Windows product launcher kept falling into dead `4589x` retries even though a literal Windows PowerShell launch proved Chrome could expose DevTools for the same kind of managed profile. The failure looked like quoting at first, but the evidence was inconsistent: `45941` worked, while nearby fixed ports like `45942` timed out.
+  - Root cause: Aura-Call was choosing DevTools ports from Linux/WSL-local availability and passing those fixed ports into stock Windows Chrome. On this machine, some fixed ports simply never came up on the Windows side even though the launch flags were correct.
+  - Fix:
+    - `packages/browser-service/src/chromeLifecycle.ts`
+      - Windows-from-WSL launches now request `--remote-debugging-port=0`
+      - poll the managed profile's `DevToolsActivePort` and adopt the real Windows-assigned port
+      - retry fresh auto-port launches instead of walking a fixed-port band
+    - `tests/browser-service/windowsChromeDiscovery.test.ts`
+      - add coverage for `requestedPort: 0` and for `DevToolsActivePort` beating the stale advertised command-line port
+  - Verification:
+    - `pnpm vitest run tests/browser-service/windowsChromeDiscovery.test.ts`
+    - `pnpm run check`
+    - live scratch proof:
+      - `/tmp/auracall-win-ab-port-zero.ps1` returned a real Windows Chrome endpoint via `DevToolsActivePort`
+      - `/tmp/auracall-launch-ab-product-auto.mts` launched through product code and adopted `windows-loopback:53868` on the first try
+  - Additional finding: this narrows the earlier suspicion. The current product failure mode was not generic PowerShell escaping; it was fixed-port selection on Windows Chrome. Literal Windows launches with correct quoting do work, and the stable product answer is to let Windows choose the port.
+
+- 2026-03-26: Windows managed-profile liveness must trust the responsive DevTools endpoint, not just the original root PID
+  - Symptom: after a clean Windows relaunch on `--remote-debugging-port=0`, Aura-Call could prove the managed profile was live (`DevToolsActivePort=49926`, Windows-local probe ok, `windows-loopback:49926` relay ok), but `auracall doctor --local-only` still marked the registry entry stale/alive=false.
+  - Root cause: `isChromeAlive(...)` over-trusted the Windows root PID path for WSL-managed Windows profiles. If that path was flaky or ambiguous, Aura-Call could report `alive=false` even while the actual Windows DevTools endpoint was responsive.
+  - Fix:
+    - `packages/browser-service/src/processCheck.ts`
+      - for WSL + managed Windows profiles, check `probeWindowsLocalDevToolsPort(port)` first
+      - treat a responsive Windows-local DevTools endpoint as sufficient proof of life
+    - `tests/browser-service/processCheck.test.ts`
+      - add coverage for the “tasklist says no, but `/json/version` is alive” case
+  - Verification:
+    - `pnpm vitest run tests/browser-service/processCheck.test.ts tests/browser-service/windowsChromeDiscovery.test.ts tests/browser-service/chromeLifecycle.test.ts`
+    - live:
+      - relaunched `windows-chrome-test/grok` through product code
+      - `DevToolsActivePort` contained `49926`
+      - `probeWindowsLocalDevToolsPort(49926) === true`
+      - `auracall doctor --profile windows-chrome-test --target grok --local-only --json` now reports `alive: true`
+
+- 2026-03-26: Browser onboarding needs a real wizard, not more setup flags
+  - Symptom: the underlying managed-profile setup/login flow had become good enough, but first-time users still had to know too much: which browser runtime to prefer, whether to create a dedicated Aura-Call profile, which profile name to use, and when to run `setup` versus `doctor`. The product had the right primitives but no clear happy path.
+  - Root cause: onboarding logic lived in scriptable commands (`setup`, `doctor`, profile-scoped config) with no guided entry point. That forced users to understand config shape before they could benefit from it.
+  - Fix:
+    - `src/cli/browserWizard.ts`
+      - added wizard choice discovery for local/WSL/Windows Chromium sources
+      - added profile-name suggestion/validation
+      - added config patch + merge helpers for `profiles.<name>`
+    - `bin/auracall.ts`
+      - added `auracall wizard`
+      - wizard writes/updates `~/.auracall/config.json`
+      - extracted the existing setup action body into a reusable `runBrowserSetupCommand(...)`, so the wizard reuses the same managed-profile login/verification path instead of forking onboarding behavior
+    - tests
+      - `tests/cli/browserWizard.test.ts`
+      - `tests/cli/browserSetup.test.ts`
+  - Verification:
+    - `pnpm vitest run tests/cli/browserWizard.test.ts tests/cli/browserSetup.test.ts`
+    - `pnpm tsx bin/auracall.ts wizard --help`
+    - `pnpm run check`
+  - Outcome: the preferred first-run path is now `auracall wizard`, while `auracall setup` remains the scriptable/non-interactive path for automation and advanced users.
+
+- 2026-03-26: Windows bot detection is not coming from a custom Aura-Call user-agent
+  - Symptom: Windows-managed Aura-Call Chrome profiles were being flagged by some services as bot-like, raising suspicion that Aura-Call might be overriding the UA string.
+  - Investigation:
+    - `packages/browser-service/src/chromeLifecycle.ts` and `packages/browser-service/src/manualLogin.ts` do not set `--user-agent` or any explicit UA override.
+    - Live probe against `windows-chrome-test/grok` via `pnpm tsx scripts/browser-tools.ts eval --port 62265 --url-contains grok.com ...` returned:
+      - `navigator.userAgent = Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36`
+      - `navigator.platform = Win32`
+      - `navigator.webdriver = true`
+  - Conclusion: the current high-signal bot fingerprint is `webdriver=true` on the debug-attached Windows session, not a strange UA string. The current manual-login/debug path uses `--remote-debugging-port=0` plus a managed profile and loopback relay; that is the more plausible cause of bot detection.
+
+- 2026-03-26: WSL -> Windows launcher must emit `--user-data-dir="C:\..."`, not bare `--user-data-dir=C:\...`
+  - Symptom: manual PowerShell launches of the kept Windows managed profile worked reliably only when the `--user-data-dir` argument itself contained inner double quotes around the Windows path. The product launcher was building the bare path form instead.
+  - Root cause: `packages/browser-service/src/chromeLifecycle.ts` formatted the Windows `user-data-dir` token as `--user-data-dir=C:\...` and then only applied the outer single-quoted PowerShell literal wrapper. That did not match the known-good command shape the user verified manually.
+  - Fix:
+    - `packages/browser-service/src/chromeLifecycle.ts`
+      - `resolveUserDataDirFlag(...)` now returns `--user-data-dir="C:\..."` for WSL -> Windows Chrome launches
+    - `tests/browser-service/chromeLifecycle.test.ts`
+      - add a regression asserting the quoted Windows path token
+  - Verification:
+    - `pnpm vitest run tests/browser-service/chromeLifecycle.test.ts --maxWorkers 1`
+    - `pnpm vitest run tests/browser-service/windowsChromeDiscovery.test.ts --maxWorkers 1`
+
+- 2026-03-27: Repeated browser actions should reuse existing service tabs before opening new ones
+  - Symptom: repeated `auracall login`, remote browser attaches, and Grok project actions could leave behind a growing pile of same-service tabs because different layers independently fell back to raw `CDP.New(...)`.
+  - Root cause: browser-service had no single shared tab-open policy. Manual login already knew how to reuse an exact URL or `about:blank`, but remote attach and the Grok adapter still eagerly created new pages.
+  - Fix:
+    - `packages/browser-service/src/chromeLifecycle.ts`
+      - added `openOrReuseChromeTarget(...)`
+      - default policy is now: exact URL -> blank/new-tab -> same-origin reuse -> compatible-host family reuse -> new tab
+      - after selecting/opening a target, trim the obvious stockpile cases:
+        - keep the selected tab
+        - keep at most 3 matching-family tabs
+        - keep at most 1 spare blank/new-tab page
+        - if CDP window ids are available, close extra windows only when every tab in that window is disposable for the same profile/service action
+      - `connectToRemoteChrome(...)` now uses that policy instead of always opening a dedicated new tab
+    - `packages/browser-service/src/manualLogin.ts`
+      - login-tab opening now reuses same-origin service pages too, not just exact URL / blank
+    - `src/browser/providers/grokAdapter.ts`
+      - Grok’s last-resort project/home target opening now uses the shared helper instead of direct `CDP.New(...)`
+    - `src/browser/urlFamilies.ts`
+      - added explicit browser-service host families, starting with ChatGPT `chatgpt.com` + `chat.openai.com`
+    - `src/browser/login.ts` and `src/browser/index.ts`
+      - pass compatible host families into manual login and remote attach so ChatGPT host migrations reuse the existing service tab instead of opening a sibling host tab
+    - tests
+      - `tests/browser-service/chromeTargetReuse.test.ts`
+      - `tests/browser/manualLogin.test.ts`
+  - Verification:
+    - `pnpm vitest run tests/browser-service/chromeTargetReuse.test.ts tests/browser/manualLogin.test.ts tests/browser/browserLoginCore.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - Additional finding: compatible-host reuse should stay explicit per service. The generic fallback should not guess that unrelated hosts are interchangeable just because the page shape happens to look similar.
+  - Additional finding: window cleanup must stay profile-scoped and conservative. The safe line is “close obviously disposable extra windows,” not “try to enforce one global browser window.”
+
+- 2026-03-27: Grok conversation context cache writes failed for nested files, and project conversation lists could stick on generic `Chat` titles
+  - Symptom:
+    - `auracall conversations context get ... --target grok` failed with `ENOENT ... /contexts/<id>.json`
+    - project conversation lists could keep showing generic titles like `Chat` even after the real conversation title was available elsewhere in the UI
+  - Root cause:
+    - `src/browser/providers/cache.ts` only created the provider cache root, not the parent directory for nested cache files like `contexts/<id>.json`
+    - `src/browser/providers/grokAdapter.ts` merged raw/sidebar/history/open conversation records with a first-write-wins strategy, so a low-quality raw title could permanently dominate a better history/sidebar title
+  - Fix:
+    - `src/browser/providers/cache.ts`
+      - `writeProviderCache(...)` now creates `path.dirname(cacheFile)` so nested conversation/project cache writes succeed
+    - `src/browser/providers/grokAdapter.ts`
+      - added `grokConversationTitleQuality(...)` and `choosePreferredGrokConversation(...)`
+      - `listConversations(...)` now merges duplicate conversation ids by title quality / timestamp / URL quality instead of “first source wins forever”
+      - added post-submit rename verification in `renameConversationInHistoryDialog(...)`
+    - tests
+      - `tests/browser/providerCache.test.ts`
+      - `tests/browser/grokAdapter.test.ts`
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/providerCache.test.ts --maxWorkers 1`
+    - live `conversations context get` on Grok now returns the expected messages instead of `ENOENT`
+    - live `conversations --refresh --include-history` now resolves `e21addd2-1413-408a-b700-b78e2dbadaf8` as `AuraCall Maple Ledger`
+  - Additional finding:
+    - Grok’s old history-dialog workflow is no longer the dependable place for conversation rename/delete. On current live pages, the project-page `History` control is just an expanded header, while the real action surface appears to be the hidden root-sidebar `Options` button on each conversation row.
+
+- 2026-03-27: Grok conversation rename/delete had moved from the old history dialog to the root sidebar row menu
+  - Symptom:
+    - `auracall rename ... --target grok` and `auracall delete ... --target grok` were failing with `History dialog did not open`
+    - live DOM inspection showed the target conversation still existed in the root sidebar, with a hidden per-row `Options` button and a Radix menu containing `Rename`, `Pin`, and `Delete`
+  - Root cause:
+    - the old implementation still assumed Grok conversation actions lived behind the history dialog
+    - on the current UI, the project-page `History` control is just a collapsible header, while the real conversation action surface is the root sidebar row menu
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - added helpers to tag the target sidebar row and hidden `Options` button
+      - added `openGrokConversationSidebarMenu(...)`
+      - added sidebar-specific rename/delete verification waits
+      - `renameConversation(...)` and `deleteConversation(...)` now use the root sidebar `Options` menu first and only fall back to the old history-dialog flow if the sidebar path fails
+  - Verification:
+    - live rename of `e21addd2-1413-408a-b700-b78e2dbadaf8` to `AuraCall Maple Harbor` succeeded
+    - live delete of that same conversation succeeded
+    - follow-up `conversations --refresh --include-history` no longer listed the deleted conversation
+
+- 2026-03-27: Grok live verification needed one explicit WSL-primary acceptance checklist instead of scattered ad hoc smoke commands
+  - Symptom:
+    - Grok project and conversation CRUD were being repaired successfully, but the repo still lacked one concrete "done" checklist for deciding when the WSL Grok path was actually fully functional.
+    - `docs/manual-tests.md` only pointed loosely at `docs/dev/smoke-tests.md`, so the runbook did not clearly say which Grok operations had to pass together before calling the feature complete.
+  - Root cause:
+    - Live debugging had outpaced the smoke documentation. Each repair was being logged in the journal/fixes log, but the acceptance bar stayed implicit.
+  - Fix:
+    - `docs/dev/smoke-tests.md`
+      - added `Grok Acceptance (WSL Chrome Primary)` with concrete steps for:
+        - project create/list/rename/clone
+        - project instructions get/set
+        - project files add/list/remove
+        - conversation create/list/context/rename/delete
+        - markdown capture
+        - cache freshness and cleanup
+      - documented the Grok naming constraint: avoid timestamp-heavy disposable names because they can trip the backend `contains-phone-number` validator
+    - `docs/manual-tests.md`
+      - now points directly to that acceptance checklist as the canonical Grok runbook
+    - `docs/testing.md`
+      - now calls out the same checklist as the Grok "fully functional" bar
+    - `docs/dev/llmservice-phase-7.md`
+      - updated the Phase 7 smoke section so the plan references the same acceptance bar
+  - Verification:
+    - doc-only update; verified by reading the linked docs together and confirming they now point to the same checklist
+  - Additional finding:
+    - Windows Chrome should remain secondary/manual-debug coverage until its human-session and debug-session behavior are cleanly separated. The current Grok acceptance bar should stay WSL-primary rather than pretending both paths are equally mature.

@@ -28,8 +28,8 @@ export class BrowserAutomationClient {
     this.provider = this.llmService.provider;
     this.core = new BrowserAutomationClientCore(this.provider, {
       connectDevTools: () => this.connectDevTools(),
-      diagnoseProvider: (client, config, basePath) =>
-        diagnoseProvider(client, config as typeof this.provider.config, basePath),
+      diagnoseProvider: (client, config, basePath, options) =>
+        diagnoseProvider(client, config as typeof this.provider.config, basePath, options),
       crawlerScript: CRAWLER_SCRIPT,
     });
   }
@@ -86,7 +86,7 @@ export class BrowserAutomationClient {
     return this.browserService.connectDevTools();
   }
 
-  async diagnose(options: { basePath?: string; saveSnapshot?: boolean } = {}): Promise<{
+  async diagnose(options: { basePath?: string; saveSnapshot?: boolean; quiet?: boolean } = {}): Promise<{
     report: DiagnosisReport;
     port: number;
   }> {

@@ -1,6 +1,6 @@
 # Gemini Integration
 
-Oracle supports Gemini in two distinct ways:
+Aura-Call supports Gemini in two distinct ways:
 
 1. **Gemini API mode** (`--engine api`) via `GEMINI_API_KEY`
 2. **Gemini web (cookie) mode** (`--engine browser`) via your signed-in Chrome cookies at `gemini.google.com` (no API key required)
@@ -12,13 +12,13 @@ Oracle supports Gemini in two distinct ways:
    ```bash
    export GEMINI_API_KEY="your-google-api-key"
    ```
-3. **Run Oracle:** Use the `--model` (or `-m`) flag to select Gemini.
+3. **Run Aura-Call:** Use the `--model` (or `-m`) flag to select Gemini.
    ```bash
-   oracle --engine api --model gemini --prompt "Explain quantum entanglement"
+   auracall --engine api --model gemini --prompt "Explain quantum entanglement"
    ```
    You can also use the explicit model ID:
    ```bash
-   oracle --engine api --model gemini-3-pro --prompt "..."
+   auracall --engine api --model gemini-3-pro --prompt "..."
    ```
 
 ## Usage (Gemini web / cookies)
@@ -27,32 +27,32 @@ Gemini web mode is a cookie-based client for `gemini.google.com`. It does **not*
 
 Prereqs:
 - Chrome installed.
-- Signed into `gemini.google.com` in the Chrome profile Oracle uses (default: `Default` profile).
+- Signed into `gemini.google.com` in the Chrome profile Aura-Call uses (default: `Default` profile).
 - Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
-- If cookies are missing, run `oracle login --target gemini` to open the same profile for sign-in.
-- If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `oracle login --target gemini --export-cookies` to save cookies to `~/.oracle/cookies.json`.
+- If cookies are missing, run `auracall login --target gemini` to open the same profile for sign-in.
+- If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `auracall login --target gemini --export-cookies` to save cookies to `~/.auracall/cookies.json`.
 
 Examples:
 ```bash
 # Text run
-oracle --engine browser --model gemini-3-pro --prompt "Say OK."
+auracall --engine browser --model gemini-3-pro --prompt "Say OK."
 
 # Generate an image (writes an output file)
-oracle --engine browser --model gemini-3-pro \
+auracall --engine browser --model gemini-3-pro \
   --prompt "a cute robot holding a banana" \
   --generate-image out.jpg --aspect 1:1
 
 # Edit an image (input via --edit-image, output via --output)
-oracle --engine browser --model gemini-3-pro \
+auracall --engine browser --model gemini-3-pro \
   --prompt "add sunglasses" \
   --edit-image in.png --output out.jpg
 ```
 
 Notes:
-- If your logged-in Gemini account can’t access “Pro”, Oracle will auto-fallback to a supported model for web runs (and logs the fallback in verbose mode).
+- If your logged-in Gemini account can’t access “Pro”, Aura-Call will auto-fallback to a supported model for web runs (and logs the fallback in verbose mode).
 - This path runs fully in Node/TypeScript (no Python/venv dependency).
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.
-- Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or pass inline cookies with `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json`.
+- Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or pass inline cookies with `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`.
 
 ## Implementation details
 
@@ -74,5 +74,5 @@ Notes:
 ## Testing
 
 - Unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`
-- Live (API): `ORACLE_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
-- Live (Gemini web/cookies): `ORACLE_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts`
+- Live (API): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
+- Live (Gemini web/cookies): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts`

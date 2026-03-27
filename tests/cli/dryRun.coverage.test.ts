@@ -19,7 +19,7 @@ describe('runDryRunSummary', () => {
       { readFilesImpl },
     );
 
-    expect(log).toHaveBeenCalledWith(expect.stringContaining('[dry-run] Oracle (0.4.1) would call gpt-5.2-pro'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('[dry-run] Aura-Call (0.4.1) would call gpt-5.2-pro'));
     expect(log).toHaveBeenCalledWith(expect.stringContaining('No files matched'));
   });
 

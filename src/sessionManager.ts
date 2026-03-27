@@ -2,12 +2,12 @@ import path from 'node:path';
 import fs from 'node:fs/promises';
 import { createWriteStream } from 'node:fs';
 import type { WriteStream } from 'node:fs';
-import type { BrowserModelStrategy, CookieParam } from './browser/types.js';
+import type { BrowserModelStrategy, CookieParam, DebugPortStrategy } from './browser/types.js';
 import { isChromeAlive, isProcessAlive, isPortOpen, findAllChromeProcesses } from './browser/processCheck.js';
 import type { TransportFailureReason, AzureOptions, ModelName, ThinkingTimeLevel } from './oracle.js';
 import { DEFAULT_MODEL } from './oracle.js';
 import { safeModelSlug } from './oracle/modelResolver.js';
-import { getOracleHomeDir } from './oracleHome.js';
+import { getAuracallHomeDir } from './auracallHome.js';
 
 export type SessionMode = 'api' | 'browser';
 
@@ -15,6 +15,8 @@ export interface BrowserSessionConfig {
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;
+  bootstrapCookiePath?: string | null;
+  display?: string | null;
   target?: 'chatgpt' | 'gemini' | 'grok';
   projectId?: string | null;
   conversationId?: string | null;
@@ -24,6 +26,7 @@ export interface BrowserSessionConfig {
   url?: string;
   timeoutMs?: number;
   debugPort?: number | null;
+  debugPortStrategy?: DebugPortStrategy | null;
   inputTimeoutMs?: number;
   cookieSync?: boolean;
   cookieNames?: string[] | string | null;
@@ -44,6 +47,9 @@ export interface BrowserSessionConfig {
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
   managedProfileRoot?: string | null;
   blockingProfileAction?: 'fail' | 'restart' | 'restart-managed';
+  serviceTabLimit?: number | null;
+  blankTabLimit?: number | null;
+  collapseDisposableWindows?: boolean;
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   thinkingTime?: ThinkingTimeLevel;
 }
@@ -190,7 +196,7 @@ interface InitializeSessionOptions extends StoredRunOptions {
 }
 
 export function getSessionsDir(): string {
-  return path.join(getOracleHomeDir(), 'sessions');
+  return path.join(getAuracallHomeDir(), 'sessions');
 }
 const METADATA_FILENAME = 'meta.json';
 const LEGACY_SESSION_FILENAME = 'session.json';
@@ -706,7 +712,13 @@ async function markZombie(
     const runtime = meta.browser?.runtime;
     if (runtime) {
       if (runtime.chromePid && runtime.userDataDir) {
-        const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort, allChromeProcesses);
+        const alive = await isChromeAlive(
+          runtime.chromePid,
+          runtime.userDataDir,
+          runtime.chromePort,
+          allChromeProcesses,
+          runtime.chromeHost ?? '127.0.0.1',
+        );
         if (alive) return meta;
       } else {
         const signals: boolean[] = [];
@@ -747,7 +759,13 @@ async function markDeadBrowser(
     return meta;
   }
   if (runtime.chromePid && runtime.userDataDir) {
-    const alive = await isChromeAlive(runtime.chromePid, runtime.userDataDir, runtime.chromePort, allChromeProcesses);
+    const alive = await isChromeAlive(
+      runtime.chromePid,
+      runtime.userDataDir,
+      runtime.chromePort,
+      allChromeProcesses,
+      runtime.chromeHost ?? '127.0.0.1',
+    );
     if (alive) return meta;
   } else {
     const signals: boolean[] = [];
@@ -796,4 +814,3 @@ function isZombie(meta: SessionMetadata): boolean {
   }
   return Date.now() - startedMs > ZOMBIE_MAX_AGE_MS;
 }
-

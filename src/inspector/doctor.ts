@@ -23,7 +23,10 @@ export interface DiagnosisReport {
 export async function diagnoseProvider(
   client: ChromeClient,
   config: BrowserProviderConfig,
-  basePath?: string
+  basePath?: string,
+  options: {
+    quiet?: boolean;
+  } = {},
 ): Promise<DiagnosisReport> {
   const { result: urlResult } = await client.Runtime.evaluate({
     expression: 'location.href',
@@ -67,7 +70,9 @@ export async function diagnoseProvider(
   // If failures, capture a semantic snapshot
   if (!allPassed && basePath) {
     try {
-      console.log('Capturing UI snapshot for debugging...');
+      if (!options.quiet) {
+        console.log('Capturing UI snapshot for debugging...');
+      }
       const { result } = await client.Runtime.evaluate({
         expression: CRAWLER_SCRIPT,
         returnByValue: true
@@ -75,12 +80,14 @@ export async function diagnoseProvider(
       
       if (result.value) {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filename = `oracle-snapshot-${config.id}-${timestamp}.json`;
+        const filename = `auracall-snapshot-${config.id}-${timestamp}.json`;
         snapshotPath = path.join(basePath, filename);
         await fs.writeFile(snapshotPath, JSON.stringify(result.value, null, 2), 'utf8');
       }
     } catch (err) {
-      console.error('Failed to capture snapshot:', err);
+      if (!options.quiet) {
+        console.error('Failed to capture snapshot:', err);
+      }
     }
   }
 

@@ -4,7 +4,7 @@ Goal: Run Gemini web automation from WSL using the same Brave profile you sign i
 
 ## Key behavior
 - From WSL, Oracle launches the Windows Brave when `browser.chromePath` points at `C:/Program Files/.../brave.exe` or `/mnt/c/Program Files/.../brave.exe`.
-- `oracle login --target gemini --export-cookies` writes to `~/.oracle/cookies.json` inside WSL.
+- `oracle login --target gemini --export-cookies` writes to `~/.auracall/cookies.json` inside WSL.
 
 ## Recommended setup (WSL)
 1) Ensure config points to Windows Brave and profile:
@@ -20,7 +20,7 @@ Goal: Run Gemini web automation from WSL using the same Brave profile you sign i
 }
 ```
 
-2) Export cookies from WSL (opens Windows Brave, waits, writes `~/.oracle/cookies.json`):
+2) Export cookies from WSL (opens Windows Brave, waits, writes `~/.auracall/cookies.json`):
 
 ```bash
 oracle login --target gemini --export-cookies
@@ -42,7 +42,7 @@ oracle --gemini -p "Say hello from Brave"
 If you already exported on Windows:
 
 ```bash
-cp /mnt/c/Users/<You>/.oracle/cookies.json ~/.oracle/cookies.json
+cp /mnt/c/Users/<You>/.auracall/cookies.json ~/.auracall/cookies.json
 ```
 
 Then rerun:
@@ -54,4 +54,4 @@ oracle --gemini -p "Say hello from Brave"
 ## Notes
 - Gemini runs use inline cookies first; the fallback to Chrome cookie DB on Windows can fail if Brave is locked. `--export-cookies` is the reliable path.
 - To use a Linux browser instead, set `browser.chromePath` to the Linux Chrome/Brave binary in WSL and sign in there; cookies will come from that Linux profile.
-- Linux desktop (non-WSL) may require `libsecret-tools` so `secret-tool` can decrypt Chrome cookies; if that fails, use `--export-cookies` and `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json`.
+- Linux desktop (non-WSL) may require `libsecret-tools` so `secret-tool` can decrypt Chrome cookies; if that fails, use `--export-cookies` and `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`.

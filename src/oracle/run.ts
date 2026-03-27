@@ -178,7 +178,7 @@ export async function runOracle(options: RunOracleOptions, deps: RunOracleDeps =
 
   const envVar = apiKeyResult.source;
 
-  const minPromptLength = Number.parseInt(process.env.ORACLE_MIN_PROMPT_CHARS ?? '10', 10);
+  const minPromptLength = Number.parseInt(process.env.AURACALL_MIN_PROMPT_CHARS ?? '10', 10);
   const promptLength = options.prompt?.trim().length ?? 0;
   // Enforce the short-prompt guardrail on pro-tier models because they're costly; cheaper models can run short prompts without blocking.
   const isProTierModel = isProModel(options.model);
@@ -216,7 +216,7 @@ export async function runOracle(options: RunOracleOptions, deps: RunOracleDeps =
     logVerbose('No files attached.');
     if (!isPreview) {
       pendingNoFilesTip =
-        'Tip: no files attached — Oracle works best with project context. Add files via --file path/to/code or docs.';
+        'Tip: no files attached — Aura-Call works best with project context. Add files via --file path/to/code or docs.';
     }
   }
   const shortPrompt = (options.prompt?.trim().length ?? 0) < 80;

@@ -31,7 +31,7 @@ Define the target config shape split between BrowserService (browser/process) an
   - Service-scoped defaults (LLM domain): `projectName`, `projectId`, `conversationName`, `conversationId`, `model`, `modelStrategy`, `thinkingTime`
 
 ### Profile Overrides
-- `profiles.<name>` (v2) / `oracleProfiles.<name>` (legacy)
+- `profiles.<name>` (v2) / `auracallProfiles.<name>` (legacy)
   - `engine`, `search`, `defaultService`, `keepBrowser`
   - `browser.*` (BrowserService overrides)
   - `llm.*` (LlmService defaults override)

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import chalk from 'chalk';
-import { enforceBrowserSearchFlag } from '../../bin/oracle-cli.js';
+import { enforceBrowserSearchFlag } from '../../bin/auracall.js';
 import type { RunOracleOptions } from '../../src/oracle.js';
 import type { SessionMode } from '../../src/sessionStore.js';
 

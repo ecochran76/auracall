@@ -17,11 +17,11 @@ async function resolveTarget(): Promise<{ host: string; port: number }> {
 }
 
 function resolveUrl(): string {
-  return process.env.ORACLE_GROK_URL ?? process.env.GROK_URL ?? process.argv[2] ?? DEFAULT_URL;
+  return process.env.AURACALL_GROK_URL ?? process.env.GROK_URL ?? process.argv[2] ?? DEFAULT_URL;
 }
 
 function resolveMode(): string {
-  return process.env.ORACLE_GROK_MODE ?? process.argv[3] ?? DEFAULT_MODE;
+  return process.env.AURACALL_GROK_MODE ?? process.argv[3] ?? DEFAULT_MODE;
 }
 
 async function main() {

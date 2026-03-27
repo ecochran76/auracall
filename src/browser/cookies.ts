@@ -103,7 +103,7 @@ async function readChromeCookies(
   const chromeProfile = cookiePath ?? profile ?? undefined;
   const timeoutMs =
     readDuration('BROWSER_SERVICE_COOKIE_LOAD_TIMEOUT_MS', 0) ||
-    readDuration('ORACLE_COOKIE_LOAD_TIMEOUT_MS', 5_000);
+    readDuration('AURACALL_COOKIE_LOAD_TIMEOUT_MS', 5_000);
 
   // Learned: read from multiple origins to capture auth cookies that land on chat.openai.com + atlas.
   const { cookies, warnings } = await getCookies({
@@ -117,7 +117,7 @@ async function readChromeCookies(
   });
 
   const debugCookies =
-    process.env.BROWSER_SERVICE_DEBUG_COOKIES === '1' || process.env.ORACLE_DEBUG_COOKIES === '1';
+    process.env.BROWSER_SERVICE_DEBUG_COOKIES === '1' || process.env.AURACALL_DEBUG_COOKIES === '1';
   if (debugCookies && warnings.length) {
     // eslint-disable-next-line no-console
     console.log(`[cookies] sweet-cookie warnings:\n- ${warnings.join('\n- ')}`);

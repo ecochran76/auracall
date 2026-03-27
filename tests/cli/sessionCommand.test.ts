@@ -85,10 +85,10 @@ describe('handleSessionCommand', () => {
     const command = createCommandWithOptions({ hours: 24, limit: 10, all: false, path: true } as StatusOptions);
     const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
     const getSessionPaths = vi.fn().mockResolvedValue({
-      dir: '/tmp/.oracle/sessions/abc',
-      metadata: '/tmp/.oracle/sessions/abc/meta.json',
-      request: '/tmp/.oracle/sessions/abc/request.json',
-      log: '/tmp/.oracle/sessions/abc/output.log',
+      dir: '/tmp/.auracall/sessions/abc',
+      metadata: '/tmp/.auracall/sessions/abc/meta.json',
+      request: '/tmp/.auracall/sessions/abc/request.json',
+      log: '/tmp/.auracall/sessions/abc/output.log',
     });
 
     await handleSessionCommand('abc', command, {
@@ -100,10 +100,10 @@ describe('handleSessionCommand', () => {
     });
 
     expect(getSessionPaths).toHaveBeenCalledWith('abc');
-    expect(logSpy).toHaveBeenCalledWith('Session dir: /tmp/.oracle/sessions/abc');
-    expect(logSpy).toHaveBeenCalledWith('Metadata: /tmp/.oracle/sessions/abc/meta.json');
-    expect(logSpy).toHaveBeenCalledWith('Request: /tmp/.oracle/sessions/abc/request.json');
-    expect(logSpy).toHaveBeenCalledWith('Log: /tmp/.oracle/sessions/abc/output.log');
+    expect(logSpy).toHaveBeenCalledWith('Session dir: /tmp/.auracall/sessions/abc');
+    expect(logSpy).toHaveBeenCalledWith('Metadata: /tmp/.auracall/sessions/abc/meta.json');
+    expect(logSpy).toHaveBeenCalledWith('Request: /tmp/.auracall/sessions/abc/request.json');
+    expect(logSpy).toHaveBeenCalledWith('Log: /tmp/.auracall/sessions/abc/output.log');
     expect(process.exitCode).toBeUndefined();
   });
 
@@ -188,7 +188,7 @@ describe('handleSessionCommand', () => {
     });
     expect(deleteSessionsOlderThan).toHaveBeenCalledWith({ hours: 6, includeAll: false });
     expect(logSpy).toHaveBeenCalledWith(
-      'Deleted 3 sessions (sessions older than 6h). 2 sessions remain.\nRun "oracle session --clear --all" to delete everything.',
+      'Deleted 3 sessions (sessions older than 6h). 2 sessions remain.\nRun "auracall session --clear --all" to delete everything.',
     );
   });
 
@@ -203,7 +203,7 @@ describe('handleSessionCommand', () => {
       getSessionPaths: vi.fn(),
     });
     expect(errorSpy).toHaveBeenCalledWith(
-      'Session cleanup now uses --clear. Run "oracle session --clear --hours <n>" instead.',
+      'Session cleanup now uses --clear. Run "auracall session --clear --hours <n>" instead.',
     );
     expect(process.exitCode).toBe(1);
   });

@@ -1,9 +1,17 @@
 import net from 'node:net';
-import os from 'node:os';
+import { existsSync } from 'node:fs';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
+import { isWslEnvironment, normalizeComparablePath } from './platformPaths.js';
+import { resolveChromeEndpoint, resolveWindowsPowerShellPath, WINDOWS_LOOPBACK_REMOTE_HOST } from './windowsLoopbackRelay.js';
 
 const execFileAsync = promisify(execFile);
+
+type ChromeProcessMatch = {
+  pid: number;
+  port: number | null;
+  commandLine: string;
+};
 
 export function isProcessAlive(pid: number | undefined | null): boolean {
   if (pid == null || !Number.isFinite(pid) || pid <= 0) return false;
@@ -23,28 +31,33 @@ export async function isPortOpen(host: string, port: number): Promise<boolean> {
   if (!port || port <= 0 || port > 65535) {
     return false;
   }
-  return new Promise((resolve) => {
-    const socket = net.createConnection({ host, port });
-    let settled = false;
-    const cleanup = (result: boolean) => {
-      if (settled) return;
-      settled = true;
-      socket.removeAllListeners();
-      socket.end();
-      socket.destroy();
-      socket.unref();
-      resolve(result);
-    };
-    const timer = setTimeout(() => cleanup(false), 1000);
-    socket.once('connect', () => {
-      clearTimeout(timer);
-      cleanup(true);
+  const endpoint = await resolveChromeEndpoint(host, port);
+  try {
+    return await new Promise((resolve) => {
+      const socket = net.createConnection({ host: endpoint.host, port: endpoint.port });
+      let settled = false;
+      const cleanup = (result: boolean) => {
+        if (settled) return;
+        settled = true;
+        socket.removeAllListeners();
+        socket.end();
+        socket.destroy();
+        socket.unref();
+        resolve(result);
+      };
+      const timer = setTimeout(() => cleanup(false), 1000);
+      socket.once('connect', () => {
+        clearTimeout(timer);
+        cleanup(true);
+      });
+      socket.once('error', () => {
+        clearTimeout(timer);
+        cleanup(false);
+      });
     });
-    socket.once('error', () => {
-      clearTimeout(timer);
-      cleanup(false);
-    });
-  });
+  } finally {
+    await endpoint.dispose?.().catch(() => undefined);
+  }
 }
 
 export async function isDevToolsResponsive({
@@ -58,24 +71,29 @@ export async function isDevToolsResponsive({
   attempts?: number;
   timeoutMs?: number;
 }): Promise<boolean> {
-  const versionUrl = `http://${host}:${port}/json/version`;
-  for (let attempt = 0; attempt < attempts; attempt++) {
-    try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), timeoutMs);
-      const response = await fetch(versionUrl, { signal: controller.signal });
-      clearTimeout(timeout);
-      if (response.ok) {
-        return true;
+  const endpoint = await resolveChromeEndpoint(host, port);
+  const versionUrl = `http://${endpoint.host}:${endpoint.port}/json/version`;
+  try {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        const response = await fetch(versionUrl, { signal: controller.signal });
+        clearTimeout(timeout);
+        if (response.ok) {
+          return true;
+        }
+      } catch {
+        // ignore errors until final attempt
       }
-    } catch {
-      // ignore errors until final attempt
+      if (attempt < attempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
     }
-    if (attempt < attempts - 1) {
-      await new Promise((resolve) => setTimeout(resolve, 200));
-    }
+    return false;
+  } finally {
+    await endpoint.dispose?.().catch(() => undefined);
   }
-  return false;
 }
 
 /**
@@ -87,13 +105,21 @@ export async function isChromeAlive(
   userDataDir: string,
   port?: number,
   allChromeProcesses?: Map<string, number>,
+  host = '127.0.0.1',
 ): Promise<boolean> {
   if (isWsl() && isWindowsUserDataDir(userDataDir)) {
+    if (port && await probeWindowsLocalDevToolsPort(port)) {
+      return true;
+    }
     if (!pid || !await isWindowsProcessAlive(pid)) {
       return false;
     }
     if (port) {
-      return isDevToolsResponsive({ port });
+      const effectiveHost =
+        host && host !== '127.0.0.1'
+          ? host
+          : WINDOWS_LOOPBACK_REMOTE_HOST;
+      return isDevToolsResponsive({ port, host: effectiveHost });
     }
     return true;
   }
@@ -123,7 +149,7 @@ export async function isChromeAlive(
   if (port) {
     // If the port is specified, we expect it to be open and speaking DevTools protocol.
     // We trust the process check more, but this confirms the service is ready/healthy.
-    return isDevToolsResponsive({ port });
+    return isDevToolsResponsive({ port, host });
   }
 
   return true;
@@ -170,62 +196,37 @@ async function findAllChromeProcessesUnix(): Promise<Map<string, number>> {
 
 async function findAllChromeProcessesWin32(): Promise<Map<string, number>> {
   const results = new Map<string, number>();
-  try {
-    const script = `Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*chrome*' -or $_.Name -like '*chromium*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json`;
-    const { stdout } = await execFileAsync('powershell', ['-NoProfile', '-Command', script], {
-      maxBuffer: 10 * 1024 * 1024,
-      timeout: 5000,
-    });
-    
-    if (!stdout || !stdout.trim()) return results;
-
-    let processes: Array<{ processId: number; commandLine: string }> = [];
-    try {
-      const parsed = JSON.parse(stdout) as unknown;
-      const rows = Array.isArray(parsed) ? parsed : [parsed];
-      processes = rows
-        .map((row) => {
-          const record = row as Record<string, unknown>;
-          const processId = Number(record.ProcessId ?? record.processId);
-          const commandLine =
-            typeof record.CommandLine === 'string'
-              ? record.CommandLine
-              : typeof record.commandLine === 'string'
-                ? record.commandLine
-                : '';
-          return { processId, commandLine };
-        })
-        .filter((proc) => Number.isFinite(proc.processId) && proc.processId > 0);
-    } catch {
-      return results;
+  const processes = await listChromeProcessesViaPowerShell('powershell');
+  for (const proc of processes) {
+    const userDataDir = extractUserDataDirFromCommandLine(proc.commandLine);
+    if (userDataDir) {
+      results.set(userDataDir, proc.processId);
     }
-
-    for (const proc of processes) {
-      if (!proc.commandLine) continue;
-      const cmd = proc.commandLine;
-      const dirMatch = cmd.match(/--(?:user-data-dir|user-data-dir)=["']?([^"'\s]+)["']?/);
-      if (dirMatch?.[1]) {
-        // Normalize slashes for consistency if needed, but here we store as-is from cmdline
-        results.set(dirMatch[1], proc.processId);
-      }
-    }
-  } catch {
-    // best effort
   }
   return results;
 }
 
 export async function findChromePidUsingUserDataDir(userDataDir: string): Promise<number | null> {
+  const match = await findChromeProcessUsingUserDataDir(userDataDir);
+  return match?.pid ?? null;
+}
+
+export async function findChromeProcessUsingUserDataDir(userDataDir: string): Promise<ChromeProcessMatch | null> {
   if (isWsl() && isWindowsUserDataDir(userDataDir)) {
-    return findWindowsChromePidUsingTasklist();
+    return findWindowsChromeProcessUsingUserDataDir(userDataDir);
   }
   if (process.platform === 'win32') {
-    return findChromePidWin32(userDataDir);
+    return findChromeProcessWin32(userDataDir);
   }
-  return findChromePidUnix(userDataDir);
+  return findChromeProcessUnix(userDataDir);
 }
 
 export async function findWindowsChromePidUsingTasklist(): Promise<number | null> {
+  const match = await findWindowsChromeProcessUsingTasklist();
+  return match?.pid ?? null;
+}
+
+async function findWindowsChromeProcessUsingTasklist(): Promise<ChromeProcessMatch | null> {
   if (!isWsl()) {
     return null;
   }
@@ -248,7 +249,7 @@ export async function findWindowsChromePidUsingTasklist(): Promise<number | null
     if (pids.length === 0) {
       return null;
     }
-    return pids[0];
+    return { pid: pids[0], port: null, commandLine: '' };
   } catch {
     return null;
   }
@@ -274,21 +275,14 @@ async function isWindowsProcessAlive(pid: number): Promise<boolean> {
 }
 
 function isWindowsUserDataDir(userDataDir: string): boolean {
-  const normalized = userDataDir.replace(/\\/g, '/').toLowerCase();
-  return normalized.startsWith('/mnt/c/users/');
+  return /^\/mnt\/[a-z]\/users\//.test(normalizeComparablePath(userDataDir));
 }
 
 function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
-  }
-  return os.release().toLowerCase().includes('microsoft');
+  return isWslEnvironment();
 }
 
-async function findChromePidUnix(userDataDir: string): Promise<number | null> {
+async function findChromeProcessUnix(userDataDir: string): Promise<ChromeProcessMatch | null> {
   try {
     // -o pid,args to get PID and command line
     const { stdout } = await execFileAsync('ps', ['-ax', '-o', 'pid,args'], { maxBuffer: 10 * 1024 * 1024 });
@@ -306,7 +300,11 @@ async function findChromePidUnix(userDataDir: string): Promise<number | null> {
       
       if (!lower.includes('chrome') && !lower.includes('chromium')) continue;
       if (cmd.includes(needle) && (lower.includes('--user-data-dir') || lower.includes('/user-data-dir'))) {
-        return pid;
+        return {
+          pid,
+          port: extractRemoteDebugPort(cmd),
+          commandLine: cmd,
+        };
       }
     }
   } catch {
@@ -315,49 +313,216 @@ async function findChromePidUnix(userDataDir: string): Promise<number | null> {
   return null;
 }
 
-async function findChromePidWin32(userDataDir: string): Promise<number | null> {
+async function findChromeProcessWin32(userDataDir: string): Promise<ChromeProcessMatch | null> {
+  const processes = await listChromeProcessesViaPowerShell('powershell');
+  return findChromeProcessMatchForUserDataDir(processes, userDataDir);
+}
+
+async function findWindowsChromeProcessUsingUserDataDir(userDataDir: string): Promise<ChromeProcessMatch | null> {
+  const processes = await listChromeProcessesViaPowerShell(resolveWindowsPowerShellPathForWsl());
+  return findChromeProcessMatchForUserDataDir(processes, userDataDir);
+}
+
+function findChromeProcessMatchForUserDataDir(
+  processes: Array<{ processId: number; commandLine: string }>,
+  userDataDir: string,
+): ChromeProcessMatch | null {
+  return findChromeProcessMatchesForUserDataDir(processes, userDataDir)[0] ?? null;
+}
+
+function findChromeProcessMatchesForUserDataDir(
+  processes: Array<{ processId: number; commandLine: string }>,
+  userDataDir: string,
+): ChromeProcessMatch[] {
+  const needle = normalizeChromeUserDataDir(userDataDir);
+  const matches: ChromeProcessMatch[] = [];
+  for (const proc of processes) {
+    const parsedUserDataDir = extractUserDataDirFromCommandLine(proc.commandLine);
+    if (!parsedUserDataDir) {
+      continue;
+    }
+    if (normalizeChromeUserDataDir(parsedUserDataDir) !== needle) {
+      continue;
+    }
+    matches.push({
+      pid: proc.processId,
+      port: extractRemoteDebugPort(proc.commandLine),
+      commandLine: proc.commandLine,
+    });
+  }
+  return matches;
+}
+
+async function listChromeProcessesViaPowerShell(
+  executable: string,
+): Promise<Array<{ processId: number; commandLine: string }>> {
   try {
     const script = `Get-CimInstance Win32_Process | Where-Object { $_.Name -like '*chrome*' -or $_.Name -like '*chromium*' } | Select-Object ProcessId, CommandLine | ConvertTo-Json`;
-    const { stdout } = await execFileAsync('powershell', ['-NoProfile', '-Command', script], {
+    const { stdout } = await execFileAsync(executable, ['-NoProfile', '-Command', script], {
       maxBuffer: 10 * 1024 * 1024,
       timeout: 5000,
     });
-    
-    if (!stdout || !stdout.trim()) return null;
 
-    let processes: Array<{ processId: number; commandLine: string }> = [];
-    try {
-      const parsed = JSON.parse(stdout) as unknown;
-      const rows = Array.isArray(parsed) ? parsed : [parsed];
-      processes = rows
-        .map((row) => {
-          const record = row as Record<string, unknown>;
-          const processId = Number(record.ProcessId ?? record.processId);
-          const commandLine =
-            typeof record.CommandLine === 'string'
-              ? record.CommandLine
-              : typeof record.commandLine === 'string'
-                ? record.commandLine
-                : '';
-          return { processId, commandLine };
-        })
-        .filter((proc) => Number.isFinite(proc.processId) && proc.processId > 0);
-    } catch {
-      return null;
+    if (!stdout || !stdout.trim()) {
+      return [];
     }
 
-    // Normalize slashes for comparison
-    const needle = userDataDir.replace(/\\/g, '/').toLowerCase();
+    const parsed = JSON.parse(stdout) as unknown;
+    const rows = Array.isArray(parsed) ? parsed : [parsed];
+    return rows
+      .map((row) => {
+        const record = row as Record<string, unknown>;
+        const processId = Number(record.ProcessId ?? record.processId);
+        const commandLine =
+          typeof record.CommandLine === 'string'
+            ? record.CommandLine
+            : typeof record.commandLine === 'string'
+              ? record.commandLine
+              : '';
+        return { processId, commandLine };
+      })
+      .filter((proc) => Number.isFinite(proc.processId) && proc.processId > 0 && proc.commandLine.length > 0);
+  } catch {
+    return [];
+  }
+}
 
-    for (const proc of processes) {
-      if (!proc.commandLine) continue;
-      const cmd = proc.commandLine.replace(/\\/g, '/').toLowerCase();
-      if (cmd.includes(needle) && (cmd.includes('--user-data-dir') || cmd.includes('/user-data-dir'))) {
-        return proc.processId;
-      }
+function extractUserDataDirFromCommandLine(commandLine: string): string | null {
+  const match = commandLine.match(/--user-data-dir(?:=|\s+)(?:\"([^\"]+)\"|'([^']+)'|([^\s]+))/i);
+  return match?.[1] ?? match?.[2] ?? match?.[3] ?? null;
+}
+
+function extractRemoteDebugPort(commandLine: string): number | null {
+  const match = commandLine.match(/--remote-debugging-port(?:=|\s+)(\d+)/i);
+  const value = Number.parseInt(match?.[1] ?? '', 10);
+  return Number.isFinite(value) && value > 0 ? value : null;
+}
+
+function normalizeChromeUserDataDir(value: string): string {
+  return normalizeComparablePath(value);
+}
+
+function resolveWindowsPowerShellPathForWsl(): string {
+  const override = process.env.AURACALL_WINDOWS_POWERSHELL_PATH?.trim();
+  if (override) {
+    return override;
+  }
+  const candidates = [
+    '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe',
+    '/mnt/c/Windows/System32/WindowsPowerShell/v1.0/pwsh.exe',
+  ];
+  for (const candidate of candidates) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return 'powershell.exe';
+}
+
+export async function probeWindowsLocalDevToolsPort(
+  port: number,
+  options: { attempts?: number; delayMs?: number } = {},
+): Promise<boolean> {
+  if (!isWsl() || !port || port <= 0 || port > 65535) {
+    return false;
+  }
+  const attempts = Math.max(1, options.attempts ?? 1);
+  const delayMs = Math.max(0, options.delayMs ?? 0);
+  const script = `
+$ProgressPreference = 'SilentlyContinue'
+$uri = 'http://127.0.0.1:${port}/json/version'
+for ($i = 0; $i -lt ${attempts}; $i++) {
+  try {
+    $response = Invoke-WebRequest -UseBasicParsing $uri -TimeoutSec 1
+    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+      exit 0
     }
   } catch {
-    // best effort
   }
-  return null;
+  if ($i -lt ${attempts - 1}) {
+    Start-Sleep -Milliseconds ${delayMs}
+  }
+}
+exit 1
+`;
+  try {
+    await execFileAsync(
+      resolveWindowsPowerShellPath(),
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { timeout: attempts * (delayMs + 1_500) + 2_000, maxBuffer: 1024 * 1024 },
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export async function findResponsiveWindowsDevToolsPortForUserDataDir(
+  userDataDir: string,
+): Promise<number | null> {
+  if (!isWsl() || !isWindowsUserDataDir(userDataDir)) {
+    return null;
+  }
+  const processes = await listChromeProcessesViaPowerShell(resolveWindowsPowerShellPathForWsl());
+  const matches = findChromeProcessMatchesForUserDataDir(processes, userDataDir);
+  const candidatePorts = Array.from(new Set(
+    matches
+      .map((match) => match.port)
+      .filter((port): port is number => typeof port === 'number' && Number.isFinite(port) && port > 0),
+  ));
+
+  for (const port of candidatePorts) {
+    if (await probeWindowsLocalDevToolsPort(port)) {
+      return port;
+    }
+  }
+
+  const candidatePids = Array.from(new Set(
+    matches
+      .map((match) => match.pid)
+      .filter((pid) => Number.isFinite(pid) && pid > 0),
+  ));
+  if (candidatePids.length === 0) {
+    return null;
+  }
+
+  const pidList = candidatePids.join(',');
+  const script = `
+$ProgressPreference = 'SilentlyContinue'
+$candidatePids = @(${pidList})
+$candidatePorts = [System.Collections.Generic.List[int]]::new()
+foreach ($pidValue in $candidatePids) {
+  try {
+    Get-NetTCPConnection -State Listen -OwningProcess $pidValue -ErrorAction Stop |
+      ForEach-Object {
+        if ($_.LocalPort -gt 0 -and -not $candidatePorts.Contains([int]$_.LocalPort)) {
+          $candidatePorts.Add([int]$_.LocalPort)
+        }
+      }
+  } catch {
+  }
+}
+foreach ($port in $candidatePorts) {
+  try {
+    $response = Invoke-WebRequest -UseBasicParsing ('http://127.0.0.1:' + $port + '/json/version') -TimeoutSec 1
+    if ($response.StatusCode -ge 200 -and $response.StatusCode -lt 400) {
+      Write-Output $port
+      exit 0
+    }
+  } catch {
+  }
+}
+exit 1
+`;
+  try {
+    const { stdout } = await execFileAsync(
+      resolveWindowsPowerShellPath(),
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { timeout: 10_000, maxBuffer: 1024 * 1024 },
+    );
+    const value = Number.parseInt(String(stdout ?? '').trim().split(/\r?\n/u).at(-1) ?? '', 10);
+    return Number.isFinite(value) && value > 0 ? value : null;
+  } catch {
+    return null;
+  }
 }

@@ -5,7 +5,11 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 
 ## Workflow Checklist
 1) **Recon first**
+   - Use `scripts/browser-tools.ts tabs --port <port>` first when you are not sure which tab the tooling will target.
    - Use `scripts/browser-tools.ts eval` to list visible elements, labels, and positions.
+   - Default tab policy should be: exact URL reuse first, then blank-tab reuse, then same-origin reuse, then compatible service-host reuse, and only create a new tab when nothing reusable exists.
+   - Cleanup policy should stay conservative and profile-scoped: always keep the selected tab, keep only a small tail of matching-family tabs, keep at most one spare blank/new-tab page, and only collapse extra windows when every tab in that window is disposable for the same profile/service action.
+   - If a profile needs different cleanup behavior, set it explicitly in config via `browser.serviceTabLimit`, `browser.blankTabLimit`, and `browser.collapseDisposableWindows` instead of patching provider code.
    - Prefer `aria-label`, `role`, and obvious text nodes over brittle class selectors.
    - Check `docs/dev/browser-service-tools.md` for reusable helpers before writing new DOM logic.
    - If no DevTools port is active, run `pnpm tsx scripts/start-devtools-session.ts --url=https://grok.com`.

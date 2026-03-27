@@ -710,7 +710,7 @@ export abstract class LlmService {
     if (options?.allowFallback && this.providerId === 'grok') {
       return projectName.trim();
     }
-    throw new Error(`No cached project named "${projectName}". Run "oracle projects" to refresh.`);
+    throw new Error(`No cached project named "${projectName}". Run "auracall projects" to refresh.`);
   }
 
   async resolveConversationIdByName(
@@ -770,7 +770,7 @@ export abstract class LlmService {
       const names = candidates.map((item) => item.title || item.id).join(', ');
       throw new Error(`Conversation name "${conversationName}" is ambiguous. Matches: ${names}`);
     }
-    throw new Error(`No cached conversation named "${conversationName}". Run "oracle conversations" to refresh.`);
+    throw new Error(`No cached conversation named "${conversationName}". Run "auracall conversations" to refresh.`);
   }
 
   async resolveConversationSelector(
@@ -914,7 +914,7 @@ export abstract class LlmService {
         source: 'config',
       };
     }
-    const profile = this.userConfig.oracleProfiles?.[profileName];
+    const profile = this.userConfig.auracallProfiles?.[profileName];
     const profileIdentity = profile?.services?.[provider]?.identity;
     const identity = profileIdentity ?? globalIdentity;
     if (!identity) return null;
@@ -927,9 +927,9 @@ export abstract class LlmService {
   }
 
   private resolveActiveProfileName(): string | null {
-    const profiles = this.userConfig.oracleProfiles;
+    const profiles = this.userConfig.auracallProfiles;
     if (!profiles) return null;
-    const explicit = typeof this.userConfig.oracleProfile === 'string' ? this.userConfig.oracleProfile.trim() : '';
+    const explicit = typeof this.userConfig.auracallProfile === 'string' ? this.userConfig.auracallProfile.trim() : '';
     if (explicit && profiles[explicit]) return explicit;
     if (profiles.default) return 'default';
     const keys = Object.keys(profiles);

@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { getOracleHomeDir } from '../../oracleHome.js';
+import { getAuracallHomeDir } from '../../auracallHome.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { Conversation, Project, ProviderId, ConversationContext, FileRef } from './domain.js';
 import type { ResolvedUserConfig } from '../../config.js';
@@ -39,7 +39,7 @@ export interface CacheNameMatch<T> {
 export function resolveProviderCacheKey(context: ProviderCacheContext): string {
   const identityKey = resolveIdentityKey(context);
   const sanitized = identityKey.replace(/[\\/]/g, '_');
-  if (process.env.ORACLE_DEBUG_CACHE === '1') {
+  if (process.env.AURACALL_DEBUG_CACHE === '1') {
     const payload = JSON.stringify({ provider: context.provider, identityKey });
     console.error(`[cache] key=${sanitized} payload=${payload}`);
   }
@@ -233,7 +233,7 @@ export function resolveProviderCachePath(
   cacheFile: string;
   configuredUrl: string | null;
 } {
-  const cacheRoot = context.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+  const cacheRoot = context.cacheRoot ?? path.join(getAuracallHomeDir(), 'cache', 'providers');
   const key = resolveProviderCacheKey(context);
   const cacheDir = path.join(cacheRoot, context.provider, key);
   const cacheFile = path.join(cacheDir, fileName);
@@ -294,7 +294,7 @@ async function writeProviderCache<T>(
   items: T,
 ): Promise<void> {
   const { cacheDir, cacheFile, configuredUrl } = resolveProviderCachePath(context, fileName);
-  await fs.mkdir(cacheDir, { recursive: true });
+  await fs.mkdir(path.dirname(cacheFile), { recursive: true });
   const identity = sanitizeUserIdentity(context.userIdentity ?? null);
   const payload: ProviderCache<T> = {
     fetchedAt: new Date().toISOString(),

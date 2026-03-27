@@ -1,7 +1,7 @@
 # Anthropic (Claude) Integration Plan
 
 Status: **shipped** (November 20, 2025)  
-Scope: API support for Claude 4.5 Sonnet and Claude 4.1 Opus in Oracle CLI.
+Scope: API support for Claude 4.5 Sonnet and Claude 4.1 Opus in Aura-Call CLI.
 
 ## Models & Pricing (public list prices)
 - **claude-sonnet-4-5** (CLI alias: `claude-4.5-sonnet`) — 200k context, ~$3 / 1M input tokens, ~$15 / 1M output tokens.

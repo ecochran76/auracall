@@ -29,7 +29,7 @@ export interface ShowStatusOptions {
 }
 
 const CLEANUP_TIP =
-  'Tip: Run "oracle session --clear --hours 24" to prune cached runs (add --all to wipe everything).';
+  'Tip: Run "auracall session --clear --hours 24" to prune cached runs (add --all to wipe everything).';
 
 export async function showStatus({
   hours,
@@ -58,7 +58,7 @@ export async function showStatus({
     const sessionsDir = sessionStore.sessionsDir();
     console.log(
       chalk.yellow(
-        `Showing ${entries.length} of ${total} sessions from the requested range. Run "oracle session --clear" or delete entries in ${sessionsDir} to free space, or rerun with --status-limit/--status-all.`,
+        `Showing ${entries.length} of ${total} sessions from the requested range. Run "auracall session --clear" or delete entries in ${sessionsDir} to free space, or rerun with --status-limit/--status-all.`,
       ),
     );
   }
@@ -111,7 +111,7 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
   }
   const initialStatus = metadata.status;
   const wantsRender = Boolean(options?.renderMarkdown);
-  const isVerbose = Boolean(process.env.ORACLE_VERBOSE_RENDER);
+  const isVerbose = Boolean(process.env.AURACALL_VERBOSE_RENDER);
   const runtime = metadata.browser?.runtime;
   const controllerAlive = isProcessAlive(runtime?.controllerPid);
 
@@ -486,11 +486,11 @@ function formatRelativeDuration(referenceIso: string): string | null {
 function printStatusExamples(): void {
   console.log('');
   console.log(chalk.bold('Usage Examples'));
-  console.log(`${chalk.bold('  oracle status --hours 72 --limit 50')}`);
+  console.log(`${chalk.bold('  auracall status --hours 72 --limit 50')}`);
   console.log(dim('    Show 72h of history capped at 50 entries.'));
-  console.log(`${chalk.bold('  oracle status --clear --hours 168')}`);
+  console.log(`${chalk.bold('  auracall status --clear --hours 168')}`);
   console.log(dim('    Delete sessions older than 7 days (use --all to wipe everything).'));
-  console.log(`${chalk.bold('  oracle session <session-id>')}`);
+  console.log(`${chalk.bold('  auracall session <session-id>')}`);
   console.log(dim('    Attach to a specific running/completed session to stream its output.'));
   console.log(dim(CLEANUP_TIP));
 }

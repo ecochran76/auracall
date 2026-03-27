@@ -12,14 +12,21 @@ export type BrowserProvider = {
 
 export type BrowserAutomationClientDeps = {
   connectDevTools: () => Promise<{ client: ChromeClient; port: number }>;
-  diagnoseProvider: (client: ChromeClient, config: unknown, basePath: string) => Promise<DiagnosisReport>;
+  diagnoseProvider: (
+    client: ChromeClient,
+    config: unknown,
+    basePath: string,
+    options?: {
+      quiet?: boolean;
+    },
+  ) => Promise<DiagnosisReport>;
   crawlerScript: string;
 };
 
 export class BrowserAutomationClientCore {
   constructor(private readonly provider: BrowserProvider, private readonly deps: BrowserAutomationClientDeps) {}
 
-  async diagnose(options: { basePath?: string; saveSnapshot?: boolean } = {}): Promise<{
+  async diagnose(options: { basePath?: string; saveSnapshot?: boolean; quiet?: boolean } = {}): Promise<{
     report: DiagnosisReport;
     port: number;
   }> {
@@ -27,7 +34,9 @@ export class BrowserAutomationClientCore {
     const { client, port } = await this.deps.connectDevTools();
     try {
       await Promise.all([client.Runtime.enable(), client.DOM.enable()]);
-      const report = await this.deps.diagnoseProvider(client, this.provider.config, basePath);
+      const report = await this.deps.diagnoseProvider(client, this.provider.config, basePath, {
+        quiet: options.quiet,
+      });
       if (options.saveSnapshot && !report.snapshotPath) {
         const { result } = await client.Runtime.evaluate({
           expression: this.deps.crawlerScript,

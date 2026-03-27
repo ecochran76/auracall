@@ -1,18 +1,25 @@
 import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, GROK_URL } from './constants.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
+import { resolveManagedProfileDir, resolveManagedProfileRoot } from './profileStore.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
 import { discoverDefaultBrowserProfile, resolveProfileDirectoryName, type WslChromePreference } from './service/profile.js';
-import os from 'node:os';
 import path from 'node:path';
+import {
+  inferWindowsLocalAppDataRoot,
+  isWindowsPath,
+  isWslEnvironment,
+  toWslPath,
+} from '../../packages/browser-service/src/platformPaths.js';
 
 export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chromeProfile: null,
   chromePath: null,
   chromeCookiePath: null,
+  bootstrapCookiePath: null,
   display: null,
   blockingProfileAction: 'restart-managed',
-  managedProfileRoot: path.join(os.homedir(), '.oracle'),
+  managedProfileRoot: resolveManagedProfileRoot(),
   target: 'chatgpt',
   projectId: null,
   conversationId: null,
@@ -22,6 +29,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   chatgptUrl: CHATGPT_URL,
   timeoutMs: 1_200_000,
   debugPort: null,
+  debugPortStrategy: 'fixed',
   debugPortRange: [45000, 45100],
   inputTimeoutMs: 60_000,
   cookieSync: true,
@@ -37,19 +45,22 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   debug: false,
   allowCookieErrors: false,
   remoteChrome: null,
-  manualLogin: false,
+  manualLogin: true,
   manualLoginProfileDir: null,
   manualLoginCookieSync: false,
   wslChromePreference: 'auto',
+  serviceTabLimit: 3,
+  blankTabLimit: 1,
+  collapseDisposableWindows: true,
 };
 
 export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined): ResolvedBrowserConfig {
   const debugPortEnv = parseDebugPort(
-    process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT,
+    process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT,
   );
   const envAllowCookieErrors =
-    (process.env.ORACLE_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim().toLowerCase() === 'true' ||
-    (process.env.ORACLE_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim() === '1';
+    (process.env.AURACALL_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim().toLowerCase() === 'true' ||
+    (process.env.AURACALL_BROWSER_ALLOW_COOKIE_ERRORS ?? '').trim() === '1';
   const target = config?.target ?? DEFAULT_BROWSER_CONFIG.target;
   const rawUrl =
     target === 'grok'
@@ -71,28 +82,69 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     );
   }
   const isWindows = process.platform === 'win32';
-  const manualLogin = config?.manualLogin ?? (isWindows ? true : DEFAULT_BROWSER_CONFIG.manualLogin);
+  const manualLogin = config?.manualLogin ?? DEFAULT_BROWSER_CONFIG.manualLogin;
   const cookieSyncDefault = isWindows ? false : DEFAULT_BROWSER_CONFIG.cookieSync;
   const normalizedCookieNames = normalizeCookieNames(config?.cookieNames ?? DEFAULT_BROWSER_CONFIG.cookieNames);
   const normalizedInlineCookies = normalizeInlineCookies(config?.inlineCookies ?? DEFAULT_BROWSER_CONFIG.inlineCookies);
   const wslChromePreference = normalizeWslChromePreference(
-    config?.wslChromePreference ?? process.env.ORACLE_WSL_CHROME,
+    process.env.AURACALL_WSL_CHROME ?? config?.wslChromePreference,
   );
-  const explicitProfileDir = config?.manualLoginProfileDir ?? process.env.ORACLE_BROWSER_PROFILE_DIR ?? null;
-  const discoveredProfile = discoverDefaultBrowserProfile({ preference: wslChromePreference });
-  const resolvedProfileDir = normalizeManualLoginProfileDir(
-    explicitProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile'),
+  const explicitProfileDir = process.env.AURACALL_BROWSER_PROFILE_DIR ?? config?.manualLoginProfileDir ?? null;
+  const discoveredProfile = discoverDefaultBrowserProfile({
+    preference: wslChromePreference,
+    chromePathHint: config?.chromePath ?? null,
+    cookiePathHint:
+      process.env.AURACALL_BROWSER_BOOTSTRAP_COOKIE_PATH ??
+      config?.bootstrapCookiePath ??
+      config?.chromeCookiePath ??
+      null,
+    userDataDirHint: explicitProfileDir,
+  });
+  const preferredSource = resolvePreferredBrowserSource(wslChromePreference);
+  const resolvedChromePath = resolvePreferredBrowserValue(
+    config?.chromePath ?? null,
+    discoveredProfile?.chromePath ?? null,
+    preferredSource,
   );
+  const resolvedCookiePath = resolvePreferredBrowserValue(
+    config?.chromeCookiePath ?? null,
+    discoveredProfile?.cookiePath ?? null,
+    preferredSource,
+  );
+  const resolvedBootstrapCookiePath = resolveConfiguredBrowserValue(
+    process.env.AURACALL_BROWSER_BOOTSTRAP_COOKIE_PATH ??
+      config?.bootstrapCookiePath ??
+      config?.chromeCookiePath ??
+      null,
+  );
+  const managedProfileRoot = resolveEffectiveManagedProfileRoot({
+    configuredManagedProfileRoot: config?.managedProfileRoot ?? null,
+    explicitProfileDir,
+    resolvedChromePath,
+    sourceCookiePath: resolvedBootstrapCookiePath ?? resolvedCookiePath,
+  });
+  const resolvedProfileDir = normalizeManualLoginProfileDir(resolveManagedProfileDir({
+    configuredDir: explicitProfileDir,
+    managedProfileRoot,
+    target,
+  }));
   const resolvedChromeProfile = resolveProfileDirectoryName(
     resolvedProfileDir,
     config?.chromeProfile ?? discoveredProfile?.profileName ?? DEFAULT_BROWSER_CONFIG.chromeProfile ?? 'Default',
   );
-  const resolvedChromePath = config?.chromePath ?? discoveredProfile?.chromePath ?? DEFAULT_BROWSER_CONFIG.chromePath;
-  const resolvedCookiePath =
-    config?.chromeCookiePath ?? discoveredProfile?.cookiePath ?? DEFAULT_BROWSER_CONFIG.chromeCookiePath;
   const resolvedDisplay =
-    config?.display ?? process.env.ORACLE_BROWSER_DISPLAY ?? DEFAULT_BROWSER_CONFIG.display;
+    config?.display ?? process.env.AURACALL_BROWSER_DISPLAY ?? DEFAULT_BROWSER_CONFIG.display;
   const debugPortRange = normalizeDebugPortRange(config?.debugPortRange);
+  const serviceTabLimit = normalizeServiceTabLimit(config?.serviceTabLimit);
+  const blankTabLimit = normalizeBlankTabLimit(config?.blankTabLimit);
+  const debugPortStrategy = resolveDebugPortStrategy({
+    explicitStrategy:
+      (process.env.AURACALL_BROWSER_PORT_STRATEGY as 'fixed' | 'auto' | undefined) ??
+      config?.debugPortStrategy ??
+      undefined,
+    explicitPort: debugPortEnv ?? config?.debugPort ?? null,
+    resolvedChromePath,
+  });
   const normalizedRemoteChrome = normalizeRemoteChrome(config?.remoteChrome ?? DEFAULT_BROWSER_CONFIG.remoteChrome);
   const mapProfileConflictAction = (
     value: BrowserAutomationConfig['profileConflictAction'] | undefined,
@@ -106,7 +158,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     value: BrowserAutomationConfig['blockingProfileAction'] | undefined,
   ): ResolvedBrowserConfig['blockingProfileAction'] | undefined => {
     if (!value) return undefined;
-    if (value === 'restart-oracle') return 'restart-managed';
+    if (value === 'restart-auracall') return 'restart-managed';
     return value as ResolvedBrowserConfig['blockingProfileAction'];
   };
   const blockingProfileAction =
@@ -117,12 +169,13 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
     blockingProfileAction,
-    managedProfileRoot: config?.managedProfileRoot ?? DEFAULT_BROWSER_CONFIG.managedProfileRoot,
+    managedProfileRoot,
     target,
     url: normalizedUrl,
     chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
     timeoutMs: config?.timeoutMs ?? DEFAULT_BROWSER_CONFIG.timeoutMs,
     debugPort: debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
+    debugPortStrategy,
     debugPortRange,
     inputTimeoutMs: config?.inputTimeoutMs ?? DEFAULT_BROWSER_CONFIG.inputTimeoutMs,
     cookieSync: config?.cookieSync ?? cookieSyncDefault,
@@ -138,6 +191,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     chromeProfile: resolvedChromeProfile,
     chromePath: resolvedChromePath,
     chromeCookiePath: resolvedCookiePath,
+    bootstrapCookiePath: resolvedBootstrapCookiePath,
     display: resolvedDisplay,
     geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
     grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
@@ -149,27 +203,78 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     manualLoginProfileDir: manualLogin ? resolvedProfileDir : null,
     manualLoginCookieSync: config?.manualLoginCookieSync ?? DEFAULT_BROWSER_CONFIG.manualLoginCookieSync,
     wslChromePreference,
+    serviceTabLimit,
+    blankTabLimit,
+    collapseDisposableWindows:
+      config?.collapseDisposableWindows ?? DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
   };
 }
 
+function resolveDebugPortStrategy(options: {
+  explicitStrategy?: 'fixed' | 'auto';
+  explicitPort?: number | null;
+  resolvedChromePath?: string | null;
+}): 'fixed' | 'auto' {
+  if (options.explicitStrategy) {
+    return options.explicitStrategy;
+  }
+  if (options.explicitPort && Number.isFinite(options.explicitPort) && options.explicitPort > 0) {
+    return 'fixed';
+  }
+  if (isWslEnvironment() && isWindowsHostedChromePath(options.resolvedChromePath)) {
+    return 'auto';
+  }
+  return DEFAULT_BROWSER_CONFIG.debugPortStrategy ?? 'fixed';
+}
+
+export function resolveEffectiveManagedProfileRoot(options: {
+  configuredManagedProfileRoot?: string | null;
+  explicitProfileDir?: string | null;
+  resolvedChromePath?: string | null;
+  sourceCookiePath?: string | null;
+}): string {
+  const defaultRoot = resolveManagedProfileRoot(DEFAULT_BROWSER_CONFIG.managedProfileRoot);
+  const configuredRoot = resolveManagedProfileRoot(
+    options.configuredManagedProfileRoot ?? DEFAULT_BROWSER_CONFIG.managedProfileRoot,
+  );
+  if (options.explicitProfileDir?.trim()) {
+    return configuredRoot;
+  }
+  if (!isWslEnvironment() || !isWindowsHostedChromePath(options.resolvedChromePath)) {
+    return configuredRoot;
+  }
+  if (
+    options.configuredManagedProfileRoot?.trim() &&
+    path.resolve(configuredRoot) !== path.resolve(defaultRoot)
+  ) {
+    return configuredRoot;
+  }
+  const windowsRoot = inferWindowsManagedProfileRoot(options.sourceCookiePath ?? null);
+  return windowsRoot ? resolveManagedProfileRoot(windowsRoot) : configuredRoot;
+}
+
+function inferWindowsManagedProfileRoot(cookiePath: string | null): string | null {
+  const localAppDataRoot = inferWindowsLocalAppDataRoot(cookiePath);
+  if (!localAppDataRoot) {
+    return null;
+  }
+  return path.join(localAppDataRoot, 'AuraCall', 'browser-profiles');
+}
+
+function isWindowsHostedChromePath(chromePath?: string | null): boolean {
+  return isWindowsPath(chromePath ?? null);
+}
+
 function normalizeManualLoginProfileDir(value: string): string {
-  if (!isWsl()) {
+  if (!isWslEnvironment()) {
     return value;
   }
-  const trimmed = value.trim();
-  const uncMatch = trimmed.match(/^\\\\wsl\.localhost\\[^\\]+\\(.+)$/);
-  if (uncMatch?.[1]) {
-    return `/${uncMatch[1].replace(/\\/g, '/')}`;
-  }
-  const uncSlashMatch = trimmed.match(/^\/\/wsl\.localhost\/[^/]+\/(.+)$/);
-  if (uncSlashMatch?.[1]) {
-    return `/${uncSlashMatch[1].replace(/\//g, '/')}`;
-  }
-  const driveMatch = trimmed.match(/^([a-zA-Z]):\\(.+)$/);
-  if (driveMatch) {
-    return `/mnt/${driveMatch[1].toLowerCase()}/${driveMatch[2].replace(/\\/g, '/')}`;
-  }
-  return value;
+  return toWslPath(value);
+}
+
+function resolveConfiguredBrowserValue(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeDebugPortRange(
@@ -191,6 +296,28 @@ function normalizeDebugPortRange(
     return [min, max];
   }
   return [min, max];
+}
+
+function normalizeServiceTabLimit(value: number | null | undefined): number {
+  if (value === undefined || value === null) {
+    return DEFAULT_BROWSER_CONFIG.serviceTabLimit ?? 3;
+  }
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric) || numeric < 1) {
+    throw new Error('browser.serviceTabLimit must be a positive integer.');
+  }
+  return numeric;
+}
+
+function normalizeBlankTabLimit(value: number | null | undefined): number {
+  if (value === undefined || value === null) {
+    return DEFAULT_BROWSER_CONFIG.blankTabLimit ?? 1;
+  }
+  const numeric = Number(value);
+  if (!Number.isInteger(numeric) || numeric < 0) {
+    throw new Error('browser.blankTabLimit must be an integer greater than or equal to 0.');
+  }
+  return numeric;
 }
 
 function normalizeCookieNames(value: string[] | string | null | undefined): string[] | null {
@@ -277,14 +404,51 @@ function normalizeWslChromePreference(input: string | null | undefined): WslChro
   return 'auto';
 }
 
-function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
+function resolvePreferredBrowserSource(
+  preference: WslChromePreference,
+): 'wsl' | 'windows' | null {
+  if (!isWslEnvironment()) {
+    return null;
   }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
+  if (preference === 'wsl' || preference === 'windows') {
+    return preference;
   }
-  return os.release().toLowerCase().includes('microsoft');
+  return null;
+}
+
+function resolvePreferredBrowserValue(
+  configuredValue: string | null | undefined,
+  discoveredValue: string | null | undefined,
+  preferredSource: 'wsl' | 'windows' | null,
+): string | null {
+  if (!configuredValue) {
+    return discoveredValue ?? null;
+  }
+  if (!discoveredValue || !preferredSource) {
+    return configuredValue;
+  }
+  const configuredSource = detectBrowserPathSource(configuredValue);
+  if (configuredSource === preferredSource || configuredSource === 'unknown') {
+    return configuredValue;
+  }
+  return discoveredValue;
+}
+
+function detectBrowserPathSource(value: string): 'wsl' | 'windows' | 'unknown' {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return 'unknown';
+  }
+  if (isWindowsPath(trimmed)) {
+    return 'windows';
+  }
+  if (trimmed.startsWith('/')) {
+    return 'wsl';
+  }
+  if (trimmed.includes('/')) {
+    return 'wsl';
+  }
+  return 'unknown';
 }
 
 function parseDebugPort(raw?: string | null): number | null {

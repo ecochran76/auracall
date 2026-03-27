@@ -18,71 +18,87 @@ export function applyBrowserProfileOverrides(
   merged: MutableConfig,
   profile: Record<string, unknown>,
   browser: MutableBrowserConfig,
+  options: { overrideExisting?: boolean } = {},
 ): void {
+  const overrideExisting = options.overrideExisting ?? false;
   const profileBrowser = (profile.browser ?? {}) as Record<string, unknown>;
   const mergedBrowser = isRecord(merged.browser) ? merged.browser : {};
   const defaultService =
     asNonEmptyString(profile.defaultService) ??
     asNonEmptyString(browser.target) ??
     asNonEmptyString(mergedBrowser.target);
-  if (!browser.target && defaultService) {
+  if ((overrideExisting || !browser.target) && defaultService) {
     browser.target = defaultService;
   }
-  if (profile.keepBrowser !== undefined && browser.keepBrowser === undefined) {
+  if (profile.keepBrowser !== undefined && (overrideExisting || browser.keepBrowser === undefined)) {
     browser.keepBrowser = profile.keepBrowser as boolean;
   }
   const devRange = isRecord(merged.dev) ? merged.dev.browserPortRange : undefined;
-  if (browser.debugPortRange === undefined && profileBrowser.debugPortRange !== undefined) {
+  if ((overrideExisting || browser.debugPortRange === undefined) && profileBrowser.debugPortRange !== undefined) {
     browser.debugPortRange = profileBrowser.debugPortRange;
   } else if (browser.debugPortRange === undefined && devRange !== undefined) {
     browser.debugPortRange = devRange;
   }
-  applyBrowserProfileDefaults(browser, profileBrowser);
-  applyServiceDefaults(merged, profile, browser);
+  applyBrowserProfileDefaults(browser, profileBrowser, { overrideExisting });
+  applyServiceDefaults(merged, profile, browser, { overrideExisting });
   applyCacheDefaults(browser, profile.cache ?? null);
 }
 
-function applyBrowserProfileDefaults(browser: MutableBrowserConfig, profileBrowser: MutableBrowserConfig): void {
+function applyBrowserProfileDefaults(
+  browser: MutableBrowserConfig,
+  profileBrowser: MutableBrowserConfig,
+  options: { overrideExisting?: boolean } = {},
+): void {
+  const overrideExisting = options.overrideExisting ?? false;
   const profilePath = asNonEmptyString(profileBrowser.profilePath);
-  const profileName = asNonEmptyString(profileBrowser.profileName);
-  const cookiePath = asNonEmptyString(profileBrowser.cookiePath);
+  const profileName = asNonEmptyString(profileBrowser.profileName) ?? asNonEmptyString(profileBrowser.chromeProfile);
+  const cookiePath = asNonEmptyString(profileBrowser.cookiePath) ?? asNonEmptyString(profileBrowser.chromeCookiePath);
+  const bootstrapCookiePath = asNonEmptyString(profileBrowser.bootstrapCookiePath);
   const chromeProfile = asNonEmptyString(browser.chromeProfile);
+  const resolvedProfileName = profilePath && chromeProfile
+    ? resolveProfileDirectoryName(profilePath, chromeProfile)
+    : chromeProfile;
+  const resolvedProfileCookie = profilePath
+    ? resolveCookiePath(profilePath, resolvedProfileName ?? profileName ?? chromeProfile ?? 'Default')
+    : undefined;
 
-  if (browser.chromePath === undefined && profileBrowser.chromePath) {
+  if ((overrideExisting || browser.chromePath === undefined) && profileBrowser.chromePath) {
     browser.chromePath = profileBrowser.chromePath;
   }
-  if (browser.display === undefined && profileBrowser.display) {
+  if ((overrideExisting || browser.display === undefined) && profileBrowser.display) {
     browser.display = profileBrowser.display;
   }
-  if (browser.managedProfileRoot === undefined && profileBrowser.managedProfileRoot !== undefined) {
+  if ((overrideExisting || browser.managedProfileRoot === undefined) && profileBrowser.managedProfileRoot !== undefined) {
     browser.managedProfileRoot = profileBrowser.managedProfileRoot;
   }
-  if (browser.blockingProfileAction === undefined && profileBrowser.blockingProfileAction !== undefined) {
+  if ((overrideExisting || browser.blockingProfileAction === undefined) && profileBrowser.blockingProfileAction !== undefined) {
     browser.blockingProfileAction = profileBrowser.blockingProfileAction;
   }
-  if (browser.chromeProfile === undefined && profileName) {
+  if ((overrideExisting || browser.chromeProfile === undefined) && profileName) {
     browser.chromeProfile = profilePath
       ? resolveProfileDirectoryName(profilePath, profileName)
       : profileName;
   }
-  if (browser.chromeCookiePath === undefined) {
-    const resolvedProfileName = profilePath && chromeProfile
-      ? resolveProfileDirectoryName(profilePath, chromeProfile)
-      : chromeProfile;
+  if (overrideExisting || browser.chromeCookiePath === undefined) {
     if (cookiePath) {
       browser.chromeCookiePath = cookiePath;
-    } else if (profilePath) {
-      const resolvedName = resolvedProfileName ?? profileName ?? chromeProfile ?? 'Default';
-      const resolvedCookie = resolveCookiePath(profilePath, resolvedName);
-      if (resolvedCookie) {
-        browser.chromeCookiePath = resolvedCookie;
-      }
+    } else if (resolvedProfileCookie) {
+      browser.chromeCookiePath = resolvedProfileCookie;
     }
   }
-  if (browser.manualLogin === undefined && profileBrowser.manualLogin !== undefined) {
+  if (overrideExisting || browser.bootstrapCookiePath === undefined) {
+    if (bootstrapCookiePath) {
+      browser.bootstrapCookiePath = bootstrapCookiePath;
+    } else if (cookiePath) {
+      browser.bootstrapCookiePath = cookiePath;
+    } else if (resolvedProfileCookie) {
+      browser.bootstrapCookiePath = resolvedProfileCookie;
+    }
+  }
+  if ((overrideExisting || browser.manualLogin === undefined) && profileBrowser.manualLogin !== undefined) {
     browser.manualLogin = profileBrowser.manualLogin;
   }
-  if (browser.manualLoginProfileDir === undefined) {
+  if (overrideExisting || browser.manualLoginProfileDir === undefined) {
     const manualLoginProfileDir = asNonEmptyString(profileBrowser.manualLoginProfileDir);
     if (manualLoginProfileDir) {
       browser.manualLoginProfileDir = manualLoginProfileDir;
@@ -90,55 +106,67 @@ function applyBrowserProfileDefaults(browser: MutableBrowserConfig, profileBrows
       browser.manualLoginProfileDir = profilePath;
     }
   }
-  if (browser.headless === undefined && profileBrowser.headless !== undefined) {
+  if ((overrideExisting || browser.headless === undefined) && profileBrowser.headless !== undefined) {
     browser.headless = profileBrowser.headless;
   }
-  if (browser.hideWindow === undefined && profileBrowser.hideWindow !== undefined) {
+  if ((overrideExisting || browser.hideWindow === undefined) && profileBrowser.hideWindow !== undefined) {
     browser.hideWindow = profileBrowser.hideWindow;
   }
-  if (browser.keepBrowser === undefined && profileBrowser.keepBrowser !== undefined) {
+  if ((overrideExisting || browser.keepBrowser === undefined) && profileBrowser.keepBrowser !== undefined) {
     browser.keepBrowser = profileBrowser.keepBrowser;
   }
-  if (browser.debugPort === undefined && profileBrowser.debugPort !== undefined) {
+  if ((overrideExisting || browser.serviceTabLimit === undefined) && profileBrowser.serviceTabLimit !== undefined) {
+    browser.serviceTabLimit = profileBrowser.serviceTabLimit;
+  }
+  if ((overrideExisting || browser.blankTabLimit === undefined) && profileBrowser.blankTabLimit !== undefined) {
+    browser.blankTabLimit = profileBrowser.blankTabLimit;
+  }
+  if ((overrideExisting || browser.collapseDisposableWindows === undefined) && profileBrowser.collapseDisposableWindows !== undefined) {
+    browser.collapseDisposableWindows = profileBrowser.collapseDisposableWindows;
+  }
+  if ((overrideExisting || browser.debugPort === undefined) && profileBrowser.debugPort !== undefined) {
     browser.debugPort = profileBrowser.debugPort;
   }
-  if (browser.remoteChrome === undefined && profileBrowser.remoteChrome !== undefined) {
+  if ((overrideExisting || browser.debugPortStrategy === undefined) && profileBrowser.debugPortStrategy !== undefined) {
+    browser.debugPortStrategy = profileBrowser.debugPortStrategy;
+  }
+  if ((overrideExisting || browser.remoteChrome === undefined) && profileBrowser.remoteChrome !== undefined) {
     browser.remoteChrome = profileBrowser.remoteChrome;
   }
-  if (browser.thinkingTime === undefined && profileBrowser.thinkingTime !== undefined) {
+  if ((overrideExisting || browser.thinkingTime === undefined) && profileBrowser.thinkingTime !== undefined) {
     browser.thinkingTime = profileBrowser.thinkingTime;
   }
-  if (browser.modelStrategy === undefined && profileBrowser.modelStrategy !== undefined) {
+  if ((overrideExisting || browser.modelStrategy === undefined) && profileBrowser.modelStrategy !== undefined) {
     browser.modelStrategy = profileBrowser.modelStrategy;
   }
-  if (browser.attachments === undefined && profileBrowser.attachments !== undefined) {
+  if ((overrideExisting || browser.attachments === undefined) && profileBrowser.attachments !== undefined) {
     browser.attachments = profileBrowser.attachments;
   }
-  if (browser.inlineFiles === undefined && profileBrowser.inlineFiles !== undefined) {
+  if ((overrideExisting || browser.inlineFiles === undefined) && profileBrowser.inlineFiles !== undefined) {
     browser.inlineFiles = profileBrowser.inlineFiles;
   }
-  if (browser.bundleFiles === undefined && profileBrowser.bundleFiles !== undefined) {
+  if ((overrideExisting || browser.bundleFiles === undefined) && profileBrowser.bundleFiles !== undefined) {
     browser.bundleFiles = profileBrowser.bundleFiles;
   }
-  if (browser.cookieNames === undefined && profileBrowser.cookieNames !== undefined) {
+  if ((overrideExisting || browser.cookieNames === undefined) && profileBrowser.cookieNames !== undefined) {
     browser.cookieNames = profileBrowser.cookieNames;
   }
-  if (browser.inlineCookies === undefined && profileBrowser.inlineCookies !== undefined) {
+  if ((overrideExisting || browser.inlineCookies === undefined) && profileBrowser.inlineCookies !== undefined) {
     browser.inlineCookies = profileBrowser.inlineCookies;
   }
-  if (browser.inlineCookiesFile === undefined && profileBrowser.inlineCookiesFile !== undefined) {
+  if ((overrideExisting || browser.inlineCookiesFile === undefined) && profileBrowser.inlineCookiesFile !== undefined) {
     browser.inlineCookiesFile = profileBrowser.inlineCookiesFile;
   }
-  if (browser.allowCookieErrors === undefined && profileBrowser.allowCookieErrors !== undefined) {
+  if ((overrideExisting || browser.allowCookieErrors === undefined) && profileBrowser.allowCookieErrors !== undefined) {
     browser.allowCookieErrors = profileBrowser.allowCookieErrors;
   }
-  if (browser.noCookieSync === undefined && profileBrowser.noCookieSync !== undefined) {
+  if ((overrideExisting || browser.noCookieSync === undefined) && profileBrowser.noCookieSync !== undefined) {
     browser.noCookieSync = profileBrowser.noCookieSync;
   }
-  if (browser.cookieSyncWaitMs === undefined && profileBrowser.cookieSyncWaitMs !== undefined) {
+  if ((overrideExisting || browser.cookieSyncWaitMs === undefined) && profileBrowser.cookieSyncWaitMs !== undefined) {
     browser.cookieSyncWaitMs = profileBrowser.cookieSyncWaitMs;
   }
-  if (browser.wslChromePreference === undefined && profileBrowser.wslChromePreference !== undefined) {
+  if ((overrideExisting || browser.wslChromePreference === undefined) && profileBrowser.wslChromePreference !== undefined) {
     browser.wslChromePreference = profileBrowser.wslChromePreference;
   }
 }
@@ -147,7 +175,9 @@ function applyServiceDefaults(
   merged: MutableConfig,
   profile: Record<string, unknown>,
   browser: MutableBrowserConfig,
+  options: { overrideExisting?: boolean } = {},
 ): void {
+  const overrideExisting = options.overrideExisting ?? false;
   const services = isRecord(merged.services) ? merged.services : {};
   const profileServices = isRecord(profile.services) ? profile.services : {};
   const target = browser.target as ServiceId | undefined;
@@ -168,39 +198,45 @@ function applyServiceDefaults(
   const currentChatgptUrl = asNonEmptyString(browser.chatgptUrl) ?? null;
   const currentGeminiUrl = asNonEmptyString(browser.geminiUrl) ?? null;
   const currentGrokUrl = asNonEmptyString(browser.grokUrl) ?? null;
-  browser.chatgptUrl = browser.chatgptUrl ?? resolveUrl('chatgpt', currentChatgptUrl);
-  browser.geminiUrl = browser.geminiUrl ?? resolveUrl('gemini', currentGeminiUrl);
-  browser.grokUrl = browser.grokUrl ?? resolveUrl('grok', currentGrokUrl);
+  browser.chatgptUrl = (overrideExisting || browser.chatgptUrl === undefined)
+    ? resolveUrl('chatgpt', currentChatgptUrl)
+    : browser.chatgptUrl;
+  browser.geminiUrl = (overrideExisting || browser.geminiUrl === undefined)
+    ? resolveUrl('gemini', currentGeminiUrl)
+    : browser.geminiUrl;
+  browser.grokUrl = (overrideExisting || browser.grokUrl === undefined)
+    ? resolveUrl('grok', currentGrokUrl)
+    : browser.grokUrl;
 
   if (!target) {
     return;
   }
   const serviceConfig = resolveServiceConfig(target);
-  if (browser.projectId === undefined && serviceConfig.projectId) {
+  if ((overrideExisting || browser.projectId === undefined) && serviceConfig.projectId) {
     browser.projectId = serviceConfig.projectId;
   }
-  if (browser.projectName === undefined && serviceConfig.projectName) {
+  if ((overrideExisting || browser.projectName === undefined) && serviceConfig.projectName) {
     browser.projectName = serviceConfig.projectName;
   }
-  if (browser.conversationId === undefined && serviceConfig.conversationId) {
+  if ((overrideExisting || browser.conversationId === undefined) && serviceConfig.conversationId) {
     browser.conversationId = serviceConfig.conversationId;
   }
-  if (browser.conversationName === undefined && serviceConfig.conversationName) {
+  if ((overrideExisting || browser.conversationName === undefined) && serviceConfig.conversationName) {
     browser.conversationName = serviceConfig.conversationName;
   }
-  if (!merged.model && serviceConfig.model && merged.engine === 'browser') {
+  if ((overrideExisting || !merged.model) && serviceConfig.model && merged.engine === 'browser') {
     merged.model = serviceConfig.model as string;
   }
-  if (browser.modelStrategy === undefined && serviceConfig.modelStrategy) {
+  if ((overrideExisting || browser.modelStrategy === undefined) && serviceConfig.modelStrategy) {
     browser.modelStrategy = serviceConfig.modelStrategy;
   }
-  if (browser.thinkingTime === undefined && serviceConfig.thinkingTime) {
+  if ((overrideExisting || browser.thinkingTime === undefined) && serviceConfig.thinkingTime) {
     browser.thinkingTime = serviceConfig.thinkingTime;
   }
-  if (browser.manualLogin === undefined && serviceConfig.manualLogin !== undefined) {
+  if ((overrideExisting || browser.manualLogin === undefined) && serviceConfig.manualLogin !== undefined) {
     browser.manualLogin = serviceConfig.manualLogin;
   }
-  if (browser.manualLoginProfileDir === undefined && serviceConfig.manualLoginProfileDir) {
+  if ((overrideExisting || browser.manualLoginProfileDir === undefined) && serviceConfig.manualLoginProfileDir) {
     browser.manualLoginProfileDir = serviceConfig.manualLoginProfileDir;
   }
 }

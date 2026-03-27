@@ -8,7 +8,7 @@ description: Run the Oracle CLI for Gemini web automation or API usage, includin
 ## Gemini web (browser mode)
 - Uses signed-in cookies from a Chrome/Brave profile; no API key required.
 
-Config keys (in `~/.oracle/config.json`):
+Config keys (in `~/.auracall/config.json`):
 - `browser.target: "gemini"`
 - `browser.geminiUrl: "https://gemini.google.com/gem/<id>"`
 - `browser.chromePath: "C:/Program Files/.../brave.exe"`
@@ -30,9 +30,9 @@ oracle --gemini -p "Say hello from Brave"
 - Prefer a WSL-installed Chrome for Gemini web runs:
   - `browser.chromePath: "/usr/bin/google-chrome"`
   - `browser.chromeCookiePath: "/home/<you>/.config/google-chrome/Default/Cookies"`
-- Cookie export writes to `~/.oracle/cookies.json` inside WSL. If you exported on Windows, copy it:
+- Cookie export writes to `~/.auracall/cookies.json` inside WSL. If you exported on Windows, copy it:
 ```bash
-cp /mnt/c/Users/<You>/.oracle/cookies.json ~/.oracle/cookies.json
+cp /mnt/c/Users/<You>/.auracall/cookies.json ~/.auracall/cookies.json
 ```
 
 ## Gemini API (optional)

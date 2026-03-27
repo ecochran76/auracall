@@ -1,9 +1,9 @@
 import os from 'node:os';
 import path from 'node:path';
-import CDP from 'chrome-remote-interface';
 import type { BrowserLogger, ChromeClient, ResolvedBrowserConfig } from '../types.js';
 import { isDevToolsResponsive } from '../processCheck.js';
 import type { CredentialHint } from './types.js';
+import { connectToChrome } from '../chromeLifecycle.js';
 
 export type BrowserServiceDependencies = {
   resolveBrowserListTarget: () => Promise<{ host?: string; port?: number } | undefined>;
@@ -13,9 +13,14 @@ export type BrowserServiceDependencies = {
     profileName: string;
     userDataDir: string;
     url: string;
+    compatibleHosts?: string[];
     logger: BrowserLogger;
     debugPort?: number;
+    debugPortStrategy?: ResolvedBrowserConfig['debugPortStrategy'];
     debugPortRange?: [number, number] | null;
+    serviceTabLimit?: number | null;
+    blankTabLimit?: number | null;
+    collapseDisposableWindows?: boolean;
     detach?: boolean;
   }) => Promise<{ chrome: { port?: number; host?: string }; port: number }>;
 };
@@ -79,6 +84,10 @@ export class BrowserService {
         logger: () => undefined,
         debugPortRange: this.resolvedConfig.debugPortRange ?? undefined,
         debugPort: this.resolvedConfig.debugPort ?? undefined,
+        debugPortStrategy: this.resolvedConfig.debugPortStrategy ?? undefined,
+        serviceTabLimit: this.resolvedConfig.serviceTabLimit ?? undefined,
+        blankTabLimit: this.resolvedConfig.blankTabLimit ?? undefined,
+        collapseDisposableWindows: this.resolvedConfig.collapseDisposableWindows,
         detach: true,
       });
       port = chrome.port;
@@ -95,7 +104,7 @@ export class BrowserService {
         'No DevTools port found. Launch a browser run to register the active session or set BROWSER_SERVICE_BROWSER_PORT.',
       );
     }
-    const client = await CDP({ port: target.port, host: target.host });
+    const client = await connectToChrome(target.port, () => undefined, target.host);
     return { client, port: target.port };
   }
 

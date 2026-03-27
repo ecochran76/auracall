@@ -74,7 +74,7 @@ async function runApiDryRun(
     ],
     TOKENIZER_OPTIONS,
   );
-  const headerLine = `[dry-run] Oracle (${version}) would call ${runOptions.model} with ~${estimatedInputTokens.toLocaleString()} tokens and ${files.length} files.`;
+  const headerLine = `[dry-run] Aura-Call (${version}) would call ${runOptions.model} with ~${estimatedInputTokens.toLocaleString()} tokens and ${files.length} files.`;
   log(chalk.cyan(headerLine));
   if (files.length === 0) {
     log(chalk.dim('[dry-run] No files matched the provided --file patterns.'));
@@ -109,7 +109,7 @@ async function runBrowserDryRun(
   const assemblePromptImpl = deps.assembleBrowserPromptImpl ?? assembleBrowserPrompt;
   const artifacts = await assemblePromptImpl(runOptions, { cwd });
   const suffix = buildTokenEstimateSuffix(artifacts);
-  const headerLine = `[dry-run] Oracle (${version}) would launch browser mode (${runOptions.model}) with ~${artifacts.estimatedInputTokens.toLocaleString()} tokens${suffix}.`;
+  const headerLine = `[dry-run] Aura-Call (${version}) would launch browser mode (${runOptions.model}) with ~${artifacts.estimatedInputTokens.toLocaleString()} tokens${suffix}.`;
   log(chalk.cyan(headerLine));
   logBrowserCookieStrategy(browserConfig, log, 'dry-run');
   logBrowserFileSummary(artifacts, log, 'dry-run');
@@ -168,7 +168,7 @@ export async function runBrowserPreview(
   const assemblePromptImpl = deps.assembleBrowserPromptImpl ?? assembleBrowserPrompt;
   const artifacts = await assemblePromptImpl(runOptions, { cwd });
   const suffix = buildTokenEstimateSuffix(artifacts);
-  const headerLine = `[preview] Oracle (${version}) browser mode (${runOptions.model}) with ~${artifacts.estimatedInputTokens.toLocaleString()} tokens${suffix}.`;
+  const headerLine = `[preview] Aura-Call (${version}) browser mode (${runOptions.model}) with ~${artifacts.estimatedInputTokens.toLocaleString()} tokens${suffix}.`;
   log(chalk.cyan(headerLine));
   logBrowserFileSummary(artifacts, log, 'preview');
   if (previewMode === 'json' || previewMode === 'full') {

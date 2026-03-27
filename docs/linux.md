@@ -10,6 +10,6 @@
 - If cookie sync still can’t find your DB, rerun with `--browser-allow-cookie-errors --browser-no-cookie-sync` and sign in manually, or dump the session cookies with `--browser-inline-cookies-file`.
 - Gemini web mode relies on decrypting Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install it with `sudo apt-get install -y libsecret-tools`.
 - If Gemini still can’t read cookies, export them from a logged-in Chrome tab and pass them inline:
-  - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts cookies --port <PORT> > ~/.oracle/cookies.json`
-  - Run with `ORACLE_BROWSER_COOKIES_FILE=~/.oracle/cookies.json` (or set `browser.inlineCookiesFile` in `~/.oracle/config.json`).
+  - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts cookies --port <PORT> > ~/.auracall/cookies.json`
+  - Run with `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json` (or set `browser.inlineCookiesFile` in `~/.auracall/config.json`).
 - If install scripts fail with `spawn node-gyp ENOENT` (often on newer Node versions without prebuilt binaries), install `node-gyp` and rebuild the native dependency: `pnpm add -D node-gyp --ignore-scripts && PATH=$(pwd)/node_modules/.bin:$PATH npm_config_node_gyp=$(pwd)/node_modules/.bin/node-gyp pnpm rebuild @cdktf/node-pty-prebuilt-multiarch`.

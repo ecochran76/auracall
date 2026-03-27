@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 
 import { describe, test, expect, beforeAll, afterAll } from 'vitest';
-import { setOracleHomeDirOverrideForTest } from '../../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { getSessionsDir } from '../../src/sessionManager.js';
 
 describe('resolveOutputPath', () => {
@@ -10,11 +10,11 @@ describe('resolveOutputPath', () => {
 
   beforeAll(() => {
     tmpHome = path.join(os.tmpdir(), 'oracle-write-output-test');
-    setOracleHomeDirOverrideForTest(tmpHome);
+    setAuracallHomeDirOverrideForTest(tmpHome);
   });
 
   afterAll(() => {
-    setOracleHomeDirOverrideForTest(null);
+    setAuracallHomeDirOverrideForTest(null);
   });
 
   test('rejects paths inside session storage', async () => {

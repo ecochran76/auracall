@@ -6,7 +6,7 @@ import { runOracle, extractTextOutput } from '../../src/oracle.js';
 import { runMultiModelApiSession } from '../../src/oracle/multiModelRunner.js';
 import { sessionStore } from '../../src/sessionStore.js';
 
-const ENABLE = process.env.ORACLE_LIVE_TEST === '1';
+const ENABLE = process.env.AURACALL_LIVE_TEST === '1';
 const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const OPENAI_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY;

@@ -6,8 +6,8 @@ import { runBrowserMode } from '../../src/browser/index.js';
 import { acquireLiveTestLock, releaseLiveTestLock } from './liveLock.js';
 import { getCookies } from '@steipete/sweet-cookie';
 
-const LIVE = process.env.ORACLE_LIVE_TEST === '1';
-const FAST = process.env.ORACLE_LIVE_TEST_FAST === '1';
+const LIVE = process.env.AURACALL_LIVE_TEST === '1';
+const FAST = process.env.AURACALL_LIVE_TEST_FAST === '1';
 
 async function hasChatGptSession(): Promise<boolean> {
   try {

@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import JSON5 from 'json5';
-import { getOracleHomeDir } from './oracleHome.js';
+import { getAuracallHomeDir } from './auracallHome.js';
 import type { OracleConfig } from './schema/types.js';
 import type { ResolvedUserConfig } from './config/schema.js';
 import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
@@ -11,18 +11,18 @@ export type UserConfig = OracleConfig;
 export type { ResolvedUserConfig };
 
 function resolveUserConfigPath(): string {
-  return process.env.ORACLE_CONFIG_PATH ?? path.join(getOracleHomeDir(), 'config.json');
+  return process.env.AURACALL_CONFIG_PATH ?? path.join(getAuracallHomeDir(), 'config.json');
 }
 
 function resolveSystemConfigPath(): string | null {
-  if (process.env.ORACLE_SYSTEM_CONFIG_PATH) {
-    return process.env.ORACLE_SYSTEM_CONFIG_PATH;
+  if (process.env.AURACALL_SYSTEM_CONFIG_PATH) {
+    return process.env.AURACALL_SYSTEM_CONFIG_PATH;
   }
   if (process.platform === 'win32') {
     const programData = process.env.ProgramData;
-    return programData ? path.join(programData, 'oracle', 'config.json') : null;
+    return programData ? path.join(programData, 'auracall', 'config.json') : null;
   }
-  return '/etc/oracle/config.json';
+  return '/etc/auracall/config.json';
 }
 
 function resolveProjectConfigPaths(cwd: string): string[] {
@@ -30,7 +30,8 @@ function resolveProjectConfigPaths(cwd: string): string[] {
   let current = path.resolve(cwd);
   let prev = '';
   while (current !== prev) {
-    entries.push(path.join(current, '.oracle', 'config.json'));
+    entries.push(path.join(current, '.auracall', 'config.json'));
+    entries.push(path.join(current, 'auracall.config.json'));
     entries.push(path.join(current, 'oracle.config.json'));
     prev = current;
     current = path.dirname(current);
@@ -162,7 +163,7 @@ export async function scaffoldDefaultConfigFile(options: {
       gemini: { url: 'https://gemini.google.com/app' },
       grok: { url: GROK_URL },
     },
-    oracleProfile: 'default',
+    auracallProfile: 'default',
     profiles: {
       default: {
         engine: 'browser',

@@ -5,12 +5,12 @@ The current configuration system involves multiple layers of definitions and man
 
 ### Issues Identified
 1.  **Triple Definition:** Options are defined in three places:
-    *   `CliOptions` (Commander) in `bin/oracle-cli.ts`.
+    *   `CliOptions` (Commander) in `bin/auracall.ts`.
     *   `UserConfig` (JSON) in `src/config.ts`.
     *   `RunOracleOptions` (Core) in `src/oracle/types.ts`.
 2.  **Manual Mapping:** `src/cli/browserDefaults.ts` contains a large `applyBrowserDefaultsFromConfig` function that manually copies values from Config to CLI options.
 3.  **Inconsistent Naming:** CLI flags (`--grok-url`) don't always match config paths (`browser.grokUrl`) predictably.
-4.  **Scattered Resolution:** Precedence logic (CLI > Config > Env) is repeated in multiple files (`oracle-cli.ts`, `runOptions.ts`, `engine.ts`).
+4.  **Scattered Resolution:** Precedence logic (CLI > Config > Env) is repeated in multiple files (`auracall.ts`, `runOptions.ts`, `engine.ts`).
 
 ## Proposed Solution: Unified Zod Schema
 
@@ -57,5 +57,5 @@ A central configuration loader that:
 1.  Define the full `ConfigSchema` in `src/schema/config.ts`.
 2.  Create the `CLI_MAPPING` definition.
 3.  Implement the `Resolver` logic.
-4.  Refactor `bin/oracle-cli.ts` to use the `Resolver` instead of manual options.
+4.  Refactor `bin/auracall.ts` to use the `Resolver` instead of manual options.
 5.  Delete `src/cli/browserDefaults.ts` and legacy types.

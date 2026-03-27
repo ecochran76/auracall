@@ -1,14 +1,17 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { CHATGPT_URL, GROK_URL } from './constants.js';
-import { getOracleHomeDir } from '../oracleHome.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
+import { bootstrapManagedProfile, type ManagedProfileSeedPolicy } from './profileStore.js';
 import { registerInstance } from './service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, findWindowsChromePidUsingTasklist } from './processCheck.js';
 import { launchManualLoginSession } from './manualLogin.js';
+import { resolveCompatibleHostsForTarget } from './urlFamilies.js';
 import {
   runBrowserLogin as runBrowserLoginCore,
   type BrowserLoginOptions as BrowserLoginCoreOptions,
 } from '../../packages/browser-service/src/login.js';
+import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
 export type LoginTarget = 'chatgpt' | 'gemini' | 'grok';
 
@@ -18,10 +21,16 @@ export interface BrowserLoginOptions {
   chromeProfile: string;
   manualLoginProfileDir: string;
   cookiePath?: string;
+  bootstrapCookiePath?: string;
   chatgptUrl?: string | null;
   geminiUrl?: string | null;
   grokUrl?: string | null;
   exportCookies?: boolean;
+  managedProfileSeedPolicy?: ManagedProfileSeedPolicy;
+  debugPortStrategy?: DebugPortStrategy | null;
+  serviceTabLimit?: number | null;
+  blankTabLimit?: number | null;
+  collapseDisposableWindows?: boolean;
 }
 
 export async function runBrowserLogin(options: BrowserLoginOptions): Promise<void> {
@@ -31,10 +40,16 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     chromeProfile,
     manualLoginProfileDir,
     cookiePath,
+    bootstrapCookiePath,
     chatgptUrl,
     geminiUrl,
     grokUrl,
     exportCookies,
+    managedProfileSeedPolicy,
+    debugPortStrategy,
+    serviceTabLimit,
+    blankTabLimit,
+    collapseDisposableWindows,
   } = options;
   if (exportCookies && target !== 'gemini') {
     throw new Error('Cookie export currently supports Gemini login only.');
@@ -45,15 +60,37 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       : target === 'grok'
         ? grokUrl ?? GROK_URL
         : chatgptUrl ?? CHATGPT_URL;
+  const compatibleHosts = resolveCompatibleHostsForTarget(target);
+  const bootstrapResult = await bootstrapManagedProfile({
+    managedProfileDir: manualLoginProfileDir,
+    managedProfileName: chromeProfile,
+    sourceCookiePath: bootstrapCookiePath ?? cookiePath ?? null,
+    seedPolicy: managedProfileSeedPolicy ?? 'reseed-if-source-newer',
+    logger: (message) => console.log(`[login] ${message}`),
+  });
+  if (bootstrapResult.cloned) {
+    console.log(
+      `[login] Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+    );
+  } else if (bootstrapResult.reseeded) {
+    console.log(
+      `[login] Refreshed managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+    );
+  } else if (bootstrapResult.skippedReason === 'managed-profile-active') {
+    console.log(
+      `[login] Managed profile is already active; skipping source-profile refresh and reusing ${manualLoginProfileDir}.`,
+    );
+  }
   const coreOptions: BrowserLoginCoreOptions = {
     chromePath,
     chromeProfile,
     manualLoginProfileDir,
     cookiePath,
     loginUrl: resolvedUrl,
+    compatibleHosts,
     loginLabel: target,
     exportCookies,
-    preferCookieProfile: target !== 'chatgpt',
+    preferCookieProfile: false,
     cookieExport: exportCookies
       ? {
           urls: ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'],
@@ -63,20 +100,40 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     onRegisterInstance: async ({ userDataDir, profileName, port, host }) => {
       await registerLoginInstance(userDataDir, profileName, port, undefined, host);
     },
-    launchManualLoginSession: async ({ chromePath, profileName, userDataDir, url, debugPort }) => {
+    launchManualLoginSession: async ({
+      chromePath,
+      profileName,
+      userDataDir,
+      url,
+      compatibleHosts,
+      debugPort,
+      debugPortStrategy,
+      serviceTabLimit,
+      blankTabLimit,
+      collapseDisposableWindows,
+    }) => {
       return launchManualLoginSession({
         chromePath,
         profileName,
         userDataDir,
         url,
+        compatibleHosts,
         debugPort,
+        debugPortStrategy,
+        serviceTabLimit,
+        blankTabLimit,
+        collapseDisposableWindows,
         logger: () => undefined,
       });
     },
+    debugPortStrategy,
+    serviceTabLimit,
+    blankTabLimit,
+    collapseDisposableWindows,
     onCookiesExported: async (cookies) => {
-      const oracleHome = getOracleHomeDir();
-      const cookieOutput = path.join(oracleHome, 'cookies.json');
-      await fs.mkdir(oracleHome, { recursive: true });
+      const auracallHome = getAuracallHomeDir();
+      const cookieOutput = path.join(auracallHome, 'cookies.json');
+      await fs.mkdir(auracallHome, { recursive: true });
       await fs.writeFile(cookieOutput, JSON.stringify(cookies, null, 2), 'utf8');
       console.log(`Saved Gemini cookies to ${cookieOutput}`);
     },

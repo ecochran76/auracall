@@ -23,7 +23,7 @@ try {
 }
 
 // Prefer to run PTY cases even on Node 25+; gate on env to avoid flaky/module-resolution failures in sandboxed runners.
-const ptyRunnable = Boolean(pty) && process.env.ORACLE_ENABLE_PTY_TESTS === '1';
+const ptyRunnable = Boolean(pty) && process.env.AURACALL_ENABLE_PTY_TESTS === '1';
 const ptyDescribe = ptyRunnable ? describe : describe.skip;
 
 /**

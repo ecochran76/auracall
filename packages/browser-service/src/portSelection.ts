@@ -9,9 +9,17 @@ export async function pickAvailableDebugPort(
   logger: BrowserLogger,
   range: [number, number] | null,
 ): Promise<number> {
+  const hasPreferredPort = Number.isFinite(preferredPort) && preferredPort > 0 && preferredPort <= 65535;
+  if (hasPreferredPort && await isPortAvailable(preferredPort)) {
+    return preferredPort;
+  }
+
   if (range) {
     const [start, end] = range;
     for (let port = start; port <= end; port++) {
+      if (hasPreferredPort && port === preferredPort) {
+        continue;
+      }
       if (await isPortAvailable(port)) {
         return port;
       }

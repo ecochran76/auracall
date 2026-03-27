@@ -11,7 +11,7 @@ Status: complete
 ## Non-Goals
 - No new provider DOM features or cache behavior changes.
 - No release/publish process changes yet (handled in a later phase).
-- No removal of `ORACLE_*` env aliases (still supported for backwards compatibility).
+- No removal of `AURACALL_*` env aliases (still supported for backwards compatibility).
 
 ## Deliverables
 - A verified, minimal browser-service API (exports list finalized + documented).
@@ -33,7 +33,7 @@ Status: complete
   - DevTools connectivity helpers (if any remain).
   - WSL/Windows filesystem utilities used for profile/temp handling.
 - Update Oracle wrappers to import the new helpers from browser-service.
-- Ensure the Oracle wrapper retains the `.oracle` registry path binding and defaults.
+- Ensure the Oracle wrapper retains the `.auracall` registry path binding and defaults.
 
 ### 3) Package tests
 - Add unit tests under `packages/browser-service/tests` (or equivalent) for:

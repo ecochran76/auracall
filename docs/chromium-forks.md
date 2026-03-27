@@ -4,7 +4,7 @@ Oracle’s browser engine assumes Google Chrome by default: it launches Chrome v
 
 ## 1. Point Oracle at the right executable
 
-Either pass the CLI flag or set it once in `~/.oracle/config.json`:
+Either pass the CLI flag or set it once in `~/.auracall/config.json`:
 
 - CLI: `oracle --engine browser --browser-chrome-path "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge" …`
 - Config:
@@ -43,6 +43,8 @@ Config example (JSON5):
 
 If you omit `chromeCookiePath`, Oracle falls back to `chromeProfile` (name or explicit path). Providing both keeps things unambiguous.
 
+If you want to keep one browser as the runtime launcher but seed Aura-Call’s managed profile from a different Chromium source, use `--browser-bootstrap-cookie-path` (or `browser.bootstrapCookiePath` in config). This is especially useful on WSL when Aura-Call should launch WSL Chrome but bootstrap from a Windows Chrome/Edge/Brave profile.
+
 ## Common cookie DB paths
 
 | Browser | macOS | Linux | Windows |
@@ -52,6 +54,8 @@ If you omit `chromeCookiePath`, Oracle falls back to `chromeProfile` (name or ex
 | Microsoft Edge | `~/Library/Application Support/Microsoft Edge/Default/Cookies` (profiles are `Profile 1`, `Profile 2`, …) | `~/.config/microsoft-edge/Default/Cookies` | `%LOCALAPPDATA%/Microsoft/Edge/User Data/Default/Network/Cookies` |
 
 Brave and other forks work the same way—inspect `%APPDATA%`/`~/Library/Application Support`/`~/.config` for their `Cookies` file and pass its full path to `--browser-cookie-path`.
+
+On WSL, be aware that some Windows Chromium `Network/Cookies` DBs are readable enough to locate but still fail on actual copy/open with `EACCES`. Aura-Call’s managed-profile bootstrap now tolerates that by copying the rest of the auth-bearing profile state, but full authenticated reuse may still require a one-time manual sign-in in the Aura-Call-managed profile.
 
 ### macOS / Windows encryption caveat
 

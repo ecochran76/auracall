@@ -5,7 +5,7 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
-const LIVE = process.env.ORACLE_LIVE_TEST === '1';
+const LIVE = process.env.AURACALL_LIVE_TEST === '1';
 const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
 const baseUrl = process.env.OPENAI_BASE_URL ?? '';
 const isOpenRouterBase = baseUrl.includes('openrouter');
@@ -16,26 +16,26 @@ const OPENAI_ENV = {
   OPENROUTER_API_KEY: '',
 };
 const MCP_CONFIG = path.join(process.cwd(), 'config', 'mcporter.json');
-const ORACLE_MCP_BIN = path.join(process.cwd(), 'dist', 'bin', 'oracle-mcp.js');
+const AURACALL_MCP_BIN = path.join(process.cwd(), 'dist', 'bin', 'auracall-mcp.js');
 
 async function assertBuiltArtifacts(): Promise<void> {
-  await stat(ORACLE_MCP_BIN);
+  await stat(AURACALL_MCP_BIN);
 }
 
-(LIVE && hasOpenAI && !isOpenRouterBase ? describe : describe.skip)('mcporter live (stdio oracle-mcp)', () => {
+(LIVE && hasOpenAI && !isOpenRouterBase ? describe : describe.skip)('mcporter live (stdio auracall-mcp)', () => {
   it(
-    'lists oracle-local schema',
+    'lists auracall-local schema',
     async () => {
       await assertBuiltArtifacts();
       const { stdout } = await execFileAsync(
         'pnpm',
-        ['exec', 'mcporter', 'list', 'oracle-local', '--schema', '--config', MCP_CONFIG],
+        ['exec', 'mcporter', 'list', 'auracall-local', '--schema', '--config', MCP_CONFIG],
         {
           env: { ...process.env, ...OPENAI_ENV },
           timeout: 60_000,
         },
       );
-      expect(stdout).toContain('oracle-local');
+      expect(stdout).toContain('auracall-local');
     },
     90_000,
   );
@@ -50,7 +50,7 @@ async function assertBuiltArtifacts(): Promise<void> {
           'exec',
           'mcporter',
         'call',
-        'oracle-local.consult',
+        'auracall-local.consult',
         'prompt:Say hello from mcporter live',
         'model:gpt-4.1',
         'engine:api',

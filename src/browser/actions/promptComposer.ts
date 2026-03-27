@@ -326,16 +326,34 @@ async function verifyPromptCommitted(
   const encodedPrompt = JSON.stringify(prompt.trim());
   const primarySelectorLiteral = JSON.stringify(PROMPT_PRIMARY_SELECTOR);
   const fallbackSelectorLiteral = JSON.stringify(PROMPT_FALLBACK_SELECTOR);
+  const inputSelectorsLiteral = JSON.stringify(INPUT_SELECTORS);
   const stopSelectorLiteral = JSON.stringify(STOP_BUTTON_SELECTOR);
   const assistantSelectorLiteral = JSON.stringify(ASSISTANT_ROLE_SELECTOR);
-  const baselineLiteral =
+  const turnSelectorLiteral = JSON.stringify(CONVERSATION_TURN_SELECTOR);
+  let baseline: number | null =
     typeof baselineTurns === 'number' && Number.isFinite(baselineTurns) && baselineTurns >= 0
       ? Math.floor(baselineTurns)
-      : -1;
+      : null;
+  if (baseline === null) {
+    try {
+      const { result } = await Runtime.evaluate({
+        expression: `document.querySelectorAll(${turnSelectorLiteral}).length`,
+        returnByValue: true,
+      });
+      const raw = typeof result?.value === 'number' ? result.value : Number(result?.value);
+      if (Number.isFinite(raw)) {
+        baseline = Math.max(0, Math.floor(raw));
+      }
+    } catch {
+      // ignore; baseline stays unknown
+    }
+  }
+  const baselineLiteral = baseline ?? -1;
   // Learned: ChatGPT can echo/format text; normalize markdown and use prefix matches to detect the sent prompt.
   const script = `(() => {
 	    const editor = document.querySelector(${primarySelectorLiteral});
 	    const fallback = document.querySelector(${fallbackSelectorLiteral});
+	    const inputSelectors = ${inputSelectorsLiteral};
 	    const normalize = (value) => {
 	      let text = value?.toLowerCase?.() ?? '';
 	      // Strip markdown *markers* but keep content (ChatGPT renders fence markers differently).
@@ -349,6 +367,21 @@ async function verifyPromptCommitted(
 	    const CONVERSATION_SELECTOR = ${JSON.stringify(CONVERSATION_TURN_SELECTOR)};
 	    const articles = Array.from(document.querySelectorAll(CONVERSATION_SELECTOR));
 	    const normalizedTurns = articles.map((node) => normalize(node?.innerText));
+	    const readValue = (node) => {
+	      if (!node) return '';
+	      if (node instanceof HTMLTextAreaElement) return node.value ?? '';
+	      return node.innerText ?? '';
+	    };
+	    const isVisible = (node) => {
+	      if (!node || typeof node.getBoundingClientRect !== 'function') return false;
+	      const rect = node.getBoundingClientRect();
+	      return rect.width > 0 && rect.height > 0;
+	    };
+	    const inputs = inputSelectors
+	      .map((selector) => document.querySelector(selector))
+	      .filter((node) => Boolean(node));
+	    const visibleInputs = inputs.filter((node) => isVisible(node));
+	    const activeInputs = visibleInputs.length > 0 ? visibleInputs : inputs;
 	    const userMatched =
 	      normalizedPrompt.length > 0 && normalizedTurns.some((text) => text.includes(normalizedPrompt));
 	    const prefixMatched =
@@ -360,7 +393,7 @@ async function verifyPromptCommitted(
 	      (lastTurn.includes(normalizedPrompt) ||
 	        (normalizedPromptPrefix.length > 30 && lastTurn.includes(normalizedPromptPrefix)));
 	    const baseline = ${baselineLiteral};
-	    const hasNewTurn = baseline < 0 ? true : normalizedTurns.length > baseline;
+	    const hasNewTurn = baseline < 0 ? false : normalizedTurns.length > baseline;
       const stopVisible = Boolean(document.querySelector(${stopSelectorLiteral}));
       const assistantVisible = Boolean(
         document.querySelector(${assistantSelectorLiteral}) ||
@@ -369,10 +402,13 @@ async function verifyPromptCommitted(
       // Learned: composer clearing + stop button or assistant presence is a reliable fallback signal.
       const editorValue = editor?.innerText ?? '';
       const fallbackValue = fallback?.value ?? '';
-      const composerCleared = !(String(editorValue).trim() || String(fallbackValue).trim());
+      const activeEmpty =
+        activeInputs.length === 0 ? null : activeInputs.every((node) => !String(readValue(node)).trim());
+      const composerCleared = activeEmpty ?? !(String(editorValue).trim() || String(fallbackValue).trim());
       const href = typeof location === 'object' && location.href ? location.href : '';
       const inConversation = /\\/c\\//.test(href);
 	    return {
+      baseline,
       userMatched,
       prefixMatched,
       lastMatched,
@@ -401,15 +437,18 @@ async function verifyPromptCommitted(
       composerCleared?: boolean;
       inConversation?: boolean;
       turnsCount?: number;
+      baseline?: number;
     };
     const turnsCount = (result.value as { turnsCount?: number } | undefined)?.turnsCount;
-    if (info?.hasNewTurn && (info?.lastMatched || info?.userMatched || info?.prefixMatched)) {
+    const matchesPrompt = Boolean(info?.lastMatched || info?.userMatched || info?.prefixMatched);
+    const baselineUnknown = typeof info?.baseline === 'number' ? info.baseline < 0 : baselineLiteral < 0;
+    if (matchesPrompt && (baselineUnknown || info?.hasNewTurn)) {
       return typeof turnsCount === 'number' && Number.isFinite(turnsCount) ? turnsCount : null;
     }
     const fallbackCommit =
       info?.composerCleared &&
-      ((info?.stopVisible ?? false) ||
-        (info?.hasNewTurn && (info?.assistantVisible || info?.inConversation)));
+      Boolean(info?.hasNewTurn) &&
+      ((info?.stopVisible ?? false) || info?.assistantVisible || info?.inConversation);
     if (fallbackCommit) {
       return typeof turnsCount === 'number' && Number.isFinite(turnsCount) ? turnsCount : null;
     }
@@ -434,3 +473,7 @@ async function verifyPromptCommitted(
   }
   throw new Error('Prompt did not appear in conversation before timeout (send may have failed)');
 }
+
+export const __test__ = {
+  verifyPromptCommitted,
+};

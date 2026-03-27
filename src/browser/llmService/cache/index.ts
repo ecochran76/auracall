@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { getOracleHomeDir } from '../../../oracleHome.js';
+import { getAuracallHomeDir } from '../../../auracallHome.js';
 import type { ProviderCacheContext } from '../../providers/cache.js';
 import { resolveProviderCacheKey, resolveProviderCachePath } from '../../providers/cache.js';
 
@@ -79,7 +79,7 @@ export function resolveCacheEntryPath(context: ProviderCacheContext, fileName: s
 }
 
 function resolveCacheIndexPath(context: ProviderCacheContext): string {
-  const cacheRoot = context.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+  const cacheRoot = context.cacheRoot ?? path.join(getAuracallHomeDir(), 'cache', 'providers');
   const key = resolveProviderCacheKey(context);
   return path.join(cacheRoot, context.provider, key, 'cache-index.json');
 }

@@ -73,8 +73,8 @@ describe('runOracle preview mode', () => {
 
 describe('runOracle error handling', () => {
   test('surfaces prompt validation errors for short pro prompts', async () => {
-    const original = process.env.ORACLE_MIN_PROMPT_CHARS;
-    process.env.ORACLE_MIN_PROMPT_CHARS = '20';
+    const original = process.env.AURACALL_MIN_PROMPT_CHARS;
+    process.env.AURACALL_MIN_PROMPT_CHARS = '20';
     try {
       await expect(
         runOracle(
@@ -84,9 +84,9 @@ describe('runOracle error handling', () => {
       ).rejects.toBeInstanceOf(PromptValidationError);
     } finally {
       if (original === undefined) {
-        delete process.env.ORACLE_MIN_PROMPT_CHARS;
+        delete process.env.AURACALL_MIN_PROMPT_CHARS;
       } else {
-        process.env.ORACLE_MIN_PROMPT_CHARS = original;
+        process.env.AURACALL_MIN_PROMPT_CHARS = original;
       }
     }
   });

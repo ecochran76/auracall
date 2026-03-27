@@ -86,7 +86,7 @@ function normalizeBrowserConfig(
 ): RemoteRunPayload['browserConfig'] {
   if (!config) return {};
   const normalizedBlockingProfileAction =
-    config.blockingProfileAction === 'restart-oracle'
+    config.blockingProfileAction === 'restart-auracall'
       ? 'restart-managed'
       : config.blockingProfileAction;
   const remoteChrome = config.remoteChrome;

@@ -1,6 +1,14 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import {
+  detectChromiumBrowserFamily,
+  inferWindowsLocalAppDataRoot,
+  isWslEnvironment,
+  normalizeComparablePath,
+  toWslPath,
+  type ChromiumBrowserFamily,
+} from '../platformPaths.js';
 
 export type WslChromePreference = 'auto' | 'wsl' | 'windows';
 
@@ -14,50 +22,58 @@ export interface DiscoveredBrowserProfile {
 
 export function discoverDefaultBrowserProfile(options: {
   preference: WslChromePreference;
+  chromePathHint?: string | null;
+  cookiePathHint?: string | null;
+  userDataDirHint?: string | null;
 }): DiscoveredBrowserProfile | null {
-  if (!isWsl()) {
-    return discoverLocalProfile();
+  const preferredFamilies = resolvePreferredBrowserFamilies(options);
+  if (!isWslEnvironment()) {
+    return discoverLocalProfile(preferredFamilies);
   }
   const preference = options.preference ?? 'auto';
   if (preference === 'wsl') {
-    return discoverWslProfile() ?? discoverWindowsProfile();
+    return discoverWslProfile(preferredFamilies) ?? discoverWindowsProfile(preferredFamilies, options);
   }
   if (preference === 'windows') {
-    return discoverWindowsProfile() ?? discoverWslProfile();
+    return discoverWindowsProfile(preferredFamilies, options) ?? discoverWslProfile(preferredFamilies);
   }
-  return discoverWslProfile() ?? discoverWindowsProfile();
+  return discoverWslProfile(preferredFamilies) ?? discoverWindowsProfile(preferredFamilies, options);
 }
 
-function discoverLocalProfile(): DiscoveredBrowserProfile | null {
+function discoverLocalProfile(preferredFamilies: ChromiumBrowserFamily[]): DiscoveredBrowserProfile | null {
   if (process.platform === 'darwin') {
-    return discoverMacProfile();
+    return discoverMacProfile(preferredFamilies);
   }
   if (process.platform === 'win32') {
-    return discoverWin32Profile();
+    return discoverWin32Profile(preferredFamilies);
   }
-  return discoverLinuxProfile();
+  return discoverLinuxProfile(preferredFamilies);
 }
 
-function discoverMacProfile(): DiscoveredBrowserProfile | null {
+function discoverMacProfile(preferredFamilies: ChromiumBrowserFamily[]): DiscoveredBrowserProfile | null {
   const home = os.homedir();
-  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+  const candidates = prioritizeCandidates([
     {
+      family: 'chrome' as const,
       userDataDir: path.join(home, 'Library', 'Application Support', 'Google', 'Chrome'),
       chromePaths: ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'],
     },
     {
+      family: 'chromium' as const,
       userDataDir: path.join(home, 'Library', 'Application Support', 'Chromium'),
       chromePaths: ['/Applications/Chromium.app/Contents/MacOS/Chromium'],
     },
     {
+      family: 'brave' as const,
       userDataDir: path.join(home, 'Library', 'Application Support', 'BraveSoftware', 'Brave-Browser'),
       chromePaths: ['/Applications/Brave Browser.app/Contents/MacOS/Brave Browser'],
     },
     {
+      family: 'edge' as const,
       userDataDir: path.join(home, 'Library', 'Application Support', 'Microsoft Edge'),
       chromePaths: ['/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'],
     },
-  ];
+  ], preferredFamilies);
 
   for (const candidate of candidates) {
     if (!exists(candidate.userDataDir)) {
@@ -77,26 +93,30 @@ function discoverMacProfile(): DiscoveredBrowserProfile | null {
   return null;
 }
 
-function discoverLinuxProfile(): DiscoveredBrowserProfile | null {
+function discoverLinuxProfile(preferredFamilies: ChromiumBrowserFamily[]): DiscoveredBrowserProfile | null {
   const home = os.homedir();
-  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+  const candidates = prioritizeCandidates([
     {
+      family: 'chrome' as const,
       userDataDir: path.join(home, '.config', 'google-chrome'),
       chromePaths: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
     },
     {
+      family: 'chromium' as const,
       userDataDir: path.join(home, '.config', 'chromium'),
       chromePaths: ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
     },
     {
+      family: 'brave' as const,
       userDataDir: path.join(home, '.config', 'BraveSoftware', 'Brave-Browser'),
       chromePaths: ['/usr/bin/brave-browser', '/usr/bin/brave'],
     },
     {
+      family: 'edge' as const,
       userDataDir: path.join(home, '.config', 'microsoft-edge'),
       chromePaths: ['/usr/bin/microsoft-edge', '/usr/bin/microsoft-edge-stable'],
     },
-  ];
+  ], preferredFamilies);
 
   for (const candidate of candidates) {
     if (!exists(candidate.userDataDir)) {
@@ -116,13 +136,14 @@ function discoverLinuxProfile(): DiscoveredBrowserProfile | null {
   return null;
 }
 
-function discoverWin32Profile(): DiscoveredBrowserProfile | null {
+function discoverWin32Profile(preferredFamilies: ChromiumBrowserFamily[]): DiscoveredBrowserProfile | null {
   const localAppData = process.env.LOCALAPPDATA;
   if (!localAppData) {
     return null;
   }
-  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+  const candidates = prioritizeCandidates([
     {
+      family: 'chrome' as const,
       userDataDir: path.join(localAppData, 'Google', 'Chrome', 'User Data'),
       chromePaths: [
         'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -130,6 +151,7 @@ function discoverWin32Profile(): DiscoveredBrowserProfile | null {
       ],
     },
     {
+      family: 'edge' as const,
       userDataDir: path.join(localAppData, 'Microsoft', 'Edge', 'User Data'),
       chromePaths: [
         'C:/Program Files/Microsoft/Edge/Application/msedge.exe',
@@ -137,6 +159,7 @@ function discoverWin32Profile(): DiscoveredBrowserProfile | null {
       ],
     },
     {
+      family: 'brave' as const,
       userDataDir: path.join(localAppData, 'BraveSoftware', 'Brave-Browser', 'User Data'),
       chromePaths: [
         'C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe',
@@ -144,13 +167,14 @@ function discoverWin32Profile(): DiscoveredBrowserProfile | null {
       ],
     },
     {
+      family: 'chromium' as const,
       userDataDir: path.join(localAppData, 'Chromium', 'User Data'),
       chromePaths: [
         'C:/Program Files/Chromium/Application/chrome.exe',
         'C:/Program Files (x86)/Chromium/Application/chrome.exe',
       ],
     },
-  ];
+  ], preferredFamilies);
 
   for (const candidate of candidates) {
     if (!exists(candidate.userDataDir)) {
@@ -170,26 +194,30 @@ function discoverWin32Profile(): DiscoveredBrowserProfile | null {
   return null;
 }
 
-function discoverWslProfile(): DiscoveredBrowserProfile | null {
+function discoverWslProfile(preferredFamilies: ChromiumBrowserFamily[]): DiscoveredBrowserProfile | null {
   const home = os.homedir();
-  const candidates: Array<{ userDataDir: string; chromePaths: string[] }> = [
+  const candidates = prioritizeCandidates([
     {
+      family: 'chrome' as const,
       userDataDir: path.join(home, '.config', 'google-chrome'),
       chromePaths: ['/usr/bin/google-chrome', '/usr/bin/google-chrome-stable'],
     },
     {
+      family: 'chromium' as const,
       userDataDir: path.join(home, '.config', 'chromium'),
       chromePaths: ['/usr/bin/chromium', '/usr/bin/chromium-browser'],
     },
     {
+      family: 'brave' as const,
       userDataDir: path.join(home, '.config', 'BraveSoftware', 'Brave-Browser'),
       chromePaths: ['/usr/bin/brave-browser', '/usr/bin/brave'],
     },
     {
+      family: 'edge' as const,
       userDataDir: path.join(home, '.config', 'microsoft-edge'),
       chromePaths: ['/usr/bin/microsoft-edge', '/usr/bin/microsoft-edge-stable'],
     },
-  ];
+  ], preferredFamilies);
 
   for (const candidate of candidates) {
     if (!exists(candidate.userDataDir)) {
@@ -209,49 +237,50 @@ function discoverWslProfile(): DiscoveredBrowserProfile | null {
   return null;
 }
 
-function discoverWindowsProfile(): DiscoveredBrowserProfile | null {
-  const usersRoot = '/mnt/c/Users';
-  if (!exists(usersRoot)) {
-    return null;
-  }
-  const users = resolveWindowsUsers(usersRoot);
-  const browserDefs: Array<{
-    userDataDir: (user: string) => string;
-    chromePaths: string[];
-  }> = [
+function discoverWindowsProfile(
+  preferredFamilies: ChromiumBrowserFamily[],
+  options: { chromePathHint?: string | null; cookiePathHint?: string | null; userDataDirHint?: string | null },
+): DiscoveredBrowserProfile | null {
+  const localAppDataCandidates = resolveWindowsLocalAppDataCandidates(options);
+  const browserDefs = prioritizeCandidates([
     {
-      userDataDir: (user) => path.join(usersRoot, user, 'AppData', 'Local', 'Google', 'Chrome', 'User Data'),
+      family: 'chrome' as const,
+      userDataDir: (localAppDataRoot: string) => path.join(localAppDataRoot, 'Google', 'Chrome', 'User Data'),
       chromePaths: [
         '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
         '/mnt/c/Program Files (x86)/Google/Chrome/Application/chrome.exe',
       ],
     },
     {
-      userDataDir: (user) => path.join(usersRoot, user, 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data'),
+      family: 'edge' as const,
+      userDataDir: (localAppDataRoot: string) => path.join(localAppDataRoot, 'Microsoft', 'Edge', 'User Data'),
       chromePaths: [
         '/mnt/c/Program Files/Microsoft/Edge/Application/msedge.exe',
         '/mnt/c/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
       ],
     },
     {
-      userDataDir: (user) => path.join(usersRoot, user, 'AppData', 'Local', 'BraveSoftware', 'Brave-Browser', 'User Data'),
+      family: 'brave' as const,
+      userDataDir: (localAppDataRoot: string) =>
+        path.join(localAppDataRoot, 'BraveSoftware', 'Brave-Browser', 'User Data'),
       chromePaths: [
         '/mnt/c/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe',
         '/mnt/c/Program Files (x86)/BraveSoftware/Brave-Browser/Application/brave.exe',
       ],
     },
     {
-      userDataDir: (user) => path.join(usersRoot, user, 'AppData', 'Local', 'Chromium', 'User Data'),
+      family: 'chromium' as const,
+      userDataDir: (localAppDataRoot: string) => path.join(localAppDataRoot, 'Chromium', 'User Data'),
       chromePaths: [
         '/mnt/c/Program Files/Chromium/Application/chrome.exe',
         '/mnt/c/Program Files (x86)/Chromium/Application/chrome.exe',
       ],
     },
-  ];
+  ], preferredFamilies);
 
-  for (const user of users) {
+  for (const localAppDataRoot of localAppDataCandidates) {
     for (const def of browserDefs) {
-      const userDataDir = def.userDataDir(user);
+      const userDataDir = def.userDataDir(localAppDataRoot);
       if (!exists(userDataDir)) {
         continue;
       }
@@ -268,6 +297,84 @@ function discoverWindowsProfile(): DiscoveredBrowserProfile | null {
     }
   }
   return null;
+}
+
+function prioritizeCandidates<T extends { family: ChromiumBrowserFamily }>(
+  candidates: T[],
+  preferredFamilies: ChromiumBrowserFamily[],
+): T[] {
+  const ranking = new Map(preferredFamilies.map((family, index) => [family, index]));
+  return [...candidates].sort((left, right) => {
+    const leftRank = ranking.get(left.family) ?? Number.MAX_SAFE_INTEGER;
+    const rightRank = ranking.get(right.family) ?? Number.MAX_SAFE_INTEGER;
+    return leftRank - rightRank;
+  });
+}
+
+function resolvePreferredBrowserFamilies(options: {
+  chromePathHint?: string | null;
+  cookiePathHint?: string | null;
+  userDataDirHint?: string | null;
+}): ChromiumBrowserFamily[] {
+  const seen = new Set<ChromiumBrowserFamily>();
+  const ordered: ChromiumBrowserFamily[] = [];
+  for (const value of [options.chromePathHint, options.cookiePathHint, options.userDataDirHint]) {
+    const family = detectChromiumBrowserFamily(value);
+    if (family && !seen.has(family)) {
+      seen.add(family);
+      ordered.push(family);
+    }
+  }
+  for (const family of ['chrome', 'brave', 'edge', 'chromium'] satisfies ChromiumBrowserFamily[]) {
+    if (!seen.has(family)) {
+      ordered.push(family);
+    }
+  }
+  return ordered;
+}
+
+function resolveWindowsLocalAppDataCandidates(options: {
+  cookiePathHint?: string | null;
+  userDataDirHint?: string | null;
+}): string[] {
+  const explicitRoot = process.env.AURACALL_WINDOWS_LOCALAPPDATA?.trim()
+    ? toWslPath(process.env.AURACALL_WINDOWS_LOCALAPPDATA.trim())
+    : null;
+  const hintedRoots = [
+    inferWindowsLocalAppDataRoot(options.cookiePathHint ?? null),
+    inferWindowsLocalAppDataRoot(options.userDataDirHint ?? null),
+  ];
+  const candidates: string[] = [];
+  const seen = new Set<string>();
+  for (const value of [explicitRoot, ...hintedRoots]) {
+    const normalized = value ? normalizeComparablePath(value) : null;
+    if (value && normalized && !seen.has(normalized) && exists(value)) {
+      seen.add(normalized);
+      candidates.push(value);
+    }
+  }
+  const usersRoot = resolveWindowsUsersRoot();
+  if (!usersRoot || !exists(usersRoot)) {
+    return candidates;
+  }
+  const users = resolveWindowsUsers(usersRoot);
+  for (const user of users) {
+    const localAppDataRoot = path.join(usersRoot, user, 'AppData', 'Local');
+    const normalized = normalizeComparablePath(localAppDataRoot);
+    if (!seen.has(normalized) && exists(localAppDataRoot)) {
+      seen.add(normalized);
+      candidates.push(localAppDataRoot);
+    }
+  }
+  return candidates;
+}
+
+function resolveWindowsUsersRoot(): string | null {
+  const override = process.env.AURACALL_WINDOWS_USERS_ROOT?.trim();
+  if (override) {
+    return toWslPath(override);
+  }
+  return '/mnt/c/Users';
 }
 
 function resolveProfileName(userDataDir: string): string {
@@ -387,14 +494,4 @@ function exists(value: string): boolean {
   } catch {
     return false;
   }
-}
-
-function isWsl(): boolean {
-  if (process.platform !== 'linux') {
-    return false;
-  }
-  if (process.env.WSL_DISTRO_NAME) {
-    return true;
-  }
-  return os.release().toLowerCase().includes('microsoft');
 }

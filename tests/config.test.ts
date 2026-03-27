@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { loadUserConfig } from '../src/config.js';
-import { setOracleHomeDirOverrideForTest } from '../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 
 describe('loadUserConfig', () => {
   let tempDir: string;
@@ -12,23 +12,23 @@ describe('loadUserConfig', () => {
 
   beforeEach(async () => {
     tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-config-'));
-    setOracleHomeDirOverrideForTest(tempDir);
-    previousUserConfigPath = process.env.ORACLE_CONFIG_PATH;
-    previousSystemConfigPath = process.env.ORACLE_SYSTEM_CONFIG_PATH;
-    process.env.ORACLE_CONFIG_PATH = path.join(tempDir, 'config.json');
-    process.env.ORACLE_SYSTEM_CONFIG_PATH = path.join(tempDir, 'system.json');
+    setAuracallHomeDirOverrideForTest(tempDir);
+    previousUserConfigPath = process.env.AURACALL_CONFIG_PATH;
+    previousSystemConfigPath = process.env.AURACALL_SYSTEM_CONFIG_PATH;
+    process.env.AURACALL_CONFIG_PATH = path.join(tempDir, 'config.json');
+    process.env.AURACALL_SYSTEM_CONFIG_PATH = path.join(tempDir, 'system.json');
   });
 
   afterEach(() => {
     if (previousUserConfigPath === undefined) {
-      delete process.env.ORACLE_CONFIG_PATH;
+      delete process.env.AURACALL_CONFIG_PATH;
     } else {
-      process.env.ORACLE_CONFIG_PATH = previousUserConfigPath;
+      process.env.AURACALL_CONFIG_PATH = previousUserConfigPath;
     }
     if (previousSystemConfigPath === undefined) {
-      delete process.env.ORACLE_SYSTEM_CONFIG_PATH;
+      delete process.env.AURACALL_SYSTEM_CONFIG_PATH;
     } else {
-      process.env.ORACLE_SYSTEM_CONFIG_PATH = previousSystemConfigPath;
+      process.env.AURACALL_SYSTEM_CONFIG_PATH = previousSystemConfigPath;
     }
   });
 
@@ -79,6 +79,6 @@ describe('loadUserConfig', () => {
   });
 
   afterAll(() => {
-    setOracleHomeDirOverrideForTest(null);
+    setAuracallHomeDirOverrideForTest(null);
   });
 });

@@ -1,6 +1,6 @@
-# MCP Smoke Tests (local oracle-mcp)
+# MCP Smoke Tests (local auracall-mcp)
 
-Use these steps to validate CLI + MCP end-to-end before releasing. The npm package now ships `oracle-mcp`, but the local build remains the fastest path for development (see the `oracle-local` entry in `config/mcporter.json`).
+Use these steps to validate CLI + MCP end-to-end before releasing. The npm package now ships `auracall-mcp`, but the local build remains the fastest path for development (see the `auracall-local` entry in `config/mcporter.json`).
 
 ## Checklist (run all four lanes)
 1) CLI (API engine)
@@ -9,9 +9,9 @@ Use these steps to validate CLI + MCP end-to-end before releasing. The npm packa
 4) Claude Code via MCP (API defaults)
 
 Shared prereqs
-- `pnpm build` (ensures `dist/bin/oracle-mcp.js` exists)
+- `pnpm build` (ensures `dist/bin/auracall-mcp.js` exists)
 - `OPENAI_API_KEY` set in env
-- `config/mcporter.json` contains the `oracle` entry pointing to `npx -y @steipete/oracle oracle-mcp` (already committed).
+- `config/mcporter.json` contains the `oracle` entry pointing to `npx -y @steipete/oracle auracall-mcp` (already committed).
 - mcporter available at `/Users/steipete/Library/pnpm/global/5/node_modules/.bin/mcporter`
 - For browser runs: Chrome installed; macOS host (headful).
 - macOS notifications: `vendor/oracle-notifier/OracleNotifier.app` ships with the package (preferred); falls back to toasted-notifier if missing/broken.
@@ -19,22 +19,22 @@ Shared prereqs
 ## CLI smokes
 - API:
   ```bash
-  pnpm run oracle -- --engine api --model gpt-5.2 --prompt "API smoke: say two words"
+  pnpm run auracall -- --engine api --model gpt-5.2 --prompt "API smoke: say two words"
   ```
 - Browser:
   ```bash
-  pnpm run oracle -- --engine browser --model "GPT-5.2" --prompt "Browser smoke: say two words"
+  pnpm run auracall -- --engine browser --model "GPT-5.2" --prompt "Browser smoke: say two words"
   ```
 
 ## MCP via mcporter
 1) List tools/schema to confirm discovery (use the local entry):
    ```bash
-   mcporter list oracle-local --schema --config config/mcporter.json
+   mcporter list auracall-local --schema --config config/mcporter.json
    ```
 
 2) API consult (GPT-5.2):
    ```bash
-   mcporter call oracle-local.consult \
+   mcporter call auracall-local.consult \
      prompt:"Say hello from GPT-5.2" \
      model:"gpt-5.2" \
      engine:"api" \
@@ -43,17 +43,17 @@ Shared prereqs
 
 3) Sessions list:
    ```bash
-   mcporter call oracle-local.sessions hours:12 limit:3 --config config/mcporter.json
+   mcporter call auracall-local.sessions hours:12 limit:3 --config config/mcporter.json
    ```
 
 4) Session detail:
    ```bash
-   mcporter call oracle-local.sessions id:"say-hello-from-gpt-5-2" detail:true --config config/mcporter.json
+   mcporter call auracall-local.sessions id:"say-hello-from-gpt-5-2" detail:true --config config/mcporter.json
    ```
 
 5) Browser smoke:
    ```bash
-   mcporter call oracle-local.consult \
+   mcporter call auracall-local.consult \
      prompt:"Browser smoke" \
      model:"GPT-5.2" \
      engine:"browser" \
@@ -63,13 +63,13 @@ Shared prereqs
 
 ## Claude Code smoke (tmux + cli)
 
-Use this to verify Claude Code can reach the Oracle MCP server end-to-end.
+Use this to verify Claude Code can reach the Aura-Call MCP server end-to-end.
 
 Prereqs
 - `pnpm build`
 - `OPENAI_API_KEY` exported (for the API engine default)
-- Oracle MCP registered with Claude (once per project):  
-  `claude mcp add --transport stdio oracle -- oracle-mcp`
+- Aura-Call MCP registered with Claude (once per project):  
+  `claude mcp add --transport stdio oracle -- auracall-mcp`
 
 Steps
 1) Start Claude in tmux:
@@ -79,10 +79,10 @@ Steps
 2) From another shell, use the helper to drive it:
    ```bash
    bun scripts/agent-send.ts --session claude-smoke --wait-ms 800 --entry double -- \
-     'Call the oracle sessions MCP tool with {"limit":1,"detail":true} and show the result'
+     'Call the auracall sessions MCP tool with {"limit":1,"detail":true} and show the result'
    ```
-3) Validate the pane shows a successful `oracle sessions` tool call (or adjust `--mcp-config` if it reports no tools). When finished, `tmux kill-session -t claude-smoke`.
+3) Validate the pane shows a successful `auracall sessions` tool call (or adjust `--mcp-config` if it reports no tools). When finished, `tmux kill-session -t claude-smoke`.
 
 See `docs/mcp.md` for full tool/resource schemas and behavior.
 
-Tip: The MCP consult tool pulls defaults from your `~/.oracle/config.json` (engine/model/search/prompt suffix/heartbeat/background/filesReport) when the call doesn’t override them.
+Tip: The MCP consult tool pulls defaults from your `~/.auracall/config.json` (engine/model/search/prompt suffix/heartbeat/background/filesReport) when the call doesn’t override them.

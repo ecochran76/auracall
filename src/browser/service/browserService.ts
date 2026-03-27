@@ -1,14 +1,16 @@
-import os from 'node:os';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
+import { resolveManagedProfileDirForUserConfig } from '../profileStore.js';
 import { resolveBrowserListTarget, pruneRegistry } from './session.js';
 import { launchManualLoginSession } from '../manualLogin.js';
-import { getOracleHomeDir } from '../../oracleHome.js';
+import { getAuracallHomeDir } from '../../auracallHome.js';
 import {
   scanRegisteredInstance,
-  resolveTab,
+  explainTabResolution,
+  summarizeTabResolution,
   type TabDescriptor,
+  type TabResolutionExplanation,
 } from '../../../packages/browser-service/src/service/instanceScanner.js';
 import {
   updateInstance,
@@ -28,11 +30,20 @@ type ServiceTargetMatchOptions = {
   logger?: (message: string) => void;
 };
 
+export type ServiceTargetResolution = {
+  host?: string;
+  port?: number;
+  tab?: TabDescriptor | null;
+  tabs?: TabDescriptor[];
+  tabSelection?: TabResolutionExplanation;
+};
+
 export class BrowserService extends BrowserServiceCore {
   private readonly registryPath: string;
+  private readonly userConfig: ResolvedUserConfig;
   private constructor(userConfig: ResolvedUserConfig) {
     const resolvedConfig = resolveBrowserConfig(userConfig.browser);
-    const registryPath = path.join(getOracleHomeDir(), 'browser-state.json');
+    const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
       resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig),
       pruneRegistry: () => pruneRegistry(),
@@ -40,6 +51,7 @@ export class BrowserService extends BrowserServiceCore {
     };
     super(resolvedConfig, deps);
     this.registryPath = registryPath;
+    this.userConfig = userConfig;
   }
 
   static fromConfig(userConfig: ResolvedUserConfig): BrowserService {
@@ -48,7 +60,7 @@ export class BrowserService extends BrowserServiceCore {
 
   async resolveServiceTarget(
     options: ServiceTargetMatchOptions,
-  ): Promise<{ host?: string; port?: number; tab?: TabDescriptor | null; tabs?: TabDescriptor[] }> {
+  ): Promise<ServiceTargetResolution> {
     const target = await this.resolveDevToolsTarget({
       host: undefined,
       port: undefined,
@@ -67,7 +79,7 @@ export class BrowserService extends BrowserServiceCore {
     const profilePath =
       matchedByPort?.profilePath ??
       resolved.manualLoginProfileDir ??
-      path.join(os.homedir(), '.oracle', 'browser-profile');
+      resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(), options.serviceId);
     const profileName = matchedByPort?.profileName ?? resolved.chromeProfile ?? 'Default';
     if (!matchedByPort && target.port) {
       const pid = await findChromePidUsingUserDataDir(profilePath);
@@ -107,27 +119,26 @@ export class BrowserService extends BrowserServiceCore {
         { services: Array.from(merged) },
       );
     }
-    const matchers: Array<(url: string) => boolean> = [];
-    if (options.configuredUrl) {
-      try {
-        const host = new URL(options.configuredUrl).host;
-        if (host) {
-          matchers.push((url) => url.includes(host));
-        }
-      } catch {
-        matchers.push((url) => url.includes(options.configuredUrl ?? ''));
-      }
+    const configuredMatcher =
+      options.serviceId === 'grok' ? createConfiguredUrlMatcher(options.configuredUrl) : null;
+    const serviceMatcher =
+      options.serviceId === 'chatgpt'
+        ? (url: string) => url.includes('chatgpt.com') || url.includes('chat.openai.com')
+        : options.serviceId === 'gemini'
+          ? (url: string) => url.includes('gemini.google.com')
+          : (url: string) => url.includes('grok.com');
+    const matchUrl = configuredMatcher ?? serviceMatcher;
+    const tabSelection = scan?.tabs ? explainTabResolution(scan.tabs, { matchUrl }) : undefined;
+    if (options.logger && tabSelection) {
+      options.logger(`[browser-service] ${summarizeTabResolution(tabSelection)}`);
     }
-    if (options.serviceId === 'chatgpt') {
-      matchers.push((url) => url.includes('chatgpt.com') || url.includes('chat.openai.com'));
-    } else if (options.serviceId === 'gemini') {
-      matchers.push((url) => url.includes('gemini.google.com'));
-    } else {
-      matchers.push((url) => url.includes('grok.com'));
-    }
-    const matchUrl = (url: string) => matchers.some((matcher) => matcher(url));
-    const tab = scan?.tabs ? resolveTab(scan.tabs, { matchUrl }) : null;
-    return { host: target.host, port: target.port, tab, tabs: scan?.tabs };
+    return {
+      host: target.host,
+      port: target.port,
+      tab: tabSelection?.tab ?? null,
+      tabs: scan?.tabs,
+      tabSelection,
+    };
   }
 
   override async resolveDevToolsTarget(options: {
@@ -137,10 +148,75 @@ export class BrowserService extends BrowserServiceCore {
     launchUrl?: string;
     defaultProfileDir?: string;
   } = {}) {
-    const fallbackDir = path.join(os.homedir(), '.oracle', 'browser-profile');
+    const fallbackDir = resolveManagedProfileDirForUserConfig(
+      this.userConfigForProfilePath(),
+      this.userConfig.browser?.target ?? 'chatgpt',
+    );
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,
     });
   }
+
+  private userConfigForProfilePath(): Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> {
+    return {
+      auracallProfile: this.userConfig.auracallProfile,
+      browser: this.userConfig.browser,
+    };
+  }
+}
+
+function createConfiguredUrlMatcher(
+  configuredUrl: string | null | undefined,
+): ((url: string) => boolean) | null {
+  if (!configuredUrl) {
+    return null;
+  }
+  try {
+    const configured = new URL(configuredUrl);
+    const configuredPath = normalizeConfiguredPath(configured.pathname);
+    const configuredSearch = normalizeConfiguredSearch(configured.searchParams);
+    return (url: string) => {
+      try {
+        const candidate = new URL(url);
+        if (candidate.host !== configured.host) {
+          return false;
+        }
+        if (configuredPath === '/') {
+          return true;
+        }
+        if (normalizeConfiguredPath(candidate.pathname) !== configuredPath) {
+          return false;
+        }
+        if (!configured.search) {
+          return true;
+        }
+        return normalizeConfiguredSearch(candidate.searchParams) === configuredSearch;
+      } catch {
+        return false;
+      }
+    };
+  } catch {
+    return (url: string) => url.includes(configuredUrl);
+  }
+}
+
+function normalizeConfiguredPath(pathname: string): string {
+  const trimmed = pathname.trim();
+  if (!trimmed || trimmed === '/') {
+    return '/';
+  }
+  return trimmed.replace(/\/+$/, '') || '/';
+}
+
+function normalizeConfiguredSearch(searchParams: URLSearchParams): string {
+  return Array.from(searchParams.entries())
+    .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+      if (leftKey !== rightKey) {
+        return leftKey.localeCompare(rightKey);
+      }
+      return leftValue.localeCompare(rightValue);
+    })
+    .map(([key, value]) => `${key}=${value}`)
+    .join('&');
 }

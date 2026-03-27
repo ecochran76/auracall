@@ -1,12 +1,12 @@
 import { describe, expect, test } from 'vitest';
 import { runOracle, extractTextOutput } from '../../src/oracle.ts';
 
-const ENABLE_LIVE = process.env.ORACLE_LIVE_TEST === '1';
+const ENABLE_LIVE = process.env.AURACALL_LIVE_TEST === '1';
 const LIVE_API_KEY = process.env.XAI_API_KEY;
 
 if (!ENABLE_LIVE || !LIVE_API_KEY) {
   describe.skip('Grok live smoke tests', () => {
-    test('Set ORACLE_LIVE_TEST=1 with a real XAI_API_KEY to run these integration tests.', () => {});
+    test('Set AURACALL_LIVE_TEST=1 with a real XAI_API_KEY to run these integration tests.', () => {});
   });
 } else {
   const sharedDeps = {

@@ -19,8 +19,8 @@ afterEach(() => {
 describe('browser reattach end-to-end (simulated)', () => {
   test('marks session completed after reconnection', async () => {
     const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-reattach-'));
-    const { setOracleHomeDirOverrideForTest } = await import('../../src/oracleHome.js');
-    setOracleHomeDirOverrideForTest(tmpHome);
+    const { setAuracallHomeDirOverrideForTest } = await import('../../src/auracallHome.js');
+    setAuracallHomeDirOverrideForTest(tmpHome);
 
     try {
       const { resumeBrowserSession } = await import('../../src/browser/reattach.js');
@@ -74,14 +74,14 @@ describe('browser reattach end-to-end (simulated)', () => {
       expect(runs.some((r) => r.status === 'completed')).toBe(true);
     } finally {
       await fs.rm(tmpHome, { recursive: true, force: true });
-      setOracleHomeDirOverrideForTest(null);
+      setAuracallHomeDirOverrideForTest(null);
     }
   }, 20_000);
 
   test('reattaches when controller pid is gone even without incompleteReason', async () => {
     const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-reattach-'));
-    const { setOracleHomeDirOverrideForTest } = await import('../../src/oracleHome.js');
-    setOracleHomeDirOverrideForTest(tmpHome);
+    const { setAuracallHomeDirOverrideForTest } = await import('../../src/auracallHome.js');
+    setAuracallHomeDirOverrideForTest(tmpHome);
 
     try {
       const { resumeBrowserSession } = await import('../../src/browser/reattach.js');
@@ -148,14 +148,14 @@ describe('browser reattach end-to-end (simulated)', () => {
       expect(resumeMock).toHaveBeenCalledTimes(1);
     } finally {
       await fs.rm(tmpHome, { recursive: true, force: true });
-      setOracleHomeDirOverrideForTest(null);
+      setAuracallHomeDirOverrideForTest(null);
     }
   }, 20_000);
 
   test('reattaches after CLI termination when Chrome is left running', async () => {
     const tmpHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-reattach-'));
-    const { setOracleHomeDirOverrideForTest } = await import('../../src/oracleHome.js');
-    setOracleHomeDirOverrideForTest(tmpHome);
+    const { setAuracallHomeDirOverrideForTest } = await import('../../src/auracallHome.js');
+    setAuracallHomeDirOverrideForTest(tmpHome);
 
     try {
       const { resumeBrowserSession } = await import('../../src/browser/reattach.js');
@@ -245,7 +245,7 @@ describe('browser reattach end-to-end (simulated)', () => {
       expect(resumeMock).toHaveBeenCalledTimes(1);
     } finally {
       await fs.rm(tmpHome, { recursive: true, force: true });
-      setOracleHomeDirOverrideForTest(null);
+      setAuracallHomeDirOverrideForTest(null);
     }
   }, 20_000);
 });

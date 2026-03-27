@@ -45,13 +45,13 @@
 - Documented cache schema + index layout (`docs/dev/cache-schema.md`).
   - Includes project instruction markdown + metadata, knowledge manifest + files, and conversation attachment storage.
 - Export tools:
-  - `oracle cache export --scope project|conversation --format json|md|zip|html|csv`
+  - `auracall cache export --scope project|conversation --format json|md|zip|html|csv`
   - Include attachments and optional transcript indexes
 - Workspace overrides:
   - Config overrides to map a project or conversation to a user-defined folder.
 - Sync tools:
-  - `oracle projects pull|push` for instruction + knowledge files.
-  - `oracle projects sync --mode merge|overwrite` (bidirectional).
+  - `auracall projects pull|push` for instruction + knowledge files.
+  - `auracall projects sync --mode merge|overwrite` (bidirectional).
 - Conversation rehydration:
   - Ability to branch a new conversation from cached context, optionally to another provider.
 - Active-file reconciliation:
@@ -152,8 +152,10 @@
   - Provider URL templating
 - Live smoke:
   - Use `docs/dev/smoke-tests.md` as baseline.
-  - Add Grok project rename, knowledge CRUD, conversation rename/delete to smoke list.
-  - TODO: rerun `oracle cache export --format md|html` after context scraping is implemented (requires cached contexts).
+  - The WSL-primary Grok acceptance checklist in `docs/dev/smoke-tests.md` is the current definition-of-done bar.
+  - It must cover project create/list/rename/clone/instructions/files/remove, conversation create/list/context/rename/delete, markdown capture, cache freshness, and cleanup.
+  - Keep Windows Chrome as secondary/manual-debug coverage until its human-session and debug-session behavior is cleaner.
+  - TODO: rerun `auracall cache export --format md|html` after context scraping is implemented (requires cached contexts).
   - Sidebar/history helpers: ensure `ensureMainSidebarOpen` runs before history modal flows and use sidebar-toggle helpers for Grok.
 
 ## Phase 7 Output

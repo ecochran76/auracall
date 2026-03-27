@@ -149,7 +149,7 @@ export const MODEL_CONFIGS: Record<KnownModelName, ModelConfig> = {
 };
 
 export const DEFAULT_SYSTEM_PROMPT = [
-  'You are Oracle, a focused one-shot problem solver.',
+  'You are Aura-Call, a focused one-shot problem solver.',
   'Emphasize direct answers and cite any files referenced.',
 ].join(' ');
 

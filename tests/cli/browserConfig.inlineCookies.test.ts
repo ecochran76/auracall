@@ -3,15 +3,15 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, test, afterEach } from 'vitest';
 import { buildBrowserConfig } from '../../src/cli/browserConfig.js';
-import { setOracleHomeDirOverrideForTest } from '../../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 
 const model = 'gpt-5.1' as const;
 
 describe('buildBrowserConfig inline cookies', () => {
   afterEach(() => {
-    setOracleHomeDirOverrideForTest(null);
-    delete process.env.ORACLE_BROWSER_COOKIES_JSON;
-    delete process.env.ORACLE_BROWSER_COOKIES_FILE;
+    setAuracallHomeDirOverrideForTest(null);
+    delete process.env.AURACALL_BROWSER_COOKIES_JSON;
+    delete process.env.AURACALL_BROWSER_COOKIES_FILE;
   });
 
   test('loads inline cookies from explicit file flag', async () => {
@@ -45,10 +45,10 @@ describe('buildBrowserConfig inline cookies', () => {
     }
   });
 
-  test('ignores ~/.oracle/cookies.json when cookie sync is enabled', async () => {
+  test('ignores ~/.auracall/cookies.json when cookie sync is enabled', async () => {
     const fakeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-home-'));
-    const oracleDir = path.join(fakeHome, '.oracle');
-    setOracleHomeDirOverrideForTest(oracleDir);
+    const oracleDir = path.join(fakeHome, '.auracall');
+    setAuracallHomeDirOverrideForTest(oracleDir);
     await fs.mkdir(oracleDir, { recursive: true });
     const homeFile = path.join(oracleDir, 'cookies.json');
     await fs.writeFile(homeFile, JSON.stringify([{ name: 'cf_clearance', value: 'token', domain: 'chatgpt.com' }]));
@@ -57,10 +57,10 @@ describe('buildBrowserConfig inline cookies', () => {
     expect(config.inlineCookiesSource).toBeNull();
   });
 
-  test('uses ~/.oracle/cookies.json when cookie sync is disabled', async () => {
+  test('uses ~/.auracall/cookies.json when cookie sync is disabled', async () => {
     const fakeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-home-'));
-    const oracleDir = path.join(fakeHome, '.oracle');
-    setOracleHomeDirOverrideForTest(oracleDir);
+    const oracleDir = path.join(fakeHome, '.auracall');
+    setAuracallHomeDirOverrideForTest(oracleDir);
     await fs.mkdir(oracleDir, { recursive: true });
     const homeFile = path.join(oracleDir, 'cookies.json');
     await fs.writeFile(homeFile, JSON.stringify([{ name: 'cf_clearance', value: 'token', domain: 'chatgpt.com' }]));

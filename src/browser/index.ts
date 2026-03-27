@@ -1,8 +1,13 @@
-import { mkdtemp, rm, mkdir } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
-import path from 'node:path';
+import { rm, mkdir } from 'node:fs/promises';
 import os from 'node:os';
+import path from 'node:path';
 import { resolveBrowserConfig } from './config.js';
+import {
+  bootstrapManagedProfile,
+  findBrowserCookieFile,
+  resolveBootstrapSourceCookiePath,
+  resolveManagedProfileDir,
+} from './profileStore.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger, ChromeClient, BrowserAttachment } from './types.js';
 import {
   launchChrome,
@@ -13,7 +18,6 @@ import {
   closeRemoteChromeTarget,
   buildWslFirewallHint,
   reuseRunningChromeProfile,
-  resolveUserDataBaseDir,
 } from './chromeLifecycle.js';
 import { syncCookies } from './cookies.js';
 import {
@@ -49,6 +53,7 @@ import { ensureThinkingTimeIfAvailable } from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
+import { resolveCompatibleHostsForUrl } from './urlFamilies.js';
 import type { LaunchedChrome } from 'chrome-launcher';
 import { BrowserAutomationError } from '../oracle/errors.js';
 import { alignPromptEchoPair, buildPromptEchoMatcher } from './reattachHelpers.js';
@@ -69,6 +74,65 @@ export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } fro
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
 export { parseDuration, delay, normalizeChatgptUrl, isTemporaryChatUrl } from './utils.js';
 
+function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
+  if (!(error instanceof BrowserAutomationError)) return false;
+  return (error.details as { stage?: string } | undefined)?.stage === 'cloudflare-challenge';
+}
+
+function shouldPreserveBrowserOnError(error: unknown, headless: boolean): boolean {
+  return !headless && isCloudflareChallengeError(error);
+}
+
+export function shouldPreserveBrowserOnErrorForTest(error: unknown, headless: boolean): boolean {
+  return shouldPreserveBrowserOnError(error, headless);
+}
+
+function createWindowsManagedProfileRetryReset(options: {
+  config: ReturnType<typeof resolveBrowserConfig>;
+  userDataDir: string;
+  bootstrapCookiePath: string | null;
+  logger: BrowserLogger;
+  allowDestructiveReset?: boolean;
+}) {
+  const { config, userDataDir, bootstrapCookiePath, logger, allowDestructiveReset = true } = options;
+  const chromePath = config.chromePath?.trim() ?? '';
+  const windowsChromeFromWsl =
+    process.platform === 'linux' &&
+    (Boolean(process.env.WSL_DISTRO_NAME) || os.release().toLowerCase().includes('microsoft')) &&
+    /^([a-zA-Z]:[\\/]|\/mnt\/)/.test(chromePath);
+  if (!windowsChromeFromWsl) {
+    return undefined;
+  }
+  return async ({ failedPort, nextPort, attempt }: { failedPort: number; nextPort: number; attempt: number }) => {
+    if (!allowDestructiveReset) {
+      logger(
+        `Skipping destructive managed-profile reset after failed Windows Chrome launch on ${failedPort}; preserving explicit profile state before retry ${attempt + 1} (${nextPort}).`,
+      );
+      return;
+    }
+    logger(
+      `Resetting managed profile after failed Windows Chrome launch on ${failedPort} before retry ${attempt + 1} (${nextPort}).`,
+    );
+    await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+    await mkdir(userDataDir, { recursive: true });
+    if (!bootstrapCookiePath) {
+      return;
+    }
+    const bootstrapResult = await bootstrapManagedProfile({
+      managedProfileDir: userDataDir,
+      managedProfileName: config.chromeProfile ?? 'Default',
+      sourceCookiePath: bootstrapCookiePath,
+      seedPolicy: 'force-reseed',
+      logger,
+    });
+    if (bootstrapResult.cloned || bootstrapResult.reseeded) {
+      logger(
+        `Refreshed managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}) for Windows retry.`,
+      );
+    }
+  };
+}
+
 export async function runBrowserMode(options: BrowserRunOptions): Promise<BrowserRunResult> {
   const promptText = options.prompt?.trim();
   if (!promptText) {
@@ -88,6 +152,51 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   }
   const runtimeHintCb = options.runtimeHintCb;
   const target = config.target ?? 'chatgpt';
+  if (config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') {
+    logger(
+      `[browser-mode] config: ${JSON.stringify({
+        ...config,
+        promptLength: promptText.length,
+      })}`,
+    );
+  }
+
+  if (!config.remoteChrome && !config.debugPort && config.debugPortStrategy !== 'auto') {
+    const range = config.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+    const availablePort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, range);
+    if (availablePort !== DEFAULT_DEBUG_PORT) {
+      logger(`DevTools port ${DEFAULT_DEBUG_PORT} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
+    }
+    config = { ...config, debugPort: availablePort };
+  }
+
+  // Remote Chrome mode - connect to existing browser
+  if (config.remoteChrome) {
+    // Warn about ignored local-only options
+    if (config.headless || config.hideWindow || config.keepBrowser || config.chromePath) {
+      logger(
+        'Note: --remote-chrome ignores local Chrome flags ' +
+        '(--browser-headless, --browser-hide-window, --browser-keep-browser, --browser-chrome-path).'
+      );
+    }
+
+    if (target === 'grok') {
+      return runRemoteGrokBrowserMode(promptText, attachments, config, logger, options);
+    }
+
+    return runRemoteBrowserMode(promptText, attachments, config, logger, options);
+  }
+
+  if (target === 'grok') {
+    return runGrokBrowserMode({
+      promptText,
+      attachments,
+      config,
+      logger,
+      runtimeHintCb,
+    });
+  }
+
   let lastTargetId: string | undefined;
   let lastUrl: string | undefined;
   const emitRuntimeHint = async (): Promise<void> => {
@@ -112,55 +221,59 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       logger(`Failed to persist runtime hint: ${message}`);
     }
   };
-  if (config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') {
+
+  const manualLogin = true;
+  const userDataDir = resolveManagedProfileDir({
+    configuredDir: config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+    target,
+  });
+  const defaultManagedProfileDir = resolveManagedProfileDir({
+    configuredDir: null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+    target,
+  });
+  const allowDestructiveProfileRetryReset =
+    path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
+  await mkdir(userDataDir, { recursive: true });
+  logger(`Using managed browser profile at ${userDataDir}`);
+  logger(`Browser profile selection: ${userDataDir}`);
+  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
+    configuredCookiePath: config.bootstrapCookiePath ?? config.chromeCookiePath ?? null,
+    managedProfileDir: userDataDir,
+    managedProfileName: config.chromeProfile ?? 'Default',
+  });
+  const bootstrapResult = await bootstrapManagedProfile({
+    managedProfileDir: userDataDir,
+    managedProfileName: config.chromeProfile ?? 'Default',
+    sourceCookiePath: bootstrapCookiePath,
+    logger,
+  });
+  if (bootstrapResult.cloned) {
     logger(
-      `[browser-mode] config: ${JSON.stringify({
-        ...config,
-        promptLength: promptText.length,
-      })}`,
+      `Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
     );
   }
-
-  if (!config.remoteChrome && !config.debugPort) {
-    const range = config.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
-    const availablePort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, range);
-    if (availablePort !== DEFAULT_DEBUG_PORT) {
-      logger(`DevTools port ${DEFAULT_DEBUG_PORT} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
-    }
-    config = { ...config, debugPort: availablePort };
-  }
-
-  // Remote Chrome mode - connect to existing browser
-  if (config.remoteChrome) {
-    // Warn about ignored local-only options
-    if (config.headless || config.hideWindow || config.keepBrowser || config.chromePath) {
-      logger(
-        'Note: --remote-chrome ignores local Chrome flags ' +
-        '(--browser-headless, --browser-hide-window, --browser-keep-browser, --browser-chrome-path).'
-      );
-    }
-
-    return runRemoteBrowserMode(promptText, attachments, config, logger, options);
-  }
-
-  const manualLogin = Boolean(config.manualLogin);
-  const manualProfileDir = config.manualLoginProfileDir
-    ? path.resolve(config.manualLoginProfileDir)
-    : path.join(os.homedir(), '.oracle', 'browser-profile');
-  const userDataDir = manualLogin
-    ? manualProfileDir
-    : await mkdtemp(path.join(await resolveUserDataBaseDir(), 'oracle-browser-'));
-  if (manualLogin) {
-    // Learned: manual login reuses a persistent profile so cookies/SSO survive.
-    await mkdir(userDataDir, { recursive: true });
-    logger(`Manual login mode enabled; reusing persistent profile at ${userDataDir}`);
-  } else {
-    logger(`Created temporary Chrome profile at ${userDataDir}`);
-  }
-  logger(`Browser profile selection: ${userDataDir}`);
+  const onWindowsRetry = createWindowsManagedProfileRetryReset({
+    config,
+    userDataDir,
+    bootstrapCookiePath,
+    logger,
+    allowDestructiveReset: allowDestructiveProfileRetryReset,
+  });
 
   const effectiveKeepBrowser = Boolean(config.keepBrowser);
-  const reusedChrome = manualLogin ? await reuseRunningChromeProfile(userDataDir, logger) : null;
+  const ownedChromePids = new Set<number>();
+  const ownedChromePorts = new Set<number>();
+  const rememberOwnedChrome = (candidate: LaunchedChrome | null | undefined): void => {
+    if (typeof candidate?.pid === 'number' && Number.isFinite(candidate.pid) && candidate.pid > 0) {
+      ownedChromePids.add(candidate.pid);
+    }
+    if (typeof candidate?.port === 'number' && Number.isFinite(candidate.port) && candidate.port > 0) {
+      ownedChromePorts.add(candidate.port);
+    }
+  };
+  const reusedChrome = await reuseRunningChromeProfile(userDataDir, logger);
   let chrome =
     reusedChrome ??
     (await launchChrome(
@@ -170,7 +283,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       },
       userDataDir,
       logger,
+      { onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
     ));
+  if (!reusedChrome) {
+    rememberOwnedChrome(chrome);
+  }
   let chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
   // Persist profile state so future manual-login runs can reuse this Chrome.
   const persistManualLoginState = async (): Promise<void> => {
@@ -181,18 +298,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
   };
 
-  if (target === 'grok') {
-    return runGrokBrowserMode({
-      promptText,
-      attachments,
-      config,
-      logger,
-      emitRuntimeHint,
-      setLastUrl: (url) => {
-        lastUrl = url;
-      },
-    });
-  }
   await persistManualLoginState();
 
   let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
@@ -206,6 +311,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let removeDialogHandler: (() => void) | null = null;
   let appliedCookies = 0;
   let removeTerminationHooks: (() => void) | null = null;
+  let preserveBrowserOnError = false;
 
   try {
     try {
@@ -232,7 +338,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           },
           userDataDir,
           logger,
+          { onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
         );
+        rememberOwnedChrome(chrome);
         chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
         await persistManualLoginState();
         client = await connectToChrome(chrome.port, logger, chromeHost);
@@ -257,7 +365,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       client?.on('disconnect', () => {
         connectionClosedUnexpectedly = true;
         logger('Chrome window closed; attempting to abort run.');
-        reject(new Error('Chrome window closed before oracle finished. Please keep it open until completion.'));
+        reject(new Error('Chrome window closed before auracall finished. Please keep it open until completion.'));
       });
     });
     const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
@@ -274,31 +382,31 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     await Promise.all(domainEnablers);
     removeDialogHandler = installJavaScriptDialogAutoDismissal(Page, logger);
-    if (!manualLogin) {
-      await Network.clearBrowserCookies();
-    }
+    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, config.chromeProfile ?? 'Default');
+    const shouldSeedManagedProfile =
+      config.cookieSync &&
+      !config.inlineCookies &&
+      Boolean(bootstrapCookiePath) &&
+      (Boolean(config.manualLoginCookieSync) || !existingManagedCookieFile);
+    const shouldApplyInlineCookies = Boolean(config.inlineCookies);
 
-    const manualLoginCookieSync = manualLogin && Boolean(config.manualLoginCookieSync);
-    const cookieSyncEnabled = config.cookieSync && (!manualLogin || manualLoginCookieSync);
-    if (cookieSyncEnabled) {
-      if (manualLoginCookieSync) {
-        logger('Manual login mode: seeding persistent profile with cookies from your Chrome profile.');
-      }
-      if (!config.inlineCookies) {
+    if (shouldApplyInlineCookies || shouldSeedManagedProfile) {
+      if (shouldSeedManagedProfile) {
+        logger(
+          `Bootstrapping managed profile from source cookies at ${bootstrapCookiePath}.`,
+        );
+      } else if (!config.inlineCookies) {
         logger(
           'Heads-up: macOS may prompt for your Keychain password to read Chrome cookies; use --copy or --render for manual flow.',
-      );
-    } else {
-      logger('Applying inline cookies (skipping Chrome profile read and Keychain prompt)');
-    }
-    // Learned: always sync cookies before the first navigation so /backend-api/me succeeds.
-    const cookieCount = await syncCookies(Network, config.url, config.chromeProfile, logger, {
-      allowErrors: config.allowCookieErrors ?? false,
-      filterNames: config.cookieNames ?? undefined,
-      inlineCookies: config.inlineCookies ?? undefined,
-      cookiePath: config.chromeCookiePath ?? undefined,
-      waitMs: config.cookieSyncWaitMs ?? 0,
-    });
+        );
+      }
+      const cookieCount = await syncCookies(Network, config.url, config.chromeProfile, logger, {
+        allowErrors: config.allowCookieErrors ?? false,
+        filterNames: config.cookieNames ?? undefined,
+        inlineCookies: config.inlineCookies ?? undefined,
+        cookiePath: shouldSeedManagedProfile ? bootstrapCookiePath ?? undefined : config.chromeCookiePath ?? undefined,
+        waitMs: config.cookieSyncWaitMs ?? 0,
+      });
       appliedCookies = cookieCount;
       if (config.inlineCookies && cookieCount === 0) {
         throw new Error('No inline cookies were applied; aborting before navigation.');
@@ -307,35 +415,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         cookieCount > 0
           ? config.inlineCookies
             ? `Applied ${cookieCount} inline cookies`
-            : `Copied ${cookieCount} cookies from Chrome profile ${config.chromeProfile ?? 'Default'}`
+            : shouldSeedManagedProfile
+              ? `Seeded ${cookieCount} cookies into managed profile ${config.chromeProfile ?? 'Default'}`
+              : `Copied ${cookieCount} cookies from Chrome profile ${config.chromeProfile ?? 'Default'}`
           : config.inlineCookies
             ? 'No inline cookies applied; continuing without session reuse'
-            : 'No Chrome cookies found; continuing without session reuse',
+            : shouldSeedManagedProfile
+              ? 'No source cookies were applied to the managed profile; continuing without session reuse'
+              : 'No Chrome cookies found; continuing without session reuse',
       );
+    } else if (existingManagedCookieFile) {
+      logger(`Reusing managed profile cookies from ${existingManagedCookieFile}.`);
     } else {
-      logger(
-        manualLogin
-          ? 'Skipping Chrome cookie sync (--browser-manual-login enabled); reuse the opened profile after signing in.'
-          : 'Skipping Chrome cookie sync (--browser-no-cookie-sync)',
-      );
-    }
-
-    if (cookieSyncEnabled && !manualLogin && (appliedCookies ?? 0) === 0 && !config.inlineCookies) {
-      // Learned: if the profile has no ChatGPT cookies, browser mode will just bounce to login.
-      // Fail early so the user knows to sign in.
-      throw new BrowserAutomationError(
-        'No ChatGPT cookies were applied from your Chrome profile; cannot proceed in browser mode. ' +
-          'Make sure ChatGPT is signed in in the selected profile, use --browser-manual-login / inline cookies, ' +
-          'or retry with --browser-cookie-wait 5s if Keychain prompts are slow.',
-        {
-          stage: 'execute-browser',
-          details: {
-            profile: config.chromeProfile ?? 'Default',
-            cookiePath: config.chromeCookiePath ?? null,
-            hint: 'If macOS Keychain prompts or denies access, run oracle from a GUI session or use --copy/--render for the manual flow.',
-          },
-        },
-      );
+      logger('No managed-profile cookies found and no bootstrap source available; continuing without session reuse.');
     }
 
     const baseUrl = CHATGPT_URL;
@@ -452,7 +544,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         const base = error instanceof Error ? error.message : String(error);
         const hint =
           appliedCookies === 0
-            ? ' No cookies were applied; log in to ChatGPT in Chrome or provide inline cookies (--browser-inline-cookies[(-file)] or ORACLE_BROWSER_COOKIES_JSON).'
+            ? ' No cookies were applied; log in to ChatGPT in Chrome or provide inline cookies (--browser-inline-cookies[(-file)] or AURACALL_BROWSER_COOKIES_JSON).'
             : '';
         throw new Error(`${base}${hint}`);
       });
@@ -783,6 +875,33 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     stopThinkingMonitor?.();
     const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(normalizedError);
     connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
+    if (shouldPreserveBrowserOnError(normalizedError, config.headless)) {
+      preserveBrowserOnError = true;
+      const runtime = {
+        chromePid: chrome.pid,
+        chromePort: chrome.port,
+        chromeHost,
+        userDataDir,
+        chromeTargetId: lastTargetId,
+        tabUrl: lastUrl,
+        controllerPid: process.pid,
+      };
+      const reuseProfileHint =
+        `auracall --engine browser --browser-manual-login ` +
+        `--browser-manual-login-profile-dir ${JSON.stringify(userDataDir)}`;
+      await emitRuntimeHint();
+      logger('Cloudflare challenge detected; leaving browser open so you can complete the check.');
+      logger(`Reuse this browser profile with: ${reuseProfileHint}`);
+      throw new BrowserAutomationError(
+        'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.',
+        {
+          stage: 'cloudflare-challenge',
+          runtime,
+          reuseProfileHint,
+        },
+        normalizedError,
+      );
+    }
     if (!socketClosed) {
       logger(`Failed to complete ChatGPT run: ${normalizedError.message}`);
       if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
@@ -796,7 +915,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     await emitRuntimeHint();
     throw new BrowserAutomationError(
-      'Chrome window closed before oracle finished. Please keep it open until completion.',
+      'Chrome window closed before auracall finished. Please keep it open until completion.',
       {
         stage: 'connection-lost',
         runtime: {
@@ -821,7 +940,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     removeDialogHandler?.();
     removeTerminationHooks?.();
-    if (!effectiveKeepBrowser) {
+    const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
+    if (!keepBrowserOpen) {
       if (!connectionClosedUnexpectedly) {
         try {
           if (manualLogin) {
@@ -945,13 +1065,16 @@ async function runRemoteBrowserMode(
   let client: ChromeClient | null = null;
   let remoteTargetId: string | null = null;
   let lastUrl: string | undefined;
+  let connectedHost = host;
+  let connectedPort = port;
+  let disposeRemoteTransport: (() => Promise<void>) | null = null;
   const runtimeHintCb = options.runtimeHintCb;
   const emitRuntimeHint = async () => {
     if (!runtimeHintCb) return;
     try {
       await runtimeHintCb({
-        chromePort: port,
-        chromeHost: host,
+        chromePort: connectedPort,
+        chromeHost: connectedHost,
         chromeTargetId: remoteTargetId ?? undefined,
         tabUrl: lastUrl,
         controllerPid: process.pid,
@@ -970,9 +1093,17 @@ async function runRemoteBrowserMode(
   let removeDialogHandler: (() => void) | null = null;
 
   try {
-    const connection = await connectToRemoteChrome(host, port, logger, config.url);
+    const connection = await connectToRemoteChrome(host, port, logger, config.url, {
+      compatibleHosts: resolveCompatibleHostsForUrl(config.url),
+      serviceTabLimit: config.serviceTabLimit ?? undefined,
+      blankTabLimit: config.blankTabLimit ?? undefined,
+      collapseDisposableWindows: config.collapseDisposableWindows,
+    });
     client = connection.client;
     remoteTargetId = connection.targetId ?? null;
+    connectedHost = connection.host;
+    connectedPort = connection.port;
+    disposeRemoteTransport = connection.dispose ?? null;
     await emitRuntimeHint();
     const markConnectionLost = () => {
       connectionClosedUnexpectedly = true;
@@ -1256,8 +1387,8 @@ async function runRemoteBrowserMode(
       answerTokens,
       answerChars,
       chromePid: undefined,
-      chromePort: port,
-      chromeHost: host,
+      chromePort: connectedPort,
+      chromeHost: connectedHost,
       userDataDir: undefined,
       chromeTargetId: remoteTargetId ?? undefined,
       tabUrl: lastUrl,
@@ -1277,11 +1408,11 @@ async function runRemoteBrowserMode(
       throw normalizedError;
     }
 
-    throw new BrowserAutomationError('Remote Chrome connection lost before Oracle finished.', {
+    throw new BrowserAutomationError('Remote Chrome connection lost before Aura-Call finished.', {
       stage: 'connection-lost',
       runtime: {
-        chromeHost: host,
-        chromePort: port,
+        chromeHost: connectedHost,
+        chromePort: connectedPort,
         chromeTargetId: remoteTargetId ?? undefined,
         tabUrl: lastUrl,
         controllerPid: process.pid,
@@ -1296,8 +1427,182 @@ async function runRemoteBrowserMode(
       // ignore
     }
     removeDialogHandler?.();
-    await closeRemoteChromeTarget(host, port, remoteTargetId ?? undefined, logger);
+    await closeRemoteChromeTarget(connectedHost, connectedPort, remoteTargetId ?? undefined, logger);
+    await disposeRemoteTransport?.().catch(() => undefined);
     // Don't kill remote Chrome - it's not ours to manage
+    const totalSeconds = (Date.now() - startedAt) / 1000;
+    logger(`Remote session complete • ${totalSeconds.toFixed(1)}s total`);
+  }
+}
+
+async function runRemoteGrokBrowserMode(
+  promptText: string,
+  attachments: BrowserAttachment[],
+  config: ReturnType<typeof resolveBrowserConfig>,
+  logger: BrowserLogger,
+  options: BrowserRunOptions,
+): Promise<BrowserRunResult> {
+  const remoteChromeConfig = config.remoteChrome;
+  if (!remoteChromeConfig) {
+    throw new Error('Remote Chrome configuration missing. Pass --remote-chrome <host:port> to use this mode.');
+  }
+  const { host, port } = remoteChromeConfig;
+  logger(`Connecting to remote Chrome at ${host}:${port}`);
+
+  let client: ChromeClient | null = null;
+  let remoteTargetId: string | null = null;
+  let lastUrl: string | undefined;
+  let connectedHost = host;
+  let connectedPort = port;
+  let connectionClosedUnexpectedly = false;
+  let disposeRemoteTransport: (() => Promise<void>) | null = null;
+  const startedAt = Date.now();
+  const runtimeHintCb = options.runtimeHintCb;
+  const emitRuntimeHint = async () => {
+    if (!runtimeHintCb) return;
+    try {
+      await runtimeHintCb({
+        chromePort: connectedPort,
+        chromeHost: connectedHost,
+        chromeTargetId: remoteTargetId ?? undefined,
+        tabUrl: lastUrl,
+        controllerPid: process.pid,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger(`Failed to persist runtime hint: ${message}`);
+    }
+  };
+
+  try {
+    let grokTargetUrl = config.grokUrl ?? config.url;
+    if (config.projectId) {
+      grokTargetUrl = `https://grok.com/project/${config.projectId}`;
+      if (config.conversationId) {
+        grokTargetUrl += `?chat=${config.conversationId}`;
+      }
+    }
+    const connection = await connectToRemoteChrome(host, port, logger, grokTargetUrl, {
+      compatibleHosts: resolveCompatibleHostsForUrl(grokTargetUrl),
+      serviceTabLimit: config.serviceTabLimit ?? undefined,
+      blankTabLimit: config.blankTabLimit ?? undefined,
+      collapseDisposableWindows: config.collapseDisposableWindows,
+    });
+    client = connection.client;
+    remoteTargetId = connection.targetId ?? null;
+    connectedHost = connection.host;
+    connectedPort = connection.port;
+    disposeRemoteTransport = connection.dispose ?? null;
+    await emitRuntimeHint();
+    client.on('disconnect', () => {
+      connectionClosedUnexpectedly = true;
+    });
+
+    const { Network, Page, Runtime, Input, DOM } = client;
+    const domainEnablers = [Network.enable({}), Page.enable(), Runtime.enable()];
+    if (DOM && typeof DOM.enable === 'function') {
+      domainEnablers.push(DOM.enable());
+    }
+    await Promise.all(domainEnablers);
+    installJavaScriptDialogAutoDismissal(Page, logger);
+
+    logger('Skipping cookie sync for remote Chrome (using existing session)');
+    await navigateToGrok(Page, Runtime, grokTargetUrl, logger);
+    await ensureNotBlocked(Runtime, config.headless, logger);
+    await ensureGrokLoggedIn(Runtime, logger, { headless: config.headless, timeoutMs: config.timeoutMs });
+    await ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger);
+    logger(`Prompt textarea ready (initial focus, ${promptText.length.toLocaleString()} chars queued)`);
+
+    try {
+      const { result } = await Runtime.evaluate({
+        expression: 'location.href',
+        returnByValue: true,
+      });
+      if (typeof result?.value === 'string') {
+        lastUrl = result.value;
+      }
+      await emitRuntimeHint();
+    } catch {
+      // ignore
+    }
+
+    const modelStrategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY;
+    if (config.desiredModel && modelStrategy !== 'ignore') {
+      await selectGrokMode(Input, Runtime, config.desiredModel, logger);
+      await ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger);
+      logger(`Prompt textarea ready (after model switch, ${promptText.length.toLocaleString()} chars queued)`);
+    } else if (modelStrategy === 'ignore') {
+      logger('Model picker: skipped (strategy=ignore)');
+    }
+
+    if (attachments.length > 0) {
+      if (!DOM) {
+        throw new Error('Unable to upload attachments (DOM domain unavailable).');
+      }
+      await uploadGrokAttachments(DOM, Runtime, attachments, logger);
+    }
+
+    await setGrokPrompt(Runtime, promptText);
+    await submitGrokPrompt(Runtime);
+    logger('Submitted prompt');
+    await delay(500);
+
+    const href = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
+    const currentUrl = typeof href.result?.value === 'string' ? href.result.value : '';
+    if (currentUrl) {
+      lastUrl = currentUrl;
+      await emitRuntimeHint();
+    }
+
+    const answerText = await waitForGrokAssistantResponse(Runtime, config.timeoutMs, logger);
+    const durationMs = Date.now() - startedAt;
+
+    return {
+      answerText,
+      answerMarkdown: answerText,
+      answerHtml: undefined,
+      tookMs: durationMs,
+      answerTokens: estimateTokenCount(answerText),
+      answerChars: answerText.length,
+      chromePid: undefined,
+      chromePort: connectedPort,
+      chromeHost: connectedHost,
+      userDataDir: undefined,
+      chromeTargetId: remoteTargetId ?? undefined,
+      tabUrl: lastUrl,
+      controllerPid: process.pid,
+    };
+  } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(normalizedError);
+    connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
+    if (!socketClosed) {
+      logger(`Failed to complete Grok run: ${normalizedError.message}`);
+      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
+        logger(normalizedError.stack);
+      }
+      throw normalizedError;
+    }
+    throw new BrowserAutomationError('Remote Chrome connection lost before Aura-Call finished.', {
+      stage: 'connection-lost',
+      runtime: {
+        chromeHost: connectedHost,
+        chromePort: connectedPort,
+        chromeTargetId: remoteTargetId ?? undefined,
+        tabUrl: lastUrl,
+        controllerPid: process.pid,
+      },
+    });
+  } finally {
+    try {
+      if (!connectionClosedUnexpectedly && client) {
+        await client.close();
+      }
+    } catch {
+      // ignore
+    }
+    await closeRemoteChromeTarget(connectedHost, connectedPort, remoteTargetId ?? undefined, logger);
+    await disposeRemoteTransport?.().catch(() => undefined);
     const totalSeconds = (Date.now() - startedAt) / 1000;
     logger(`Remote session complete • ${totalSeconds.toFixed(1)}s total`);
   }
@@ -1475,24 +1780,24 @@ async function runGrokBrowserMode({
   attachments,
   config,
   logger,
-  emitRuntimeHint,
-  setLastUrl,
+  runtimeHintCb,
 }: {
   promptText: string;
   attachments: BrowserAttachment[];
   config: ReturnType<typeof resolveBrowserConfig>;
   logger: BrowserLogger;
-  emitRuntimeHint: () => Promise<void>;
-  setLastUrl: (url: string) => void;
+  runtimeHintCb?: BrowserRunOptions['runtimeHintCb'];
 }): Promise<BrowserRunResult> {
   let chrome: LaunchedChrome | null = null;
   let chromeHost = '127.0.0.1';
+  let lastUrl: string | undefined;
   let answerText = '';
   let answerMarkdown = '';
   let answerHtml = '';
   let runStatus: 'attempted' | 'complete' = 'attempted';
   let connectionClosedUnexpectedly = false;
   let removeTerminationHooks: (() => void) | null = null;
+  let preserveBrowserOnError = false;
   const startedAt = Date.now();
   const launchConfig = config.headless
     ? { ...config, headless: false }
@@ -1502,23 +1807,80 @@ async function runGrokBrowserMode({
     logger('Grok requires a visible browser; overriding headless=false.');
   }
   logger(`[browser] launch mode: headless=${headless} display=${process.env.DISPLAY ?? '(unset)'}`);
-  const manualLogin = Boolean(launchConfig.manualLogin);
-  const manualProfileDir = config.manualLoginProfileDir
-    ? path.resolve(config.manualLoginProfileDir)
-    : path.join(os.homedir(), '.oracle', 'browser-profile');
-  const userDataDir = manualLogin
-    ? manualProfileDir
-    : await mkdtemp(path.join(await resolveUserDataBaseDir(), 'oracle-browser-'));
-  if (manualLogin) {
-    await mkdir(userDataDir, { recursive: true });
-    logger(`Manual login mode enabled; reusing persistent profile at ${userDataDir}`);
-  } else {
-    logger(`Created temporary Chrome profile at ${userDataDir}`);
-  }
+  const emitRuntimeHint = async (): Promise<void> => {
+    if (!runtimeHintCb || !chrome?.port) {
+      return;
+    }
+    const conversationId = lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined;
+    const hint = {
+      chromePid: chrome.pid,
+      chromePort: chrome.port,
+      chromeHost,
+      chromeTargetId: undefined,
+      tabUrl: lastUrl,
+      conversationId,
+      userDataDir,
+      controllerPid: process.pid,
+    };
+    try {
+      await runtimeHintCb(hint);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger(`Failed to persist runtime hint: ${message}`);
+    }
+  };
+  const manualLogin = true;
+  const userDataDir = resolveManagedProfileDir({
+    configuredDir: config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+    target: config.target ?? 'grok',
+  });
+  const defaultManagedProfileDir = resolveManagedProfileDir({
+    configuredDir: null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+    target: config.target ?? 'grok',
+  });
+  const allowDestructiveProfileRetryReset =
+    path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
+  await mkdir(userDataDir, { recursive: true });
+  logger(`Using managed browser profile at ${userDataDir}`);
   logger(`Browser profile selection: ${userDataDir}`);
+  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
+    configuredCookiePath: config.bootstrapCookiePath ?? config.chromeCookiePath ?? null,
+    managedProfileDir: userDataDir,
+    managedProfileName: config.chromeProfile ?? 'Default',
+  });
+  const bootstrapResult = await bootstrapManagedProfile({
+    managedProfileDir: userDataDir,
+    managedProfileName: config.chromeProfile ?? 'Default',
+    sourceCookiePath: bootstrapCookiePath,
+    logger,
+  });
+  if (bootstrapResult.cloned) {
+    logger(
+      `Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+    );
+  }
+  const onWindowsRetry = createWindowsManagedProfileRetryReset({
+    config: launchConfig,
+    userDataDir,
+    bootstrapCookiePath,
+    logger,
+    allowDestructiveReset: allowDestructiveProfileRetryReset,
+  });
 
   const effectiveKeepBrowser = Boolean(launchConfig.keepBrowser);
-  const reusedChrome = manualLogin ? await reuseRunningChromeProfile(userDataDir, logger) : null;
+  const ownedChromePids = new Set<number>();
+  const ownedChromePorts = new Set<number>();
+  const rememberOwnedChrome = (candidate: LaunchedChrome | null | undefined): void => {
+    if (typeof candidate?.pid === 'number' && Number.isFinite(candidate.pid) && candidate.pid > 0) {
+      ownedChromePids.add(candidate.pid);
+    }
+    if (typeof candidate?.port === 'number' && Number.isFinite(candidate.port) && candidate.port > 0) {
+      ownedChromePorts.add(candidate.port);
+    }
+  };
+  const reusedChrome = await reuseRunningChromeProfile(userDataDir, logger);
   let effectiveConfig = launchConfig;
   chrome =
     reusedChrome ??
@@ -1529,7 +1891,11 @@ async function runGrokBrowserMode({
       },
       userDataDir,
       logger,
+      { onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
     ));
+  if (!reusedChrome) {
+    rememberOwnedChrome(chrome);
+  }
   chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
   if (manualLogin && chrome.port) {
     await writeDevToolsActivePort(userDataDir, chrome.port);
@@ -1545,10 +1911,15 @@ async function runGrokBrowserMode({
     if (probe) {
       return;
     }
+    const useAutoDebugPort = effectiveConfig.debugPortStrategy === 'auto';
     const fallbackRange = effectiveConfig.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
-    const fallbackPort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, fallbackRange);
+    const fallbackPort = useAutoDebugPort
+      ? null
+      : await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, fallbackRange);
     logger(
-      `DevTools port ${chrome.port} unreachable; relaunching Chrome on ${fallbackPort}.`,
+      useAutoDebugPort
+        ? `DevTools port ${chrome.port} unreachable; relaunching Chrome with a fresh auto-assigned Windows DevTools port.`
+        : `DevTools port ${chrome.port} unreachable; relaunching Chrome on ${fallbackPort}.`,
     );
     try {
       await chrome.kill();
@@ -1566,7 +1937,9 @@ async function runGrokBrowserMode({
       },
       userDataDir,
       logger,
+      { onWindowsRetry, ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
     );
+    rememberOwnedChrome(chrome);
     chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
     if (manualLogin && chrome.port) {
       await writeDevToolsActivePort(userDataDir, chrome.port);
@@ -1615,7 +1988,9 @@ async function runGrokBrowserMode({
           },
           userDataDir,
           logger,
+          { ownedPids: ownedChromePids, ownedPorts: ownedChromePorts },
         );
+        rememberOwnedChrome(chrome);
         chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
         if (chrome.port) {
           await writeDevToolsActivePort(userDataDir, chrome.port);
@@ -1632,7 +2007,7 @@ async function runGrokBrowserMode({
       client?.on('disconnect', () => {
         connectionClosedUnexpectedly = true;
         logger('Chrome window closed; attempting to abort run.');
-        reject(new Error('Chrome window closed before oracle finished. Please keep it open until completion.'));
+        reject(new Error('Chrome window closed before auracall finished. Please keep it open until completion.'));
       });
     });
     const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
@@ -1646,17 +2021,23 @@ async function runGrokBrowserMode({
     await Promise.all(domainEnablers);
     installJavaScriptDialogAutoDismissal(Page, logger);
 
-    if (!manualLogin) {
-      const cookieFile = findCookieFile(manualProfileDir);
-      if (cookieFile) {
-        logger(`Syncing cookies from manual login profile: ${cookieFile}`);
-        await syncCookies(Network, config.url, undefined, logger, {
-          cookiePath: cookieFile,
-          waitMs: 500, // Short wait to ensure file is readable
-        });
-      } else {
-        logger(`No manual login cookies found at ${manualProfileDir}; session may not persist.`);
-      }
+    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, config.chromeProfile ?? 'Default');
+    const shouldSeedManagedProfile =
+      config.cookieSync &&
+      !config.inlineCookies &&
+      Boolean(bootstrapCookiePath) &&
+      (Boolean(config.manualLoginCookieSync) || !existingManagedCookieFile);
+    if (shouldSeedManagedProfile) {
+      logger(`Bootstrapping managed Grok profile from source cookies at ${bootstrapCookiePath}.`);
+      await syncCookies(Network, config.url, undefined, logger, {
+        cookiePath: bootstrapCookiePath ?? undefined,
+        waitMs: 500,
+        allowErrors: config.allowCookieErrors ?? false,
+      });
+    } else if (existingManagedCookieFile) {
+      logger(`Reusing managed profile cookies from ${existingManagedCookieFile}.`);
+    } else {
+      logger(`No managed-profile cookies found at ${userDataDir}; Grok may require sign-in.`);
     }
 
     if (!headless && launchConfig.hideWindow) {
@@ -1719,7 +2100,7 @@ async function runGrokBrowserMode({
     const href = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
     const currentUrl = typeof href.result?.value === 'string' ? href.result.value : '';
     if (currentUrl) {
-      setLastUrl(currentUrl);
+      lastUrl = currentUrl;
       await emitRuntimeHint();
     }
 
@@ -1751,13 +2132,41 @@ async function runGrokBrowserMode({
       controllerPid: chrome.process?.pid,
     };
   } catch (error) {
+    if (shouldPreserveBrowserOnError(error, headless)) {
+      preserveBrowserOnError = true;
+      const runtime = {
+        chromePid: chrome?.pid,
+        chromePort: chrome?.port,
+        chromeHost,
+        userDataDir,
+        chromeTargetId: undefined,
+        tabUrl: undefined,
+        controllerPid: process.pid,
+      };
+      const reuseProfileHint =
+        `auracall --engine browser --browser-manual-login ` +
+        `--browser-manual-login-profile-dir ${JSON.stringify(userDataDir)}`;
+      await emitRuntimeHint().catch(() => undefined);
+      logger('Cloudflare challenge detected; leaving browser open so you can complete the check.');
+      logger(`Reuse this browser profile with: ${reuseProfileHint}`);
+      throw new BrowserAutomationError(
+        'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.',
+        {
+          stage: 'cloudflare-challenge',
+          runtime,
+          reuseProfileHint,
+        },
+        error,
+      );
+    }
     if (error instanceof BrowserAutomationError) {
       throw error;
     }
     const message = error instanceof Error ? error.message : 'Grok browser automation failed.';
     throw new BrowserAutomationError(message, { stage: 'execute-browser' }, error);
   } finally {
-    if (!effectiveKeepBrowser && chrome) {
+    const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
+    if (!keepBrowserOpen && chrome) {
       try {
         if (manualLogin) {
           await gracefulShutdownChrome(chrome, client ?? null, logger);
@@ -1769,7 +2178,7 @@ async function runGrokBrowserMode({
       }
     }
     if (manualLogin) {
-      if (!effectiveKeepBrowser) {
+      if (!keepBrowserOpen) {
         const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
           connectionClosedUnexpectedly,
         });
@@ -1778,13 +2187,18 @@ async function runGrokBrowserMode({
         }
       }
     } else {
-      await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+      if (!keepBrowserOpen) {
+        await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+      }
     }
     removeTerminationHooks?.();
     try {
       await client?.close?.();
     } catch {
       // ignore
+    }
+    if (keepBrowserOpen && !connectionClosedUnexpectedly && chrome) {
+      logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
     }
   }
 }
@@ -1911,19 +2325,4 @@ function buildThinkingStatusExpression(): string {
     }
     return null;
   })()`;
-}
-
-function findCookieFile(profileDir: string): string | null {
-  const candidates = [
-    path.join(profileDir, 'Default', 'Network', 'Cookies'),
-    path.join(profileDir, 'Default', 'Cookies'),
-    path.join(profileDir, 'Network', 'Cookies'),
-    path.join(profileDir, 'Cookies'),
-  ];
-  for (const candidate of candidates) {
-    if (existsSync(candidate)) {
-      return candidate;
-    }
-  }
-  return null;
 }

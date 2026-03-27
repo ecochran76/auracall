@@ -80,7 +80,7 @@ Recommended defaults:
 
 ## Sessions + slugs (don’t lose work)
 
-- Stored under `~/.oracle/sessions` (override with `ORACLE_HOME_DIR`).
+- Stored under `~/.auracall/sessions` (override with `AURACALL_HOME_DIR`).
 - Runs may detach or take a long time (browser + GPT‑5.2 Pro often does). If the CLI times out: don’t re-run; reattach.
   - List: `oracle status --hours 72`
   - Attach: `oracle session <id> --render`

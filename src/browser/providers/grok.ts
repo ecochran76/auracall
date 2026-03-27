@@ -4,6 +4,8 @@ export const GROK_PROVIDER: BrowserProviderConfig = {
   id: 'grok',
   selectors: {
     input: [
+      'textarea[aria-label="Ask Grok anything"]',
+      'textarea[placeholder*="What\'s on your mind?"]',
       'div.ProseMirror[contenteditable="true"]',
       'div[contenteditable="true"][role="textbox"]',
       'div.ProseMirror[contenteditable="true"][aria-label]',

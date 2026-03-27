@@ -13,8 +13,9 @@ type MutableConfig = Record<string, unknown> & {
   dev?: { browserPortRange?: [number, number] };
   engine?: string;
   search?: unknown;
-  oracleProfile?: string;
-  oracleProfiles?: Record<string, unknown>;
+  auracallProfile?: string;
+  auracallProfiles?: Record<string, unknown>;
+  profiles?: Record<string, unknown>;
   model?: string;
 };
 
@@ -87,13 +88,14 @@ export async function resolveConfig(
     aliasRules: options.aliasRules,
   }) as MutableConfig;
   applyOracleProfile(normalized);
+  const effective = mergeRecursively(normalized, cliConfig);
 
   // 4. Resolve Model and Engine Business Logic
-  const cliModelArg = cliConfig.model || normalized.model || 'gpt-5.2-pro';
+  const cliModelArg = cliConfig.model || effective.model || 'gpt-5.2-pro';
   
   // Decide engine
   let engine = resolveEngine({
-    engine: (typeof normalized.engine === 'string' ? (normalized.engine as EngineMode) : undefined),
+    engine: (typeof effective.engine === 'string' ? (effective.engine as EngineMode) : undefined),
     browserFlag: cliOptions.browser,
     env,
   });
@@ -112,17 +114,17 @@ export async function resolveConfig(
 
   // Resolve Base URL
   const baseUrl = normalizeBaseUrl(
-    asNonEmptyString(normalized.apiBaseUrl) ??
+    asNonEmptyString(effective.apiBaseUrl) ??
       (isClaude ? env.ANTHROPIC_BASE_URL : isGrok ? env.XAI_BASE_URL : env.OPENAI_BASE_URL),
   );
 
   // Update merged object with resolved values
-  normalized.model = inferredModel;
-  normalized.engine = engine;
-  normalized.apiBaseUrl = baseUrl;
+  effective.model = inferredModel;
+  effective.engine = engine;
+  effective.apiBaseUrl = baseUrl;
 
   // 5. Validate and Default
-  return ComposedConfigSchema.parse(normalized);
+  return ComposedConfigSchema.parse(effective);
 }
 
 function mergeRecursively(target: MutableConfig, source: MutableConfig): MutableConfig {
@@ -150,7 +152,7 @@ function mergeRecursively(target: MutableConfig, source: MutableConfig): Mutable
 }
 
 function applyOracleProfile(merged: MutableConfig): void {
-  const profiles = merged.oracleProfiles ?? null;
+  const profiles = merged.auracallProfiles ?? merged.profiles ?? null;
   if (!profiles || typeof profiles !== 'object') {
     return;
   }
@@ -158,28 +160,28 @@ function applyOracleProfile(merged: MutableConfig): void {
   if (!profileName || !profiles[profileName]) {
     return;
   }
-  merged.oracleProfile = profileName;
+  merged.auracallProfile = profileName;
   const profile = profiles[profileName];
   if (!isRecord(profile)) {
     return;
   }
 
-  if (merged.engine === undefined && profile.engine !== undefined) {
+  if (profile.engine !== undefined) {
     merged.engine = profile.engine as string;
   }
-  if (merged.search === undefined && profile.search !== undefined) {
+  if (profile.search !== undefined) {
     merged.search = profile.search;
   }
 
   merged.browser = merged.browser ?? {};
   const browser = merged.browser;
-  applyBrowserProfileOverrides(merged, profile, browser);
+  applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
 }
 
 function resolveActiveProfileName(merged: MutableConfig): string | null {
-  const profiles = merged.oracleProfiles ?? null;
+  const profiles = merged.auracallProfiles ?? merged.profiles ?? null;
   if (!profiles || typeof profiles !== 'object') return null;
-  const explicit = typeof merged.oracleProfile === 'string' ? merged.oracleProfile.trim() : '';
+  const explicit = typeof merged.auracallProfile === 'string' ? merged.auracallProfile.trim() : '';
   if (explicit && profiles[explicit]) return explicit;
   if (profiles.default) return 'default';
   const keys = Object.keys(profiles);

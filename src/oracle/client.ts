@@ -75,7 +75,7 @@ export function createDefaultClientFactory(): ClientFactory {
 function buildOpenRouterHeaders(): Record<string, string> | undefined {
   const headers: Record<string, string> = {};
   const referer = process.env.OPENROUTER_REFERER ?? process.env.OPENROUTER_HTTP_REFERER ?? 'https://github.com/steipete/oracle';
-  const title = process.env.OPENROUTER_TITLE ?? 'Oracle CLI';
+  const title = process.env.OPENROUTER_TITLE ?? 'Aura-Call CLI';
   if (referer) {
     headers['HTTP-Referer'] = referer;
   }
@@ -86,7 +86,7 @@ function buildOpenRouterHeaders(): Record<string, string> | undefined {
 }
 
 function loadCustomClientFactory(): ClientFactory | null {
-  const override = process.env.ORACLE_CLIENT_FACTORY;
+  const override = process.env.AURACALL_CLIENT_FACTORY;
   if (!override) {
     return null;
   }
@@ -125,7 +125,7 @@ function loadCustomClientFactory(): ClientFactory | null {
     }
     console.warn(`Custom client factory at ${resolved} did not export a function.`);
   } catch (error) {
-    console.warn(`Failed to load ORACLE_CLIENT_FACTORY module "${override}":`, error);
+    console.warn(`Failed to load AURACALL_CLIENT_FACTORY module "${override}":`, error);
   }
   return null;
 }

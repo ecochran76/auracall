@@ -8,8 +8,8 @@ import { once } from 'node:events';
 import readline from 'node:readline/promises';
 import { Command, Option } from 'commander';
 import type { OptionValues } from 'commander';
-// Allow `npx @steipete/oracle oracle-mcp` to resolve the MCP server even though npx runs the default binary.
-if (process.argv[2] === 'oracle-mcp') {
+// Allow `npx auracall auracall-mcp` to resolve the MCP server even though npx runs the default binary.
+if (process.argv[2] === 'auracall-mcp') {
   const { startMcpServer } = await import('../src/mcp/server.js');
   await startMcpServer();
   process.exit(0);
@@ -54,6 +54,22 @@ import { buildMarkdownBundle } from '../src/cli/markdownBundle.js';
 import { shouldDetachSession } from '../src/cli/detach.js';
 import { applyHiddenAliases } from '../src/cli/hiddenAliases.js';
 import { buildBrowserConfig, resolveBrowserModelLabel } from '../src/cli/browserConfig.js';
+import {
+  defaultSetupVerificationPrompt,
+  resolveBrowserSetupTarget,
+  resolveSetupVerificationModel,
+  createAuracallBrowserSetupContract,
+} from '../src/cli/browserSetup.js';
+import {
+  buildBrowserWizardConfigPatch,
+  discoverBrowserWizardChoices,
+  formatBrowserWizardChoiceLabel,
+  mergeWizardConfig,
+  pickPreferredBrowserWizardChoiceIndex,
+  suggestBrowserWizardProfileName,
+  validateBrowserWizardProfileName,
+  type BrowserWizardChoice,
+} from '../src/cli/browserWizard.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -82,9 +98,11 @@ import { configPath, loadUserConfig, scaffoldDefaultConfigFile, type ResolvedUse
 import { shouldBlockDuplicatePrompt } from '../src/cli/duplicatePromptGuard.js';
 import os from 'node:os';
 import path from 'node:path';
-import { getOracleHomeDir } from '../src/oracleHome.js';
+import { getAuracallHomeDir } from '../src/auracallHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
 import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
+import { resolveBrowserConfig } from '../src/browser/config.js';
+import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
 import {
   PROVIDER_CACHE_TTL_MS,
   resolveProviderCacheKey,
@@ -93,12 +111,15 @@ import {
   writeProjectCache,
 } from '../src/browser/providers/cache.js';
 import { resolveConfig } from '../src/schema/resolver.js';
-import { materializeConfigV2 } from '../src/config/migrate.js';
+import { materializeConfigV2, normalizeConfigV1toV2 } from '../src/config/migrate.js';
 import { isPortOpen } from '../src/browser/processCheck.js';
 
 interface CliOptions extends OptionValues {
   prompt?: string;
   message?: string;
+  profile?: string;
+  auracallProfile?: string;
+  oracleProfile?: string;
   file?: string[];
   include?: string[];
   files?: string[];
@@ -124,6 +145,7 @@ interface CliOptions extends OptionValues {
   execSession?: string;
   notify?: boolean;
   notifySound?: boolean;
+  json?: boolean;
   renderMarkdown?: boolean;
   sessionId?: string;
   engine?: EngineMode;
@@ -132,11 +154,13 @@ interface CliOptions extends OptionValues {
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
+  browserBootstrapCookiePath?: string;
+  browserDisplay?: string;
   geminiUrl?: string;
   grokUrl?: string;
   chatgptUrl?: string;
   browserUrl?: string;
-  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-oracle';
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-auracall';
   projectId?: string;
   projectName?: string;
   noProject?: boolean;
@@ -157,6 +181,7 @@ interface CliOptions extends OptionValues {
   browserManualLogin?: boolean;
   browserManualLoginProfileDir?: string;
   browserWslChrome?: 'auto' | 'wsl' | 'windows';
+  forceReseedManagedProfile?: boolean;
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
   browserAllowCookieErrors?: boolean;
@@ -187,6 +212,100 @@ interface CliOptions extends OptionValues {
   writeOutputPath?: string;
 }
 
+interface BrowserDoctorReportLike {
+  target: 'chatgpt' | 'gemini' | 'grok';
+  managedProfileDir: string;
+  chromeProfile: string;
+  managedProfileExists: boolean;
+  managedCookiePath: string | null;
+  chromeGoogleAccount: {
+    source: 'local-state' | 'preferences' | 'merged';
+    status: 'signed-in' | 'signed-out' | 'inconclusive';
+    profileName: string | null;
+    displayName: string | null;
+    givenName: string | null;
+    email: string | null;
+    gaiaId: string | null;
+    consentedPrimaryAccount: boolean;
+    explicitBrowserSignin: boolean;
+    activeAccounts: number;
+  } | null;
+  sourceCookiePath: string | null;
+  sourceProfile: { userDataDir: string; profileName: string } | null;
+  registryPath: string;
+  registryEntries: Array<{
+    profilePath: string;
+    profileName: string;
+    alive: boolean;
+    managed: boolean;
+    legacy: boolean;
+    pid: number;
+    port: number;
+    host: string;
+    services: string[];
+  }>;
+  staleRegistryEntries: Array<unknown>;
+  legacyRegistryEntries: Array<unknown>;
+  prunedRegistryEntries: number;
+  managedRegistryEntry: {
+    pid: number;
+    port: number;
+    host: string;
+    alive: boolean;
+  } | null;
+  warnings: string[];
+}
+
+interface BrowserDoctorIdentityReportLike {
+  target: 'chatgpt' | 'gemini' | 'grok';
+  supported: boolean;
+  attempted: boolean;
+  identity: ProviderUserIdentity | null;
+  error: string | null;
+}
+
+interface BrowserLoginLaunchOptions {
+  chromePath: string;
+  chromeProfile: string;
+  manualLoginProfileDir: string;
+  cookiePath?: string;
+  bootstrapCookiePath?: string;
+  chatgptUrl: string;
+  geminiUrl: string;
+  grokUrl: string;
+}
+
+type SetupCommandOptions = Partial<Pick<
+  CliOptions,
+  | 'profile'
+  | 'auracallProfile'
+  | 'model'
+  | 'verbose'
+  | 'browserKeepBrowser'
+  | 'browserChromePath'
+  | 'browserChromeProfile'
+  | 'browserCookiePath'
+  | 'browserBootstrapCookiePath'
+  | 'browserDisplay'
+  | 'browserManualLoginProfileDir'
+  | 'browserWslChrome'
+  | 'chatgptUrl'
+  | 'geminiUrl'
+  | 'grokUrl'
+  | 'forceReseedManagedProfile'
+>> & {
+  json?: boolean;
+  target?: string;
+  chatgpt?: boolean;
+  gemini?: boolean;
+  grok?: boolean;
+  pruneBrowserState?: boolean;
+  skipLogin?: boolean;
+  skipVerify?: boolean;
+  verifyPrompt?: string;
+  exportCookies?: boolean;
+};
+
 type ResolvedCliOptions = Omit<CliOptions, 'model'> & {
   model: ModelName;
   models?: ModelName[];
@@ -204,6 +323,7 @@ const program = new Command();
 let introPrinted = false;
 program.hook('preAction', () => {
   if (introPrinted) return;
+  if (userCliArgs.includes('--json')) return;
   console.log(formatIntroLine(VERSION, { env: process.env, richTty: isTty }));
   introPrinted = true;
 });
@@ -216,7 +336,7 @@ program.hook('preAction', (thisCommand) => {
     return;
   }
   if (userCliArgs.length === 0) {
-    // Let the root action handle zero-arg entry (help + hint to `oracle tui`).
+    // Let the root action handle zero-arg entry (help + hint to `auracall tui`).
     return;
   }
   const opts = thisCommand.optsWithGlobals() as CliOptions;
@@ -234,7 +354,7 @@ program.hook('preAction', (thisCommand) => {
   }
 });
 program
-  .name('oracle')
+  .name('auracall')
   .description('One-shot GPT-5.2 Pro / GPT-5.2 / GPT-5.1 Codex tool for hard questions that benefit from large file context and server-side search.')
   .version(VERSION)
   .argument('[prompt]', 'Prompt text (shorthand for --prompt).')
@@ -306,13 +426,15 @@ program
   .addOption(
     new Option(
       '-e, --engine <mode>',
-      'Execution engine (api | browser). Browser engine: GPT models automate ChatGPT; Gemini models use a cookie-based client for gemini.google.com. If omitted, oracle picks api when OPENAI_API_KEY is set, otherwise browser.',
+      'Execution engine (api | browser). Browser engine: GPT models automate ChatGPT; Gemini models use a cookie-based client for gemini.google.com. If omitted, Aura-Call picks api when OPENAI_API_KEY is set, otherwise browser.',
     ).choices(['api', 'browser'])
   )
   .addOption(
     new Option('--mode <mode>', 'Alias for --engine (api | browser).').choices(['api', 'browser']).hideHelp(),
   )
-  .option('--oracle-profile <name>', 'Select which oracleProfile to use for this run.')
+  .option('--profile <name>', 'Select which Aura-Call profile to use for this run.')
+  .addOption(new Option('--auracall-profile <name>', 'Alias for --profile.').hideHelp())
+  .addOption(new Option('--oracle-profile <name>', 'Legacy alias for --profile.').hideHelp())
   .option('--files-report', 'Show token usage per attached file (also prints automatically when files exceed the token budget).', false)
   .option('-v, --verbose', 'Enable verbose logging for all operations.', false)
   .addOption(
@@ -347,7 +469,7 @@ program
   )
   .addOption(new Option('--exec-session <id>').hideHelp())
   .addOption(new Option('--session <id>').hideHelp())
-  .addOption(new Option('--status', 'Show stored sessions (alias for `oracle status`).').default(false).hideHelp())
+  .addOption(new Option('--status', 'Show stored sessions (alias for `auracall status`).').default(false).hideHelp())
   .option(
     '--render-markdown',
     'Print the assembled markdown bundle for prompt + files and exit; pair with --copy to put it on the clipboard.',
@@ -390,9 +512,15 @@ program
   )
   .addOption(
     new Option(
+      '--browser-bootstrap-cookie-path <path>',
+      'Explicit source cookie DB path to seed Aura-Call managed browser profiles without changing the runtime browser.',
+    ),
+  )
+  .addOption(
+    new Option(
       '--browser-blocking-profile <mode>',
       'Handle a blocking Chrome profile (fail, restart, restart-managed).',
-    ).choices(['fail', 'restart', 'restart-managed', 'restart-oracle']),
+    ).choices(['fail', 'restart', 'restart-managed', 'restart-auracall']),
   )
   .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
@@ -488,8 +616,8 @@ program
       'Connect to remote Chrome DevTools Protocol (e.g., 192.168.1.10:9222 or [2001:db8::1]:9222 for IPv6).',
     ),
   )
-  .addOption(new Option('--remote-host <host:port>', 'Delegate browser runs to a remote `oracle serve` instance.'))
-  .addOption(new Option('--remote-token <token>', 'Access token for the remote `oracle serve` instance.'))
+  .addOption(new Option('--remote-host <host:port>', 'Delegate browser runs to a remote `auracall serve` instance.'))
+  .addOption(new Option('--remote-token <token>', 'Access token for the remote `auracall serve` instance.'))
   .addOption(
     new Option('--browser-inline-files', 'Alias for --browser-attachments never (force pasting file contents inline).').default(false),
   )
@@ -547,20 +675,20 @@ program.addHelpText(
   `
 Examples:
   # Quick API run with two files
-  oracle --prompt "Summarize the risk register" --file docs/risk-register.md docs/risk-matrix.md
+  auracall --prompt "Summarize the risk register" --file docs/risk-register.md docs/risk-matrix.md
 
   # Browser run (no API key) + globbed TypeScript sources, excluding tests
-  oracle --engine browser --prompt "Review the TS data layer" \\
+  auracall --engine browser --prompt "Review the TS data layer" \\
     --file "src/**/*.ts" --file "!src/**/*.test.ts"
 
   # Build, print, and copy a markdown bundle (semi-manual)
-  oracle --render --copy -p "Review the TS data layer" --file "src/**/*.ts" --file "!src/**/*.test.ts"
+  auracall --render --copy -p "Review the TS data layer" --file "src/**/*.ts" --file "!src/**/*.test.ts"
 `,
 );
 
 program
   .command('serve')
-  .description('Run Oracle browser automation as a remote service for other machines.')
+  .description('Run Aura-Call browser automation as a remote service for other machines.')
   .option('--host <address>', 'Interface to bind (default 0.0.0.0).')
   .option('--port <number>', 'Port to listen on (default random).', parseIntOption)
   .option('--token <value>', 'Access token clients must provide (random if omitted).')
@@ -717,6 +845,11 @@ projectsCommand
         },
         { listOptions },
       );
+      if (!createdProject) {
+        throw new Error(
+          `Project creation could not be verified. Grok did not resolve a new project page for "${projectName}".`,
+        );
+      }
     } else {
       await llmService.openCreateProjectModal({ listOptions });
       await llmService.setCreateProjectFields({ name: projectName, instructions, modelLabel }, { listOptions });
@@ -1413,7 +1546,7 @@ const cacheCommand = program
       (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok',
       userConfig,
     ).getCacheSettings();
-    const cacheRoot = cacheSettings.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+    const cacheRoot = cacheSettings.cacheRoot ?? path.join(getAuracallHomeDir(), 'cache', 'providers');
     const cacheTtlMs = cacheSettings.ttlMs ?? PROVIDER_CACHE_TTL_MS;
     const output: Array<{
       provider: string;
@@ -1639,7 +1772,7 @@ cacheCommand
   .option('--format <json|md|html|csv|zip>', 'Export format (default json).')
   .option('--project-id <id>', 'Project ID or name for project-scoped exports.')
   .option('--conversation-id <id>', 'Conversation ID for conversation-scoped exports.')
-  .option('--output <path>', 'Output directory or zip path (default is timestamped under ~/.oracle/cache/exports).')
+  .option('--output <path>', 'Output directory or zip path (default is timestamped under ~/.auracall/cache/exports).')
   .action(async (commandOptions) => {
     const providers = new Set(['chatgpt', 'grok']);
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
@@ -1680,7 +1813,7 @@ cacheCommand
     if (commandOptions.projectId) {
       resolvedProjectId = await resolveProjectIdArg(llmService, String(commandOptions.projectId), listOptions);
     }
-    const exportRoot = path.join(getOracleHomeDir(), 'cache', 'exports');
+    const exportRoot = path.join(getAuracallHomeDir(), 'cache', 'exports');
     const defaultDir = path.join(
       exportRoot,
       provider,
@@ -1707,9 +1840,12 @@ cacheCommand
 
 program
   .command('doctor')
-  .description('Verify that the browser UI matches the expected selectors.')
+  .description('Inspect local browser profile state and verify that the browser UI matches the expected selectors.')
   .option('--target <chatgpt|grok>', 'Choose which provider to inspect (chatgpt or grok).')
+  .option('--local-only', 'Inspect managed profile/bootstrap/browser-state only; do not attach to Chrome.')
+  .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
@@ -1717,6 +1853,82 @@ program
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
+    const {
+      inspectBrowserDoctorState,
+      inspectBrowserDoctorIdentity,
+      createAuracallBrowserDoctorContract,
+    } = await import('../src/browser/profileDoctor.js');
+    const localReport = await inspectBrowserDoctorState(userConfig, {
+      target,
+      pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+    });
+    const identityStatus = commandOptions.localOnly
+      ? null
+      : await inspectBrowserDoctorIdentity(userConfig, {
+          target,
+          localReport,
+        });
+
+    if (commandOptions.json) {
+      let browserTools = null;
+      let browserToolsError: string | null = null;
+      let selectorDiagnosis = null;
+      let selectorDiagnosisError: string | null = null;
+
+      if (!commandOptions.localOnly) {
+        const activeInstance = localReport.managedRegistryEntry;
+        if (activeInstance?.alive) {
+          if (isLoopbackHost(activeInstance.host)) {
+            try {
+              const { collectBrowserToolsDoctorReport, createBrowserToolsDoctorContract } = await import(
+                '../packages/browser-service/src/browserTools.js'
+              );
+              const report = await collectBrowserToolsDoctorReport(activeInstance.port, {
+                urlContains: resolveBrowserDoctorUrlContains(target),
+              });
+              browserTools = createBrowserToolsDoctorContract(report);
+            } catch (error) {
+              browserToolsError = error instanceof Error ? error.message : String(error);
+            }
+          } else {
+            browserToolsError = `Managed browser instance is on non-loopback host ${activeInstance.host}; browser-tools doctor currently expects localhost CDP access.`;
+          }
+        }
+
+        try {
+          const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+          selectorDiagnosis = await client.diagnose({
+            basePath: process.cwd(),
+            saveSnapshot: Boolean(commandOptions.saveSnapshot),
+            quiet: true,
+          });
+        } catch (error) {
+          selectorDiagnosisError = error instanceof Error ? error.message : String(error);
+        }
+      }
+
+      const contract = createAuracallBrowserDoctorContract({
+        target,
+        localReport,
+        identityStatus,
+        browserTools,
+        browserToolsError,
+        selectorDiagnosis,
+        selectorDiagnosisError,
+      });
+      console.log(JSON.stringify(contract, null, 2));
+      if (selectorDiagnosisError || (selectorDiagnosis && !selectorDiagnosis.report.allPassed)) {
+        process.exitCode = 1;
+      }
+      return;
+    }
+
+    printLocalBrowserDoctorReport(localReport, { identityStatus });
+
+    if (commandOptions.localOnly) {
+      return;
+    }
+
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
     try {
       const { report, port } = await client.diagnose({
@@ -1805,7 +2017,7 @@ function assertCacheIdentity(
   if (!identity.identityKey) {
     throw new Error(
       `Cache identity for ${provider} is required. ` +
-        'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Oracle can detect it.',
+        'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Aura-Call can detect it.',
     );
   }
 }
@@ -1926,7 +2138,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
     } catch (error) {
       console.warn(
         chalk.yellow(
-          `Skipping project "${projectInput}" (not in cache). Run "oracle projects" to refresh.`,
+          `Skipping project "${projectInput}" (not in cache). Run "auracall projects" to refresh.`,
         ),
       );
       options.projectId = undefined;
@@ -1950,7 +2162,7 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
       }
       console.warn(
         chalk.yellow(
-          `Skipping default project "${projectName}" (not in cache). Run "oracle projects" to refresh.`,
+          `Skipping default project "${projectName}" (not in cache). Run "auracall projects" to refresh.`,
         ),
       );
     }
@@ -1972,10 +2184,501 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
       }
       console.warn(
         chalk.yellow(
-          `Skipping default conversation "${conversationName}" (not in cache). Run "oracle conversations" to refresh.`,
+          `Skipping default conversation "${conversationName}" (not in cache). Run "auracall conversations" to refresh.`,
         ),
       );
     }
+  }
+}
+
+function printLocalBrowserDoctorReport(
+  localReport: BrowserDoctorReportLike,
+  options: { title?: string; identityStatus?: BrowserDoctorIdentityReportLike | null } = {},
+): void {
+  console.log(options.title ?? `Local browser state for ${localReport.target}:`);
+  console.log(`- managedProfileDir: ${localReport.managedProfileDir}`);
+  console.log(`- chromeProfile: ${localReport.chromeProfile}`);
+  console.log(`- managedProfileExists: ${localReport.managedProfileExists ? 'yes' : 'no'}`);
+  console.log(`- managedCookiePath: ${localReport.managedCookiePath ?? '(missing)'}`);
+  console.log(`- chromeGoogleAccount: ${formatChromeGoogleAccount(localReport.chromeGoogleAccount)}`);
+  console.log(`- sourceCookiePath: ${localReport.sourceCookiePath ?? '(none)'}`);
+  console.log(
+    `- sourceProfile: ${
+      localReport.sourceProfile
+        ? `${localReport.sourceProfile.userDataDir} (${localReport.sourceProfile.profileName})`
+        : '(unknown)'
+    }`,
+  );
+  console.log(`- browserStatePath: ${localReport.registryPath}`);
+  console.log(`- browserStateEntries: ${localReport.registryEntries.length}`);
+  console.log(`- staleBrowserStateEntries: ${localReport.staleRegistryEntries.length}`);
+  console.log(`- legacyBrowserStateEntries: ${localReport.legacyRegistryEntries.length}`);
+  if (localReport.prunedRegistryEntries > 0) {
+    console.log(`- prunedBrowserStateEntries: ${localReport.prunedRegistryEntries}`);
+  }
+  if (localReport.managedRegistryEntry) {
+    console.log(
+      `- activeManagedInstance: pid ${localReport.managedRegistryEntry.pid} on ${localReport.managedRegistryEntry.host}:${localReport.managedRegistryEntry.port} (${localReport.managedRegistryEntry.alive ? 'alive' : 'stale'})`,
+    );
+  } else {
+    console.log('- activeManagedInstance: (none)');
+  }
+  if (options.identityStatus) {
+    const { identityStatus } = options;
+    if (!identityStatus.supported) {
+      console.log(`- accountIdentity: (not supported for ${identityStatus.target})`);
+    } else if (!identityStatus.attempted) {
+      console.log('- accountIdentity: (not checked; no active managed browser instance)');
+    } else if (identityStatus.identity) {
+      console.log(`- accountIdentity: ${formatProviderIdentity(identityStatus.identity)}`);
+    } else if (identityStatus.error) {
+      console.log(`- accountIdentity: (check failed: ${identityStatus.error})`);
+    } else {
+      console.log('- accountIdentity: (signed-in account not detected)');
+    }
+  }
+  if (localReport.registryEntries.length > 0) {
+    const registryTable = localReport.registryEntries.map((entry) => ({
+      Profile: entry.profilePath,
+      Name: entry.profileName,
+      Status: [
+        entry.alive ? 'alive' : 'stale',
+        entry.managed ? 'managed' : 'external',
+        entry.legacy ? 'legacy' : null,
+      ]
+        .filter(Boolean)
+        .join(', '),
+      PID: entry.pid,
+      Port: entry.port,
+      Host: entry.host,
+      Services: entry.services.join(', '),
+    }));
+    if (process.stdout.isTTY) {
+      console.table(registryTable);
+    } else {
+      console.log(JSON.stringify(registryTable, null, 2));
+    }
+  }
+  if (localReport.warnings.length > 0) {
+    console.log('\nLocal warnings:');
+    for (const warning of localReport.warnings) {
+      console.log(`- ${warning}`);
+    }
+  }
+}
+
+function formatChromeGoogleAccount(
+  account: BrowserDoctorReportLike['chromeGoogleAccount'],
+): string {
+  if (!account) {
+    return '(not detected from Local State)';
+  }
+  if (account.status === 'signed-in') {
+    const name = account.displayName ?? account.givenName ?? account.profileName ?? 'Google account';
+    const email = account.email ? ` <${account.email}>` : '';
+    const consent = account.consentedPrimaryAccount ? 'consented' : 'unconsented';
+    const browserSignin = account.explicitBrowserSignin ? 'browser-signin' : 'no-browser-signin-flag';
+    return `${name}${email} [${account.source}; ${consent}; ${browserSignin}; activeAccounts=${account.activeAccounts}]`;
+  }
+  if (account.status === 'inconclusive') {
+    return `(active Google-account markers present, but no primary account identity; ${account.source}; activeAccounts=${account.activeAccounts})`;
+  }
+  return '(signed-in Google account not detected)';
+}
+
+function resolveBrowserDoctorUrlContains(target: 'chatgpt' | 'grok'): string {
+  return target === 'grok' ? 'grok.com' : 'chatgpt.com';
+}
+
+function isLoopbackHost(host: string | null | undefined): boolean {
+  if (!host) {
+    return false;
+  }
+  const normalized = host.trim().toLowerCase();
+  return normalized === '127.0.0.1' || normalized === 'localhost' || normalized === '::1' || normalized === '[::1]';
+}
+
+function formatProviderIdentity(identity: ProviderUserIdentity): string {
+  const parts: string[] = [];
+  if (identity.name?.trim()) {
+    parts.push(identity.name.trim());
+  }
+  if (identity.handle?.trim()) {
+    parts.push(identity.handle.trim());
+  }
+  if (identity.email?.trim()) {
+    parts.push(`<${identity.email.trim()}>`);
+  }
+  const core = parts.length > 0 ? parts.join(' ') : identity.id?.trim() || '(unknown)';
+  return identity.source?.trim() ? `${core} [${identity.source.trim()}]` : core;
+}
+
+function resolveBrowserLoginLaunchOptions(
+  commandOptions: Pick<
+    CliOptions,
+    | 'browserChromePath'
+    | 'browserChromeProfile'
+    | 'browserCookiePath'
+    | 'browserBootstrapCookiePath'
+    | 'browserDisplay'
+    | 'browserManualLoginProfileDir'
+    | 'browserWslChrome'
+    | 'chatgptUrl'
+    | 'geminiUrl'
+    | 'grokUrl'
+  >,
+  userConfig: ResolvedUserConfig,
+  target: 'chatgpt' | 'gemini' | 'grok',
+): BrowserLoginLaunchOptions {
+  const resolvedBrowser = resolveBrowserConfig({
+    ...userConfig.browser,
+    chromePath: commandOptions.browserChromePath ?? userConfig.browser?.chromePath ?? undefined,
+    chromeProfile: commandOptions.browserChromeProfile ?? userConfig.browser?.chromeProfile ?? undefined,
+    chromeCookiePath: commandOptions.browserCookiePath ?? userConfig.browser?.chromeCookiePath ?? undefined,
+    bootstrapCookiePath:
+      commandOptions.browserBootstrapCookiePath ?? userConfig.browser?.bootstrapCookiePath ?? undefined,
+    wslChromePreference: commandOptions.browserWslChrome ?? userConfig.browser?.wslChromePreference ?? undefined,
+    display: commandOptions.browserDisplay ?? userConfig.browser?.display ?? undefined,
+    manualLogin: true,
+    manualLoginProfileDir:
+      commandOptions.browserManualLoginProfileDir ??
+      resolveManagedProfileDirForUserConfig(userConfig, target),
+    target,
+  });
+  const chromePath = resolvedBrowser.chromePath ?? undefined;
+  if (!chromePath) {
+    throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');
+  }
+  return {
+    chromePath,
+    chromeProfile: resolvedBrowser.chromeProfile ?? 'Default',
+    manualLoginProfileDir:
+      resolvedBrowser.manualLoginProfileDir ?? resolveManagedProfileDirForUserConfig(userConfig, target),
+    cookiePath: resolvedBrowser.chromeCookiePath ?? undefined,
+    bootstrapCookiePath: resolvedBrowser.bootstrapCookiePath ?? resolvedBrowser.chromeCookiePath ?? undefined,
+    chatgptUrl:
+      commandOptions.chatgptUrl ??
+      userConfig.browser?.chatgptUrl ??
+      userConfig.browser?.url ??
+      CHATGPT_URL,
+    geminiUrl: commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app',
+    grokUrl: commandOptions.grokUrl ?? userConfig.browser?.grokUrl ?? GROK_URL,
+  };
+}
+
+function resolveSetupLaunchUrl(
+  target: 'chatgpt' | 'gemini' | 'grok',
+  launchOptions: BrowserLoginLaunchOptions,
+): string {
+  switch (target) {
+    case 'gemini':
+      return launchOptions.geminiUrl;
+    case 'grok':
+      return launchOptions.grokUrl;
+    case 'chatgpt':
+    default:
+      return launchOptions.chatgptUrl;
+  }
+}
+
+async function waitForSetupLoginConfirmation(target: 'chatgpt' | 'gemini' | 'grok'): Promise<void> {
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.log(chalk.dim(`Non-interactive terminal detected; continuing ${target} setup without waiting for login confirmation.`));
+    return;
+  }
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    await rl.question(`Finish signing into ${target} in the opened browser, then press Enter to continue setup. `);
+  } finally {
+    rl.close();
+  }
+}
+
+async function withStdoutRedirectedToStderr<T>(callback: () => Promise<T>): Promise<T> {
+  const stdout = process.stdout as NodeJS.WriteStream & { write: typeof process.stdout.write };
+  const originalWrite = stdout.write.bind(process.stdout);
+  const stderrWrite = process.stderr.write.bind(process.stderr);
+  stdout.write = ((chunk: unknown, encoding?: BufferEncoding | ((error?: Error | null) => void), cb?: (error?: Error | null) => void) => {
+    if (typeof encoding === 'function') {
+      return stderrWrite(chunk as never, encoding);
+    }
+    return stderrWrite(chunk as never, encoding, cb);
+  }) as typeof process.stdout.write;
+  try {
+    return await callback();
+  } finally {
+    stdout.write = originalWrite as typeof process.stdout.write;
+  }
+}
+
+async function loadWritableUserConfigForWizard(): Promise<UserConfig> {
+  const userPath = configPath();
+  try {
+    const raw = await fs.readFile(userPath, 'utf8');
+    return materializeConfigV2(normalizeConfigV1toV2(JSON5.parse(raw) as UserConfig));
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === 'ENOENT') {
+      const scaffolded = await scaffoldDefaultConfigFile({ path: userPath, force: false });
+      if (scaffolded) {
+        return materializeConfigV2(normalizeConfigV1toV2(scaffolded.config));
+      }
+      return { version: 2, model: 'gpt-5.2-pro', browser: {}, profiles: {} };
+    }
+    throw error;
+  }
+}
+
+async function writeWizardUserConfig(config: UserConfig): Promise<string> {
+  const userPath = configPath();
+  const materialized = materializeConfigV2(config);
+  await fs.mkdir(path.dirname(userPath), { recursive: true });
+  await fs.writeFile(userPath, `${JSON.stringify(materialized, null, 2)}\n`, 'utf8');
+  return userPath;
+}
+
+function resolveDefaultBrowserWizardChoiceIndex(
+  choices: BrowserWizardChoice[],
+  userConfig: ResolvedUserConfig,
+): number {
+  return pickPreferredBrowserWizardChoiceIndex(choices, {
+    configuredChromePath: userConfig.browser?.chromePath ?? null,
+    wslChromePreference: userConfig.browser?.wslChromePreference ?? null,
+  });
+}
+
+async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Promise<void> {
+  const jsonMode = Boolean(commandOptions.json);
+  const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+  const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+  const target = resolveBrowserSetupTarget({
+    explicitTarget: commandOptions.target,
+    aliasChatgpt: Boolean(commandOptions.chatgpt),
+    aliasGemini: Boolean(commandOptions.gemini),
+    aliasGrok: Boolean(commandOptions.grok),
+    fallbackTarget: userConfig.browser?.target ?? 'chatgpt',
+  });
+  const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
+  const {
+    inspectBrowserDoctorState,
+    inspectBrowserDoctorIdentity,
+    createAuracallBrowserDoctorContract,
+  } = await import('../src/browser/profileDoctor.js');
+  const managedProfileSeedPolicy = commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer';
+  const initialLaunchUrl = resolveSetupLaunchUrl(target, launchOptions);
+
+  const localReport = await inspectBrowserDoctorState(userConfig, {
+    target,
+    pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+  });
+  const initialIdentityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+    target,
+    localReport,
+  });
+  const initialDoctorContract = createAuracallBrowserDoctorContract({
+    target,
+    localReport,
+    identityStatus: initialIdentityStatus,
+  });
+  const loginReport: import('../src/cli/browserSetup.js').BrowserSetupLoginStep = {
+    status: commandOptions.skipLogin ? 'skipped' : 'completed',
+    exportCookies: Boolean(commandOptions.exportCookies),
+    managedProfileSeedPolicy,
+    manualLoginProfileDir: launchOptions.manualLoginProfileDir,
+    chromeProfile: launchOptions.chromeProfile,
+    launchTargetUrl: initialLaunchUrl,
+    error: null,
+  };
+  const verificationReport: import('../src/cli/browserSetup.js').BrowserSetupVerificationStep = {
+    status: commandOptions.skipVerify ? 'skipped' : 'completed',
+    model: null,
+    prompt: null,
+    sessionId: null,
+    error: null,
+  };
+  let finalDoctorContract: import('../src/browser/profileDoctor.js').AuracallBrowserDoctorContract | null = null;
+  let finalDoctorError: string | null = null;
+  let setupFailed = false;
+
+  if (!jsonMode) {
+    printLocalBrowserDoctorReport(localReport, {
+      title: `Managed profile setup for ${target}:`,
+      identityStatus: initialIdentityStatus,
+    });
+  }
+
+  const runSetupFlow = async () => {
+    if (!commandOptions.skipLogin) {
+      console.log('');
+      console.log(
+        chalk.dim(
+          `Opening ${target} with managed profile ${launchOptions.manualLoginProfileDir} (${launchOptions.chromeProfile}).`,
+        ),
+      );
+      try {
+        const client = await BrowserAutomationClient.fromConfig(userConfig, {
+          target: target === 'grok' ? 'grok' : 'chatgpt',
+        });
+        await client.login({
+          target,
+          ...launchOptions,
+          exportCookies: Boolean(commandOptions.exportCookies),
+          managedProfileSeedPolicy,
+        });
+        if (!commandOptions.skipVerify) {
+          await waitForSetupLoginConfirmation(target);
+        }
+      } catch (error) {
+        loginReport.status = 'failed';
+        loginReport.error = error instanceof Error ? error.message : String(error);
+        setupFailed = true;
+      }
+    } else {
+      console.log(chalk.dim(`Skipping login launch; reusing managed profile ${launchOptions.manualLoginProfileDir}.`));
+    }
+
+    if (commandOptions.skipVerify || setupFailed) {
+      if (!commandOptions.skipVerify && setupFailed) {
+        verificationReport.status = 'skipped';
+      }
+      return;
+    }
+
+    const verifyModel = resolveSetupVerificationModel({
+      target,
+      resolvedModel: userConfig.model,
+      modelSource: program.getOptionValueSource?.('model') ?? null,
+    });
+    const verifyPrompt =
+      typeof commandOptions.verifyPrompt === 'string' && commandOptions.verifyPrompt.trim().length > 0
+        ? commandOptions.verifyPrompt.trim()
+        : defaultSetupVerificationPrompt(target);
+    verificationReport.model = verifyModel;
+    verificationReport.prompt = verifyPrompt;
+    const browserConfig = await buildBrowserConfig({
+      ...cliOptions,
+      auracallProfileName: userConfig.auracallProfile ?? 'default',
+      managedProfileRoot: userConfig.browser.managedProfileRoot ?? null,
+      model: verifyModel,
+      browserTarget: target,
+      browserManualLogin: true,
+      browserManualLoginProfileDir: launchOptions.manualLoginProfileDir,
+      browserChromeProfile: launchOptions.chromeProfile,
+      browserChromePath: launchOptions.chromePath,
+      browserCookiePath: launchOptions.cookiePath,
+      browserBootstrapCookiePath: launchOptions.bootstrapCookiePath,
+      browserDisplay: commandOptions.browserDisplay ?? userConfig.browser?.display,
+      browserWslChrome: commandOptions.browserWslChrome ?? userConfig.browser?.wslChromePreference,
+      chatgptUrl: launchOptions.chatgptUrl,
+      geminiUrl: launchOptions.geminiUrl,
+      grokUrl: launchOptions.grokUrl,
+      browserKeepBrowser: cliOptions.browserKeepBrowser ?? userConfig.browser.keepBrowser,
+      verbose: Boolean(cliOptions.verbose),
+    });
+
+    await sessionStore.ensureStorage();
+    const verificationNotifications: NotificationSettings = { enabled: false, sound: false };
+    const sessionMeta = await sessionStore.createSession(
+      {
+        prompt: verifyPrompt,
+        model: verifyModel,
+        mode: 'browser',
+        browserConfig,
+        file: [],
+        verbose: Boolean(cliOptions.verbose),
+        browserAttachments: 'auto',
+        browserInlineFiles: false,
+        browserBundleFiles: false,
+      },
+      process.cwd(),
+      verificationNotifications,
+    );
+    verificationReport.sessionId = sessionMeta.id;
+
+    console.log('');
+    console.log(
+      chalk.dim(
+        `Running verification with ${verifyModel} against the managed ${target} profile. Session: ${sessionMeta.id}`,
+      ),
+    );
+    try {
+      await runInteractiveSession(
+        sessionMeta,
+        {
+          prompt: verifyPrompt,
+          model: verifyModel,
+          effectiveModelId: verifyModel,
+          file: [],
+          verbose: Boolean(cliOptions.verbose),
+          browserAttachments: 'auto',
+          browserInlineFiles: false,
+          browserBundleFiles: false,
+        },
+        'browser',
+        browserConfig,
+        false,
+        verificationNotifications,
+        userConfig,
+      );
+    } catch (error) {
+      verificationReport.status = 'failed';
+      verificationReport.error = error instanceof Error ? error.message : String(error);
+      setupFailed = true;
+    }
+  };
+
+  if (jsonMode) {
+    await withStdoutRedirectedToStderr(runSetupFlow);
+  } else {
+    await runSetupFlow();
+  }
+
+  try {
+    const finalLocalReport = await inspectBrowserDoctorState(userConfig, {
+      target,
+      pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+    });
+    const finalIdentityStatus = await inspectBrowserDoctorIdentity(userConfig, {
+      target,
+      localReport: finalLocalReport,
+    });
+    finalDoctorContract = createAuracallBrowserDoctorContract({
+      target,
+      localReport: finalLocalReport,
+      identityStatus: finalIdentityStatus,
+    });
+
+    if (!jsonMode) {
+      console.log('');
+      printLocalBrowserDoctorReport(finalLocalReport, {
+        title: commandOptions.skipVerify
+          ? `Managed profile state after setup for ${target}:`
+          : `Managed profile state after verification for ${target}:`,
+        identityStatus: finalIdentityStatus,
+      });
+      if (commandOptions.skipVerify) {
+        console.log(chalk.dim('Skipping live verification (--skip-verify).'));
+      }
+    }
+  } catch (error) {
+    finalDoctorError = error instanceof Error ? error.message : String(error);
+    setupFailed = true;
+  }
+
+  if (jsonMode) {
+    const contract = createAuracallBrowserSetupContract({
+      target,
+      initialDoctor: initialDoctorContract,
+      finalDoctor: finalDoctorContract,
+      finalDoctorError,
+      login: loginReport,
+      verification: verificationReport,
+    });
+    console.log(JSON.stringify(contract, null, 2));
+  }
+
+  if (setupFailed) {
+    process.exitCode = 1;
   }
 }
 
@@ -2063,6 +2766,221 @@ function applyBrowserLaunchUrl({
 }
 
 program
+  .command('wizard')
+  .description('Guided first-run browser onboarding for ChatGPT, Gemini, or Grok.')
+  .option('--chatgpt', 'Preselect ChatGPT in the wizard.')
+  .option('--gemini', 'Preselect Gemini in the wizard.')
+  .option('--grok', 'Preselect Grok in the wizard.')
+  .option('--target <chatgpt|gemini|grok>', 'Preselect which site to bootstrap.')
+  .option('--profile-name <name>', 'Preselect the Aura-Call profile name to create or update.')
+  .action(async (commandOptions) => {
+    if (!process.stdin.isTTY || !process.stdout.isTTY) {
+      throw new Error('The onboarding wizard requires an interactive terminal. Use "auracall setup" with flags instead.');
+    }
+
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const discoveredChoices = discoverBrowserWizardChoices();
+    if (discoveredChoices.length === 0) {
+      throw new Error(
+        'No supported Chrome/Chromium profile was detected. Configure browser.chromePath/browser.chromeCookiePath and rerun "auracall setup".',
+      );
+    }
+
+    const defaultTarget = resolveBrowserSetupTarget({
+      explicitTarget: commandOptions.target,
+      aliasChatgpt: Boolean(commandOptions.chatgpt),
+      aliasGemini: Boolean(commandOptions.gemini),
+      aliasGrok: Boolean(commandOptions.grok),
+      fallbackTarget: userConfig.browser?.target ?? 'chatgpt',
+    });
+    const defaultChoiceIndex = resolveDefaultBrowserWizardChoiceIndex(discoveredChoices, userConfig);
+    const wizardChoiceOptions = discoveredChoices.map((choice) => ({
+      label: formatBrowserWizardChoiceLabel(choice),
+      choice,
+    }));
+    const initialProfileName =
+      typeof commandOptions.profileName === 'string' && commandOptions.profileName.trim().length > 0
+        ? commandOptions.profileName.trim()
+        : typeof cliOptions.profile === 'string' && cliOptions.profile.trim().length > 0
+          ? cliOptions.profile.trim()
+          : suggestBrowserWizardProfileName(discoveredChoices[defaultChoiceIndex] ?? discoveredChoices[0]);
+
+    const { default: inquirer } = await import('inquirer');
+    const answers = await inquirer.prompt<{
+      target: 'chatgpt' | 'gemini' | 'grok';
+      choiceKey: string;
+      profileName: string;
+      setAsDefault: boolean;
+      verifyNow: boolean;
+      keepBrowser: boolean;
+      confirmWrite: boolean;
+    }>([
+      {
+        type: 'list',
+        name: 'target',
+        message: 'Which browser service do you want to set up?',
+        default: defaultTarget,
+        choices: [
+          { name: 'ChatGPT', value: 'chatgpt' },
+          { name: 'Gemini', value: 'gemini' },
+          { name: 'Grok', value: 'grok' },
+        ],
+      },
+      {
+        type: 'list',
+        name: 'choiceKey',
+        message: 'Which browser/profile source should Aura-Call use?',
+        default: wizardChoiceOptions[defaultChoiceIndex]?.label ?? wizardChoiceOptions[0]?.label,
+        choices: wizardChoiceOptions.map(({ label }) => ({
+          name: label,
+          value: label,
+        })),
+      },
+      {
+        type: 'input',
+        name: 'profileName',
+        message: 'What Aura-Call profile name should this setup use?',
+        default: (promptAnswers) => {
+          if (initialProfileName) {
+            return initialProfileName;
+          }
+          const selectedChoice =
+            wizardChoiceOptions.find((option) => option.label === promptAnswers.choiceKey)?.choice ??
+            wizardChoiceOptions[defaultChoiceIndex]?.choice ??
+            discoveredChoices[0];
+          return suggestBrowserWizardProfileName(selectedChoice);
+        },
+        validate: (value) => validateBrowserWizardProfileName(value) ?? true,
+      },
+      {
+        type: 'confirm',
+        name: 'setAsDefault',
+        message: 'Make this the default Aura-Call profile?',
+        default: (() => {
+          const currentProfile = userConfig.auracallProfile?.trim();
+          if (!currentProfile) {
+            return true;
+          }
+          return currentProfile === initialProfileName;
+        })(),
+      },
+      {
+        type: 'confirm',
+        name: 'verifyNow',
+        message: 'Run a live verification prompt after login?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'keepBrowser',
+        message: 'Keep the browser open after setup?',
+        default: true,
+      },
+      {
+        type: 'confirm',
+        name: 'confirmWrite',
+        message: (promptAnswers) => {
+          const selectedChoice =
+            wizardChoiceOptions.find((option) => option.label === promptAnswers.choiceKey)?.choice ??
+            wizardChoiceOptions[defaultChoiceIndex]?.choice ??
+            discoveredChoices[0];
+          const confirmedProfileName = promptAnswers.profileName?.trim() || initialProfileName || 'default';
+          const action = promptAnswers.setAsDefault ? 'create/update and activate' : 'create/update';
+          return [
+            `${action} profile "${confirmedProfileName}" in ${configPath()}?`,
+            `target=${promptAnswers.target}`,
+            `browser=${selectedChoice.runtime}/${selectedChoice.family ?? 'browser'}`,
+            `verify=${promptAnswers.verifyNow ? 'yes' : 'no'}`,
+            `keepBrowser=${promptAnswers.keepBrowser ? 'yes' : 'no'}`,
+          ].join('\n');
+        },
+        default: true,
+      },
+    ]);
+
+    if (!answers.confirmWrite) {
+      console.log(chalk.yellow('Cancelled without changing your Aura-Call config.'));
+      return;
+    }
+
+    const selectedChoice =
+      wizardChoiceOptions.find((option) => option.label === answers.choiceKey)?.choice ?? discoveredChoices[0];
+    const profileName = answers.profileName.trim();
+    const baseConfig = await loadWritableUserConfigForWizard();
+    const existingProfile = baseConfig.profiles?.[profileName];
+    const mergedConfig = materializeConfigV2(
+      mergeWizardConfig(
+        normalizeConfigV1toV2(baseConfig),
+        buildBrowserWizardConfigPatch({
+          target: answers.target,
+          profileName,
+          setAsDefault: answers.setAsDefault,
+          keepBrowser: answers.keepBrowser,
+          choice: selectedChoice,
+        }),
+      ),
+    );
+    const writtenPath = await writeWizardUserConfig(mergedConfig);
+
+    console.log('');
+    console.log(
+      chalk.dim(
+        `${existingProfile ? 'Updated' : 'Created'} Aura-Call profile "${profileName}" in ${writtenPath}.`,
+      ),
+    );
+
+    await runBrowserSetupCommand({
+      ...commandOptions,
+      target: answers.target,
+      profile: profileName,
+      auracallProfile: profileName,
+      browserKeepBrowser: answers.keepBrowser,
+      skipVerify: !answers.verifyNow,
+      pruneBrowserState: true,
+    });
+  });
+
+program
+  .command('setup')
+  .description('Bootstrap a managed browser profile for ChatGPT, Gemini, or Grok, then verify it with a real browser run.')
+  .option('--chatgpt', 'Alias for --target chatgpt.')
+  .option('--gemini', 'Alias for --target gemini.')
+  .option('--grok', 'Alias for --target grok.')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which site to bootstrap and verify.')
+  .option('--chatgpt-url <url>', 'Override the ChatGPT URL for setup/login.')
+  .option('--gemini-url <url>', 'Override the Gemini URL for setup/login.')
+  .option('--grok-url <url>', 'Override the Grok URL for setup/login.')
+  .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
+  .option('--skip-login', 'Skip opening the login browser and only run the verification step.')
+  .option('--skip-verify', 'Stop after local inspection/login; do not send a live verification prompt.')
+  .option('--verify-prompt <text>', 'Prompt to use for the verification browser run.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--export-cookies', 'Export Gemini cookies to ~/.auracall/cookies.json while you sign in.')
+  .option('--force-reseed-managed-profile', 'Rebuild the managed Aura-Call browser profile from the source Chrome profile before login.')
+  .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
+  .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
+  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(
+    new Option(
+      '--browser-bootstrap-cookie-path <path>',
+      'Source cookie DB path to seed the managed Aura-Call browser profile before login/setup.',
+    ),
+  )
+  .addOption(new Option('--browser-display <value>', 'Override DISPLAY when launching Chrome on Linux.'))
+  .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Managed profile directory override.'))
+  .addOption(
+    new Option(
+      '--browser-wsl-chrome <auto|wsl|windows>',
+      'On WSL, prefer WSL-native Chrome or Windows-hosted Chrome (default: auto).',
+    )
+      .choices(['auto', 'wsl', 'windows']),
+  )
+  .action(async (commandOptions) => {
+    await runBrowserSetupCommand(commandOptions);
+  });
+
+program
   .command('login')
   .description('Launch the configured browser profile for ChatGPT, Gemini, or Grok sign-in.')
   .option('--chatgpt', 'Alias for --target chatgpt.')
@@ -2072,10 +2990,17 @@ program
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
   .option('--gemini-url <url>', 'Override the Gemini URL for login.')
   .option('--grok-url <url>', 'Override the Grok URL for login.')
-  .option('--export-cookies', 'Export Gemini cookies to ~/.oracle/cookies.json while you sign in.')
+  .option('--export-cookies', 'Export Gemini cookies to ~/.auracall/cookies.json while you sign in.')
+  .option('--force-reseed-managed-profile', 'Rebuild the managed Aura-Call browser profile from the source Chrome profile before opening login.')
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
   .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(
+    new Option(
+      '--browser-bootstrap-cookie-path <path>',
+      'Source cookie DB path to seed the managed Aura-Call browser profile before opening login.',
+    ),
+  )
   .addOption(new Option('--browser-display <value>', 'Override DISPLAY when launching Chrome on Linux.'))
   .addOption(new Option('--browser-manual-login-profile-dir <path>', 'Manual-login profile directory override.'))
   .addOption(
@@ -2088,66 +3013,42 @@ program
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
-    const explicitTarget = commandOptions.target;
-    const aliasTarget = commandOptions.grok ? 'grok' : commandOptions.gemini ? 'gemini' : commandOptions.chatgpt ? 'chatgpt' : undefined;
-    if (explicitTarget && aliasTarget && explicitTarget !== aliasTarget) {
-      throw new Error('Do not combine --target with --chatgpt/--gemini/--grok.');
-    }
-    const target = (explicitTarget ?? aliasTarget ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
-    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
-      throw new Error(`Invalid login target "${target}". Use "chatgpt", "gemini", or "grok".`);
-    }
-
-    const chromePath =
-      commandOptions.browserChromePath ?? userConfig.browser?.chromePath ?? undefined;
-    if (!chromePath) {
-      throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');
-    }
-    const manualLoginDir =
-      commandOptions.browserManualLoginProfileDir ??
-      userConfig.browser?.manualLoginProfileDir ??
-      path.join(os.homedir(), '.oracle', 'browser-profile');
-    const chromeProfile =
-      commandOptions.browserChromeProfile ?? userConfig.browser?.chromeProfile ?? 'Default';
-    const cookiePath =
-      commandOptions.browserCookiePath ?? userConfig.browser?.chromeCookiePath ?? undefined;
+    const target = resolveBrowserSetupTarget({
+      explicitTarget: commandOptions.target,
+      aliasChatgpt: Boolean(commandOptions.chatgpt),
+      aliasGemini: Boolean(commandOptions.gemini),
+      aliasGrok: Boolean(commandOptions.grok),
+      fallbackTarget: userConfig.browser?.target ?? 'chatgpt',
+    });
+    const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
 
     const client = await BrowserAutomationClient.fromConfig(userConfig, {
       target: target === 'grok' ? 'grok' : 'chatgpt',
     });
     await client.login({
       target,
-      chromePath,
-      chromeProfile,
-      manualLoginProfileDir: manualLoginDir,
-      cookiePath,
-      chatgptUrl:
-        commandOptions.chatgptUrl ??
-        userConfig.browser?.chatgptUrl ??
-        userConfig.browser?.url ??
-        CHATGPT_URL,
-      geminiUrl: commandOptions.geminiUrl ?? userConfig.browser?.geminiUrl ?? 'https://gemini.google.com/app',
-      grokUrl: commandOptions.grokUrl ?? userConfig.browser?.grokUrl ?? GROK_URL,
+      ...launchOptions,
       exportCookies: Boolean(commandOptions.exportCookies),
+      managedProfileSeedPolicy: commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer',
     });
   });
 
 const profileCommand = program
   .command('profile')
-  .description('Manage oracle profiles.');
+  .description('Manage Aura-Call profiles.');
 
 const configCommand = program
   .command('config')
-  .description('Manage oracle config files.');
+  .description('Manage Aura-Call config files.');
 
 configCommand
   .command('migrate')
   .description('Write a v2-style config layout (legacy keys remain unless --strip-legacy).')
-  .option('--path <path>', 'Input config path (defaults to ~/.oracle/config.json).')
+  .option('--path <path>', 'Input config path (defaults to ~/.auracall/config.json).')
   .option('--output <path>', 'Write migrated config to a custom path.')
   .option('--in-place', 'Overwrite the input config file in place.', false)
   .option('--dry-run', 'Print the migrated config instead of writing it.', false)
-  .option('--strip-legacy', 'Drop legacy browser/oracleProfiles keys from output.', false)
+  .option('--strip-legacy', 'Drop legacy browser/auracallProfiles keys from output.', false)
   .option('--force', 'Overwrite an existing output file.', false)
   .action(async (commandOptions, command) => {
     const cmd = command?.opts ? command : (commandOptions as unknown as Command);
@@ -2195,7 +3096,7 @@ configCommand
 
 profileCommand
   .command('scaffold')
-  .description('Create a default oracleProfile config file from the current browser profile.')
+  .description('Create a default Aura-Call profile config file from the current browser profile.')
   .option('--force', 'Overwrite an existing config file.', false)
   .action(async (commandOptions) => {
     const result = await scaffoldDefaultConfigFile({ force: Boolean(commandOptions.force) });
@@ -2266,7 +3167,7 @@ const statusCommand = program
       return;
     }
     if (sessionId === 'clear' || sessionId === 'clean') {
-      console.error('Session cleanup now uses --clear. Run "oracle status --clear --hours <n>" instead.');
+      console.error('Session cleanup now uses --clear. Run "auracall status --clear --hours <n>" instead.');
       process.exitCode = 1;
       return;
     }
@@ -2391,7 +3292,7 @@ function getBrowserConfigFromMetadata(metadata: SessionMetadata): BrowserSession
 }
 
 async function runRootCommand(options: CliOptions): Promise<void> {
-  if (process.env.ORACLE_FORCE_TUI === '1') {
+  if (process.env.AURACALL_FORCE_TUI === '1') {
     await sessionStore.ensureStorage();
     await launchTui({ version: VERSION, printIntro: false });
     return;
@@ -2448,7 +3349,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     if (optionUsesDefault('retainHours') && typeof userConfig.sessionRetentionHours === 'number') {
       options.retainHours = userConfig.sessionRetentionHours;
     }
-    const envRetention = process.env.ORACLE_RETAIN_HOURS;
+    const envRetention = process.env.AURACALL_RETAIN_HOURS;
     if (optionUsesDefault('retainHours') && envRetention) {
       const parsed = Number.parseFloat(envRetention);
       if (!Number.isNaN(parsed)) {
@@ -2485,15 +3386,15 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   }
 
   const remoteHost =
-    options.remoteHost ?? userConfig.remoteHost ?? userConfig.remote?.host ?? process.env.ORACLE_REMOTE_HOST;
+    options.remoteHost ?? userConfig.remoteHost ?? userConfig.remote?.host ?? process.env.AURACALL_REMOTE_HOST;
   const remoteToken =
-    options.remoteToken ?? userConfig.remoteToken ?? userConfig.remote?.token ?? process.env.ORACLE_REMOTE_TOKEN;
+    options.remoteToken ?? userConfig.remoteToken ?? userConfig.remote?.token ?? process.env.AURACALL_REMOTE_TOKEN;
   if (remoteHost) {
     console.log(chalk.dim(`Remote browser host detected: ${remoteHost}`));
   }
 
   if (userCliArgs.length === 0) {
-    console.log(chalk.yellow('No prompt or subcommand supplied. Run `oracle --help` or `oracle tui` for the TUI.'));
+    console.log(chalk.yellow('No prompt or subcommand supplied. Run `auracall --help` or `auracall tui` for the TUI.'));
     program.outputHelp();
     return;
   }
@@ -2757,19 +3658,24 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     sessionMode === 'browser'
       ? await buildBrowserConfig({
           ...options,
+          auracallProfileName: userConfig.auracallProfile ?? 'default',
+          managedProfileRoot: config.browser.managedProfileRoot ?? null,
           model: resolvedModel,
           browserModelLabel: browserModelLabelOverride,
-          browserManualLogin: config.browser.manualLogin,
+          browserManualLogin: config.browser.manualLogin ?? true,
           browserManualLoginProfileDir: config.browser.manualLoginProfileDir,
           browserChromeProfile: config.browser.chromeProfile,
           browserChromePath: config.browser.chromePath,
           browserCookiePath: config.browser.chromeCookiePath,
+          browserBootstrapCookiePath: config.browser.bootstrapCookiePath,
+          browserDisplay: config.browser.display,
           browserHeadless: config.browser.headless,
           browserHideWindow: config.browser.hideWindow,
           browserKeepBrowser: config.browser.keepBrowser,
           browserTimeout: config.browser.timeoutMs ? String(config.browser.timeoutMs) : undefined,
           browserInputTimeout: config.browser.inputTimeoutMs ? String(config.browser.inputTimeoutMs) : undefined,
           browserCookieWait: config.browser.cookieSyncWaitMs ? String(config.browser.cookieSyncWaitMs) : undefined,
+          browserWslChrome: options.browserWslChrome ?? config.browser.wslChromePreference,
         })
       : undefined;
   applyBrowserLaunchUrl({ browserConfig, userConfig, model: resolvedModel });
@@ -2856,7 +3762,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     sessionId: sessionMeta.id,
     effectiveModelId,
   };
-  const disableDetachEnv = process.env.ORACLE_NO_DETACH === '1';
+  const disableDetachEnv = process.env.AURACALL_NO_DETACH === '1';
   const detachAllowed = remoteExecutionActive
     ? false
     : shouldDetachSession({
@@ -2879,7 +3785,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       process.exitCode = 1;
       return;
     }
-    console.log(chalk.blue(`Session running in background. Reattach via: oracle session ${sessionMeta.id}`));
+    console.log(chalk.blue(`Session running in background. Reattach via: auracall session ${sessionMeta.id}`));
     console.log(
       chalk.dim('Pro runs can take up to 60 minutes (usually 10-15). Add --wait to stay attached.'),
     );
@@ -2901,7 +3807,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
     return;
   }
   if (detached) {
-    console.log(chalk.blue(`Reattach via: oracle session ${sessionMeta.id}`));
+    console.log(chalk.blue(`Reattach via: auracall session ${sessionMeta.id}`));
     await attachSession(sessionMeta.id, { suppressMetadata: true });
   }
 }
@@ -2920,10 +3826,10 @@ async function runInteractiveSession(
   const { logLine, writeChunk, stream } = sessionStore.createLogWriter(sessionMeta.id);
   let headerAugmented = false;
   const combinedLog = (message = ''): void => {
-    if (!headerAugmented && message.startsWith('oracle (')) {
+    if (!headerAugmented && message.startsWith('auracall (')) {
       headerAugmented = true;
       if (showReattachHint) {
-        console.log(`${message}\n${chalk.blue(`Reattach via: oracle session ${sessionMeta.id}`)}`);
+        console.log(`${message}\n${chalk.blue(`Reattach via: auracall session ${sessionMeta.id}`)}`);
       } else {
         console.log(message);
       }
@@ -3036,6 +3942,7 @@ function printDebugHelp(cliName: string): void {
     ['--browser-chrome-profile <name>', 'Reuse cookies from a specific Chrome profile.'],
     ['--browser-chrome-path <path>', 'Point to a custom Chrome/Chromium binary.'],
     ['--browser-cookie-path <path>', 'Use a specific Chrome/Chromium cookie store file.'],
+    ['--browser-bootstrap-cookie-path <path>', 'Seed the managed Aura-Call profile from a different cookie store without changing the runtime browser.'],
     ['--browser-url <url>', 'Alias for --chatgpt-url.'],
     ['--browser-timeout <ms|s|m>', 'Cap total wait time for the assistant response.'],
     ['--browser-input-timeout <ms|s|m>', 'Cap how long we wait for the composer textarea.'],

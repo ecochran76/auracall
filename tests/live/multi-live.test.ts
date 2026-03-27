@@ -8,7 +8,7 @@ import { runMultiModelApiSession } from '../../src/oracle/multiModelRunner.js';
 import { sessionStore } from '../../src/sessionStore.js';
 import type { ModelName } from '../../src/oracle.js';
 
-const live = process.env.ORACLE_LIVE_TEST === '1';
+const live = process.env.AURACALL_LIVE_TEST === '1';
 const baseUrl = process.env.OPENAI_BASE_URL ?? '';
 const isOpenRouterBase = baseUrl.includes('openrouter');
 const hasKeys =
@@ -31,7 +31,7 @@ const isAccessOrAuthError = (reason: unknown): boolean => {
 const isHtmlError = (reason: unknown): boolean => /<!doctype|<html/i.test(String(reason ?? ''));
 const execFileAsync = promisify(execFile);
 const TSX_BIN = path.join(process.cwd(), 'node_modules', 'tsx', 'dist', 'cli.mjs');
-const CLI_ENTRY = path.join(process.cwd(), 'bin', 'oracle-cli.ts');
+const CLI_ENTRY = path.join(process.cwd(), 'bin', 'auracall.ts');
 
 (live && !isOpenRouterBase ? describe : describe.skip)('Multi-model live smoke (GPT + Gemini + Claude)', () => {
   const originalBaseUrl = process.env.OPENAI_BASE_URL;
@@ -118,13 +118,13 @@ const CLI_ENTRY = path.join(process.cwd(), 'bin', 'oracle-cli.ts');
   it(
     'accepts shorthand models end-to-end via CLI',
     async () => {
-      const oracleHome = await mkdtemp(path.join(os.tmpdir(), 'oracle-live-multi-shorthand-'));
+      const auracallHome = await mkdtemp(path.join(os.tmpdir(), 'oracle-live-multi-shorthand-'));
       const env = {
         ...process.env,
         // biome-ignore lint/style/useNamingConvention: env var name
-        ORACLE_HOME_DIR: oracleHome,
+        AURACALL_HOME_DIR: auracallHome,
         // biome-ignore lint/style/useNamingConvention: env var name
-        ORACLE_NO_DETACH: '1',
+        AURACALL_NO_DETACH: '1',
       };
 
       try {
@@ -156,7 +156,7 @@ const CLI_ENTRY = path.join(process.cwd(), 'bin', 'oracle-cli.ts');
         throw _error;
       }
 
-      const sessionsDir = path.join(oracleHome, 'sessions');
+      const sessionsDir = path.join(auracallHome, 'sessions');
       const sessionIds = await readdir(sessionsDir);
       expect(sessionIds.length).toBe(1);
       const sessionDir = path.join(sessionsDir, sessionIds[0]);
@@ -187,7 +187,7 @@ const CLI_ENTRY = path.join(process.cwd(), 'bin', 'oracle-cli.ts');
         throw error;
       }
 
-      await rm(oracleHome, { recursive: true, force: true });
+      await rm(auracallHome, { recursive: true, force: true });
     },
     600_000,
   );

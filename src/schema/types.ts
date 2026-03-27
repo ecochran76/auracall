@@ -135,10 +135,11 @@ export const BrowserConfigSchema = z.object({
   chromeProfile: z.string().optional(),
   chromePath: z.string().optional(),
   chromeCookiePath: z.string().optional(),
+  bootstrapCookiePath: z.string().optional(),
   display: z.string().optional(),
   managedProfileRoot: z.string().optional(),
   profileConflictAction: z.enum(['fail', 'terminate-existing', 'attach-existing']).optional(),
-  blockingProfileAction: z.enum(['fail', 'restart', 'restart-managed', 'restart-oracle']).optional(),
+  blockingProfileAction: z.enum(['fail', 'restart', 'restart-managed', 'restart-auracall']).optional(),
   headless: z.boolean().optional(),
   hideWindow: z.boolean().optional(),
   keepBrowser: z.boolean().optional(),
@@ -146,9 +147,13 @@ export const BrowserConfigSchema = z.object({
   interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
+  serviceTabLimit: z.number().int().positive().optional(),
+  blankTabLimit: z.number().int().min(0).optional(),
+  collapseDisposableWindows: z.boolean().optional(),
   
   // Connection
   debugPort: z.number().optional(),
+  debugPortStrategy: z.enum(['fixed', 'auto']).optional(),
   debugPortRange: z.tuple([z.number(), z.number()]).optional(),
   remoteChrome: z.object({ host: z.string(), port: z.number() }).optional().or(z.string().optional()), // CLI passes string
   
@@ -180,13 +185,16 @@ export const BrowserConfigSchema = z.object({
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileBrowserSchema = z.object({
   chromePath: z.string().optional(),
+  chromeProfile: z.string().optional(),
   profilePath: z.string().optional(),
   profileName: z.string().optional(),
+  chromeCookiePath: z.string().optional(),
   cookiePath: z.string().optional(),
+  bootstrapCookiePath: z.string().optional(),
   display: z.string().optional(),
   managedProfileRoot: z.string().optional(),
   profileConflictAction: z.enum(['fail', 'terminate-existing', 'attach-existing']).optional(),
-  blockingProfileAction: z.enum(['fail', 'restart', 'restart-managed', 'restart-oracle']).optional(),
+  blockingProfileAction: z.enum(['fail', 'restart', 'restart-managed', 'restart-auracall']).optional(),
   manualLogin: z.boolean().optional(),
   interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
@@ -194,6 +202,7 @@ export const OracleProfileBrowserSchema = z.object({
   hideWindow: z.boolean().optional(),
   keepBrowser: z.boolean().optional(),
   debugPort: z.number().optional(),
+  debugPortStrategy: z.enum(['fixed', 'auto']).optional(),
   debugPortRange: z.tuple([z.number(), z.number()]).optional(),
   remoteChrome: z.object({ host: z.string(), port: z.number() }).optional().or(z.string().optional()),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
@@ -208,6 +217,9 @@ export const OracleProfileBrowserSchema = z.object({
   noCookieSync: z.boolean().optional(),
   cookieSyncWaitMs: DurationMs.optional(),
   wslChromePreference: z.enum(['auto', 'wsl', 'windows']).optional(),
+  serviceTabLimit: z.number().int().positive().optional(),
+  blankTabLimit: z.number().int().min(0).optional(),
+  collapseDisposableWindows: z.boolean().optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -316,8 +328,8 @@ export const ConfigSchema = z.object({
   heartbeatSeconds: z.number().optional(),
   
   // Profiles + services
-  oracleProfile: z.string().optional(),
-  oracleProfiles: z.record(z.string(), OracleProfileSchema).optional(),
+  auracallProfile: z.string().optional(),
+  auracallProfiles: z.record(z.string(), OracleProfileSchema).optional(),
   services: OracleServicesSchema.optional(),
   dev: OracleDevConfigSchema.optional(),
 

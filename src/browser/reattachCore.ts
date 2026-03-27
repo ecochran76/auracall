@@ -1,9 +1,11 @@
-import CDP from 'chrome-remote-interface';
-import os from 'node:os';
-import path from 'node:path';
-import { mkdtemp, mkdir, rm } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfig } from './types.js';
 import type { BrowserLogger, ChromeClient } from './types.js';
+import { resolveManagedProfileDir } from './profileStore.js';
+import {
+  connectToChromeTarget as connectToChromeTargetCore,
+  listChromeTargets as listChromeTargetsCore,
+} from '../../packages/browser-service/src/chromeLifecycle.js';
 
 export type ReattachTargetInfo = {
   targetId?: string;
@@ -154,10 +156,20 @@ export async function resumeBrowserSessionCore(
     const listTargets =
       deps.listTargets ??
       (async () => {
-        const targets = await CDP.List({ host, port: runtime.chromePort as number });
+        const targets = await listChromeTargetsCore(runtime.chromePort as number, host);
         return targets as unknown as ReattachTargetInfo[];
       });
-    const connect = deps.connect ?? ((options?: unknown) => CDP(options as CDP.Options));
+    const connect = deps.connect ?? ((options?: unknown) => {
+      const resolved = options as { host?: string; port?: number; target?: string };
+      if (!resolved.port) {
+        throw new Error('Missing DevTools port for reattach.');
+      }
+      return connectToChromeTargetCore({
+        port: resolved.port,
+        host: resolved.host,
+        target: resolved.target,
+      });
+    });
     const targetList = (await listTargets()) as ReattachTargetInfo[];
     const target = helpers.pickTarget(targetList, runtime);
     const client: ChromeClient = (await connect({
@@ -254,13 +266,13 @@ async function resumeBrowserSessionViaNewChrome(
     throw new Error('Reattach runtime dependencies missing; cannot launch new Chrome.');
   }
   const resolved = runtimeDeps.resolveBrowserConfig(config ?? {});
-  const manualLogin = Boolean(resolved.manualLogin);
-  const userDataDir = manualLogin
-    ? resolved.manualLoginProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile')
-    : await mkdtemp(path.join(os.tmpdir(), 'browser-reattach-'));
-  if (manualLogin) {
-    await mkdir(userDataDir, { recursive: true });
-  }
+  const manualLogin = true;
+  const userDataDir = resolveManagedProfileDir({
+    configuredDir: resolved.manualLoginProfileDir ?? null,
+    managedProfileRoot: resolved.managedProfileRoot ?? null,
+    target: resolved.target ?? 'chatgpt',
+  });
+  await mkdir(userDataDir, { recursive: true });
   const chrome = await runtimeDeps.launchChrome(resolved, userDataDir, logger);
   const chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
   const client = await runtimeDeps.connectToChrome(chrome.port, logger, chromeHost);
@@ -276,22 +288,7 @@ async function resumeBrowserSessionViaNewChrome(
     await runtimeDeps.hideChromeWindow(chrome, logger);
   }
 
-  let appliedCookies = 0;
-  if (!manualLogin && resolved.cookieSync) {
-    appliedCookies = await runtimeDeps.syncCookies(
-      Network,
-      resolved.url ?? null,
-      resolved.chromeProfile ?? null,
-      logger,
-      {
-        allowErrors: resolved.allowCookieErrors,
-        filterNames: resolved.cookieNames ?? undefined,
-        inlineCookies: resolved.inlineCookies ?? undefined,
-        cookiePath: resolved.chromeCookiePath ?? undefined,
-        waitMs: resolved.cookieSyncWaitMs ?? 0,
-      },
-    );
-  }
+  const appliedCookies = 0;
 
   await runtimeDeps.navigateToChatGPT(Page, Runtime, resolved.url ?? 'https://chatgpt.com/', logger);
   await runtimeDeps.ensureNotBlocked(Runtime, resolved.headless, logger);
@@ -356,8 +353,6 @@ async function resumeBrowserSessionViaNewChrome(
       await runtimeDeps.cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(
         () => undefined,
       );
-    } else {
-      await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
     }
   }
 

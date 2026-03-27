@@ -10,7 +10,7 @@ import {
   readProjectCache,
   resolveProviderCacheKey,
 } from '../../providers/cache.js';
-import { getOracleHomeDir } from '../../../oracleHome.js';
+import { getAuracallHomeDir } from '../../../auracallHome.js';
 import { readCacheIndex, type CacheIndexEntry } from './index.js';
 
 export type CacheExportFormat = 'json' | 'md' | 'html' | 'csv' | 'zip';
@@ -234,7 +234,7 @@ async function exportZip(
   context: ProviderCacheContext,
   plan: CacheExportPlan,
 ): Promise<string> {
-  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-cache-export-'));
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cache-export-'));
   const jsonPlan: CacheExportPlan = {
     ...plan,
     format: 'json',
@@ -261,7 +261,7 @@ async function copyEntry(source: string, target: string, kind: CacheIndexEntry['
 }
 
 function resolveCacheBaseDir(context: ProviderCacheContext): string {
-  const cacheRoot = context.cacheRoot ?? path.join(getOracleHomeDir(), 'cache', 'providers');
+  const cacheRoot = context.cacheRoot ?? path.join(getAuracallHomeDir(), 'cache', 'providers');
   const key = resolveProviderCacheKey(context);
   return path.join(cacheRoot, context.provider, key);
 }

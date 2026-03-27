@@ -1,8 +1,7 @@
-import os from 'node:os';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
-import { getOracleHomeDir } from '../../oracleHome.js';
-import { resolveWslHost } from '../chromeLifecycle.js';
+import { getAuracallHomeDir } from '../../auracallHome.js';
+import { resolveManagedProfileDirForUserConfig } from '../profileStore.js';
 import {
   resolveBrowserListTarget as resolveBrowserListTargetCore,
   type BrowserListTarget,
@@ -18,20 +17,22 @@ export async function resolveBrowserListPort(userConfig: ResolvedUserConfig): Pr
 export async function resolveBrowserListTarget(
   userConfig: ResolvedUserConfig,
 ): Promise<BrowserListTarget | undefined> {
-  const envPort = process.env.ORACLE_BROWSER_PORT ?? process.env.ORACLE_BROWSER_DEBUG_PORT ?? null;
+  const envPort = process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT ?? null;
   const configuredPort = userConfig.browser?.debugPort ?? null;
+  const configuredPortStrategy = userConfig.browser?.debugPortStrategy ?? null;
   const profilePath =
+    process.env.AURACALL_BROWSER_PROFILE_DIR ??
     userConfig.browser?.manualLoginProfileDir ??
-    process.env.ORACLE_BROWSER_PROFILE_DIR ??
-    path.join(os.homedir(), '.oracle', 'browser-profile');
+    resolveManagedProfileDirForUserConfig(userConfig, userConfig.browser?.target ?? 'chatgpt');
   const profileName = userConfig.browser?.chromeProfile ?? 'Default';
-  const registryPath = path.join(getOracleHomeDir(), 'browser-state.json');
+  const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
   return resolveBrowserListTargetCore({
     envPort,
     configuredPort,
+    configuredPortStrategy,
     profilePath,
     profileName,
     registryPath,
-    resolveHost: () => resolveWslHost() ?? '127.0.0.1',
+    resolveHost: () => '127.0.0.1',
   });
 }

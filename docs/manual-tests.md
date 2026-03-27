@@ -10,19 +10,24 @@ and run the live API suite before shipping major transport changes.
 - macOS with Chrome installed (default profile signed in to ChatGPT Pro).
 - Node 22+ and `pnpm install` already completed.
 - Headful display access (no `--browser-headless`).
-- When debugging, add `--browser-keep-browser` so Chrome stays open after Oracle exits, then connect with `pnpm exec tsx scripts/browser-tools.ts ...` (screenshot, eval, DOM picker, etc.). The `pick` command is the general-purpose DOM inspector we use for browser automation selectors.
-- Ensure no Chrome instances are force-terminated mid-run; let Oracle clean up once you’re done capturing state.
+- When debugging, add `--browser-keep-browser` so Chrome stays open after Aura-Call exits, then connect with `pnpm exec tsx scripts/browser-tools.ts ...` (screenshot, eval, DOM picker, etc.). The `pick` command is the general-purpose DOM inspector we use for browser automation selectors.
+- Ensure no Chrome instances are force-terminated mid-run; let Aura-Call clean up once you’re done capturing state.
 - Clipboard checks (`browser-tools.ts eval "navigator.clipboard.readText()"`) trigger a permission dialog in Chrome—approve it for debugging, but remember that we can’t rely on readText in unattended runs.
 
 ## Test Cases
 
 ### Grok browser smoke (live)
 
-See the Grok smoke checklist in `docs/dev/smoke-tests.md`. Keep that file updated as the browser automation evolves.
+Run the WSL-primary Grok acceptance checklist in `docs/dev/smoke-tests.md` before calling Grok browser support done. That checklist is the canonical runbook for:
+- project create/list/rename/clone/instructions/files/remove
+- conversation create/list/context/rename/delete
+- markdown capture and cache-freshness verification
+
+Treat Windows Chrome as supplemental/manual-debug coverage for now. It should not block the WSL Grok acceptance bar unless the change is specifically Windows-only.
 
 ### Quick browser port smoke
 
-- `pnpm test:browser` — launches headful Chrome and checks the DevTools endpoint is reachable. Set `ORACLE_BROWSER_PORT` (or `ORACLE_BROWSER_DEBUG_PORT`) to reuse a fixed port when you’ve already opened a firewall rule.
+- `pnpm test:browser` — launches headful Chrome and checks the DevTools endpoint is reachable. Set `AURACALL_BROWSER_PORT` (or `AURACALL_BROWSER_DEBUG_PORT`) to reuse a fixed port when you’ve already opened a firewall rule.
 
 ### Gemini browser mode (Gemini web / cookies)
 
@@ -32,10 +37,10 @@ Prereqs:
 - Chrome profile is signed into `gemini.google.com`.
 
 1. Generate an image:
-   `pnpm run oracle -- --engine browser --model gemini-3-pro --prompt "a cute robot holding a banana" --generate-image /tmp/gemini-gen.jpg --aspect 1:1 --wait --verbose`
+   `pnpm run auracall -- --engine browser --model gemini-3-pro --prompt "a cute robot holding a banana" --generate-image /tmp/gemini-gen.jpg --aspect 1:1 --wait --verbose`
    - Confirm the output file exists and is a real image (`file /tmp/gemini-gen.jpg`).
 2. Edit an image:
-   `pnpm run oracle -- --engine browser --model gemini-3-pro --prompt "add sunglasses" --edit-image /tmp/gemini-gen.jpg --output /tmp/gemini-edit.jpg --wait --verbose`
+   `pnpm run auracall -- --engine browser --model gemini-3-pro --prompt "add sunglasses" --edit-image /tmp/gemini-gen.jpg --output /tmp/gemini-edit.jpg --wait --verbose`
    - Confirm `/tmp/gemini-edit.jpg` exists.
 
 ### Multi-Model CLI fan-out
@@ -43,25 +48,25 @@ Prereqs:
 Run this whenever you touch the session store, CLI session views, or TUI wiring for multi-model runs.
 
 1. Kick off an API multi-run:  
-   `pnpm run oracle -- --models "gpt-5.1-pro,gemini-3-pro" --prompt "Compare the moon & sun."`
+   `pnpm run auracall -- --models "gpt-5.1-pro,gemini-3-pro" --prompt "Compare the moon & sun."`
    - Expect stdout to print sequential sections, one per model (`[gpt-5.1-pro] …` followed by `[gemini-3-pro] …`). No interleaved tokens.
-2. Capture the session ID from the summary line. Run `oracle session --status --model gpt-5.1-pro`.  
+2. Capture the session ID from the summary line. Run `auracall session --status --model gpt-5.1-pro`.  
    - Table should collapse to sessions that include GPT-5.1 Pro and show status icons (✓/⌛/✖) per model.
-3. Inspect detailed logs: `oracle session <id>`
+3. Inspect detailed logs: `auracall session <id>`
    - The metadata header now includes a `Models:` block with one line per model plus token counts.
    - When prompted, pick `View gemini-3-pro log` and confirm only that model’s stream renders. Refresh should keep completed models intact even if others still run.
-4. Model filter path: `oracle session <id> --model gemini-3-pro`  
+4. Model filter path: `auracall session <id> --model gemini-3-pro`  
    - Attach mode should error if that model is missing (double-check by filtering for a bogus model), otherwise it should render the prompt + single-model log only.
 
 ### Write-output export (API)
 
 Run this when touching session serialization, file IO helpers, or CLI flag plumbing.
 
-1. `ORACLE_LIVE_TEST=1 OPENAI_API_KEY=<real key> pnpm vitest run tests/live/write-output-live.test.ts --runInBand`
+1. `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=<real key> pnpm vitest run tests/live/write-output-live.test.ts --runInBand`
    - Expect the test to create a temp `write-output-live.md` file containing `write-output e2e`.
-2. Manual spot-check: `oracle --prompt "answer file smoke" --write-output /tmp/out.md --wait`
+2. Manual spot-check: `auracall --prompt "answer file smoke" --write-output /tmp/out.md --wait`
    - Confirm `/tmp/out.md` exists with the answer text and a trailing newline.
-3. Multi-model spot-check: `oracle --models "gpt-5.1-pro,gemini-3-pro" --prompt "two files" --write-output /tmp/out.md --wait`
+3. Multi-model spot-check: `auracall --models "gpt-5.1-pro,gemini-3-pro" --prompt "two files" --write-output /tmp/out.md --wait`
    - Confirm `/tmp/out.gpt-5.1-pro.md` and `/tmp/out.gemini-3-pro.md` exist with distinct content.
 
 ### Lightweight Browser CLI (manual exploration)
@@ -90,7 +95,7 @@ This mirrors Mario Zechner’s “What if you don’t need MCP?” technique and
 1. **Prompt Submission & Model Switching**
    - With Chrome signed in and cookie sync enabled, run  
      ```bash
-     pnpm run oracle -- --engine browser --model "GPT-5.2" \
+     pnpm run auracall -- --engine browser --model "GPT-5.2" \
        --prompt "Line 1\nLine 2\nLine 3"
      ```
    - Observe logs for:
@@ -102,27 +107,27 @@ This mirrors Mario Zechner’s “What if you don’t need MCP?” technique and
 2. **Markdown Capture**
    - Prompt:
      ```bash
-     pnpm run oracle -- --engine browser --model "GPT-5.2" \
+     pnpm run auracall -- --engine browser --model "GPT-5.2" \
        --prompt "Produce a short bullet list with code fencing."
      ```
    - Expected CLI output:
      - `Answer:` section containing bullet list with Markdown preserved (e.g., `- item`, fenced code).
-     - Session log (`oracle session <id>`) should show the assistant markdown (confirm via `grep -n '```' ~/.oracle/sessions/<id>/output.log`).
+     - Session log (`auracall session <id>`) should show the assistant markdown (confirm via `grep -n '```' ~/.auracall/sessions/<id>/output.log`).
 
 3. **Stop Button Handling**
   - Start a long prompt (`"Write a detailed essay about browsers"`) and once ChatGPT responds, manually click “Stop generating” inside Chrome.
-  - Oracle should detect the assistant message (partial) and still store the markdown.
+  - Aura-Call should detect the assistant message (partial) and still store the markdown.
 
 4. **Override Flag**
   - Run with `--browser-allow-cookie-errors` while intentionally breaking bindings.
   - Confirm log shows `Cookie sync failed (continuing with override)` and the run proceeds headless/logged-out.
-- Remember: the browser composer now pastes only the user prompt (plus any inline file blocks). If you see the default “You are Oracle…” text or other system-prefixed content in the ChatGPT composer, something regressed in `assembleBrowserPrompt` and you should stop and file a bug.
+- Remember: the browser composer now pastes only the user prompt (plus any inline file blocks). If you see the default “You are Aura-Call…” text or other system-prefixed content in the ChatGPT composer, something regressed in `assembleBrowserPrompt` and you should stop and file a bug.
 - Heartbeats: Browser runs do **not** emit `--heartbeat` logs today. Heartbeat settings apply to streaming API runs only; ignore heartbeat toggles when validating browser mode.
 
 ## Post-Run Validation
 
-- `oracle session <id>` should replay the transcript with markdown.
-- `~/.oracle/sessions/<id>/meta.json` must include `browser.config` metadata (model label, cookie settings) and `browser.runtime` (PID/port).
+- `auracall session <id>` should replay the transcript with markdown.
+- `~/.auracall/sessions/<id>/meta.json` must include `browser.config` metadata (model label, cookie settings) and `browser.runtime` (PID/port).
 
 Document results (pass/fail, session IDs) in PR descriptions so reviewers can audit real-world behavior.
 
@@ -134,28 +139,28 @@ Document results (pass/fail, session IDs) in PR descriptions so reviewers can au
 - 2025-11-18 — Browser gpt-5.1-pro (`browser-smoke-pro-three-words`): completed in ~1m33s; response noted “Search tool used.”.
 - 2025-11-18 (rerun) — API gpt-5.1 (`api-smoke-give-two-words`): reconfirmed OK; same answer + cost bracket.
 - 2025-11-18 (rerun) — Browser gpt-5.1-pro (`browser-smoke-pro-three-words`): reconfirmed OK; included heartbeat progress and search tool note.
-- 2025-11-20 — Browser gpt-5.1 via `oracle serve` (remote host on same Mac): fetched https://example.com; title “Example Domain”; first sentence “This domain is for use in documentation examples without needing permission.” (ran via tmux sessions `oracle-serve` and `oracle-client`).
+- 2025-11-20 — Browser gpt-5.1 via `auracall serve` (remote host on same Mac): fetched https://example.com; title “Example Domain”; first sentence “This domain is for use in documentation examples without needing permission.” (ran via tmux sessions `oracle-serve` and `auracallent`).
 
 ## Browser Regression Checklist (manual)
 
 Run these four smoke tests whenever we touch browser automation:
 
 1. **GPT-5.2 simple prompt**  
-   `pnpm run oracle -- --engine browser --model "GPT-5.2" --prompt "Give me two short markdown bullet points about tables"`  
+   `pnpm run auracall -- --engine browser --model "GPT-5.2" --prompt "Give me two short markdown bullet points about tables"`  
    Expect two markdown bullets, no files/search referenced. Note the session ID (e.g., `give-me-two-short-markdown`).
 
 2. **GPT-5.2 simple prompt**  
-   `pnpm run oracle -- --engine browser --model gpt-5.2 --prompt "List two reasons Markdown is handy"`  
+   `pnpm run auracall -- --engine browser --model gpt-5.2 --prompt "List two reasons Markdown is handy"`  
    Confirm the answer arrives (and only once) even if it takes ~2–3 minutes.
 
 3. **GPT-5.2 + attachment**  
    Prepare `/tmp/browser-md.txt` with a short note, then run  
-   `pnpm run oracle -- --engine browser --model "GPT-5.2" --prompt "Summarize the key idea from the attached note" --file /tmp/browser-md.txt`  
+   `pnpm run auracall -- --engine browser --model "GPT-5.2" --prompt "Summarize the key idea from the attached note" --file /tmp/browser-md.txt`  
    Ensure upload logs show “Attachment queued” and the answer references the file contents explicitly.
 
 4. **GPT-5.2 + attachment (verbose)**  
    Prepare `/tmp/browser-report.txt` with faux metrics, then run  
-   `pnpm run oracle -- --engine browser --model gpt-5.2 --prompt "Use the attachment to report current CPU and memory figures" --file /tmp/browser-report.txt --verbose`  
+   `pnpm run auracall -- --engine browser --model gpt-5.2 --prompt "Use the attachment to report current CPU and memory figures" --file /tmp/browser-report.txt --verbose`  
    Verify verbose logs show attachment upload and the final answer matches the file data.
 
 Record session IDs and outcomes in the PR description (pass/fail, notable delays). This ensures reviewers can audit real runs.
@@ -199,7 +204,7 @@ Use this when you need to inspect the live ChatGPT composer (DOM state, markdown
 1. **Launch within tmux**
    ```bash
    tmux new -d -s oracle-browser \\
-     "pnpm run oracle -- --engine browser --browser-keep-browser \\
+     "pnpm run auracall -- --engine browser --browser-keep-browser \\
        --model 'GPT-5.2 Pro' --prompt 'Debug via DevTools.'"
    ```
    Keeping the run in tmux prevents your shell from blocking and ensures Chrome stays open afterward.
@@ -247,7 +252,7 @@ These Vitest cases hit the real OpenAI API to exercise both transports:
 1. Export a real key and explicitly opt in (default runs stay fast):
    ```bash
    export OPENAI_API_KEY=sk-...
-   export ORACLE_LIVE_TEST=1
+   export AURACALL_LIVE_TEST=1
    pnpm vitest run tests/live/openai-live.test.ts
    ```
 2. The first test sends a `gpt-5.1-pro` prompt (API: `gpt-5.2-pro`) and expects the CLI to stay
@@ -259,4 +264,4 @@ These Vitest cases hit the real OpenAI API to exercise both transports:
    smoke strings.
 
 Skip these unless you're intentionally validating the production API; they are
-fully gated behind `ORACLE_LIVE_TEST=1` to avoid accidental CI runs.
+fully gated behind `AURACALL_LIVE_TEST=1` to avoid accidental CI runs.

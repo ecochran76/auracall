@@ -28,7 +28,7 @@ export interface NotificationContent {
   characters?: number;
 }
 
-const ORACLE_EMOJI = '🧿';
+const AURACALL_EMOJI = '🧿';
 
 export function resolveNotificationSettings(
   {
@@ -39,8 +39,8 @@ export function resolveNotificationSettings(
   }: { cliNotify?: boolean; cliNotifySound?: boolean; env: NodeJS.ProcessEnv; config?: ResolvedUserConfig['notify'] },
 ): NotificationSettings {
   const defaultEnabled = !(bool(env.CI) || bool(env.SSH_CONNECTION) || muteByConfig(env, config));
-  const envNotify = parseToggle(env.ORACLE_NOTIFY);
-  const envSound = parseToggle(env.ORACLE_NOTIFY_SOUND);
+  const envNotify = parseToggle(env.AURACALL_NOTIFY);
+  const envSound = parseToggle(env.AURACALL_NOTIFY_SOUND);
 
   const enabled = cliNotify ?? envNotify ?? config?.enabled ?? defaultEnabled;
   const sound = cliNotifySound ?? envSound ?? config?.sound ?? false;
@@ -69,7 +69,7 @@ export async function sendSessionNotification(
     return;
   }
 
-  const title = `Oracle${ORACLE_EMOJI} finished`;
+  const title = `Aura-Call${AURACALL_EMOJI} finished`;
   const message = buildMessage(payload, sanitizePreview(answerPreview));
 
   try {
@@ -348,7 +348,7 @@ function muteByConfig(env: NodeJS.ProcessEnv, config?: ResolvedUserConfig['notif
 
 function isTestEnv(env: NodeJS.ProcessEnv): boolean {
   return (
-    env.ORACLE_DISABLE_NOTIFICATIONS === '1' ||
+    env.AURACALL_DISABLE_NOTIFICATIONS === '1' ||
     env.NODE_ENV === 'test' ||
     Boolean(env.VITEST || env.VITEST_WORKER_ID || env.JEST_WORKER_ID)
   );

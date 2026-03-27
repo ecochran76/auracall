@@ -48,5 +48,5 @@ else
 fi
 
 log "Done. Next steps:"
-log "  - Set ORACLE_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 in ~/.zshrc"
+log "  - Set AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 in ~/.zshrc"
 log "  - Run: oracle login --target chatgpt --browser-keep-browser"

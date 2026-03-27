@@ -4,9 +4,9 @@ import chalk from 'chalk';
 chalk.level = 0;
 
 // Ensure prompt-length guardrails are deterministic in tests
-if (!process.env.ORACLE_MIN_PROMPT_CHARS) {
-  process.env.ORACLE_MIN_PROMPT_CHARS = '20';
+if (!process.env.AURACALL_MIN_PROMPT_CHARS) {
+  process.env.AURACALL_MIN_PROMPT_CHARS = '20';
 }
 
 // Silence noisy env-dependent defaults (e.g., notifications)
-process.env.ORACLE_NO_DETACH = '1';
+process.env.AURACALL_NO_DETACH = '1';

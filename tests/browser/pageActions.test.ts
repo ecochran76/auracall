@@ -13,6 +13,7 @@ import {
 import * as attachments from '../../src/browser/actions/attachments.js';
 import * as attachmentDataTransfer from '../../src/browser/actions/attachmentDataTransfer.js';
 import type { ChromeClient } from '../../src/browser/types.js';
+import { BrowserAutomationError } from '../../src/oracle/errors.js';
 
 const logger = vi.fn();
 
@@ -143,6 +144,13 @@ describe('ensureNotBlocked', () => {
       evaluate: vi.fn().mockResolvedValue({ result: { value: 'Just a moment...' } }),
     } as unknown as ChromeClient['Runtime'];
     await expect(ensureNotBlocked(runtime, true, logger)).rejects.toThrow(/headless mode/i);
+    await ensureNotBlocked(runtime, true, logger).catch((error) => {
+      expect(error).toBeInstanceOf(BrowserAutomationError);
+      expect((error as BrowserAutomationError).details).toMatchObject({
+        stage: 'cloudflare-challenge',
+        headless: true,
+      });
+    });
     expect(logger).toHaveBeenCalledWith('Cloudflare anti-bot page detected');
   });
 

@@ -57,7 +57,7 @@ describe('resolveNotificationSettings', () => {
 
   it('parses env toggles', () => {
     // biome-ignore lint/style/useNamingConvention: environment variable name
-    const result = resolveNotificationSettings({ cliNotify: undefined, cliNotifySound: undefined, env: { ORACLE_NOTIFY: 'off' } });
+    const result = resolveNotificationSettings({ cliNotify: undefined, cliNotifySound: undefined, env: { AURACALL_NOTIFY: 'off' } });
     expect(result.enabled).toBe(false);
   });
 
@@ -76,7 +76,7 @@ describe('resolveNotificationSettings', () => {
     delete process.env.VITEST_WORKER_ID;
     delete process.env.JEST_WORKER_ID;
     process.env.NODE_ENV = 'development';
-    process.env.ORACLE_DISABLE_NOTIFICATIONS = '0';
+    process.env.AURACALL_DISABLE_NOTIFICATIONS = '0';
     vi.spyOn(process, 'platform', 'get').mockReturnValue('linux' as NodeJS.Platform);
 
     const payload: NotificationContent = {
@@ -95,7 +95,7 @@ describe('resolveNotificationSettings', () => {
     const { notifier } = await getMocks();
     expect(notifier.notify).toHaveBeenCalledTimes(1);
     const call = notifier.notify.mock.calls[0]?.[0];
-    expect(call?.title).toContain('Oracle');
+    expect(call?.title).toContain('Aura-Call');
     expect(call?.message).toContain('demo run');
     expect(call?.message).toContain('chars');
     expect(call?.message).not.toContain('**');

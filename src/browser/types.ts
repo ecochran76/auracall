@@ -1,6 +1,12 @@
 import type * as BaseTypes from '../../packages/browser-service/src/types.js';
 
-export type { ChromeClient, CookieParam, BrowserLogger, BrowserAttachment } from '../../packages/browser-service/src/types.js';
+export type {
+  ChromeClient,
+  CookieParam,
+  BrowserLogger,
+  BrowserAttachment,
+  DebugPortStrategy,
+} from '../../packages/browser-service/src/types.js';
 
 export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
 export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
@@ -23,7 +29,7 @@ export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
 
 type BrowserBlockingProfileAction =
   | BaseTypes.BrowserAutomationConfig['blockingProfileAction']
-  | 'restart-oracle';
+  | 'restart-auracall';
 
 export type BrowserSessionConfig = Omit<BaseTypes.BrowserSessionConfig, 'blockingProfileAction'> &
   LlmBrowserFields & {

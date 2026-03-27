@@ -20,7 +20,7 @@
   - Build a new resolveConfig pipeline that:
       - Loads raw config.
       - Validates with a composed Zod schema from the registry.
-      - Produces a ResolvedUserConfig with typed sections: browser, services, oracleProfiles, cache.
+      - Produces a ResolvedUserConfig with typed sections: browser, services, auracallProfiles, cache.
   - Keep the existing resolveBrowserConfig but only for browser/process defaults. It should not resolve provider URLs or
     project IDs anymore.
 

@@ -4,17 +4,17 @@ import { createServer } from 'node:net';
 import type { AddressInfo } from 'node:net';
 import path from 'node:path';
 import os from 'node:os';
-import { setOracleHomeDirOverrideForTest } from '../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 
 type SessionModule = typeof import('../src/sessionManager.ts');
 type SessionMetadata = Awaited<ReturnType<SessionModule['initializeSession']>>;
 
 let sessionModule: SessionModule;
-let oracleHomeDir: string;
+let auracallHomeDir: string;
 
 beforeAll(async () => {
-  oracleHomeDir = await mkdtemp(path.join(os.tmpdir(), 'oracle-session-tests-'));
-  setOracleHomeDirOverrideForTest(oracleHomeDir);
+  auracallHomeDir = await mkdtemp(path.join(os.tmpdir(), 'oracle-session-tests-'));
+  setAuracallHomeDirOverrideForTest(auracallHomeDir);
   sessionModule = await import('../src/sessionManager.ts');
   await sessionModule.ensureSessionStorage();
 });
@@ -25,8 +25,8 @@ beforeEach(async () => {
 });
 
 afterAll(async () => {
-  await rm(oracleHomeDir, { recursive: true, force: true });
-  setOracleHomeDirOverrideForTest(null);
+  await rm(auracallHomeDir, { recursive: true, force: true });
+  setAuracallHomeDirOverrideForTest(null);
 });
 
 describe('session storage setup', () => {

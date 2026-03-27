@@ -169,7 +169,7 @@ export async function performSessionRun({
 
       const multiRunTips: string[] = [];
       if (files.length === 0) {
-        multiRunTips.push('Tip: no files attached — Oracle works best with project context. Add files via --file path/to/code or docs.');
+        multiRunTips.push('Tip: no files attached — Aura-Call works best with project context. Add files via --file path/to/code or docs.');
       }
       const shortPrompt = (runOptions.prompt?.trim().length ?? 0) < 80;
       if (shortPrompt) {
@@ -396,6 +396,10 @@ export async function performSessionRun({
     log(`ERROR: ${message}`);
     markErrorLogged(error);
     const userError = asOracleUserError(error);
+    const browserRuntime =
+      userError?.category === 'browser-automation'
+        ? ((userError.details as { runtime?: BrowserRuntimeMetadata } | undefined)?.runtime ?? undefined)
+        : undefined;
     const connectionLost =
       userError?.category === 'browser-automation' && (userError.details as { stage?: string } | undefined)?.stage === 'connection-lost';
     if (connectionLost && mode === 'browser') {
@@ -437,7 +441,12 @@ export async function performSessionRun({
       completedAt: new Date().toISOString(),
       errorMessage: message,
       mode,
-      browser: browserConfig ? { config: browserConfig } : undefined,
+      browser: browserConfig
+        ? {
+            config: browserConfig,
+            runtime: browserRuntime ?? sessionMeta.browser?.runtime,
+          }
+        : undefined,
       response: responseMetadata,
       transport: transportMetadata,
       error: userError

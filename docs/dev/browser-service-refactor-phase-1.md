@@ -42,10 +42,10 @@ Consolidate browser session lifecycle and config/profile resolution so Oracle us
 - No new UI flows; only reuse and cleanup.
 
 ## Validation (No Regressions)
-- **Baseline browser list**: `DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts projects`
-- **Conversation list**: `DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts conversations --target grok --include-history`
-- **Prompt run**: `DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts -p "ping" --force`
-- **Login flow**: `DISPLAY=:0.0 pnpm tsx bin/oracle-cli.ts login --target grok`
+- **Baseline browser list**: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects`
+- **Conversation list**: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts conversations --target grok --include-history`
+- **Prompt run**: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts -p "ping" --force`
+- **Login flow**: `DISPLAY=:0.0 pnpm tsx bin/auracall.ts login --target grok`
 
 ## Exit Criteria
 - All browser interactions resolve port/profile/session via the shared handler.

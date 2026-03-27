@@ -6,7 +6,11 @@ import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, isTemporaryC
 import { normalizeBrowserModelStrategy } from '../browser/modelStrategy.js';
 import type { BrowserModelStrategy } from '../browser/types.js';
 import type { CookieParam } from '../browser/types.js';
-import { getOracleHomeDir } from '../oracleHome.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
+import { resolveManagedProfileDir } from '../browser/profileStore.js';
+import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
+import { ensureServicesRegistry, resolveServiceModelLabels } from '../services/registry.js';
+import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
 const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
@@ -27,9 +31,13 @@ const BROWSER_MODEL_LABELS: [ModelName, string][] = [
 ];
 
 export interface BrowserFlagOptions {
+  auracallProfileName?: string;
+  managedProfileRoot?: string | null;
   browserChromeProfile?: string;
   browserChromePath?: string;
   browserCookiePath?: string;
+  browserBootstrapCookiePath?: string;
+  browserDisplay?: string;
   projectId?: string;
   conversationId?: string;
   geminiUrl?: string;
@@ -58,7 +66,8 @@ export interface BrowserFlagOptions {
   remoteChrome?: string;
   browserPort?: number;
   browserDebugPort?: number;
-  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-oracle';
+  browserPortStrategy?: DebugPortStrategy;
+  browserBlockingProfile?: 'fail' | 'restart' | 'restart-managed' | 'restart-auracall';
   model: ModelName;
   verbose?: boolean;
 }
@@ -88,6 +97,7 @@ export function normalizeChatGptModelForBrowser(model: ModelName): ModelName {
 }
 
 export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<BrowserSessionConfig> {
+  const servicesRegistry = await ensureServicesRegistry();
   const desiredModelOverride = options.browserModelLabel?.trim();
   const normalizedOverride = desiredModelOverride?.toLowerCase() ?? '';
   const baseModel = options.model.toLowerCase();
@@ -97,12 +107,12 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const shouldUseOverride = !isChatGptModel && normalizedOverride.length > 0 && normalizedOverride !== baseModel;
   const modelStrategy =
     normalizeBrowserModelStrategy(options.browserModelStrategy) ?? DEFAULT_MODEL_STRATEGY;
-  const cookieNames = parseCookieNames(options.browserCookieNames ?? process.env.ORACLE_BROWSER_COOKIE_NAMES);
+  const cookieNames = parseCookieNames(options.browserCookieNames ?? process.env.AURACALL_BROWSER_COOKIE_NAMES);
   let inline = await resolveInlineCookies({
     inlineArg: options.browserInlineCookies,
     inlineFileArg: options.browserInlineCookiesFile,
-    envPayload: process.env.ORACLE_BROWSER_COOKIES_JSON,
-    envFile: process.env.ORACLE_BROWSER_COOKIES_FILE,
+    envPayload: process.env.AURACALL_BROWSER_COOKIES_JSON,
+    envFile: process.env.AURACALL_BROWSER_COOKIES_FILE,
     cwd: process.cwd(),
   });
   if (inline?.source?.startsWith('home:') && options.browserNoCookieSync !== true && !isGeminiModel) {
@@ -118,7 +128,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const grokUrl = options.grokUrl ?? undefined;
 
   const desiredModel = isGrokModel
-    ? resolveGrokModeLabel(desiredModelOverride, options.model)
+    ? resolveGrokModeLabel(desiredModelOverride, options.model, servicesRegistry)
     : isChatGptModel
       ? mapModelToBrowserLabel(options.model)
       : shouldUseOverride
@@ -133,11 +143,25 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   }
 
   const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
+  const managedProfileRoot = resolveEffectiveManagedProfileRoot({
+    configuredManagedProfileRoot: options.managedProfileRoot ?? null,
+    explicitProfileDir: options.browserManualLoginProfileDir ?? null,
+    resolvedChromePath: options.browserChromePath ?? null,
+    sourceCookiePath: options.browserBootstrapCookiePath ?? options.browserCookiePath ?? null,
+  });
+  const managedProfileDir = resolveManagedProfileDir({
+    configuredDir: options.browserManualLoginProfileDir ?? undefined,
+    managedProfileRoot,
+    auracallProfileName: options.auracallProfileName ?? 'default',
+    target,
+  });
 
   return {
     chromeProfile: options.browserChromeProfile ?? undefined,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,
+    bootstrapCookiePath: options.browserBootstrapCookiePath ?? null,
+    display: options.browserDisplay ?? undefined,
     target,
     geminiUrl: options.geminiUrl ?? null,
     grokUrl: grokUrl ?? null,
@@ -145,6 +169,8 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     conversationId: options.conversationId ?? null,
     url,
     debugPort: selectBrowserPort(options),
+    debugPortStrategy: selectBrowserPortStrategy(options),
+    managedProfileRoot,
     blockingProfileAction: normalizeBlockingProfileAction(options.browserBlockingProfile),
     timeoutMs: options.browserTimeout ? parseDuration(options.browserTimeout, DEFAULT_BROWSER_TIMEOUT_MS) : undefined,
     inputTimeoutMs: options.browserInputTimeout
@@ -158,7 +184,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     headless: undefined, // disable headless; Cloudflare blocks it
     keepBrowser: options.browserKeepBrowser ? true : undefined,
     manualLogin: options.browserManualLogin === undefined ? undefined : options.browserManualLogin,
-    manualLoginProfileDir: options.browserManualLoginProfileDir ?? undefined,
+    manualLoginProfileDir: managedProfileDir,
     wslChromePreference: options.browserWslChrome ?? undefined,
     hideWindow: options.browserHideWindow ? true : undefined,
     desiredModel,
@@ -178,6 +204,16 @@ function selectBrowserPort(options: BrowserFlagOptions): number | null {
     throw new Error(`Invalid browser port: ${candidate}. Expected a number between 1 and 65535.`);
   }
   return candidate;
+}
+
+function selectBrowserPortStrategy(options: BrowserFlagOptions): DebugPortStrategy | null {
+  if (options.browserPortStrategy) {
+    return options.browserPortStrategy;
+  }
+  if (options.browserPort != null || options.browserDebugPort != null) {
+    return 'fixed';
+  }
+  return null;
 }
 
 export function mapModelToBrowserLabel(model: ModelName): string {
@@ -207,18 +243,19 @@ function normalizeBlockingProfileAction(
   value: BrowserFlagOptions['browserBlockingProfile'],
 ): BrowserSessionConfig['blockingProfileAction'] | undefined {
   if (!value) return undefined;
-  if (value === 'restart-oracle') return 'restart-managed';
+  if (value === 'restart-auracall') return 'restart-managed';
   return value;
 }
 
-function resolveGrokModeLabel(override: string | undefined, model: ModelName): string {
+function resolveGrokModeLabel(
+  override: string | undefined,
+  model: ModelName,
+  servicesRegistry: Awaited<ReturnType<typeof ensureServicesRegistry>>,
+): string {
   if (override && override.trim().length > 0) {
-    return override.trim();
+    return resolveServiceModelLabels(servicesRegistry, 'grok', override)[0] ?? override.trim();
   }
-  if (model.toLowerCase().startsWith('grok-4.1')) {
-    return 'Grok 4.1 Thinking';
-  }
-  return 'Auto';
+  return resolveServiceModelLabels(servicesRegistry, 'grok', model)[0] ?? 'Auto';
 }
 
 function parseRemoteChromeTarget(raw: string): { host: string; port: number } {
@@ -318,11 +355,11 @@ async function resolveInlineCookies({
     if (parsed) return { cookies: parsed, source };
   }
 
-  // fallback: ~/.oracle/cookies.{json,base64}
-  const oracleHome = getOracleHomeDir();
+  // fallback: ~/.auracall/cookies.{json,base64}
+  const auracallHome = getAuracallHomeDir();
   const candidates = ['cookies.json', 'cookies.base64'];
   for (const file of candidates) {
-    const fullPath = path.join(oracleHome, file);
+    const fullPath = path.join(auracallHome, file);
     try {
       const stat = await fs.stat(fullPath);
       if (!stat.isFile()) continue;

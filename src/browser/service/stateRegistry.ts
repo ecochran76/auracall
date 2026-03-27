@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { getOracleHomeDir } from '../../oracleHome.js';
+import { getAuracallHomeDir } from '../../auracallHome.js';
 import {
   findActiveInstance as findActiveInstanceCore,
   pruneRegistry as pruneRegistryCore,
@@ -14,7 +14,7 @@ type RegistryOptions = {
 };
 
 function getRegistryOptions(): RegistryOptions {
-  return { registryPath: path.join(getOracleHomeDir(), 'browser-state.json') };
+  return { registryPath: path.join(getAuracallHomeDir(), 'browser-state.json') };
 }
 
 export type { BrowserInstance, BrowserStateRegistry };

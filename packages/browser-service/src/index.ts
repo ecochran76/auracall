@@ -14,6 +14,8 @@ export * from './service/instanceScanner.js';
 export * from './service/types.js';
 export * from './service/selectors.js';
 export * from './service/ui.js';
+export * from './browserTools.js';
+export * from './windowsLoopbackRelay.js';
 
 // Provisional surface
 export * from './manualLogin.js';

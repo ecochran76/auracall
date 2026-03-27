@@ -5,7 +5,7 @@ import { stat } from 'node:fs/promises';
 import path from 'node:path';
 
 const execFileAsync = promisify(execFile);
-const LIVE = process.env.ORACLE_LIVE_TEST === '1';
+const LIVE = process.env.AURACALL_LIVE_TEST === '1';
 const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
 const baseUrl = process.env.OPENAI_BASE_URL ?? '';
 const isOpenRouterBase = baseUrl.includes('openrouter');
@@ -16,10 +16,10 @@ const OPENAI_ENV = {
   OPENROUTER_API_KEY: '',
 };
 const MCP_CONFIG = path.join(process.cwd(), 'config', 'mcporter.json');
-const ORACLE_MCP_BIN = path.join(process.cwd(), 'dist', 'bin', 'oracle-mcp.js');
+const AURACALL_MCP_BIN = path.join(process.cwd(), 'dist', 'bin', 'auracall-mcp.js');
 
 async function ensureBuilt(): Promise<void> {
-  await stat(ORACLE_MCP_BIN);
+  await stat(AURACALL_MCP_BIN);
 }
 
 type McporterOutput = { result?: unknown; error?: unknown; sessionId?: string; text?: string };
@@ -70,7 +70,7 @@ function extractSessionId(output: McporterOutput): string | null {
       const slug = `mcporter session smoke live ${Date.now().toString(36)}`;
       const consult = await runMcporter([
         'call',
-        'oracle-local.consult',
+        'auracall-local.consult',
         'prompt:mcporter session smoke',
         'model:gpt-4.1',
         'engine:api',
@@ -81,7 +81,7 @@ function extractSessionId(output: McporterOutput): string | null {
       if (consult.error) {
         const message = String((consult.error as Error).message ?? consult.error);
         if (message.includes('appears offline') || message.includes('timed out')) {
-          console.warn('oracle-local unavailable, skipping mcporter sessions live test:', message);
+          console.warn('auracall-local unavailable, skipping mcporter sessions live test:', message);
           return;
         }
         throw consult.error;
@@ -100,7 +100,7 @@ function extractSessionId(output: McporterOutput): string | null {
 
       const summary = await runMcporter([
         'call',
-        'oracle-local.sessions',
+        'auracall-local.sessions',
         `id:${sessionId}`,
         '--config',
         MCP_CONFIG,
@@ -115,7 +115,7 @@ function extractSessionId(output: McporterOutput): string | null {
 
       const detail = await runMcporter([
         'call',
-        'oracle-local.sessions',
+        'auracall-local.sessions',
         `id:${sessionId}`,
         'detail:true',
         '--config',

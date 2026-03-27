@@ -9,9 +9,9 @@ describe('supportsOscProgress', () => {
     expect(supportsOscProgress(baseEnv, false)).toBe(false);
   });
 
-  test('can be disabled with ORACLE_NO_OSC_PROGRESS', () => {
+  test('can be disabled with AURACALL_NO_OSC_PROGRESS', () => {
     // biome-ignore lint/style/useNamingConvention: env keys mirror real process env.
-    expect(supportsOscProgress({ ...baseEnv, ORACLE_NO_OSC_PROGRESS: '1' }, true)).toBe(false);
+    expect(supportsOscProgress({ ...baseEnv, AURACALL_NO_OSC_PROGRESS: '1' }, true)).toBe(false);
   });
 
   test('detects Ghostty / WezTerm / Windows Terminal', () => {
@@ -25,9 +25,9 @@ describe('supportsOscProgress', () => {
 
   test('force flag still requires TTY', () => {
     // biome-ignore lint/style/useNamingConvention: env keys mirror real process env.
-    expect(supportsOscProgress({ ...baseEnv, ORACLE_FORCE_OSC_PROGRESS: '1' }, false)).toBe(false);
+    expect(supportsOscProgress({ ...baseEnv, AURACALL_FORCE_OSC_PROGRESS: '1' }, false)).toBe(false);
     // biome-ignore lint/style/useNamingConvention: env keys mirror real process env.
-    expect(supportsOscProgress({ ...baseEnv, ORACLE_FORCE_OSC_PROGRESS: '1' }, true)).toBe(true);
+    expect(supportsOscProgress({ ...baseEnv, AURACALL_FORCE_OSC_PROGRESS: '1' }, true)).toBe(true);
   });
 });
 
@@ -39,7 +39,7 @@ describe('startOscProgress', () => {
       label: 'Waiting',
       targetMs: 2_000,
       // biome-ignore lint/style/useNamingConvention: env keys mirror real process env.
-      env: { ...process.env, ORACLE_FORCE_OSC_PROGRESS: '1' },
+      env: { ...process.env, AURACALL_FORCE_OSC_PROGRESS: '1' },
       isTty: true,
       write: (chunk) => writes.push(chunk),
     });

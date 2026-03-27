@@ -39,9 +39,9 @@ export async function launchTui({ version, printIntro = true }: LaunchTuiOptions
   let exitMessageShown = false;
   if (printIntro) {
     if (rich) {
-      console.log(chalk.bold('🧿 oracle'), `${version}`, dim('— Whispering your tokens to the silicon sage'));
+      console.log(chalk.bold('🧿 auracall'), `${version}`, dim('— Whispering your tokens to the silicon sage'));
     } else {
-      console.log(`🧿 oracle ${version} — Whispering your tokens to the silicon sage`);
+      console.log(`🧿 auracall ${version} — Whispering your tokens to the silicon sage`);
     }
   }
   console.log('');
@@ -53,7 +53,7 @@ export async function launchTui({ version, printIntro = true }: LaunchTuiOptions
     const headerLabel = formatSessionTableHeader(isTty());
 
     // Start with a selectable row so focus never lands on a separator
-    choices.push({ name: chalk.bold.green('ask oracle'), value: '__ask__' });
+    choices.push({ name: chalk.bold.green('ask auracall'), value: '__ask__' });
 
     if (!showingOlder) {
       if (recent.length > 0) {
@@ -71,7 +71,7 @@ export async function launchTui({ version, printIntro = true }: LaunchTuiOptions
 
     choices.push(new inquirer.Separator(' '));
     choices.push(new inquirer.Separator('Actions'));
-    choices.push({ name: chalk.bold.green('ask oracle'), value: '__ask__' });
+    choices.push({ name: chalk.bold.green('ask auracall'), value: '__ask__' });
 
     if (!showingOlder && olderTotal > 0) {
       choices.push({ name: 'Older page', value: '__older__' });
@@ -111,7 +111,7 @@ export async function launchTui({ version, printIntro = true }: LaunchTuiOptions
           if (message.includes('setRawMode') || message.includes('EIO') || pagingFailures >= 3) {
             console.error(
               chalk.red('Terminal input unavailable; exiting TUI.'),
-              dim('Try `stty sane` then rerun oracle, or use `oracle recent`.'),
+              dim('Try `stty sane` then rerun auracall, or use `auracall recent`.'),
             );
             resolve('__exit__');
             return;
@@ -120,7 +120,7 @@ export async function launchTui({ version, printIntro = true }: LaunchTuiOptions
         });
     });
 
-    if (process.env.ORACLE_DEBUG_TUI === '1') {
+    if (process.env.AURACALL_DEBUG_TUI === '1') {
       console.error(`[tui] selection=${JSON.stringify(selection)}`);
     }
     pagingFailures = 0;
@@ -511,7 +511,7 @@ export async function askOracleFlow(version: string, userConfig: Partial<Resolve
   };
 
   console.log(chalk.bold(`Session ${sessionMeta.id} starting...`));
-  console.log(dim(`Log path: ${path.join(os.homedir(), '.oracle', 'sessions', sessionMeta.id, 'output.log')}`));
+  console.log(dim(`Log path: ${path.join(os.homedir(), '.auracall', 'sessions', sessionMeta.id, 'output.log')}`));
 
   try {
     await performSessionRun({

@@ -57,14 +57,14 @@ export async function runOracleTuiWithPty({
   }
 
   const home = homeDir ?? (await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-tui-')));
-  const entry = path.join(process.cwd(), 'dist/bin/oracle-cli.js');
+  const entry = path.join(process.cwd(), 'dist/bin/auracall.js');
   const env = {
     ...process.env,
     // Uppercase env names are intentional for CLI behavior.
     // biome-ignore lint/style/useNamingConvention: env keys stay uppercase
-    ORACLE_FORCE_TUI: '1',
+    AURACALL_FORCE_TUI: '1',
     // biome-ignore lint/style/useNamingConvention: env keys stay uppercase
-    ORACLE_HOME_DIR: home,
+    AURACALL_HOME_DIR: home,
     // biome-ignore lint/style/useNamingConvention: env keys stay uppercase
     FORCE_COLOR: '1',
     // biome-ignore lint/style/useNamingConvention: env keys stay uppercase

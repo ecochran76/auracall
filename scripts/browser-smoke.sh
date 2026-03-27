@@ -2,7 +2,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-CMD=(node "$ROOT/dist/bin/oracle-cli.js" --engine browser --wait --heartbeat 0 --timeout 900 --browser-input-timeout 120000)
+CMD=(node "$ROOT/dist/bin/auracall.js" --engine browser --wait --heartbeat 0 --timeout 900 --browser-input-timeout 120000)
 FAST_MODEL="gpt-5.2"
 PRO_MODEL="gpt-5.2-pro"
 
@@ -23,7 +23,7 @@ echo "[browser-smoke] pro standard markdown check"
 
 echo "[browser-smoke] reattach flow after controller loss"
 slug="browser-reattach-smoke"
-meta="$HOME/.oracle/sessions/$slug/meta.json"
+meta="$HOME/.auracall/sessions/$slug/meta.json"
 logfile="$(mktemp -t oracle-browser-reattach.XXXXXX)"
 
 # Start a browser run in the background and wait for runtime hints to appear.
@@ -54,7 +54,7 @@ kill "$runner_pid" 2>/dev/null || true
 wait "$runner_pid" 2>/dev/null || true
 
 reattach_log="$(mktemp -t oracle-browser-reattach-log.XXXXXX)"
-if ! node "$ROOT/dist/bin/oracle-cli.js" session "$slug" --render-plain >"$reattach_log" 2>&1; then
+if ! node "$ROOT/dist/bin/auracall.js" session "$slug" --render-plain >"$reattach_log" 2>&1; then
   echo "[browser-smoke] reattach: session command failed"
   cat "$reattach_log"
   exit 1
@@ -71,6 +71,6 @@ chrome_pid=$(node -e "const fs=require('fs');try{const j=JSON.parse(fs.readFileS
 if [ -n "${chrome_pid:-}" ]; then
   kill "$chrome_pid" 2>/dev/null || true
 fi
-rm -rf "$HOME/.oracle/sessions/$slug" "$logfile" "$reattach_log"
+rm -rf "$HOME/.auracall/sessions/$slug" "$logfile" "$reattach_log"
 
 rm -f "$tmpfile"

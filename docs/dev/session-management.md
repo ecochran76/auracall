@@ -13,7 +13,7 @@ Providers (ChatGPT/Grok/Gemini) share the same Chrome instance via separate tabs
 
 ## Registry
 
-Oracle stores active sessions in `~/.oracle/browser-state.json`. Each entry records:
+Oracle stores active sessions in `~/.auracall/browser-state.json`. Each entry records:
 
 - `profilePath`
 - `profileName`
@@ -22,7 +22,7 @@ Oracle stores active sessions in `~/.oracle/browser-state.json`. Each entry reco
 - `pid`
 - timestamps (`launchedAt`, `lastSeenAt`)
 
-Registry lookups are the primary way to resolve active DevTools ports. Keys are stored as `<profilePath>::<profileName>`. The environment override (`ORACLE_BROWSER_PORT` / `ORACLE_BROWSER_DEBUG_PORT`) is reserved for exceptional debugging.
+Registry lookups are the primary way to resolve active DevTools ports. Keys are stored as `<profilePath>::<profileName>`. The environment override (`AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT`) is reserved for exceptional debugging.
 
 ## Port selection
 

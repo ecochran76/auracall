@@ -4,18 +4,18 @@ import fs from 'node:fs/promises';
 import { sessionStore } from '../../sessionStore.js';
 
 // URIs:
-// - oracle-session://<id>/metadata
-// - oracle-session://<id>/log
-// - oracle-session://<id>/request
+// - auracall-session://<id>/metadata
+// - auracall-session://<id>/log
+// - auracall-session://<id>/request
 
 export function registerSessionResources(server: McpServer): void {
-  const template = new ResourceTemplate('oracle-session://{id}/{kind}', { list: undefined });
+  const template = new ResourceTemplate('auracall-session://{id}/{kind}', { list: undefined });
 
   server.registerResource(
-    'oracle-session',
+    'auracall-session',
     template,
     {
-      title: 'oracle session resources',
+      title: 'Aura-Call session resources',
       description: 'Read stored session metadata, log, or request payload.',
     },
     async (uri, variables) => {

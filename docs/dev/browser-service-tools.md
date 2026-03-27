@@ -5,7 +5,36 @@ follow when automating UI flows. The goal is to keep Grok-specific hacks minimal
 and push general strategies into browser-service so new service adapters are
 faster to implement.
 
+The `browser-tools` DevTools helper CLI now lives in
+[`packages/browser-service/src/browserTools.ts`](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/browserTools.ts).
+Keep Aura-Call-specific config/bootstrap logic in the thin compatibility wrapper
+[`scripts/browser-tools.ts`](/home/ecochran76/workspace.local/oracle/scripts/browser-tools.ts).
+
+Current upgrade backlog:
+- generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+- Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/auracall-browser-onboarding-backlog.md)
+
 ## Core helpers (packages/browser-service/src/service/ui.ts)
+
+- `waitForPredicate(Runtime, expression, options)`
+  - Generic polling primitive for truthy page predicates.
+  - Returns attempts, elapsed time, and the last truthy value when a condition wins.
+  - Prefer this over ad hoc polling loops when the condition is not just a selector.
+
+- `waitForDocumentReady(Runtime, options)`
+  - Waits for `document.readyState` to reach `interactive` / `complete` by default.
+  - Can also require `document.visibilityState === "visible"`.
+  - Use this before probing apps that hydrate after the first navigation event.
+
+- `waitForVisibleSelector(Runtime, selector, options)`
+  - Waits for a selector to exist and have a visible bounding box.
+  - Returns selector metadata (tag/text/rect) when it succeeds.
+  - Prefer this when the next action needs an actually clickable element, not just a DOM node.
+
+- `waitForScriptText(Runtime, options)`
+  - Waits for inline script text to contain required tokens.
+  - Useful for hydration/bootstrap payloads that appear before stable DOM markers.
+  - Keep the tokens generic here; provider-specific payload semantics still belong in the app layer.
 
 - `waitForSelector(Runtime, selector, timeoutMs)`
   - Polls for a selector to appear; prefer this over ad-hoc sleep loops.
@@ -94,6 +123,27 @@ faster to implement.
 - `openRadixMenu(Runtime, options)`
   - Alias for `openMenu` when targeting Radix menus; keeps the naming consistent in adapters.
 
+## Core helpers (packages/browser-service/src/chromeLifecycle.ts)
+
+- `openOrReuseChromeTarget(port, url, options)`
+  - Shared tab-open policy for Aura-Call browser flows.
+  - Default policy is:
+    1. reuse the most recent exact URL match
+    2. reuse an existing `about:blank` / new-tab page
+    3. reuse an existing same-origin page by navigating it
+    4. reuse an explicitly compatible host-family page (for example `chatgpt.com` <-> `chat.openai.com`)
+    5. only then create a fresh tab
+  - After selecting/opening the target, it also trims obvious stockpile patterns:
+    - keep the selected tab
+    - keep at most 3 matching-family tabs total
+    - keep at most 1 spare blank/new-tab page
+    - if CDP exposes Chrome window ids, collapse extra windows for the same profile only when every tab in that window is disposable for the current service action
+  - The caps are now profile-configurable through Aura-Call browser config:
+    - `browser.serviceTabLimit`
+    - `browser.blankTabLimit`
+    - `browser.collapseDisposableWindows`
+  - Use this instead of raw `CDP.New(...)` when the goal is “get to this page without stockpiling tabs”.
+
 ## Usage notes
 
 - Prefer selector helpers from `packages/browser-service/src/service/selectors.ts`.
@@ -103,6 +153,27 @@ faster to implement.
 - For workflow guidance, see `docs/dev/browser-automation-playbook.md`.
 
 ## Smoke helpers
+
+- `pnpm tsx scripts/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
+  - Shows the live tab census for one DevTools browser instance.
+  - Includes the tab that `browser-tools` would select and why (`url-contains`,
+    `focused`, `non-internal-page`, `last-page`).
+  - Use this before ad hoc `eval` when a run might be targeting the wrong tab.
+
+- `pnpm tsx scripts/browser-tools.ts probe --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--json]`
+  - Collects structured generic probes from the selected page.
+  - Reports document state, visible selector matches, script-text token presence,
+    storage-key presence, and cookie-name presence.
+  - `--json` emits a versioned envelope:
+    - `contract: "browser-tools.page-probe"`
+    - `version: 1`
+
+- `pnpm tsx scripts/browser-tools.ts doctor --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--storage-any <key>] [--storage-all <key>] [--cookie-any <name>] [--cookie-all <name>] [--json]`
+  - Combines the tab census with the structured selected-page probes.
+  - Use this as the first package-owned diagnosis surface before app-specific doctor logic.
+  - `--json` emits a versioned envelope:
+    - `contract: "browser-tools.doctor-report"`
+    - `version: 1`
 
 - `pnpm tsx scripts/verify-grok-project-sources-steps.ts <step|all> <projectId|current> [file... ] [--delete <fileName>]`
   - Steps 1–6 are independent; use `all` to run the full flow.

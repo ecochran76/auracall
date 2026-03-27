@@ -118,7 +118,7 @@ export async function assembleBrowserPrompt(
   let bundleText: string | null = null;
   let bundled: { originalCount: number; bundlePath: string } | null = null;
   if (shouldBundle) {
-    const bundleDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-browser-bundle-'));
+    const bundleDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-bundle-'));
     const bundlePath = path.join(bundleDir, 'attachments-bundle.txt');
     const bundleLines: string[] = [];
     sections.forEach((section) => {
@@ -174,7 +174,7 @@ export async function assembleBrowserPrompt(
     const fallbackAttachments = [...uploadPlan.attachments, ...mediaAttachments];
     let fallbackBundled: { originalCount: number; bundlePath: string } | null = null;
     if (uploadPlan.shouldBundle) {
-      const bundleDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-browser-bundle-'));
+      const bundleDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-bundle-'));
       const bundlePath = path.join(bundleDir, 'attachments-bundle.txt');
       const bundleLines: string[] = [];
       sections.forEach((section) => {

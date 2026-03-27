@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { runOracle, extractTextOutput } from '../../src/oracle.js';
 
-const live = process.env.ORACLE_LIVE_TEST === '1';
+const live = process.env.AURACALL_LIVE_TEST === '1';
 const hasKey = Boolean(process.env.ANTHROPIC_API_KEY);
 
 (live ? describe : describe.skip)('Claude 4.5 live smoke', () => {

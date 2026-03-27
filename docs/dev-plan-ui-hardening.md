@@ -63,7 +63,7 @@ Phase 3: Migrate ChatGPT
   - `assistantResponse.ts` (assistant selectors + copy button)
   - `attachments.ts` (composer root + menu open)
   - `modelSelection.ts` (menu item selectors)
-- Run `ORACLE_BROWSER_PORT=9222 pnpm test:browser`.
+- Run `AURACALL_BROWSER_PORT=9222 pnpm test:browser`.
 
 Phase 4: Harden + Docs
 - Add docs: `docs/browser-mode.md` section “UI hardening + selectors”.

@@ -18,7 +18,7 @@
       }
     },
     "chrome-devtools": {
-      "description": "Attach chrome-devtools-mcp to the live Oracle browser session.",
+      "description": "Attach chrome-devtools-mcp to the live Aura-Call browser session.",
       "command": "npx",
       "args": [
         "-y",
@@ -31,20 +31,20 @@
     "iterm": {
       "command": "/Users/steipete/Projects/iterm-mcp/build/index.js"
     },
-    "oracle": {
+    "auracall": {
       "command": "npx",
       "args": [
         "-y",
-        "@steipete/oracle",
-        "oracle-mcp"
+        "auracall",
+        "auracall-mcp"
       ],
       "root": ".."
     },
-    "oracle-local": {
-      "description": "Local oracle-mcp built from dist/bin/oracle-mcp.js",
+    "auracall-local": {
+      "description": "Local auracall-mcp built from dist/bin/auracall-mcp.js",
       "command": "node",
       "args": [
-        "../dist/bin/oracle-mcp.js"
+        "../dist/bin/auracall-mcp.js"
       ],
       "root": ".."
     }

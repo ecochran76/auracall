@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { findChromePidUsingUserDataDir, isDevToolsResponsive, isChromeAlive } from './processCheck.js';
 
 export type ProfileStateLogger = (message: string) => void;
@@ -11,6 +11,13 @@ const DEVTOOLS_ACTIVE_PORT_RELATIVE_PATHS = [
 ] as const;
 
 const CHROME_PID_FILENAME = 'chrome.pid';
+const CHROME_LOCK_FILE_NAMES = new Set([
+  'lockfile',
+  'lock',
+  'singletonlock',
+  'singletonsocket',
+  'singletoncookie',
+]);
 
 export function getDevToolsActivePortPaths(userDataDir: string): string[] {
   return DEVTOOLS_ACTIVE_PORT_RELATIVE_PATHS.map((relative) => path.join(userDataDir, relative));
@@ -98,7 +105,7 @@ export async function shouldCleanupManualLoginProfileState(
 export async function cleanupStaleProfileState(
   userDataDir: string,
   logger?: ProfileStateLogger,
-  options: { lockRemovalMode?: 'never' | 'if_recorded_pid_dead' } = {},
+  options: { lockRemovalMode?: 'never' | 'if_recorded_pid_dead' | 'force' } = {},
 ): Promise<void> {
   for (const candidate of getDevToolsActivePortPaths(userDataDir)) {
     try {
@@ -114,6 +121,17 @@ export async function cleanupStaleProfileState(
     return;
   }
 
+  if (await findChromePidUsingUserDataDir(userDataDir)) {
+    logger?.('Detected running Chrome using this profile; skipping profile lock cleanup');
+    return;
+  }
+
+  if (lockRemovalMode === 'force') {
+    await removeChromeProfileLocks(userDataDir);
+    logger?.('Force-cleaned Chrome profile locks');
+    return;
+  }
+
   const pid = await readChromePid(userDataDir);
   if (!pid) {
     return;
@@ -125,22 +143,30 @@ export async function cleanupStaleProfileState(
     return;
   }
 
-  // Extra safety: if Chrome is running with this profile (but with a different PID, e.g. user relaunched
-  // without remote debugging), never delete lock files.
-  if (await findChromePidUsingUserDataDir(userDataDir)) {
-    logger?.('Detected running Chrome using this profile; skipping profile lock cleanup');
-    return;
-  }
-
-  const lockFiles = [
-    path.join(userDataDir, 'lockfile'),
-    path.join(userDataDir, 'SingletonLock'),
-    path.join(userDataDir, 'SingletonSocket'),
-    path.join(userDataDir, 'SingletonCookie'),
-  ];
-  for (const lock of lockFiles) {
-    await rm(lock, { force: true }).catch(() => undefined);
-  }
+  await removeChromeProfileLocks(userDataDir);
   logger?.('Cleaned up stale Chrome profile locks');
 }
 
+async function removeChromeProfileLocks(rootDir: string): Promise<void> {
+  await removeChromeProfileLocksRecursive(rootDir);
+}
+
+async function removeChromeProfileLocksRecursive(currentDir: string): Promise<void> {
+  let entries;
+  try {
+    entries = await readdir(currentDir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  for (const entry of entries) {
+    const entryPath = path.join(currentDir, entry.name);
+    if (entry.isDirectory()) {
+      await removeChromeProfileLocksRecursive(entryPath);
+      continue;
+    }
+    if (!CHROME_LOCK_FILE_NAMES.has(entry.name.trim().toLowerCase())) {
+      continue;
+    }
+    await rm(entryPath, { force: true }).catch(() => undefined);
+  }
+}

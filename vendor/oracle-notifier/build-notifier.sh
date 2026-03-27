@@ -42,7 +42,7 @@ cat > "$CONTENTS/Info.plist" <<'PLIST'
 <plist version="1.0">
 <dict>
   <key>CFBundleIdentifier</key>
-  <string>com.steipete.oracle.notifier</string>
+  <string>com.steipete.auracall.notifier</string>
   <key>CFBundleName</key>
   <string>OracleNotifier</string>
   <key>CFBundleDisplayName</key>

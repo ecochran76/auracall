@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import os from 'node:os';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import * as profileState from '../../packages/browser-service/src/profileState.js';
 import * as processCheck from '../../packages/browser-service/src/processCheck.js';
 
@@ -53,6 +53,30 @@ describe('profileState (package)', () => {
       }
       expect(processCheck.isChromeAlive).toHaveBeenCalled();
       expect(processCheck.findChromePidUsingUserDataDir).toHaveBeenCalled();
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('force cleanup removes nested Chromium LOCK files after a failed launch', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-profile-'));
+    const nestedLocks = [
+      path.join(dir, 'lockfile'),
+      path.join(dir, 'Default', 'LOCK'),
+      path.join(dir, 'Default', 'Local Storage', 'leveldb', 'LOCK'),
+      path.join(dir, 'Default', 'Session Storage', 'LOCK'),
+    ];
+    try {
+      for (const lock of nestedLocks) {
+        await mkdir(path.dirname(lock), { recursive: true });
+        await writeFile(lock, 'x', 'utf8');
+      }
+
+      await profileState.cleanupStaleProfileState(dir, undefined, { lockRemovalMode: 'force' });
+
+      for (const lock of nestedLocks) {
+        expect(existsSync(lock)).toBe(false);
+      }
     } finally {
       await rm(dir, { recursive: true, force: true });
     }

@@ -1,7 +1,7 @@
 # Browser Automation Client Refactor Plan
 
 ## Context
-The `bin/oracle-cli.ts` file has become a "god object", conflating CLI argument parsing with complex browser automation logic. Features like project listing, conversation management, renaming, and diagnostics are manually implemented in each command handler, leading to duplicated code (DRY violations) and poor testability.
+The `bin/auracall.ts` file has become a "god object", conflating CLI argument parsing with complex browser automation logic. Features like project listing, conversation management, renaming, and diagnostics are manually implemented in each command handler, leading to duplicated code (DRY violations) and poor testability.
 
 ## Objective
 Extract a `BrowserAutomationClient` class to encapsulate all browser connection, provider resolution, and command dispatch logic. The CLI should act as a thin layer that parses arguments and delegates to this client.
@@ -10,17 +10,17 @@ Extract a `BrowserAutomationClient` class to encapsulate all browser connection,
 These are the intended behaviors for session management and login flows as we refactor:
 
 - **Profile identity** is `{ profilePath, profileName }`. This is the stable key for registry, reuse, and session resolution.
-- **Registry first**: active sessions are resolved from `~/.oracle/browser-state.json` (env override only for debugging).
+- **Registry first**: active sessions are resolved from `~/.auracall/browser-state.json` (env override only for debugging).
 - **Login flow intent**: “manual login” means a *human-interactive* bootstrap of the persistent profile; it is not a disposable profile.
 - **Profile reuse**: Oracle should reuse a live session for the same profile identity and spawn a new one only when missing.
 
 ### Future extensions (post-refactor goals)
 - **Multi-profile config blocks**: allow multiple named profile identities (e.g., `profiles.<name>`) so different folders/targets can select different logins via config layering.
-- **Smart defaults**: when no profile is configured, attempt to detect a Chromium-based default browser/profile and attach to it before falling back to `~/.oracle`.
+- **Smart defaults**: when no profile is configured, attempt to detect a Chromium-based default browser/profile and attach to it before falling back to `~/.auracall`.
 - **Profile discovery precedence** (target behavior):
   1) Explicit config/CLI profile identity.
   2) Discovered system/browser profile (Chromium-based).
-  3) Oracle-managed profile under `~/.oracle`.
+  3) Oracle-managed profile under `~/.auracall`.
 
 ## Implementation Phases
 
@@ -43,11 +43,11 @@ Create a class that standardizes interaction with the active browser session.
 ### Phase 2: Centralize Shared Logic
 **Files:** `src/browser/chromeLifecycle.ts`, `src/browser/service/portResolution.ts` (or similar)
 
-1.  **Port Resolution**: Move `resolveBrowserListPort` from `bin/oracle-cli.ts` to `src/browser/chromeLifecycle.ts` or `src/browser/service/portResolution.ts`. It should remain robust (checking Env -> Config -> Registry -> File).
+1.  **Port Resolution**: Move `resolveBrowserListPort` from `bin/auracall.ts` to `src/browser/chromeLifecycle.ts` or `src/browser/service/portResolution.ts`. It should remain robust (checking Env -> Config -> Registry -> File).
 2.  **Login Logic**: Ensure `launchManualLoginChrome` and related helpers are exported from `src/browser/chromeLifecycle.ts` or `src/remote/server.ts` so `BrowserAutomationClient` can use them without circular deps.
 
 ### Phase 3: Refactor CLI Commands
-**File:** `bin/oracle-cli.ts`
+**File:** `bin/auracall.ts`
 
 Systematically replace the body of each command with `BrowserAutomationClient` usage.
 
@@ -64,7 +64,7 @@ Systematically replace the body of each command with `BrowserAutomationClient` u
     *   Replace with `client.diagnose()`.
 
 ### Phase 4: Cleanup
-1.  Remove `getProvider`, `resolveBrowserListPort`, and other isolated helper functions from `bin/oracle-cli.ts`.
+1.  Remove `getProvider`, `resolveBrowserListPort`, and other isolated helper functions from `bin/auracall.ts`.
 2.  Ensure imports are clean.
 
 ## Benefits

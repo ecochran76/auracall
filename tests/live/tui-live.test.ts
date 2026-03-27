@@ -4,7 +4,7 @@ import os from 'node:os';
 import { describe, expect, it } from 'vitest';
 import { ptyAvailable, runOracleTuiWithPty } from '../util/pty.js';
 
-const LIVE = process.env.ORACLE_LIVE_TEST === '1' && Boolean(process.env.OPENAI_API_KEY);
+const LIVE = process.env.AURACALL_LIVE_TEST === '1' && Boolean(process.env.OPENAI_API_KEY);
 const liveDescribe = LIVE && ptyAvailable ? describe : describe.skip;
 
 liveDescribe('live TUI flow (API multi-model)', () => {

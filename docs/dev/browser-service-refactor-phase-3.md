@@ -30,9 +30,9 @@ Introduce the `llmService` layer that centralizes LLM-domain primitives (project
    - Record any cache/identity behavior changes in the fixes log.
 
 ## Validation (No Regressions)
-- `oracle projects` refreshes and caches using `LlmService`.
-- `oracle conversations` resolves project/conversation names via cache.
-- `oracle cache --refresh` still refreshes with history flags.
+- `auracall projects` refreshes and caches using `LlmService`.
+- `auracall conversations` resolves project/conversation names via cache.
+- `auracall cache --refresh` still refreshes with history flags.
 - Browser prompt run (`oracle -p`) still resolves default project name.
 
 ## Exit Criteria

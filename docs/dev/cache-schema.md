@@ -7,7 +7,7 @@ This document defines the on-disk cache layout and index structure for LLM servi
 All cache data is keyed by provider + identity.
 
 ```
-~/.oracle/cache/providers/<provider>/<identityKey>/
+~/.auracall/cache/providers/<provider>/<identityKey>/
   cache-index.json
   projects.json
   conversations.json

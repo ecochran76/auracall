@@ -1,39 +1,40 @@
-import { beforeAll, afterAll, describe, expect, it } from 'vitest';
-import { spawn } from 'node:child_process';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import path from 'node:path';
-import { once } from 'node:events';
+import type { ChildProcess } from 'node:child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-function startOracleMcp(): { proc: ReturnType<typeof spawn>; waitReady: () => Promise<void> } {
-  const entry = path.join(process.cwd(), 'dist/bin/oracle-mcp.js');
-  const proc = spawn(process.execPath, [entry], { stdio: ['pipe', 'pipe', 'pipe'] });
-  const waitReady = async () => {
-    // Give the stdio transport a moment to attach; MCP stdio has no explicit ready signal.
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  };
-  return { proc, waitReady };
-}
+const entry = path.join(process.cwd(), 'dist/bin/auracall-mcp.js');
 
-describe('oracle-mcp stdio smoke', () => {
-  let proc: ReturnType<typeof spawn>;
+describe('auracall-mcp stdio smoke', () => {
+  let client: Client | null = null;
+  let transport: StdioClientTransport | null = null;
 
   beforeAll(async () => {
-    // @ts-expect-error built artifact has no d.ts
-    await import('../dist/bin/oracle-mcp.js'); // ensure built artifacts exist
-    const started = startOracleMcp();
-    proc = started.proc;
-    await started.waitReady();
-  }, 30_000);
+    const candidateClient = new Client({ name: 'integration-smoke', version: '0.0.0' });
+    const candidateTransport = new StdioClientTransport({
+      command: process.execPath,
+      args: [entry],
+      stderr: 'pipe',
+      cwd: path.dirname(entry),
+      env: {
+        ...process.env,
+        AURACALL_DISABLE_KEYTAR: '1',
+      },
+    });
+    await candidateClient.connect(candidateTransport);
+    client = candidateClient;
+    transport = candidateTransport;
+  }, 20_000);
 
   afterAll(async () => {
-    if (proc) {
-      const exitPromise = once(proc, 'exit');
-      proc.kill('SIGTERM');
-      await Promise.race([exitPromise, new Promise((resolve) => setTimeout(resolve, 1000))]);
-    }
+    await client?.close().catch(() => {});
+    const proc = (transport as unknown as { proc?: ChildProcess })?.proc;
+    proc?.kill?.('SIGKILL');
   });
 
-  it('exposes stdio (process stays alive)', () => {
-    expect(proc.killed).toBe(false);
-    expect(proc.pid).toBeDefined();
+  it('connects and stays alive', () => {
+    expect(client?.getServerCapabilities()).toBeDefined();
+    expect(client?.getServerVersion()).toBeDefined();
   });
 });

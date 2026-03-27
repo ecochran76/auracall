@@ -19,6 +19,25 @@ function listenEphemeral(): Promise<net.Server & { port: number }> {
 }
 
 describe('portSelection', () => {
+  test('honors an available pinned port even when a range is configured', async () => {
+    const server = await listenEphemeral();
+    const preferred = await listenEphemeral();
+    const logs: string[] = [];
+    try {
+      const preferredPort = preferred.port;
+      await new Promise<void>((resolve) => preferred.close(() => resolve()));
+      const chosen = await pickAvailableDebugPort(
+        preferredPort,
+        (message) => logs.push(message),
+        [server.port, server.port + 2],
+      );
+      expect(chosen).toBe(preferredPort);
+      expect(logs.length).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
   test('falls back when the requested range is fully occupied', async () => {
     const server = await listenEphemeral();
     const logs: string[] = [];
@@ -41,6 +60,22 @@ describe('portSelection', () => {
     try {
       const chosen = await pickAvailableDebugPort(
         server.port,
+        (message) => logs.push(message),
+        [server.port, server.port + 2],
+      );
+      expect(chosen).toBe(server.port + 1);
+      expect(logs.length).toBe(0);
+    } finally {
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    }
+  });
+
+  test('prefers the pinned port when it is inside the range and available', async () => {
+    const server = await listenEphemeral();
+    const logs: string[] = [];
+    try {
+      const chosen = await pickAvailableDebugPort(
+        server.port + 1,
         (message) => logs.push(message),
         [server.port, server.port + 2],
       );

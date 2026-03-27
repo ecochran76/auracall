@@ -13,8 +13,8 @@ import { isDevToolsResponsive } from '../../src/browser/processCheck.js';
 import { acquireLiveTestLock, releaseLiveTestLock } from './liveLock.js';
 import { getCookies } from '@steipete/sweet-cookie';
 
-const LIVE = process.env.ORACLE_LIVE_TEST === '1';
-const MANUAL = process.env.ORACLE_LIVE_TEST_MANUAL_LOGIN === '1';
+const LIVE = process.env.AURACALL_LIVE_TEST === '1';
+const MANUAL = process.env.AURACALL_LIVE_TEST_MANUAL_LOGIN === '1';
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 

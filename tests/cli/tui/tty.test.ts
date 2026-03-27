@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { ptyAvailable, runOracleTuiWithPty } from '../../util/pty.js';
-import { setOracleHomeDirOverrideForTest } from '../../../src/oracleHome.js';
+import { setAuracallHomeDirOverrideForTest } from '../../../src/auracallHome.js';
 
 const ptyDescribe =
   process.platform === 'linux' ? describe.skip : ptyAvailable ? describe : describe.skip;
@@ -21,7 +21,7 @@ ptyDescribe('TUI (interactive, PTY)', () => {
       await fs.rm(homeDir, { recursive: true, force: true }).catch(() => {});
 
       expect(exitCode).toBe(0);
-      expect(output).toContain('🧿 oracle');
+      expect(output).toContain('🧿 auracall');
       expect(output.toLowerCase()).toContain('closing the book');
     },
     20_000,
@@ -37,7 +37,7 @@ ptyDescribe('TUI (interactive, PTY)', () => {
       });
       await fs.rm(homeDir, { recursive: true, force: true }).catch(() => {});
 
-      const headerCount = (output.match(/🧿 oracle/g) ?? []).length;
+      const headerCount = (output.match(/🧿 auracall/g) ?? []).length;
       expect(headerCount).toBe(1);
       expect(output).not.toContain('__disabled__');
       expect(output).not.toContain('(Disabled)');
@@ -51,7 +51,7 @@ ptyDescribe('TUI (interactive, PTY)', () => {
       const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-tui-sessions-'));
       try {
         const { sessionStore } = await import('../../../src/sessionStore.ts');
-        setOracleHomeDirOverrideForTest(homeDir);
+        setAuracallHomeDirOverrideForTest(homeDir);
 
 	        await sessionStore.ensureStorage();
 	        await sessionStore.createSession({ prompt: 'one', model: 'gpt-5.1' }, process.cwd());
@@ -69,7 +69,7 @@ ptyDescribe('TUI (interactive, PTY)', () => {
         expect(statusHeaders.length).toBeGreaterThan(0);
         expect(statusHeaders.length).toBeLessThan(10);
       } finally {
-        setOracleHomeDirOverrideForTest(null);
+        setAuracallHomeDirOverrideForTest(null);
         await fs.rm(homeDir, { recursive: true, force: true }).catch(() => {});
       }
     },

@@ -7,7 +7,9 @@ export const CLI_MAPPING: Record<string, string> = {
   'timeout': 'timeout',
   'file': 'file',
   'filesReport': 'filesReport',
-  'oracleProfile': 'oracleProfile',
+  'profile': 'auracallProfile',
+  'auracallProfile': 'auracallProfile',
+  'oracleProfile': 'auracallProfile',
   
   // Output
   'writeOutput': 'writeOutput',
@@ -32,6 +34,7 @@ export const CLI_MAPPING: Record<string, string> = {
   'browserChromeProfile': 'browser.chromeProfile',
   'browserChromePath': 'browser.chromePath',
   'browserCookiePath': 'browser.chromeCookiePath',
+  'browserBootstrapCookiePath': 'browser.bootstrapCookiePath',
   'browserDisplay': 'browser.display',
   'browserPort': 'browser.debugPort',
   'browserDebugPort': 'browser.debugPort', // alias

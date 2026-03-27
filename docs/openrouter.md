@@ -8,7 +8,7 @@ Oracle can target any OpenAI-compatible model on OpenRouter with minimal setup.
 export OPENROUTER_API_KEY="sk-or-..."
 # Optional but recommended for attribution:
 export OPENROUTER_REFERER="https://your-app.example"
-export OPENROUTER_TITLE="Oracle CLI"
+export OPENROUTER_TITLE="Aura-Call CLI"
 ```
 
 - If you set `OPENROUTER_API_KEY` and don’t provide another provider key, Oracle automatically routes API runs to `https://openrouter.ai/api/v1`.

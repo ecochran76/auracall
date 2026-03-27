@@ -1,38 +1,44 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { spawn } from 'node:child_process';
-import { once } from 'node:events';
 import path from 'node:path';
+import type { ChildProcess } from 'node:child_process';
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-async function callResource(proc: ReturnType<typeof spawn>, method: string, id: number, params: object) {
-  if (!proc.stdin || !proc.stdout) {
-    throw new Error('stdio unavailable');
-  }
-  // Simple one-request/one-response framing over stdio JSON-RPC.
-  const req = `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`;
-  proc.stdin.write(req);
-  const [data] = (await once(proc.stdout, 'data')) as [Buffer];
-  const parsed = JSON.parse(data.toString());
-  return parsed;
-}
+const entry = path.join(process.cwd(), 'dist/bin/auracall-mcp.js');
 
-describe('oracle-session resources via stdio', () => {
-  let proc: ReturnType<typeof spawn>;
+describe('auracall-session resources via stdio', () => {
+  let client: Client | null = null;
+  let transport: StdioClientTransport | null = null;
 
   beforeAll(async () => {
-    const entry = path.join(process.cwd(), 'dist/bin/oracle-mcp.js');
-    proc = spawn(process.execPath, [entry], { stdio: ['pipe', 'pipe', 'pipe'] });
-    await new Promise((resolve) => setTimeout(resolve, 200)); // give stdio transport time
-  }, 10_000);
+    const candidateClient = new Client({ name: 'resource-smoke', version: '0.0.0' });
+    const candidateTransport = new StdioClientTransport({
+      command: process.execPath,
+      args: [entry],
+      stderr: 'pipe',
+      cwd: path.dirname(entry),
+      env: {
+        ...process.env,
+        AURACALL_DISABLE_KEYTAR: '1',
+      },
+    });
+    await candidateClient.connect(candidateTransport);
+    client = candidateClient;
+    transport = candidateTransport;
+  }, 20_000);
 
   afterAll(async () => {
-    if (proc) {
-      proc.kill('SIGTERM');
-      await Promise.race([once(proc, 'exit'), new Promise((r) => setTimeout(r, 500))]);
-    }
+    await client?.close().catch(() => {});
+    const proc = (transport as unknown as { proc?: ChildProcess })?.proc;
+    proc?.kill?.('SIGKILL');
   });
 
   it('responds to resource/read (metadata)', async () => {
-    const res = await callResource(proc, 'resource/read', 1, { uri: 'oracle-session://nonexistent/metadata' });
-    expect(res.error?.message || res.result?.contents).toBeDefined();
+    if (!client) {
+      throw new Error('MCP client not connected');
+    }
+    await expect(
+      client.readResource({ uri: 'auracall-session://nonexistent/metadata' }, { timeout: 10_000 }),
+    ).rejects.toThrow(/Session "nonexistent" not found/);
   }, 15_000);
 });

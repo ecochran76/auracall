@@ -10,7 +10,7 @@
    - [ ] Source `~/.profile` so codesign/notary env vars are available before building the notifier.
 2. **Artifacts**
    - [ ] Run `pnpm run build` (ensure `dist/` is current).
-   - [ ] Verify `bin` mapping in `package.json` points to `dist/bin/oracle-cli.js`.
+   - [ ] Verify `bin` mapping in `package.json` points to `dist/bin/auracall.js`.
  - [ ] Produce npm tarball and checksums:
     - `npm pack --pack-destination /tmp` (after build)
     - Move the tarball into repo root (e.g., `oracle-<version>.tgz`) and generate `*.sha1` / `*.sha256`.
@@ -30,8 +30,8 @@
    - [ ] `pnpm run check` (zero warnings allowed; fail on any lint/type warnings).
    - [ ] `pnpm vitest`
    - [ ] `pnpm run lint`
-   - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `ORACLE_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
-   - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`oracle-local`), run `mcporter list oracle-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
+   - [ ] Optional live smoke (with real `OPENAI_API_KEY`): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
+   - [ ] MCP sanity check: with `config/mcporter.json` pointed at the local stdio server (`auracall-local`), run `mcporter list auracall-local --schema --config config/mcporter.json` after building (`pnpm build`) to ensure tools/resources are discoverable.
 5. **Publish (npm)**
    - [ ] Ensure git status is clean; commit and push any pending changes.
    - [ ] Avoid repeated browser auth: create a granular access token with **write** + **Bypass 2FA** at npmjs.com/settings/~/tokens, then export it (e.g., `export NPM_TOKEN=...` in `~/.profile`) and set `//registry.npmjs.org/:_authToken=${NPM_TOKEN}` in `~/.npmrc`.

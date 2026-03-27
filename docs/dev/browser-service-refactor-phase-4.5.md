@@ -50,7 +50,7 @@ Refactor config resolution so browser/process settings live in `BrowserService`,
   "profiles": {
     "default": {
       "defaultService": "grok",
-      "browser": { "profilePath": "/home/user/.oracle/browser-profile" },
+      "browser": { "profilePath": "/home/user/.auracall/browser-profile" },
       "llm": { "model": "grok-4.1-thinking" },
       "services": {
         "grok": { "defaultProjectName": "SABER" }
@@ -84,7 +84,7 @@ Refactor config resolution so browser/process settings live in `BrowserService`,
    - Validate raw config against composed schema.
    - Instantiate LlmService with resolved config to normalize provider URLs and project/conversation IDs.
 4) **Compatibility**
-   - Accept legacy config and map into v2 with warnings (e.g., `browser` -> `browserDefaults`, `oracleProfiles` -> `profiles`).
+   - Accept legacy config and map into v2 with warnings (e.g., `browser` -> `browserDefaults`, `auracallProfiles` -> `profiles`).
 5) **Remove provider logic from config.ts**
    - `resolveBrowserConfig` only shapes browser/process settings.
    - Provider URL resolution moves into LlmService.

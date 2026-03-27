@@ -11,6 +11,7 @@ import type { BrowserRunResult } from '../browserMode.js';
 import type { RemoteRunPayload, RemoteRunEvent } from './types.js';
 import { getCookies, type Cookie } from '@steipete/sweet-cookie';
 import { CHATGPT_URL } from '../browser/constants.js';
+import { resolveManagedProfileDir } from '../browser/profileStore.js';
 import {
   cleanupStaleProfileState,
   readDevToolsPort,
@@ -48,7 +49,7 @@ export async function createRemoteServer(
   const server = http.createServer();
   const logger = options.logger ?? console.log;
   const authToken = options.token ?? randomBytes(16).toString('hex');
-  const verbose = process.argv.includes('--verbose') || process.env.ORACLE_SERVE_VERBOSE === '1';
+  const verbose = process.argv.includes('--verbose') || process.env.AURACALL_SERVE_VERBOSE === '1';
   const color = process.stdout.isTTY
     ? (formatter: (msg: string) => string, msg: string) => formatter(msg)
     : (_formatter: (msg: string) => string, msg: string) => msg;
@@ -113,7 +114,7 @@ export async function createRemoteServer(
     const runId = randomUUID();
     logger(`[serve] Accepted run ${runId} from ${formatSocket(req)} (prompt ${payload?.prompt?.length ?? 0} chars)`);
     // Each run gets an isolated temp dir so attachments/logs don't collide.
-    const runDir = await mkdtemp(path.join(os.tmpdir(), `oracle-serve-${runId}-`));
+    const runDir = await mkdtemp(path.join(os.tmpdir(), `auracall-serve-${runId}-`));
     const attachmentDir = path.join(runDir, 'attachments');
     await mkdir(attachmentDir, { recursive: true });
 
@@ -204,7 +205,7 @@ export async function createRemoteServer(
   const also = extras.length ? `, also [${extras.join(', ')}]` : '';
   logger(color(chalk.cyanBright.bold, `Listening at ${primary}${also}`));
   logger(color(chalk.yellowBright, `Access token: ${authToken}`));
-  logger('Leave this terminal running; press Ctrl+C to stop oracle serve.');
+  logger('Leave this terminal running; press Ctrl+C to stop auracall serve.');
 
   return {
     port: address.port,
@@ -218,14 +219,17 @@ export async function createRemoteServer(
 }
 
 export async function serveRemote(options: RemoteServerOptions = {}): Promise<void> {
-  const manualProfileDir = options.manualLoginProfileDir ?? path.join(os.homedir(), '.oracle', 'browser-profile');
+  const manualProfileDir = resolveManagedProfileDir({
+    configuredDir: options.manualLoginProfileDir ?? null,
+    target: 'chatgpt',
+  });
   const preferManualLogin = options.manualLoginDefault || process.platform === 'win32' || isWsl();
   let cookies: CookieParam[] | null = null;
   let opened = false;
 
-  if (isWsl() && process.env.ORACLE_ALLOW_WSL_SERVE !== '1') {
-    console.log('WSL detected. For reliable browser automation, run `oracle serve` from Windows PowerShell/Command Prompt so we can use your Windows Chrome profile.');
-    console.log('If you want to stay in WSL anyway, set ORACLE_ALLOW_WSL_SERVE=1 and ensure a Linux Chrome is installed, then rerun.');
+  if (isWsl() && process.env.AURACALL_ALLOW_WSL_SERVE !== '1') {
+    console.log('WSL detected. For reliable browser automation, run `auracall serve` from Windows PowerShell/Command Prompt so we can use your Windows Chrome profile.');
+    console.log('If you want to stay in WSL anyway, set AURACALL_ALLOW_WSL_SERVE=1 and ensure a Linux Chrome is installed, then rerun.');
     console.log('Alternatively, start Windows Chrome with --remote-debugging-port=9222 and use `--remote-chrome <windows-ip>:9222`.');
     return;
   }
@@ -260,7 +264,7 @@ export async function serveRemote(options: RemoteServerOptions = {}): Promise<vo
         void launchManualLoginChrome(manualProfileDir, CHATGPT_URL, console.log);
       }
     } else if (opened) {
-      console.log('Opened chatgpt.com for login. Sign in, then restart `oracle serve` to continue.');
+      console.log('Opened chatgpt.com for login. Sign in, then restart `auracall serve` to continue.');
       return;
     } else {
       console.log('Please open https://chatgpt.com/ in this host\'s browser and sign in; then rerun.');
@@ -411,7 +415,7 @@ function toCdpCookie(cookie: Cookie): CookieParam | null {
 }
 
 function triggerLocalLoginPrompt(logger: (message: string) => void, url: string): boolean {
-  const verbose = process.argv.includes('--verbose') || process.env.ORACLE_SERVE_VERBOSE === '1';
+  const verbose = process.argv.includes('--verbose') || process.env.AURACALL_SERVE_VERBOSE === '1';
   const openers: Array<{ cmd: string; args?: string[] }> = [];
 
   if (process.platform === 'darwin') {

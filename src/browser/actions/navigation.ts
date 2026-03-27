@@ -6,6 +6,7 @@ import {
 } from '../constants.js';
 import { delay } from '../utils.js';
 import { logDomFailure } from '../domDebug.js';
+import { BrowserAutomationError } from '../../oracle/errors.js';
 
 export function installJavaScriptDialogAutoDismissal(
   Page: ChromeClient['Page'],
@@ -176,28 +177,11 @@ export async function navigateToPromptReadyWithFallback(
 
 export async function ensureNotBlocked(Runtime: ChromeClient['Runtime'], headless: boolean, logger: BrowserLogger) {
   if (await isCloudflareInterstitial(Runtime)) {
-    if (headless) {
-      const message =
-        'Cloudflare challenge detected in headless mode. Re-run with --headful so you can solve the challenge.';
-      logger('Cloudflare anti-bot page detected');
-      throw new Error(message);
-    }
-    logger('Cloudflare anti-bot page detected; check the open browser window to complete the challenge.');
-    const deadline = Date.now() + 10 * 60_000;
-    let lastNotice = 0;
-    while (Date.now() < deadline) {
-      if (!(await isCloudflareInterstitial(Runtime))) {
-        logger('Cloudflare challenge cleared; resuming.');
-        return;
-      }
-      const now = Date.now();
-      if (now - lastNotice > 5000) {
-        logger('Waiting for Cloudflare challenge to clear...');
-        lastNotice = now;
-      }
-      await delay(1000);
-    }
-    throw new Error('Cloudflare challenge did not clear in time. Please retry.');
+    const message = headless
+      ? 'Cloudflare challenge detected in headless mode. Re-run with --headful so you can solve the challenge.'
+      : 'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.';
+    logger('Cloudflare anti-bot page detected');
+    throw new BrowserAutomationError(message, { stage: 'cloudflare-challenge', headless });
   }
 }
 
@@ -253,8 +237,8 @@ export async function ensureLoggedIn(
   const cookieHint = options.remoteSession
     ? 'The remote Chrome session is not signed into ChatGPT. Sign in there, then rerun.'
     : (options.appliedCookies ?? 0) === 0
-      ? 'No ChatGPT cookies were applied; sign in to chatgpt.com in Chrome or pass inline cookies (--browser-inline-cookies[(-file)] / ORACLE_BROWSER_COOKIES_JSON).'
-      : 'ChatGPT login appears missing; open chatgpt.com in Chrome to refresh the session or provide inline cookies (--browser-inline-cookies[(-file)] / ORACLE_BROWSER_COOKIES_JSON).';
+      ? 'No ChatGPT cookies were applied; sign in to chatgpt.com in Chrome or pass inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).'
+      : 'ChatGPT login appears missing; open chatgpt.com in Chrome to refresh the session or provide inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).';
 
   throw new Error(`ChatGPT session not detected.${domLabel} ${cookieHint}`);
 }

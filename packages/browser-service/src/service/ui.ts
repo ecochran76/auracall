@@ -177,6 +177,192 @@ export type SubmitInlineRenameOptions = {
   closeSelector?: string;
 };
 
+export type WaitForPredicateOptions = {
+  timeoutMs?: number;
+  pollMs?: number;
+  description?: string;
+};
+
+export type WaitForPredicateResult = {
+  ok: boolean;
+  value?: unknown;
+  attempts: number;
+  elapsedMs: number;
+  description?: string;
+};
+
+export type WaitForDocumentReadyOptions = WaitForPredicateOptions & {
+  states?: Array<'loading' | 'interactive' | 'complete'>;
+  requireVisible?: boolean;
+};
+
+export type WaitForVisibleSelectorOptions = WaitForPredicateOptions & {
+  rootSelectors?: readonly string[];
+};
+
+export type WaitForScriptTextOptions = WaitForPredicateOptions & {
+  includeAny?: string[];
+  includeAll?: string[];
+  scriptSelector?: string;
+  caseSensitive?: boolean;
+};
+
+const DEFAULT_WAIT_POLL_MS = 200;
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+export async function waitForPredicate(
+  Runtime: ChromeClient['Runtime'],
+  expression: string,
+  options: WaitForPredicateOptions = {},
+): Promise<WaitForPredicateResult> {
+  const timeoutMs = options.timeoutMs ?? 10_000;
+  const pollMs = options.pollMs ?? DEFAULT_WAIT_POLL_MS;
+  const startedAt = Date.now();
+  const deadline = startedAt + timeoutMs;
+  let attempts = 0;
+  let lastValue: unknown;
+  while (Date.now() < deadline) {
+    attempts += 1;
+    const { result } = await Runtime.evaluate({
+      expression,
+      returnByValue: true,
+    });
+    lastValue = result?.value;
+    if (result?.value) {
+      return {
+        ok: true,
+        value: result.value,
+        attempts,
+        elapsedMs: Date.now() - startedAt,
+        description: options.description,
+      };
+    }
+    await sleep(pollMs);
+  }
+  return {
+    ok: false,
+    value: lastValue,
+    attempts,
+    elapsedMs: Date.now() - startedAt,
+    description: options.description,
+  };
+}
+
+export async function waitForDocumentReady(
+  Runtime: ChromeClient['Runtime'],
+  options: WaitForDocumentReadyOptions = {},
+): Promise<WaitForPredicateResult> {
+  const states = options.states?.length ? options.states : ['interactive', 'complete'];
+  const requireVisible = options.requireVisible ?? false;
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const allowedStates = ${JSON.stringify(states)};
+      const readyState = document.readyState;
+      const visibilityState = document.visibilityState ?? null;
+      const ok =
+        allowedStates.includes(readyState) &&
+        (${JSON.stringify(requireVisible)} ? visibilityState === 'visible' : true);
+      if (!ok) {
+        return null;
+      }
+      return { readyState, visibilityState };
+    })()`,
+    {
+      ...options,
+      description:
+        options.description ??
+        `document.readyState in [${states.join(', ')}]${requireVisible ? ' and visible' : ''}`,
+    },
+  );
+}
+
+export async function waitForVisibleSelector(
+  Runtime: ChromeClient['Runtime'],
+  selector: string,
+  options: WaitForVisibleSelectorOptions = {},
+): Promise<WaitForPredicateResult> {
+  const rootSelectors = options.rootSelectors ?? [];
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const selector = ${JSON.stringify(selector)};
+      const rootSelectors = ${JSON.stringify(rootSelectors)};
+      const roots = rootSelectors.length
+        ? rootSelectors.map((root) => document.querySelector(root)).filter(Boolean)
+        : [document];
+      for (const root of roots) {
+        const node = root?.querySelector?.(selector);
+        if (!node) continue;
+        const rect = node.getBoundingClientRect();
+        if (!rect || rect.width <= 0 || rect.height <= 0) continue;
+        return {
+          tagName: node.tagName?.toLowerCase?.() ?? null,
+          text: (node.textContent || '').trim().slice(0, 120) || null,
+          rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        };
+      }
+      return null;
+    })()`,
+    {
+      ...options,
+      description: options.description ?? `visible selector ${selector}`,
+    },
+  );
+}
+
+export async function waitForScriptText(
+  Runtime: ChromeClient['Runtime'],
+  options: WaitForScriptTextOptions,
+): Promise<WaitForPredicateResult> {
+  const includeAny = options.includeAny ?? [];
+  const includeAll = options.includeAll ?? [];
+  const caseSensitive = options.caseSensitive ?? false;
+  const scriptSelector = options.scriptSelector ?? 'script';
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const includeAny = ${JSON.stringify(includeAny)};
+      const includeAll = ${JSON.stringify(includeAll)};
+      const caseSensitive = ${JSON.stringify(caseSensitive)};
+      const normalize = (value) => {
+        const text = String(value || '');
+        return caseSensitive ? text : text.toLowerCase();
+      };
+      const texts = Array.from(document.querySelectorAll(${JSON.stringify(scriptSelector)}))
+        .map((node) => normalize(node.textContent || ''))
+        .filter(Boolean);
+      const anyTokens = includeAny.map(normalize);
+      const allTokens = includeAll.map(normalize);
+      const match = texts.find((text) => {
+        if (allTokens.length && !allTokens.every((token) => text.includes(token))) {
+          return false;
+        }
+        if (anyTokens.length && !anyTokens.some((token) => text.includes(token))) {
+          return false;
+        }
+        return allTokens.length > 0 || anyTokens.length > 0;
+      });
+      if (!match) {
+        return null;
+      }
+      return {
+        matchedLength: match.length,
+        preview: match.slice(0, 160),
+      };
+    })()`,
+    {
+      ...options,
+      description:
+        options.description ??
+        `script text contains ${[...includeAll, ...includeAny].map((token) => JSON.stringify(token)).join(', ')}`,
+    },
+  );
+}
+
 export async function isDialogOpen(
   Runtime: ChromeClient['Runtime'],
   dialogSelectors: readonly string[] = DEFAULT_DIALOG_SELECTORS,
@@ -194,14 +380,15 @@ export async function waitForDialog(
   timeoutMs = 10_000,
   dialogSelectors: readonly string[] = DEFAULT_DIALOG_SELECTORS,
 ): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    if (await isDialogOpen(Runtime, dialogSelectors)) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  return false;
+  const ready = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const selectors = ${JSON.stringify(dialogSelectors)};
+      return selectors.some((selector) => Boolean(document.querySelector(selector)));
+    })()`,
+    { timeoutMs, description: 'dialog open' },
+  );
+  return ready.ok;
 }
 
 export async function waitForSelector(
@@ -209,18 +396,12 @@ export async function waitForSelector(
   selector: string,
   timeoutMs = 10_000,
 ): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { result } = await Runtime.evaluate({
-      expression: `Boolean(document.querySelector(${JSON.stringify(selector)}))`,
-      returnByValue: true,
-    });
-    if (result?.value) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  return false;
+  const ready = await waitForPredicate(
+    Runtime,
+    `Boolean(document.querySelector(${JSON.stringify(selector)}))`,
+    { timeoutMs, description: `selector ${selector}` },
+  );
+  return ready.ok;
 }
 
 export async function waitForNotSelector(
@@ -228,18 +409,12 @@ export async function waitForNotSelector(
   selector: string,
   timeoutMs = 10_000,
 ): Promise<boolean> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { result } = await Runtime.evaluate({
-      expression: `Boolean(document.querySelector(${JSON.stringify(selector)}))`,
-      returnByValue: true,
-    });
-    if (!result?.value) {
-      return true;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 200));
-  }
-  return false;
+  const gone = await waitForPredicate(
+    Runtime,
+    `!Boolean(document.querySelector(${JSON.stringify(selector)}))`,
+    { timeoutMs, description: `selector gone ${selector}` },
+  );
+  return gone.ok;
 }
 
 export async function hoverElement(
@@ -637,9 +812,21 @@ export async function pressButton(
 ): Promise<{ ok: boolean; reason?: string; matchedLabel?: string }> {
   const timeoutMs = options.timeoutMs ?? 5000;
   if (options.selector) {
-    const ready = await waitForSelector(Runtime, options.selector, timeoutMs);
-    if (!ready) {
-      return { ok: false, reason: 'Selector not found: ' + options.selector };
+    const ready = options.requireVisible ?? true
+      ? await waitForVisibleSelector(Runtime, options.selector, {
+          timeoutMs,
+          rootSelectors: options.rootSelectors,
+        })
+      : await waitForPredicate(
+          Runtime,
+          `Boolean(document.querySelector(${JSON.stringify(options.selector)}))`,
+          { timeoutMs, description: `selector ${options.selector}` },
+        );
+    if (!ready.ok) {
+      return {
+        ok: false,
+        reason: `${options.requireVisible ?? true ? 'Visible selector' : 'Selector'} not found: ${options.selector}`,
+      };
     }
   }
 

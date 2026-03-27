@@ -112,9 +112,9 @@ export function registerConsultTool(server: McpServer): void {
   server.registerTool(
     'consult',
     {
-      title: 'Run an oracle session',
+      title: 'Run an Aura-Call session',
       description:
-        'Run a one-shot Oracle session (API or browser). Attach files/dirs for context, optional model/engine overrides, and an optional slug. Background handling follows the CLI defaults; browser runs only start when Chrome is available.',
+        'Run a one-shot Aura-Call session (API or browser). Attach files/dirs for context, optional model/engine overrides, and an optional slug. Background handling follows the CLI defaults; browser runs only start when Chrome is available.',
       // Cast to any to satisfy SDK typings across differing Zod versions.
       inputSchema: consultInputShape,
       outputSchema: consultOutputShape,

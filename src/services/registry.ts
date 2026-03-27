@@ -2,11 +2,12 @@ import crypto from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getOracleHomeDir } from '../oracleHome.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
 
 export interface ServiceModelEntry {
   id: string;
   label: string;
+  aliases?: string[];
 }
 
 export interface ServiceRegistryEntry {
@@ -37,7 +38,7 @@ export async function ensureServicesRegistry(): Promise<ServicesRegistry> {
   const templateHash = hashContents(templateContents);
   const template = JSON.parse(templateContents) as ServicesRegistry;
 
-  const registryPath = path.join(getOracleHomeDir(), 'services.json');
+  const registryPath = path.join(getAuracallHomeDir(), 'services.json');
   let registry: ServicesRegistryFile | null = null;
   try {
     const existing = await fs.readFile(registryPath, 'utf8');
@@ -60,4 +61,46 @@ export async function ensureServicesRegistry(): Promise<ServicesRegistry> {
     version: registry.version,
     services: registry.services,
   };
+}
+
+export function normalizeServiceModelToken(text: string): string {
+  return text
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/[\u2022•]+/g, ' ')
+    .replace(/[_.-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .toLowerCase();
+}
+
+export function resolveServiceModelLabels(
+  registry: ServicesRegistry,
+  serviceId: string,
+  input: string,
+): string[] {
+  const normalized = normalizeServiceModelToken(input);
+  if (!normalized) return [];
+
+  const models = registry.services[serviceId]?.models ?? [];
+  const exactMatches = new Set<string>();
+  const prefixMatches = new Set<string>();
+
+  for (const model of models) {
+    const tokens = [model.label, model.id, ...(model.aliases ?? [])]
+      .map((token) => normalizeServiceModelToken(token))
+      .filter(Boolean);
+    if (tokens.includes(normalized)) {
+      exactMatches.add(model.label);
+      continue;
+    }
+    if (tokens.some((token) => token.startsWith(normalized) || normalized.startsWith(token))) {
+      prefixMatches.add(model.label);
+    }
+  }
+
+  if (exactMatches.size > 0) {
+    return [...exactMatches];
+  }
+
+  return [...prefixMatches];
 }

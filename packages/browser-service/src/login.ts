@@ -1,15 +1,9 @@
-import { spawn } from 'node:child_process';
-import type { CookieParam } from './types.js';
+import type { CookieParam, DebugPortStrategy } from './types.js';
 import {
   exportCookiesFromCdp,
   inferProfileFromCookiePath,
-  isWindowsChromePath,
   isWsl,
-  quotePowerShellLiteral,
-  toWindowsPath,
-  waitForPortOpen,
 } from './loginHelpers.js';
-import { resolveWslHost } from './chromeLifecycle.js';
 import { pickAvailableDebugPort, DEFAULT_DEBUG_PORT, DEFAULT_DEBUG_PORT_RANGE } from './portSelection.js';
 
 export interface BrowserLoginOptions {
@@ -18,6 +12,7 @@ export interface BrowserLoginOptions {
   manualLoginProfileDir: string;
   cookiePath?: string;
   loginUrl: string;
+  compatibleHosts?: string[];
   loginLabel?: string;
   exportCookies?: boolean;
   preferCookieProfile?: boolean;
@@ -38,10 +33,19 @@ export interface BrowserLoginOptions {
     profileName: string;
     userDataDir: string;
     url: string;
+    compatibleHosts?: string[];
     debugPort?: number;
+    debugPortStrategy?: DebugPortStrategy | null;
+    serviceTabLimit?: number | null;
+    blankTabLimit?: number | null;
+    collapseDisposableWindows?: boolean;
     logger: () => void;
-  }) => Promise<{ chrome: { process?: { unref?: () => void } } }>;
+  }) => Promise<{ chrome: { process?: { unref?: () => void }; pid?: number | null; host?: string; port?: number } }>;
   onCookiesExported?: (cookies: CookieParam[]) => Promise<void> | void;
+  debugPortStrategy?: DebugPortStrategy | null;
+  serviceTabLimit?: number | null;
+  blankTabLimit?: number | null;
+  collapseDisposableWindows?: boolean;
 }
 
 export async function runBrowserLogin(options: BrowserLoginOptions): Promise<void> {
@@ -51,6 +55,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     manualLoginProfileDir,
     cookiePath,
     loginUrl,
+    compatibleHosts,
     loginLabel,
     exportCookies,
     preferCookieProfile = true,
@@ -58,18 +63,23 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     onRegisterInstance,
     launchManualLoginSession,
     onCookiesExported,
+    debugPortStrategy,
+    serviceTabLimit,
+    blankTabLimit,
+    collapseDisposableWindows,
   } = options;
 
   const inferred = cookiePath && preferCookieProfile ? inferProfileFromCookiePath(cookiePath) : null;
   const userDataDir = inferred?.userDataDir ?? manualLoginProfileDir;
   const profileName = inferred?.profileDir ?? chromeProfile;
-  const wslWindowsChrome = isWsl() && isWindowsChromePath(chromePath);
-  const debugHost = wslWindowsChrome ? (resolveWslHost() ?? '127.0.0.1') : '127.0.0.1';
-  const debugPort = await pickAvailableDebugPort(
-    DEFAULT_DEBUG_PORT,
-    () => undefined,
-    DEFAULT_DEBUG_PORT_RANGE,
-  );
+  const effectiveDebugPortStrategy = debugPortStrategy ?? (isWsl() && /^\/mnt\/[a-z]\//i.test(chromePath) ? 'auto' : 'fixed');
+  const debugPort = effectiveDebugPortStrategy === 'fixed'
+    ? await pickAvailableDebugPort(
+        DEFAULT_DEBUG_PORT,
+        () => undefined,
+        DEFAULT_DEBUG_PORT_RANGE,
+      )
+    : undefined;
 
   if (exportCookies) {
     if (!cookieExport?.urls?.length) {
@@ -80,56 +90,45 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
         'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
       );
     }
-    const args = [
-      '--new-window',
-      `--user-data-dir=${userDataDir}`,
-      `--profile-directory=${profileName}`,
-      '--remote-allow-origins=*',
-      `--remote-debugging-port=${debugPort}`,
-      loginUrl,
-    ];
-    if (wslWindowsChrome) {
-      args.splice(args.length - 1, 0, '--remote-debugging-address=0.0.0.0');
-    }
     const cookieUrls = cookieExport.urls;
     const requiredCookies = cookieExport.requiredCookies ?? [];
     const timeoutMs = cookieExport.timeoutMs ?? 120_000;
-
-    if (wslWindowsChrome) {
-      const winChromePath = toWindowsPath(chromePath);
-      const winArgs = args.map(toWindowsPath);
-      const argList = winArgs.map(quotePowerShellLiteral).join(', ');
-      const psCommand =
-        `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
-        `-ArgumentList @(${argList}) -WindowStyle Normal`;
-      const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
-        detached: true,
-        stdio: 'ignore',
-        windowsVerbatimArguments: true,
-      });
-      loginProcess.unref();
-      await waitForPortOpen(debugHost, debugPort, timeoutMs);
-      await onRegisterInstance?.({ userDataDir, profileName, port: debugPort, host: debugHost });
-    } else {
-      const { chrome } = await launchManualLoginSession({
-        chromePath,
-        profileName,
-        userDataDir,
-        url: loginUrl,
-        debugPort,
-        logger: () => undefined,
-      });
-      chrome.process?.unref?.();
-    }
+    const { chrome } = await launchManualLoginSession({
+      chromePath,
+      profileName,
+      userDataDir,
+      url: loginUrl,
+      compatibleHosts,
+      debugPort,
+      debugPortStrategy: effectiveDebugPortStrategy,
+      serviceTabLimit,
+      blankTabLimit,
+      collapseDisposableWindows,
+      logger: () => undefined,
+    });
+    chrome.process?.unref?.();
+    const debugHost = chrome.host ?? '127.0.0.1';
+    const activePort = chrome.port ?? debugPort ?? null;
+    await onRegisterInstance?.({
+      userDataDir,
+      profileName,
+      port: activePort ?? undefined,
+      host: debugHost,
+      pid: chrome.pid ?? undefined,
+    });
 
     const label = loginLabel ?? 'browser';
     console.log(`Opened ${label} login in ${chromePath}`);
     console.log(`Profile: ${userDataDir} (${profileName})`);
     console.log(`URL: ${loginUrl}`);
     console.log('Waiting for cookies...');
+    if (!activePort) {
+      throw new Error('Chrome did not expose a DevTools port for cookie export.');
+    }
 
     const cookies = await exportCookiesFromCdp({
-      port: debugPort,
+      port: activePort,
+      host: debugHost,
       requiredNames: requiredCookies,
       urls: cookieUrls,
       timeoutMs,
@@ -143,47 +142,34 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       'Note: if Chrome is already running, it may ignore --user-data-dir; quit Chrome to force the login profile.',
     );
   }
-  const args = [
-    '--new-window',
-    `--user-data-dir=${userDataDir}`,
-    `--profile-directory=${profileName}`,
-    '--remote-allow-origins=*',
-    `--remote-debugging-port=${debugPort}`,
-    loginUrl,
-  ];
-  if (wslWindowsChrome) {
-    args.splice(args.length - 1, 0, '--remote-debugging-address=0.0.0.0');
-  }
-  const timeoutMs = 120_000;
-  if (wslWindowsChrome) {
-    const winChromePath = toWindowsPath(chromePath);
-    const winArgs = args.map(toWindowsPath);
-    const argList = winArgs.map(quotePowerShellLiteral).join(', ');
-    const psCommand =
-      `Start-Process -FilePath ${quotePowerShellLiteral(winChromePath)} ` +
-      `-ArgumentList @(${argList}) -WindowStyle Normal`;
-    const loginProcess = spawn('powershell.exe', ['-NoProfile', '-Command', psCommand], {
-      detached: true,
-      stdio: 'ignore',
-      windowsVerbatimArguments: true,
-    });
-    loginProcess.unref();
-    await waitForPortOpen(debugHost, debugPort, timeoutMs);
-    await onRegisterInstance?.({ userDataDir, profileName, port: debugPort, host: debugHost });
-  } else {
-    const { chrome } = await launchManualLoginSession({
-      chromePath,
-      profileName,
-      userDataDir,
-      url: loginUrl,
-      debugPort,
-      logger: () => undefined,
-    });
-    chrome.process?.unref?.();
-  }
+  const { chrome } = await launchManualLoginSession({
+    chromePath,
+    profileName,
+    userDataDir,
+    url: loginUrl,
+    compatibleHosts,
+    debugPort,
+    debugPortStrategy: effectiveDebugPortStrategy,
+    serviceTabLimit,
+    blankTabLimit,
+    collapseDisposableWindows,
+    logger: () => undefined,
+  });
+  chrome.process?.unref?.();
+  const debugHost = chrome.host ?? '127.0.0.1';
+  const activePort = chrome.port ?? debugPort ?? null;
+  await onRegisterInstance?.({
+    userDataDir,
+    profileName,
+    port: activePort ?? undefined,
+    host: debugHost,
+    pid: chrome.pid ?? undefined,
+  });
   const label = loginLabel ?? 'browser';
   console.log(`Opened ${label} login in ${chromePath}`);
   console.log(`Profile: ${userDataDir} (${profileName})`);
   console.log(`URL: ${loginUrl}`);
-  console.log(`Args: ${args.join(' ')}`);
+  if (activePort) {
+    console.log(`Debug endpoint: ${debugHost}:${activePort}`);
+  }
 }

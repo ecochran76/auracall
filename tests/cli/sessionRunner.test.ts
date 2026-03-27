@@ -38,7 +38,7 @@ const sessionStoreMock = vi.hoisted(() => ({
   filterSessions: vi.fn(),
   getPaths: vi.fn(),
   readModelLog: vi.fn(),
-  sessionsDir: vi.fn().mockReturnValue('/tmp/.oracle/sessions'),
+  sessionsDir: vi.fn().mockReturnValue('/tmp/.auracall/sessions'),
 }));
 
 vi.mock('../../src/sessionStore.ts', () => ({
@@ -102,7 +102,7 @@ beforeEach(() => {
     stream: { end: vi.fn() },
   });
   sessionStoreMock.readModelLog.mockResolvedValue('model log body');
-  sessionStoreMock.sessionsDir.mockReturnValue('/tmp/.oracle/sessions');
+  sessionStoreMock.sessionsDir.mockReturnValue('/tmp/.auracall/sessions');
   vi.spyOn(fsPromises, 'mkdir').mockResolvedValue(undefined);
   vi.spyOn(fsPromises, 'writeFile').mockResolvedValue(undefined);
 });
@@ -799,6 +799,50 @@ describe('performSessionRun', () => {
     const logLines = log.mock.calls.map((c) => String(c[0])).join('\n');
     expect(logLines).not.toContain('Next steps (browser fallback)');
     expect(logLines).not.toContain('--engine api');
+  });
+
+  test('persists browser runtime metadata when browser automation fails with runtime details', async () => {
+    const automationError = new BrowserAutomationError('challenge pending', {
+      stage: 'cloudflare-challenge',
+      runtime: {
+        chromePid: 1234,
+        chromePort: 9222,
+        chromeHost: '127.0.0.1',
+        userDataDir: '/tmp/oracle-browser',
+      },
+    });
+    vi.mocked(runBrowserSessionExecution).mockRejectedValueOnce(automationError);
+
+    await expect(
+      performSessionRun({
+        sessionMeta: baseSessionMeta,
+        runOptions: baseRunOptions,
+        mode: 'browser',
+        browserConfig: { chromePath: null },
+        cwd: '/tmp',
+        log,
+        write,
+        version: cliVersion,
+      }),
+    ).rejects.toThrow('challenge pending');
+
+    const finalUpdate = sessionStoreMock.updateSession.mock.calls.at(-1)?.[1];
+    expect(finalUpdate).toMatchObject({
+      status: 'error',
+      browser: {
+        config: expect.any(Object),
+        runtime: expect.objectContaining({
+          chromePid: 1234,
+          chromePort: 9222,
+          chromeHost: '127.0.0.1',
+          userDataDir: '/tmp/oracle-browser',
+        }),
+      },
+      error: expect.objectContaining({
+        category: 'browser-automation',
+        details: expect.objectContaining({ stage: 'cloudflare-challenge' }),
+      }),
+    });
   });
 
   test('records response metadata when runOracle throws OracleResponseError', async () => {

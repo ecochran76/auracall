@@ -3,6 +3,8 @@ import path from 'node:path';
 import { isDevToolsResponsive } from '../processCheck.js';
 import { resolveProfileDirectoryName } from './profile.js';
 
+import type { DebugPortStrategy } from '../types.js';
+
 export type BrowserListTarget = {
   port: number;
   host?: string;
@@ -11,6 +13,7 @@ export type BrowserListTarget = {
 export type ResolvePortOptions = {
   envPort?: string | null;
   configuredPort?: number | null;
+  configuredPortStrategy?: DebugPortStrategy | null;
   profilePath: string;
   profileName?: string | null;
   registryPath: string;
@@ -28,7 +31,7 @@ export async function resolveBrowserListTarget(
       return { port: parsed, host };
     }
   }
-  const configuredPort = options.configuredPort;
+  const configuredPort = options.configuredPortStrategy === 'auto' ? null : options.configuredPort;
   if (configuredPort && Number.isFinite(configuredPort) && configuredPort > 0) {
     const host = options.resolveHost?.() ?? '127.0.0.1';
     return { port: configuredPort, host };

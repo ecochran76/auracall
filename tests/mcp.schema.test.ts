@@ -4,9 +4,9 @@ import type { ChildProcess } from 'node:child_process';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 
-const entry = path.join(process.cwd(), 'dist/bin/oracle-mcp.js');
+const entry = path.join(process.cwd(), 'dist/bin/auracall-mcp.js');
 
-describe('oracle-mcp schemas', () => {
+describe('auracall-mcp schemas', () => {
   let client: Client | null = null;
   let transport: StdioClientTransport | null = null;
   const stderrLog: string[] = [];
@@ -16,7 +16,7 @@ describe('oracle-mcp schemas', () => {
   let stdoutRemainder = '';
 
   // Keep the daemon quiet and skip optional native deps in CI.
-  process.env.ORACLE_DISABLE_KEYTAR = '1';
+  process.env.AURACALL_DISABLE_KEYTAR = '1';
 
   const attachStderr = (proc: ChildProcess | undefined): void => {
     proc?.stderr?.on('data', (chunk) => stderrLog.push(String(chunk)));
@@ -51,7 +51,7 @@ describe('oracle-mcp schemas', () => {
         env: {
           ...process.env,
           // biome-ignore lint/style/useNamingConvention: environment variables stay upper snake case
-          'ORACLE_DISABLE_KEYTAR': '1',
+          'AURACALL_DISABLE_KEYTAR': '1',
         },
       });
       try {
@@ -71,7 +71,7 @@ describe('oracle-mcp schemas', () => {
       }
     }
     const detail = [...stderrLog, ...exitLog].join('') || String(lastError);
-    throw new Error(`oracle-mcp failed to start: ${detail}`);
+    throw new Error(`auracall-mcp failed to start: ${detail}`);
   }, 20_000);
 
   afterAll(async () => {

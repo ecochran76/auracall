@@ -28,11 +28,15 @@ export type BrowserServiceConfig = Pick<
   | 'display'
   | 'keepBrowser'
   | 'debugPort'
+  | 'debugPortStrategy'
   | 'debugPortRange'
   | 'manualLoginProfileDir'
   | 'manualLogin'
   | 'wslChromePreference'
   | 'remoteChrome'
+  | 'serviceTabLimit'
+  | 'blankTabLimit'
+  | 'collapseDisposableWindows'
 >;
 
 export type CredentialHint = {

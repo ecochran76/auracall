@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import * as registry from '../../packages/browser-service/src/service/stateRegistry.js';
-import { resolveTab } from '../../packages/browser-service/src/service/instanceScanner.js';
+import {
+  explainTabResolution,
+  resolveTab,
+  summarizeTabResolution,
+} from '../../packages/browser-service/src/service/instanceScanner.js';
 
 vi.mock('../../packages/browser-service/src/processCheck.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../packages/browser-service/src/processCheck.js')>();
@@ -79,5 +83,59 @@ describe('stateRegistry (package)', () => {
     ];
     const tab = resolveTab(tabs, { matchUrl: (url) => url.includes('grok.com') });
     expect(tab?.targetId).toBe('b');
+  });
+
+  test('resolveTab normalizes legacy id-only targets', () => {
+    const tabs = [
+      { id: 'legacy-a', url: 'https://example.com', title: 'Example', type: 'page' },
+      { id: 'legacy-b', url: 'https://grok.com', title: 'Grok', type: 'page' },
+    ];
+    const tab = resolveTab(tabs, { matchUrl: (url) => url.includes('grok.com') });
+    expect(tab?.targetId).toBe('legacy-b');
+  });
+
+  test('explainTabResolution reports score and reasons for the winner', () => {
+    const tabs = [
+      { targetId: 'a', url: 'https://example.com', title: 'Docs', type: 'page' },
+      { id: 'legacy-b', url: 'https://grok.com/project', title: 'Grok', type: 'page' },
+      { targetId: 'c', url: 'https://grok.com/settings', title: 'Settings', type: 'other' },
+    ];
+
+    const result = explainTabResolution(tabs, {
+      matchUrl: (url) => url.includes('grok.com'),
+      matchTitle: (title) => title === 'Grok',
+      preferTypes: ['page'],
+    });
+
+    expect(result.tab?.targetId).toBe('legacy-b');
+    expect(result.score).toBe(6);
+    expect(result.candidates[1]).toMatchObject({
+      selected: true,
+      score: 6,
+      reasons: ['match-url', 'match-title', 'preferred-type'],
+      tab: { targetId: 'legacy-b' },
+    });
+    expect(result.candidates[2]).toMatchObject({
+      selected: false,
+      score: 3,
+      reasons: ['match-url'],
+    });
+  });
+
+  test('summarizeTabResolution formats the winner and nearest losers', () => {
+    const result = explainTabResolution(
+      [
+        { targetId: 'a', url: 'https://example.com', title: 'Docs', type: 'page' },
+        { targetId: 'b', url: 'https://grok.com/project', title: 'Grok', type: 'page' },
+        { targetId: 'c', url: 'https://grok.com/settings', title: 'Settings', type: 'page' },
+      ],
+      {
+        matchUrl: (url) => url.includes('grok.com'),
+        matchTitle: (title) => title === 'Grok',
+      },
+    );
+
+    expect(summarizeTabResolution(result)).toContain('Selected tab=b type=page url=https://grok.com/project score=5');
+    expect(summarizeTabResolution(result)).toContain('tab=c type=page url=https://grok.com/settings score=3');
   });
 });

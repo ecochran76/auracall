@@ -1,7 +1,11 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { buildBrowserConfig, resolveBrowserModelLabel } from '../../src/cli/browserConfig.js';
 
 describe('buildBrowserConfig', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   test('uses defaults when optional flags omitted', async () => {
     const config = await buildBrowserConfig({ model: 'gpt-5.2-pro' });
     expect(config).toMatchObject({
@@ -35,6 +39,7 @@ describe('buildBrowserConfig', () => {
       browserChromeProfile: 'Profile 2',
       browserChromePath: '/Applications/Chrome.app',
       browserCookiePath: '/tmp/cookies.db',
+      browserBootstrapCookiePath: '/tmp/bootstrap-cookies.db',
       browserUrl: 'https://chat.example.com',
       browserTimeout: '120s',
       browserInputTimeout: '5s',
@@ -50,6 +55,7 @@ describe('buildBrowserConfig', () => {
       chromeProfile: 'Profile 2',
       chromePath: '/Applications/Chrome.app',
       chromeCookiePath: '/tmp/cookies.db',
+      bootstrapCookiePath: '/tmp/bootstrap-cookies.db',
       url: 'https://chat.example.com/',
       timeoutMs: 120_000,
       inputTimeoutMs: 5_000,
@@ -85,6 +91,21 @@ describe('buildBrowserConfig', () => {
       model: 'gemini-3-pro',
     });
     expect(config.desiredModel).toBe('Gemini 3 Pro');
+  });
+
+  test('maps Grok aliases to the current browser picker labels', async () => {
+    const config = await buildBrowserConfig({
+      model: 'grok-4.1',
+    });
+    expect(config.desiredModel).toBe('Expert');
+  });
+
+  test('normalizes Grok browser label overrides to current picker entries', async () => {
+    const config = await buildBrowserConfig({
+      model: 'grok-4.1',
+      browserModelLabel: 'grok-4.20',
+    });
+    expect(config.desiredModel).toBe('Heavy');
   });
 
   test('trims whitespace around override labels', async () => {
@@ -181,6 +202,22 @@ describe('buildBrowserConfig', () => {
         remoteChrome: 'server:70000',
       }),
     ).rejects.toThrow(/between 1 and 65535/i);
+  });
+
+  test('uses a Windows-backed managed profile root for WSL Windows Chrome by default', async () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+
+    const config = await buildBrowserConfig({
+      model: 'grok-4.1',
+      browserChromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
+      browserCookiePath: '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
+      browserWslChrome: 'windows',
+    });
+
+    expect(config.managedProfileRoot).toBe('/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles');
+    expect(config.manualLoginProfileDir).toBe(
+      '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/default/grok',
+    );
   });
 });
 
