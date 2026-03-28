@@ -85,10 +85,11 @@ export interface ReattachRuntimeDeps {
     port: number;
     kill: () => Promise<void>;
     host?: string;
+    launchedByAuracall?: boolean;
     process?: { unref?: () => void };
   }>;
   connectToChrome: (port: number, logger: BrowserLogger, host?: string) => Promise<ChromeClient>;
-  hideChromeWindow: (chrome: { port: number; host?: string }, logger: BrowserLogger) => Promise<void>;
+  hideChromeWindow: (chrome: { port: number; host?: string; launchedByAuracall?: boolean }, logger: BrowserLogger) => Promise<void>;
   syncCookies: (
     Network: ChromeClient['Network'],
     url: string | null,
@@ -284,7 +285,7 @@ async function resumeBrowserSessionViaNewChrome(
   if (DOM && typeof DOM.enable === 'function') {
     await DOM.enable();
   }
-  if (!resolved.headless && resolved.hideWindow) {
+  if (!resolved.headless && resolved.hideWindow && chrome.launchedByAuracall) {
     await runtimeDeps.hideChromeWindow(chrome, logger);
   }
 

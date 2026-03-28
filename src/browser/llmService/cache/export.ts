@@ -437,7 +437,7 @@ function resolveSqlScopeWhere(
       params: [options.conversationId],
     };
   }
-  const datasets = ['conversations', 'conversation-context', 'conversation-files', 'conversation-attachments'];
+  const datasets = ['conversations', 'conversation-context', 'conversation-files', 'conversation-attachments', 'account-files'];
   return { sql: `WHERE dataset IN (${inClause(datasets)})`, params: datasets };
 }
 
@@ -479,6 +479,14 @@ function mapSqlDatasetToEntries(
       updatedAt,
       sourceUrl,
       conversationId: entityId,
+    }];
+  }
+  if (dataset === 'account-files') {
+    return [{
+      kind: 'account-files',
+      path: 'account-files.json',
+      updatedAt,
+      sourceUrl,
     }];
   }
   if (dataset === 'conversation-attachments' && entityId) {
@@ -569,6 +577,11 @@ async function materializeEntryToTarget(
     const conversationId = entry.conversationId ?? parseConversationIdFromPath(entry.path);
     if (!conversationId) return;
     const data = await store.readConversationAttachments(context, conversationId);
+    await writeJsonCachePayload(targetPath, data.items, data.fetchedAt, context);
+    return;
+  }
+  if (entry.kind === 'account-files') {
+    const data = await store.readAccountFiles(context);
     await writeJsonCachePayload(targetPath, data.items, data.fetchedAt, context);
     return;
   }

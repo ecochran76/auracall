@@ -11,6 +11,7 @@ export async function launchManualLoginSession(options: {
   url: string;
   compatibleHosts?: string[];
   logger: BrowserLogger;
+  hideWindow?: boolean;
   debugPort?: number;
   debugPortStrategy?: DebugPortStrategy | null;
   debugPortRange?: [number, number] | null;
@@ -23,6 +24,7 @@ export async function launchManualLoginSession(options: {
     ...options,
     baseConfig: {
       ...DEFAULT_BROWSER_CONFIG,
+      hideWindow: options.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
       serviceTabLimit: options.serviceTabLimit ?? DEFAULT_BROWSER_CONFIG.serviceTabLimit,
       blankTabLimit: options.blankTabLimit ?? DEFAULT_BROWSER_CONFIG.blankTabLimit,
       collapseDisposableWindows:

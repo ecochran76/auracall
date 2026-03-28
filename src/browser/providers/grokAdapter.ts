@@ -16,6 +16,7 @@ import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from './grokMode
 import { uploadGrokAttachments } from '../actions/grok.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
 import {
+  clickRevealedRowAction,
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   ensureCollapsibleExpanded,
@@ -26,6 +27,7 @@ import {
   selectMenuItem,
   openAndSelectListbox,
   openMenu,
+  openRevealedRowMenu,
   openRadixMenu,
   pressMenuButtonByAriaLabel,
   pressDialogButton,
@@ -33,12 +35,15 @@ import {
   pressButton,
   hoverRowAndClickAction,
   hoverAndReveal,
+  navigateAndSettle,
   submitInlineRename,
   queryRowsByText,
   waitForDialog,
+  waitForDocumentReady as waitForDocumentReadyUi,
   waitForNotSelector,
   waitForPredicate,
   waitForSelector,
+  withUiDiagnostics,
 } from '../service/ui.js';
 import { cssClassContains } from '../service/selectors.js';
 
@@ -61,7 +66,11 @@ const GROK_PERSONAL_FILES_SEARCH_SELECTOR = 'input[placeholder*="Search"][placeh
 const GROK_PERSONAL_FILES_ROW_SELECTOR = `div${cssClassContains('hover:bg-surface-l1')}${cssClassContains('group')}`;
 const GROK_PERSONAL_FILES_MODAL_MARKER = 'data-oracle-personal-files-modal';
 const GROK_HOME_URL = 'https://grok.com/';
+const GROK_FILES_URL = 'https://grok.com/files';
 const GROK_PROJECTS_INDEX_URL = 'https://grok.com/project';
+const GROK_CREATE_PROJECT_DIALOG_SELECTOR = '[data-oracle-create-project-dialog="true"]';
+const GROK_ACCOUNT_FILE_LINK_SELECTOR = 'a[href*="/files?file="], a[href*="?file="]';
+const GROK_ACCOUNT_FILE_UPLOAD_INPUT_SELECTOR = 'main header input[type="file"]';
 const GROK_GENERIC_CONVERSATION_TITLES = new Set([
   'chat',
   'new chat',
@@ -71,6 +80,32 @@ const GROK_GENERIC_CONVERSATION_TITLES = new Set([
   'untitled',
 ]);
 
+type GrokProjectFileProbe = {
+  name: string;
+  size?: number;
+};
+
+type GrokAccountFileProbe = {
+  id: string;
+  name: string;
+  remoteUrl?: string;
+};
+
+type GrokConversationFileProbe = {
+  rowId?: string;
+  rowIndex?: number;
+  chipIndex?: number;
+  name: string;
+  fileTypeLabel?: string | null;
+  remoteUrl?: string | null;
+};
+
+type GrokProjectLinkProbe = {
+  id: string;
+  name: string;
+  url?: string | null;
+};
+
 type GrokMainSidebarProbe = {
   triggerDataState?: string | null;
   triggerAriaExpanded?: string | null;
@@ -78,6 +113,16 @@ type GrokMainSidebarProbe = {
   sidebarWidth?: number | null;
   sidebarRight?: number | null;
 };
+
+type ChromeClientWithFocusPolicy = ChromeClient & { __auracallSuppressFocus?: boolean };
+
+function setClientSuppressFocus(client: ChromeClient, suppressFocus: boolean | undefined): void {
+  (client as ChromeClientWithFocusPolicy).__auracallSuppressFocus = Boolean(suppressFocus);
+}
+
+function isClientFocusSuppressed(client: ChromeClient): boolean {
+  return Boolean((client as ChromeClientWithFocusPolicy).__auracallSuppressFocus);
+}
 
 export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | undefined): boolean {
   if (!probe) {
@@ -99,6 +144,60 @@ export function isGrokMainSidebarOpenProbe(probe: GrokMainSidebarProbe | null | 
 
 export { normalizeGrokIdentityProbe, extractGrokIdentityFromSerializedScripts } from './grokIdentity.js';
 
+export function findGrokProjectByName(
+  entries: GrokProjectLinkProbe[],
+  projectName: string,
+): GrokProjectLinkProbe | null {
+  const normalizedTarget = projectName.trim().toLowerCase().replace(/\s+/g, ' ');
+  if (!normalizedTarget) {
+    return null;
+  }
+  return (
+    entries.find((entry) => entry.name.trim().toLowerCase().replace(/\s+/g, ' ') === normalizedTarget) ?? null
+  );
+}
+
+export function parseGrokPersonalFilesRowTexts(rowTexts: string[]): GrokProjectFileProbe[] {
+  const files: GrokProjectFileProbe[] = [];
+  for (const rawText of rowTexts) {
+    const text = String(rawText || '').replace(/\s+/g, ' ').trim();
+    if (!text) {
+      continue;
+    }
+    const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*(kb|mb|gb|b)\s*$/i);
+    let size: number | undefined;
+    let name = text;
+    if (sizeMatch) {
+      const amount = Number.parseFloat(sizeMatch[1]);
+      const unit = sizeMatch[2].toLowerCase();
+      if (Number.isFinite(amount)) {
+        const multiplier = unit === 'gb' ? 1024 ** 3 : unit === 'mb' ? 1024 ** 2 : unit === 'kb' ? 1024 : 1;
+        size = Math.round(amount * multiplier);
+      }
+      name = text.slice(0, sizeMatch.index).trim();
+    }
+    if (!name) {
+      continue;
+    }
+    files.push({ name, size });
+  }
+  return files;
+}
+
+export function extractGrokAccountFileIdFromUrl(url: string | null | undefined): string | null {
+  const value = typeof url === 'string' ? url.trim() : '';
+  if (!value) {
+    return null;
+  }
+  try {
+    const parsed = new URL(value, GROK_FILES_URL);
+    const fileId = parsed.searchParams.get('file');
+    return fileId?.trim() || null;
+  } catch {
+    return null;
+  }
+}
+
 export function extractGrokProjectIdFromUrl(url: string | null | undefined): string | null {
   const value = typeof url === 'string' ? url.trim() : '';
   if (!value) {
@@ -106,6 +205,51 @@ export function extractGrokProjectIdFromUrl(url: string | null | undefined): str
   }
   const match = value.match(/\/project\/([^/?#]+)/);
   return match?.[1] ?? null;
+}
+
+export function mapGrokConversationFileProbes(
+  conversationId: string,
+  probes: GrokConversationFileProbe[] | null | undefined,
+): FileRef[] {
+  const cleanConversationId = String(conversationId || '').trim();
+  if (!cleanConversationId || !Array.isArray(probes) || probes.length === 0) {
+    return [];
+  }
+  const deduped = new Map<string, FileRef>();
+  for (const probe of probes) {
+    const name = typeof probe?.name === 'string' ? probe.name.trim() : '';
+    if (!name) {
+      continue;
+    }
+    const rowId = typeof probe?.rowId === 'string' ? probe.rowId.trim() : '';
+    const rowIndex = Number.isFinite(probe?.rowIndex) ? Number(probe?.rowIndex) : -1;
+    const chipIndex = Number.isFinite(probe?.chipIndex) ? Number(probe?.chipIndex) : 0;
+    const uniqueKey = `${rowId || `row-${rowIndex}`}:${chipIndex}:${name}`;
+    if (deduped.has(uniqueKey)) {
+      continue;
+    }
+    const fileTypeLabel =
+      typeof probe?.fileTypeLabel === 'string' && probe.fileTypeLabel.trim().length > 0
+        ? probe.fileTypeLabel.trim()
+        : null;
+    const remoteUrl =
+      typeof probe?.remoteUrl === 'string' && probe.remoteUrl.trim().length > 0 ? probe.remoteUrl.trim() : undefined;
+    deduped.set(uniqueKey, {
+      id: `grok-conversation-file:${cleanConversationId}:${uniqueKey}`,
+      name,
+      provider: 'grok',
+      source: 'conversation',
+      remoteUrl,
+      metadata: {
+        conversationId: cleanConversationId,
+        rowId: rowId || null,
+        rowIndex: rowIndex >= 0 ? rowIndex : null,
+        chipIndex,
+        fileTypeLabel,
+      },
+    });
+  }
+  return Array.from(deduped.values());
 }
 
 export function grokUrlMatchesPreference(
@@ -232,6 +376,9 @@ export async function ensureGrokTabVisible(
   client: ChromeClient,
   options?: { timeoutMs?: number },
 ): Promise<void> {
+  if (isClientFocusSuppressed(client)) {
+    return;
+  }
   await client.Page.bringToFront().catch(() => undefined);
   const ready = await waitForPredicate(
     client.Runtime,
@@ -308,6 +455,10 @@ export function createGrokAdapter(): Pick<
   | 'updateProjectInstructions'
   | 'getProjectInstructions'
   | 'readConversationContext'
+  | 'listConversationFiles'
+  | 'listAccountFiles'
+  | 'uploadAccountFiles'
+  | 'deleteAccountFile'
   | 'uploadProjectFiles'
   | 'listProjectFiles'
   | 'deleteProjectFile'
@@ -472,14 +623,35 @@ export function createGrokAdapter(): Pick<
           await navigateToProject(client, projectUrl);
         }
         await ensureProjectPage(client, resolvedProjectId);
-        await openConversationList(client);
+        await openConversationList(client, resolvedProjectId);
       }
       try {
+        const openConversations = await listOpenConversations(host, port, resolvedProjectId);
+        let rootSidebarConversations: Conversation[] = [];
+        if (resolvedProjectId) {
+          const projectPageConversations = await listProjectPageConversations(client, resolvedProjectId);
+          const merged = new Map<string, Conversation>();
+          const mergeConversation = (entry: Conversation) => {
+            merged.set(entry.id, choosePreferredGrokConversation(merged.get(entry.id), entry));
+          };
+          for (const entry of projectPageConversations) {
+            mergeConversation(entry);
+          }
+          if (projectPageConversations.length === 0 && options?.includeHistory) {
+            for (const entry of await listHistoryConversations(client, resolvedProjectId, options)) {
+              mergeConversation(entry);
+            }
+          }
+          for (const entry of openConversations) {
+            mergeConversation(entry);
+          }
+          return Array.from(merged.values());
+        }
         const includeHistory = Boolean(options?.includeHistory);
-        const openConversations = resolvedProjectId
-          ? []
-          : await listOpenConversations(host, port, resolvedProjectId);
         let history: Conversation[] = [];
+        await navigateToProject(client, GROK_HOME_URL);
+        await ensureMainSidebarOpen(client, { logPrefix: 'browser-root-conversations' });
+        rootSidebarConversations = await listRootSidebarConversations(client);
         if (includeHistory) {
           if (options?.configuredUrl?.includes('/project/')) {
             const historyConnection = await connectToGrokTab(
@@ -504,7 +676,7 @@ export function createGrokAdapter(): Pick<
               }
             }
           } else {
-            history = await listHistoryConversations(client, resolvedProjectId, options);
+            history = await listHistoryConversations(client, undefined, options);
           }
         }
         const { result } = await client.Runtime.evaluate({
@@ -585,7 +757,10 @@ export function createGrokAdapter(): Pick<
                 return null;
               };
               
-              const items = Array.from(document.querySelectorAll('a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]'));
+              const baseSelector = projectId
+                ? 'main a, main button, main [role="link"], main [role="button"], main [role="option"], main [data-href], main [data-url], main [data-value]'
+                : 'a,button,[role="link"],[role="button"],[role="option"],[data-href],[data-url],[data-value]';
+              const items = Array.from(document.querySelectorAll(baseSelector));
               const nodeDetails = items.slice(0, 10).map(n => ({
                 tag: n.tagName,
                 text: (n.textContent || '').trim().slice(0, 30),
@@ -594,6 +769,9 @@ export function createGrokAdapter(): Pick<
               }));
               
               for (const node of items) {
+                if (projectId && node.closest(${JSON.stringify(GROK_SIDEBAR_WRAPPER_SELECTOR)})) {
+                  continue;
+                }
                 const href = node.getAttribute('href') || node.getAttribute('data-href') || node.getAttribute('data-url') || '';
                 const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
                 let chatId = '';
@@ -675,6 +853,9 @@ export function createGrokAdapter(): Pick<
         for (const entry of history) {
           mergeConversation(entry);
         }
+        for (const entry of rootSidebarConversations) {
+          mergeConversation(entry);
+        }
         for (const entry of openConversations) {
           mergeConversation(entry);
         }
@@ -720,12 +901,31 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const connection = await connectToGrokTab(options, GROK_HOME_URL);
-      const { client, targetId, shouldClose, host, port } = connection;
+      const resolvedProjectId = projectId?.trim() || undefined;
+      const projectUrl = resolvedProjectId
+        ? `https://grok.com/project/${resolvedProjectId}`
+        : undefined;
+      const connection = projectUrl
+        ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
+        : await connectToGrokTab(options, GROK_HOME_URL);
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
         let sidebarError: unknown;
         try {
+          if (projectUrl) {
+            if (!usedExisting) {
+              await navigateToProject(client, projectUrl);
+            }
+            await ensureProjectPage(client, resolvedProjectId);
+            await openConversationList(client, resolvedProjectId);
+          }
           await renameConversationInSidebarList(client, conversationId, newTitle);
+          if (projectUrl) {
+            await navigateToProject(client, projectUrl);
+            await ensureProjectPage(client, resolvedProjectId);
+            await openConversationList(client, resolvedProjectId);
+            await waitForGrokProjectConversationListTitle(client.Runtime, conversationId, newTitle);
+          }
           return;
         } catch (error) {
           sidebarError = error;
@@ -753,12 +953,31 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const connection = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);
-      const { client, targetId, shouldClose, host, port } = connection;
+      const resolvedProjectId = projectId?.trim() || undefined;
+      const projectUrl = resolvedProjectId
+        ? `https://grok.com/project/${resolvedProjectId}`
+        : undefined;
+      const connection = projectUrl
+        ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
+        : await connectToGrokTab(options, GROK_HOME_URL);
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
         let sidebarError: unknown;
         try {
+          if (projectUrl) {
+            if (!usedExisting) {
+              await navigateToProject(client, projectUrl);
+            }
+            await ensureProjectPage(client, resolvedProjectId);
+            await openConversationList(client, resolvedProjectId);
+          }
           await deleteConversationFromSidebarList(client, conversationId);
+          if (projectUrl) {
+            await navigateToProject(client, projectUrl);
+            await ensureProjectPage(client, resolvedProjectId);
+            await openConversationList(client, resolvedProjectId);
+            await waitForGrokConversationSidebarGone(client.Runtime, conversationId);
+          }
           return;
         } catch (error) {
           sidebarError = error;
@@ -786,126 +1005,39 @@ export function createGrokAdapter(): Pick<
       newTitle: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
-      const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
+      const projectUrl = `https://grok.com/project/${projectId}`;
+      const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToProject(client, targetUrl);
-        await ensureSidebarOpen(client);
+        await navigateToProject(client, projectUrl);
         await closeHistoryDialog(client);
-        await openProjectMenuAndSelect(client, 'Rename', { logPrefix: 'browser-rename-project' });
-
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(async () => {
-            const projectId = ${JSON.stringify(projectId)};
-            const newTitle = ${JSON.stringify(newTitle)};
-            const logs = [];
-            const log = (msg) => {
-              logs.push(msg);
-              console.log('[browser-rename-project] ' + msg);
-            };
-
-            const linkSelectors = [
-              'a[href="/project/' + projectId + '"]',
-              'a[href*="/project/' + projectId + '"]',
-            ];
-            let projectLink = null;
-            for (let attempt = 0; attempt < 10; attempt += 1) {
-              for (const selector of linkSelectors) {
-                projectLink = document.querySelector(selector);
-                if (projectLink) break;
-              }
-              if (projectLink) break;
-              await new Promise(r => setTimeout(r, 400));
-            }
-
-            if (!projectLink) {
-              log('Project link not found for id: ' + projectId);
-            }
-
-            const row = projectLink || null;
-            if (row) {
-              row.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-              row.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-              await new Promise(r => setTimeout(r, 400));
-            }
-
-            await new Promise(r => setTimeout(r, 400));
-
-            const active = document.activeElement;
-            let input =
-              (active && (active.tagName === 'INPUT' || active.getAttribute('contenteditable') === 'true')) ? active : null;
-            if (!input) {
-              input = Array.from(document.querySelectorAll('input[aria-label]')).find((candidate) => {
-                const label = (candidate.getAttribute('aria-label') || '').toLowerCase();
-                if (label !== 'project name') return false;
-                const rect = candidate.getBoundingClientRect();
-                return rect.width > 0 && rect.height > 0;
-              }) || null;
-            }
-            if (!input) {
-              input = document.querySelector('input, [contenteditable="true"]');
-            }
-            if (!input) {
-              return { success: false, error: 'Rename input not found', logs };
-            }
-
-            if (input.tagName === 'INPUT') {
-              input.focus();
-              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-              if (setter) {
-                setter.call(input, newTitle);
-              } else {
-                input.value = newTitle;
-              }
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-            } else {
-              input.focus();
-              input.textContent = newTitle;
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-
-            log('Submitting rename');
-            input.dispatchEvent(
-              new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
-            );
-            input.dispatchEvent(
-              new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
-            );
-
-            const form = input.closest('form');
-            if (form && typeof form.requestSubmit === 'function') {
-              form.requestSubmit();
-            } else if (form) {
-              form.submit();
-            }
-
-            const scoped = input.closest('div,header,section') || document;
-            const saveButton = Array.from(scoped.querySelectorAll('button[type="submit"][aria-label="Save"]')).find((button) => {
-              const rect = button.getBoundingClientRect();
-              return rect.width > 0 && rect.height > 0;
-            }) || null;
-            if (saveButton) {
-              saveButton.click();
-            }
-
-            return { success: true, logs };
-          })()`,
-          awaitPromise: true,
-          returnByValue: true,
+        await openProjectRenameEditor(client, {
+          logPrefix: 'browser-rename-project',
+          projectId,
         });
-
-        if (evalResult.exceptionDetails) {
-          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+        await submitProjectRenameWithClient(client, newTitle);
+        let applied = await waitForProjectRenameApplied(client, newTitle, 3_000);
+        if (!applied.ok) {
+          await navigateToProject(client, projectUrl);
+          await closeHistoryDialog(client);
+          await openProjectRenameEditor(client, {
+            logPrefix: 'browser-rename-project-retry',
+            projectId,
+          });
+          await submitProjectRenameWithClient(client, newTitle);
+          applied = await waitForProjectRenameApplied(client, newTitle, 5_000);
         }
-        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-        if (!info?.success) {
-          throw new Error(info?.error || 'Rename project failed');
+        if (!applied.ok) {
+          const debug = await readProjectRenameDebug(client);
+          throw new Error(
+            `Project rename did not apply (current=${debug.current || 'n/a'}, visibleInput=${debug.visibleInput ? 'true' : 'false'})`,
+          );
         }
-        const closed = await waitForNotSelector(client.Runtime, 'input[aria-label="Project name"]', 3000);
-        if (!closed) {
-          throw new Error('Project rename stayed in edit mode');
+        await navigateToProject(client, GROK_PROJECTS_INDEX_URL);
+        await ensureSidebarOpen(client);
+        const listed = await waitForProjectRenameAppliedInList(client.Runtime, projectId, newTitle, 5_000);
+        if (!listed.ok) {
+          throw new Error(`Project rename did not persist in project list for ${projectId}`);
         }
       } finally {
         await closeHistoryDialog(client);
@@ -928,23 +1060,62 @@ export function createGrokAdapter(): Pick<
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
-        const { result: beforeResult } = await client.Runtime.evaluate({
-          expression: 'location.href',
-          returnByValue: true,
-        });
-        const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
-        await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-clone-project' });
-        await waitForNotSelector(client.Runtime, '[role="menuitem"], [data-radix-collection-item]', 2000);
-        const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
-        const match = projectUrl?.match(/\/project\/([^/?#]+)/);
-        const name = await readProjectNameFromPage(client);
-        if (match?.[1]) {
-          created = {
-            id: match[1],
-            name: name ?? match[1],
-            provider: 'grok',
-            url: projectUrl ?? undefined,
-          };
+        const sourceName = (await readProjectNameFromPage(client)) ?? `Project ${projectId}`;
+        try {
+          await navigateToProject(client, GROK_PROJECTS_INDEX_URL);
+          await ensureSidebarOpen(client);
+          await closeHistoryDialog(client);
+          const { result: beforeResult } = await client.Runtime.evaluate({
+            expression: 'location.href',
+            returnByValue: true,
+          });
+          const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
+          await openProjectMenuAndSelect(client, 'Clone', {
+            logPrefix: 'browser-clone-project',
+            preferSidebarRow: true,
+            projectId,
+          });
+          await waitForNotSelector(client.Runtime, '[role="menuitem"], [data-radix-collection-item]', 2000);
+          const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
+          const match = projectUrl?.match(/\/project\/([^/?#]+)/);
+          const name = await readProjectNameFromPage(client);
+          if (match?.[1]) {
+            created = {
+              id: match[1],
+              name: name ?? match[1],
+              provider: 'grok',
+              url: projectUrl ?? undefined,
+            };
+          }
+        } catch (error) {
+          if (!isMissingGrokCloneMenuError(error)) {
+            throw error;
+          }
+          const cloneSeed = projectId.replace(/[^a-f]/gi, '').slice(0, 6).toLowerCase() || 'copy';
+          const fallbackName = `${sourceName} Copy ${cloneSeed}`;
+          await navigateToProject(client, GROK_PROJECTS_INDEX_URL);
+          await ensureSidebarOpen(client);
+          await closeHistoryDialog(client);
+          await openCreateProjectModalWithClient(client);
+          await setCreateProjectFieldsWithClient(client, { name: fallbackName });
+          await clickCreateProjectNextWithClient(client);
+          const { result: beforeResult } = await client.Runtime.evaluate({
+            expression: 'location.href',
+            returnByValue: true,
+          });
+          const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
+          await clickCreateProjectConfirmWithClient(client);
+          const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
+          const match = projectUrl?.match(/\/project\/([^/?#]+)/);
+          const name = await readProjectNameFromPage(client);
+          if (match?.[1]) {
+            created = {
+              id: match[1],
+              name: name ?? fallbackName,
+              provider: 'grok',
+              url: projectUrl ?? undefined,
+            };
+          }
         }
       } finally {
         await closeHistoryDialog(client);
@@ -988,7 +1159,10 @@ export function createGrokAdapter(): Pick<
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
-        await openProjectMenuAndSelect(client, 'Rename', { logPrefix: 'browser-select-rename-project' });
+        await openProjectRenameEditor(client, {
+          logPrefix: 'browser-select-rename-project',
+          projectId,
+        });
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -1006,10 +1180,14 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToProject(client, targetUrl);
+        await navigateToProject(client, GROK_PROJECTS_INDEX_URL);
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
-        await openProjectMenuAndSelect(client, 'Clone', { logPrefix: 'browser-select-clone-project' });
+        await openProjectMenuAndSelect(client, 'Clone', {
+          logPrefix: 'browser-select-clone-project',
+          preferSidebarRow: true,
+          projectId,
+        });
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -1030,7 +1208,16 @@ export function createGrokAdapter(): Pick<
         await navigateToProject(client, targetUrl);
         await ensureSidebarOpen(client);
         await closeHistoryDialog(client);
-        await openProjectMenuAndSelect(client, 'Remove', { logPrefix: 'browser-select-remove-project' });
+        const menuSelector = await openProjectMenuButton(client, { logPrefix: 'browser-select-remove-project' });
+        const clicked = await selectMenuItem(client.Runtime, {
+          menuSelector,
+          itemMatch: { exact: ['remove', 'delete'], includeAny: ['remove', 'delete'] },
+          closeMenuAfter: true,
+          timeoutMs: 3000,
+        });
+        if (!clicked) {
+          throw new Error('Remove/Delete project menu item not found');
+        }
       } finally {
         await closeHistoryDialog(client);
         await client.close();
@@ -1052,16 +1239,40 @@ export function createGrokAdapter(): Pick<
         let lastError: unknown = null;
         for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
           try {
-            await navigateToProject(client, targetUrl);
+            if (!(await isValidProjectUrl(client).catch(() => false))) {
+              lastError = null;
+              break;
+            }
             await closeHistoryHoverMenu(client, { logPrefix: 'browser-remove-project' });
-            await ensureSidebarOpen(client);
-            await openProjectMenuAndSelect(client, 'Remove', { logPrefix: 'browser-remove-project' });
-            await waitForProjectRemoveDialog(client, 5_000);
+            let dialogOpen = await waitForProjectRemoveDialog(client, 1_000);
+            if (!dialogOpen) {
+              await navigateToProject(client, targetUrl);
+              await closeHistoryHoverMenu(client, { logPrefix: 'browser-remove-project' });
+              await ensureSidebarOpen(client);
+              const menuSelector = await openProjectMenuButton(client, { logPrefix: 'browser-remove-project' });
+              const clicked = await selectMenuItem(client.Runtime, {
+                menuSelector,
+                itemMatch: { exact: ['remove', 'delete'], includeAny: ['remove', 'delete'] },
+                closeMenuAfter: true,
+                timeoutMs: 3000,
+              });
+              if (!clicked) {
+                throw new Error('Remove/Delete project menu item not found');
+              }
+              dialogOpen = await waitForProjectRemoveDialog(client, 5_000);
+            }
+            if (!dialogOpen) {
+              throw new Error('Project remove dialog did not open');
+            }
             await clickProjectRemoveConfirmation(client, { logPrefix: 'browser-remove-project' });
             lastError = null;
             break;
           } catch (error) {
             lastError = error;
+            if (!(await isValidProjectUrl(client).catch(() => false))) {
+              lastError = null;
+              break;
+            }
             const message = error instanceof Error ? error.message : String(error);
             if (!message.includes('Execution context was destroyed')) {
               throw error;
@@ -1295,17 +1506,33 @@ export function createGrokAdapter(): Pick<
               if (!input) {
                 return { success: false, error: 'Project name input not found', logs };
               }
-              input.focus();
               const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-              if (setter) {
-                setter.call(input, nameValue);
-              } else {
-                input.value = nameValue;
+              const writeValue = (value) => {
+                input.focus();
+                input.select?.();
+                if (setter) {
+                  setter.call(input, '');
+                } else {
+                  input.value = '';
+                }
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+                if (setter) {
+                  setter.call(input, value);
+                } else {
+                  input.value = value;
+                }
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, data: value, inputType: 'insertFromPaste' }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              };
+              for (let attempt = 0; attempt < 6; attempt += 1) {
+                writeValue(nameValue);
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                if ((input.value || '').trim() === nameValue.trim()) {
+                  input.blur?.();
+                  return { success: true, value: input.value, logs, attempt };
+                }
               }
-              input.dispatchEvent(new Event('input', { bubbles: true }));
-              input.dispatchEvent(new Event('change', { bubbles: true }));
-              input.blur?.();
-              return { success: true, value: input.value, logs };
+              return { success: false, error: 'Create project name did not stick', value: input.value, logs };
             })()`,
             awaitPromise: true,
             returnByValue: true,
@@ -1339,31 +1566,7 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(async () => {
-            const logs = [];
-            const log = (msg) => {
-              logs.push(msg);
-              console.log('[browser-project-create] ' + msg);
-            };
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const nextBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'next') || null;
-            if (!nextBtn) {
-              return { success: false, error: 'Next button not found', logs };
-            }
-            nextBtn.click();
-            return { success: true, logs };
-          })()`,
-          awaitPromise: true,
-          returnByValue: true,
-        });
-        if (evalResult.exceptionDetails) {
-          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-        }
-        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-        if (!info?.success) {
-          throw new Error(info?.error || 'Create project next failed');
-        }
+        await clickCreateProjectNextWithClient(client);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1515,31 +1718,7 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(async () => {
-            const logs = [];
-            const log = (msg) => {
-              logs.push(msg);
-              console.log('[browser-project-create] ' + msg);
-            };
-            const buttons = Array.from(document.querySelectorAll('button'));
-            const createBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'create') || null;
-            if (!createBtn) {
-              return { success: false, error: 'Create button not found', logs };
-            }
-            createBtn.click();
-            return { success: true, logs };
-          })()`,
-          awaitPromise: true,
-          returnByValue: true,
-        });
-        if (evalResult.exceptionDetails) {
-          throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
-        }
-        const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-        if (!info?.success) {
-          throw new Error(info?.error || 'Create project confirm failed');
-        }
+        await clickCreateProjectConfirmWithClient(client);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1587,7 +1766,10 @@ export function createGrokAdapter(): Pick<
         });
         const beforeHref = typeof beforeResult?.value === 'string' ? beforeResult.value : '';
         await clickCreateProjectConfirmWithClient(client);
-        const projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
+        let projectUrl = await waitForProjectUrl(client, 20_000, beforeHref);
+        if (!projectUrl) {
+          projectUrl = await recoverCreatedProjectUrlByName(client, input.name, 10_000);
+        }
         if (!projectUrl && workspaceCreateErrorRequestId) {
           const response = await client.Network.getResponseBody({ requestId: workspaceCreateErrorRequestId }).catch(
             () => null,
@@ -1615,6 +1797,69 @@ export function createGrokAdapter(): Pick<
       return created;
     },
 
+    async listAccountFiles(
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      const connection = await connectToGrokTab(options, GROK_FILES_URL);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToGrokFiles(client, GROK_FILES_URL);
+        const files = await readVisibleAccountFilesWithClient(client);
+        return files.map((file) => ({
+          id: file.id,
+          name: file.name,
+          provider: 'grok',
+          source: 'account',
+          remoteUrl: file.remoteUrl,
+        }));
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async uploadAccountFiles(
+      filePaths: string[],
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      if (filePaths.length === 0) return;
+      const connection = await connectToGrokTab(options, GROK_FILES_URL);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToGrokFiles(client, GROK_FILES_URL);
+        await uploadAccountFilesWithClient(client, filePaths);
+        await waitForAccountFilesPersisted(
+          client,
+          filePaths.map((filePath) => path.basename(filePath)),
+        );
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async deleteAccountFile(
+      fileId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const connection = await connectToGrokTab(options, GROK_FILES_URL);
+      const { client, targetId, shouldClose, host, port } = connection;
+      try {
+        await navigateToGrokFiles(client, GROK_FILES_URL);
+        await removeAccountFileWithClient(client, fileId);
+        await waitForAccountFileRemoved(client, fileId);
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
     async uploadProjectFiles(
       projectId: string,
       filePaths: string[],
@@ -1634,6 +1879,10 @@ export function createGrokAdapter(): Pick<
           filePaths.map((filePath) => path.basename(filePath)),
         );
         await clickPersonalFilesSaveWithClient(client);
+        await waitForProjectFilesPersisted(
+          client,
+          filePaths.map((filePath) => path.basename(filePath)),
+        );
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1654,34 +1903,7 @@ export function createGrokAdapter(): Pick<
         await ensureProjectSourcesTabSelected(client);
         await waitForProjectSourcesTab(client);
         await ensureProjectSourcesFilesExpanded(client);
-        await ensurePersonalFilesModalOpen(client);
-        const evalResult = await client.Runtime.evaluate({
-          expression: `(() => {
-            const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
-            const rows = Array.from(root.querySelectorAll(${JSON.stringify(GROK_PERSONAL_FILES_ROW_SELECTOR)}));
-            const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-            const sizeMatch = (text) => {
-              const match = text.match(/(\\d+(?:\\.\\d+)?)\\s*(kb|mb|gb|b)/i);
-              if (!match) return null;
-              const amount = Number.parseFloat(match[1]);
-              const unit = match[2].toLowerCase();
-              if (!Number.isFinite(amount)) return null;
-              const multiplier = unit === 'gb' ? 1024 ** 3 : unit === 'mb' ? 1024 ** 2 : unit === 'kb' ? 1024 : 1;
-              return Math.round(amount * multiplier);
-            };
-            const files = rows.map((row) => {
-              const text = normalize(row.textContent || '');
-              if (!text) return null;
-              const size = sizeMatch(text);
-              const name = text.replace(/\\s*(\\d+(?:\\.\\d+)?)\\s*(kb|mb|gb|b)\\s*$/i, '').trim();
-              return { name: name || text, size };
-            }).filter(Boolean);
-            return { files };
-          })()`,
-          returnByValue: true,
-        });
-        const info = evalResult.result?.value as { files?: { name: string; size?: number | null }[] } | undefined;
-        const files = Array.isArray(info?.files) ? info?.files : [];
+        const files = await readVisiblePersonalFilesWithClient(client);
         const seen = new Set<string>();
         return files
           .filter((file) => {
@@ -1917,24 +2139,28 @@ export function createGrokAdapter(): Pick<
       const connection = cleanProjectId
         ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
         : await connectToGrokTab(options, targetUrl);
-      const { client, targetId, shouldClose, host, port } = connection;
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
         if (cleanProjectId) {
-          await navigateToProject(client, targetUrl);
+          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          if (shouldNavigate) {
+            await navigateToProject(client, targetUrl);
+          }
         } else {
-          await client.Page.navigate({ url: targetUrl });
-          await waitForDocumentReady(client, 15_000);
+          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          if (shouldNavigate) {
+            await navigateToConversation(client, targetUrl);
+          }
           if (!(await isValidConversationUrl(client))) {
             throw new Error('Conversation URL is invalid or missing.');
           }
         }
 
-        const ready = await waitForSelector(
-          client.Runtime,
-          'main [id^="response-"], main div.message-bubble, main [class*="response-content-markdown"]',
-          10_000,
-        );
-        if (!ready) {
+        const ready = await waitForGrokConversationSurface(client.Runtime, {
+          timeoutMs: 10_000,
+          requireResponse: true,
+        });
+        if (!ready.ok) {
           throw new Error('Conversation content not found');
         }
 
@@ -2133,6 +2359,7 @@ export function createGrokAdapter(): Pick<
         } | undefined;
         const messages = Array.isArray(info?.messages) ? info.messages : [];
         const sources = Array.isArray(info?.sources) ? info.sources : [];
+        const files = await readVisibleConversationFilesWithClient(client, conversationId);
         if (messages.length === 0) {
           throw new Error('Conversation messages not found');
         }
@@ -2140,8 +2367,53 @@ export function createGrokAdapter(): Pick<
           provider: 'grok',
           conversationId,
           messages,
+          files,
           sources,
         };
+      } finally {
+        await client.close();
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+
+    async listConversationFiles(
+      conversationId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      const cleanProjectId =
+        typeof options?.projectId === 'string' && options.projectId.trim().length > 0 ? options.projectId.trim() : undefined;
+      const targetUrl = cleanProjectId
+        ? `https://grok.com/project/${cleanProjectId}?chat=${conversationId}`
+        : `https://grok.com/c/${conversationId}`;
+      const connection = cleanProjectId
+        ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
+        : await connectToGrokTab(options, targetUrl);
+      const { client, targetId, shouldClose, host, port, usedExisting } = connection;
+      try {
+        if (cleanProjectId) {
+          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          if (shouldNavigate) {
+            await navigateToProject(client, targetUrl);
+          }
+        } else {
+          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          if (shouldNavigate) {
+            await navigateToConversation(client, targetUrl);
+          }
+          if (!(await isValidConversationUrl(client))) {
+            throw new Error('Conversation URL is invalid or missing.');
+          }
+        }
+        const ready = await waitForGrokConversationSurface(client.Runtime, {
+          timeoutMs: 12_000,
+          requireResponse: false,
+        });
+        if (!ready.ok) {
+          throw new Error('Conversation content not found');
+        }
+        return await readVisibleConversationFilesWithClient(client, conversationId);
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -2169,6 +2441,7 @@ async function connectToGrokTab(
   if (options?.tabTargetId && port) {
     const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
     await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+    setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
     return {
       client,
       targetId: options.tabTargetId,
@@ -2230,6 +2503,7 @@ async function connectToGrokTab(
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
+      suppressFocus: tabPolicy.suppressFocus,
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -2246,6 +2520,7 @@ async function connectToGrokTab(
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
+      suppressFocus: tabPolicy.suppressFocus,
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -2257,6 +2532,7 @@ async function connectToGrokTab(
   }
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  setClientSuppressFocus(client, tabPolicy.suppressFocus);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
@@ -2401,12 +2677,17 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
   if (!ready) {
     throw new Error('Create project modal did not render');
   }
+  const tagged = await tagVisibleCreateProjectDialog(client);
+  if (!tagged) {
+    throw new Error('Create project dialog could not be identified');
+  }
 }
 
 async function setCreateProjectFieldsWithClient(
   client: ChromeClient,
   fields: { name?: string; instructions?: string; modelLabel?: string },
 ): Promise<void> {
+  await tagVisibleCreateProjectDialog(client);
   await waitForSelector(
     client.Runtime,
     'input[placeholder*="project name" i], textarea[placeholder*="instruction" i]',
@@ -2429,30 +2710,61 @@ async function setCreateProjectFieldsWithClient(
           const rect = el.getBoundingClientRect();
           return rect.width > 0 && rect.height > 0;
         };
-        const input = Array.from(document.querySelectorAll('input[placeholder], input[aria-label]'))
+        const taggedDialog = document.querySelector(${JSON.stringify(GROK_CREATE_PROJECT_DIALOG_SELECTOR)});
+        const visibleDialogs = Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]')).filter(visible);
+        const dialogWithProjectName =
+          (taggedDialog && visible(taggedDialog)
+            ? taggedDialog
+            : null) ||
+          visibleDialogs.find((node) =>
+            Boolean(node.querySelector('input[placeholder*="project name" i], input[aria-label*="project name" i]')),
+          ) ||
+          null;
+        const dialogWithInstructions =
+          visibleDialogs.find((node) =>
+            Boolean(node.querySelector('textarea[placeholder*="instruction" i], textarea')),
+          ) || null;
+        const dialogRoot = dialogWithProjectName || dialogWithInstructions || document;
+        const input = Array.from(dialogRoot.querySelectorAll('input[placeholder], input[aria-label]'))
           .find((el) => {
             if (!visible(el)) return false;
             const label = String(el.getAttribute('placeholder') || el.getAttribute('aria-label') || '').toLowerCase();
             return label.includes('project name');
           }) || null;
-        if (!input) {
-          return { success: false, error: 'Project name input not found', logs };
-        }
-        input.focus();
-        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
-        if (setter) {
-          setter.call(input, nameValue);
-        } else {
-          input.value = nameValue;
-        }
-        input.dispatchEvent(new Event('input', { bubbles: true }));
-        input.dispatchEvent(new Event('change', { bubbles: true }));
-        input.blur?.();
-        return { success: true, value: input.value, logs };
-      })()`,
-      awaitPromise: true,
-      returnByValue: true,
-    });
+              if (!input) {
+                return { success: false, error: 'Project name input not found', logs };
+              }
+              const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+              const writeValue = (value) => {
+                input.focus();
+                input.select?.();
+                if (setter) {
+                  setter.call(input, '');
+                } else {
+                  input.value = '';
+                }
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+                if (setter) {
+                  setter.call(input, value);
+                } else {
+                  input.value = value;
+                }
+                input.dispatchEvent(new InputEvent('input', { bubbles: true, data: value, inputType: 'insertFromPaste' }));
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+              };
+              for (let attempt = 0; attempt < 6; attempt += 1) {
+                writeValue(nameValue);
+                await new Promise((resolve) => setTimeout(resolve, 120));
+                if ((input.value || '').trim() === nameValue.trim()) {
+                  input.blur?.();
+                  return { success: true, value: input.value, logs, attempt };
+                }
+              }
+              return { success: false, error: 'Create project name did not stick', value: input.value, logs };
+            })()`,
+            awaitPromise: true,
+            returnByValue: true,
+          });
     if (evalResult.exceptionDetails) {
       throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
     }
@@ -2473,38 +2785,36 @@ async function setCreateProjectFieldsWithClient(
 }
 
 async function clickCreateProjectNextWithClient(client: ChromeClient): Promise<void> {
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[browser-project-create] ' + msg);
-      };
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const nextBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'next') || null;
-      if (!nextBtn) {
-        return { success: false, error: 'Next button not found', logs };
-      }
-      nextBtn.click();
-      return { success: true, logs };
-    })()`,
-    awaitPromise: true,
-    returnByValue: true,
-  });
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  await tagVisibleCreateProjectDialog(client);
+  const finalStep = await waitForCreateProjectFinalStep(client, 1_500);
+  if (finalStep.ok) {
+    return;
   }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Create project next failed');
+
+  const pressed = await pressButton(client.Runtime, {
+    match: { exact: ['next'], includeAny: ['next'] },
+    rootSelectors: [GROK_CREATE_PROJECT_DIALOG_SELECTOR],
+    requireVisible: true,
+    timeoutMs: 2_000,
+  });
+  if (!pressed.ok) {
+    const debug = await readCreateProjectDialogDebug(client);
+    throw new Error(`${pressed.reason || 'Next button not found'} (${formatCreateProjectDialogDebug(debug)})`);
+  }
+
+  const advanced = await waitForCreateProjectFinalStep(client, 5_000);
+  if (!advanced.ok) {
+    const debug = await readCreateProjectDialogDebug(client);
+    throw new Error(`Create project next did not advance to sources step (${formatCreateProjectDialogDebug(debug)})`);
   }
 }
 
 async function clickCreateProjectAttachWithClient(client: ChromeClient): Promise<void> {
+  await tagVisibleCreateProjectDialog(client);
   const opened = await openMenu(client.Runtime, {
     trigger: {
       selector: `button${cssClassContains('group/attach-button')}`,
-      rootSelectors: DEFAULT_DIALOG_SELECTORS,
+      rootSelectors: [GROK_CREATE_PROJECT_DIALOG_SELECTOR],
       requireVisible: true,
     },
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
@@ -2516,10 +2826,11 @@ async function clickCreateProjectAttachWithClient(client: ChromeClient): Promise
 }
 
 async function clickCreateProjectUploadFileWithClient(client: ChromeClient): Promise<void> {
+  await tagVisibleCreateProjectDialog(client);
   const clicked = await openAndSelectMenuItem(client.Runtime, {
     trigger: {
       selector: `button${cssClassContains('group/attach-button')}`,
-      rootSelectors: DEFAULT_DIALOG_SELECTORS,
+      rootSelectors: [GROK_CREATE_PROJECT_DIALOG_SELECTOR],
       requireVisible: true,
     },
     menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
@@ -2695,23 +3006,35 @@ async function tagPersonalFilesModalRoot(client: ChromeClient): Promise<boolean>
 }
 
 async function ensurePersonalFilesModalOpen(client: ChromeClient): Promise<void> {
-  if (await tagPersonalFilesModalRoot(client)) {
-    return;
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    if (await tagPersonalFilesModalRoot(client)) {
+      return;
+    }
+    const clicked = await pressButton(client.Runtime, {
+      match: { includeAny: ['personal files'] },
+      rootSelectors: ['main'],
+      requireVisible: true,
+      timeoutMs: 5000,
+      logCandidatesOnMiss: attempt === 2,
+    });
+    if (!clicked.ok) {
+      throw new Error(clicked.reason || 'Personal files opener not found');
+    }
+    await waitForPredicate(
+      client.Runtime,
+      `(() => Boolean(
+        document.querySelector(${JSON.stringify(GROK_PERSONAL_FILES_SEARCH_SELECTOR)}) ||
+        Array.from(document.querySelectorAll('[role="dialog"], div[id^="radix-"]')).find((node) =>
+          (node.textContent || '').toLowerCase().includes('personal files'),
+        )
+      ))()`,
+      { timeoutMs: 8_000, pollMs: 200 },
+    );
+    if (await tagPersonalFilesModalRoot(client)) {
+      return;
+    }
   }
-  const clicked = await pressButton(client.Runtime, {
-    match: { includeAny: ['personal files'] },
-    rootSelectors: ['main'],
-    requireVisible: true,
-    timeoutMs: 5000,
-    logCandidatesOnMiss: true,
-  });
-  if (!clicked.ok) {
-    throw new Error(clicked.reason || 'Personal files opener not found');
-  }
-  const opened = await waitForSelector(client.Runtime, GROK_PERSONAL_FILES_SEARCH_SELECTOR, 5000);
-  if (!opened || !(await tagPersonalFilesModalRoot(client))) {
-    throw new Error('Personal files modal not found');
-  }
+  throw new Error('Personal files modal not found');
 }
 
 async function clickPersonalFilesSaveWithClient(client: ChromeClient): Promise<void> {
@@ -2726,6 +3049,451 @@ async function clickPersonalFilesSaveWithClient(client: ChromeClient): Promise<v
     throw new Error(clicked.reason || 'Personal files Save button not found');
   }
   await waitForNotSelector(client.Runtime, `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`, 5000);
+}
+
+async function readVisiblePersonalFilesWithClient(client: ChromeClient): Promise<GrokProjectFileProbe[]> {
+  await ensurePersonalFilesModalOpen(client);
+  const evalResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const root = document.querySelector('[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]') || document;
+      const rows = Array.from(root.querySelectorAll(${JSON.stringify(GROK_PERSONAL_FILES_ROW_SELECTOR)}));
+      return {
+        rowTexts: rows
+          .map((row) => String(row.textContent || ''))
+          .filter((text) => text && text.trim().length > 0),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const rowTexts = (evalResult.result?.value?.rowTexts as string[] | undefined) ?? [];
+  return parseGrokPersonalFilesRowTexts(rowTexts);
+}
+
+async function waitForProjectFilesPersisted(
+  client: ChromeClient,
+  fileNames: string[],
+  timeoutMs = 12_000,
+): Promise<void> {
+  const expected = Array.from(
+    new Set(
+      fileNames
+        .map((name) => String(name || '').trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+  if (expected.length === 0) {
+    return;
+  }
+  const deadline = Date.now() + timeoutMs;
+  let missing = expected;
+  while (Date.now() < deadline) {
+    await ensureProjectSourcesTabSelected(client);
+    await waitForProjectSourcesTab(client);
+    await ensureProjectSourcesFilesExpanded(client);
+    const files = await readVisiblePersonalFilesWithClient(client).catch(() => []);
+    const present = new Set(files.map((file) => file.name.toLowerCase()));
+    missing = expected.filter((name) => !present.has(name));
+    if (missing.length === 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  throw new Error(`Uploaded file(s) did not persist after save: ${missing.join(', ')}`);
+}
+
+async function waitForGrokFilesPageReady(client: ChromeClient, timeoutMs = 15_000): Promise<void> {
+  const ready = await waitForPredicate(
+    client.Runtime,
+    grokFilesPageReadyExpression(),
+    { timeoutMs, pollMs: 200, description: 'Grok files page ready' },
+  );
+  if (!ready.ok) {
+    throw new Error('Grok files page did not load');
+  }
+}
+
+async function navigateToGrokFiles(client: ChromeClient, url: string): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url,
+    timeoutMs: 10_000,
+    fallbackTimeoutMs: 15_000,
+    pollMs: 200,
+    routeExpression: grokFilesPathExpression(),
+    routeDescription: 'Grok files path',
+    readyExpression: grokFilesPageReadyExpression(),
+    readyDescription: 'Grok files page ready',
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    if (settled.phase === 'route') {
+      throw new Error('Grok files page did not navigate');
+    }
+    throw new Error('Grok files page did not load');
+  }
+  await ensureGrokTabVisible(client);
+}
+
+async function readVisibleAccountFilesWithClient(client: ChromeClient): Promise<GrokAccountFileProbe[]> {
+  await waitForGrokFilesPageReady(client);
+  const result = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const selector = ${JSON.stringify(GROK_ACCOUNT_FILE_LINK_SELECTOR)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const extractId = (href) => {
+        try {
+          return new URL(href, location.origin).searchParams.get('file') || '';
+        } catch {
+          return '';
+        }
+      };
+      const pickScroller = () => {
+        const main = document.querySelector('main');
+        const candidates = Array.from((main || document).querySelectorAll('*')).filter((node) => {
+          if (!(node instanceof HTMLElement)) return false;
+          const style = getComputedStyle(node);
+          const overflowY = style.overflowY || '';
+          return /(auto|scroll)/.test(overflowY) && node.scrollHeight - node.clientHeight > 40;
+        });
+        candidates.sort((left, right) => right.scrollHeight - left.scrollHeight);
+        return candidates[0] || document.scrollingElement || document.documentElement;
+      };
+      const collect = () =>
+        Array.from(document.querySelectorAll(selector))
+          .map((node) => {
+            const href = node instanceof HTMLAnchorElement ? node.href : String(node.getAttribute('href') || '');
+            const id = extractId(href);
+            const name = normalize(
+              node.querySelector('span[style*="mask-image"], span.flex-1, span')?.textContent || '',
+            );
+            return {
+              id,
+              name,
+              remoteUrl: href || null,
+            };
+          })
+          .filter((item) => item.id && item.name);
+      const scroller = pickScroller();
+      let previousCount = -1;
+      let stableReads = 0;
+      for (let attempt = 0; attempt < 24; attempt += 1) {
+        const count = collect().length;
+        const mainText = normalize(document.querySelector('main')?.textContent || '');
+        const loadMore = mainText.includes('scroll to load more');
+        if (count === previousCount) {
+          stableReads += 1;
+        } else {
+          stableReads = 0;
+          previousCount = count;
+        }
+        if (!loadMore && stableReads >= 2) {
+          break;
+        }
+        if (scroller instanceof HTMLElement) {
+          scroller.scrollTop = scroller.scrollHeight;
+          scroller.dispatchEvent(new Event('scroll', { bubbles: true }));
+        }
+        if (document.scrollingElement) {
+          document.scrollingElement.scrollTop = document.scrollingElement.scrollHeight;
+        }
+        window.scrollTo(0, document.body.scrollHeight);
+        await sleep(350);
+      }
+      return collect();
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const rawItems = Array.isArray(result.result?.value) ? (result.result.value as GrokAccountFileProbe[]) : [];
+  const deduped = new Map<string, GrokAccountFileProbe>();
+  for (const item of rawItems) {
+    const id = typeof item.id === 'string' ? item.id.trim() : '';
+    const name = typeof item.name === 'string' ? item.name.trim() : '';
+    if (!id || !name) continue;
+    if (!deduped.has(id)) {
+      deduped.set(id, {
+        id,
+        name,
+        remoteUrl: typeof item.remoteUrl === 'string' && item.remoteUrl.trim().length > 0 ? item.remoteUrl : undefined,
+      });
+    }
+  }
+  return Array.from(deduped.values());
+}
+
+async function readVisibleConversationFilesWithClient(
+  client: ChromeClient,
+  conversationId: string,
+): Promise<FileRef[]> {
+  const result = await client.Runtime.evaluate({
+    expression: `(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const collectRows = () => {
+        const primary = Array.from(document.querySelectorAll('main [id^="response-"]'));
+        if (primary.length > 0) return primary;
+        return Array.from(document.querySelectorAll('main div[class*="items-end"]'));
+      };
+      const collectItems = () => {
+        const items = [];
+        const rows = collectRows();
+        rows.forEach((row, rowIndex) => {
+          const classText = String(row.getAttribute('class') || '');
+          const looksLikeUserRow = classText.includes('items-end') || /justify-end/.test(classText);
+          if (!looksLikeUserRow) return;
+          const rowId = normalize(row.getAttribute('id') || '');
+          const chips = Array.from(
+            row.querySelectorAll('div[class*="bg-chip"], div[class*="group/chip"], div[data-state]'),
+          )
+            .filter((chip) => chip.querySelector('span'))
+            .filter((chip) => !chip.closest('button'));
+          chips.forEach((chip, chipIndex) => {
+            const name = normalize(
+              chip.querySelector('span.truncate, span[class*="truncate"], span')?.textContent || '',
+            );
+            if (!name) return;
+            const fileTypeLabel = normalize(
+              chip.querySelector('svg[aria-label], [role="img"][aria-label]')?.getAttribute('aria-label') || '',
+            );
+            const link = chip.querySelector('a[href]');
+            const href =
+              link instanceof HTMLAnchorElement ? link.href : normalize(link?.getAttribute('href') || '') || null;
+            items.push({
+              rowId: rowId || null,
+              rowIndex,
+              chipIndex,
+              name,
+              fileTypeLabel: fileTypeLabel || null,
+              remoteUrl: href,
+            });
+          });
+        });
+        return items;
+      };
+      for (let attempt = 0; attempt < 30; attempt += 1) {
+        const items = collectItems();
+        if (items.length > 0) {
+          return items;
+        }
+        await sleep(200);
+      }
+      return collectItems();
+    })()`,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const rawItems = Array.isArray(result.result?.value) ? (result.result.value as GrokConversationFileProbe[]) : [];
+  return mapGrokConversationFileProbes(conversationId, rawItems);
+}
+
+async function uploadAccountFilesWithClient(
+  client: ChromeClient,
+  paths: string[],
+): Promise<void> {
+  await waitForGrokFilesPageReady(client);
+  const tagResult = await client.Runtime.evaluate({
+    expression: `(() => {
+      const input =
+        document.querySelector(${JSON.stringify(GROK_ACCOUNT_FILE_UPLOAD_INPUT_SELECTOR)}) ||
+        document.querySelector('input[type="file"]');
+      if (!(input instanceof HTMLInputElement)) {
+        return { ok: false };
+      }
+      input.setAttribute('data-oracle-account-upload', 'true');
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  if (!tagResult.result?.value?.ok) {
+    throw new Error('Account files upload input not found');
+  }
+  for (const filePath of paths) {
+    await transferAttachmentViaDataTransfer(
+      client.Runtime,
+      {
+        path: filePath,
+        displayPath: filePath,
+      },
+      'input[type="file"][data-oracle-account-upload="true"]',
+    );
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+}
+
+async function waitForAccountFilesPersisted(
+  client: ChromeClient,
+  fileNames: string[],
+  timeoutMs = 15_000,
+): Promise<void> {
+  const expected = Array.from(
+    new Set(
+      fileNames
+        .map((name) => String(name || '').trim().toLowerCase())
+        .filter(Boolean),
+    ),
+  );
+  if (expected.length === 0) {
+    return;
+  }
+  const deadline = Date.now() + timeoutMs;
+  let missing = expected;
+  while (Date.now() < deadline) {
+    const files = await readVisibleAccountFilesWithClient(client).catch(() => []);
+    const present = new Set(files.map((file) => file.name.toLowerCase()));
+    missing = expected.filter((name) => !present.has(name));
+    if (missing.length === 0) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  throw new Error(`Uploaded account file(s) did not persist: ${missing.join(', ')}`);
+}
+
+async function removeAccountFileWithClient(
+  client: ChromeClient,
+  fileId: string,
+): Promise<void> {
+  await readVisibleAccountFilesWithClient(client);
+  const marked = await client.Runtime.evaluate({
+    expression: `(() => {
+      const targetId = ${JSON.stringify(fileId)};
+      const rows = Array.from(document.querySelectorAll(${JSON.stringify(GROK_ACCOUNT_FILE_LINK_SELECTOR)}));
+      for (const row of rows) {
+        const href = row instanceof HTMLAnchorElement ? row.href : String(row.getAttribute('href') || '');
+        try {
+          const id = new URL(href, location.origin).searchParams.get('file') || '';
+          if (id === targetId) {
+            row.setAttribute('data-oracle-account-file-row', 'true');
+            return { ok: true };
+          }
+        } catch {}
+      }
+      return { ok: false };
+    })()`,
+    returnByValue: true,
+  });
+  if (!marked.result?.value?.ok) {
+    throw new Error(`Account file ${fileId} not found`);
+  }
+  await hoverElement(client.Runtime, client.Input, {
+    selector: '[data-oracle-account-file-row="true"]',
+    timeoutMs: 5000,
+  });
+  const clicked = await pressButton(client.Runtime, {
+    selector: 'button[aria-label="Delete file"]',
+    rootSelectors: ['[data-oracle-account-file-row="true"]'],
+    requireVisible: true,
+    timeoutMs: 5000,
+    logCandidatesOnMiss: true,
+  });
+  if (!clicked.ok) {
+    const fallback = await client.Runtime.evaluate({
+      expression: `(() => {
+        const row = document.querySelector('[data-oracle-account-file-row="true"]');
+        const button = row?.querySelector('button[aria-label="Delete file"]');
+        if (!(button instanceof HTMLButtonElement)) {
+          return { ok: false };
+        }
+        button.click();
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    if (!fallback.result?.value?.ok) {
+      throw new Error(clicked.reason || `Delete button not found for account file ${fileId}`);
+    }
+  }
+  if (await waitForDialog(client.Runtime, 1_500)) {
+    const confirmed = await pressDialogButton(client.Runtime, {
+      match: { exact: ['delete', 'remove'], includeAny: ['delete', 'remove'] },
+      preferLast: true,
+      timeoutMs: 3_000,
+    });
+    if (!confirmed.ok) {
+      throw new Error(confirmed.reason || `Delete confirmation not found for account file ${fileId}`);
+    }
+    await waitForNotSelector(client.Runtime, DEFAULT_DIALOG_SELECTORS.join(', '), 5_000).catch(() => undefined);
+    return;
+  }
+  const stagedDelete = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const row = document.querySelector('[data-oracle-account-file-row="true"]');
+      if (!row) {
+        return true;
+      }
+      return Boolean(
+        row.querySelector('button[aria-label="Delete"]') &&
+        row.querySelector('button[aria-label="Cancel"]'),
+      );
+    })()`,
+    { timeoutMs: 3_000, pollMs: 150, description: 'account file staged delete actions' },
+  );
+  if (!stagedDelete.ok) {
+    return;
+  }
+  const rowStillPresent = await client.Runtime.evaluate({
+    expression: `(() => Boolean(document.querySelector('[data-oracle-account-file-row="true"]')))()`,
+    returnByValue: true,
+  });
+  if (!rowStillPresent.result?.value) {
+    return;
+  }
+  await hoverElement(client.Runtime, client.Input, {
+    selector: '[data-oracle-account-file-row="true"]',
+    timeoutMs: 5_000,
+  });
+  const stagedClicked = await pressButton(client.Runtime, {
+    selector: 'button[aria-label="Delete"]',
+    rootSelectors: ['[data-oracle-account-file-row="true"]'],
+    requireVisible: true,
+    timeoutMs: 5_000,
+    logCandidatesOnMiss: true,
+  });
+  if (!stagedClicked.ok) {
+    const fallback = await client.Runtime.evaluate({
+      expression: `(() => {
+        const row = document.querySelector('[data-oracle-account-file-row="true"]');
+        const button = row?.querySelector('button[aria-label="Delete"]');
+        if (!(button instanceof HTMLButtonElement)) {
+          return { ok: false };
+        }
+        button.click();
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    if (!fallback.result?.value?.ok) {
+      throw new Error(stagedClicked.reason || `Inline delete confirmation not found for account file ${fileId}`);
+    }
+  }
+  if (await waitForDialog(client.Runtime, 1_500)) {
+    const confirmed = await pressDialogButton(client.Runtime, {
+      match: { exact: ['delete', 'remove'], includeAny: ['delete', 'remove'] },
+      preferLast: true,
+      timeoutMs: 3_000,
+    });
+    if (!confirmed.ok) {
+      throw new Error(confirmed.reason || `Delete confirmation not found for account file ${fileId}`);
+    }
+    await waitForNotSelector(client.Runtime, DEFAULT_DIALOG_SELECTORS.join(', '), 5_000).catch(() => undefined);
+  }
+}
+
+async function waitForAccountFileRemoved(
+  client: ChromeClient,
+  fileId: string,
+  timeoutMs = 12_000,
+): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const files = await readVisibleAccountFilesWithClient(client).catch(() => []);
+    if (!files.some((file) => file.id === fileId)) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 400));
+  }
+  throw new Error(`Account file ${fileId} still appears on the Grok files page after delete`);
 }
 
 async function setPersonalFilesSearchQuery(client: ChromeClient, query: string): Promise<void> {
@@ -3069,31 +3837,165 @@ async function waitForProjectSourceFileMarkedRemoved(
 }
 
 async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promise<void> {
-  const evalResult = await client.Runtime.evaluate({
-    expression: `(async () => {
-      const logs = [];
-      const log = (msg) => {
-        logs.push(msg);
-        console.log('[browser-project-create] ' + msg);
+  await tagVisibleCreateProjectDialog(client);
+  const finalStep = await waitForCreateProjectFinalStep(client, 5_000);
+  if (!finalStep.ok) {
+    const debug = await readCreateProjectDialogDebug(client);
+    throw new Error(`Create project final step not ready (${formatCreateProjectDialogDebug(debug)})`);
+  }
+
+  const pressed = await pressButton(client.Runtime, {
+    match: { exact: ['create'], includeAny: ['create'] },
+    rootSelectors: [GROK_CREATE_PROJECT_DIALOG_SELECTOR],
+    requireVisible: true,
+    timeoutMs: 2_000,
+  });
+  if (!pressed.ok) {
+    const debug = await readCreateProjectDialogDebug(client);
+    throw new Error(`${pressed.reason || 'Create button not found'} (${formatCreateProjectDialogDebug(debug)})`);
+  }
+}
+
+async function waitForCreateProjectFinalStep(
+  client: ChromeClient,
+  timeoutMs: number,
+): Promise<{ ok: boolean; buttons?: string[] }> {
+  await tagVisibleCreateProjectDialog(client);
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (el) => {
+        if (!el) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
       };
-      const buttons = Array.from(document.querySelectorAll('button'));
-      const createBtn = buttons.find((button) => (button.textContent || '').trim().toLowerCase() === 'create') || null;
-      if (!createBtn) {
-        return { success: false, error: 'Create button not found', logs };
+      const dialog =
+        document.querySelector(${JSON.stringify(GROK_CREATE_PROJECT_DIALOG_SELECTOR)}) ||
+        Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]')).find((node) => visible(node)) ||
+        null;
+      if (!dialog) {
+        return null;
       }
-      createBtn.click();
-      return { success: true, logs };
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const buttons = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.textContent || node.getAttribute('aria-label') || ''))
+        .filter(Boolean);
+      const hasCreate = buttons.includes('create');
+      const hasAddSourcesLater = buttons.includes('add sources later');
+      const hasAttach = Array.from(dialog.querySelectorAll('button[aria-label="Attach"]')).some((node) => visible(node));
+      if (!hasCreate || (!hasAddSourcesLater && !hasAttach)) {
+        return null;
+      }
+      return { buttons };
     })()`,
-    awaitPromise: true,
+    {
+      timeoutMs,
+      description: 'create-project final step',
+    },
+  );
+  if (!ready.ok) {
+    return { ok: false };
+  }
+  const probe = ready.value as { buttons?: string[] } | undefined;
+  return {
+    ok: true,
+    buttons: Array.isArray(probe?.buttons) ? probe.buttons : undefined,
+  };
+}
+
+async function readCreateProjectDialogDebug(
+  client: ChromeClient,
+): Promise<{ text?: string; buttons?: string[]; inputs?: string[] }> {
+  await tagVisibleCreateProjectDialog(client);
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (el) => {
+        if (!el) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const dialog =
+        document.querySelector(${JSON.stringify(GROK_CREATE_PROJECT_DIALOG_SELECTOR)}) ||
+        Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]')).find((node) => visible(node)) ||
+        null;
+      if (!dialog) {
+        return { text: null, buttons: [], inputs: [] };
+      }
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const buttons = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.textContent || node.getAttribute('aria-label') || ''))
+        .filter(Boolean);
+      const inputs = Array.from(dialog.querySelectorAll('input, textarea'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.getAttribute('aria-label') || node.getAttribute('placeholder') || node.value || ''))
+        .filter(Boolean);
+      return {
+        text: normalize(dialog.textContent || '').slice(0, 240),
+        buttons,
+        inputs,
+      };
+    })()`,
     returnByValue: true,
   });
-  if (evalResult.exceptionDetails) {
-    throw new Error(`JS Exception: ${evalResult.exceptionDetails.exception?.description}`);
+  return (result.result?.value as { text?: string; buttons?: string[]; inputs?: string[] } | undefined) ?? {};
+}
+
+function formatCreateProjectDialogDebug(debug: {
+  text?: string;
+  buttons?: string[];
+  inputs?: string[];
+}): string {
+  const parts: string[] = [];
+  if (debug.text) {
+    parts.push(`text=${debug.text}`);
   }
-  const info = evalResult.result?.value as { success: boolean; error?: string } | undefined;
-  if (!info?.success) {
-    throw new Error(info?.error || 'Create project confirm failed');
+  if (debug.buttons && debug.buttons.length > 0) {
+    parts.push(`buttons=${debug.buttons.join('|')}`);
   }
+  if (debug.inputs && debug.inputs.length > 0) {
+    parts.push(`inputs=${debug.inputs.join('|')}`);
+  }
+  return parts.join(', ') || 'dialog=n/a';
+}
+
+async function tagVisibleCreateProjectDialog(client: ChromeClient): Promise<boolean> {
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const existing = document.querySelector(${JSON.stringify(GROK_CREATE_PROJECT_DIALOG_SELECTOR)});
+      if (existing && visible(existing)) {
+        return true;
+      }
+      for (const node of Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]'))) {
+        node.removeAttribute('data-oracle-create-project-dialog');
+      }
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], [aria-modal="true"]')).filter(visible);
+      const match =
+        dialogs.find((node) =>
+          Boolean(node.querySelector('input[placeholder*="project name" i], input[aria-label*="project name" i]')),
+        ) || null;
+      if (!match) {
+        return false;
+      }
+      match.setAttribute('data-oracle-create-project-dialog', 'true');
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result.result?.value);
+}
+
+function isMissingGrokCloneMenuError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+  return /menu item not found:\s*clone/i.test(error.message);
 }
 
 async function waitForProjectUrl(
@@ -3112,6 +4014,101 @@ async function waitForProjectUrl(
       return href;
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return null;
+}
+
+async function waitForGrokProjectLinks(client: ChromeClient, timeoutMs: number): Promise<void> {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `Boolean(document.querySelector('main a[href*="/project/"], nav a[href*="/project/"], aside a[href*="/project/"]'))`,
+      returnByValue: true,
+    });
+    if (result?.value) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 300));
+  }
+}
+
+async function scrapeVisibleGrokProjects(client: ChromeClient): Promise<{
+  items: GrokProjectLinkProbe[];
+  error?: string | null;
+  linkCount?: number | null;
+}> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      try {
+        const projects = new Map();
+        const add = (id, name, url) => {
+          if (!id) return;
+          if (!projects.has(id)) {
+            projects.set(id, { id, name: name || id, url: url || null });
+          }
+        };
+        const current = location.href;
+        const currentMatch = current.match(/\\/project\\/([^/?#]+)/);
+        if (currentMatch?.[1]) {
+          add(currentMatch[1], document.title || currentMatch[1], current);
+        }
+        const roots = [
+          document.querySelector('main'),
+          document.querySelector('nav'),
+          document.querySelector('aside'),
+          document.body,
+        ].filter(Boolean);
+        const seen = new Set();
+        const links = [];
+        for (const root of roots) {
+          for (const link of Array.from(root.querySelectorAll('a[href*="/project/"]'))) {
+            if (seen.has(link)) continue;
+            seen.add(link);
+            links.push(link);
+          }
+        }
+        for (const link of links) {
+          const href = link.getAttribute('href') || '';
+          const match = href.match(/\\/project\\/([^/?#]+)/);
+          if (!match?.[1]) continue;
+          const text = (link.textContent || '').trim();
+          const url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+          add(match[1], text, url);
+        }
+        return {
+          items: Array.from(projects.values()),
+          error: null,
+          linkCount: links.length,
+        };
+      } catch (error) {
+        return { items: [], error: String(error), linkCount: null };
+      }
+    })()`,
+    returnByValue: true,
+  });
+  return (result?.value ?? { items: [] }) as {
+    items: GrokProjectLinkProbe[];
+    error?: string | null;
+    linkCount?: number | null;
+  };
+}
+
+async function recoverCreatedProjectUrlByName(
+  client: ChromeClient,
+  projectName: string,
+  timeoutMs: number,
+): Promise<string | null> {
+  for (const url of [GROK_PROJECTS_INDEX_URL, GROK_HOME_URL]) {
+    await navigateToProject(client, url);
+    await waitForGrokProjectLinks(client, timeoutMs);
+    const visible = await scrapeVisibleGrokProjects(client);
+    const match = findGrokProjectByName(visible.items, projectName);
+    if (match?.url) {
+      return match.url;
+    }
+    if (match?.id) {
+      return `https://grok.com/project/${match.id}?tab=conversations`;
+    }
   }
   return null;
 }
@@ -3222,6 +4219,7 @@ async function connectToGrokProjectTab(
       matchingTabLimit: tabPolicy.serviceTabLimit,
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
+      suppressFocus: tabPolicy.suppressFocus,
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -3250,12 +4248,14 @@ function resolveBrowserTabPolicy(
   serviceTabLimit?: number;
   blankTabLimit?: number;
   collapseDisposableWindows?: boolean;
+  suppressFocus?: boolean;
 } {
   const config = options?.browserService?.getConfig?.();
   return {
     serviceTabLimit: config?.serviceTabLimit ?? undefined,
     blankTabLimit: config?.blankTabLimit ?? undefined,
     collapseDisposableWindows: config?.collapseDisposableWindows,
+    suppressFocus: config?.hideWindow ?? undefined,
   };
 }
 
@@ -3297,6 +4297,18 @@ function selectPreferredGrokTarget<T extends { url?: string | null }>(
     : undefined;
 }
 
+async function currentGrokUrlMatchesPreference(
+  client: ChromeClient,
+  preferredUrl: string,
+): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: 'location.href',
+    returnByValue: true,
+  });
+  const currentUrl = typeof result?.value === 'string' ? result.value : '';
+  return grokUrlMatchesPreference(currentUrl, preferredUrl);
+}
+
 function grokUsesBroadTargetMatch(preferredUrl: string): boolean {
   try {
     return normalizeGrokUrlPath(new URL(preferredUrl).pathname) === '/';
@@ -3315,6 +4327,7 @@ function normalizeGrokUrlPath(pathname: string): string {
 
 function normalizeGrokUrlSearch(searchParams: URLSearchParams): string {
   return Array.from(searchParams.entries())
+    .filter(([key]) => key.toLowerCase() !== 'rid')
     .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
       if (leftKey !== rightKey) {
         return leftKey.localeCompare(rightKey);
@@ -3325,128 +4338,610 @@ function normalizeGrokUrlSearch(searchParams: URLSearchParams): string {
     .join('&');
 }
 
+function grokFilesPathExpression(): string {
+  return `(() => {
+    try {
+      return new URL(location.href).pathname === '/files';
+    } catch {
+      return location.pathname === '/files';
+    }
+  })()`;
+}
+
+function grokFilesPageReadyExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+    if (location.pathname !== '/files') {
+      return false;
+    }
+    const heading = Array.from(document.querySelectorAll('h1, h2, h3, [role="heading"]')).some((node) =>
+      normalize(node.textContent || '') === 'files',
+    );
+    const uploadInput = Boolean(
+      document.querySelector(${JSON.stringify(GROK_ACCOUNT_FILE_UPLOAD_INPUT_SELECTOR)}) ||
+      document.querySelector('main input[type="file"]'),
+    );
+    const searchInput = Boolean(
+      document.querySelector(${JSON.stringify(GROK_PERSONAL_FILES_SEARCH_SELECTOR)}) ||
+      document.querySelector('input[placeholder*="search" i]'),
+    );
+    const fileLinks = document.querySelectorAll(${JSON.stringify(GROK_ACCOUNT_FILE_LINK_SELECTOR)}).length;
+    const mainText = normalize(document.querySelector('main')?.textContent || '');
+    const emptyState = mainText.includes('files') && (mainText.includes('private') || mainText.includes('upload'));
+    return (heading && uploadInput) || (searchInput && uploadInput) || fileLinks > 0 || emptyState;
+  })()`;
+}
+
+function grokUrlSettleExpression(targetUrl: string): string {
+  try {
+    const parsed = new URL(targetUrl);
+    const targetPath = normalizeGrokUrlPath(parsed.pathname);
+    const targetSearch = normalizeGrokUrlSearch(parsed.searchParams);
+    return `(() => {
+      const normalizePath = (value) => {
+        const trimmed = String(value || '').trim();
+        if (!trimmed || trimmed === '/') {
+          return '/';
+        }
+        return trimmed.replace(/\\/+$/, '') || '/';
+      };
+      const normalizeSearch = (params) =>
+        Array.from(params.entries())
+          .filter(([key]) => String(key || '').toLowerCase() !== 'rid')
+          .sort(([leftKey, leftValue], [rightKey, rightValue]) => {
+            if (leftKey !== rightKey) {
+              return leftKey.localeCompare(rightKey);
+            }
+            return leftValue.localeCompare(rightValue);
+          })
+          .map(([key, value]) => \`\${key}=\${value}\`)
+          .join('&');
+      try {
+        const current = new URL(location.href);
+        return current.host === ${JSON.stringify(parsed.host)} &&
+          normalizePath(current.pathname) === ${JSON.stringify(targetPath)} &&
+          normalizeSearch(current.searchParams) === ${JSON.stringify(targetSearch)};
+      } catch {
+        return false;
+      }
+    })()`;
+  } catch {
+    return `location.href === ${JSON.stringify(targetUrl)}`;
+  }
+}
+
 async function navigateToProject(client: ChromeClient, url: string): Promise<void> {
-  await client.Page.navigate({ url });
-  await waitForDocumentReady(client, 15_000);
+  const settled = await navigateAndSettle(client, {
+    url,
+    timeoutMs: 15_000,
+    fallbackTimeoutMs: 15_000,
+    pollMs: 200,
+    routeExpression: grokUrlSettleExpression(url),
+    routeDescription: `Grok route ${url}`,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Grok page did not navigate to ${url}`);
+  }
   await ensureGrokTabVisible(client);
   if (!(await isValidProjectUrl(client))) {
     throw new Error('Project URL is invalid or points to a deleted project.');
   }
 }
 
+async function navigateToConversation(client: ChromeClient, url: string): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url,
+    timeoutMs: 15_000,
+    fallbackTimeoutMs: 15_000,
+    pollMs: 200,
+    routeExpression: grokUrlSettleExpression(url),
+    routeDescription: `Grok conversation route ${url}`,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Grok conversation did not navigate to ${url}`);
+  }
+  await ensureGrokTabVisible(client);
+  if (!(await isValidConversationUrl(client))) {
+    throw new Error('Conversation URL is invalid or missing.');
+  }
+}
+
 async function waitForDocumentReady(client: ChromeClient, timeoutMs: number): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
-  while (Date.now() < deadline) {
-    const { result } = await client.Runtime.evaluate({
-      expression: 'document.readyState',
+  const ready = await waitForDocumentReadyUi(client.Runtime, {
+    timeoutMs,
+    pollMs: 200,
+  });
+  if (!ready.ok) {
+    throw new Error('Document did not become ready');
+  }
+}
+
+async function waitForGrokConversationSurface(
+  Runtime: ChromeClient['Runtime'],
+  options?: { timeoutMs?: number; requireResponse?: boolean },
+): Promise<Awaited<ReturnType<typeof waitForPredicate>>> {
+  const timeoutMs = options?.timeoutMs ?? 10_000;
+  const requireResponse = options?.requireResponse ?? false;
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const main = document.querySelector('main');
+      if (!main) return false;
+      let isConversation = false;
+      try {
+        const current = new URL(location.href);
+        isConversation =
+          /\\/c\\/[^/?#]+$/.test(current.pathname) ||
+          (current.pathname.startsWith('/project/') && current.searchParams.has('chat'));
+      } catch {
+        isConversation = /\\/c\\//.test(location.pathname) || /(?:\\?|&)chat=/.test(location.search);
+      }
+      if (!isConversation) return false;
+      if (main.querySelector('[id^="response-"], div.message-bubble, [class*="response-content-markdown"]')) {
+        return true;
+      }
+      if (${JSON.stringify(requireResponse)}) {
+        return false;
+      }
+      if (
+        main.querySelector(
+          'div[class*="bg-chip"] span, div[class*="group/chip"] span, a[href*="/files?file="], a[href*="/files?"]',
+        )
+      ) {
+        return true;
+      }
+      const conversationRows = Array.from(
+        main.querySelectorAll('div[class*="items-end"], div[class*="items-start"], div[class*="message"]'),
+      ).filter((node) => {
+        const text = String(node.textContent || '').trim();
+        if (text.length === 0) {
+          return false;
+        }
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      return conversationRows.length > 0;
+    })()`,
+    {
+      timeoutMs,
+      description: requireResponse ? 'grok-conversation-response' : 'grok-conversation-surface',
+    },
+  );
+}
+
+async function openProjectRenameEditor(
+  client: ChromeClient,
+  options?: { logPrefix?: string; projectId?: string; projectName?: string | null },
+): Promise<void> {
+  await ensureGrokTabVisible(client);
+  const renameInputSelector = 'input[aria-label="Project name"], input[aria-label^="Rename "]';
+  const isProjectIndex = await client.Runtime.evaluate({
+    expression: `location.pathname.replace(/\\/+$/, '') === '/project'`,
+    returnByValue: true,
+  });
+  if (!isProjectIndex.result?.value) {
+    await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const visible = (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const headings = Array.from(document.querySelectorAll('main h1, main h2, header h1, header h2'))
+          .filter((node) => visible(node))
+          .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim())
+          .filter((text) => text.length > 0);
+        if (headings.length > 0) {
+          return true;
+        }
+        return Boolean(
+          document.querySelector('button[aria-label="Options"]') ||
+          document.querySelector('button[aria-label="Open menu"]') ||
+          document.querySelector('main [role="button"]') ||
+          document.querySelector('main [data-sidebar="menu-button"]'),
+        );
+      })()`,
+      {
+        timeoutMs: 10_000,
+        description: 'grok-project-rename-surface',
+      },
+    );
+    const openedFromHeader = await client.Runtime.evaluate({
+      expression: `(() => {
+        const visible = (el) => {
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const title = normalize((document.title || '').replace(/\\s*-\\s*Grok\\s*$/i, ''));
+        const headings = Array.from(document.querySelectorAll('h1[role="button"], h1, h2[role="button"], h2'));
+        const match =
+          headings.find((el) => visible(el) && normalize(el.textContent) === title) ||
+          headings.find((el) => visible(el) && (el.getAttribute('role') || '').toLowerCase() === 'button') ||
+          null;
+        if (!match) {
+          return { ok: false };
+        }
+        match.click();
+        return { ok: true };
+      })()`,
       returnByValue: true,
     });
-    if (result?.value === 'complete' || result?.value === 'interactive') {
-      return;
+    const headerOpened = (openedFromHeader.result?.value as { ok?: boolean } | undefined)?.ok === true;
+    if (headerOpened) {
+      const inputReady = await waitForSelector(client.Runtime, renameInputSelector, 3000);
+      if (inputReady) {
+        return;
+      }
     }
-    await new Promise((resolve) => setTimeout(resolve, 200));
   }
+  await openProjectMenuAndSelect(client, 'Rename', {
+    logPrefix: options?.logPrefix,
+    preferSidebarRow: true,
+    projectId: options?.projectId,
+    projectName: options?.projectName,
+  });
+  const inputReady = await waitForSelector(client.Runtime, renameInputSelector, 3000);
+  if (!inputReady) {
+    throw new Error('Project rename input not found');
+  }
+}
+
+async function submitProjectRenameWithClient(client: ChromeClient, newTitle: string): Promise<void> {
+  const commitInfo = await submitInlineRename(client.Runtime, {
+    value: newTitle,
+    inputSelector: 'input[aria-label="Project name"], input[aria-label^="Rename "]',
+    rootSelectors: ['header', 'main'],
+    saveButtonMatch: { exact: ['save'] },
+    closeSelector: 'input[aria-label="Project name"], input[aria-label^="Rename "]',
+    timeoutMs: 3_000,
+  });
+  if (!commitInfo.ok) {
+    throw new Error(commitInfo.reason || 'Project rename submit failed');
+  }
+}
+
+async function waitForProjectRenameApplied(
+  client: ChromeClient,
+  newTitle: string,
+  timeoutMs: number,
+): Promise<{ ok: boolean }> {
+  const applied = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const expected = normalize(${JSON.stringify(newTitle)});
+      const input = Array.from(document.querySelectorAll('input[aria-label="Project name"], input[aria-label^="Rename "]')).find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }) || null;
+      const heading = Array.from(document.querySelectorAll('h1, h2, header h1, header h2')).find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }) || null;
+      const title = normalize((document.title || '').replace(/\\s*-\\s*Grok\\s*$/i, ''));
+      const current = normalize((heading && heading.textContent) || title || (input && input.value) || '');
+      if (!current || current !== expected) {
+        return null;
+      }
+      return { current, visibleInput: Boolean(input) };
+    })()`,
+    {
+      timeoutMs,
+      description: 'grok-project-rename-applied',
+    },
+  );
+  return { ok: applied.ok };
+}
+
+async function waitForProjectRenameAppliedInList(
+  Runtime: ChromeClient['Runtime'],
+  projectId: string,
+  newTitle: string,
+  timeoutMs: number,
+): Promise<{ ok: boolean }> {
+  const applied = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const expected = normalize(${JSON.stringify(newTitle)});
+      const projectId = ${JSON.stringify(projectId)};
+      const links = Array.from(document.querySelectorAll('a[href*="/project/"]'));
+      const match = links.find((link) => {
+        const href = link.getAttribute('href') || '';
+        return href.includes('/project/' + projectId);
+      }) || null;
+      if (!match) {
+        return null;
+      }
+      const current = normalize(match.textContent || '');
+      return current === expected ? { current } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'grok-project-rename-applied-list',
+    },
+  );
+  return { ok: applied.ok };
+}
+
+async function readProjectRenameDebug(
+  client: ChromeClient,
+): Promise<{ current?: string; visibleInput?: boolean }> {
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const input = Array.from(document.querySelectorAll('input[aria-label="Project name"], input[aria-label^="Rename "]')).find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }) || null;
+      const heading = Array.from(document.querySelectorAll('h1, h2, header h1, header h2')).find((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }) || null;
+      return {
+        current: normalize((heading && heading.textContent) || (document.title || '').replace(/\\s*-\\s*Grok\\s*$/i, '') || (input && input.value) || ''),
+        visibleInput: Boolean(input),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  return (result.result?.value as { current?: string; visibleInput?: boolean } | undefined) ?? {};
 }
 
 export async function openProjectMenuButton(
   client: ChromeClient,
-  options?: { logPrefix?: string },
-): Promise<void> {
-  await ensureGrokTabVisible(client);
-  const direct = await pressMenuButtonByAriaLabel(client.Runtime, {
-    label: 'Open menu',
-    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-    timeoutMs: 2000,
-  });
-  if (direct.ok) {
-    return;
-  }
-  await waitForSelector(client.Runtime, 'button[aria-label="Open menu"]', 5000);
-  const projectName = await readProjectNameFromPage(client);
-  const tagResult = await client.Runtime.evaluate({
-    expression: `(() => {
-      const name = ${JSON.stringify(projectName ?? '')};
+  options?: { logPrefix?: string; preferSidebarRow?: boolean; projectId?: string; projectName?: string | null },
+): Promise<string> {
+  return withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      await ensureGrokTabVisible(client);
+      const menuSelector = '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"], [role="menu"]';
+      const isActualMenuSelector = (selector?: string | null): boolean =>
+        typeof selector === 'string' &&
+        (selector.includes('[role="menu"') || selector.includes('[data-radix-menu-content'));
+      if (!options?.preferSidebarRow) {
+        for (const label of ['Open menu', 'Options']) {
+          const mainScoped = await pressMenuButtonByAriaLabel(client.Runtime, {
+            label,
+            rootSelectors: ['main'],
+            menuSelector,
+            timeoutMs: 2000,
+          });
+          if (mainScoped.ok && isActualMenuSelector(mainScoped.menuSelector)) {
+            return mainScoped.menuSelector || menuSelector;
+          }
+        }
+        for (const label of ['Options', 'Open menu']) {
+          const direct = await pressMenuButtonByAriaLabel(client.Runtime, {
+            label,
+            menuSelector,
+            timeoutMs: 2000,
+          });
+          if (direct.ok && isActualMenuSelector(direct.menuSelector)) {
+            return direct.menuSelector || menuSelector;
+          }
+        }
+      }
+
+      await waitForSelector(client.Runtime, 'button[aria-label="Options"], button[aria-label="Open menu"]', 5000);
+      const projectName = await readProjectNameFromPage(client);
+      const tagResult = await client.Runtime.evaluate({
+        expression: `(() => {
+      const name = ${JSON.stringify(options?.projectName ?? projectName ?? '')};
+      const explicitProjectId = ${JSON.stringify(options?.projectId ?? '')};
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const target = normalize(name);
-      const candidates = Array.from(document.querySelectorAll('button[aria-label="Open menu"], button[aria-haspopup="menu"]'));
-      const visible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
+      const explicitId = normalize(explicitProjectId);
+      const pathMatch = window.location.pathname.match(/\\/project\\/([^/?#]+)/i);
+      const currentProjectId = pathMatch?.[1]?.toLowerCase() || '';
+      document
+        .querySelectorAll('[data-oracle-project-row], [data-oracle-project-options], [data-oracle-project-link]')
+        .forEach((node) => {
+          node.removeAttribute('data-oracle-project-row');
+          node.removeAttribute('data-oracle-project-options');
+          node.removeAttribute('data-oracle-project-link');
+        });
+      const findProjectRow = (link) => {
+        const candidates = [
+          link.closest('li'),
+          link.closest('div.max-h-11'),
+          link.closest('div[class*="menu-item"]'),
+          link.closest('div[class*="sidebar"]'),
+          link.parentElement,
+          link.closest('div'),
+          link,
+        ].filter(Boolean);
+        for (const candidate of candidates) {
+          if (!(candidate instanceof Element)) continue;
+          if (candidate.querySelector('a[href*="/project/"]')) {
+            return candidate;
+          }
+        }
+        return link;
       };
-      if (target) {
-        const textNodes = Array.from(document.querySelectorAll('h1, h2, h3, div, span'))
-          .filter((el) => visible(el))
-          .filter((el) => normalize(el.textContent || '') === target);
-        for (const node of textNodes) {
-          let container = node.closest('header, section, div') || node.parentElement;
-          for (let i = 0; i < 4 && container; i += 1) {
-            const button = container.querySelector('button[aria-label="Open menu"]');
-            if (button && visible(button)) {
-              container.setAttribute('data-oracle-project-menu-root', 'true');
-              return { ok: true };
-            }
-            container = container.parentElement;
+      const sidebarRoots = [
+        document.querySelector(${JSON.stringify(GROK_SIDEBAR_WRAPPER_SELECTOR)}),
+        document.querySelector('[data-sidebar="sidebar"]'),
+        document.querySelector('nav'),
+        document.querySelector('aside'),
+      ].filter(Boolean);
+      const seenLinks = new Set();
+      const collectLinks = (roots) => {
+        const values = [];
+        for (const root of roots) {
+          if (!(root instanceof Element)) continue;
+          for (const link of Array.from(root.querySelectorAll('a[href*="/project/"]'))) {
+            if (seenLinks.has(link)) continue;
+            seenLinks.add(link);
+            values.push(link);
           }
         }
-      }
-      const tablist = document.querySelector('[role="tablist"]');
-      if (tablist) {
-        let node = tablist;
-        for (let i = 0; i < 6 && node; i += 1) {
-          const container = node.closest('div') || node.parentElement;
-          if (container) {
-            const button = container.querySelector('button[aria-label="Open menu"]');
-            if (button && visible(button)) {
-              container.setAttribute('data-oracle-project-menu-root', 'true');
-              return { ok: true };
-            }
-          }
-          node = node.parentElement;
-        }
-      }
-      const match = candidates.find((button) => {
-        if (!visible(button)) return false;
-        if (!target) return false;
-        const container = button.closest('header, section, div') || button.parentElement;
-        const text = normalize(container?.textContent || '');
-        return text.includes(target);
-      });
+        return values;
+      };
+      const sidebarLinks = collectLinks(sidebarRoots);
+      const links = sidebarLinks.length > 0
+        ? sidebarLinks
+        : Array.from(document.querySelectorAll('a[href*="/project/"]'));
+      const extractRowInfo = (link) => {
+        const href = link.getAttribute('href') || '';
+        const idMatch = href.match(/\\/project\\/([^/?#]+)/i);
+        const id = idMatch?.[1]?.toLowerCase() || '';
+        const row = findProjectRow(link);
+        const title = normalize(link.textContent || row.textContent || '');
+        return { row, link, id, title };
+      };
+      const entries = links.map(extractRowInfo).filter((entry) => entry.row);
+      const match =
+        entries.find((entry) => explicitId && entry.id === explicitId) ||
+        entries.find((entry) => currentProjectId && entry.id === currentProjectId) ||
+        entries.find((entry) => target && entry.title === target) ||
+        entries.find((entry) => target && entry.title.includes(target)) ||
+        null;
       if (!match) return { ok: false };
-      const root = match.closest('header, section, div') || match.parentElement || document.body;
-      root.setAttribute('data-oracle-project-menu-root', 'true');
+      match.row.setAttribute('data-oracle-project-row', 'true');
+      match.link.setAttribute('data-oracle-project-link', 'true');
       return { ok: true };
     })()`,
-    returnByValue: true,
-  });
-  const tagged = tagResult.result?.value as { ok?: boolean } | undefined;
-  if (tagged?.ok) {
-    const opened = await pressMenuButtonByAriaLabel(client.Runtime, {
-      label: 'Open menu',
-      rootSelectors: ['[data-oracle-project-menu-root="true"]'],
-      menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-      timeoutMs: 5000,
-    });
-    if (opened.ok) {
-      return;
-    }
-  }
-  const pressed = await pressMenuButtonByAriaLabel(client.Runtime, {
-    label: 'Open menu',
-    rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
-    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-    timeoutMs: 5000,
-  });
-  if (pressed.ok) {
-    return;
-  }
-  const globalOpen = await pressMenuButtonByAriaLabel(client.Runtime, {
-    label: 'Open menu',
-    menuSelector: '[role="menu"][data-state="open"], [data-radix-menu-content][data-state="open"]',
-    timeoutMs: 5000,
-  });
-  if (!globalOpen.ok) {
-    throw new Error('Project menu button not found');
-  }
+      });
+      const tagged = tagResult.result?.value as { ok?: boolean } | undefined;
+      if (tagged?.ok) {
+        try {
+          const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
+            rowSelector: '[data-oracle-project-row="true"]',
+            rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'nav', 'aside'],
+            actionMatch: { exact: ['options', 'open menu'] },
+            timeoutMs: 3000,
+          });
+          if (revealResult.ok) {
+            const taggedButton = await waitForPredicate(
+              client.Runtime,
+              `(() => {
+            const visible = (node) => {
+              if (!(node instanceof HTMLElement)) return false;
+              const rect = node.getBoundingClientRect();
+              return rect.width > 0 && rect.height > 0;
+            };
+            const row = document.querySelector('[data-oracle-project-row="true"]');
+            const link = document.querySelector('[data-oracle-project-link="true"]');
+            if (!(link instanceof HTMLElement)) {
+              return null;
+            }
+            const roots = [row, link.closest('nav'), link.closest('aside'), document].filter(Boolean);
+            const seen = new Set();
+            const candidates = [];
+            for (const root of roots) {
+              if (!(root instanceof Element || root instanceof Document)) continue;
+              for (const button of Array.from(
+                root.querySelectorAll('button[aria-label="Options"], button[aria-label="Open menu"], button[aria-haspopup="menu"]'),
+              )) {
+                if (seen.has(button) || !visible(button)) continue;
+                seen.add(button);
+                candidates.push(button);
+              }
+            }
+            const rowElement = row instanceof HTMLElement ? row : null;
+            const linkRect = link.getBoundingClientRect();
+            const score = (button) => {
+              const rect = button.getBoundingClientRect();
+              const centerX = rect.left + rect.width / 2;
+              const centerY = rect.top + rect.height / 2;
+              const linkCenterX = linkRect.left + linkRect.width / 2;
+              const linkCenterY = linkRect.top + linkRect.height / 2;
+              const dy = Math.abs(centerY - linkCenterY);
+              const dx = Math.abs(centerX - linkCenterX);
+              const sameRow = rowElement ? rowElement.contains(button) : false;
+              const overlapY = Math.max(0, Math.min(rect.bottom, linkRect.bottom) - Math.max(rect.top, linkRect.top));
+              return dy * 1000 + dx - overlapY * 10 + (sameRow ? -500 : 0);
+            };
+            const best = candidates
+              .map((button) => ({ button, score: score(button) }))
+              .sort((a, b) => a.score - b.score)[0]?.button || null;
+            if (!(best instanceof HTMLElement)) {
+              return null;
+            }
+            document
+              .querySelectorAll('[data-oracle-project-options]')
+              .forEach((node) => node.removeAttribute('data-oracle-project-options'));
+            best.setAttribute('data-oracle-project-options', 'true');
+            return { tagged: true };
+          })()`,
+              {
+                timeoutMs: 1_500,
+                description: 'visible project row menu button',
+              },
+            );
+            if (taggedButton.ok) {
+              const opened = await openRevealedRowMenu(client, {
+                rowSelector: '[data-oracle-project-row="true"]',
+                triggerSelector: '[data-oracle-project-options="true"]',
+                rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'nav', 'aside'],
+                triggerRootSelectors: ['[data-oracle-project-row="true"]'],
+                actionMatch: { exact: ['options', 'open menu'] },
+                menuSelector,
+                prepareTriggerBeforeOpen: true,
+                directTriggerClickFallback: true,
+                timeoutMs: 3_000,
+              });
+              if (opened.ok && isActualMenuSelector(opened.menuSelector)) {
+                return opened.menuSelector || menuSelector;
+              }
+            }
+          }
+        } catch {
+          // Fall through to broader project-menu strategies if the tagged row is transient.
+        }
+      }
+      for (const label of ['Options', 'Open menu']) {
+        const pressed = await pressMenuButtonByAriaLabel(client.Runtime, {
+          label,
+          rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]'],
+          menuSelector,
+          timeoutMs: 5000,
+        });
+        if (pressed.ok && isActualMenuSelector(pressed.menuSelector)) {
+          return pressed.menuSelector || menuSelector;
+        }
+      }
+      for (const label of ['Options', 'Open menu']) {
+        const globalOpen = await pressMenuButtonByAriaLabel(client.Runtime, {
+          label,
+          menuSelector,
+          timeoutMs: 5000,
+        });
+        if (globalOpen.ok && isActualMenuSelector(globalOpen.menuSelector)) {
+          return globalOpen.menuSelector || menuSelector;
+        }
+      }
+      throw new Error('Project menu button not found');
+    },
+    {
+      label: 'grok-project-menu',
+      rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'nav', 'aside', 'main'],
+      menuSelectors: [
+        '[role="menu"][data-state="open"]',
+        '[data-radix-menu-content][data-state="open"]',
+        '[role="menu"]',
+      ],
+      candidateSelectors: [
+        '[data-oracle-project-row="true"]',
+        '[data-oracle-project-options="true"]',
+        '[data-oracle-project-link="true"]',
+        'a[href*="/project/"]',
+        'button[aria-label="Options"]',
+        'button[aria-label="Open menu"]',
+      ],
+      buttonSelectors: [
+        'button[aria-label="Options"]',
+        'button[aria-label="Open menu"]',
+        'button[aria-haspopup="menu"]',
+        '[role="menuitem"]',
+      ],
+    },
+  );
 }
 
 export async function clickProjectMenuItem(
@@ -3514,10 +5009,44 @@ export async function clickProjectMenuItem(
 async function openProjectMenuAndSelect(
   client: ChromeClient,
   label: string,
-  options?: { logPrefix?: string },
+  options?: { logPrefix?: string; preferSidebarRow?: boolean; projectId?: string; projectName?: string | null },
 ): Promise<void> {
-  await openProjectMenuButton(client, options);
-  await clickProjectMenuItem(client, label, options);
+  await withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      const menuSelector = await openProjectMenuButton(client, options);
+      const clicked = await selectMenuItem(client.Runtime, {
+        menuSelector,
+        itemMatch: { exact: [label.toLowerCase()], includeAny: [label.toLowerCase()] },
+        closeMenuAfter: true,
+        timeoutMs: 3000,
+      });
+      if (!clicked) {
+        await clickProjectMenuItem(client, label, options);
+      }
+    },
+    {
+      label: `grok-project-menu-item:${label.toLowerCase()}`,
+      rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, '[data-sidebar="sidebar"]', 'nav', 'aside', 'main'],
+      menuSelectors: [
+        '[role="menu"][data-state="open"]',
+        '[data-radix-menu-content][data-state="open"]',
+        '[role="menu"]',
+      ],
+      candidateSelectors: [
+        '[data-oracle-project-row="true"]',
+        '[data-oracle-project-options="true"]',
+        '[data-oracle-project-link="true"]',
+        '[role="menuitem"]',
+      ],
+      buttonSelectors: [
+        '[data-oracle-project-options="true"]',
+        'button[aria-label="Options"]',
+        'button[aria-label="Open menu"]',
+        '[role="menuitem"]',
+      ],
+    },
+  );
 }
 
 export async function clickProjectRemoveConfirmation(
@@ -3594,8 +5123,17 @@ export async function ensureProjectSidebarOpen(
   options?: { logPrefix?: string },
 ): Promise<void> {
   await ensureGrokTabVisible(client);
-  if (!await client.Runtime.evaluate({ expression: 'location.pathname.includes("/project/")', returnByValue: true })) {
+  const onProjectPage = await client.Runtime.evaluate({
+    expression: 'location.pathname.includes("/project/")',
+    returnByValue: true,
+  });
+  if (!onProjectPage.result?.value) {
     throw new Error('Not on a project page');
+  }
+
+  const sidebarAlreadyVisible = await isProjectSidebarVisible(client);
+  if (sidebarAlreadyVisible) {
+    return;
   }
 
   const collapseVisible = await waitForSelector(client.Runtime, 'button[aria-label="Collapse side panel"]', 1500);
@@ -3612,10 +5150,69 @@ export async function ensureProjectSidebarOpen(
   if (!expand.ok) {
     throw new Error(expand.reason || 'Project sidebar toggle not found');
   }
-  const openedAfterExpand = await waitForSelector(client.Runtime, 'button[aria-label="Collapse side panel"]', 3000);
-  if (!openedAfterExpand) {
+  const openedAfterExpand = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      if (document.querySelector('button[aria-label="Collapse side panel"]')) {
+        return true;
+      }
+      const nodes = Array.from(document.querySelectorAll('div, aside, [role="complementary"], [data-side]'));
+      return nodes.some((node) => {
+        if (!visible(node)) return false;
+        const classText = String(node.getAttribute('class') || '');
+        const text = String(node.textContent || '').toLowerCase();
+        const looksLikePanel =
+          classText.includes('group/side-panel-section') ||
+          classText.includes('side-panel') ||
+          classText.includes('sidepanel') ||
+          node.hasAttribute('data-side') ||
+          node.getAttribute('role') === 'complementary';
+        return looksLikePanel && (text.includes('instructions') || text.includes('sources'));
+      });
+    })()`,
+    {
+      timeoutMs: 3000,
+      description: 'grok-project-sidebar-open',
+    },
+  );
+  if (!openedAfterExpand.ok) {
     throw new Error('Project sidebar did not open');
   }
+}
+
+async function isProjectSidebarVisible(client: ChromeClient): Promise<boolean> {
+  const result = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      if (document.querySelector('button[aria-label="Collapse side panel"]')) {
+        return true;
+      }
+      const nodes = Array.from(document.querySelectorAll('div, aside, [role="complementary"], [data-side]'));
+      return nodes.some((node) => {
+        if (!visible(node)) return false;
+        const classText = String(node.getAttribute('class') || '');
+        const text = String(node.textContent || '').toLowerCase();
+        const looksLikePanel =
+          classText.includes('group/side-panel-section') ||
+          classText.includes('side-panel') ||
+          classText.includes('sidepanel') ||
+          node.hasAttribute('data-side') ||
+          node.getAttribute('role') === 'complementary';
+        return looksLikePanel && (text.includes('instructions') || text.includes('sources'));
+      });
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result.result?.value);
 }
 
 async function waitForProjectRemoveDialog(
@@ -3884,14 +5481,9 @@ async function tagGrokConversationSidebarRow(
   conversationId: string,
 ): Promise<void> {
   const evalResult = await Runtime.evaluate({
-    expression: `(() => {
+    expression: `(async () => {
+      const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
       const chatId = ${JSON.stringify(conversationId)};
-      document
-        .querySelectorAll('[data-oracle-grok-conversation-row], [data-oracle-grok-conversation-options]')
-        .forEach((node) => {
-          node.removeAttribute('data-oracle-grok-conversation-row');
-          node.removeAttribute('data-oracle-grok-conversation-options');
-        });
       const selectors = [
         'a[href="/c/' + chatId + '"]',
         'a[href*="' + chatId + '"]',
@@ -3900,35 +5492,59 @@ async function tagGrokConversationSidebarRow(
         '[data-href*="' + chatId + '"]',
         '[data-url*="' + chatId + '"]',
       ];
-      let anchor = null;
-      for (const selector of selectors) {
-        anchor = document.querySelector(selector);
-        if (anchor) {
-          break;
-        }
-      }
-      if (!anchor) {
-        return { ok: false, reason: 'Conversation sidebar row not found' };
-      }
-      const row =
-        anchor.closest('li') ||
-        anchor.closest('[data-sidebar="group"]') ||
-        anchor.closest('div') ||
-        anchor.parentElement;
-      if (!row) {
-        return { ok: false, reason: 'Conversation sidebar row container not found' };
-      }
-      row.setAttribute('data-oracle-grok-conversation-row', 'true');
-      const optionsButton = row.querySelector('button[aria-label="Options"]');
-      if (!optionsButton) {
-        return { ok: false, reason: 'Conversation options button not found' };
-      }
-      optionsButton.setAttribute('data-oracle-grok-conversation-options', 'true');
-      return {
-        ok: true,
-        title: (anchor.textContent || '').replace(/\\s+/g, ' ').trim() || chatId,
+      const clearTags = () => {
+        document
+          .querySelectorAll('[data-oracle-grok-conversation-row], [data-oracle-grok-conversation-options]')
+          .forEach((node) => {
+            node.removeAttribute('data-oracle-grok-conversation-row');
+            node.removeAttribute('data-oracle-grok-conversation-options');
+          });
       };
+      let lastReason = 'Conversation sidebar row not found';
+      for (let attempt = 0; attempt < 80; attempt += 1) {
+        clearTags();
+        let anchor = null;
+        for (const selector of selectors) {
+          anchor = document.querySelector(selector);
+          if (anchor) {
+            break;
+          }
+        }
+        if (!anchor) {
+          lastReason = 'Conversation sidebar row not found';
+          await sleep(250);
+          continue;
+        }
+        const row =
+          anchor.closest('[data-sidebar="menu-button"]') ||
+          anchor.closest('[data-sidebar="menu-item"]') ||
+          anchor.closest('li') ||
+          anchor.closest('[data-sidebar="group"]') ||
+          anchor.closest('div') ||
+          anchor.parentElement;
+        if (!row) {
+          lastReason = 'Conversation sidebar row container not found';
+          await sleep(250);
+          continue;
+        }
+        row.setAttribute('data-oracle-grok-conversation-row', 'true');
+        const optionsButton =
+          row.querySelector('button[aria-label="Options"]') ||
+          row.querySelector('button[aria-label*="option" i]');
+        if (!optionsButton) {
+          lastReason = 'Conversation options button not found';
+          await sleep(250);
+          continue;
+        }
+        optionsButton.setAttribute('data-oracle-grok-conversation-options', 'true');
+        return {
+          ok: true,
+          title: (anchor.textContent || '').replace(/\\s+/g, ' ').trim() || chatId,
+        };
+      }
+      return { ok: false, reason: lastReason };
     })()`,
+    awaitPromise: true,
     returnByValue: true,
   });
   const info = evalResult.result?.value as
@@ -3944,34 +5560,44 @@ async function openGrokConversationSidebarMenu(
   client: ChromeClient,
   conversationId: string,
 ): Promise<string> {
-  await navigateToProject(client, GROK_HOME_URL);
-  await ensureMainSidebarOpen(client, { logPrefix: 'browser-conversation-sidebar' });
-  await closeHistoryDialog(client);
-  await tagGrokConversationSidebarRow(client.Runtime, conversationId);
-
-  const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
-    rowSelector: '[data-oracle-grok-conversation-row="true"]',
-    rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, 'nav', 'aside', 'main'],
-    actionMatch: { exact: ['options'] },
-    timeoutMs: 3000,
-  });
-  if (!revealResult.ok) {
-    throw new Error(revealResult.reason || 'Conversation sidebar actions did not appear');
-  }
-
-  const opened = await openMenu(client.Runtime, {
-    trigger: {
-      selector: '[data-oracle-grok-conversation-options="true"]',
-      rootSelectors: ['[data-oracle-grok-conversation-row="true"]'],
-      requireVisible: true,
+  return withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      await navigateToProject(client, GROK_HOME_URL);
+      await ensureMainSidebarOpen(client, { logPrefix: 'browser-conversation-sidebar' });
+      await closeHistoryDialog(client);
+      await tagGrokConversationSidebarRow(client.Runtime, conversationId);
+      const opened = await openRevealedRowMenu(client, {
+        rowSelector: '[data-oracle-grok-conversation-row="true"]',
+        triggerSelector: '[data-oracle-grok-conversation-options="true"]',
+        rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, 'nav', 'aside', 'main'],
+        triggerRootSelectors: ['[data-oracle-grok-conversation-row="true"]'],
+        actionMatch: { exact: ['options'] },
+        menuSelector: '[role="menu"]',
+        timeoutMs: 3000,
+      });
+      if (!opened.ok) {
+        throw new Error(opened.reason || 'Conversation options menu did not open');
+      }
+      return opened.menuSelector || '[role="menu"]';
     },
-    menuSelector: '[role="menu"]',
-    timeoutMs: 3000,
-  });
-  if (!opened.ok) {
-    throw new Error('Conversation options menu did not open');
-  }
-  return opened.menuSelector || '[role="menu"]';
+    {
+      label: 'grok-conversation-sidebar-menu',
+      rootSelectors: [GROK_SIDEBAR_WRAPPER_SELECTOR, 'nav', 'aside', 'main'],
+      menuSelectors: ['[role="menu"]', '[data-radix-menu-content][data-state="open"]'],
+      candidateSelectors: [
+        '[data-oracle-grok-conversation-row="true"]',
+        '[data-oracle-grok-conversation-options="true"]',
+        `a[href*="${conversationId}"]`,
+        `[data-value*="${conversationId}"]`,
+      ],
+      buttonSelectors: [
+        '[data-oracle-grok-conversation-options="true"]',
+        'button[aria-label="Options"]',
+        '[role="menuitem"]',
+      ],
+    },
+  );
 }
 
 async function waitForGrokConversationSidebarTitle(
@@ -4013,6 +5639,48 @@ async function waitForGrokConversationSidebarTitle(
   );
   if (!renamed.ok) {
     throw new Error(`Rename did not persist for conversation ${conversationId}`);
+  }
+}
+
+async function waitForGrokProjectConversationListTitle(
+  Runtime: ChromeClient['Runtime'],
+  conversationId: string,
+  expectedTitle: string,
+): Promise<void> {
+  const renamed = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const chatId = ${JSON.stringify(conversationId)};
+      const expected = ${JSON.stringify(expectedTitle.trim().toLowerCase())};
+      const selectors = [
+        'a[href="/c/' + chatId + '"]',
+        'a[href*="' + chatId + '"]',
+        '[data-value="conversation:' + chatId + '"]',
+        '[data-value*="' + chatId + '"]',
+      ];
+      let anchor = null;
+      for (const selector of selectors) {
+        anchor = document.querySelector(selector);
+        if (anchor) {
+          break;
+        }
+      }
+      if (!anchor) {
+        return null;
+      }
+      const text = (anchor.textContent || '').replace(/\\s+/g, ' ').trim();
+      if (!text) {
+        return null;
+      }
+      return text.toLowerCase().includes(expected) ? { text } : null;
+    })()`,
+    {
+      timeoutMs: 5000,
+      description: `Grok project conversation list title ${conversationId} => ${expectedTitle}`,
+    },
+  );
+  if (!renamed.ok) {
+    throw new Error(`Project conversation list did not persist rename for ${conversationId}`);
   }
 }
 
@@ -4222,7 +5890,7 @@ async function ensureProjectPage(client: ChromeClient, projectId?: string): Prom
   }
 }
 
-async function openConversationList(client: ChromeClient): Promise<void> {
+async function openConversationList(client: ChromeClient, projectId?: string): Promise<void> {
   await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
@@ -4241,7 +5909,355 @@ async function openConversationList(client: ChromeClient): Promise<void> {
       return false;
     })()`,
   });
-  await waitForSelector(client.Runtime, 'a[href*="/c/"], [data-value^="conversation:"]', 5000);
+  let ready = await waitForProjectConversationList(client.Runtime);
+  if (!ready.ok && projectId) {
+    await navigateToProject(client, `https://grok.com/project/${projectId}?tab=conversations`);
+    ready = await waitForProjectConversationList(client.Runtime);
+  }
+  if (!ready.ok) {
+    throw new Error('Project conversations list did not load');
+  }
+}
+
+async function listRootSidebarConversations(client: ChromeClient): Promise<Conversation[]> {
+  await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const roots = [
+        document.querySelector(${JSON.stringify(GROK_SIDEBAR_WRAPPER_SELECTOR)}),
+        document.querySelector('[data-sidebar="sidebar"]'),
+        document.querySelector('nav'),
+        document.querySelector('aside'),
+      ].filter(Boolean);
+      if (roots.length === 0) return false;
+      return roots.some((root) =>
+        root.querySelector('a[href*="/c/"], [data-value^="conversation:"]'),
+      );
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'grok-root-sidebar-conversations',
+    },
+  );
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const now = Date.now();
+      const parseRelative = (value) => {
+        const text = String(value || '').toLowerCase().trim();
+        if (!text) return null;
+        if (text === 'just now' || text === 'moments ago') return now;
+        if (text === 'today') return now;
+        if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
+        const cleaned = text.replace(/[.,]/g, '');
+        const shortMatch = cleaned.match(/^(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)$/);
+        const agoMatch = cleaned.match(/(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)\\s*ago/);
+        const match = agoMatch || shortMatch;
+        if (!match) return null;
+        const amount = Number.parseInt(match[1], 10);
+        if (!Number.isFinite(amount)) return null;
+        const unit = match[2];
+        const isMonth = unit.startsWith('mo');
+        const isMinute = unit.startsWith('m') && !isMonth;
+        const isHour = unit.startsWith('h');
+        const isDay = unit.startsWith('d');
+        const isWeek = unit.startsWith('w');
+        const isYear = unit.startsWith('y');
+        const ms =
+          isMinute
+            ? amount * 60 * 1000
+            : isHour
+              ? amount * 60 * 60 * 1000
+              : isDay
+                ? amount * 24 * 60 * 60 * 1000
+                : isWeek
+                  ? amount * 7 * 24 * 60 * 60 * 1000
+                  : isMonth
+                    ? amount * 30 * 24 * 60 * 60 * 1000
+                    : isYear
+                      ? amount * 365 * 24 * 60 * 60 * 1000
+                      : null;
+        return ms === null ? null : now - ms;
+      };
+      const readTimestamp = (row) => {
+        const timeEl = row.querySelector('time');
+        const candidates = [
+          timeEl?.getAttribute?.('datetime'),
+          timeEl?.textContent,
+          row.querySelector(${JSON.stringify(GROK_TIME_SELECTOR)})?.textContent,
+          row.querySelector(${JSON.stringify(GROK_TIMESTAMP_SELECTOR)})?.textContent,
+        ];
+        for (const candidate of candidates) {
+          const parsed = parseRelative(candidate);
+          if (parsed !== null) return parsed;
+          const absolute = Date.parse(String(candidate || ''));
+          if (Number.isFinite(absolute)) return absolute;
+        }
+        return null;
+      };
+      const extractTitle = (row, chatId) => {
+        const titleNode =
+          row.querySelector('span.truncate, div.truncate, [data-testid*="title"], [data-testid*="conversation"], h3, h4') ||
+          null;
+        const rawTitle = normalize(titleNode?.textContent || row.textContent || '');
+        const cleaned = rawTitle
+          .replace(/(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi, ' ')
+          .replace(/(^|\\s)(yesterday|today)(\\s|$)/gi, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+        return cleaned || chatId;
+      };
+      const roots = [
+        document.querySelector(${JSON.stringify(GROK_SIDEBAR_WRAPPER_SELECTOR)}),
+        document.querySelector('[data-sidebar="sidebar"]'),
+        document.querySelector('nav'),
+        document.querySelector('aside'),
+      ].filter(Boolean);
+      const items = new Map();
+      for (const root of roots) {
+        const nodes = Array.from(root.querySelectorAll('a[href*="/c/"], [data-value^="conversation:"]'));
+        for (const node of nodes) {
+          const href =
+            node.getAttribute('href') ||
+            node.getAttribute('data-href') ||
+            node.getAttribute('data-url') ||
+            '';
+          const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
+          let chatId = '';
+          let url = '';
+          if (dataValue.startsWith('conversation:')) {
+            chatId = dataValue.split(':')[1];
+            url = 'https://grok.com/c/' + chatId;
+          } else if (href) {
+            try {
+              url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+              const parsed = new URL(url);
+              chatId = parsed.searchParams.get('chat') || '';
+              if (!chatId) {
+                const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+                chatId = match?.[1] || '';
+              }
+            } catch {
+              continue;
+            }
+          }
+          if (!chatId) continue;
+          const row =
+            node.closest('[data-sidebar="menu-item"]') ||
+            node.closest('li') ||
+            node.closest('div') ||
+            node;
+          const title = extractTitle(row, chatId);
+          if (!title) continue;
+          items.set(chatId, {
+            id: chatId,
+            title,
+            url: url || null,
+            timestamp: readTimestamp(row),
+          });
+        }
+      }
+      return { items: Array.from(items.values()) };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? { items: [] }) as { items?: unknown[] };
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const conversations: Conversation[] = [];
+  for (const entry of items) {
+    if (!entry || typeof entry !== 'object') continue;
+    const record = entry as Record<string, unknown>;
+    const id = typeof record.id === 'string' ? record.id : '';
+    const title = typeof record.title === 'string' ? record.title : '';
+    if (!id || !title) continue;
+    const url = typeof record.url === 'string' ? record.url : undefined;
+    const timestamp = typeof record.timestamp === 'number' ? record.timestamp : undefined;
+    conversations.push({
+      id,
+      title,
+      provider: 'grok',
+      url,
+      updatedAt: timestamp ? new Date(timestamp).toISOString() : undefined,
+    });
+  }
+  return conversations;
+}
+
+async function waitForProjectConversationList(
+  Runtime: ChromeClient['Runtime'],
+): Promise<Awaited<ReturnType<typeof waitForPredicate>>> {
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const root =
+        document.querySelector('main [role="tabpanel"]') ||
+        document.querySelector('main');
+      if (!root) return false;
+      if (root.querySelector('a[href*="/c/"], [data-value^="conversation:"]')) {
+        return true;
+      }
+      const text = String(root.textContent || '').toLowerCase();
+      return (
+        text.includes('start a conversation in this project') ||
+        text.includes('no conversations yet')
+      );
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'grok-project-conversations',
+    },
+  );
+}
+
+async function listProjectPageConversations(
+  client: ChromeClient,
+  projectId: string,
+): Promise<Conversation[]> {
+  const ready = await waitForProjectConversationList(client.Runtime);
+  if (!ready.ok) {
+    return [];
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const root =
+        document.querySelector('main [role="tabpanel"]') ||
+        document.querySelector('main');
+      if (!root) {
+        return { items: [] };
+      }
+
+      const now = Date.now();
+      const parseRelative = (value) => {
+        const text = String(value || '').toLowerCase().trim();
+        if (!text) return null;
+        if (text === 'just now' || text === 'moments ago' || text === 'today') return now;
+        if (text === 'yesterday') return now - 24 * 60 * 60 * 1000;
+        const cleaned = text.replace(/[.,]/g, '');
+        const shortMatch = cleaned.match(/^(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)$/);
+        const agoMatch = cleaned.match(/(\\d+)\\s*(m|min|mins|minute|minutes|h|hr|hrs|hour|hours|d|day|days|w|wk|wks|week|weeks|mo|mos|month|months|y|yr|yrs|year|years)\\s*ago/);
+        const match = agoMatch || shortMatch;
+        if (!match) return null;
+        const amount = Number.parseInt(match[1], 10);
+        if (!Number.isFinite(amount)) return null;
+        const unit = match[2];
+        const isMonth = unit.startsWith('mo');
+        const isMinute = unit.startsWith('m') && !isMonth;
+        const isHour = unit.startsWith('h');
+        const isDay = unit.startsWith('d');
+        const isWeek = unit.startsWith('w');
+        const isYear = unit.startsWith('y');
+        const ms =
+          isMinute
+            ? amount * 60 * 1000
+            : isHour
+              ? amount * 60 * 60 * 1000
+              : isDay
+                ? amount * 24 * 60 * 60 * 1000
+                : isWeek
+                  ? amount * 7 * 24 * 60 * 60 * 1000
+                  : isMonth
+                    ? amount * 30 * 24 * 60 * 60 * 1000
+                    : isYear
+                      ? amount * 365 * 24 * 60 * 60 * 1000
+                      : null;
+        return ms === null ? null : now - ms;
+      };
+
+      const readTimestamp = (row) => {
+        const timeEl = row.querySelector('time');
+        const candidates = [
+          timeEl?.getAttribute?.('datetime'),
+          timeEl?.textContent,
+          row.querySelector(${JSON.stringify(GROK_TIME_SELECTOR)})?.textContent,
+          row.querySelector(${JSON.stringify(GROK_TIMESTAMP_SELECTOR)})?.textContent,
+        ];
+        for (const candidate of candidates) {
+          const parsed = parseRelative(candidate);
+          if (parsed !== null) return parsed;
+          const absolute = Date.parse(String(candidate || ''));
+          if (Number.isFinite(absolute)) return absolute;
+        }
+        return null;
+      };
+
+      const extractTitle = (row, chatId) => {
+        const titleNode =
+          row.querySelector('span.truncate, div.truncate, [data-testid*="title"], [data-testid*="conversation"], h3, h4') ||
+          null;
+        const rawTitle = (titleNode?.textContent || row.textContent || '').replace(/\\s+/g, ' ').trim();
+        const cleaned = rawTitle
+          .replace(/(^|\\s)\\d+\\s+(minute|hour|day|week|month|year)s?\\s+ago(\\s|$)/gi, ' ')
+          .replace(/(^|\\s)(yesterday|today)(\\s|$)/gi, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+        return cleaned || chatId;
+      };
+
+      const items = new Map();
+      const nodes = Array.from(
+        root.querySelectorAll('a[href*="/c/"], [data-value^="conversation:"]'),
+      );
+      for (const node of nodes) {
+        const href =
+          node.getAttribute('href') ||
+          node.getAttribute('data-href') ||
+          node.getAttribute('data-url') ||
+          '';
+        const dataValue = node.getAttribute('data-value') || node.dataset?.value || '';
+        let chatId = '';
+        let url = '';
+        if (dataValue.startsWith('conversation:')) {
+          chatId = dataValue.split(':')[1];
+          url = 'https://grok.com/c/' + chatId;
+        } else if (href) {
+          try {
+            url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
+            const parsed = new URL(url);
+            chatId = parsed.searchParams.get('chat') || '';
+            if (!chatId) {
+              const match = parsed.pathname.match(/\\/c\\/([^/?#]+)/);
+              chatId = match?.[1] || '';
+            }
+          } catch {
+            continue;
+          }
+        }
+        if (!chatId) continue;
+        const row = node.closest('div.max-h-11, li, [role="option"], div') || node;
+        const title = extractTitle(row, chatId);
+        if (!title) continue;
+        items.set(chatId, {
+          id: chatId,
+          title,
+          url: url || null,
+          timestamp: readTimestamp(row),
+        });
+      }
+      return { items: Array.from(items.values()) };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? { items: [] }) as { items?: unknown[] };
+  const items = Array.isArray(payload.items) ? payload.items : [];
+  const conversations: Conversation[] = [];
+  for (const entry of items) {
+    if (!entry || typeof entry !== 'object') continue;
+    const record = entry as Record<string, unknown>;
+    const id = typeof record.id === 'string' ? record.id : '';
+    const title = typeof record.title === 'string' ? record.title : '';
+    if (!id || !title) continue;
+    const url = typeof record.url === 'string' ? record.url : undefined;
+    const timestamp = typeof record.timestamp === 'number' ? record.timestamp : undefined;
+    conversations.push({
+      id,
+      title,
+      provider: 'grok',
+      projectId,
+      url,
+      updatedAt: timestamp ? new Date(timestamp).toISOString() : undefined,
+    });
+  }
+  return conversations;
 }
 
 async function renameConversationInHistoryDialog(
@@ -4335,21 +6351,12 @@ async function renameConversationInHistoryDialog(
     throw new Error('Rename hover target missing');
   }
 
-  const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
+  const clickInfo = await clickRevealedRowAction(client, {
     rowSelector: info.itemSelector,
-    rootSelectors: DEFAULT_DIALOG_SELECTORS,
-    actionMatch: { exact: ['rename'] },
-    timeoutMs: 1500,
-  });
-  if (!revealResult.ok) {
-    throw new Error(revealResult.reason || 'Rename hover failed');
-  }
-
-  const clickInfo = await pressRowAction(client.Runtime, {
     anchorSelector: info.itemSelector,
     rootSelectors: DEFAULT_DIALOG_SELECTORS,
     actionMatch: { exact: ['rename'] },
-    timeoutMs: 1000,
+    timeoutMs: 1500,
   });
   if (!clickInfo.ok) {
     throw new Error(clickInfo.reason || 'Rename click failed');
@@ -4534,21 +6541,12 @@ async function deleteConversationInHistoryDialog(
     throw new Error('Delete hover target missing');
   }
 
-  const revealResult = await hoverAndReveal(client.Runtime, client.Input, {
+  const deleteInfo = await clickRevealedRowAction(client, {
     rowSelector: info.itemSelector,
-    rootSelectors: DEFAULT_DIALOG_SELECTORS,
-    actionMatch: { exact: ['delete'] },
-    timeoutMs: 1500,
-  });
-  if (!revealResult.ok) {
-    throw new Error(revealResult.reason || 'Delete hover failed');
-  }
-
-  const deleteInfo = await pressRowAction(client.Runtime, {
     anchorSelector: info.itemSelector,
     rootSelectors: DEFAULT_DIALOG_SELECTORS,
     actionMatch: { exact: ['delete'] },
-    timeoutMs: 1000,
+    timeoutMs: 1500,
   });
   if (!deleteInfo.ok) {
     throw new Error(deleteInfo.reason || 'Delete click failed');
@@ -5404,8 +7402,10 @@ async function listOpenConversations(
     if (!url.includes('grok.com')) continue;
     const chatId = extractChatIdFromUrl(url) ?? '';
     if (!chatId) continue;
-    if (projectId && url.includes('/project/') && !url.includes(`/project/${projectId}`)) {
-      continue;
+    if (projectId) {
+      if (!url.includes(`/project/${projectId}`)) {
+        continue;
+      }
     }
     entries.push({
       id: chatId,

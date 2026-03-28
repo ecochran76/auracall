@@ -8,6 +8,7 @@ export type CacheIndexKind =
   | 'projects'
   | 'conversations'
   | 'context'
+  | 'account-files'
   | 'conversation-files'
   | 'project-instructions'
   | 'project-knowledge'

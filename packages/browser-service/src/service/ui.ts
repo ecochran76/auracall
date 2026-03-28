@@ -160,6 +160,26 @@ export type PressRowActionOptions = {
   timeoutMs?: number;
 };
 
+export type ClickRevealedRowActionOptions = {
+  rowSelector: string;
+  anchorSelector?: string;
+  actionMatch: LabelMatchOptions;
+  rootSelectors?: readonly string[];
+  timeoutMs?: number;
+};
+
+export type OpenRevealedRowMenuOptions = {
+  rowSelector: string;
+  triggerSelector: string;
+  actionMatch: LabelMatchOptions;
+  rootSelectors?: readonly string[];
+  triggerRootSelectors?: readonly string[];
+  menuSelector?: string;
+  prepareTriggerBeforeOpen?: boolean;
+  directTriggerClickFallback?: boolean;
+  timeoutMs?: number;
+};
+
 export type PressDialogButtonOptions = {
   match: LabelMatchOptions;
   rootSelectors?: readonly string[];
@@ -205,6 +225,78 @@ export type WaitForScriptTextOptions = WaitForPredicateOptions & {
   includeAll?: string[];
   scriptSelector?: string;
   caseSensitive?: boolean;
+};
+
+export type NavigateAndSettleOptions = WaitForPredicateOptions & {
+  url: string;
+  routeExpression?: string;
+  routeDescription?: string;
+  readyExpression?: string;
+  readyDescription?: string;
+  waitForDocumentReady?: boolean;
+  documentReadyStates?: Array<'loading' | 'interactive' | 'complete'>;
+  requireVisibleDocument?: boolean;
+  fallbackToLocationAssign?: boolean;
+  fallbackTimeoutMs?: number;
+};
+
+export type NavigateAndSettleResult = {
+  ok: boolean;
+  url: string;
+  fallbackUsed: boolean;
+  phase: 'complete' | 'route' | 'document-ready' | 'ready';
+  reason?: string;
+  route?: WaitForPredicateResult;
+  documentReady?: WaitForPredicateResult;
+  ready?: WaitForPredicateResult;
+};
+
+export type CollectUiDiagnosticsOptions = {
+  rootSelectors?: readonly string[];
+  dialogSelectors?: readonly string[];
+  menuSelectors?: readonly string[];
+  candidateSelectors?: readonly string[];
+  buttonSelectors?: readonly string[];
+  limit?: number;
+};
+
+export type UiDiagnosticElement = {
+  selector: string;
+  tag: string | null;
+  role: string | null;
+  ariaLabel: string | null;
+  text: string | null;
+};
+
+export type UiDiagnosticMenu = UiDiagnosticElement & {
+  items: string[];
+};
+
+export type UiDiagnosticCandidate = {
+  selector: string;
+  count: number;
+  samples: string[];
+};
+
+export type UiDiagnostics = {
+  url: string | null;
+  title: string | null;
+  readyState: string | null;
+  activeElement: {
+    tag: string | null;
+    role: string | null;
+    ariaLabel: string | null;
+    text: string | null;
+  } | null;
+  dialogs: UiDiagnosticElement[];
+  menus: UiDiagnosticMenu[];
+  buttons: UiDiagnosticElement[];
+  candidates: UiDiagnosticCandidate[];
+  roots: string[];
+};
+
+export type WithUiDiagnosticsOptions = CollectUiDiagnosticsOptions & {
+  label?: string;
 };
 
 const DEFAULT_WAIT_POLL_MS = 200;
@@ -361,6 +453,288 @@ export async function waitForScriptText(
         `script text contains ${[...includeAll, ...includeAny].map((token) => JSON.stringify(token)).join(', ')}`,
     },
   );
+}
+
+export async function navigateAndSettle(
+  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
+  options: NavigateAndSettleOptions,
+): Promise<NavigateAndSettleResult> {
+  const evaluateState = async (
+    timeoutMs: number | undefined,
+    fallbackUsed: boolean,
+  ): Promise<NavigateAndSettleResult> => {
+    let route: WaitForPredicateResult | undefined;
+    if (options.routeExpression) {
+      route = await waitForPredicate(client.Runtime, options.routeExpression, {
+        timeoutMs,
+        pollMs: options.pollMs,
+        description: options.routeDescription ?? `route settled for ${options.url}`,
+      });
+      if (!route.ok) {
+        return {
+          ok: false,
+          url: options.url,
+          fallbackUsed,
+          phase: 'route',
+          route,
+          reason: `${route.description ?? 'route'} did not settle`,
+        };
+      }
+    }
+
+    let documentReady: WaitForPredicateResult | undefined;
+    if (options.waitForDocumentReady !== false) {
+      documentReady = await waitForDocumentReady(client.Runtime, {
+        timeoutMs,
+        pollMs: options.pollMs,
+        states: options.documentReadyStates,
+        requireVisible: options.requireVisibleDocument,
+        description: `document ready for ${options.url}`,
+      });
+      if (!documentReady.ok) {
+        return {
+          ok: false,
+          url: options.url,
+          fallbackUsed,
+          phase: 'document-ready',
+          route,
+          documentReady,
+          reason: `${documentReady.description ?? 'document ready'} did not settle`,
+        };
+      }
+    }
+
+    let ready: WaitForPredicateResult | undefined;
+    if (options.readyExpression) {
+      ready = await waitForPredicate(client.Runtime, options.readyExpression, {
+        timeoutMs,
+        pollMs: options.pollMs,
+        description: options.readyDescription ?? `ready state for ${options.url}`,
+      });
+      if (!ready.ok) {
+        return {
+          ok: false,
+          url: options.url,
+          fallbackUsed,
+          phase: 'ready',
+          route,
+          documentReady,
+          ready,
+          reason: `${ready.description ?? 'ready state'} did not settle`,
+        };
+      }
+    }
+
+    return {
+      ok: true,
+      url: options.url,
+      fallbackUsed,
+      phase: 'complete',
+      route,
+      documentReady,
+      ready,
+    };
+  };
+
+  await client.Page.navigate({ url: options.url });
+  const primary = await evaluateState(options.timeoutMs, false);
+  if (primary.ok || !options.fallbackToLocationAssign) {
+    return primary;
+  }
+
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const target = ${JSON.stringify(options.url)};
+      if (location.href !== target) {
+        location.assign(target);
+        return 'assigned';
+      }
+      return 'already-there';
+    })()`,
+    awaitPromise: false,
+  }).catch(() => undefined);
+
+  return evaluateState(options.fallbackTimeoutMs ?? options.timeoutMs, true);
+}
+
+export async function collectUiDiagnostics(
+  Runtime: ChromeClient['Runtime'],
+  options: CollectUiDiagnosticsOptions = {},
+): Promise<UiDiagnostics> {
+  const limit = Math.max(1, Math.min(options.limit ?? 8, 20));
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const limit = ${JSON.stringify(limit)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (el) => {
+        if (!(el instanceof Element)) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const summarize = (el, selector) => ({
+        selector,
+        tag: el?.tagName?.toLowerCase?.() ?? null,
+        role: el?.getAttribute?.('role') ?? null,
+        ariaLabel: normalize(el?.getAttribute?.('aria-label') || '') || null,
+        text: normalize(el?.textContent || '').slice(0, 160) || null,
+      });
+      const uniqueVisible = (selectors) => {
+        const entries = [];
+        const seen = new Set();
+        for (const selector of selectors) {
+          for (const el of Array.from(document.querySelectorAll(selector))) {
+            if (!isVisible(el) || seen.has(el)) continue;
+            seen.add(el);
+            entries.push({ el, selector });
+            if (entries.length >= limit) {
+              return entries;
+            }
+          }
+        }
+        return entries;
+      };
+      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+      const dialogSelectors = ${JSON.stringify(options.dialogSelectors ?? Array.from(DEFAULT_DIALOG_SELECTORS))};
+      const menuSelectors = ${JSON.stringify(options.menuSelectors ?? ['[role="menu"]', '[role="listbox"]', '[data-radix-menu-content][data-state="open"]'])};
+      const candidateSelectors = ${JSON.stringify(options.candidateSelectors ?? [])};
+      const buttonSelectors = ${JSON.stringify(options.buttonSelectors ?? ['button', '[role="button"]', '[role="menuitem"]', 'a[role="button"]'])};
+      const roots = rootSelectors.length
+        ? rootSelectors
+            .map((selector) => ({ selector, node: document.querySelector(selector) }))
+            .filter((entry) => entry.node && isVisible(entry.node))
+            .slice(0, limit)
+            .map((entry) => entry.selector)
+        : [];
+
+      const dialogs = uniqueVisible(dialogSelectors).map(({ el, selector }) => summarize(el, selector));
+      const menuEntries = uniqueVisible(menuSelectors).map(({ el, selector }) => {
+        const items = Array.from(el.querySelectorAll('[role="menuitem"], [role="option"], button, a'))
+          .filter((node) => isVisible(node))
+          .map((node) => normalize(node.textContent || node.getAttribute?.('aria-label') || ''))
+          .filter(Boolean)
+          .slice(0, limit);
+        return {
+          ...summarize(el, selector),
+          items,
+        };
+      });
+
+      const buttonRoots = rootSelectors.length
+        ? rootSelectors.map((selector) => document.querySelector(selector)).filter((node) => node instanceof Element || node instanceof Document)
+        : [document];
+      const buttonResults = [];
+      const seenButtons = new Set();
+      for (const root of buttonRoots) {
+        if (!(root instanceof Element || root instanceof Document)) continue;
+        for (const selector of buttonSelectors) {
+          for (const el of Array.from(root.querySelectorAll(selector))) {
+            if (!isVisible(el) || seenButtons.has(el)) continue;
+            seenButtons.add(el);
+            buttonResults.push(summarize(el, selector));
+            if (buttonResults.length >= limit) {
+              break;
+            }
+          }
+          if (buttonResults.length >= limit) {
+            break;
+          }
+        }
+        if (buttonResults.length >= limit) {
+          break;
+        }
+      }
+
+      const candidates = candidateSelectors.slice(0, limit).map((selector) => {
+        const nodes = Array.from(document.querySelectorAll(selector)).filter((el) => isVisible(el));
+        return {
+          selector,
+          count: nodes.length,
+          samples: nodes
+            .map((el) => normalize(el.textContent || el.getAttribute?.('aria-label') || ''))
+            .filter(Boolean)
+            .slice(0, Math.min(limit, 5)),
+        };
+      });
+
+      const activeElement = document.activeElement instanceof Element
+        ? {
+            tag: document.activeElement.tagName?.toLowerCase?.() ?? null,
+            role: document.activeElement.getAttribute?.('role') ?? null,
+            ariaLabel: normalize(document.activeElement.getAttribute?.('aria-label') || '') || null,
+            text: normalize(document.activeElement.textContent || '').slice(0, 160) || null,
+          }
+        : null;
+
+      return {
+        url: location.href || null,
+        title: document.title || null,
+        readyState: document.readyState || null,
+        activeElement,
+        dialogs,
+        menus: menuEntries,
+        buttons: buttonResults,
+        candidates,
+        roots,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as UiDiagnostics | undefined;
+  return (
+    value ?? {
+      url: null,
+      title: null,
+      readyState: null,
+      activeElement: null,
+      dialogs: [],
+      menus: [],
+      buttons: [],
+      candidates: [],
+      roots: [],
+    }
+  );
+}
+
+export async function withUiDiagnostics<T>(
+  Runtime: ChromeClient['Runtime'],
+  action: () => Promise<T>,
+  options: WithUiDiagnosticsOptions = {},
+): Promise<T> {
+  try {
+    return await action();
+  } catch (error) {
+    const diagnostics = await collectUiDiagnostics(Runtime, options).catch((diagError) => ({
+      url: null,
+      title: null,
+      readyState: null,
+      activeElement: null,
+      dialogs: [],
+      menus: [],
+      buttons: [],
+      candidates: [],
+      roots: [],
+      collectionError: String(diagError),
+    }));
+    const labelPrefix = options.label ? `${options.label}: ` : '';
+    const serialized = JSON.stringify(diagnostics);
+    if (error instanceof Error) {
+      const enriched = error as Error & { uiDiagnostics?: unknown };
+      enriched.uiDiagnostics = diagnostics;
+      if (!enriched.message.includes('UI diagnostics:')) {
+        enriched.message = `${labelPrefix}${enriched.message}\nUI diagnostics: ${serialized}`;
+      } else if (labelPrefix && !enriched.message.startsWith(labelPrefix)) {
+        enriched.message = `${labelPrefix}${enriched.message}`;
+      }
+      throw enriched;
+    }
+    const enriched = new Error(`${labelPrefix}${String(error)}\nUI diagnostics: ${serialized}`) as Error & {
+      cause?: unknown;
+      uiDiagnostics?: unknown;
+    };
+    enriched.cause = error;
+    enriched.uiDiagnostics = diagnostics;
+    throw enriched;
+  }
 }
 
 export async function isDialogOpen(
@@ -673,6 +1047,134 @@ export async function pressRowAction(
   return { ok: false, reason: 'Action button not found' };
 }
 
+export async function clickRevealedRowAction(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  options: ClickRevealedRowActionOptions,
+): Promise<{ ok: boolean; reason?: string; matchedLabel?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const revealed = await hoverAndReveal(client.Runtime, client.Input, {
+    rowSelector: options.rowSelector,
+    rootSelectors: options.rootSelectors,
+    actionMatch: options.actionMatch,
+    timeoutMs,
+  });
+  if (!revealed.ok) {
+    return { ok: false, reason: revealed.reason || 'Row action did not appear' };
+  }
+  return pressRowAction(client.Runtime, {
+    anchorSelector: options.anchorSelector ?? options.rowSelector,
+    rootSelectors: options.rootSelectors,
+    actionMatch: options.actionMatch,
+    timeoutMs,
+  });
+}
+
+export async function openRevealedRowMenu(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  options: OpenRevealedRowMenuOptions,
+): Promise<{ ok: boolean; reason?: string; menuSelector?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const revealed = await hoverAndReveal(client.Runtime, client.Input, {
+    rowSelector: options.rowSelector,
+    rootSelectors: options.rootSelectors,
+    actionMatch: options.actionMatch,
+    timeoutMs,
+  });
+  if (!revealed.ok) {
+    return { ok: false, reason: revealed.reason || 'Row menu trigger did not appear' };
+  }
+
+  const prepareTrigger = async (): Promise<{ ok: boolean; reason?: string }> => {
+    if (!options.prepareTriggerBeforeOpen) {
+      return { ok: true };
+    }
+    const prepared = await client.Runtime.evaluate({
+      expression: `(() => {
+        const row = document.querySelector(${JSON.stringify(options.rowSelector)});
+        const trigger = document.querySelector(${JSON.stringify(options.triggerSelector)});
+        if (!(row instanceof HTMLElement)) {
+          return { ok: false, reason: 'Row not found' };
+        }
+        if (!(trigger instanceof HTMLElement)) {
+          return { ok: false, reason: 'Trigger not found' };
+        }
+        const link =
+          trigger.closest('a[href], [role="link"]') ||
+          row.querySelector('a[href], [role="link"]');
+        const stopNav = (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          event.stopImmediatePropagation?.();
+        };
+        if (link instanceof HTMLElement) {
+          for (const type of ['click', 'auxclick']) {
+            link.addEventListener(type, stopNav, { once: true });
+          }
+        }
+        trigger.style.opacity = '1';
+        trigger.style.pointerEvents = 'auto';
+        trigger.style.visibility = 'visible';
+        trigger.style.display = trigger.style.display || 'inline-flex';
+        for (const eventName of ['mouseenter', 'mouseover', 'mousemove']) {
+          row.dispatchEvent(new MouseEvent(eventName, { bubbles: true, cancelable: true }));
+          trigger.dispatchEvent(new MouseEvent(eventName, { bubbles: true, cancelable: true }));
+        }
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    const info = prepared.result?.value as { ok?: boolean; reason?: string } | undefined;
+    return info?.ok ? { ok: true } : { ok: false, reason: info?.reason || 'Trigger prep failed' };
+  };
+
+  const prep = await prepareTrigger();
+  if (!prep.ok) {
+    return { ok: false, reason: prep.reason };
+  }
+
+  const opened = await openMenu(client.Runtime, {
+    trigger: {
+      selector: options.triggerSelector,
+      rootSelectors: options.triggerRootSelectors ?? [options.rowSelector],
+      requireVisible: true,
+    },
+    menuSelector: options.menuSelector,
+    timeoutMs,
+  });
+  if (!opened.ok && options.directTriggerClickFallback) {
+    const fallbackClick = await client.Runtime.evaluate({
+      expression: `(() => {
+        const trigger = document.querySelector(${JSON.stringify(options.triggerSelector)});
+        if (!(trigger instanceof HTMLElement)) {
+          return { ok: false, reason: 'Trigger not found' };
+        }
+        trigger.click();
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+    const fallbackInfo = fallbackClick.result?.value as { ok?: boolean; reason?: string } | undefined;
+    if (!fallbackInfo?.ok) {
+      return { ok: false, reason: fallbackInfo?.reason || 'Row menu did not open' };
+    }
+    const ready = await waitForMenuOpen(client.Runtime, {
+      menuSelector: options.menuSelector,
+      fallbackSelectors: options.menuSelector
+        ? [options.menuSelector, '[role="menu"], [role="listbox"], [data-radix-collection-item]']
+        : ['[role="menu"], [role="listbox"], [data-radix-collection-item]'],
+      timeoutMs,
+    });
+    if (!ready.ok) {
+      return { ok: false, reason: 'Row menu did not open' };
+    }
+    return { ok: true, menuSelector: ready.menuSelector || options.menuSelector };
+  }
+  if (!opened.ok) {
+    return { ok: false, reason: 'Row menu did not open' };
+  }
+  return { ok: true, menuSelector: opened.menuSelector || options.menuSelector };
+}
+
 export async function pressDialogButton(
   Runtime: ChromeClient['Runtime'],
   options: PressDialogButtonOptions,
@@ -740,10 +1242,18 @@ export async function findAndClickByLabel(
     const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
 
     const roots = rootSelectors.length
-      ? rootSelectors.map((selector) => document.querySelector(selector)).filter(Boolean)
+      ? rootSelectors.flatMap((selector) => Array.from(document.querySelectorAll(selector)))
       : [document];
-    const root = roots[0] || document;
-    const nodes = Array.from(root.querySelectorAll(selectors.join(',')));
+    const seen = new Set();
+    const nodes = [];
+    for (const root of roots) {
+      if (!(root instanceof Element || root instanceof Document)) continue;
+      for (const node of Array.from(root.querySelectorAll(selectors.join(',')))) {
+        if (seen.has(node)) continue;
+        seen.add(node);
+        nodes.push(node);
+      }
+    }
 
     const matches = (label) => {
       if (!label) return false;

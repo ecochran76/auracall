@@ -148,12 +148,88 @@ export async function ensureGrokPromptReady(
   throw new Error('Grok prompt not ready before timeout.');
 }
 
-export async function setGrokPrompt(Runtime: ChromeClient['Runtime'], prompt: string): Promise<void> {
-  const outcome = await Runtime.evaluate({
+export async function setGrokPrompt(
+  Input: ChromeClient['Input'],
+  Runtime: ChromeClient['Runtime'],
+  prompt: string,
+): Promise<void> {
+  const normalizeText = (value: string): string => value.replace(/\r\n/g, '\n').replace(/\u00a0/g, ' ').trim();
+  const focusOutcome = await Runtime.evaluate({
+    expression: `(() => {
+      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      if (!el) return { ok: false };
+      const dispatchClick = (target) => {
+        for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+          target.dispatchEvent(new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            button: 0,
+            buttons: 1,
+            view: window,
+          }));
+        }
+      };
+      dispatchClick(el);
+      el.focus();
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+        el.value = '';
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return { ok: true, mode: 'input' };
+      }
+      if (el instanceof HTMLElement && el.isContentEditable) {
+        const doc = el.ownerDocument;
+        const selection = doc?.getSelection?.();
+        if (selection) {
+          const range = doc.createRange();
+          range.selectNodeContents(el);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        el.textContent = '';
+        el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: '', inputType: 'deleteByCut' }));
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+        return { ok: true, mode: 'contenteditable' };
+      }
+      return { ok: false };
+    })()`,
+    returnByValue: true,
+  });
+  if (!focusOutcome.result?.value?.ok) {
+    throw new Error('Unable to focus the Grok prompt composer.');
+  }
+
+  const mode = String(focusOutcome.result?.value?.mode ?? '');
+  const shouldPreferDomInjection = mode === 'contenteditable' && prompt.includes('\n');
+  if (!shouldPreferDomInjection) {
+    await Input.insertText({ text: prompt });
+    await delay(250);
+  }
+
+  const verifyOutcome = await Runtime.evaluate({
+    expression: `(() => {
+      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      if (!el) return { ok: false, text: '' };
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+        return { ok: true, text: el.value || '' };
+      }
+      if (el instanceof HTMLElement && el.isContentEditable) {
+        return { ok: true, text: el.innerText || el.textContent || '' };
+      }
+      return { ok: false, text: '' };
+    })()`,
+    returnByValue: true,
+  });
+  const observedText = normalizeText(String(verifyOutcome.result?.value?.text ?? ''));
+  if (observedText === normalizeText(prompt)) {
+    return;
+  }
+
+  const fallbackOutcome = await Runtime.evaluate({
     expression: `(() => {
       const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
       if (!el) return false;
-      el.focus();
       const text = ${JSON.stringify(prompt)};
       if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
         const prototype = el instanceof HTMLTextAreaElement
@@ -165,30 +241,119 @@ export async function setGrokPrompt(Runtime: ChromeClient['Runtime'], prompt: st
         } else {
           el.value = text;
         }
-        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertFromPaste' }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         return true;
       }
       if (el instanceof HTMLElement && el.isContentEditable) {
-        document.execCommand('selectAll', false, null);
-        document.execCommand('delete', false, null);
-        document.execCommand('insertText', false, text);
-        el.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
+        el.replaceChildren();
+        const lines = text.split(/\\r?\\n/);
+        lines.forEach((line, index) => {
+          if (index > 0) {
+            el.appendChild(document.createElement('br'));
+          }
+          el.appendChild(document.createTextNode(line));
+        });
+        el.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: text, inputType: 'insertFromPaste' }));
+        el.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertFromPaste' }));
         return true;
       }
       return false;
     })()`,
     returnByValue: true,
   });
-  if (!outcome.result?.value) {
+  if (!fallbackOutcome.result?.value) {
     throw new Error('Unable to set Grok prompt text.');
+  }
+
+  const postFallback = await Runtime.evaluate({
+    expression: `(() => {
+      const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+      if (!el) return { ok: false, text: '' };
+      if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+        return { ok: true, text: el.value || '' };
+      }
+      if (el instanceof HTMLElement && el.isContentEditable) {
+        return { ok: true, text: el.innerText || el.textContent || '' };
+      }
+      return { ok: false, text: '' };
+    })()`,
+    returnByValue: true,
+  });
+  if (normalizeText(String(postFallback.result?.value?.text ?? '')) !== normalizeText(prompt)) {
+    throw new Error('Unable to preserve Grok prompt formatting in the composer.');
   }
 }
 
-export async function submitGrokPrompt(Runtime: ChromeClient['Runtime']): Promise<void> {
+export async function submitGrokPrompt(
+  Input: ChromeClient['Input'],
+  Runtime: ChromeClient['Runtime'],
+): Promise<void> {
+  const readSubmissionState = async (): Promise<{
+    composerText: string;
+    turnCount: number;
+    submitDisabled: boolean;
+    hasEnabledSubmit: boolean;
+  }> => {
+    const state = await Runtime.evaluate({
+      expression: `(() => {
+        const isVisible = (el) => {
+          if (!(el instanceof HTMLElement)) return false;
+          const style = window.getComputedStyle(el);
+          const rect = el.getBoundingClientRect();
+          return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+        };
+        const selectors = ${GROK_SEND_SELECTORS};
+        const btn = selectors
+          .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+          .find((candidate) => candidate instanceof HTMLButtonElement && isVisible(candidate) && !candidate.disabled) || null;
+        const el = ${GROK_VISIBLE_INPUT_EXPRESSION};
+        const composerText =
+          el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement
+            ? (el.value || '')
+            : el instanceof HTMLElement && el.isContentEditable
+              ? (el.innerText || el.textContent || '')
+              : '';
+        const turnCount = document.querySelectorAll('[id^="response-"]').length;
+        return {
+          composerText,
+          turnCount,
+          submitDisabled: btn ? Boolean(btn.disabled) : false,
+          hasEnabledSubmit: Boolean(btn),
+        };
+      })()`,
+      returnByValue: true,
+    });
+    return {
+      composerText: String(state.result?.value?.composerText ?? ''),
+      turnCount: Number(state.result?.value?.turnCount ?? 0),
+      submitDisabled: Boolean(state.result?.value?.submitDisabled),
+      hasEnabledSubmit: Boolean(state.result?.value?.hasEnabledSubmit),
+    };
+  };
+
+  const waitDeadline = Date.now() + 10_000;
+  let baseline = await readSubmissionState();
+  while (!baseline.hasEnabledSubmit && Date.now() < waitDeadline) {
+    await delay(250);
+    baseline = await readSubmissionState();
+  }
+  if (!baseline.hasEnabledSubmit) {
+    throw new Error('Unable to locate Grok submit button.');
+  }
+
   const outcome = await Runtime.evaluate({
     expression: `(() => {
-      const btn = ${buildFindFirstSelectorExpression(GROK_SEND_SELECTORS)};
+      const isVisible = (el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      };
+      const selectors = ${GROK_SEND_SELECTORS};
+      const btn = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((candidate) => candidate instanceof HTMLButtonElement && isVisible(candidate) && !candidate.disabled) || null;
       if (!btn) return false;
       btn.click();
       return true;
@@ -198,6 +363,33 @@ export async function submitGrokPrompt(Runtime: ChromeClient['Runtime']): Promis
   if (!outcome.result?.value) {
     throw new Error('Unable to locate Grok submit button.');
   }
+
+  await delay(600);
+  const afterClick = await readSubmissionState();
+  const committed =
+    afterClick.turnCount > baseline.turnCount ||
+    afterClick.submitDisabled ||
+    afterClick.composerText.trim().length === 0;
+  if (committed) {
+    return;
+  }
+
+  await Input.dispatchKeyEvent({
+    type: 'keyDown',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+    text: '\r',
+    unmodifiedText: '\r',
+  });
+  await Input.dispatchKeyEvent({
+    type: 'keyUp',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+  });
 }
 
 export async function selectGrokMode(
@@ -258,24 +450,41 @@ export async function waitForGrokAssistantResponse(
   timeoutMs: number,
   logger: BrowserLogger,
 ): Promise<string> {
+  const result = await waitForGrokAssistantResult(Runtime, timeoutMs, logger);
+  return result.text;
+}
+
+export async function waitForGrokAssistantResult(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number,
+  logger: BrowserLogger,
+): Promise<{ text: string; markdown: string; html?: string }> {
   const baseline = await readAssistantSnapshot(Runtime);
-  let lastText = baseline.lastText;
+  let lastSignature = baseline.lastMarkdown || baseline.lastText;
   let stableCount = 0;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const current = await readAssistantSnapshot(Runtime);
-    const hasNewContent = current.count > baseline.count || (current.count === baseline.count && current.lastText.length > baseline.lastText.length);
-    
-    if (hasNewContent && current.lastText.trim().length > 0) {
-      if (current.lastText === lastText) {
+    const currentSignature = current.lastMarkdown || current.lastText;
+    const baselineSignature = baseline.lastMarkdown || baseline.lastText;
+    const hasNewContent =
+      current.count > baseline.count ||
+      (current.count === baseline.count && currentSignature.length > baselineSignature.length);
+
+    if (hasNewContent && currentSignature.trim().length > 0) {
+      if (currentSignature === lastSignature) {
         stableCount += 1;
       } else {
         stableCount = 0;
-        lastText = current.lastText;
+        lastSignature = currentSignature;
       }
       if (stableCount >= 2) {
         logger('Recovered assistant response');
-        return current.lastText;
+        return {
+          text: current.lastText,
+          markdown: current.lastMarkdown || current.lastText,
+          html: current.lastHtml || undefined,
+        };
       }
     }
     await delay(500);
@@ -320,26 +529,191 @@ async function waitForAttachmentName(
   return false;
 }
 
-async function readAssistantSnapshot(Runtime: ChromeClient['Runtime']): Promise<{ count: number; lastText: string }> {
-  const outcome = await Runtime.evaluate({
-    expression: `(() => {
+export function buildGrokAssistantSnapshotExpressionForTest(): string {
+  return buildGrokAssistantSnapshotExpression();
+}
+
+function buildGrokAssistantSnapshotExpression(): string {
+  return `(() => {
       const bubbles = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_BUBBLE_SELECTORS)};
       const assistant = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_ROLE_SELECTORS)};
       const candidates = assistant.length > 0
         ? assistant
         : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
       const last = candidates[candidates.length - 1];
-      if (!last) return { count: candidates.length, lastText: '' };
+      if (!last) return { count: candidates.length, lastText: '', lastMarkdown: '', lastHtml: '' };
 
-      const normalizeText = (value) => value.replace(/\\u200b/g, '').trim();
+      const normalizeText = (value) =>
+        String(value || '')
+          .replace(/\\u200b/g, '')
+          .replace(/\\r\\n/g, '\\n')
+          .replace(/\\n{3,}/g, '\\n\\n')
+          .trim();
+      const normalizeInlineWhitespace = (value) => String(value || '').replace(/\\s+/g, ' ');
+      const collapseInline = (value) => normalizeText(normalizeInlineWhitespace(value));
+      const normalizeCode = (value) => String(value || '').replace(/\\u200b/g, '').replace(/\\r\\n/g, '\\n').replace(/\\n$/, '');
       const markdownRoot =
         last.querySelector('.response-content-markdown') ||
         last.querySelector('[class*="response-content-markdown"]') ||
         Array.from(last.querySelectorAll('.markdown')).find((node) =>
           !node.closest('.thinking-container') && !node.closest('.action-buttons'),
         );
+
+      const isExcluded = (node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        if (node.tagName === 'BUTTON') return true;
+        const testId = (node.getAttribute('data-testid') || '').toLowerCase();
+        const className = (node.className || '').toString().toLowerCase();
+        if (
+          testId.includes('follow-up') ||
+          testId.includes('suggest') ||
+          testId.includes('thinking') ||
+          className.includes('thinking-container') ||
+          className.includes('action-buttons') ||
+          className.includes('sticky')
+        ) {
+          return true;
+        }
+        return false;
+      };
+
+      const cleanPlainText = (root) => {
+        if (!(root instanceof HTMLElement)) return '';
+        const clone = root.cloneNode(true);
+        clone.querySelectorAll('*').forEach((node) => {
+          if (!(node instanceof HTMLElement)) return;
+          if (isExcluded(node)) {
+            node.remove();
+            return;
+          }
+          if ((node.getAttribute('data-testid') || '').toLowerCase() === 'code-block') {
+            const codeNode = Array.from(node.querySelectorAll('code')).find((candidate) =>
+              !candidate.closest('button'),
+            );
+            const replacement = document.createElement('div');
+            replacement.textContent = normalizeCode(codeNode?.textContent || '');
+            node.replaceWith(replacement);
+          }
+        });
+        return normalizeText(clone.textContent || '');
+      };
+
+      const inlineText = (node) => {
+        if (!node) return '';
+        if (node.nodeType === Node.TEXT_NODE) {
+          return node.textContent || '';
+        }
+        if (!(node instanceof HTMLElement)) {
+          return '';
+        }
+        if (isExcluded(node)) return '';
+        if ((node.getAttribute('data-testid') || '').toLowerCase() === 'code-block') {
+          const codeNode = Array.from(node.querySelectorAll('code')).find((candidate) => !candidate.closest('button'));
+          return normalizeCode(codeNode?.textContent || '');
+        }
+        if (node.tagName === 'BR') {
+          return '\\n';
+        }
+        if (node.tagName === 'CODE' && !node.closest('[data-testid="code-block"]')) {
+          return \`\\\`\${collapseInline(node.textContent || '')}\\\`\`;
+        }
+        return Array.from(node.childNodes).map((child) => inlineText(child)).join('');
+      };
+
+      const serializeListItem = (node, depth, ordered, index) => {
+        const indent = '  '.repeat(depth);
+        const marker = ordered ? \`\${index + 1}. \` : '- ';
+        const bodyParts = [];
+        const nestedParts = [];
+        for (const child of Array.from(node.childNodes)) {
+          if (child instanceof HTMLElement && (child.tagName === 'UL' || child.tagName === 'OL')) {
+            const nested = serializeBlock(child, depth + 1);
+            if (nested) nestedParts.push(nested);
+            continue;
+          }
+          const value = inlineText(child);
+          if (value) bodyParts.push(value);
+        }
+        const body = collapseInline(bodyParts.join(''));
+        const firstLine = \`\${indent}\${marker}\${body}\`.trimEnd();
+        return [firstLine, ...nestedParts].filter(Boolean).join('\\n');
+      };
+
+      const serializeCodeBlock = (node) => {
+        const languageNode = node.querySelector('span.font-mono');
+        const language = collapseInline(languageNode?.textContent || '');
+        const codeNode = Array.from(node.querySelectorAll('code')).find((candidate) => !candidate.closest('button'));
+        const code = normalizeCode(codeNode?.textContent || '');
+        if (!code) return '';
+        return \`\\\`\\\`\\\`\${language}\\n\${code}\\n\\\`\\\`\\\`\`;
+      };
+
+      const serializeBlock = (node, depth = 0) => {
+        if (!node) return '';
+        if (node.nodeType === Node.TEXT_NODE) {
+          return collapseInline(node.textContent || '');
+        }
+        if (!(node instanceof HTMLElement)) return '';
+        if (isExcluded(node)) return '';
+        const testId = (node.getAttribute('data-testid') || '').toLowerCase();
+        if (testId === 'code-block') {
+          return serializeCodeBlock(node);
+        }
+        const tag = node.tagName;
+        if (tag === 'UL' || tag === 'OL') {
+          const ordered = tag === 'OL';
+          return Array.from(node.children)
+            .filter((child) => child.tagName === 'LI')
+            .map((child, index) => serializeListItem(child, depth, ordered, index))
+            .filter(Boolean)
+            .join('\\n');
+        }
+        if (tag === 'LI') {
+          return serializeListItem(node, depth, false, 0);
+        }
+        if (/^H[1-6]$/.test(tag)) {
+          const level = Number(tag.slice(1));
+          return \`\${'#'.repeat(level)} \${collapseInline(inlineText(node))}\`.trim();
+        }
+        if (tag === 'P') {
+          return collapseInline(inlineText(node));
+        }
+        if (tag === 'BLOCKQUOTE') {
+          return normalizeText(inlineText(node))
+            .split('\\n')
+            .map((line) => \`> \${line}\`.trimEnd())
+            .join('\\n');
+        }
+        if (tag === 'PRE') {
+          const codeNode = node.querySelector('code');
+          const code = normalizeCode(codeNode?.textContent || node.textContent || '');
+          return code ? \`\\\`\\\`\\\`\\n\${code}\\n\\\`\\\`\\\`\` : '';
+        }
+        const directChildren = Array.from(node.children).filter((child) => !isExcluded(child));
+        if (directChildren.length === 0) {
+          return collapseInline(inlineText(node));
+        }
+        const nestedBlocks = directChildren
+          .map((child) => serializeBlock(child, depth))
+          .filter(Boolean);
+        if (nestedBlocks.length > 0) {
+          return nestedBlocks.join('\\n\\n');
+        }
+        return collapseInline(inlineText(node));
+      };
+
       if (markdownRoot) {
-        return { count: candidates.length, lastText: normalizeText(markdownRoot.textContent || '') };
+        const markdown = normalizeText(
+          Array.from(markdownRoot.children).map((child) => serializeBlock(child)).filter(Boolean).join('\\n\\n') ||
+            serializeBlock(markdownRoot),
+        );
+        const text = cleanPlainText(markdownRoot);
+        return {
+          count: candidates.length,
+          lastText: text || markdown,
+          lastMarkdown: markdown || text,
+          lastHtml: markdownRoot.innerHTML || '',
+        };
       }
 
       const clone = last.cloneNode(true);
@@ -366,13 +740,23 @@ async function readAssistantSnapshot(Runtime: ChromeClient['Runtime']): Promise<
         }
       });
 
-      return { count: candidates.length, lastText: normalizeText(clone.textContent || '') };
-    })()`,
+      const fallbackText = normalizeText(clone.textContent || '');
+      return { count: candidates.length, lastText: fallbackText, lastMarkdown: fallbackText, lastHtml: '' };
+    })()`;
+}
+
+async function readAssistantSnapshot(
+  Runtime: ChromeClient['Runtime'],
+): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string }> {
+  const outcome = await Runtime.evaluate({
+    expression: buildGrokAssistantSnapshotExpression(),
     returnByValue: true,
   });
   return {
     count: outcome.result?.value?.count ?? 0,
     lastText: outcome.result?.value?.lastText ?? '',
+    lastMarkdown: outcome.result?.value?.lastMarkdown ?? '',
+    lastHtml: outcome.result?.value?.lastHtml ?? '',
   };
 }
 

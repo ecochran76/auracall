@@ -516,6 +516,18 @@ async function loadManifestFileRows(
     updatedAt: string | null;
   }> = [];
 
+  const accountFiles = await readFileArrayCache<FileRef>(path.join(cacheDir, 'account-files.json'));
+  if (accountFiles) {
+    rows.push({
+      dataset: 'account-files',
+      entityId: '__account__',
+      conversationId: null,
+      projectId: null,
+      files: accountFiles.items,
+      updatedAt: accountFiles.updatedAt,
+    });
+  }
+
   const folders: Array<{
     dataset: string;
     rootDir: string;

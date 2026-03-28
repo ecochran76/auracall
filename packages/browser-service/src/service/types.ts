@@ -26,6 +26,7 @@ export type BrowserServiceConfig = Pick<
   | 'chromeProfile'
   | 'chromeCookiePath'
   | 'display'
+  | 'hideWindow'
   | 'keepBrowser'
   | 'debugPort'
   | 'debugPortStrategy'

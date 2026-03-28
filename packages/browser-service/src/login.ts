@@ -34,6 +34,7 @@ export interface BrowserLoginOptions {
     userDataDir: string;
     url: string;
     compatibleHosts?: string[];
+    hideWindow?: boolean;
     debugPort?: number;
     debugPortStrategy?: DebugPortStrategy | null;
     serviceTabLimit?: number | null;
@@ -46,6 +47,7 @@ export interface BrowserLoginOptions {
   serviceTabLimit?: number | null;
   blankTabLimit?: number | null;
   collapseDisposableWindows?: boolean;
+  hideWindow?: boolean;
 }
 
 export async function runBrowserLogin(options: BrowserLoginOptions): Promise<void> {
@@ -67,6 +69,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     serviceTabLimit,
     blankTabLimit,
     collapseDisposableWindows,
+    hideWindow,
   } = options;
 
   const inferred = cookiePath && preferCookieProfile ? inferProfileFromCookiePath(cookiePath) : null;
@@ -99,6 +102,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       userDataDir,
       url: loginUrl,
       compatibleHosts,
+      hideWindow,
       debugPort,
       debugPortStrategy: effectiveDebugPortStrategy,
       serviceTabLimit,
@@ -148,6 +152,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     userDataDir,
     url: loginUrl,
     compatibleHosts,
+    hideWindow,
     debugPort,
     debugPortStrategy: effectiveDebugPortStrategy,
     serviceTabLimit,

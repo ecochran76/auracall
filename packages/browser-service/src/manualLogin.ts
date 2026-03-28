@@ -1,6 +1,6 @@
 import type { BrowserLogger, DebugPortStrategy, ResolvedBrowserConfig } from './types.js';
 import { DEFAULT_DEBUG_PORT, DEFAULT_DEBUG_PORT_RANGE, pickAvailableDebugPort } from './portSelection.js';
-import { launchChrome, openOrReuseChromeTarget } from './chromeLifecycle.js';
+import { hideChromeWindow, launchChrome, openOrReuseChromeTarget, wasChromeLaunchedByAuracall } from './chromeLifecycle.js';
 import { writeChromePid, writeDevToolsActivePort } from './profileState.js';
 import { isDevToolsResponsive } from './processCheck.js';
 
@@ -12,6 +12,7 @@ export async function launchManualLoginSession(options: {
   compatibleHosts?: string[];
   logger: BrowserLogger;
   baseConfig: ResolvedBrowserConfig;
+  hideWindow?: boolean;
   debugPort?: number;
   debugPortStrategy?: DebugPortStrategy | null;
   debugPortRange?: [number, number] | null;
@@ -38,7 +39,7 @@ export async function launchManualLoginSession(options: {
     debugPort: port,
     debugPortStrategy: effectiveDebugPortStrategy,
     headless: false,
-    hideWindow: false,
+    hideWindow: options.hideWindow ?? options.baseConfig.hideWindow ?? false,
     keepBrowser: true,
     serviceTabLimit: options.serviceTabLimit ?? options.baseConfig.serviceTabLimit,
     blankTabLimit: options.blankTabLimit ?? options.baseConfig.blankTabLimit,
@@ -61,13 +62,20 @@ export async function launchManualLoginSession(options: {
   if (!ready) {
     throw new Error(`Chrome DevTools did not respond on ${host}:${chrome.port}.`);
   }
+  if (config.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
+    await hideChromeWindow(chrome, options.logger);
+  }
 
   await openLoginUrl(host, chrome.port, options.url, {
     compatibleHosts: options.compatibleHosts,
     serviceTabLimit: config.serviceTabLimit,
     blankTabLimit: config.blankTabLimit,
     collapseDisposableWindows: config.collapseDisposableWindows,
+    suppressFocus: config.hideWindow,
   });
+  if (config.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
+    await hideChromeWindow(chrome, options.logger);
+  }
   return { chrome, port: chrome.port };
 }
 
@@ -80,6 +88,7 @@ export async function openLoginUrl(
     serviceTabLimit?: number | null;
     blankTabLimit?: number | null;
     collapseDisposableWindows?: boolean;
+    suppressFocus?: boolean;
   } = {},
 ): Promise<void> {
   try {
@@ -90,6 +99,7 @@ export async function openLoginUrl(
       matchingTabLimit: options.serviceTabLimit ?? undefined,
       blankTabLimit: options.blankTabLimit ?? undefined,
       collapseDisposableWindows: options.collapseDisposableWindows,
+      suppressFocus: options.suppressFocus,
     });
   } catch {
     // Best effort: login can proceed even if we can't open a new tab.

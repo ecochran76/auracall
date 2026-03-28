@@ -2,7 +2,7 @@
 
 Aura-Call-specific notes:
 - Before digging into a task, review recent git commit logs and scan relevant dev docs (start with `README.md`, `docs/testing.md`, and the newest entries in `docs/dev-fixes-log.md`).
-- Skim `docs/dev/` (current phase plans, `docs/dev/browser-service-tools.md`, `docs/dev/browser-automation-playbook.md`) before making behavioral changes.
+- Skim `docs/dev/` (current phase plans, `docs/dev/browser-service-tools.md`, `docs/dev/browser-automation-playbook.md`, and `docs/dev/browser-service-upgrade-backlog.md`) before making behavioral changes.
 - Maintain the running journal in `docs/dev/dev-journal.md` with progress, current focus, and problems/solutions.
 - Keep `docs/dev-fixes-log.md` and related dev docs up to date as you fix issues or learn new failure modes.
 - ChatGPT project URLs: steipete@gmail.com -> https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project; studpete@gmail.com -> https://chatgpt.com/g/g-p-69505ed97e3081918a275477a647a682/project. Prefer studpete URL if steipete project not found.
@@ -17,6 +17,8 @@ Aura-Call-specific notes:
 - If browser smokes echo the prompt (Instant), rerun with `--browser-keep-browser --verbose` in tmux, then inspect DOM with `pnpm tsx scripts/browser-tools.ts eval ...` to confirm assistant turns exist; we fixed a case by refreshing assistant snapshots post-send.
 - Browser “Pro thinking” gate: never click/auto-click ChatGPT’s “Answer now” button. Treat it as a placeholder and wait 10m–1h for the real assistant response (auto-clicking skips long thinking and changes behavior).
 - Browser smokes should preserve Markdown (lists, fences); if output looks flattened or echoed, inspect the captured assistant turn via `browser-tools.ts eval` before shipping.
+- If a browser/provider repair smells like generic DOM drift, check `docs/dev/browser-service-upgrade-backlog.md` first and extract reusable navigation/row-action/diagnostic logic into browser-service instead of adding another provider-local workaround.
+- Current browser-service plan (2026-03-28): keep provider-local trigger scoring in adapters unless it repeats on another real surface/provider; make structured UI diagnostics wrappers the next package-owned extraction so fragile UI failures already include scoped evidence.
 - Working on Windows? Read and update `docs/windows-work.md` before you start.
 - Sparkle signing key lives at `/Users/steipete/Library/CloudStorage/Dropbox/Backup/Sparkle`; set `SPARKLE_PRIVATE_KEY_FILE` to that path when notarizing the notifier.
 - Browser cookie sync + Node 25: if browser runs fail with “Failed to load keytar… Cannot find module '../build/Release/keytar.node'” and no cookies are applied, rebuild keytar in the pnpm dlx cache: run `PYTHON=/usr/bin/python3 /Users/steipete/Projects/oracle/runner npx node-gyp rebuild` inside the keytar directory printed in the error, then rerun the auracall command.

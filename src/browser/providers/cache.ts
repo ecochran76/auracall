@@ -55,7 +55,7 @@ export async function readProjectCache(
 export async function readConversationCache(
   context: ProviderCacheContext,
 ): Promise<CacheReadResult<Conversation[]>> {
-  return readProviderCache<Conversation[]>(context, 'conversations.json', []);
+  return readProviderCache<Conversation[]>(context, resolveConversationCacheFileName(context), []);
 }
 
 export async function writeProjectCache(
@@ -69,7 +69,7 @@ export async function writeConversationCache(
   context: ProviderCacheContext,
   items: Conversation[],
 ): Promise<void> {
-  await writeProviderCache(context, 'conversations.json', items);
+  await writeProviderCache(context, resolveConversationCacheFileName(context), items);
 }
 
 export async function readConversationContextCache(
@@ -123,6 +123,19 @@ export async function writeConversationAttachmentsCache(
   files: FileRef[],
 ): Promise<void> {
   await writeProviderCache(context, `conversation-attachments/${conversationId}/manifest.json`, files);
+}
+
+export async function readAccountFilesCache(
+  context: ProviderCacheContext,
+): Promise<CacheReadResult<FileRef[]>> {
+  return readProviderCache<FileRef[]>(context, 'account-files.json', []);
+}
+
+export async function writeAccountFilesCache(
+  context: ProviderCacheContext,
+  files: FileRef[],
+): Promise<void> {
+  await writeProviderCache(context, 'account-files.json', files);
 }
 
 export async function readProjectKnowledgeCache(
@@ -242,6 +255,20 @@ export function resolveProviderCachePath(
     cacheFile,
     configuredUrl: context.listOptions.configuredUrl ?? null,
   };
+}
+
+export function resolveConversationCacheScopeId(context: Pick<ProviderCacheContext, 'listOptions'>): string | null {
+  const projectId = context.listOptions.projectId;
+  if (typeof projectId !== 'string') return null;
+  const trimmed = projectId.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+export function resolveConversationCacheFileName(
+  context: Pick<ProviderCacheContext, 'listOptions'>,
+): string {
+  const projectId = resolveConversationCacheScopeId(context);
+  return projectId ? `project-conversations/${projectId}.json` : 'conversations.json';
 }
 
 async function readProviderCache<T>(

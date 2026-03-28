@@ -29,6 +29,8 @@ import { isKnownModel } from '../src/oracle/modelResolver.js';
 import type { ModelName, PreviewMode, RunOracleOptions } from '../src/oracle.js';
 import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, normalizeChatgptUrl } from '../src/browserMode.js';
 import { GROK_URL } from '../src/browser/constants.js';
+import { runBrowserMode } from '../src/browser/index.js';
+import { connectToChrome } from '../packages/browser-service/src/chromeLifecycle.js';
 import { createRemoteBrowserExecutor } from '../src/remote/client.js';
 import { createGeminiWebExecutor } from '../src/gemini-web/index.js';
 import { applyHelpStyling } from '../src/cli/help.js';
@@ -104,6 +106,7 @@ import { BrowserAutomationClient } from '../src/browser/client.js';
 import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
+import type { BrowserAttachment, BrowserLogger, BrowserRunOptions } from '../src/browser/types.js';
 import { createCacheStore, type CacheStoreKind } from '../src/browser/llmService/cache/store.js';
 import {
   searchCachedContextsByKeyword,
@@ -684,6 +687,76 @@ async function resolveProjectIdArg(
   return await llmService.resolveProjectIdByName(trimmed, { listOptions, allowAutoRefresh: true });
 }
 
+async function resolveBrowserAttachmentsFromPaths(filePaths: string[], cwd: string): Promise<BrowserAttachment[]> {
+  return Promise.all(
+    filePaths.map(async (rawPath) => {
+      const resolvedPath = path.resolve(cwd, rawPath);
+      const stats = await fs.stat(resolvedPath);
+      return {
+        path: resolvedPath,
+        displayPath: path.relative(cwd, resolvedPath) || path.basename(resolvedPath),
+        sizeBytes: stats.size,
+      };
+    }),
+  );
+}
+
+function createCliBrowserLogger(verbose: boolean): BrowserLogger {
+  const logger = ((message: string) => {
+    if (verbose) {
+      console.log(chalk.dim(`[browser] ${message}`));
+    }
+  }) as BrowserLogger;
+  logger.verbose = verbose;
+  return logger;
+}
+
+async function closeBrowserEndpoint(
+  port: number | null | undefined,
+  host: string | null | undefined,
+  logger: BrowserLogger,
+): Promise<void> {
+  if (!port) {
+    return;
+  }
+  let client: Awaited<ReturnType<typeof connectToChrome>> | null = null;
+  try {
+    client = await connectToChrome(port, logger, host ?? undefined);
+    await client.Browser.close().catch(() => undefined);
+  } catch {
+    // Best effort only. The browser may already be gone.
+  } finally {
+    await client?.close().catch(() => undefined);
+  }
+}
+
+type CliBrowserRunSummary = {
+  conversationId?: string;
+  answerMarkdown: string;
+  chromePort?: number;
+  chromeHost?: string;
+  chromeTargetId?: string;
+  tabUrl?: string;
+};
+
+async function runCliBrowserMode(options: BrowserRunOptions): Promise<CliBrowserRunSummary> {
+  return await new Promise<CliBrowserRunSummary>((resolve, reject) => {
+    const run = runBrowserMode as unknown as (options: BrowserRunOptions) => Promise<CliBrowserRunSummary>;
+    void run(options)
+      .then((result) =>
+        resolve({
+          conversationId: result.conversationId,
+          answerMarkdown: result.answerMarkdown,
+          chromePort: result.chromePort,
+          chromeHost: result.chromeHost,
+          chromeTargetId: result.chromeTargetId,
+          tabUrl: result.tabUrl,
+        }),
+      )
+      .catch(reject);
+  });
+}
+
 program.addHelpText(
   'after',
   `
@@ -732,7 +805,7 @@ const projectsCommand = program
     });
     const provider = llmService.provider;
     const listOptions = await llmService.buildListOptions();
-    const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
+    let normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
     let cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>> | undefined;
     const resolveCacheContext = async () => {
       if (!cacheContext) {
@@ -948,20 +1021,35 @@ projectsCommand
     }
 
     if (newName && created?.id) {
-      try {
-        await llmService.renameProject(created.id, newName, { listOptions });
-        console.log(`Renamed cloned project to "${newName}".`);
-        await upsertProjectCacheEntry(cacheContext, {
-          id: created.id,
-          name: newName,
-          provider: created.provider,
-          url: created.url,
-        });
-      } catch (error) {
-        console.warn(`Clone rename failed: ${error instanceof Error ? error.message : String(error)}`);
+      await llmService.renameProject(created.id, newName, { listOptions });
+      const waitDeadline = Date.now() + 8_000;
+      let resolvedName: string | null = null;
+      while (Date.now() < waitDeadline) {
+        const refreshed = await llmService.listProjects(listOptions);
+        if (Array.isArray(refreshed)) {
+          await writeProjectCache(cacheContext, refreshed);
+          const match = refreshed.find((project) => project.id === created.id);
+          resolvedName = match?.name ?? null;
+          if (resolvedName === newName) {
+            break;
+          }
+        }
+        await new Promise((resolve) => setTimeout(resolve, 400));
       }
+      if (resolvedName !== newName) {
+        throw new Error(
+          `Clone rename did not persist. Expected "${newName}", got "${resolvedName ?? 'missing'}".`,
+        );
+      }
+      console.log(`Renamed cloned project to "${newName}".`);
+      await upsertProjectCacheEntry(cacheContext, {
+        id: created.id,
+        name: newName,
+        provider: created.provider,
+        url: created.url,
+      });
     } else if (newName) {
-      console.warn('Clone created but could not resolve its ID to rename.');
+      throw new Error('Clone created but could not resolve its ID to rename.');
     }
   });
 
@@ -1145,8 +1233,9 @@ projectInstructionsCommand
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .action(async (projectId, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
+    const mergedOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
     const userConfig = await resolveConfig(
-      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      mergedOptions,
       process.cwd(),
       process.env,
     );
@@ -1158,20 +1247,14 @@ projectInstructionsCommand
       identityPrompt: promptForCacheIdentity,
     });
     const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
-    const textValue = typeof commandOptions.text === 'string' && commandOptions.text.trim().length > 0
-      ? commandOptions.text
-      : null;
-    const filePath = typeof commandOptions.file === 'string' && commandOptions.file.trim().length > 0
-      ? commandOptions.file.trim()
-      : null;
+    const textValue = readStringOption(mergedOptions, ['text']) ?? null;
+    const filePath = readStringOption(mergedOptions, ['file']) ?? null;
     if (!textValue && !filePath) {
       throw new Error('Provide --text or --file for instructions.');
     }
     const instructions = textValue ?? await fs.readFile(filePath as string, 'utf8');
     const modelLabel =
-      typeof commandOptions.model === 'string' && commandOptions.model.trim().length > 0
-        ? commandOptions.model.trim()
-        : undefined;
+      readStringOption(mergedOptions, ['model']);
     const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
     await llmService.updateProjectInstructions(resolvedId, instructions, { modelLabel });
     console.log(`Updated instructions for project ${resolvedId}.`);
@@ -1205,6 +1288,127 @@ projectInstructionsCommand
       console.log(instructions.text);
     } else {
       console.log(JSON.stringify(instructions, null, 2));
+    }
+  });
+
+const filesCommand = program
+  .command('files')
+  .description('Manage account-level files for the active browser provider.');
+
+filesCommand
+  .command('add')
+  .description('Upload files to the provider account-level file library.')
+  .option('-f, --file <paths...>', 'Files to upload.', collectPaths, [])
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (commandOptions) => {
+    const parentOptions = filesCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const rootOptions: CliOptions = (program.opts?.() as CliOptions | undefined) ?? ({} as CliOptions);
+    const mergedFileInputs = mergePathLikeOptions(
+      collectPaths(commandOptions.file, collectPaths((parentOptions as CliOptions).file, collectPaths(rootOptions.file, []))),
+      collectPaths(
+        (commandOptions as CliOptions).include,
+        collectPaths((parentOptions as CliOptions).include, collectPaths(rootOptions.include, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).files,
+        collectPaths((parentOptions as CliOptions).files, collectPaths(rootOptions.files, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).path,
+        collectPaths((parentOptions as CliOptions).path, collectPaths(rootOptions.path, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).paths,
+        collectPaths((parentOptions as CliOptions).paths, collectPaths(rootOptions.paths, [])),
+      ),
+    );
+    const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
+    if (duplicates.length > 0) {
+      const preview = duplicates.slice(0, 8).join(', ');
+      const suffix = duplicates.length > 8 ? ` (+${duplicates.length - 8} more)` : '';
+      console.log(chalk.dim(`Ignoring duplicate --file inputs: ${preview}${suffix}`));
+    }
+    if (deduped.length === 0) {
+      throw new Error('Provide one or more --file paths to upload.');
+    }
+    await llmService.uploadAccountFiles(deduped, { listOptions });
+    console.log(`Uploaded ${deduped.length} account file(s).`);
+  });
+
+filesCommand
+  .command('list')
+  .description('List account-level files for the active browser provider.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (commandOptions) => {
+    const parentOptions = filesCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const files = await llmService.listAccountFiles({ listOptions });
+    if (files.length === 0) {
+      console.log('No account files found.');
+      return;
+    }
+    if (!process.stdout.isTTY) {
+      console.log(JSON.stringify(files, null, 2));
+      return;
+    }
+    for (const file of files) {
+      const suffix = typeof file.size === 'number' ? ` (${file.size} B)` : '';
+      console.log(`${file.id}\t${file.name}${suffix}`);
+    }
+    console.log(chalk.dim(`Listed ${files.length} account file(s).`));
+  });
+
+filesCommand
+  .command('remove <fileId...>')
+  .alias('delete')
+  .description('Remove account-level files by file id.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .action(async (fileIds, commandOptions) => {
+    const parentOptions = filesCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    if (!Array.isArray(fileIds) || fileIds.length === 0) {
+      throw new Error('Provide one or more file ids to remove.');
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    for (const fileId of fileIds) {
+      await llmService.deleteAccountFile(String(fileId).trim(), { listOptions });
+      console.log(`Removed account file ${fileId}.`);
     }
   });
 
@@ -1279,7 +1483,7 @@ const conversationsCommand = program
     if (listOptions.historySince && !Number.isFinite(Date.parse(listOptions.historySince))) {
       throw new Error('history-since must be a valid date (YYYY-MM-DD or ISO timestamp).');
     }
-    const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
+    let normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
     let cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>> | undefined;
     const resolveCacheContext = async () => {
       if (!cacheContext) {
@@ -1302,6 +1506,9 @@ const conversationsCommand = program
         forceRefresh,
         listOptions: normalizedListOptions,
       });
+    }
+    if (projectId) {
+      normalizedListOptions = { ...normalizedListOptions, projectId };
     }
     const conversationName =
       typeof commandOptions.conversationName === 'string'
@@ -1337,7 +1544,7 @@ const conversationsCommand = program
       console.log(JSON.stringify(fallback, null, 2));
       return;
     }
-    const conversations = await provider.listConversations?.(projectId, normalizedListOptions);
+    const conversations = await llmService.listConversations(projectId, normalizedListOptions);
     let resolved = conversations;
     if (Array.isArray(resolved) && resolved.length === 0) {
       const fallback = llmService.deriveConversationsFromConfig({
@@ -1369,6 +1576,220 @@ const conversationsCommand = program
     } else {
       console.log(JSON.stringify(filtered, null, 2));
     }
+  });
+
+const conversationFilesCommand = conversationsCommand
+  .command('files')
+  .description('List files for a conversation.');
+
+conversationFilesCommand
+  .command('add <id>')
+  .description('Append files to an existing conversation by sending a new turn with attachments.')
+  .option('-f, --file <paths...>', 'Files to attach to the conversation.', collectPaths, [])
+  .option('--prompt <text>', 'Prompt to send with the attached files.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (currently grok only).')
+  .option('--project-id <id>', 'Project ID or name (if the conversation is in a project).')
+  .action(async (conversationId, commandOptions, command) => {
+    const parentOptions = command.parent?.parent?.opts?.() ?? {};
+    const rootOptions: CliOptions = (program.opts?.() as CliOptions | undefined) ?? ({} as CliOptions);
+    const cliOptions = { ...rootOptions, ...parentOptions, ...commandOptions } as CliOptions;
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
+      | 'chatgpt'
+      | 'grok';
+    if (target !== 'grok') {
+      throw new Error('Conversation file add is currently implemented only for Grok browser runs.');
+    }
+
+    const promptText = String(
+      commandOptions.prompt ??
+        parentOptions.prompt ??
+        rootOptions.prompt ??
+        commandOptions.message ??
+        parentOptions.message ??
+        rootOptions.message ??
+        '',
+    ).trim();
+    if (!promptText) {
+      throw new Error('Provide --prompt text for the follow-up turn that carries the attached file(s).');
+    }
+
+    const mergedFileInputs = mergePathLikeOptions(
+      collectPaths(commandOptions.file, collectPaths((parentOptions as CliOptions).file, collectPaths(rootOptions.file, []))),
+      collectPaths(
+        (commandOptions as CliOptions).include,
+        collectPaths((parentOptions as CliOptions).include, collectPaths(rootOptions.include, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).files,
+        collectPaths((parentOptions as CliOptions).files, collectPaths(rootOptions.files, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).path,
+        collectPaths((parentOptions as CliOptions).path, collectPaths(rootOptions.path, [])),
+      ),
+      collectPaths(
+        (commandOptions as CliOptions).paths,
+        collectPaths((parentOptions as CliOptions).paths, collectPaths(rootOptions.paths, [])),
+      ),
+    );
+    const { deduped, duplicates } = dedupePathInputs(mergedFileInputs, { cwd: process.cwd() });
+    if (duplicates.length > 0) {
+      const preview = duplicates.slice(0, 8).join(', ');
+      const suffix = duplicates.length > 8 ? ` (+${duplicates.length - 8} more)` : '';
+      console.log(chalk.dim(`Ignoring duplicate --file inputs: ${preview}${suffix}`));
+    }
+    if (deduped.length === 0) {
+      throw new Error('Provide one or more --file paths to attach.');
+    }
+    const filesToValidate = deduped.filter((filePath) => !isMediaFile(filePath));
+    if (filesToValidate.length > 0) {
+      await readFiles(filesToValidate, { cwd: process.cwd() });
+    }
+
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const configuredUrl = userConfig.browser?.grokUrl ?? null;
+    const listOptions = await llmService.buildListOptions({ configuredUrl });
+    const projectArg = commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const trimmedConversationId = String(conversationId).trim();
+    if (!trimmedConversationId) {
+      throw new Error('Conversation identifier is required.');
+    }
+
+    const requestedModel = String(commandOptions.model ?? rootOptions.model ?? '').trim();
+    const browserModel = requestedModel.toLowerCase().startsWith('grok-')
+      ? normalizeModelOption(requestedModel)
+      : ('grok-4.1' as ModelName);
+    const resolvedBrowserConfig = resolveBrowserConfig(userConfig.browser);
+    const browserConfig = await buildBrowserConfig({
+      ...cliOptions,
+      auracallProfileName: userConfig.auracallProfile ?? 'default',
+      managedProfileRoot: resolvedBrowserConfig.managedProfileRoot ?? null,
+      model: browserModel,
+      browserTarget: 'grok',
+      projectId: projectId ?? undefined,
+      conversationId: trimmedConversationId,
+      browserManualLogin: resolvedBrowserConfig.manualLogin ?? true,
+      browserManualLoginProfileDir: resolvedBrowserConfig.manualLoginProfileDir ?? undefined,
+      browserChromeProfile: resolvedBrowserConfig.chromeProfile ?? undefined,
+      browserChromePath: resolvedBrowserConfig.chromePath ?? undefined,
+      browserCookiePath: resolvedBrowserConfig.chromeCookiePath ?? undefined,
+      browserBootstrapCookiePath: resolvedBrowserConfig.bootstrapCookiePath ?? undefined,
+      browserDisplay: resolvedBrowserConfig.display ?? undefined,
+      browserHeadless: resolvedBrowserConfig.headless,
+      browserHideWindow: resolvedBrowserConfig.hideWindow,
+      browserKeepBrowser: resolvedBrowserConfig.keepBrowser,
+      browserTimeout: resolvedBrowserConfig.timeoutMs ? String(resolvedBrowserConfig.timeoutMs) : undefined,
+      browserInputTimeout: resolvedBrowserConfig.inputTimeoutMs ? String(resolvedBrowserConfig.inputTimeoutMs) : undefined,
+      browserCookieWait: resolvedBrowserConfig.cookieSyncWaitMs ? String(resolvedBrowserConfig.cookieSyncWaitMs) : undefined,
+      browserWslChrome: cliOptions.browserWslChrome ?? resolvedBrowserConfig.wslChromePreference,
+    });
+    applyBrowserLaunchUrl({ browserConfig, userConfig, model: browserModel });
+
+    const attachments = await resolveBrowserAttachmentsFromPaths(deduped, process.cwd());
+    const browserLogger = createCliBrowserLogger(Boolean(cliOptions.verbose));
+    const keepBrowserRequested = Boolean(browserConfig.keepBrowser);
+    const browserRunConfig = keepBrowserRequested ? browserConfig : { ...browserConfig, keepBrowser: true };
+    let runtimeHint:
+      | {
+          chromePort?: number;
+          chromeHost?: string;
+          chromeTargetId?: string;
+          tabUrl?: string;
+        }
+      | null = null;
+    let closeChromePort: number | undefined;
+    let closeChromeHost: string | undefined;
+    try {
+      let finalConversationId = trimmedConversationId;
+      let answerMarkdown = '';
+      let refreshedFileCount = 0;
+      await runCliBrowserMode({
+        prompt: promptText,
+        attachments,
+        config: browserRunConfig,
+        log: browserLogger,
+        runtimeHintCb: async (hint) => {
+          runtimeHint = {
+            chromePort: hint.chromePort,
+            chromeHost: hint.chromeHost,
+            chromeTargetId: hint.chromeTargetId,
+            tabUrl: hint.tabUrl,
+          };
+        },
+      }).then(async (runResult) => {
+        closeChromePort = runResult.chromePort ?? runtimeHint?.chromePort;
+        closeChromeHost = runResult.chromeHost ?? runtimeHint?.chromeHost;
+        finalConversationId = runResult.conversationId ?? trimmedConversationId;
+        answerMarkdown = runResult.answerMarkdown;
+        const refreshListOptions: BrowserProviderListOptions = {
+          configuredUrl: browserRunConfig.grokUrl ?? browserRunConfig.url ?? null,
+          host: runResult.chromeHost ?? runtimeHint?.chromeHost,
+          port: runResult.chromePort ?? runtimeHint?.chromePort,
+          tabTargetId: runResult.chromeTargetId ?? runtimeHint?.chromeTargetId,
+          tabUrl: runResult.tabUrl ?? runtimeHint?.tabUrl,
+        };
+        const files = await llmService.listConversationFiles(finalConversationId, {
+          projectId,
+          listOptions: refreshListOptions,
+        });
+        refreshedFileCount = files.length;
+      });
+
+      console.log(`Appended ${attachments.length} file(s) to conversation ${finalConversationId}.`);
+      if (answerMarkdown.trim()) {
+        console.log('');
+        console.log(answerMarkdown.trim());
+      }
+      console.log(chalk.dim(`Conversation files refreshed (${refreshedFileCount} total).`));
+    } finally {
+      if (!keepBrowserRequested && closeChromePort) {
+        await closeBrowserEndpoint(closeChromePort, closeChromeHost, browserLogger);
+      }
+    }
+  });
+
+conversationFilesCommand
+  .command('list <id>')
+  .description('List files for a conversation.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--project-id <id>', 'Project ID or name (if the conversation is in a project).')
+  .action(async (conversationId, commandOptions, command) => {
+    const parentOptions = command.parent?.parent?.opts?.() ?? {};
+    const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
+      | 'chatgpt'
+      | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
+    const projectArg = commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const files = await llmService.listConversationFiles(String(conversationId).trim(), {
+      projectId,
+      listOptions,
+    });
+    if (files.length === 0) {
+      console.log(`No files found for conversation ${conversationId}.`);
+      return;
+    }
+    if (!process.stdout.isTTY) {
+      console.log(JSON.stringify(files, null, 2));
+      return;
+    }
+    for (const file of files) {
+      const suffix = typeof file.size === 'number' ? ` (${file.size} B)` : '';
+      console.log(`${file.id}\t${file.name}${suffix}`);
+    }
+    console.log(chalk.dim(`Listed ${files.length} conversation file(s).`));
   });
 
 const conversationContextCommand = conversationsCommand
@@ -1422,6 +1843,7 @@ conversationContextCommand
     const projectArg =
       commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
     const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const scopedListOptions = projectId ? { ...listOptions, projectId } : listOptions;
     const selector = String(id || '').trim();
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selector);
     const conversationId = isUuid
@@ -1430,7 +1852,7 @@ conversationContextCommand
           await llmService.resolveConversationSelector(selector, {
             projectId,
             forceRefresh: true,
-            listOptions,
+            listOptions: scopedListOptions,
           })
         ).id;
     const refresh = commandOptions.cacheOnly ? false : true;
@@ -1748,7 +2170,7 @@ cacheFilesCommand
   .option('--conversation-id <id>', 'Filter to a single conversation ID.')
   .option('--project-id <id>', 'Filter to a single project ID.')
   .option(
-    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge>',
+    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge|account-files>',
     'Filter by cached dataset type.',
   )
   .option('--query <text>', 'Match against display name/id/url/path text.')
@@ -1813,7 +2235,7 @@ cacheFilesCommand
   .option('--conversation-id <id>', 'Filter to a single conversation ID.')
   .option('--project-id <id>', 'Filter to a single project ID.')
   .option(
-    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge>',
+    '--dataset <conversation-context|conversation-files|conversation-attachments|project-knowledge|account-files>',
     'Filter by cached dataset type.',
   )
   .option('--query <text>', 'Match against display name/id/url/path text.')
@@ -1998,7 +2420,7 @@ cacheCommand
   .option('--provider <chatgpt|grok>', 'Limit clear to one provider.')
   .option('--identity-key <key>', 'Limit clear to one identity key.')
   .option(
-    '--dataset <all|projects|conversations|context|conversation-files|conversation-attachments|project-knowledge|project-instructions>',
+    '--dataset <all|projects|conversations|context|account-files|conversation-files|conversation-attachments|project-knowledge|project-instructions>',
     'Dataset to clear.',
     'all',
   )
@@ -2163,6 +2585,7 @@ program
     });
     const projectArg = commandOptions.projectId ?? userConfig.browser?.projectId;
     const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const scopedListOptions = projectId ? { ...listOptions, projectId } : listOptions;
     const matchMode = (commandOptions.match ?? 'exact') as string;
     const deleteAll = Boolean(commandOptions.all);
     const skipConfirm = Boolean(commandOptions.yes);
@@ -2183,7 +2606,7 @@ program
       return new RegExp(regex, 'i');
     };
 
-    const conversationList = await llmService.listConversations(projectId, listOptions);
+    const conversationList = await llmService.listConversations(projectId, scopedListOptions);
     const pattern = String(id || '');
     const matchId = normalize(pattern);
     const matcher =
@@ -2244,10 +2667,21 @@ program
     console.log(chalk.green('Deleted successfully.'));
 
     try {
-      console.log('Refreshing conversation cache...');
-      const cacheContext = await llmService.resolveCacheContext(listOptions);
+      const cacheContext = await llmService.resolveCacheContext(scopedListOptions);
       assertCacheIdentity(cacheContext, target);
-      const refreshed = await llmService.listConversations(projectId, listOptions);
+      const configuredStore = cacheContext.userConfig.browser?.cache?.store;
+      const cacheStoreKind: CacheStoreKind =
+        configuredStore === 'json' || configuredStore === 'sqlite' || configuredStore === 'dual'
+          ? configuredStore
+          : 'dual';
+      const cacheStore = createCacheStore(cacheStoreKind);
+      for (const item of matches) {
+        await cacheStore.writeConversationFiles(cacheContext, item.id, []);
+        await cacheStore.writeConversationAttachments(cacheContext, item.id, []);
+      }
+
+      console.log('Refreshing conversation cache...');
+      const refreshed = await llmService.listConversations(projectId, scopedListOptions);
       if (Array.isArray(refreshed)) {
         await writeConversationCache(cacheContext, refreshed);
         console.log('Conversation cache refreshed.');
@@ -2871,8 +3305,13 @@ function readOptionRaw(options: OptionValues, keys: string[]): unknown {
 
 function readStringOption(options: OptionValues, keys: string[]): string | undefined {
   const raw = readOptionRaw(options, keys);
-  if (typeof raw !== 'string') return undefined;
-  const value = raw.trim();
+  const value =
+    typeof raw === 'string'
+      ? raw.trim()
+      : Array.isArray(raw)
+        ? raw.find((entry) => typeof entry === 'string' && entry.trim().length > 0)?.trim()
+        : undefined;
+  if (typeof value !== 'string') return undefined;
   return value.length > 0 ? value : undefined;
 }
 
@@ -2892,10 +3331,11 @@ function parseCacheFileDataset(raw: unknown): string | undefined {
     'conversation-files',
     'conversation-attachments',
     'project-knowledge',
+    'account-files',
   ]);
   if (!valid.has(normalized)) {
     throw new Error(
-      'dataset must be one of: conversation-context, conversation-files, conversation-attachments, project-knowledge.',
+      'dataset must be one of: conversation-context, conversation-files, conversation-attachments, project-knowledge, account-files.',
     );
   }
   return normalized;
@@ -4246,6 +4686,7 @@ type CacheDatasetName =
   | 'projects'
   | 'conversations'
   | 'context'
+  | 'account-files'
   | 'conversation-files'
   | 'conversation-attachments'
   | 'project-knowledge'
@@ -4599,6 +5040,7 @@ function parseCacheDataset(raw: unknown): CacheDatasetName {
     'projects',
     'conversations',
     'context',
+    'account-files',
     'conversation-files',
     'conversation-attachments',
     'project-knowledge',
@@ -4606,7 +5048,7 @@ function parseCacheDataset(raw: unknown): CacheDatasetName {
   ]);
   if (!valid.has(normalized)) {
     throw new Error(
-      'dataset must be one of: all, projects, conversations, context, conversation-files, conversation-attachments, project-knowledge, project-instructions.',
+      'dataset must be one of: all, projects, conversations, context, account-files, conversation-files, conversation-attachments, project-knowledge, project-instructions.',
     );
   }
   return normalized;
@@ -4895,6 +5337,7 @@ function resolveSqlDatasetFilter(dataset: CacheDatasetName): string[] | null {
     projects: 'projects',
     conversations: 'conversations',
     context: 'conversation-context',
+    'account-files': 'account-files',
     'conversation-files': 'conversation-files',
     'conversation-attachments': 'conversation-attachments',
     'project-knowledge': 'project-knowledge',

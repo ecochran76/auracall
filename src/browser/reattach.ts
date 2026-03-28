@@ -8,7 +8,7 @@ import {
   ensurePromptReady,
 } from './pageActions.js';
 import type { BrowserLogger, ChromeClient, CookieParam } from './types.js';
-import { launchChrome, connectToChrome, hideChromeWindow } from './chromeLifecycle.js';
+import { launchChrome, connectToChrome, hideChromeWindow, wasChromeLaunchedByAuracall } from './chromeLifecycle.js';
 import { resolveBrowserConfig } from './config.js';
 import { syncCookies } from './cookies.js';
 import { cleanupStaleProfileState } from './profileState.js';
@@ -88,6 +88,7 @@ export async function resumeBrowserSession(
         return {
           port: chrome.port,
           host: chrome.host,
+          launchedByAuracall: wasChromeLaunchedByAuracall(chrome),
           process: chrome.process,
           kill: async () => {
             await chrome.kill();

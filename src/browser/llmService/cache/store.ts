@@ -14,6 +14,7 @@ import {
   readProjectCache,
   readConversationCache,
   readConversationContextCache,
+  readAccountFilesCache,
   readConversationFilesCache,
   readConversationAttachmentsCache,
   readProjectKnowledgeCache,
@@ -21,19 +22,169 @@ import {
   writeProjectCache,
   writeConversationCache,
   writeConversationContextCache,
+  writeAccountFilesCache,
   writeConversationFilesCache,
   writeConversationAttachmentsCache,
   writeProjectKnowledgeCache,
   writeProjectInstructionsCache,
   resolveProviderCachePath,
+  resolveConversationCacheFileName,
+  resolveConversationCacheScopeId,
 } from '../../providers/cache.js';
 import { resolveCacheEntryPath, upsertCacheIndexEntry } from './index.js';
+import { choosePreferredGrokConversation } from '../../providers/grokAdapter.js';
 
 export interface CachedConversationContextEntry {
   conversationId: string;
   updatedAt: string | null;
   fetchedAt: string | null;
   path: string | null;
+}
+
+const ACCOUNT_FILES_ENTITY_ID = '__account__';
+
+function resolveConversationScopeEntityId(context: ProviderCacheContext): string {
+  return resolveConversationCacheScopeId(context) ?? '';
+}
+
+function isGlobalConversationScope(context: ProviderCacheContext): boolean {
+  return resolveConversationCacheScopeId(context) === null;
+}
+
+function normalizeConversationTitle(
+  title: string | null | undefined,
+  conversationId?: string | null | undefined,
+): string {
+  const normalized = String(title ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+  const normalizedId = String(conversationId ?? '').toLowerCase().replace(/\s+/g, ' ').trim();
+  if (!normalized || normalized === normalizedId) {
+    return '';
+  }
+  return normalized;
+}
+
+function genericConversationTitleQuality(
+  title: string | null | undefined,
+  conversationId?: string | null | undefined,
+): number {
+  const normalized = normalizeConversationTitle(title, conversationId);
+  if (!normalized) return 0;
+  let score = 1;
+  if (/\s/.test(normalized)) score += 1;
+  if (normalized.length >= 12) score += 1;
+  return score;
+}
+
+function choosePreferredConversation(
+  existing: Conversation | null | undefined,
+  candidate: Conversation,
+): Conversation {
+  if (!existing) {
+    return candidate;
+  }
+  if (existing.provider === 'grok' || candidate.provider === 'grok') {
+    const preferred = choosePreferredGrokConversation(existing, candidate);
+    const fallback = preferred === existing ? candidate : existing;
+    return {
+      ...fallback,
+      ...preferred,
+      projectId: preferred.projectId ?? fallback.projectId,
+      url: preferred.url ?? fallback.url,
+      updatedAt: preferred.updatedAt ?? fallback.updatedAt,
+    };
+  }
+  const existingQuality = genericConversationTitleQuality(existing.title, existing.id);
+  const candidateQuality = genericConversationTitleQuality(candidate.title, candidate.id);
+  if (candidateQuality !== existingQuality) {
+    const preferred = candidateQuality > existingQuality ? candidate : existing;
+    const fallback = preferred === existing ? candidate : existing;
+    return {
+      ...fallback,
+      ...preferred,
+      projectId: preferred.projectId ?? fallback.projectId,
+      url: preferred.url ?? fallback.url,
+      updatedAt: preferred.updatedAt ?? fallback.updatedAt,
+    };
+  }
+  const existingTimestamp = existing.updatedAt ? Date.parse(existing.updatedAt) : Number.NEGATIVE_INFINITY;
+  const candidateTimestamp = candidate.updatedAt ? Date.parse(candidate.updatedAt) : Number.NEGATIVE_INFINITY;
+  if (candidateTimestamp !== existingTimestamp) {
+    const preferred = candidateTimestamp > existingTimestamp ? candidate : existing;
+    const fallback = preferred === existing ? candidate : existing;
+    return {
+      ...fallback,
+      ...preferred,
+      projectId: preferred.projectId ?? fallback.projectId,
+      url: preferred.url ?? fallback.url,
+      updatedAt: preferred.updatedAt ?? fallback.updatedAt,
+    };
+  }
+  return {
+    ...existing,
+    ...candidate,
+    title: existing.title || candidate.title,
+    projectId: existing.projectId ?? candidate.projectId,
+    url: existing.url ?? candidate.url,
+    updatedAt: existing.updatedAt ?? candidate.updatedAt,
+  };
+}
+
+function mergeConversationLists(lists: Conversation[][]): Conversation[] {
+  const merged = new Map<string, Conversation>();
+  for (const list of lists) {
+    for (const item of list) {
+      if (!item?.id) continue;
+      merged.set(item.id, choosePreferredConversation(merged.get(item.id), item));
+    }
+  }
+  return Array.from(merged.values());
+}
+
+function combineConversationCacheResults(
+  results: CacheReadResult<Conversation[]>[],
+): CacheReadResult<Conversation[]> {
+  const items = mergeConversationLists(results.map((result) => result.items));
+  const fetchedAt = results.reduce<number | null>((max, result) => {
+    if (result.fetchedAt === null) return max;
+    if (max === null) return result.fetchedAt;
+    return Math.max(max, result.fetchedAt);
+  }, null);
+  const stale = results.length === 0 ? true : results.every((result) => result.stale);
+  return { items, fetchedAt, stale };
+}
+
+async function readSupplementalProjectConversationCaches(
+  context: ProviderCacheContext,
+): Promise<CacheReadResult<Conversation[]>[]> {
+  if (!isGlobalConversationScope(context)) {
+    return [];
+  }
+  const { cacheDir } = resolveProviderCachePath(context, 'conversations.json');
+  const projectDir = path.join(cacheDir, 'project-conversations');
+  try {
+    const files = await fs.readdir(projectDir, { withFileTypes: true });
+    const results: CacheReadResult<Conversation[]>[] = [];
+    for (const file of files) {
+      if (!file.isFile() || !file.name.endsWith('.json')) continue;
+      const projectId = file.name.replace(/\.json$/i, '').trim();
+      if (!projectId) continue;
+      const scopedContext: ProviderCacheContext = {
+        ...context,
+        listOptions: {
+          ...context.listOptions,
+          projectId,
+        },
+      };
+      results.push(await readConversationCache(scopedContext));
+    }
+    return results;
+  } catch (error) {
+    const code = (error as { code?: string }).code;
+    if (code === 'ENOENT') {
+      return [];
+    }
+    throw error;
+  }
 }
 
 export interface CacheStore {
@@ -49,6 +200,13 @@ export interface CacheStore {
     context: ProviderCacheContext,
     conversationId: string,
     payload: ConversationContext,
+  ): Promise<void>;
+  readAccountFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>>;
+  writeAccountFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
   ): Promise<void>;
   readConversationFiles(
     context: ProviderCacheContext,
@@ -108,14 +266,20 @@ export class JsonCacheStore implements CacheStore {
   async readConversations(
     context: ProviderCacheContext,
   ): Promise<CacheReadResult<Conversation[]>> {
-    return readConversationCache(context);
+    const primary = await readConversationCache(context);
+    if (!isGlobalConversationScope(context)) {
+      return primary;
+    }
+    const supplemental = await readSupplementalProjectConversationCaches(context);
+    return combineConversationCacheResults([primary, ...supplemental]);
   }
 
   async writeConversations(context: ProviderCacheContext, items: Conversation[]): Promise<void> {
     await writeConversationCache(context, items);
     await upsertCacheIndexEntry(context, {
       kind: 'conversations',
-      path: resolveCacheEntryPath(context, 'conversations.json'),
+      path: resolveCacheEntryPath(context, resolveConversationCacheFileName(context)),
+      projectId: resolveConversationCacheScopeId(context) ?? undefined,
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -137,6 +301,24 @@ export class JsonCacheStore implements CacheStore {
       kind: 'context',
       path: resolveCacheEntryPath(context, `contexts/${conversationId}.json`),
       conversationId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return readAccountFilesCache(context);
+  }
+
+  async writeAccountFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    await writeAccountFilesCache(context, files);
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-files',
+      path: resolveCacheEntryPath(context, 'account-files.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -308,6 +490,7 @@ type SqlDataset =
   | 'projects'
   | 'conversations'
   | 'conversation-context'
+  | 'account-files'
   | 'conversation-files'
   | 'conversation-attachments'
   | 'project-knowledge'
@@ -335,14 +518,66 @@ export class SqliteCacheStore implements CacheStore {
   }
 
   async readConversations(context: ProviderCacheContext): Promise<CacheReadResult<Conversation[]>> {
-    return this.readDataset<Conversation[]>(context, 'conversations', '', []);
+    if (!isGlobalConversationScope(context)) {
+      return this.readDataset<Conversation[]>(context, 'conversations', resolveConversationScopeEntityId(context), []);
+    }
+    const dbPath = await this.ensureDatabase(context);
+    return this.withDatabase(dbPath, async (db) => {
+      const rows = db
+        .prepare(
+          'SELECT entity_id, items_json, fetched_at, source_url FROM cache_entries WHERE dataset = ?',
+        )
+        .all('conversations');
+      if (!rows.length) {
+        return { items: [], fetchedAt: null, stale: true };
+      }
+      const ttlMs = context.ttlMs && Number.isFinite(context.ttlMs) && context.ttlMs > 0
+        ? context.ttlMs
+        : PROVIDER_CACHE_TTL_MS;
+      const now = Date.now();
+      const configuredUrl = context.listOptions.configuredUrl ?? null;
+      const results: CacheReadResult<Conversation[]>[] = rows.map((row) => {
+        let items: Conversation[] = [];
+        try {
+          const raw = typeof row.items_json === 'string' ? row.items_json : '';
+          const parsed = JSON.parse(raw) as Conversation[];
+          if (Array.isArray(parsed)) {
+            items = parsed;
+          }
+        } catch {
+          items = [];
+        }
+        const fetchedAt =
+          typeof row.fetched_at === 'string' && row.fetched_at.trim().length > 0
+            ? Date.parse(row.fetched_at)
+            : NaN;
+        const tooOld = Number.isFinite(fetchedAt) ? now - fetchedAt > ttlMs : true;
+        const sourceUrl =
+          typeof row.source_url === 'string' && row.source_url.trim().length > 0
+            ? row.source_url.trim()
+            : null;
+        const urlMismatch =
+          typeof configuredUrl === 'string' &&
+          configuredUrl.length > 0 &&
+          typeof sourceUrl === 'string' &&
+          sourceUrl.length > 0 &&
+          configuredUrl !== sourceUrl;
+        return {
+          items,
+          fetchedAt: Number.isFinite(fetchedAt) ? fetchedAt : null,
+          stale: tooOld || urlMismatch,
+        };
+      });
+      return combineConversationCacheResults(results);
+    });
   }
 
   async writeConversations(context: ProviderCacheContext, items: Conversation[]): Promise<void> {
-    await this.writeDataset(context, 'conversations', '', items);
+    await this.writeDataset(context, 'conversations', resolveConversationScopeEntityId(context), items);
     await upsertCacheIndexEntry(context, {
       kind: 'conversations',
-      path: resolveCacheEntryPath(context, 'conversations.json'),
+      path: resolveCacheEntryPath(context, resolveConversationCacheFileName(context)),
+      projectId: resolveConversationCacheScopeId(context) ?? undefined,
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -370,6 +605,32 @@ export class SqliteCacheStore implements CacheStore {
       kind: 'context',
       path: resolveCacheEntryPath(context, `contexts/${conversationId}.json`),
       conversationId,
+      sourceUrl: context.listOptions.configuredUrl ?? null,
+    });
+  }
+
+  async readAccountFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return this.readDataset<FileRef[]>(context, 'account-files', ACCOUNT_FILES_ENTITY_ID, []);
+  }
+
+  async writeAccountFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    const dbPath = await this.ensureDatabase(context);
+    await this.writeDatasetAtPath(dbPath, context, 'account-files', ACCOUNT_FILES_ENTITY_ID, files);
+    await this.syncFileBindings(dbPath, context, {
+      dataset: 'account-files',
+      entityId: ACCOUNT_FILES_ENTITY_ID,
+      conversationId: null,
+      projectId: null,
+      files,
+    });
+    await upsertCacheIndexEntry(context, {
+      kind: 'account-files',
+      path: resolveCacheEntryPath(context, 'account-files.json'),
       sourceUrl: context.listOptions.configuredUrl ?? null,
     });
   }
@@ -762,6 +1023,20 @@ export class SqliteCacheStore implements CacheStore {
       });
       await this.syncConversationContextRelations(dbPath, context, id, entry.items);
     }
+    const accountFilesEntry = await readAccountFilesCache(context);
+    if (accountFilesEntry.fetchedAt !== null) {
+      await this.writeDatasetAtPath(dbPath, context, 'account-files', ACCOUNT_FILES_ENTITY_ID, accountFilesEntry.items, {
+        fetchedAt: new Date(accountFilesEntry.fetchedAt).toISOString(),
+        sourceUrl: null,
+      });
+      await this.syncFileBindings(dbPath, context, {
+        dataset: 'account-files',
+        entityId: ACCOUNT_FILES_ENTITY_ID,
+        conversationId: null,
+        projectId: null,
+        files: accountFilesEntry.items,
+      });
+    }
     for (const id of await this.listJsonIds(path.join(this.resolveCacheDir(context), 'conversation-files'))) {
       const entry = await readConversationFilesCache(context, id);
       if (entry.fetchedAt === null) continue;
@@ -843,9 +1118,10 @@ export class SqliteCacheStore implements CacheStore {
         .prepare(
           `SELECT dataset, entity_id, items_json
              FROM cache_entries
-            WHERE dataset IN (?, ?, ?, ?)`,
+            WHERE dataset IN (?, ?, ?, ?, ?)`,
         )
         .all(
+          'account-files',
           'conversation-context',
           'conversation-files',
           'conversation-attachments',
@@ -1331,6 +1607,28 @@ class DualCacheStore implements CacheStore {
       () => this.primary.writeConversationContext(context, conversationId, payload),
       () => this.secondary.writeConversationContext(context, conversationId, payload),
       'writeConversationContext',
+    );
+  }
+
+  async readAccountFiles(
+    context: ProviderCacheContext,
+  ): Promise<CacheReadResult<FileRef[]>> {
+    return this.readThrough(
+      context,
+      () => this.primary.readAccountFiles(context),
+      () => this.secondary.readAccountFiles(context),
+      (items) => this.primary.writeAccountFiles(context, items),
+    );
+  }
+
+  async writeAccountFiles(
+    context: ProviderCacheContext,
+    files: FileRef[],
+  ): Promise<void> {
+    await this.writeBoth(
+      () => this.primary.writeAccountFiles(context, files),
+      () => this.secondary.writeAccountFiles(context, files),
+      'writeAccountFiles',
     );
   }
 

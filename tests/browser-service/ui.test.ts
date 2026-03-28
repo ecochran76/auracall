@@ -1,5 +1,10 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import {
+  clickRevealedRowAction,
+  collectUiDiagnostics,
+  findAndClickByLabel,
+  navigateAndSettle,
+  openRevealedRowMenu,
   pressButton,
   waitForDocumentReady,
   waitForNotSelector,
@@ -7,18 +12,20 @@ import {
   waitForScriptText,
   waitForSelector,
   waitForVisibleSelector,
+  withUiDiagnostics,
 } from '../../packages/browser-service/src/service/ui.js';
 
 function createRuntime(values: unknown[]) {
   let callIndex = 0;
+  const evaluate = vi.fn(async () => {
+    const value = callIndex < values.length ? values[callIndex] : values.at(-1);
+    callIndex += 1;
+    return { result: { value } };
+  });
   return {
-    evaluate: async () => {
-      const value = callIndex < values.length ? values[callIndex] : values.at(-1);
-      callIndex += 1;
-      return { result: { value } };
-    },
+    evaluate,
   } as {
-    evaluate: (options: { expression: string; returnByValue?: boolean }) => Promise<{ result: { value: unknown } }>;
+    evaluate: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -108,6 +115,150 @@ describe('browser-service ui wait helpers', () => {
     });
   });
 
+  test('findAndClickByLabel searches across all matching root selectors, not only the first', async () => {
+    const runtime = createRuntime([true]);
+
+    const clicked = await findAndClickByLabel(runtime as never, {
+      selectors: ['[role="menuitem"]'],
+      match: { exact: ['rename'] },
+      rootSelectors: ['[role="menu"]'],
+    });
+
+    expect(clicked).toBe(true);
+  });
+
+  test('collectUiDiagnostics returns a bounded structured page snapshot', async () => {
+    const runtime = createRuntime([
+      {
+        url: 'https://grok.com/project/abc123',
+        title: 'Grok',
+        readyState: 'interactive',
+        activeElement: { tag: 'input', role: 'textbox', ariaLabel: 'Rename', text: null },
+        dialogs: [{ selector: '[role="dialog"]', tag: 'div', role: 'dialog', ariaLabel: null, text: 'Rename project' }],
+        menus: [{ selector: '[role="menu"]', tag: 'div', role: 'menu', ariaLabel: null, text: 'Menu', items: ['Rename', 'Delete'] }],
+        buttons: [{ selector: 'button[aria-label="Options"]', tag: 'button', role: null, ariaLabel: 'Options', text: null }],
+        candidates: [{ selector: '[data-oracle-project-row="true"]', count: 1, samples: ['Oracle'] }],
+        roots: ['nav'],
+      },
+    ]);
+
+    const result = await collectUiDiagnostics(runtime as never, {
+      rootSelectors: ['nav'],
+      candidateSelectors: ['[data-oracle-project-row="true"]'],
+      limit: 5,
+    });
+
+    expect(result).toEqual({
+      url: 'https://grok.com/project/abc123',
+      title: 'Grok',
+      readyState: 'interactive',
+      activeElement: { tag: 'input', role: 'textbox', ariaLabel: 'Rename', text: null },
+      dialogs: [{ selector: '[role="dialog"]', tag: 'div', role: 'dialog', ariaLabel: null, text: 'Rename project' }],
+      menus: [{ selector: '[role="menu"]', tag: 'div', role: 'menu', ariaLabel: null, text: 'Menu', items: ['Rename', 'Delete'] }],
+      buttons: [{ selector: 'button[aria-label="Options"]', tag: 'button', role: null, ariaLabel: 'Options', text: null }],
+      candidates: [{ selector: '[data-oracle-project-row="true"]', count: 1, samples: ['Oracle'] }],
+      roots: ['nav'],
+    });
+  });
+
+  test('withUiDiagnostics appends a diagnostics payload to thrown errors', async () => {
+    const runtime = createRuntime([
+      {
+        url: 'https://grok.com/project/abc123',
+        title: 'Grok',
+        readyState: 'complete',
+        activeElement: null,
+        dialogs: [],
+        menus: [],
+        buttons: [],
+        candidates: [],
+        roots: [],
+      },
+    ]);
+
+    await expect(
+      withUiDiagnostics(
+        runtime as never,
+        async () => {
+          throw new Error('Menu item not found');
+        },
+        { label: 'grok-project-menu' },
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('grok-project-menu: Menu item not found'),
+      uiDiagnostics: {
+        url: 'https://grok.com/project/abc123',
+        title: 'Grok',
+      },
+    });
+  });
+
+  test('navigateAndSettle runs route/document/ready checks after Page.navigate', async () => {
+    const runtime = createRuntime([
+      { path: '/files' },
+      { readyState: 'interactive', visibilityState: 'visible' },
+      { loaded: true },
+    ]);
+    const Page = {
+      navigate: vi.fn(async () => undefined),
+    };
+
+    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+      url: 'https://grok.com/files',
+      routeExpression: 'location.pathname === "/files"',
+      readyExpression: 'window.__filesReady',
+      timeoutMs: 50,
+      pollMs: 1,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.fallbackUsed).toBe(false);
+    expect(Page.navigate).toHaveBeenCalledWith({ url: 'https://grok.com/files' });
+    expect(runtime.evaluate).toHaveBeenCalledTimes(3);
+  });
+
+  test('navigateAndSettle retries with location.assign when the first route settle fails', async () => {
+    let fallbackTriggered = false;
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('location.assign')) {
+          fallbackTriggered = true;
+          return { result: { value: 'assigned' } };
+        }
+        if (options.expression.includes('location.pathname === "/files"')) {
+          return { result: { value: fallbackTriggered ? { path: '/files' } : null } };
+        }
+        if (options.expression.includes('document.readyState')) {
+          return { result: { value: { readyState: 'interactive', visibilityState: 'visible' } } };
+        }
+        if (options.expression.includes('window.__filesReady')) {
+          return { result: { value: { loaded: true } } };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const Page = {
+      navigate: vi.fn(async () => undefined),
+    };
+
+    const result = await navigateAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+      url: 'https://grok.com/files',
+      routeExpression: 'location.pathname === "/files"',
+      readyExpression: 'window.__filesReady',
+      timeoutMs: 50,
+      fallbackToLocationAssign: true,
+      pollMs: 1,
+    });
+
+    expect(result.ok).toBe(true);
+    expect(result.fallbackUsed).toBe(true);
+    expect(
+      runtime.evaluate.mock.calls.some(
+        (call) => typeof call?.[0]?.expression === 'string' && call[0].expression.includes('location.assign'),
+      ),
+    ).toBe(true);
+  });
+
   test('pressButton waits for a visible selector before clicking', async () => {
     const runtime = createRuntime([
       {
@@ -125,5 +276,158 @@ describe('browser-service ui wait helpers', () => {
     });
 
     expect(result).toEqual({ ok: true, matchedLabel: 'submit' });
+  });
+
+  test('clickRevealedRowAction reveals a hover action before pressing it', async () => {
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('document.elementFromPoint')) {
+          return { result: { value: { ok: true, element: { tag: 'button' } } } };
+        }
+        if (options.expression.includes('const matchOptions =')) {
+          return { result: { value: { ok: true, actions: [{ label: 'rename' }] } } };
+        }
+        if (options.expression.includes('const anchorSelector =')) {
+          return { result: { value: { ok: true, matchedLabel: 'rename' } } };
+        }
+        if (options.expression.includes('center: { x: rect.left + rect.width / 2')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                rect: { x: 10, y: 20, width: 100, height: 32 },
+                center: { x: 60, y: 36 },
+              },
+            },
+          };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const input = {
+      dispatchMouseEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await clickRevealedRowAction(
+      { Runtime: runtime as never, Input: input as never },
+      {
+        rowSelector: '[data-row="true"]',
+        anchorSelector: '[data-item="true"]',
+        rootSelectors: ['[role="dialog"]'],
+        actionMatch: { exact: ['rename'] },
+        timeoutMs: 50,
+      },
+    );
+
+    expect(result).toEqual({ ok: true, matchedLabel: 'rename' });
+    expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
+  });
+
+  test('openRevealedRowMenu reveals a row menu trigger before opening the menu', async () => {
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('document.elementFromPoint')) {
+          return { result: { value: { ok: true, element: { tag: 'button' } } } };
+        }
+        if (options.expression.includes('const matchOptions =')) {
+          return { result: { value: { ok: true, actions: [{ label: 'options' }] } } };
+        }
+        if (options.expression.includes('const selector = "[data-options=\\"true\\"]"')) {
+          return { result: { value: { ok: true, listId: 'menu-123' } } };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("#menu-123"))')) {
+          return { result: { value: true } };
+        }
+        if (options.expression.includes('center: { x: rect.left + rect.width / 2')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                rect: { x: 10, y: 20, width: 100, height: 32 },
+                center: { x: 60, y: 36 },
+              },
+            },
+          };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const input = {
+      dispatchMouseEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await openRevealedRowMenu(
+      { Runtime: runtime as never, Input: input as never },
+      {
+        rowSelector: '[data-row="true"]',
+        triggerSelector: '[data-options="true"]',
+        rootSelectors: ['nav'],
+        triggerRootSelectors: ['[data-row="true"]'],
+        actionMatch: { exact: ['options'] },
+        menuSelector: '[role="menu"]',
+        timeoutMs: 50,
+      },
+    );
+
+    expect(result).toEqual({ ok: true, menuSelector: '#menu-123' });
+    expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
+  });
+
+  test('openRevealedRowMenu can prepare the trigger and fall back to a direct click', async () => {
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('document.elementFromPoint')) {
+          return { result: { value: { ok: true, element: { tag: 'button' } } } };
+        }
+        if (options.expression.includes('const matchOptions =')) {
+          return { result: { value: { ok: true, actions: [{ label: 'options' }] } } };
+        }
+        if (options.expression.includes("trigger.style.pointerEvents = 'auto'")) {
+          return { result: { value: { ok: true } } };
+        }
+        if (options.expression.includes('const selector = "[data-options=\\"true\\"]"')) {
+          return { result: { value: { ok: false } } };
+        }
+        if (options.expression.includes('trigger.click();')) {
+          return { result: { value: { ok: true } } };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("[role=\\"menu\\"]"))')) {
+          return { result: { value: true } };
+        }
+        if (options.expression.includes('center: { x: rect.left + rect.width / 2')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                rect: { x: 10, y: 20, width: 100, height: 32 },
+                center: { x: 60, y: 36 },
+              },
+            },
+          };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const input = {
+      dispatchMouseEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await openRevealedRowMenu(
+      { Runtime: runtime as never, Input: input as never },
+      {
+        rowSelector: '[data-row="true"]',
+        triggerSelector: '[data-options="true"]',
+        rootSelectors: ['nav'],
+        triggerRootSelectors: ['[data-row="true"]'],
+        actionMatch: { exact: ['options'] },
+        menuSelector: '[role="menu"]',
+        prepareTriggerBeforeOpen: true,
+        directTriggerClickFallback: true,
+        timeoutMs: 50,
+      },
+    );
+
+    expect(result).toEqual({ ok: true, menuSelector: '[role="menu"]' });
+    expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
   });
 });

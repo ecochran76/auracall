@@ -34,6 +34,7 @@ import {
 const execFileAsync = promisify(execFile);
 const WINDOWS_WSL_DISCOVERY_ATTEMPTS = 40;
 const WINDOWS_WSL_DISCOVERY_DELAY_MS = 250;
+type ManagedChromeHandle = LaunchedChrome & { host?: string; launchedByAuracall?: boolean };
 
 export async function launchChrome(
   config: ResolvedBrowserConfig,
@@ -227,7 +228,10 @@ export async function launchChrome(
     config.headless ?? false,
     debugBindAddress,
     resolvedProfileName ?? undefined,
-    { minimal: minimalFlags },
+    {
+      minimal: minimalFlags,
+      startMinimized: !config.headless && config.hideWindow,
+    },
   );
   const bypassUserDataDir = shouldBypassLauncherUserDataDir(config.chromePath ?? undefined);
   const userDataDirFlag = `--user-data-dir=${resolveUserDataDirFlag(userDataDir, config.chromePath ?? undefined)}`;
@@ -363,7 +367,7 @@ export async function launchChrome(
     return originalKill();
   };
 
-  return Object.assign(launcher, { kill, host: runtimeHost }) as LaunchedChrome & { host?: string };
+  return Object.assign(launcher, { kill, host: runtimeHost, launchedByAuracall: true }) as ManagedChromeHandle;
 }
 
 async function safeKillLaunchedChrome(chrome: LaunchedChrome, logger: BrowserLogger): Promise<void> {
@@ -526,7 +530,8 @@ function createAdoptedChromeHandle(options: {
       kill: async () => { logger('Skipping shutdown of reused Chrome instance.'); },
       process: undefined,
       host,
-    } as unknown as LaunchedChrome & { host?: string };
+      launchedByAuracall: false,
+    } as unknown as ManagedChromeHandle;
   }
 
   return {
@@ -540,7 +545,8 @@ function createAdoptedChromeHandle(options: {
     },
     process: undefined,
     host,
-  } as unknown as LaunchedChrome & { host?: string };
+    launchedByAuracall: false,
+  } as unknown as ManagedChromeHandle;
 }
 
 function isCurrentRunOwnedChrome(
@@ -655,8 +661,29 @@ export function registerTerminationHooks(
 }
 
 export async function hideChromeWindow(chrome: LaunchedChrome, logger: BrowserLogger): Promise<void> {
+  const debugHost = (chrome as ManagedChromeHandle).host ?? '127.0.0.1';
+  if (chrome.port) {
+    try {
+      const endpoint = await resolveChromeEndpoint(debugHost, chrome.port, logger);
+      try {
+        const targets = (await CDP.List({ host: endpoint.host, port: endpoint.port }))
+          .filter((target) => target.type === 'page');
+        const targetId = targets[0] ? resolveTargetId(targets[0]) : undefined;
+        if (targetId) {
+          await setChromeTargetWindowState(endpoint.host, endpoint.port, targetId, 'minimized');
+          logger('Chrome window minimized');
+          return;
+        }
+      } finally {
+        await endpoint.dispose?.().catch(() => undefined);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger(`Failed to minimize Chrome window via DevTools: ${message}`);
+    }
+  }
   if (process.platform !== 'darwin') {
-    logger('Window hiding is only supported on macOS');
+    logger('Window minimization is unavailable without a DevTools target');
     return;
   }
   if (!chrome.pid) {
@@ -675,6 +702,10 @@ export async function hideChromeWindow(chrome: LaunchedChrome, logger: BrowserLo
     const message = error instanceof Error ? error.message : String(error);
     logger(`Failed to hide Chrome window: ${message}`);
   }
+}
+
+export function wasChromeLaunchedByAuracall(chrome: LaunchedChrome | null | undefined): boolean {
+  return (chrome as ManagedChromeHandle | null | undefined)?.launchedByAuracall === true;
 }
 
 export async function reuseRunningChromeProfile(
@@ -811,6 +842,7 @@ export async function openOrReuseChromeTarget(
     matchingTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
+    suppressFocus?: boolean;
   } = {},
 ): Promise<OpenOrReuseChromeTargetResult> {
   const logger = options.logger ?? (() => undefined);
@@ -830,7 +862,7 @@ export async function openOrReuseChromeTarget(
         (target) => normalizeChromeTargetUrl(target.url ?? '') === normalizedUrl,
       );
       if (exactTarget) {
-        await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(exactTarget), url, false);
+        await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(exactTarget), url, false, options.suppressFocus);
         const result = { target: exactTarget, reused: true, reason: 'exact' as const };
         await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
           selectedTargetId: resolveTargetId(exactTarget),
@@ -846,7 +878,7 @@ export async function openOrReuseChromeTarget(
 
       const blankTarget = findLastMatchingTarget(pageTargets, (target) => isReusableBlankTarget(target.url ?? ''));
       if (blankTarget) {
-        await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(blankTarget), url, true);
+        await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(blankTarget), url, true, options.suppressFocus);
         const result = { target: blankTarget, reused: true, reason: 'blank' as const };
         await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
           selectedTargetId: resolveTargetId(blankTarget),
@@ -866,7 +898,14 @@ export async function openOrReuseChromeTarget(
           (target) => urlsShareOrigin(target.url ?? '', url),
         );
         if (sameOriginTarget) {
-          await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(sameOriginTarget), url, true);
+          await focusChromeTarget(
+            endpoint.host,
+            endpoint.port,
+            resolveTargetId(sameOriginTarget),
+            url,
+            true,
+            options.suppressFocus,
+          );
           const result = { target: sameOriginTarget, reused: true, reason: 'same-origin' as const };
           await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
             selectedTargetId: resolveTargetId(sameOriginTarget),
@@ -885,7 +924,14 @@ export async function openOrReuseChromeTarget(
             (target) => urlsShareCompatibleHost(target.url ?? '', url, compatibleHosts),
           );
           if (compatibleHostTarget) {
-            await focusChromeTarget(endpoint.host, endpoint.port, resolveTargetId(compatibleHostTarget), url, true);
+            await focusChromeTarget(
+              endpoint.host,
+              endpoint.port,
+              resolveTargetId(compatibleHostTarget),
+              url,
+              true,
+              options.suppressFocus,
+            );
             const result = { target: compatibleHostTarget, reused: true, reason: 'compatible-host' as const };
             await cleanupChromeTargetStockpile(endpoint.host, endpoint.port, {
               selectedTargetId: resolveTargetId(compatibleHostTarget),
@@ -932,6 +978,7 @@ export async function connectToRemoteChrome(
     serviceTabLimit?: number;
     blankTabLimit?: number;
     collapseDisposableWindows?: boolean;
+    suppressFocus?: boolean;
   } = {},
 ): Promise<RemoteChromeConnection> {
   const endpoint = await resolveChromeEndpoint(host, port, logger);
@@ -952,6 +999,7 @@ export async function connectToRemoteChrome(
         matchingTabLimit: options.serviceTabLimit,
         blankTabLimit: options.blankTabLimit,
         collapseDisposableWindows: options.collapseDisposableWindows,
+        suppressFocus: options.suppressFocus,
       });
       const targetId = resolveTargetId(opened.target);
       const client = await CDP({ host: connectHost, port: connectPort, target: targetId });
@@ -1015,6 +1063,7 @@ async function focusChromeTarget(
   targetId: string,
   navigateUrl?: string,
   navigate = false,
+  suppressFocus = false,
 ): Promise<void> {
   const client = await CDP({ host, port, target: targetId });
   try {
@@ -1022,7 +1071,27 @@ async function focusChromeTarget(
     if (navigate && navigateUrl) {
       await client.Page.navigate({ url: navigateUrl });
     }
-    await client.Page.bringToFront().catch(() => undefined);
+    if (!suppressFocus) {
+      await client.Page.bringToFront().catch(() => undefined);
+    }
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
+async function setChromeTargetWindowState(
+  host: string,
+  port: number,
+  targetId: string,
+  state: 'minimized' | 'normal',
+): Promise<void> {
+  const client = await CDP({ host, port, target: targetId });
+  try {
+    const window = await client.Browser.getWindowForTarget({ targetId });
+    await client.Browser.setWindowBounds({
+      windowId: window.windowId,
+      bounds: { windowState: state },
+    });
   } finally {
     await client.close().catch(() => undefined);
   }
@@ -1267,11 +1336,11 @@ function findLastMatchingTarget<T>(
   return undefined;
 }
 
-function buildChromeFlags(
+export function buildChromeFlags(
   headless: boolean,
   debugBindAddress?: string | null,
   chromeProfile?: string,
-  options: { minimal?: boolean } = {},
+  options: { minimal?: boolean; startMinimized?: boolean } = {},
 ): string[] {
   const flags = options.minimal
     ? ['--new-window', '--hide-crash-restore-bubble']
@@ -1313,6 +1382,10 @@ function buildChromeFlags(
 
   if (headless) {
     flags.push('--headless=new');
+  }
+
+  if (!headless && options.startMinimized) {
+    flags.push('--start-minimized');
   }
 
   return flags;

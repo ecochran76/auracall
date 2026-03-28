@@ -21,6 +21,95 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-27
+- Area: Browser/Grok WSL acceptance hardening (clone rename verification + project conversation tab fallback)
+- Symptom: The new scripted WSL Grok acceptance runner immediately found two last real product problems that earlier manual spot checks had not forced consistently. `projects clone <id> <new-name>` could return success while the refreshed project list still showed `(<source name> clone)` instead of the requested clone name, and right after a successful project-scoped browser prompt the first `conversations --project-id ... --refresh --include-history` could still die with `Project conversations list did not load`.
+- Root cause:
+  - The CLI clone flow in `bin/auracall.ts` treated the post-clone rename as best-effort. It called `renameProject(...)`, but if the rename drifted or the refreshed list never reflected the requested name, the command only logged a warning and still exited successfully.
+  - Project-scoped conversation refresh still relied on an in-page Conversations tab click from the current project page state. After a browser run, Grok sometimes stayed in a project-chat surface where the tab click did not actually materialize the project conversation list, even though the project page itself was valid.
+- Fix:
+  - Tightened `projects clone <id> <new-name>` in `bin/auracall.ts` so it now waits for the refreshed project list to show the requested clone name for the created id and throws if the rename does not persist.
+  - Updated `openConversationList(...)` in `src/browser/providers/grokAdapter.ts` so project-scoped flows can fall back to direct `https://grok.com/project/<id>?tab=conversations` navigation before declaring the conversation list unloaded.
+  - While stabilizing the scripted runner, also fixed `scripts/grok-acceptance.ts` to understand the current top-level `conversations context get` payload shape and to verify that the assistant context includes the expected reply even when Grok prepends project instructions text.
+- Verification:
+  - `pnpm run check`
+  - `DISPLAY=:0.0 pnpm tsx scripts/grok-acceptance.ts --json`
+    - final green run returned:
+      - `ok: true`
+      - project `0c7b28e2-610a-4878-8dfa-c3d34c5a970f`
+      - clone `23fb88ea-76bc-41ca-bb23-f21388299423`
+      - conversation `aa3ee50d-cc65-4f9b-85a2-9473d115d727`
+    - cleanup removed the disposable clone and project successfully
+- Follow-ups:
+  - Decide later whether project instructions text should keep appearing inline in the assistant conversation-context payload or whether that should be normalized into a distinct system/instructions surface.
+  - Treat the scripted acceptance runner as the primary regression tripwire for future Grok browser changes instead of relying on isolated manual CRUD spot checks.
+
+- Date: 2026-03-27
+- Area: Browser/Grok WSL acceptance automation
+- Symptom: The Grok finish-up checklist had finally gone green on the authenticated WSL profile, but the proof still lived in a manual runbook plus ad hoc shell snippets. That made the definition of done easy to drift: the next refactor could quietly skip clone-rename verification, medium-file failure handling, or project-scoped conversation cleanup simply because the human operator forgot one of the steps.
+- Root cause:
+  - `docs/dev/smoke-tests.md` had the right acceptance bar, but it was prose plus command fragments, not an executable harness.
+  - The real CLI is mixed: some commands return JSON in non-TTY mode, while create/rename/remove/browser-run paths are still human-text oriented. Without a dedicated harness, the live acceptance bar depended on one-off shell parsing and manual project/conversation id tracking.
+- Fix:
+  - Added `scripts/grok-acceptance.ts`, a scripted WSL-primary acceptance runner that drives the real `auracall` CLI in non-TTY mode, parses the refreshed JSON list/context surfaces, and hard-fails on drift.
+  - The runner now covers:
+    - project create/rename/clone
+    - instructions set/get
+    - unique-file add/list/remove
+    - the explicit medium-file guard (`Uploaded file(s) did not persist after save: grok-medium.jsonl`)
+    - project conversation create/list/context/rename/delete
+    - Markdown-preserving browser prompt capture
+    - disposable project cleanup
+  - Added `pnpm test:grok-acceptance` and updated `docs/dev/smoke-tests.md`, `docs/manual-tests.md`, and `docs/testing.md` so the scripted runner is the primary Grok acceptance path.
+- Verification:
+  - `DISPLAY=:0.0 pnpm tsx scripts/grok-acceptance.ts`
+    - returned `ok: true`
+    - created disposable project `430fd142-382b-4ebc-939d-f40e33b0e31b`
+    - created disposable clone `2bc78431-0825-4cb9-af6c-1cf3dd59783b`
+    - created/discovered disposable conversation `e7ccc288-7a26-4af1-84ab-8eea308ae806`
+    - removed both disposable projects at the end
+  - `pnpm run check`
+- Follow-ups:
+  - Keep this runner opt-in/live for now; it should not be folded into the normal fast test suite.
+  - If we later need CI-style reporting, add a thin junit/json wrapper around the live runner instead of duplicating the checklist in another script.
+
+- Date: 2026-03-27
+- Area: Browser/Grok WSL acceptance finish-up (Markdown response capture + project delete)
+- Symptom: The WSL Grok acceptance pass was still not complete even after project and conversation CRUD mostly worked. The final Markdown-preservation smoke returned flattened output like `alpha` plus `txtCopybeta` instead of the original bullet and fenced code block, and project cleanup still failed with `Project menu button not found` or bogus menu items like `My Projects, Shared with me, Examples` when `projects remove ...` tried to use the current Grok sidebar.
+- Root cause:
+  - Grok browser runs were not using the richer shared ChatGPT copy-button capture path. `src/browser/actions/grok.ts` still exposed only `waitForGrokAssistantResponse(...)`, which flattened the current Grok assistant DOM via `textContent` and therefore pulled the code-block toolbar (`txt`, `Copy`) into the captured answer.
+  - `src/browser/index.ts` then hardwired `answerMarkdown = answerText` for Grok runs, so even when the page contained real structured Markdown, Aura-Call threw it away.
+  - Project delete had partially moved to the current sidebar row affordance, but `openProjectMenuButton(...)` was still anchored to the old `Open menu` assumption and accepted any Radix-like collection as a “menu,” which let unrelated project-index tabs (`My Projects`, `Shared with me`, `Examples`) masquerade as a successful row-menu open.
+- Fix:
+  - Added `waitForGrokAssistantResult(...)` in `src/browser/actions/grok.ts` and kept `waitForGrokAssistantResponse(...)` as a plain-text wrapper for compatibility.
+  - Replaced the old Grok assistant snapshot with a richer DOM serializer that:
+    - targets the current `response-content-markdown` root,
+    - strips sticky copy/tool UI, buttons, thinking/follow-up chrome,
+    - reads code from the real `data-testid="code-block"` subtree,
+    - reconstructs current Grok lists and fenced code blocks into Markdown,
+    - returns separate `text`, `markdown`, and `html`.
+  - Wired both local and remote Grok browser run paths in `src/browser/index.ts` to use the richer result so `answerMarkdown` preserves Grok’s Markdown instead of mirroring flattened text.
+  - Updated `openProjectMenuButton(...)` / `openProjectMenuAndSelect(...)` in `src/browser/providers/grokAdapter.ts` to:
+    - target the current project row in the sidebar by project id / row link,
+    - hover-reveal the hidden `button[aria-label="Options"]`,
+    - require a real open menu container before proceeding,
+    - scope menu-item selection to that menu instead of scanning the whole page.
+  - While in this acceptance slice, also fixed `projects instructions set --file ...` in `bin/auracall.ts` so merged CLI/global options are read correctly when Commander promotes `--file` into an array-valued top-level option bag.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/grokActions.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - Live Markdown smoke on the clean clone project:
+    - `DISPLAY=:0.0 pnpm tsx bin/auracall.ts --engine browser --browser-target grok --project-id a65ef98d-e67c-4dd8-b157-343d916d6f60 --model grok-4.1-thinking --prompt $'Return exactly this Markdown:\n- alpha\n```txt\nbeta\n```' --wait --force --browser-keep-browser`
+    - returned the bullet plus the fenced `txt` block intact
+  - Live project cleanup:
+    - `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects remove a65ef98d-e67c-4dd8-b157-343d916d6f60 --target grok`
+    - `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects remove f3e51b2a-1023-439a-8a67-a62134792f35 --target grok`
+    - fresh `DISPLAY=:0.0 pnpm tsx bin/auracall.ts projects --target grok --refresh`
+      - no longer listed either disposable project
+- Follow-ups:
+  - The live WSL Grok profile still tends to keep one spare `about:blank` tab and duplicate hidden `Projects - Grok` tabs after longer CRUD runs. That is separate from correctness, but it is the next tab-hygiene refinement if we keep polishing the browser path.
+  - If Grok’s Markdown surface grows more complex (tables, nested lists, richer inline formatting), the current serializer may need a broader grammar than the list/code-block cases covered in this repair.
+
+- Date: 2026-03-27
 - Area: Bastion SQL cache branch merge (`cache-mirror-2026-03-27`)
 - Symptom: The SQL cache/catalog/search/export work landed on a separate Bastion branch based on an older pre-rename CLI/doc surface, so merging it directly onto the live Aura-Call browser/Grok branch risked reviving stale `oracle` naming and older Grok/UI logic.
 - Root cause:
@@ -1764,3 +1853,670 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - doc-only update; verified by reading the linked docs together and confirming they now point to the same checklist
   - Additional finding:
     - Windows Chrome should remain secondary/manual-debug coverage until its human-session and debug-session behavior are cleanly separated. The current Grok acceptance bar should stay WSL-primary rather than pretending both paths are equally mature.
+
+- 2026-03-27: Grok project-file upload/list needed stronger saved-state verification on the WSL acceptance path
+  - Symptom:
+    - the first live `projects files list <project_id> --target grok` run failed with `Personal files modal not found`, while the immediate retry succeeded
+    - uploading `/tmp/auracall-grok-stress/medium.jsonl` printed `Uploaded 1 file(s)...`, but a fresh file list never showed `medium.jsonl`
+  - Root cause:
+    - `src/browser/providers/grokAdapter.ts` still assumed the Personal Files modal would expose its search input immediately after the opener click
+    - the upload path only verified transient modal state before `Save`; it never re-read the saved project state, so silently dropped Grok files looked like success
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - hardened `ensurePersonalFilesModalOpen(...)` with retries and a broader wait that accepts the current delayed `Personal files` dialog
+      - added `parseGrokPersonalFilesRowTexts(...)` and `readVisiblePersonalFilesWithClient(...)` so list/upload verification share one file-row parser
+      - added `waitForProjectFilesPersisted(...)` after `clickPersonalFilesSaveWithClient(...)`, so Aura-Call now reopens the project file surface after Save and fails if the requested file names never actually persist
+    - `tests/browser/grokAdapter.test.ts`
+      - added parser coverage for file row text normalization and trailing size parsing
+    - `docs/dev/smoke-tests.md`
+      - extended the Grok acceptance runbook with a file-stress step and documented that unique file names are the primary correctness check
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/grokActions.test.ts --maxWorkers 1`
+    - live multi-file add/list/remove/delete on disposable project `e130b1b0-10b9-410b-97cd-e4f62c8a349e` succeeded on the WSL Grok profile
+    - live medium-file upload now fails honestly with `Uploaded file(s) did not persist after save: medium.jsonl`
+  - Additional finding:
+    - Same-name duplicate uploads are still a provider/product ambiguity. Grok appears willing to accept duplicate names, but the current list/remove surfaces are name-based, so duplicate-name behavior should remain an exploratory stress case, not the primary acceptance bar.
+
+- 2026-03-27: Full WSL Grok acceptance still fails on project-scoped conversation refresh after a real project prompt run
+  - Symptom:
+    - a full disposable WSL acceptance pass got through project create/rename/clone, instructions get/set, unique-file add/list/remove, medium-file rejection, and the project-scoped browser prompt itself
+    - but `auracall conversations --target grok --project-id 628cae8a-8918-4567-912f-e44fde3ee3e0 --refresh --include-history` did not yield the newly created project conversation in a usable list
+    - the same acceptance run then hit a related cleanup drift: `projects remove` for the disposable project/clone could land on a menu whose visible items were just `Conversations`, not the project action menu
+  - Root cause:
+    - project-scoped conversation refresh still did not have one dependable source of truth for "conversations that belong to this project after a real prompt run"
+    - the previous implementation was too broad in one direction (root/global history results being tagged with the active `projectId`) and too narrow in another (a corrected project-page scrape still returning `[]` even though session metadata proved a project chat URL existed)
+    - the disposable project cleanup drift indicates there is still a project/conversation menu-surface ambiguity on the current Grok page state
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - stopped forcing project-scoped `includeHistory` onto the root `https://grok.com/` history path
+      - project-scoped raw scraping now ignores nodes inside the main sidebar wrapper
+      - open-tab fallback now only keeps Grok tabs whose URL actually belongs to the requested `/project/<id>`
+    - This removed the earlier over-inclusive project conversation pollution, but it did not yet solve the deeper problem: the project-scoped list still comes back empty for the live disposable project
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live partial acceptance on:
+      - project `628cae8a-8918-4567-912f-e44fde3ee3e0` / `AuraCall Harbor nzlqec`
+      - clone `17e57d61-ce6c-4e41-b13c-3f64582daaa2` / `AuraCall Orbit nzlqec`
+    - live blocker repro:
+      - `DISPLAY=:0.0 timeout 45s pnpm tsx bin/auracall.ts conversations --target grok --project-id 628cae8a-8918-4567-912f-e44fde3ee3e0 --refresh --include-history`
+      - result: `[]`
+    - live browser-session evidence of the missing conversation still existing:
+      - `~/.auracall/sessions/reply-exactly-with-auracall-maple-2/meta.json` recorded
+        - project id `628cae8a-8918-4567-912f-e44fde3ee3e0`
+        - tab URL `.../project/628cae8a-...?...chat=f3241435-0667-437d-b6ae-246f7815b1ec...`
+        - conversation id `f3241435-0667-437d-b6ae-246f7815b1ec`
+  - Additional finding:
+    - The WSL Grok path is closer, but not done. Before calling it "fully functional," Aura-Call still needs one reliable project-scoped conversation source and a cleanup/remove path that cannot drift from the project menu onto the conversations UI.
+
+- 2026-03-27: Project-scoped Grok conversation refresh now uses the project conversations tab and no longer trashes the global conversation cache
+  - Symptom:
+    - the live WSL acceptance project had a real conversation and chat id in session metadata, but `auracall conversations --target grok --project-id <id> --refresh --include-history` still returned `[]`
+    - the same project-scoped refresh path was also overwriting the shared `~/.auracall/cache/providers/grok/<identity>/conversations.json`, so a failed project refresh could wipe the global cache to `[]`
+    - disposable project cleanup was brittle because the tagged project-row menu strategy could throw before broader fallback menu-open paths had a chance to run
+  - Root cause:
+    - `src/browser/providers/grokAdapter.ts` still treated project-scoped conversation listing too much like the broad global conversation scrape. Even after narrowing some earlier selectors, the code still depended on mixed surfaces instead of the actual project conversations tab that Grok renders in `main`.
+    - conversation cache storage was keyed only by provider + identity, not by project scope, so project-scoped refreshes and global refreshes shared the same `conversations.json`.
+    - `openProjectMenuButton(...)` hard-failed when the tagged sidebar project row was transient, even though the broader menu-button fallbacks could still have succeeded.
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - added a focused project-conversation readiness wait
+      - added direct project-tab conversation extraction from `main [role="tabpanel"]` / `main`
+      - changed project-scoped `listConversations(...)` to prefer that focused project list, with project history only as fallback
+      - relaxed the tagged project-row menu-open path so transient row-selector failures fall through to other menu strategies
+    - `src/browser/providers/types.ts`
+      - added `projectId` to `BrowserProviderListOptions`
+    - `src/browser/providers/cache.ts`
+      - project-scoped conversation lists now use `project-conversations/<projectId>.json`
+    - `src/browser/llmService/cache/store.ts`
+      - JSON and SQLite conversation-list storage now honor the same project scope
+    - `src/browser/llmService/llmService.ts`
+    - `src/browser/llmService/providers/grokService.ts`
+    - `src/browser/llmService/providers/chatgptService.ts`
+    - `bin/auracall.ts`
+      - propagated project scope consistently through conversation list resolution and cache writes
+    - `tests/browser/providerCache.test.ts`
+      - added regression coverage for the project-scoped cache path
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/providerCache.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - `DISPLAY=:0.0 timeout 45s pnpm tsx bin/auracall.ts conversations --target grok --project-id 628cae8a-8918-4567-912f-e44fde3ee3e0 --refresh --include-history`
+        - returned `f3241435-0667-437d-b6ae-246f7815b1ec` / `AuraCall Maple Ledger`
+      - `DISPLAY=:0.0 timeout 45s pnpm tsx bin/auracall.ts conversations context get f3241435-0667-437d-b6ae-246f7815b1ec --target grok --project-id 628cae8a-8918-4567-912f-e44fde3ee3e0 --json-only`
+        - returned the expected project prompt/response pair
+      - verified the project-scoped cache landed in `project-conversations/628cae8a-8918-4567-912f-e44fde3ee3e0.json`
+      - removed disposable clone `17e57d61-ce6c-4e41-b13c-3f64582daaa2`
+      - removed disposable project `628cae8a-8918-4567-912f-e44fde3ee3e0`
+      - fresh `projects --target grok --refresh` no longer listed either disposable project
+  - Additional finding:
+    - This repair fixed correctness, but not yet the global title-quality issue. A follow-up metadata overlay is still needed so the root conversation list can reuse stronger project-scoped titles instead of regressing to `Chat`.
+
+- 2026-03-27: Global Grok conversation lists now reuse stronger project-scoped titles instead of generic `Chat`
+  - Symptom:
+    - after the project-scoped refresh fix landed, project-scoped conversation list/context calls were correct, but the global `auracall conversations --target grok --refresh --include-history` output could still show the same conversation id as generic `Chat`
+    - the weaker title could also persist in the global `conversations.json`, which meant cache-backed selectors/export surfaces could inherit the worse metadata too
+  - Root cause:
+    - global conversation metadata and project-scoped conversation metadata were still treated as parallel datasets with no reconciliation layer when reading the global list
+    - the user-facing CLI conversation list path was still calling the provider directly, bypassing any cache-side metadata overlay
+  - Fix:
+    - `src/browser/llmService/cache/store.ts`
+      - added a read-time conversation overlay for global conversation reads
+      - JSON cache store now merges the global conversation list with `project-conversations/*.json`
+      - SQLite cache store now merges all `conversations` datasets (global + project-scoped entity ids) when reading the global list
+      - Grok reconciliation reuses `choosePreferredGrokConversation(...)` so specific project titles beat generic placeholders like `Chat`
+    - `src/browser/llmService/llmService.ts`
+      - added a shared helper for overlaying global conversation lists through the cache layer
+    - `src/browser/llmService/providers/grokService.ts`
+      - global Grok conversation listing now routes through that cache-backed overlay before returning to callers
+    - `bin/auracall.ts`
+      - the user-facing `conversations` command now uses `llmService.listConversations(...)` instead of calling the provider directly
+    - `tests/browser/providerCache.test.ts`
+      - added JSON + SQLite regression coverage proving a project-scoped `AuraCall Maple Ledger` title wins over a global `Chat` placeholder for the same id
+  - Verification:
+    - `pnpm vitest run tests/browser/providerCache.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - `DISPLAY=:0.0 timeout 45s pnpm tsx bin/auracall.ts conversations --target grok --refresh --include-history`
+        - now shows `AuraCall Maple Ledger` for `f3241435-0667-437d-b6ae-246f7815b1ec`
+      - verified the persisted global cache entry in `~/.auracall/cache/providers/grok/ez86944@gmail.com/conversations.json` now carries the stronger title for that same id
+  - Additional finding:
+    - The remaining Grok title work is now general ranking/normalization polish. The concrete project-scoped-vs-global `Chat` regression is fixed.
+
+- 2026-03-27: WSL Grok acceptance blockers cleared for project conversation empty-state, project cleanup, and clone rename stability
+  - Symptom:
+    - after the project-scoped conversation fixes landed, the full disposable WSL Grok acceptance run still had three remaining blockers:
+      - after deleting the last project conversation, `conversations --project-id ... --refresh` could fail with `Project conversations list did not load`
+      - `projects remove ...` could actually delete the project in Grok but still throw afterward because Aura-Call reopened menus or retried against a page that had already been torn down
+      - `projects clone <id> <new-name>` could leave the inline rename editor open and print `Clone rename failed: Project rename stayed in edit mode`
+  - Root cause:
+    - the project conversation readiness probe only recognized rows or the older `start a conversation in this project` text, not Grok's current empty-state copy `No conversations yet`
+    - project conversation delete still ignored `projectId` and started from the generic projects index instead of the actual project conversation list
+    - project cleanup reopened the wrong menu surface in some states (sidebar row `Options` instead of the page-level project menu), then retried into a dead/invalid page after the project had already been deleted
+    - clone rename used a brittle 3-second “input disappeared” check instead of waiting for the new title to actually apply
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - `waitForProjectConversationList(...)` now treats `No conversations yet` as a loaded project conversation surface
+      - `deleteConversation(...)` now mirrors `renameConversation(...)` and uses the actual project page + project conversation list when `--project-id` is present
+      - `openProjectMenuButton(...)` now prefers the page-level `Open menu` inside `main` before sidebar row `Options`
+      - `selectRemoveProjectItem(...)` now chooses `Remove` or `Delete` from a single opened menu instead of reopening label-specific fallbacks
+      - `pushProjectRemoveConfirmation(...)` now confirms an existing remove dialog first and treats an invalid/deleted project page after confirmation as success
+      - project rename now waits for the new title to land and retries one more submit/blur cycle before failing
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/grokActions.test.ts tests/browser/providerCache.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - the final disposable WSL acceptance run completed cleanly end to end with:
+        - project create / rename / clone
+        - instructions get/set
+        - unique-file add/list/remove
+        - medium-file guard failing explicitly as intended
+        - project conversation create / context / rename / delete
+        - markdown-preserving browser capture
+        - clone cleanup + source cleanup both returning success
+      - focused project cleanup repro passed after the final fixes:
+        - created `AuraCall Cedar Atlas qpwlyc`
+        - cloned + renamed to `AuraCall Cedar Orbit qpwlyc`
+        - removed clone `c0a97011-5a88-4298-a512-5d68927d2d1a`
+        - removed source `4188013b-78f2-43b1-9102-0378581ed047`
+        - refreshed project list no longer showed either disposable project
+  - Additional finding:
+    - WSL Grok CRUD is no longer blocked on the current live UI. The next reliability investment should be a scripted acceptance runner wired directly to `docs/dev/smoke-tests.md`.
+
+- 2026-03-27: Project-scoped Grok conversation context no longer prepends project instructions into the first assistant message
+  - Symptom:
+    - after the live WSL Grok acceptance runner went green, one residual quality issue remained: project-scoped `conversations context get ... --project-id ...` could return the project instructions text duplicated at the start of the first assistant message payload
+    - that polluted downstream cache/export consumers even when the actual user prompt and assistant answer were otherwise correct
+  - Root cause:
+    - the llmService conversation-context path did not persist project instructions into its cache store consistently, and it had no reconciliation step to strip a duplicated project-instructions prefix from live project-scoped assistant payloads before caching them
+  - Fix:
+    - `src/browser/llmService/llmService.ts`
+      - added `stripProjectInstructionsPrefixFromConversationContext(...)`, a project-scoped normalization helper that removes an exact instructions prefix from the first assistant message only when real assistant content remains after the prefix
+      - `createProject(...)`, `updateProjectInstructions(...)`, and `getProjectInstructions(...)` now write the latest project instructions into the cache store
+      - `getConversationContext(...)` now reads cached project instructions for `--project-id ...`, applies the prefix-strip normalization when needed, then writes the cleaned context back to cache
+    - `tests/browser/llmServiceContext.test.ts`
+      - added focused regression coverage for both the positive prefix-strip case and the “instructions text appears later, so do not strip” case
+  - Verification:
+    - `pnpm vitest run tests/browser/llmServiceContext.test.ts tests/browser/providerCache.test.ts tests/browser/grokActions.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - created disposable project `f9bd98f3-ffbd-4158-b40c-f95231111216`
+      - created project conversation `6bfb2942-a443-4cf5-8bf4-23a82e3f264d`
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts conversations context get 6bfb2942-a443-4cf5-8bf4-23a82e3f264d --target grok --project-id f9bd98f3-ffbd-4158-b40c-f95231111216 --json-only`
+        - returned the clean assistant text (`Context Probe Inspect`) with no duplicated project instructions prefix
+  - Additional finding:
+    - the earlier leaked-prefix case did not reproduce on the fresh probe after the broader Grok fixes, so this normalization now acts as a defensive safeguard against future Grok payload drift rather than masking an actively reproducible live bug.
+
+- 2026-03-27: Grok project file CRUD now writes through to the `project-knowledge` cache/catalog dataset
+  - Symptom:
+    - the live WSL Grok file CRUD surface (`projects files add/list/remove`) was working in the browser, but Aura-Call was treating it as transient UI state
+    - `cache files list --provider grok --project-id <id> --dataset project-knowledge` was not being refreshed by live project-file mutations, even though the cache schema and export/catalog tooling already had a dedicated `project-knowledge` dataset for durable project files
+  - Root cause:
+    - `src/browser/llmService/llmService.ts` exposed `listProjectFiles(...)`, `uploadProjectFiles(...)`, and `deleteProjectFile(...)`, but none of those methods wrote through to `cacheStore.writeProjectKnowledge(...)`
+    - the scripted WSL Grok acceptance runner only verified the visible project file list, not the normalized cache/catalog view
+  - Fix:
+    - `src/browser/llmService/llmService.ts`
+      - `listProjectFiles(...)` now refreshes `project-knowledge` from the live provider list
+      - `uploadProjectFiles(...)` and `deleteProjectFile(...)` now re-read the live provider list after mutation and write the post-mutation state into `project-knowledge`
+      - `createProject(...)` now does the same when a project is created with initial files attached
+    - `tests/browser/llmServiceFiles.test.ts`
+      - added focused regression coverage proving list/add/remove all write the correct `project-knowledge` cache state
+    - `scripts/grok-acceptance.ts`
+      - extended the live WSL acceptance runner to assert that `cache files list --provider grok --project-id <id> --dataset project-knowledge` matches the visible file CRUD state after single-file upload, single-file removal, and multi-file upload
+    - `docs/dev/smoke-tests.md`, `docs/testing.md`
+      - updated the Grok file acceptance bar to require project-knowledge cache freshness, not just the visible file list
+    - `tests/browser/grokActions.test.ts`
+      - stabilized the plain-text response unit by giving the mock one more steady snapshot and a slightly wider wait budget so the focused validation suite stays clean
+  - Verification:
+    - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/browser/providerCache.test.ts tests/browser/grokActions.test.ts tests/browser/llmServiceContext.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - `DISPLAY=:0.0 pnpm tsx scripts/grok-acceptance.ts --json`
+      - passed with disposable project `aa02d27a-8a0c-4c7d-b006-92906f10e11b`, clone `bd23e825-a28a-43ee-948c-63a16605eef7`, and conversation `d6352fd9-34c2-4056-8697-ae670ae90e7e`
+      - project file CRUD and `cache files list --dataset project-knowledge` agreed on `grok-file.txt`, `grok-file-a.txt`, and `grok-file-b.md`
+      - medium-file guard still failed explicitly as intended with `Uploaded file(s) did not persist after save: grok-medium.jsonl`
+  - Additional finding:
+    - The remaining Grok file work is now about breadth of file surfaces, not persistence correctness for project files. Project files are now durable in both the live browser view and Aura-Call’s normalized cache/catalog view.
+
+- 2026-03-27: Grok account-wide `/files` CRUD now works and is part of the WSL acceptance bar
+  - Symptom:
+    - Aura-Call only handled Grok project knowledge files, but Grok also exposes an account-wide `/files` page from the avatar menu
+    - that master file list matters because Grok enforces a 1 GB account storage quota there
+    - without support for the account-wide surface, Aura-Call could accumulate files and leave users blind to quota usage
+  - Root cause:
+    - the provider/cache/CLI model only covered project files and conversation files/attachments
+    - the live Grok `/files` page has its own row parser, upload input, and a separate two-step inline delete flow (`Delete file`, then row-local `Delete`)
+  - Fix:
+    - `src/browser/providers/types.ts`, `src/browser/providers/domain.ts`, `src/browser/providers/cache.ts`
+      - added account-file provider methods, source typing, and `account-files.json`
+    - `src/browser/llmService/cache/store.ts`, `cache/catalog.ts`, `cache/export.ts`, `cache/index.ts`
+      - added the `account-files` dataset across JSON + SQLite storage, catalog, and export
+    - `src/browser/llmService/llmService.ts`
+      - added cache-backed live account-file list/add/remove methods
+    - `src/browser/providers/grokAdapter.ts`
+      - implemented the live `/files` page adapter, including the current two-step inline delete sequence
+    - `bin/auracall.ts`
+      - added `auracall files add`, `auracall files list`, and `auracall files remove`
+    - `scripts/grok-acceptance.ts`, `docs/dev/smoke-tests.md`, `docs/testing.md`, `docs/manual-tests.md`
+      - added account-wide `/files` CRUD plus `account-files` cache freshness to the canonical WSL Grok acceptance bar
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - uploaded disposable account file `auracall-account-files-smoke-1774669753.txt`
+      - listed it as Grok file id `3849f21d-c354-4ee0-a8b6-47258d41fd46`
+      - removed it successfully with `auracall files remove 3849f21d-c354-4ee0-a8b6-47258d41fd46 --target grok`
+      - refreshed `auracall files list --target grok` no longer showed the file
+      - refreshed `cache files list --provider grok --dataset account-files --query auracall-account-files-smoke-1774669753` returned `count: 0`
+  - Additional finding:
+    - The first live delete attempt revealed that Grok account-file removal is not modal-based like project Personal Files. It stages delete inline on the row, so the adapter must explicitly drive the second row-local `Delete` action.
+
+- 2026-03-28: Remaining Grok CRUD plan is now explicit, and conversation file listing/cache parity has started
+  - Symptom:
+    - after the WSL Grok acceptance bar went green, the remaining CRUD work was still only described conversationally
+    - the cache/export layer already modeled `conversation-files` and `conversation-attachments`, but there was no stable service/CLI entry point for conversation-scoped files
+  - Fix:
+    - added `docs/dev/grok-remaining-crud-plan.md` to make the remaining scope explicit and prioritized
+    - wired the plan into `docs/dev/smoke-tests.md`, `docs/testing.md`, and `docs/manual-tests.md`
+    - started the first implementation slice:
+      - `src/browser/providers/types.ts`
+        - `listConversationFiles(...)` now accepts list options
+      - `src/browser/llmService/llmService.ts`
+        - added `listConversationFiles(...)`
+        - added `refreshConversationFilesCache(...)`
+        - falls back to `readConversationContext(...).files` when no dedicated provider list method exists
+      - `bin/auracall.ts`
+        - added `auracall conversations files list <conversationId> [--project-id <id>]`
+      - `tests/browser/llmServiceFiles.test.ts`
+        - added focused coverage for provider-backed and context-fallback conversation file cache writes
+  - Verification:
+    - pending focused tests + typecheck
+  - Additional finding:
+    - The right first step is read/list/cache parity, not upload/delete. It gives the next live Grok adapter work a stable surface to target instead of another one-off browser patch.
+
+- 2026-03-28: Grok conversation-file read parity now uses the live sent-turn file chips, not just service/cache scaffolding
+  - Symptom:
+    - `auracall conversations files list <conversationId> --target grok` existed at the service/CLI level, but Grok still had no live adapter-backed conversation-file surface
+    - the first landing zone depended on provider `listConversationFiles(...)` when available, otherwise on `readConversationContext(...).files`, but Grok exposed neither
+  - Fix:
+    - live-probed the current WSL Grok conversation page and confirmed the real file surface:
+      - user message rows render file chips above the bubble
+      - the chip exposes filename text and an icon `aria-label` such as `Text File`
+      - the row does not expose a provider file id or remote link
+    - `src/browser/providers/grokAdapter.ts`
+      - added `mapGrokConversationFileProbes(...)`
+      - added `readVisibleConversationFilesWithClient(...)`
+      - added Grok `listConversationFiles(...)`
+      - updated `readConversationContext(...)` to include `files[]`
+      - added a short polling window so context reads do not sample before file chips finish rendering
+    - `tests/browser/grokAdapter.test.ts`
+      - added focused coverage for conversation-file probe mapping/deduping
+  - Verification:
+    - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
+    - live:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts conversations files list 07adb712-2304-4746-adfd-2c87c888cec0 --target grok`
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts conversations context get 07adb712-2304-4746-adfd-2c87c888cec0 --target grok --json-only`
+      - confirmed cache write at `~/.auracall/cache/providers/grok/ez86944@gmail.com/conversation-files/07adb712-2304-4746-adfd-2c87c888cec0.json`
+  - Additional finding:
+    - Grok conversation-file rows currently do not expose a durable provider-side file id. Aura-Call must synthesize stable ids from conversation id + response row id + chip index until Grok surfaces something richer.
+    - Grok currently exposes mutation asymmetrically on conversations:
+      - existing conversation composers still have `Attach` for the next turn
+      - already-sent file chips only open a read-only preview aside with `Close`
+      - no delete/remove/download control was visible on the sent file surface
+
+- 2026-03-28: WSL Grok scripted acceptance is green again after fixing project-create verification, root submit/attach commit, multiline composer input, and `/files` readiness
+  - Symptom:
+    - after the conversation-file work landed, the full WSL acceptance runner still failed in several real ways:
+      - `projects create` could fail even though Grok had actually created the project
+      - root/non-project browser runs with an attached file could stage the prompt and attachment but never commit the turn
+      - multiline markdown prompts on the live Grok `ProseMirror` composer could be flattened before send
+      - `/files` refreshes could falsely fail with `Grok files page did not load` right after a successful delete
+  - Root cause:
+    - project-create verification only trusted immediate post-submit URL navigation instead of also consulting the live visible project list
+    - the Grok send path was too optimistic about when a visible enabled submit control existed and whether a click actually committed the turn
+    - the composer input path treated Grok's `ProseMirror` more like a plain text input and could lose line breaks/fence structure
+    - the `/files` readiness gate required a narrower page shape than Grok currently presents during some post-delete refresh states
+  - Fix:
+    - `scripts/grok-acceptance.ts`
+      - added a disposable root/non-project conversation-file step to the canonical WSL acceptance runner
+      - added polling helper reuse for new conversation discovery instead of a one-shot list diff
+    - `src/browser/providers/grokAdapter.ts`
+      - added project-create recovery by exact normalized project name against the visible project surfaces
+      - hardened the create-project name setters so the entered name must actually stick before continuing
+      - broadened the `/files` readiness gate to accept the current usable heading/search/upload/empty-state combinations
+    - `src/browser/actions/grok.ts`, `src/browser/index.ts`
+      - made `setGrokPrompt(...)` preserve multiline `ProseMirror` content more defensively
+      - made `submitGrokPrompt(...)` wait for a real enabled submit, verify commit, and fall back to Enter if click alone does not commit the turn
+    - `tests/browser/grokActions.test.ts`, `tests/browser/grokAdapter.test.ts`
+      - updated focused regression coverage for the stronger Grok submit/project-create paths
+  - Verification:
+    - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - root file probe returned `AuraCall Root Submit Probe` with `files=1`
+      - multiline markdown probe preserved `- alpha` plus the fenced `txt` block
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/grok-acceptance.ts --json` returned `ok: true`
+  - Additional finding:
+    - The WSL-primary Grok bar is no longer blocked on core CRUD correctness. The remaining Grok work is now follow-on quality/breadth work plus quota cleanup of disposable artifacts left behind by failed intermediate runs.
+
+- 2026-03-28: Grok `/files` needed a navigation fallback even after the broader ready-gate fix
+  - Symptom:
+    - `auracall files list --target grok` could still fail with `Grok files page did not load` during quota cleanup, even though the live WSL browser clearly showed a valid `Files - Grok` page with:
+      - `Files`
+      - `Add new file`
+      - row `Options`
+      - the expected disposable file names
+  - Root cause:
+    - the `/files` ready predicate was already correct on the live DOM
+    - the remaining failure was the route/attach path into `/files`: Aura-Call could attach on an existing Grok tab, call `Page.navigate(...)`, and then give up before the SPA route fully settled on the files surface
+  - Fix:
+    - `src/browser/providers/grokAdapter.ts`
+      - added `waitForGrokFilesPath(...)`
+      - updated `navigateToGrokFiles(...)` to retry with an in-page `location.assign(...)` fallback before the ready gate gives up
+    - verification:
+      - the exact `/files` ready predicate evaluated to `ok: true` on the live page after direct CDP inspection
+      - `pnpm vitest run tests/browser/grokAdapter.test.ts --maxWorkers 1`
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts files list --target grok`
+  - Additional finding:
+    - The lingering Grok `/files` flake was no longer about selector coverage. It was a navigation/settling race on top of an otherwise valid page.
+
+- 2026-03-28: Cleaned the stale Grok acceptance artifacts after the WSL pass went green
+  - Work completed:
+    - removed the leftover `AuraCall ...` disposable projects created by failed intermediate passes
+    - removed the disposable Grok account-file artifacts named like:
+      - `grok-file*`
+      - `grok-conversation-file*`
+      - `grok-root-file*`
+      - `grok-acceptance-*`
+      - `auracall-conversation-file-probe-*`
+  - Verification:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts projects --target grok --refresh`
+      - remaining projects now: `SoyLei`, `Oracle (clone)`, `Oracle`
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts files list --target grok`
+      - no `grok-file*`, `grok-conversation-file*`, `grok-root-file*`, or `grok-acceptance-*` rows remained
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts cache files list --provider grok --dataset account-files --query grok-file`
+      - returned `count: 0`
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts cache files list --provider grok --dataset account-files --query grok-conversation-file`
+      - returned `count: 0`
+  - Additional finding:
+    - The remaining account-file rows are non-disposable uploads (for example `dup.txt`, `notes.txt`, `spec.md`, doc files, images, and browser-service docs) rather than the acceptance/debug artifacts this cleanup targeted.
+
+- 2026-03-28: `auracall conversations files add ...` could succeed in Grok and still die afterward while refreshing `conversation-files`
+  - Symptom:
+    - the first live `auracall conversations files add <conversationId> --target grok --prompt ... -f ...` appended the file and follow-up turn successfully, but then exited with:
+      - `TypeError: Cannot read properties of undefined (reading 'webSocketDebuggerUrl')`
+    - a follow-up context probe showed the mutation had actually happened, so the failure was in the post-send refresh path, not the Grok send itself
+  - Root cause:
+    - after `runBrowserMode(...)` returned, the CLI asked `llmService.listConversationFiles(...)` to rediscover the browser session
+    - that rediscovery could race against Chrome shutdown and stale DevTools state instead of simply reusing the runtime endpoint that had just sent the turn
+  - Fix:
+    - `bin/auracall.ts`
+      - `conversations files add` now keeps the just-used browser alive long enough to refresh `conversation-files` from that same runtime endpoint
+      - if the caller did not request `keepBrowser`, the command now closes the browser explicitly after the refresh
+    - `src/browser/llmService/llmService.ts`
+      - `buildListOptions(...)` now treats explicit runtime `host` / `port` overrides as authoritative and skips service-target rediscovery for that case
+    - `tests/browser/llmServiceFiles.test.ts`
+      - added a regression that verifies explicit `host` / `port` overrides do not trigger browser rediscovery
+  - Verification:
+    - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - live fresh conversation `c7188321-f0e4-4c39-ba1f-75e6511dcd14`:
+      - first-run `auracall conversations files add ...` returned success
+      - `conversations files list`, `conversations context get --json-only`, and `cache files list --dataset conversation-files` all agreed on `grok-conversation-append-fix-22376b.txt`
+  - Additional finding:
+    - on the WSL Grok path, conversation-file mutation is now practical as append-only add, but Grok still does not expose delete controls for already-sent conversation file chips.
+
+- 2026-03-28: deleting a conversation left stale `conversation-files` cache rows behind
+  - Symptom:
+    - after deleting live disposable conversation `c7188321-f0e4-4c39-ba1f-75e6511dcd14`, refreshed conversation history no longer listed it, but `cache files list --provider grok --conversation-id ... --dataset conversation-files` still returned the attached file row
+  - Root cause:
+    - the CLI delete flow refreshed the conversation list cache only
+    - it never cleared the per-conversation `conversation-files` / `conversation-attachments` datasets for the deleted conversation id
+  - Fix:
+    - `bin/auracall.ts`
+      - after successful delete, Aura-Call now writes empty `conversation-files` and `conversation-attachments` datasets for each deleted conversation before refreshing the conversation list cache
+  - Verification:
+    - live disposable conversation `740f3cbe-6790-4729-9952-5ea899053edb`:
+      - created
+      - appended file via `conversations files add`
+      - deleted via `auracall delete ... --target grok --yes`
+      - `cache files list --provider grok --conversation-id 740f3cbe-6790-4729-9952-5ea899053edb --dataset conversation-files` returned `count: 0`
+
+- 2026-03-28: `browser.hideWindow` needed launch-time minimization and per-client focus suppression, not a process-global env toggle
+  - Symptom:
+    - headful Aura-Call browser runs on WSL/Linux could still steal focus even with `browser.hideWindow`
+    - the first implementation used a process-global env var to suppress Grok `bringToFront()` calls, which was wrong for simultaneous multi-profile work
+  - Root cause:
+    - hiding/minimizing after Chrome launched was too late to prevent the initial focus grab
+    - Grok still had its own `Page.bringToFront()` path
+    - a process-wide env flag would leak focus policy across profiles/runs in one process
+  - Fix:
+    - `packages/browser-service/src/chromeLifecycle.ts`
+      - add `--start-minimized` for headful `hideWindow` launches
+      - export `wasChromeLaunchedByAuracall(...)`
+      - tag fresh vs adopted Chrome handles so only newly launched windows are auto-hidden
+    - `packages/browser-service/src/manualLogin.ts`, `src/browser/index.ts`, `src/browser/reattach.ts`, `src/browser/reattachCore.ts`
+      - only auto-hide Aura-Call-launched windows
+      - manual-login launch now reapplies hide after opening the initial target URL
+    - `src/browser/providers/grokAdapter.ts`
+      - replace the process-global focus-suppression env var with per-client metadata
+    - tests:
+      - `tests/browser-service/chromeLifecycle.test.ts`
+      - `tests/browser-service/chromeTargetReuse.test.ts`
+      - `tests/browser/manualLogin.test.ts`
+      - `tests/browser/grokAdapter.test.ts`
+  - Verification:
+    - `pnpm vitest run tests/browser-service/chromeLifecycle.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/browser/manualLogin.test.ts tests/browser/grokAdapter.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live WSL disposable smoke:
+      - `_NET_ACTIVE_WINDOW` before launch matched `_NET_ACTIVE_WINDOW` after launch/open (`unchanged: true`)
+      - Chrome DevTools still reported `windowState: "normal"` on this X11 stack
+  - Additional finding:
+    - On the current WSL/X11 environment, "no focus steal" is the trustworthy invariant. DevTools window-bounds state is not a reliable minimized-state oracle there.
+
+- 2026-03-28: browser-service needed an explicit DOM-drift extraction plan after the Grok stabilization push
+  - Symptom:
+    - repeated Grok fixes kept landing in adapter code even when the failure class was generic:
+      - SPA route settling
+      - hover-only row actions
+      - multi-surface action fallbacks
+      - weak failure diagnostics
+  - Root cause:
+    - the package backlog did not yet spell out the next concrete extractions, so the path of least resistance was another provider-local patch
+  - Fix:
+    - expanded `docs/dev/browser-service-upgrade-backlog.md` with the current DOM-drift plan and priority order:
+      - `navigateAndSettle(...)`
+      - anchored row/menu action helpers
+      - structured UI diagnostics wrappers
+      - canonical action-surface fallback helpers
+      - explicit per-client focus policy
+      - optional failure snapshots
+    - wired that plan into:
+      - `AGENTS.md`
+      - `docs/dev/browser-automation-playbook.md`
+      - `docs/dev/browser-service-tools.md`
+      - `docs/dev/smoke-tests.md`
+  - Additional finding:
+    - the most reusable lesson from the Grok work is not any one selector fix; it is that browser-service needs stronger post-condition helpers and better built-in diagnostics so DOM drift is cheaper to repair next time.
+
+- 2026-03-28: started extracting SPA route settling into browser-service via `navigateAndSettle(...)`
+  - Symptom:
+    - Grok still had repeated provider-local route code:
+      - `Page.navigate(...)`
+      - document-ready polling
+      - route predicate polling
+      - fallback `location.assign(...)`
+    - this was the same drift pattern we had already identified in the new backlog
+  - Root cause:
+    - browser-service had good wait primitives, but no single navigation helper that combined route settling with optional ready checks and a route fallback
+  - Fix:
+    - `packages/browser-service/src/service/ui.ts`
+      - added `navigateAndSettle(...)`
+    - `tests/browser-service/ui.test.ts`
+      - added focused coverage for direct success and fallback `location.assign(...)`
+    - `src/browser/providers/grokAdapter.ts`
+      - moved `/files` navigation settling onto the shared helper
+      - moved generic Grok URL/project navigation onto the shared helper
+      - kept provider-specific post-validation (`isValidProjectUrl(...)`) in the adapter
+  - Verification:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - Additional finding:
+    - the first useful extraction was exactly the right size: one package helper plus one provider adoption. It improved maintainability immediately without trying to genericize every Grok branch in one pass.
+
+- 2026-03-28: started extracting anchored row/menu action helpers into browser-service
+  - Symptom:
+    - Grok still repeated the same row-hover plumbing in multiple places:
+      - reveal hidden row actions
+      - open hidden row `Options` menus
+      - then click rename/delete/menu items
+    - the provider code was already using browser-service primitives, but the higher-level row interaction pattern was still duplicated
+  - Root cause:
+    - browser-service had `hoverAndReveal(...)`, `pressRowAction(...)`, and `openMenu(...)`, but no helper that expressed the common “reveal then act” pattern directly
+  - Fix:
+    - `packages/browser-service/src/service/ui.ts`
+      - added `clickRevealedRowAction(...)`
+      - added `openRevealedRowMenu(...)`
+    - `tests/browser-service/ui.test.ts`
+      - added focused coverage for both helpers
+    - `src/browser/providers/grokAdapter.ts`
+      - moved the root/sidebar conversation `Options` menu opening onto `openRevealedRowMenu(...)`
+      - moved history-dialog conversation rename/delete row actions onto `clickRevealedRowAction(...)`
+    - docs:
+      - marked the anchored row/menu backlog item as started in `docs/dev/browser-service-upgrade-backlog.md`
+      - updated `docs/dev/browser-service-tools.md`
+      - updated `docs/dev/browser-automation-playbook.md`
+  - Verification:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/grok-acceptance.ts --json`
+      - returned `ok: true`
+  - Additional finding:
+    - This was the right scope for the second extraction too: the generic reveal-then-act helpers now cover the conversation/sidebar/history paths, while the project-row `Options` path still needs one more generalization around link-navigation suppression before it can move fully onto the shared helper.
+
+- 2026-03-28: moved the Grok project-row `Options` path onto the shared row-menu helper shape
+  - Symptom:
+    - `openProjectMenuButton(...)` still owned a large provider-local block for:
+      - picking the best hidden `Options` trigger near the project row
+      - suppressing accidental project-link navigation
+      - trying direct click first
+      - then falling back to manual CDP pointer events
+    - that meant the highest-drift part of the project menu path was still not actually using the new browser-service helper
+  - Root cause:
+    - the first `openRevealedRowMenu(...)` extraction covered plain hidden menu triggers, but not the real-world case where the trigger sits beside a navigable link and needs a prep/fallback stage before open attempts
+  - Fix:
+    - `packages/browser-service/src/service/ui.ts`
+      - extended `openRevealedRowMenu(...)` with:
+        - `prepareTriggerBeforeOpen`
+        - `directTriggerClickFallback`
+      - the helper now:
+        - makes the tagged trigger visible/clickable
+        - installs one-shot link click suppression on nearby navigable ancestors
+        - retries with a direct `trigger.click()` fallback if the generic `openMenu(...)` path still misses
+    - `tests/browser-service/ui.test.ts`
+      - added a regression for the prepare + direct-click fallback path
+    - `src/browser/providers/grokAdapter.ts`
+      - kept the Grok-specific row/button tagging logic
+      - replaced the old direct-click + raw CDP pointer-click block with `openRevealedRowMenu(...)`
+  - Verification:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/grok-acceptance.ts --json`
+      - returned `ok: true`
+      - project rename/clone/remove and the later project conversation rename/delete flows all completed on the same run
+  - Additional finding:
+    - The remaining project-row complexity is now mostly “pick the correct button in this row,” not “how do we hover/open the menu safely.” That is a cleaner boundary for deciding what should remain provider-specific.
+
+- 2026-03-28: documented the next browser-service extraction plan and made it the active repair policy
+  - Symptom:
+    - after the row/menu helper extractions, the remaining question was no longer “how do we open this menu?” but “should trigger scoring move into browser-service too?”
+    - leaving that as an implicit judgment call would make the next DOM-drift repair inconsistent again
+  - Root cause:
+    - the backlog said structured diagnostics were next in priority order, but it did not yet spell out the concrete implementation steps or the rule for when trigger scoring should stay adapter-local
+  - Fix:
+    - `docs/dev/browser-service-upgrade-backlog.md`
+      - made structured UI diagnostics wrappers the active next implementation plan
+      - added the concrete phases:
+        - `collectUiDiagnostics(...)`
+        - `withUiDiagnostics(...)`
+        - first Grok adoption surfaces
+        - focused tests
+        - live WSL Grok acceptance verification
+      - added the explicit extraction rule:
+        - do not move trigger scoring into browser-service until the same scoring shape repeats on another real surface/provider
+    - `AGENTS.md`
+      - added the current browser-service plan to the standing repo guidance
+    - `docs/dev/browser-automation-playbook.md`
+      - wired the same decision into the runbook
+    - `docs/dev/browser-service-tools.md`
+      - recorded the active extraction plan alongside the helper inventory
+  - Additional finding:
+    - this gives a better decision boundary:
+      - browser-service should own mechanics and diagnostics first
+      - adapters should keep app-shaped trigger scoring until there is evidence for a generic primitive
+
+- 2026-03-28: started the structured UI diagnostics extraction and used it to repair the next live Grok drift round
+  - Symptom:
+    - live Grok regressions were still real, but they had become hard to localize quickly:
+      - clone rename sometimes failed on a concrete project page with no obvious selector-level clue
+      - root conversation file list after append could fail with a generic “Conversation content not found”
+      - root conversation delete could fail with “Conversation sidebar row not found” even though the conversation still existed
+  - Root cause:
+    - browser-service had generic navigation and row helpers, but fragile flows still did not carry enough scoped UI evidence on failure
+    - several of the remaining Grok failures were also hydration/timing problems rather than wrong-selector problems:
+      - root `/c/...` reads were using raw `Page.navigate(...)`
+      - clone rename could fire before the concrete project page had hydrated
+      - root conversation list/delete depended on a home/sidebar surface that can lag behind the actual completed browser run
+  - Fix:
+    - `packages/browser-service/src/service/ui.ts`
+      - added `collectUiDiagnostics(...)`
+      - added `withUiDiagnostics(...)`
+      - first diagnostics payload includes:
+        - URL/title/readyState
+        - active element summary
+        - visible dialogs
+        - visible menus plus menu items
+        - visible buttons in scope
+        - scoped candidate census
+    - `tests/browser-service/ui.test.ts`
+      - added focused diagnostics/enrichment coverage
+    - `src/browser/providers/grokAdapter.ts`
+      - adopted `withUiDiagnostics(...)` for:
+        - project menu open
+        - project menu item selection
+        - conversation sidebar menu open
+      - root conversation reads now use route-settled navigation plus a broader conversation-surface wait
+      - sent-turn conversation-file chip polling now waits longer after append
+      - root sidebar row tagging now retries long enough to survive the observed post-append lag
+      - concrete project rename now waits for the project rename surface to hydrate before acting
+      - root/non-project conversation listing now merges the visible home/sidebar conversation surface
+    - `scripts/grok-acceptance.ts`
+      - widened the root post-browser conversation wait
+      - added a deliberate fallback to the fresh browser session’s recorded `conversationId` when the root list surface still lags
+  - Verification:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+    - live targeted proofs:
+      - `conversations context get db726922-f6a1-49c7-bdc3-f9c607c620a1 --target grok --json-only`
+      - `conversations files list db726922-f6a1-49c7-bdc3-f9c607c620a1 --target grok`
+      - `projects clone ff05cf94-c79d-4021-b66f-db19eb099c1e 'AuraCall Cedar Orbit hydratefix' --target grok`
+      - `delete d966a9e0-85e6-4beb-8461-1bf6e08c3b9e --target grok --yes`
+      - `conversations --target grok --refresh --include-history`
+  - Additional finding:
+    - the new diagnostics made the remaining failures much more specific:
+      - clone issues were really pre-hydration rename attempts
+      - root append/list issues were really route/surface settle problems
+      - root delete issues were really home/sidebar discovery lag, not missing conversations
+  - Final verification:
+    - the full WSL Grok acceptance runner is green again on a fresh clean pass:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/grok-acceptance.ts --json`
+      - returned `ok: true`
+      - clean pass ids:
+        - project `b3f7da94-9342-4194-84ac-34b3c51c480c`
+        - clone `ca3d75e7-5cba-4f5c-b801-bcc949d88284`
+        - project conversation `77bee9d5-9d28-4fd6-9bb0-0d2a706e321c`
+        - root conversation `39ed172c-59c4-4813-a98f-874e5ec7ba33`
+    - stale disposable Grok projects from earlier failed runs were cleaned up afterward:
+      - removed 42 `AuraCall Cedar (Atlas|Harbor|Orbit) ...` projects
+      - verified `leftoverCount: 0` for that disposable family

@@ -1,6 +1,7 @@
 import os from 'node:os';
 import { describe, expect, test, afterEach } from 'vitest';
 import {
+  buildChromeFlags,
   resolveUserDataBaseDir,
   resolveUserDataDirFlag,
   resolveWslHost,
@@ -38,5 +39,10 @@ describe('chromeLifecycle (package)', () => {
         '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
       ),
     ).toBe('"C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\windows-chrome-test\\grok"');
+  });
+
+  test('buildChromeFlags adds start-minimized when hideWindow launches headful Chrome', () => {
+    expect(buildChromeFlags(false, null, 'Default', { startMinimized: true })).toContain('--start-minimized');
+    expect(buildChromeFlags(true, null, 'Default', { startMinimized: true })).not.toContain('--start-minimized');
   });
 });

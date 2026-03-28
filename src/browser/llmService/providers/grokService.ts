@@ -40,11 +40,15 @@ export class GrokService extends LlmService {
     if (!this.provider.listConversations) {
       return [];
     }
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return (await this.withRetry(
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options, { ensurePort: true }),
+      projectId,
+    );
+    const items = (await this.withRetry(
       () => this.provider.listConversations?.(projectId, listOptions) as Promise<Conversation[]>,
       { action: 'listConversations' },
     )) as Conversation[];
+    return this.overlayConversationListFromCache(items, listOptions, projectId);
   }
 
   async renameConversation(

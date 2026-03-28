@@ -32,6 +32,7 @@ export interface BrowserProviderListOptions {
   host?: string;
   port?: number;
   configuredUrl?: string | null;
+  projectId?: string | null;
   tabTargetId?: string;
   tabUrl?: string | null;
   includeHistory?: boolean;
@@ -115,9 +116,16 @@ export interface BrowserProvider {
     projectId: string,
     options?: BrowserProviderListOptions,
   ) => Promise<unknown>;
+  listAccountFiles?: (
+    options?: BrowserProviderListOptions,
+  ) => Promise<unknown>;
   uploadProjectFile?: (projectId: string, filePath: string) => Promise<unknown>;
   uploadProjectFiles?: (
     projectId: string,
+    filePaths: string[],
+    options?: BrowserProviderListOptions,
+  ) => Promise<void>;
+  uploadAccountFiles?: (
     filePaths: string[],
     options?: BrowserProviderListOptions,
   ) => Promise<void>;
@@ -126,8 +134,15 @@ export interface BrowserProvider {
     fileName: string,
     options?: BrowserProviderListOptions,
   ) => Promise<void>;
+  deleteAccountFile?: (
+    fileId: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<void>;
   downloadProjectFile?: (projectId: string, fileId: string, destPath: string) => Promise<void>;
-  listConversationFiles?: (conversationId: string) => Promise<unknown>;
+  listConversationFiles?: (
+    conversationId: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<unknown>;
   downloadConversationFile?: (conversationId: string, fileId: string, destPath: string) => Promise<void>;
   renameConversation?: (conversationId: string, newTitle: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
   deleteConversation?: (conversationId: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;

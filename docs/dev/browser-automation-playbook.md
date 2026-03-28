@@ -3,10 +3,19 @@
 ## Goal
 Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 
+For generic DOM-drift follow-on work, use
+[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+as the extraction plan. If a repair looks reusable, prefer moving it into
+`packages/browser-service/` over adding another provider-local workaround.
+Current plan: keep trigger/button scoring in the adapter unless it clearly
+repeats on another real surface/provider; make structured UI diagnostics the
+next browser-service extraction so failures arrive with scoped evidence.
+
 ## Workflow Checklist
 1) **Recon first**
    - Use `scripts/browser-tools.ts tabs --port <port>` first when you are not sure which tab the tooling will target.
    - Use `scripts/browser-tools.ts eval` to list visible elements, labels, and positions.
+   - If the issue looks like route settling, hover-row action drift, or poor failure diagnostics, check the current DOM-drift priorities in `docs/dev/browser-service-upgrade-backlog.md` before patching provider code.
    - Default tab policy should be: exact URL reuse first, then blank-tab reuse, then same-origin reuse, then compatible service-host reuse, and only create a new tab when nothing reusable exists.
    - Cleanup policy should stay conservative and profile-scoped: always keep the selected tab, keep only a small tail of matching-family tabs, keep at most one spare blank/new-tab page, and only collapse extra windows when every tab in that window is disposable for the same profile/service action.
    - If a profile needs different cleanup behavior, set it explicitly in config via `browser.serviceTabLimit`, `browser.blankTabLimit`, and `browser.collapseDisposableWindows` instead of patching provider code.
@@ -24,15 +33,20 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
    - When multiple matches exist, pick the closest element to the target row.
 
 4) **Interact like a user**
-   - Hover over rows to surface hidden controls.
-   - Use pointer events when click handlers are picky.
-   - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
-   - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
+  - Hover over rows to surface hidden controls.
+  - Use pointer events when click handlers are picky.
+  - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
+  - Prefer `navigateAndSettle(...)` over raw `Page.navigate(...)` when the app is an SPA or a route/ready race has shown up before.
+  - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
    - For menu buttons, prefer `aria-label="Open menu"` to avoid picking the profile/user menu.
    - If a menu uses `aria-controls`, wait for the referenced element id but fall back to a generic
      menu selector when the id is missing.
-   - Use `pressRowAction` for hover-revealed Rename/Delete actions instead of scanning the whole dialog.
-- For hover-only row actions (files/conversations), prefer `hoverRowAndClickAction`.
+   - Use `clickRevealedRowAction(...)` for hover-revealed Rename/Delete actions before dropping to lower-level hover/click helpers.
+- For hover-only row menus, prefer `openRevealedRowMenu(...)` before wiring `hoverAndReveal(...)` + `openMenu(...)` manually.
+- If the row menu trigger lives inside or beside a navigable link, use the
+  helper's trigger-prep/direct-click options instead of adding provider-local
+  menu-open suppression unless the row still needs custom button scoring.
+- For hover-only row actions (files/conversations), prefer `hoverRowAndClickAction` when the row is located by visible text instead of a pre-tagged selector.
 - For collapsible panels (Files/Sources), use `ensureCollapsibleExpanded` before searching rows.
 - For project Sources workflows, use `ensureProjectSourcesTabSelected` + `ensureProjectSourcesFilesExpanded`
   and the `verify-grok-project-sources-steps.ts` script to validate the attach/upload/delete sequence.
@@ -50,6 +64,8 @@ Codify repeatable steps for UI automation so we avoid rediscovering DOM quirks.
 7) **Fail loudly with context**
    - Return useful error strings when UI elements are missing.
    - Log selector candidates and counts in verbose mode.
+   - Prefer package-owned diagnostics and probe helpers when possible so the next repair does not start from raw `eval`.
+   - When a flow is still fragile after the row/menu helper extraction, the next default move is not more provider-local selector glue; it is adopting the upcoming structured diagnostics wrapper from `browser-service-upgrade-backlog.md`.
 
 ## When to Ask for Browser Inspection
 If the DOM is ambiguous or selectors are inconsistent:

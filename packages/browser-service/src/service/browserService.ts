@@ -15,6 +15,7 @@ export type BrowserServiceDependencies = {
     url: string;
     compatibleHosts?: string[];
     logger: BrowserLogger;
+    hideWindow?: boolean;
     debugPort?: number;
     debugPortStrategy?: ResolvedBrowserConfig['debugPortStrategy'];
     debugPortRange?: [number, number] | null;
@@ -82,6 +83,7 @@ export class BrowserService {
         userDataDir,
         url,
         logger: () => undefined,
+        hideWindow: this.resolvedConfig.hideWindow,
         debugPortRange: this.resolvedConfig.debugPortRange ?? undefined,
         debugPort: this.resolvedConfig.debugPort ?? undefined,
         debugPortStrategy: this.resolvedConfig.debugPortStrategy ?? undefined,

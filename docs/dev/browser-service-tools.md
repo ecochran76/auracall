@@ -14,6 +14,21 @@ Current upgrade backlog:
 - generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
 - Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/auracall-browser-onboarding-backlog.md)
 
+Current DOM-drift extraction priorities live in the 2026-03-28 section of
+[browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md):
+- `navigateAndSettle(...)`
+- anchored row/menu action helpers
+- structured UI diagnostics wrappers
+- canonical action-surface fallback helpers
+- explicit per-client focus policy
+- optional failure snapshots
+
+Current active extraction plan:
+- keep trigger/button scoring in adapters unless the same scoring shape repeats
+  on another real surface/provider
+- move structured UI diagnostics into browser-service next so failures already
+  include scoped menus/dialogs/button candidates/row evidence
+
 ## Core helpers (packages/browser-service/src/service/ui.ts)
 
 - `waitForPredicate(Runtime, expression, options)`
@@ -35,6 +50,16 @@ Current upgrade backlog:
   - Waits for inline script text to contain required tokens.
   - Useful for hydration/bootstrap payloads that appear before stable DOM markers.
   - Keep the tokens generic here; provider-specific payload semantics still belong in the app layer.
+
+- `navigateAndSettle({ Page, Runtime }, options)`
+  - Shared route-settling primitive for SPA/browser automation flows.
+  - Combines `Page.navigate(...)`, document-ready wait, optional route predicate,
+    optional ready predicate, and optional in-page `location.assign(...)` fallback.
+  - Returns structured phase data (`route`, `document-ready`, `ready`) so
+    callers can throw provider-specific errors without reimplementing the
+    settling loop.
+  - Prefer this over ad hoc `Page.navigate(...)` + `waitForDocumentReady(...)`
+    + retry logic when the page can route asynchronously.
 
 - `waitForSelector(Runtime, selector, timeoutMs)`
   - Polls for a selector to appear; prefer this over ad-hoc sleep loops.
@@ -103,6 +128,16 @@ Current upgrade backlog:
 - `pressRowAction(Runtime, options)`
   - Finds a row action button (Rename/Delete/etc.) near an anchor element and clicks it.
   - Uses proximity to the row to disambiguate buttons outside the row.
+
+- `clickRevealedRowAction({ Runtime, Input }, options)`
+  - Shared “hover row, verify action, then click it” helper for rename/delete-style controls.
+  - Prefer this over hand-rolling `hoverAndReveal(...)` + `pressRowAction(...)` in adapters.
+
+- `openRevealedRowMenu({ Runtime, Input }, options)`
+  - Shared “hover row, verify trigger, then open its menu” helper for hidden `Options` buttons.
+  - Prefer this over repeating row hover + `openMenu(...)` glue in adapters.
+  - Supports optional trigger preparation plus a direct trigger-click fallback for
+    link-adjacent menu buttons that need navigation suppression before the menu opens.
 
 - `pressDialogButton(Runtime, options)`
   - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.

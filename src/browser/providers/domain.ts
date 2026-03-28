@@ -20,7 +20,7 @@ export interface FileRef {
   id: string;
   name: string;
   provider: ProviderId;
-  source: 'project' | 'conversation';
+  source: 'project' | 'conversation' | 'account';
   size?: number;
   mimeType?: string;
   remoteUrl?: string;

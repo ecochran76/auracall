@@ -4,6 +4,7 @@ import {
   launchChrome as launchChromeCore,
   registerTerminationHooks,
   hideChromeWindow,
+  wasChromeLaunchedByAuracall,
   connectToChrome,
   connectToRemoteChrome,
   closeRemoteChromeTarget,
@@ -35,6 +36,7 @@ export async function launchChrome(
 export {
   registerTerminationHooks,
   hideChromeWindow,
+  wasChromeLaunchedByAuracall,
   connectToChrome,
   connectToRemoteChrome,
   closeRemoteChromeTarget,

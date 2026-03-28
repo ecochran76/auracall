@@ -20,10 +20,19 @@ and run the live API suite before shipping major transport changes.
 
 Run the WSL-primary Grok acceptance checklist in `docs/dev/smoke-tests.md` before calling Grok browser support done. That checklist is the canonical runbook for:
 - project create/list/rename/clone/instructions/files/remove
+- account-wide `/files` add/list/remove
 - conversation create/list/context/rename/delete
+- root/non-project conversation file list/context/cache parity plus append-only `conversations files add`
 - markdown capture and cache-freshness verification
 
+Prefer the scripted runner first:
+- `DISPLAY=:0.0 pnpm tsx scripts/grok-acceptance.ts`
+- add `--profile <name>` to target a non-default Aura-Call profile
+- add `--keep-projects` if you want the disposable project/clone preserved after a passing run
+
 Treat Windows Chrome as supplemental/manual-debug coverage for now. It should not block the WSL Grok acceptance bar unless the change is specifically Windows-only.
+
+For the post-acceptance Grok backlog, use `docs/dev/grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity and append-only add are now live for both project and non-project conversations; the current active slice is attachment/asset-manifest breadth beyond the visible file chips.
 
 ### Quick browser port smoke
 

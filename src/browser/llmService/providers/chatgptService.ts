@@ -40,7 +40,10 @@ export class ChatgptService extends LlmService {
     if (!this.provider.listConversations) {
       return [];
     }
-    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options, { ensurePort: true }),
+      projectId,
+    );
     return (await this.provider.listConversations(projectId, listOptions)) as Conversation[];
   }
 

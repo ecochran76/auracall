@@ -8,6 +8,7 @@ const {
   const client = {
     Browser: {
       getWindowForTarget: vi.fn(async () => ({ windowId: 1 })),
+      setWindowBounds: vi.fn(async () => undefined),
     },
     Page: {
       enable: vi.fn(async () => undefined),

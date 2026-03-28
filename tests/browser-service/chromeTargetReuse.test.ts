@@ -8,6 +8,7 @@ const {
   const client = {
     Browser: {
       getWindowForTarget: vi.fn(async ({ targetId }: { targetId: string }) => ({ windowId: 1 })),
+      setWindowBounds: vi.fn(async () => undefined),
     },
     Page: {
       enable: vi.fn(async () => undefined),
@@ -81,6 +82,20 @@ describe('chrome target reuse policy', () => {
     expect(cdpMock).toHaveBeenCalledWith({ host: '127.0.0.1', port: 45920, target: 'newer-grok' });
     expect(client.Page.navigate).not.toHaveBeenCalled();
     expect(cdpMock.New).not.toHaveBeenCalled();
+  });
+
+  it('does not raise the tab when suppressFocus is enabled', async () => {
+    cdpMock.List.mockResolvedValue([
+      { id: 'newer-grok', type: 'page', url: 'https://grok.com/' },
+    ]);
+
+    await openOrReuseChromeTarget(45920, 'https://grok.com/', {
+      host: '127.0.0.1',
+      reusePolicy: 'same-origin',
+      suppressFocus: true,
+    });
+
+    expect(client.Page.bringToFront).not.toHaveBeenCalled();
   });
 
   it('reuses an existing same-origin page when no exact or blank target exists', async () => {

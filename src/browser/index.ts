@@ -13,6 +13,7 @@ import {
   launchChrome,
   registerTerminationHooks,
   hideChromeWindow,
+  wasChromeLaunchedByAuracall,
   connectToChrome,
   connectToRemoteChrome,
   closeRemoteChromeTarget,
@@ -45,7 +46,7 @@ import {
   ensureGrokPromptReady,
   setGrokPrompt,
   submitGrokPrompt,
-  waitForGrokAssistantResponse,
+  waitForGrokAssistantResult,
   uploadGrokAttachments,
   selectGrokMode,
 } from './actions/grok.js';
@@ -372,7 +373,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       Promise.race([promise, disconnectPromise]);
     const { Network, Page, Runtime, Input, DOM } = client;
 
-    if (!config.headless && config.hideWindow) {
+    if (!config.headless && config.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
       await hideChromeWindow(chrome, logger);
     }
 
@@ -1542,8 +1543,8 @@ async function runRemoteGrokBrowserMode(
       await uploadGrokAttachments(DOM, Runtime, attachments, logger);
     }
 
-    await setGrokPrompt(Runtime, promptText);
-    await submitGrokPrompt(Runtime);
+    await setGrokPrompt(Input, Runtime, promptText);
+    await submitGrokPrompt(Input, Runtime);
     logger('Submitted prompt');
     await delay(500);
 
@@ -1554,16 +1555,16 @@ async function runRemoteGrokBrowserMode(
       await emitRuntimeHint();
     }
 
-    const answerText = await waitForGrokAssistantResponse(Runtime, config.timeoutMs, logger);
+    const answer = await waitForGrokAssistantResult(Runtime, config.timeoutMs, logger);
     const durationMs = Date.now() - startedAt;
 
     return {
-      answerText,
-      answerMarkdown: answerText,
-      answerHtml: undefined,
+      answerText: answer.text,
+      answerMarkdown: answer.markdown,
+      answerHtml: answer.html,
       tookMs: durationMs,
-      answerTokens: estimateTokenCount(answerText),
-      answerChars: answerText.length,
+      answerTokens: estimateTokenCount(answer.markdown),
+      answerChars: answer.text.length,
       chromePid: undefined,
       chromePort: connectedPort,
       chromeHost: connectedHost,
@@ -2040,7 +2041,7 @@ async function runGrokBrowserMode({
       logger(`No managed-profile cookies found at ${userDataDir}; Grok may require sign-in.`);
     }
 
-    if (!headless && launchConfig.hideWindow) {
+    if (!headless && launchConfig.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
       await hideChromeWindow(chrome, logger);
     }
 
@@ -2094,8 +2095,8 @@ async function runGrokBrowserMode({
       await raceWithDisconnect(uploadGrokAttachments(DOM, Runtime, attachments, logger));
     }
 
-    await raceWithDisconnect(setGrokPrompt(Runtime, promptText));
-    await raceWithDisconnect(submitGrokPrompt(Runtime));
+    await raceWithDisconnect(setGrokPrompt(Input, Runtime, promptText));
+    await raceWithDisconnect(submitGrokPrompt(Input, Runtime));
     await delay(500);
     const href = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
     const currentUrl = typeof href.result?.value === 'string' ? href.result.value : '';
@@ -2104,11 +2105,12 @@ async function runGrokBrowserMode({
       await emitRuntimeHint();
     }
 
-    answerText = await raceWithDisconnect(
-      waitForGrokAssistantResponse(Runtime, config.timeoutMs, logger),
+    const answer = await raceWithDisconnect(
+      waitForGrokAssistantResult(Runtime, config.timeoutMs, logger),
     );
-    answerMarkdown = answerText;
-    answerHtml = '';
+    answerText = answer.text;
+    answerMarkdown = answer.markdown;
+    answerHtml = answer.html ?? '';
     if (connectionClosedUnexpectedly) {
       throw new Error('Chrome disconnected before completion');
     }

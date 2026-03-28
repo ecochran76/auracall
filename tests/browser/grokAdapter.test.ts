@@ -2,11 +2,15 @@ import { describe, expect, test, vi } from 'vitest';
 import {
   choosePreferredGrokConversation,
   ensureGrokTabVisible,
+  extractGrokAccountFileIdFromUrl,
+  mapGrokConversationFileProbes,
   extractGrokProjectIdFromUrl,
   extractGrokIdentityFromSerializedScripts,
+  findGrokProjectByName,
   grokUrlMatchesPreference,
   grokConversationTitleQuality,
   isGrokMainSidebarOpenProbe,
+  parseGrokPersonalFilesRowTexts,
   parseGrokWorkspaceCreateError,
 } from '../../src/browser/providers/grokAdapter.js';
 import type { ChromeClient } from '../../src/browser/types.js';
@@ -36,10 +40,58 @@ describe('extractGrokProjectIdFromUrl', () => {
   });
 });
 
+describe('findGrokProjectByName', () => {
+  test('finds the created project by normalized exact name', () => {
+    expect(
+      findGrokProjectByName(
+        [
+          { id: 'alpha', name: 'Oracle', url: 'https://grok.com/project/alpha?tab=conversations' },
+          { id: 'beta', name: '  AuraCall   Cedar Atlas bfxirt  ', url: 'https://grok.com/project/beta' },
+        ],
+        'AuraCall Cedar Atlas bfxirt',
+      ),
+    ).toEqual({
+      id: 'beta',
+      name: '  AuraCall   Cedar Atlas bfxirt  ',
+      url: 'https://grok.com/project/beta',
+    });
+  });
+});
+
+describe('extractGrokAccountFileIdFromUrl', () => {
+  test('returns the file id for Grok account file URLs', () => {
+    expect(extractGrokAccountFileIdFromUrl('https://grok.com/files?file=6d5ea327-6e9c-4e3d-a290-2c7fc59b3546')).toBe(
+      '6d5ea327-6e9c-4e3d-a290-2c7fc59b3546',
+    );
+  });
+
+  test('returns null for non-file URLs', () => {
+    expect(extractGrokAccountFileIdFromUrl('https://grok.com/files')).toBeNull();
+  });
+});
+
 describe('grokUrlMatchesPreference', () => {
   test('requires an exact project index path match for /project', () => {
     expect(grokUrlMatchesPreference('https://grok.com/project', 'https://grok.com/project')).toBe(true);
     expect(grokUrlMatchesPreference('https://grok.com/project/abc123', 'https://grok.com/project')).toBe(false);
+  });
+
+  test('treats a live conversation rid URL as matching the bare conversation URL', () => {
+    expect(
+      grokUrlMatchesPreference(
+        'https://grok.com/c/20a14419-5d0c-422d-931f-73f2f4fbce02?rid=e2f484b9-ae0c-4dcf-b900-102e1f24c9c7',
+        'https://grok.com/c/20a14419-5d0c-422d-931f-73f2f4fbce02',
+      ),
+    ).toBe(true);
+  });
+
+  test('ignores Grok rid when matching a project chat URL', () => {
+    expect(
+      grokUrlMatchesPreference(
+        'https://grok.com/project/4022aaed-827b-41d6-aaf8-7f9f1ad77fd3?chat=d563e2ea-05c7-4463-af28-062ab8f3b5a5&rid=65a3062d-77d6-42fb-ab78-b8021260ce0b',
+        'https://grok.com/project/4022aaed-827b-41d6-aaf8-7f9f1ad77fd3?chat=d563e2ea-05c7-4463-af28-062ab8f3b5a5',
+      ),
+    ).toBe(true);
   });
 
   test('requires matching query parameters when the preferred Grok URL includes them', () => {
@@ -65,6 +117,85 @@ describe('parseGrokWorkspaceCreateError', () => {
         '{"code":3,"message":"name: Value contains phone number. [WKE=form-invalid:contains-phone-number:name]\\n","details":[]}',
       ),
     ).toBe('name: Value contains phone number. [WKE=form-invalid:contains-phone-number:name]');
+  });
+});
+
+describe('parseGrokPersonalFilesRowTexts', () => {
+  test('normalizes plain file rows and parses trailing sizes', () => {
+    expect(
+      parseGrokPersonalFilesRowTexts([
+        ' notes.txt ',
+        'spec.md 47 B',
+        'medium.jsonl 257 KB',
+      ]),
+    ).toEqual([
+      { name: 'notes.txt', size: undefined },
+      { name: 'spec.md', size: 47 },
+      { name: 'medium.jsonl', size: 257 * 1024 },
+    ]);
+  });
+
+  test('ignores empty row text', () => {
+    expect(parseGrokPersonalFilesRowTexts(['', '   ', '\n'])).toEqual([]);
+  });
+});
+
+describe('mapGrokConversationFileProbes', () => {
+  test('maps visible conversation file chips into stable FileRef rows', () => {
+    expect(
+      mapGrokConversationFileProbes('conv-123', [
+        {
+          rowId: 'response-a',
+          rowIndex: 0,
+          chipIndex: 0,
+          name: 'notes.txt',
+          fileTypeLabel: 'Text File',
+        },
+        {
+          rowId: 'response-a',
+          rowIndex: 0,
+          chipIndex: 0,
+          name: 'notes.txt',
+          fileTypeLabel: 'Text File',
+        },
+        {
+          rowId: 'response-b',
+          rowIndex: 2,
+          chipIndex: 0,
+          name: 'diagram.png',
+          fileTypeLabel: 'Image File',
+          remoteUrl: 'https://grok.com/files?file=abc',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'grok-conversation-file:conv-123:response-a:0:notes.txt',
+        name: 'notes.txt',
+        provider: 'grok',
+        source: 'conversation',
+        metadata: {
+          conversationId: 'conv-123',
+          rowId: 'response-a',
+          rowIndex: 0,
+          chipIndex: 0,
+          fileTypeLabel: 'Text File',
+        },
+      },
+      {
+        id: 'grok-conversation-file:conv-123:response-b:0:diagram.png',
+        name: 'diagram.png',
+        provider: 'grok',
+        source: 'conversation',
+        remoteUrl: 'https://grok.com/files?file=abc',
+        metadata: {
+          conversationId: 'conv-123',
+          rowId: 'response-b',
+          rowIndex: 2,
+          chipIndex: 0,
+          fileTypeLabel: 'Image File',
+        },
+      },
+    ]);
   });
 });
 
@@ -145,5 +276,19 @@ describe('ensureGrokTabVisible', () => {
     await expect(ensureGrokTabVisible(client)).resolves.toBeUndefined();
     expect(bringToFront).toHaveBeenCalledTimes(1);
     expect(evaluate).toHaveBeenCalledTimes(1);
+  });
+
+  test('does not raise the Grok tab when focus suppression is enabled on the client', async () => {
+    const bringToFront = vi.fn().mockResolvedValue(undefined);
+    const evaluate = vi.fn();
+    const client = {
+      Page: { bringToFront },
+      Runtime: { evaluate },
+      __auracallSuppressFocus: true,
+    } as unknown as ChromeClient;
+
+    await expect(ensureGrokTabVisible(client)).resolves.toBeUndefined();
+    expect(bringToFront).not.toHaveBeenCalled();
+    expect(evaluate).not.toHaveBeenCalled();
   });
 });

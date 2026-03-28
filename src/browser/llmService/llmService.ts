@@ -32,11 +32,45 @@ import { createCacheStore, type CacheStoreKind } from './cache/store.js';
 
 const DEFAULT_HISTORY_LIMIT = 2000;
 
+function normalizeProjectInstructionsForPrefix(value: string): string {
+  return value.replace(/\r\n/g, '\n').trim();
+}
+
+export function stripProjectInstructionsPrefixFromConversationContext(
+  context: ConversationContext,
+  projectInstructions: string,
+): ConversationContext {
+  const normalizedInstructions = normalizeProjectInstructionsForPrefix(projectInstructions);
+  if (!normalizedInstructions) {
+    return context;
+  }
+  let stripped = false;
+  const messages = context.messages.map((message) => {
+    if (stripped || message.role !== 'assistant') {
+      return message;
+    }
+    const normalizedText = message.text.replace(/\r\n/g, '\n');
+    if (!normalizedText.startsWith(normalizedInstructions)) {
+      return message;
+    }
+    const remainder = normalizedText.slice(normalizedInstructions.length).replace(/^\s+/, '');
+    if (!remainder) {
+      return message;
+    }
+    stripped = true;
+    return {
+      ...message,
+      text: remainder,
+    };
+  });
+  return stripped ? { ...context, messages } : context;
+}
+
 export abstract class LlmService {
   readonly provider: LlmServiceAdapter;
   readonly providerId: ProviderId;
   private readonly browserService: BrowserService;
-  private readonly cacheStore: CacheStore;
+  protected readonly cacheStore: CacheStore;
   private readonly identityPrompt?: IdentityPrompt;
 
   protected constructor(
@@ -60,7 +94,7 @@ export abstract class LlmService {
       conversations: this.provider.capabilities?.conversations ?? false,
       rename: Boolean(this.provider.renameConversation),
       contexts: Boolean(this.provider.readConversationContext),
-      files: Boolean(this.provider.listConversationFiles || this.provider.listProjectFiles),
+      files: Boolean(this.provider.listConversationFiles || this.provider.listProjectFiles || this.provider.listAccountFiles),
       models: true,
     };
   }
@@ -185,7 +219,8 @@ export abstract class LlmService {
       : this.getConfiguredUrl();
     const launchUrl =
       configuredUrl ?? (this.providerId === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
-    const target = overrides.tabTargetId
+    const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
+    const target = overrides.tabTargetId || hasExplicitEndpoint
       ? null
       : await this.browserService.resolveServiceTarget({
           serviceId: this.providerId,
@@ -203,6 +238,36 @@ export abstract class LlmService {
       tabUrl: overrides.tabUrl ?? target?.tab?.url ?? undefined,
       browserService: this.browserService,
     };
+  }
+
+  protected scopeConversationListOptions(
+    listOptions: BrowserProviderListOptions,
+    projectId?: string,
+  ): BrowserProviderListOptions {
+    const normalizedProjectId = typeof projectId === 'string' ? projectId.trim() : '';
+    if (!normalizedProjectId) {
+      if (!Object.hasOwn(listOptions, 'projectId')) return listOptions;
+      const { projectId: _projectId, ...rest } = listOptions;
+      return rest;
+    }
+    return {
+      ...listOptions,
+      projectId: normalizedProjectId,
+    };
+  }
+
+  protected async overlayConversationListFromCache(
+    items: Conversation[],
+    listOptions: BrowserProviderListOptions,
+    projectId?: string,
+  ): Promise<Conversation[]> {
+    if (projectId || items.length === 0) {
+      return items;
+    }
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeConversations(cacheContext, items);
+    const cached = await this.cacheStore.readConversations(cacheContext);
+    return cached.items;
   }
 
   abstract listProjects(options?: BrowserProviderListOptions): Promise<ProjectListResult>;
@@ -454,6 +519,22 @@ export abstract class LlmService {
       () => this.provider.uploadProjectFiles?.(projectId, paths, listOptions) as Promise<void>,
       { action: 'uploadProjectFiles' },
     );
+    await this.refreshProjectKnowledgeCache(projectId, listOptions);
+  }
+
+  async uploadAccountFiles(
+    paths: string[],
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.uploadAccountFiles) {
+      throw new Error(`Account file upload is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.uploadAccountFiles?.(paths, listOptions) as Promise<void>,
+      { action: 'uploadAccountFiles' },
+    );
+    await this.refreshAccountFilesCache(listOptions);
   }
 
   async deleteProjectFile(
@@ -469,6 +550,22 @@ export abstract class LlmService {
       () => this.provider.deleteProjectFile?.(projectId, fileName, listOptions) as Promise<void>,
       { action: 'deleteProjectFile' },
     );
+    await this.refreshProjectKnowledgeCache(projectId, listOptions);
+  }
+
+  async deleteAccountFile(
+    fileId: string,
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<void> {
+    if (!this.provider.deleteAccountFile) {
+      throw new Error(`Account file deletion is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    await this.withRetry(
+      () => this.provider.deleteAccountFile?.(fileId, listOptions) as Promise<void>,
+      { action: 'deleteAccountFile' },
+    );
+    await this.refreshAccountFilesCache(listOptions);
   }
 
   async listProjectFiles(
@@ -479,11 +576,41 @@ export abstract class LlmService {
       throw new Error(`Project file listing is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
-    const files = await this.withRetry(
-      () => this.provider.listProjectFiles?.(projectId, listOptions) as Promise<FileRef[]>,
-      { action: 'listProjectFiles' },
+    return this.refreshProjectKnowledgeCache(projectId, listOptions);
+  }
+
+  async listAccountFiles(
+    options?: { listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef[]> {
+    if (!this.provider.listAccountFiles) {
+      throw new Error(`Account file listing is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    return this.refreshAccountFilesCache(listOptions);
+  }
+
+  async listConversationFiles(
+    conversationId: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef[]> {
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+      options?.projectId,
     );
-    return Array.isArray(files) ? files : [];
+    if (this.provider.listConversationFiles) {
+      return this.refreshConversationFilesCache(conversationId, listOptions);
+    }
+    if (!this.provider.readConversationContext) {
+      throw new Error(`Conversation file listing is not supported for ${this.providerId}.`);
+    }
+    const context = await this.getConversationContext(conversationId, {
+      projectId: options?.projectId,
+      listOptions,
+    });
+    const normalizedFiles = Array.isArray(context.files) ? context.files : [];
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeConversationFiles(cacheContext, conversationId, normalizedFiles);
+    return normalizedFiles;
   }
 
   async clickCreateProjectConfirm(
@@ -516,6 +643,13 @@ export abstract class LlmService {
       () => this.provider.createProject?.(input, listOptions) as Promise<Project | null>,
       { action: 'createProject' },
     );
+    if (created?.id && typeof input.instructions === 'string' && input.instructions.trim().length > 0) {
+      const cacheContext = await this.resolveCacheContext(listOptions);
+      await this.cacheStore.writeProjectInstructions(cacheContext, created.id, input.instructions);
+    }
+    if (created?.id && Array.isArray(input.files) && input.files.length > 0 && this.provider.listProjectFiles) {
+      await this.refreshProjectKnowledgeCache(created.id, listOptions);
+    }
     return created ?? null;
   }
 
@@ -603,6 +737,8 @@ export abstract class LlmService {
         ) as Promise<void>,
       { action: 'updateProjectInstructions' },
     );
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeProjectInstructions(cacheContext, projectId, instructions);
   }
 
   async getProjectInstructions(
@@ -613,7 +749,7 @@ export abstract class LlmService {
       throw new Error(`Project instructions read is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
-    return await this.withRetry(
+    const result = await this.withRetry(
       () =>
         this.provider.getProjectInstructions?.(projectId, listOptions) as Promise<{
           text: string;
@@ -621,6 +757,9 @@ export abstract class LlmService {
         }>,
       { action: 'getProjectInstructions' },
     );
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeProjectInstructions(cacheContext, projectId, result.text);
+    return result;
   }
 
   async getConversationContext(
@@ -661,7 +800,14 @@ export abstract class LlmService {
           ) as Promise<unknown>,
         { action: 'readConversationContext' },
       );
-      const normalized = this.normalizeConversationContext(context, conversationId);
+      let normalized = this.normalizeConversationContext(context, conversationId);
+      if (typeof options?.projectId === 'string' && options.projectId.trim().length > 0) {
+        const cachedInstructions = await this.cacheStore.readProjectInstructions(cacheContext, options.projectId.trim());
+        const projectInstructions = cachedInstructions.items.content?.trim();
+        if (projectInstructions) {
+          normalized = stripProjectInstructionsPrefixFromConversationContext(normalized, projectInstructions);
+        }
+      }
       await this.cacheStore.writeConversationContext(cacheContext, conversationId, normalized);
       return normalized;
     } catch (error) {
@@ -786,7 +932,10 @@ export abstract class LlmService {
       listOptions?: BrowserProviderListOptions;
     },
   ): Promise<Conversation> {
-    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+      options?.projectId,
+    );
     const cacheContext = await this.resolveCacheContext(listOptions);
     let cached = await this.cacheStore.readConversations(cacheContext);
     const allowAutoRefresh = options?.allowAutoRefresh ?? true;
@@ -988,6 +1137,56 @@ export abstract class LlmService {
     return keys.length ? keys[0] : null;
   }
 
+  private async refreshProjectKnowledgeCache(
+    projectId: string,
+    listOptions: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    if (!this.provider.listProjectFiles) {
+      return [];
+    }
+    const files = await this.withRetry(
+      () => this.provider.listProjectFiles?.(projectId, listOptions) as Promise<FileRef[]>,
+      { action: 'listProjectFiles' },
+    );
+    const normalizedFiles = Array.isArray(files) ? files : [];
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeProjectKnowledge(cacheContext, projectId, normalizedFiles);
+    return normalizedFiles;
+  }
+
+  private async refreshAccountFilesCache(
+    listOptions: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    if (!this.provider.listAccountFiles) {
+      return [];
+    }
+    const files = await this.withRetry(
+      () => this.provider.listAccountFiles?.(listOptions) as Promise<FileRef[]>,
+      { action: 'listAccountFiles' },
+    );
+    const normalizedFiles = Array.isArray(files) ? files : [];
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeAccountFiles(cacheContext, normalizedFiles);
+    return normalizedFiles;
+  }
+
+  private async refreshConversationFilesCache(
+    conversationId: string,
+    listOptions: BrowserProviderListOptions,
+  ): Promise<FileRef[]> {
+    if (!this.provider.listConversationFiles) {
+      return [];
+    }
+    const files = await this.withRetry(
+      () => this.provider.listConversationFiles?.(conversationId, listOptions) as Promise<FileRef[]>,
+      { action: 'listConversationFiles' },
+    );
+    const normalizedFiles = Array.isArray(files) ? files : [];
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    await this.cacheStore.writeConversationFiles(cacheContext, conversationId, normalizedFiles);
+    return normalizedFiles;
+  }
+
   resolveProviderCacheKey(cacheContext: CacheContext): string {
     return resolveProviderCacheKey(cacheContext);
   }
@@ -1099,7 +1298,10 @@ export abstract class LlmService {
     if (!this.provider.listConversations) {
       throw new Error(`${this.providerId} does not support conversation listing yet.`);
     }
-    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+      options?.projectId,
+    );
     const items = await this.listConversations(options?.projectId, {
       ...listOptions,
       includeHistory: true,

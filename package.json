@@ -23,6 +23,7 @@
     "test:mcp:mcporter": "npx -y mcporter list auracall-local --schema --config config/mcporter.json && npx -y mcporter call auracall-local.sessions limit:1 --config config/mcporter.json",
     "test:browser": "pnpm run build && tsx scripts/test-browser.ts && ./scripts/browser-smoke.sh",
     "test:grok-smoke": "tsx scripts/grok-dom-smoke.ts",
+    "test:grok-acceptance": "tsx scripts/grok-acceptance.ts",
     "test:live": "AURACALL_LIVE_TEST=1 vitest run tests/live --exclude tests/live/openai-live.test.ts",
     "test:live:fast": "AURACALL_LIVE_TEST=1 AURACALL_LIVE_TEST_FAST=1 vitest run tests/live/browser-fast-live.test.ts",
     "test:pro": "AURACALL_LIVE_TEST=1 vitest run tests/live/openai-live.test.ts",
