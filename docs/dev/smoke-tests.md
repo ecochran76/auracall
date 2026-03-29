@@ -4,7 +4,7 @@ These are real end-to-end checks for the Grok browser path. Keep them updated as
 
 For the still-open breadth work after this acceptance bar, see [grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/grok-remaining-crud-plan.md).
 If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
-For the remaining ChatGPT project-management surface after lifecycle CRUD, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md).
+For the remaining ChatGPT project-management surface after lifecycle CRUD + project sources/files, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md).
 
 Current post-acceptance status:
 - the full scripted WSL-primary Grok acceptance pass remains the canonical
@@ -30,7 +30,12 @@ Current ChatGPT project status:
 - lifecycle CRUD is green on the authenticated managed WSL Chrome path: list, create, rename, delete
 - project create now also supports the memory-mode gear via `--memory-mode global|project`
 - the signed-in browser session now supplies ChatGPT cache identity automatically via `/api/auth/session`
-- remaining work is project sources/files first, then instructions, then clone if the native UI exposes it
+- project sources/files CRUD is now green through the real CLI surface:
+  - `auracall projects files add <projectId> --target chatgpt --file <path>`
+  - `auracall projects files list <projectId> --target chatgpt`
+  - `auracall projects files remove <projectId> <fileName> --target chatgpt`
+- upload/remove verification now requires a fresh `Sources` reload, not only the first immediate row that appears after file selection
+- remaining work is project instructions next, then clone if the native UI exposes it
 
 ## Environment
 

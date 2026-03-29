@@ -3,8 +3,8 @@
 Goal: finish the remaining ChatGPT project-management surface after core project lifecycle CRUD stabilized on the managed WSL Chrome path.
 
 Current status:
-- implemented: canonical `g-p-...` route handling, project list/create/rename/delete, create-time memory mode, browser-derived cache identity via `/api/auth/session`
-- not implemented: `projects files list|add|remove --target chatgpt`, `projects instructions get|set --target chatgpt`, `projects clone --target chatgpt`
+- implemented: canonical `g-p-...` route handling, project list/create/rename/delete, create-time memory mode, browser-derived cache identity via `/api/auth/session`, `projects files list|add|remove --target chatgpt`
+- not implemented: `projects instructions get|set --target chatgpt`, `projects clone --target chatgpt`
 
 ## Phase 1. Sources DOM Recon
 
@@ -21,6 +21,8 @@ Deliverable:
 
 ## Phase 2. Project Sources/File CRUD
 
+Status: complete on the managed WSL Chrome path.
+
 Implement the remaining project file surface in `src/browser/providers/chatgptAdapter.ts`.
 
 Required behavior:
@@ -34,6 +36,13 @@ Service/CLI expectations:
 - reuse the existing generic `projects files ...` CLI surface
 - write through to the project file cache once live list/add/remove succeed
 - do not regress current create/rename/delete flows
+
+Delivered:
+- `auracall projects files add <projectId> --target chatgpt --file <path>`
+- `auracall projects files list <projectId> --target chatgpt`
+- `auracall projects files remove <projectId> <fileName> --target chatgpt`
+- upload/remove now verify success across a fresh `Sources` reload instead of trusting only the immediate post-picker row
+- nested `projects files ...` and `projects instructions ...` commands now inherit `--target` the same way the parent `projects` commands do
 
 ## Phase 3. Project Instructions
 
@@ -74,4 +83,4 @@ Run one disposable end-to-end pass on the authenticated WSL Chrome profile:
 
 ## Immediate Next Step
 
-Start with live `Sources` tab DOM recon on the authenticated managed ChatGPT session, then implement project file/source CRUD before moving on to instructions.
+Implement project instructions on the same project settings surface, then reassess whether the current ChatGPT UI exposes a native clone action.

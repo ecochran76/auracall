@@ -1146,7 +1146,13 @@ projectFilesCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (
+      commandOptions.target ??
+      (parentOptions as CliOptions).target ??
+      (program.opts?.() as CliOptions | undefined)?.target ??
+      userConfig.browser?.target ??
+      'chatgpt'
+    ) as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1199,7 +1205,13 @@ projectFilesCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (
+      commandOptions.target ??
+      (parentOptions as CliOptions).target ??
+      (program.opts?.() as CliOptions | undefined)?.target ??
+      userConfig.browser?.target ??
+      'chatgpt'
+    ) as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1231,7 +1243,13 @@ projectFilesCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (
+      commandOptions.target ??
+      (parentOptions as CliOptions).target ??
+      (program.opts?.() as CliOptions | undefined)?.target ??
+      userConfig.browser?.target ??
+      'chatgpt'
+    ) as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1264,7 +1282,13 @@ projectInstructionsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (
+      commandOptions.target ??
+      (parentOptions as CliOptions).target ??
+      (program.opts?.() as CliOptions | undefined)?.target ??
+      userConfig.browser?.target ??
+      'chatgpt'
+    ) as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1296,7 +1320,13 @@ projectInstructionsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (
+      commandOptions.target ??
+      (parentOptions as CliOptions).target ??
+      (program.opts?.() as CliOptions | undefined)?.target ??
+      userConfig.browser?.target ??
+      'chatgpt'
+    ) as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }

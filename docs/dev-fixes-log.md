@@ -2717,3 +2717,33 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - live:
     - created disposable ChatGPT project `AuraCall BrowserService Surface Probe` with `--memory-mode project`
     - removed it successfully by bare id `g-p-69c86caa0c308191bb2af23d234cf23f`
+
+## 2026-03-28 — ChatGPT project sources/files CRUD now survives fresh reloads
+
+- Scope:
+  - finish the ChatGPT project sources/files CRUD slice on the managed WSL Chrome path
+  - stop treating the immediate post-picker source row as authoritative persistence
+  - fix nested `projects files ...` / `projects instructions ...` target inheritance so `--target chatgpt` works the same way under subcommands
+- Changed:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added reload-backed helpers for project-source persistence and removal verification
+    - `uploadProjectFiles(...)` now requires the uploaded source names to survive a fresh `Sources` reload before returning success
+    - `deleteProjectFile(...)` now requires the removed source name to stay gone after a fresh reload
+    - `listProjectFiles(...)` now performs one hard-reload retry before returning an empty list
+  - `bin/auracall.ts`
+    - nested `projects files add|list|remove` now inherit `--target` from the parent/root CLI
+    - nested `projects instructions get|set` now inherit `--target` from the parent/root CLI too
+- Live DOM lesson captured in code:
+  - ChatGPT closes the `Add sources` picker and shows a row immediately after file selection, but that first row is not a strong persisted-state proof on its own
+  - a fresh `?tab=sources` reload is the right verification boundary for ChatGPT project sources
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceIdentity.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live:
+    - created disposable ChatGPT project `AuraCall ChatGPT Sources Acceptance 1774747901`
+    - `projects files add g-p-69c8810c65ac8191b2906da27ea5132f --target chatgpt --file /tmp/chatgpt-project-source-gQ3f.md`
+    - `projects files list ...` returned `chatgpt-project-source-gQ3f.md`
+    - `projects files remove ... chatgpt-project-source-gQ3f.md --target chatgpt`
+    - follow-up `projects files list ...` returned `No files found for project g-p-69c8810c65ac8191b2906da27ea5132f.`
+    - removed the disposable project afterward

@@ -1489,3 +1489,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live verification:
     - created disposable ChatGPT project `AuraCall BrowserService Surface Probe` with `--memory-mode project`
     - removed it successfully by bare id `g-p-69c86caa0c308191bb2af23d234cf23f`
+- ChatGPT project sources/files follow-up:
+  - completed the remaining ChatGPT project sources/files CRUD slice on the managed WSL Chrome profile
+  - live DOM lesson:
+    - the first source row that appears immediately after selecting a file is not strong enough evidence of persistence
+    - ChatGPT can close the picker and show the row before a fresh `Sources` reload will reliably reproduce it
+    - the durable verification bar is now: row appears, then a hard reload of `?tab=sources` still shows it
+  - code changes:
+    - `src/browser/providers/chatgptAdapter.ts`
+      - added reload-backed source verification helpers for project source add/remove
+      - `listProjectFiles(...)` now does one hard-reload retry before returning an empty list
+      - `uploadProjectFiles(...)` now waits for the uploaded source names to survive a fresh `Sources` reload
+      - `deleteProjectFile(...)` now waits for the removed source name to stay gone after a fresh reload
+    - `bin/auracall.ts`
+      - nested `projects files ...` and `projects instructions ...` commands now inherit `--target` from the parent/root CLI the same way `projects create|rename|remove` already do
+  - live CLI verification:
+    - created disposable project `AuraCall ChatGPT Sources Acceptance 1774747901`
+    - `projects files add g-p-69c8810c65ac8191b2906da27ea5132f --target chatgpt --file /tmp/chatgpt-project-source-gQ3f.md`
+    - `projects files list ...` returned `chatgpt-project-source-gQ3f.md`
+    - `projects files remove ... chatgpt-project-source-gQ3f.md --target chatgpt`
+    - follow-up `projects files list ...` returned `No files found`
+    - removed the disposable project successfully afterward
+  - remaining ChatGPT project work:
+    - project instructions get/set
+    - clone only if the current native UI exposes it

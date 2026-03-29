@@ -1,12 +1,15 @@
+import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import type { ChromeClient } from '../types.js';
-import type { Project, ProjectMemoryMode } from './domain.js';
+import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
+import type { FileRef, Project, ProjectMemoryMode } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   navigateAndSettle,
+  openAndSelectMenuItem,
   openMenu,
   openSurface,
   pressButton,
@@ -29,6 +32,8 @@ const CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR = 'textarea[aria-label="Instructions
 const CHATGPT_PROJECT_SETTINGS_BUTTON_LABEL = 'Project settings';
 const CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH = 'project settings';
 const CHATGPT_COMPATIBLE_HOSTS = ['chatgpt.com', 'chat.openai.com'];
+const CHATGPT_PROJECT_SOURCES_INPUT_ATTR = 'data-auracall-chatgpt-project-source-input';
+const CHATGPT_PROJECT_SOURCE_ACTION_ATTR = 'data-auracall-chatgpt-project-source-action';
 
 type ChatgptProjectLinkProbe = {
   id: string;
@@ -47,6 +52,12 @@ type ChatgptAuthSessionProbe = {
     name?: string | null;
     email?: string | null;
   } | null;
+};
+
+type ChatgptProjectSourceProbe = {
+  rowText?: string | null;
+  leafTexts?: string[] | null;
+  metadataText?: string | null;
 };
 
 export function normalizeChatgptProjectId(value: string | null | undefined): string | null {
@@ -117,6 +128,14 @@ function normalizeProjectName(value: string): string {
   return value.replace(/\s+/g, ' ').trim().toLowerCase();
 }
 
+function normalizeUiText(value: string | null | undefined): string {
+  return typeof value === 'string' ? value.replace(/\s+/g, ' ').trim() : '';
+}
+
+function normalizeFileKey(value: string | null | undefined): string {
+  return normalizeUiText(value).toLowerCase();
+}
+
 function isRetryableConnectionError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return message.includes('WebSocket connection closed') || message.includes('ECONNRESET');
@@ -170,6 +189,55 @@ export function normalizeChatgptAuthSessionIdentity(
     name,
     source: 'auth-session',
   };
+}
+
+export function extractChatgptProjectSourceName(
+  probe: Pick<ChatgptProjectSourceProbe, 'rowText' | 'leafTexts'> | null | undefined,
+): string | null {
+  if (!probe || typeof probe !== 'object') return null;
+  const rowText = normalizeUiText(probe.rowText);
+  const leafTexts = Array.isArray(probe.leafTexts)
+    ? Array.from(
+        new Set(
+          probe.leafTexts
+            .map((value) => normalizeUiText(value))
+            .filter(Boolean),
+        ),
+      )
+    : [];
+  for (const candidate of leafTexts) {
+    if (candidate === rowText) continue;
+    if (candidate.includes(' · ')) continue;
+    if (/^(file|pdf|docx?|txt|csv|image|png|jpe?g|webp)\b/i.test(candidate)) continue;
+    return candidate;
+  }
+  const beforeMeta = rowText.split(/\s+·\s+/)[0]?.trim() ?? '';
+  if (!beforeMeta) return null;
+  const stripped = beforeMeta.replace(/(?:file|pdf|docx?|txt|csv|image|png|jpe?g|webp)$/i, '').trim();
+  return stripped || beforeMeta || null;
+}
+
+export function normalizeChatgptProjectSourceProbes(
+  probes: readonly ChatgptProjectSourceProbe[],
+): FileRef[] {
+  const files: FileRef[] = [];
+  const seen = new Set<string>();
+  for (const probe of probes) {
+    const name = extractChatgptProjectSourceName(probe);
+    if (!name) continue;
+    const key = normalizeFileKey(name);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const metadataText = normalizeUiText(probe.metadataText);
+    files.push({
+      id: name,
+      name,
+      provider: 'chatgpt',
+      source: 'project',
+      metadata: metadataText ? { label: metadataText } : undefined,
+    });
+  }
+  return files;
 }
 
 function buildProjectRouteExpression(projectId?: string): string {
@@ -262,6 +330,115 @@ function buildProjectSettingsReadyExpression(): string {
       }
     }
     return null;
+  })()`;
+}
+
+function buildProjectSourcesReadyExpression(projectId?: string | null): string {
+  return `(() => {
+    const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
+    if (!route) return null;
+    const rawId = String(route[1] || '').trim();
+    const match = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    if (!match) return null;
+    const normalizedId = match[1];
+    const expected = ${JSON.stringify(projectId ?? null)};
+    if (expected && normalizedId !== expected) return null;
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const queryTab = new URL(location.href).searchParams.get('tab');
+    const sourceTab = Array.from(document.querySelectorAll('[role="tab"]'))
+      .find((node) => {
+        const id = String(node.getAttribute('id') || '');
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+        return id.endsWith('-sources') || label === 'sources';
+      });
+    const selected = String(sourceTab?.getAttribute('aria-selected') || '').toLowerCase() === 'true';
+    const addSources = Array.from(document.querySelectorAll('button,[role="button"]'))
+      .find((node) => {
+        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+        return label === 'add sources' || label === 'add';
+      });
+    const hasRows = document.querySelectorAll('button[aria-label="Source actions"]').length > 0;
+    return (selected || queryTab === 'sources') && (Boolean(addSources) || hasRows)
+      ? { id: normalizedId, href: location.href, selected, hasRows }
+      : null;
+  })()`;
+}
+
+function buildProjectSourcesUploadDialogReadyExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
+    for (const dialog of dialogs) {
+      const text = normalize(dialog.textContent || '');
+      const hasInput = Boolean(dialog.querySelector('input[type="file"][multiple]'));
+      const hasUpload = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+        .some((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === 'upload');
+      if ((text.includes('add sources') || text.includes('drag sources here')) && hasInput && hasUpload) {
+        return { ok: true };
+      }
+    }
+    return null;
+  })()`;
+}
+
+function buildProjectSourcesSnapshotExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const panel = Array.from(document.querySelectorAll('[role="tabpanel"]'))
+      .find((node) => String(node.getAttribute('aria-labelledby') || '').endsWith('-sources'));
+    const scope = panel || document;
+    const rows = Array.from(scope.querySelectorAll('div[class*="group/file-row"]'));
+    return rows.map((row) => {
+      const leafTexts = Array.from(row.querySelectorAll('div,span,p'))
+        .map((node) => normalize(node.textContent || ''))
+        .filter(Boolean)
+        .slice(0, 24);
+      const metadataText = leafTexts.find((text) => text.includes(' · ')) || null;
+      return {
+        rowText: normalize(row.textContent || ''),
+        leafTexts,
+        metadataText,
+      };
+    });
+  })()`;
+}
+
+function buildProjectSourceNamesPresentExpression(fileNames: readonly string[]): string {
+  return `(() => {
+    const expected = ${JSON.stringify(fileNames)}.map((value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase()).filter(Boolean);
+    if (expected.length === 0) return { ok: true, names: [] };
+    const texts = [];
+    const pushText = (value) => {
+      const normalized = String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      if (normalized) texts.push(normalized);
+    };
+    for (const row of Array.from(document.querySelectorAll('div[class*="group/file-row"]'))) {
+      pushText(row.textContent || '');
+      for (const node of Array.from(row.querySelectorAll('div,span,p'))) {
+        pushText(node.textContent || '');
+      }
+    }
+    const unique = Array.from(new Set(texts));
+    const matches = expected.filter((name) => unique.some((text) => text === name || text.includes(name)));
+    return matches.length === expected.length ? { ok: true, matches, names: unique.slice(0, 40) } : null;
+  })()`;
+}
+
+function buildProjectSourceRemovedExpression(fileName: string): string {
+  return `(() => {
+    const expected = String(${JSON.stringify(fileName)} || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const texts = [];
+    const pushText = (value) => {
+      const normalized = String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      if (normalized) texts.push(normalized);
+    };
+    for (const row of Array.from(document.querySelectorAll('div[class*="group/file-row"]'))) {
+      pushText(row.textContent || '');
+      for (const node of Array.from(row.querySelectorAll('div,span,p'))) {
+        pushText(node.textContent || '');
+      }
+    }
+    return texts.some((text) => text === expected || text.includes(expected)) ? null : { ok: true };
   })()`;
 }
 
@@ -480,6 +657,381 @@ async function navigateToChatgptUrl(client: ChromeClient, url: string, projectId
   if (projectId && !settled.ok) {
     throw new Error(settled.reason || `ChatGPT project ${projectId} did not settle`);
   }
+}
+
+async function openProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
+  const url = `https://chatgpt.com/g/${projectId}/project?tab=sources`;
+  const settled = await navigateAndSettle(client, {
+    url,
+    routeExpression: buildProjectRouteExpression(projectId),
+    routeDescription: `chatgpt project ${projectId}`,
+    readyExpression: buildProjectSourcesReadyExpression(projectId),
+    readyDescription: `ChatGPT project sources ready for ${projectId}`,
+    waitForDocumentReady: true,
+    fallbackToLocationAssign: true,
+    timeoutMs: 10_000,
+    fallbackTimeoutMs: 10_000,
+  });
+  if (settled.ok) return;
+  await withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      const opened = await openSurface(client.Runtime, {
+        readyExpression: buildProjectSourcesReadyExpression(projectId),
+        readyDescription: `ChatGPT project sources ready for ${projectId}`,
+        alreadyOpenTimeoutMs: 800,
+        readyTimeoutMs: 3_000,
+        timeoutMs: 5_000,
+        attempts: [
+          {
+            name: 'sources-tab-id',
+            trigger: {
+              selector: '[role="tab"][id$="-sources"]',
+              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+          },
+          {
+            name: 'sources-tab-label',
+            trigger: {
+              match: { exact: ['sources'] },
+              rootSelectors: ['[role="tablist"]'],
+              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+          },
+        ],
+      });
+      if (!opened.ok) {
+        throw new Error(
+          `ChatGPT project sources tab did not open (${JSON.stringify({
+            reason: opened.reason,
+            attempts: opened.attempts,
+          })})`,
+        );
+      }
+    },
+    {
+      label: 'chatgpt-open-project-sources',
+      candidateSelectors: ['[role="tab"]', 'button', '[role="button"]', 'div[class*="group/file-row"]'],
+      context: {
+        surface: 'chatgpt-project-sources',
+        projectId,
+      },
+    },
+  );
+}
+
+async function readChatgptProjectSourceFiles(client: ChromeClient): Promise<FileRef[]> {
+  const { result } = await client.Runtime.evaluate({
+    expression: buildProjectSourcesSnapshotExpression(),
+    returnByValue: true,
+  });
+  const probes = Array.isArray(result?.value) ? (result.value as ChatgptProjectSourceProbe[]) : [];
+  return normalizeChatgptProjectSourceProbes(probes);
+}
+
+async function readChatgptProjectSourceFilesSettled(
+  client: ChromeClient,
+  options?: { timeoutMs?: number; pollMs?: number },
+): Promise<FileRef[]> {
+  const timeoutMs = options?.timeoutMs ?? 5_000;
+  const pollMs = options?.pollMs ?? 400;
+  const deadline = Date.now() + timeoutMs;
+  let last: FileRef[] = [];
+  while (Date.now() < deadline) {
+    const files = await readChatgptProjectSourceFiles(client);
+    if (files.length > 0) {
+      return files;
+    }
+    last = files;
+    await sleep(pollMs);
+  }
+  return last;
+}
+
+async function reloadProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
+  await client.Page.reload({ ignoreCache: true });
+  const ready = await waitForPredicate(
+    client.Runtime,
+    buildProjectSourcesReadyExpression(projectId),
+    {
+      timeoutMs: 15_000,
+      description: `ChatGPT project sources ready after reload for ${projectId}`,
+    },
+  );
+  if (ready.ok) return;
+  await openProjectSourcesTab(client, projectId);
+}
+
+async function waitForProjectSourceNamesPersisted(
+  client: ChromeClient,
+  projectId: string,
+  expectedNames: readonly string[],
+): Promise<void> {
+  const deadline = Date.now() + 30_000;
+  await sleep(4_000);
+  while (Date.now() < deadline) {
+    await reloadProjectSourcesTab(client, projectId);
+    const persisted = await waitForPredicate(
+      client.Runtime,
+      buildProjectSourceNamesPresentExpression(expectedNames),
+      {
+        timeoutMs: 8_000,
+        description: `ChatGPT project source list persisted for ${projectId}`,
+      },
+    );
+    if (persisted.ok) {
+      return;
+    }
+    await sleep(2_000);
+  }
+  throw new Error(`ChatGPT project source upload did not persist for ${projectId}`);
+}
+
+async function waitForProjectSourceRemovedPersisted(
+  client: ChromeClient,
+  projectId: string,
+  fileName: string,
+): Promise<void> {
+  const deadline = Date.now() + 20_000;
+  await sleep(1_500);
+  while (Date.now() < deadline) {
+    await reloadProjectSourcesTab(client, projectId);
+    const removed = await waitForPredicate(
+      client.Runtime,
+      buildProjectSourceRemovedExpression(fileName),
+      {
+        timeoutMs: 6_000,
+        description: `ChatGPT project source removed after reload: ${fileName}`,
+      },
+    );
+    if (removed.ok) {
+      return;
+    }
+    await sleep(1_500);
+  }
+  throw new Error(`ChatGPT project source "${fileName}" still appeared after reload`);
+}
+
+async function openProjectSourcesUploadDialog(client: ChromeClient, projectId: string): Promise<void> {
+  await openProjectSourcesTab(client, projectId);
+  await withUiDiagnostics(
+    client.Runtime,
+    async () => {
+      const opened = await openSurface(client.Runtime, {
+        readyExpression: buildProjectSourcesUploadDialogReadyExpression(),
+        readyDescription: `ChatGPT project sources upload dialog ready for ${projectId}`,
+        alreadyOpenTimeoutMs: 800,
+        readyTimeoutMs: 3_000,
+        timeoutMs: 5_000,
+        attempts: [
+          {
+            name: 'add-sources',
+            trigger: {
+              match: { exact: ['add sources'] },
+              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+          },
+          {
+            name: 'add-empty-state',
+            trigger: {
+              match: { exact: ['add'] },
+              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+          },
+        ],
+      });
+      if (!opened.ok) {
+        throw new Error(
+          `ChatGPT project sources upload dialog did not open (${JSON.stringify({
+            reason: opened.reason,
+            attempts: opened.attempts,
+          })})`,
+        );
+      }
+    },
+    {
+      label: 'chatgpt-open-project-sources-upload-dialog',
+      candidateSelectors: ['button', '[role="button"]', '[role="dialog"]', 'input[type="file"]'],
+      context: {
+        surface: 'chatgpt-project-sources-upload-dialog',
+        projectId,
+      },
+    },
+  );
+}
+
+async function tagChatgptProjectSourceInput(client: ChromeClient): Promise<string> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const attribute = ${JSON.stringify(CHATGPT_PROJECT_SOURCES_INPUT_ATTR)};
+      for (const node of Array.from(document.querySelectorAll('[' + attribute + ']'))) {
+        node.removeAttribute(attribute);
+      }
+      const dialog = document.querySelector('[role="dialog"], dialog[open]') || document;
+      const input = Array.from(dialog.querySelectorAll('input[type="file"][multiple]'))
+        .find((node) => !['upload-files', 'upload-photos', 'upload-camera'].includes(node.id));
+      if (!(input instanceof HTMLInputElement)) {
+        return { ok: false };
+      }
+      input.setAttribute(attribute, 'true');
+      return { ok: true, selector: 'input[' + attribute + '="true"]' };
+    })()`,
+    returnByValue: true,
+  });
+  const info = result?.value as { ok?: boolean; selector?: string } | undefined;
+  if (!info?.ok || !info.selector) {
+    throw new Error('ChatGPT project sources file input not found');
+  }
+  return info.selector;
+}
+
+async function uploadChatgptProjectSourceFilesWithClient(
+  client: ChromeClient,
+  projectId: string,
+  filePaths: readonly string[],
+): Promise<void> {
+  if (filePaths.length === 0) return;
+  await openProjectSourcesUploadDialog(client, projectId);
+  const selector = await tagChatgptProjectSourceInput(client);
+  await client.DOM.enable();
+  const documentRoot = await client.DOM.getDocument({ depth: 0 });
+  const query = await client.DOM.querySelector({
+    nodeId: documentRoot.root.nodeId,
+    selector,
+  });
+  if (!query.nodeId) {
+    throw new Error('ChatGPT project sources upload input could not be resolved');
+  }
+  await client.DOM.setFileInputFiles({
+    nodeId: query.nodeId,
+    files: [...filePaths],
+  });
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const input = document.querySelector(${JSON.stringify(selector)});
+      if (!(input instanceof HTMLInputElement)) return false;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      input.dispatchEvent(new Event('change', { bubbles: true }));
+      return true;
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
+  const expectedNames = filePaths.map((filePath) => path.basename(filePath));
+  const uploadReady = await waitForPredicate(
+    client.Runtime,
+    buildProjectSourceNamesPresentExpression(expectedNames),
+    {
+      timeoutMs: 12_000,
+      description: `ChatGPT project sources appeared for ${projectId}`,
+    },
+  );
+  if (!uploadReady.ok && filePaths.length === 1) {
+    await transferAttachmentViaDataTransfer(
+      client.Runtime,
+      {
+        path: filePaths[0],
+        displayPath: filePaths[0],
+      },
+      selector,
+    );
+  }
+  const previewVerified = await waitForPredicate(
+    client.Runtime,
+    buildProjectSourceNamesPresentExpression(expectedNames),
+    {
+      timeoutMs: 12_000,
+      description: `ChatGPT project source preview ready for ${projectId}`,
+    },
+  );
+  if (!previewVerified.ok) {
+    throw new Error(`ChatGPT project source upload preview did not appear for ${projectId}`);
+  }
+  await waitForProjectSourceNamesPersisted(client, projectId, expectedNames);
+}
+
+async function tagChatgptProjectSourceAction(client: ChromeClient, fileName: string): Promise<string> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const expected = normalize(${JSON.stringify(fileName)});
+      const attribute = ${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTION_ATTR)};
+      for (const node of Array.from(document.querySelectorAll('[' + attribute + ']'))) {
+        node.removeAttribute(attribute);
+      }
+      const rows = Array.from(document.querySelectorAll('div[class*="group/file-row"]'));
+      const extractName = (row) => {
+        const rowText = String(row.textContent || '').replace(/\\s+/g, ' ').trim();
+        const leafTexts = Array.from(row.querySelectorAll('div,span,p'))
+          .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim())
+          .filter(Boolean);
+        for (const candidate of leafTexts) {
+          if (candidate === rowText) continue;
+          if (candidate.includes(' · ')) continue;
+          if (/^(file|pdf|docx?|txt|csv|image|png|jpe?g|webp)\\b/i.test(candidate)) continue;
+          return candidate;
+        }
+        const beforeMeta = rowText.split(/\\s+·\\s+/)[0]?.trim() ?? '';
+        return beforeMeta.replace(/(?:file|pdf|docx?|txt|csv|image|png|jpe?g|webp)$/i, '').trim() || beforeMeta;
+      };
+      for (const row of rows) {
+        const name = normalize(extractName(row));
+        if (!name || name !== expected) continue;
+        const button = row.querySelector('button[aria-label="Source actions"]');
+        if (!(button instanceof HTMLButtonElement)) continue;
+        button.setAttribute(attribute, 'true');
+        return { ok: true, selector: 'button[' + attribute + '="true"]' };
+      }
+      return {
+        ok: false,
+        candidates: rows
+          .map((row) => extractName(row))
+          .filter(Boolean)
+          .slice(0, 10),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const info = result?.value as { ok?: boolean; selector?: string; candidates?: string[] } | undefined;
+  if (!info?.ok || !info.selector) {
+    const candidates = Array.isArray(info?.candidates) && info.candidates.length > 0
+      ? ` (${info.candidates.join(', ')})`
+      : '';
+    throw new Error(`ChatGPT project source action button not found for "${fileName}"${candidates}`);
+  }
+  return info.selector;
+}
+
+async function confirmChatgptProjectSourceRemovalIfPresent(client: ChromeClient, fileName: string): Promise<void> {
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const expected = normalize(${JSON.stringify(fileName)});
+      for (const dialog of Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))) {
+        const text = normalize(dialog.textContent || '');
+        if (!text.includes('remove') && !text.includes('delete')) continue;
+        if (expected && text && !text.includes(expected) && !text.includes('source')) continue;
+        const button = Array.from(dialog.querySelectorAll('button'))
+          .find((node) => {
+            const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+            return label === 'remove' || label === 'delete';
+          });
+        if (button instanceof HTMLButtonElement) {
+          button.click();
+          return true;
+        }
+      }
+      return false;
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
 }
 
 async function openCreateProjectModalWithClient(client: ChromeClient): Promise<void> {
@@ -873,6 +1425,9 @@ export function createChatgptAdapter(): Pick<
   | 'capabilities'
   | 'getUserIdentity'
   | 'listProjects'
+  | 'listProjectFiles'
+  | 'uploadProjectFiles'
+  | 'deleteProjectFile'
   | 'renameProject'
   | 'openCreateProjectModal'
   | 'setCreateProjectFields'
@@ -884,6 +1439,7 @@ export function createChatgptAdapter(): Pick<
   return {
     capabilities: {
       projects: true,
+      files: true,
     },
     async getUserIdentity(options?: BrowserProviderListOptions): Promise<ProviderUserIdentity | null> {
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
@@ -951,9 +1507,6 @@ export function createChatgptAdapter(): Pick<
       },
       options?: BrowserProviderListOptions,
     ): Promise<Project | null> {
-      if (Array.isArray(input.files) && input.files.length > 0) {
-        throw new Error('ChatGPT project file upload is not implemented yet.');
-      }
       const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
       try {
         await navigateToChatgptUrl(client, options?.configuredUrl ?? CHATGPT_HOME_URL);
@@ -1034,7 +1587,105 @@ export function createChatgptAdapter(): Pick<
         if (input.instructions?.trim()) {
           await applyProjectSettings(client, created.id, { instructions: input.instructions });
         }
+        if (Array.isArray(input.files) && input.files.length > 0) {
+          await uploadChatgptProjectSourceFilesWithClient(client, created.id, input.files);
+        }
         return created;
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async uploadProjectFiles(
+      projectId: string,
+      filePaths: string[],
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      if (filePaths.length === 0) return;
+      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      try {
+        await uploadChatgptProjectSourceFilesWithClient(client, projectId, filePaths);
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async listProjectFiles(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      try {
+        await openProjectSourcesTab(client, projectId);
+        const initial = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000 });
+        if (initial.length > 0) {
+          return initial;
+        }
+        await reloadProjectSourcesTab(client, projectId);
+        return await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000 });
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
+    async deleteProjectFile(
+      projectId: string,
+      fileName: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      try {
+        await openProjectSourcesTab(client, projectId);
+        await readChatgptProjectSourceFilesSettled(client);
+        const selector = await tagChatgptProjectSourceAction(client, fileName);
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            const removed = await openAndSelectMenuItem(client.Runtime, {
+              trigger: {
+                selector,
+                interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+                requireVisible: true,
+                timeoutMs: 3_000,
+              },
+              itemMatch: { exact: ['remove'] },
+              menuSelector: '[role="menu"]',
+              timeoutMs: 4_000,
+              closeMenuAfter: true,
+            });
+            if (!removed) {
+              throw new Error(`ChatGPT source actions menu did not remove "${fileName}"`);
+            }
+          },
+          {
+            label: 'chatgpt-remove-project-source',
+            candidateSelectors: ['button[aria-label="Source actions"]', '[role="menu"]', '[role="menuitem"]'],
+            context: {
+              projectId,
+              fileName,
+            },
+          },
+        );
+        let removal = await waitForPredicate(
+          client.Runtime,
+          buildProjectSourceRemovedExpression(fileName),
+          {
+            timeoutMs: 4_000,
+            description: `ChatGPT project source removed: ${fileName}`,
+          },
+        );
+        if (!removal.ok) {
+          await confirmChatgptProjectSourceRemovalIfPresent(client, fileName);
+          removal = await waitForPredicate(
+            client.Runtime,
+            buildProjectSourceRemovedExpression(fileName),
+            {
+              timeoutMs: 8_000,
+              description: `ChatGPT project source removed after confirmation: ${fileName}`,
+            },
+          );
+        }
+        if (!removal.ok) {
+          throw new Error(`ChatGPT project source "${fileName}" did not disappear after removal`);
+        }
+        await waitForProjectSourceRemovedPersisted(client, projectId, fileName);
       } finally {
         await client.close().catch(() => undefined);
       }

@@ -2,8 +2,10 @@ import { describe, expect, test } from 'vitest';
 import { normalizeProjectMemoryMode } from '../../src/browser/providers/domain.js';
 import {
   extractChatgptProjectIdFromUrl,
+  extractChatgptProjectSourceName,
   findChatgptProjectByName,
   normalizeChatgptAuthSessionIdentity,
+  normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
   resolveChatgptProjectMemoryLabel,
 } from '../../src/browser/providers/chatgptAdapter.js';
@@ -137,6 +139,59 @@ describe('normalizeChatgptAuthSessionIdentity', () => {
       email: undefined,
       source: 'auth-session',
     });
+  });
+});
+
+describe('extractChatgptProjectSourceName', () => {
+  test('prefers the concise leaf text over row metadata', () => {
+    expect(
+      extractChatgptProjectSourceName({
+        rowText: '20251106-NSF GRFP Instructions.mdFile · Nov 6, 2025',
+        leafTexts: [
+          '20251106-NSF GRFP Instructions.mdFile · Nov 6, 2025',
+          '20251106-NSF GRFP Instructions.md',
+          'File · Nov 6, 2025',
+        ],
+      }),
+    ).toBe('20251106-NSF GRFP Instructions.md');
+  });
+
+  test('falls back to stripping the trailing kind label from row text', () => {
+    expect(
+      extractChatgptProjectSourceName({
+        rowText: 'Cochran_Faculty_Vita (15).pdfPDF · Oct 6, 2025',
+        leafTexts: [],
+      }),
+    ).toBe('Cochran_Faculty_Vita (15).pdf');
+  });
+});
+
+describe('normalizeChatgptProjectSourceProbes', () => {
+  test('dedupes rows and emits project-scoped file refs', () => {
+    expect(
+      normalizeChatgptProjectSourceProbes([
+        {
+          rowText: 'spec.mdFile · Mar 28, 2026',
+          leafTexts: ['spec.mdFile · Mar 28, 2026', 'spec.md', 'File · Mar 28, 2026'],
+          metadataText: 'File · Mar 28, 2026',
+        },
+        {
+          rowText: 'spec.mdFile · Mar 28, 2026',
+          leafTexts: ['spec.md'],
+          metadataText: 'File · Mar 28, 2026',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'spec.md',
+        name: 'spec.md',
+        provider: 'chatgpt',
+        source: 'project',
+        metadata: {
+          label: 'File · Mar 28, 2026',
+        },
+      },
+    ]);
   });
 });
 
