@@ -4,6 +4,7 @@ These are real end-to-end checks for the Grok browser path. Keep them updated as
 
 For the still-open breadth work after this acceptance bar, see [grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/grok-remaining-crud-plan.md).
 If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
+For the remaining ChatGPT project-management surface after lifecycle CRUD, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md).
 
 Current post-acceptance status:
 - the full scripted WSL-primary Grok acceptance pass remains the canonical
@@ -24,6 +25,12 @@ Current post-acceptance status:
   - `cache files list --dataset conversation-files`
 - conversation delete now clears the matching `conversation-files` cache rows during cleanup
 - when the root/non-project conversation list surface lags after a browser-file prompt, the scripted runner now logs that lag and falls back to the fresh browser session `conversationId` from `~/.auracall/sessions/*/meta.json` so the same conversation can still be validated end to end
+
+Current ChatGPT project status:
+- lifecycle CRUD is green on the authenticated managed WSL Chrome path: list, create, rename, delete
+- project create now also supports the memory-mode gear via `--memory-mode global|project`
+- the signed-in browser session now supplies ChatGPT cache identity automatically via `/api/auth/session`
+- remaining work is project sources/files first, then instructions, then clone if the native UI exposes it
 
 ## Environment
 

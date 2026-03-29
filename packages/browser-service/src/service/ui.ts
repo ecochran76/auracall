@@ -9,6 +9,13 @@ export type LabelMatchOptions = {
   exact?: string[];
 };
 
+export type UiInteractionStrategy =
+  | 'click'
+  | 'pointer'
+  | 'keyboard-enter'
+  | 'keyboard-space'
+  | 'keyboard-arrowdown';
+
 export type FindAndClickOptions = {
   selectors: string[];
   match: LabelMatchOptions;
@@ -19,6 +26,7 @@ export type PressButtonOptions = {
   selector?: string;
   match?: LabelMatchOptions;
   rootSelectors?: readonly string[];
+  interactionStrategies?: readonly UiInteractionStrategy[];
   requireVisible?: boolean;
   timeoutMs?: number;
   postSelector?: string;
@@ -67,6 +75,35 @@ export type OpenMenuOptions = {
   trigger: PressButtonOptions;
   menuSelector?: string;
   timeoutMs?: number;
+};
+
+export type OpenSurfaceAttempt = {
+  name: string;
+  trigger: PressButtonOptions;
+};
+
+export type OpenSurfaceOptions = {
+  attempts: readonly OpenSurfaceAttempt[];
+  readyExpression?: string;
+  readySelector?: string;
+  readyDescription?: string;
+  timeoutMs?: number;
+  readyTimeoutMs?: number;
+  alreadyOpenTimeoutMs?: number;
+  pollMs?: number;
+};
+
+export type OpenSurfaceResult = {
+  ok: boolean;
+  attempt?: string;
+  reason?: string;
+  attempts: Array<{
+    name: string;
+    triggerOk: boolean;
+    triggerReason?: string;
+    matchedLabel?: string;
+    readyOk?: boolean;
+  }>;
 };
 
 export type OpenRadixMenuOptions = OpenMenuOptions;
@@ -258,6 +295,7 @@ export type CollectUiDiagnosticsOptions = {
   candidateSelectors?: readonly string[];
   buttonSelectors?: readonly string[];
   limit?: number;
+  context?: Record<string, unknown>;
 };
 
 export type UiDiagnosticElement = {
@@ -293,6 +331,7 @@ export type UiDiagnostics = {
   buttons: UiDiagnosticElement[];
   candidates: UiDiagnosticCandidate[];
   roots: string[];
+  context?: Record<string, unknown>;
 };
 
 export type WithUiDiagnosticsOptions = CollectUiDiagnosticsOptions & {
@@ -303,6 +342,141 @@ const DEFAULT_WAIT_POLL_MS = 200;
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function resolveInteractionStrategies(
+  strategies: readonly UiInteractionStrategy[] | undefined,
+  fallback: readonly UiInteractionStrategy[],
+): UiInteractionStrategy[] {
+  const unique = new Set<UiInteractionStrategy>();
+  for (const strategy of strategies ?? fallback) {
+    unique.add(strategy);
+  }
+  return Array.from(unique);
+}
+
+async function dispatchMatchedTrigger(
+  Runtime: ChromeClient['Runtime'],
+  options: PressButtonOptions,
+  interactionStrategy: UiInteractionStrategy,
+): Promise<{ ok: boolean; reason?: string; matchedLabel?: string; listId?: string; rootSelectorUsed?: string | null }> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const selector = ${JSON.stringify(options.selector ?? null)};
+      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+      const requireVisible = ${JSON.stringify(options.requireVisible ?? true)};
+      const includeAny = ${JSON.stringify(options.match?.includeAny ?? [])};
+      const includeAll = ${JSON.stringify(options.match?.includeAll ?? [])};
+      const startsWith = ${JSON.stringify(options.match?.startsWith ?? [])};
+      const exact = ${JSON.stringify(options.match?.exact ?? [])};
+      const interactionStrategy = ${JSON.stringify(interactionStrategy)};
+      const logCandidatesOnMiss = ${JSON.stringify(options.logCandidatesOnMiss ?? false)};
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const isVisible = (el) => {
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const roots = rootSelectors.length
+        ? rootSelectors.map((sel) => ({ selector: sel, root: document.querySelector(sel) })).filter((entry) => entry.root)
+        : [{ selector: 'document', root: document }];
+      const matchesLabel = (label) => {
+        if (!label) return false;
+        if (exact.length && exact.includes(label)) return true;
+        if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
+        if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
+        if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
+        return false;
+      };
+      const dispatchInteraction = (match) => {
+        if (interactionStrategy === 'pointer') {
+          const pointerOpts = { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 };
+          match.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
+          match.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
+          match.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
+          match.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
+          match.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
+          return;
+        }
+        if (interactionStrategy === 'keyboard-enter') {
+          match.focus?.();
+          const keyOpts = { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true };
+          match.dispatchEvent(new KeyboardEvent('keydown', keyOpts));
+          match.dispatchEvent(new KeyboardEvent('keyup', keyOpts));
+          return;
+        }
+        if (interactionStrategy === 'keyboard-space') {
+          match.focus?.();
+          const keyOpts = { key: ' ', code: 'Space', keyCode: 32, which: 32, bubbles: true, cancelable: true };
+          match.dispatchEvent(new KeyboardEvent('keydown', keyOpts));
+          match.dispatchEvent(new KeyboardEvent('keyup', keyOpts));
+          return;
+        }
+        if (interactionStrategy === 'keyboard-arrowdown') {
+          match.focus?.();
+          const keyOpts = { key: 'ArrowDown', code: 'ArrowDown', keyCode: 40, which: 40, bubbles: true, cancelable: true };
+          match.dispatchEvent(new KeyboardEvent('keydown', keyOpts));
+          match.dispatchEvent(new KeyboardEvent('keyup', keyOpts));
+          return;
+        }
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+        match.dispatchEvent(clickEvent);
+      };
+
+      const candidateLabels = [];
+      for (const entry of roots) {
+        const root = entry.root;
+        if (!root) continue;
+        const candidates = selector
+          ? Array.from(root.querySelectorAll(selector))
+          : Array.from(root.querySelectorAll('button,[role="button"],a,[role="link"],[role="menuitem"]'));
+        const visibleCandidates = requireVisible ? candidates.filter(isVisible) : candidates;
+        const match = selector
+          ? visibleCandidates[0] || null
+          : visibleCandidates.find((el) => {
+              const label = normalize(el.getAttribute?.('aria-label') || el.textContent || '');
+              return matchesLabel(label);
+            }) || null;
+        if (!match) {
+          if (logCandidatesOnMiss) {
+            candidateLabels.push(
+              ...visibleCandidates
+                .map((el) => normalize(el.getAttribute?.('aria-label') || el.textContent || ''))
+                .filter(Boolean)
+                .slice(0, 12 - candidateLabels.length),
+            );
+          }
+          continue;
+        }
+        const label = normalize(match.getAttribute?.('aria-label') || match.textContent || '');
+        const listId = match.getAttribute?.('aria-controls') || '';
+        dispatchInteraction(match);
+        return {
+          ok: true,
+          matchedLabel: label,
+          listId,
+          rootSelectorUsed: entry.selector,
+        };
+      }
+
+      if (logCandidatesOnMiss && candidateLabels.length > 0) {
+        return { ok: false, reason: 'Button not found (candidates: ' + candidateLabels.join(', ') + ')' };
+      }
+      return { ok: false, reason: 'Button not found' };
+    })()`,
+    returnByValue: true,
+  });
+  const info = result.result?.value as
+    | { ok?: boolean; reason?: string; matchedLabel?: string; listId?: string; rootSelectorUsed?: string | null }
+    | undefined;
+  if (!info?.ok) {
+    return { ok: false, reason: info?.reason || 'Button click failed' };
+  }
+  return {
+    ok: true,
+    matchedLabel: info.matchedLabel,
+    listId: info.listId,
+    rootSelectorUsed: info.rootSelectorUsed ?? null,
+  };
 }
 
 export async function waitForPredicate(
@@ -675,6 +849,7 @@ export async function collectUiDiagnostics(
         buttons: buttonResults,
         candidates,
         roots,
+        context: ${JSON.stringify(options.context ?? null)},
       };
     })()`,
     returnByValue: true,
@@ -691,6 +866,7 @@ export async function collectUiDiagnostics(
       buttons: [],
       candidates: [],
       roots: [],
+      context: options.context,
     }
   );
 }
@@ -713,6 +889,7 @@ export async function withUiDiagnostics<T>(
       buttons: [],
       candidates: [],
       roots: [],
+      context: options.context,
       collectionError: String(diagError),
     }));
     const labelPrefix = options.label ? `${options.label}: ` : '';
@@ -1339,86 +1516,92 @@ export async function pressButton(
       };
     }
   }
+  const interactionStrategies = resolveInteractionStrategies(options.interactionStrategies, ['click']);
+  const perAttemptTimeoutMs = Math.max(250, Math.floor(timeoutMs / Math.max(interactionStrategies.length, 1)));
+  let lastReason = 'Button click failed';
+  let matchedLabel: string | undefined;
 
-  const result = await Runtime.evaluate({
-    expression: `(() => {
-      const selector = ${JSON.stringify(options.selector ?? null)};
-      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
-      const requireVisible = ${JSON.stringify(options.requireVisible ?? true)};
-      const includeAny = ${JSON.stringify(options.match?.includeAny ?? [])};
-      const includeAll = ${JSON.stringify(options.match?.includeAll ?? [])};
-      const startsWith = ${JSON.stringify(options.match?.startsWith ?? [])};
-      const exact = ${JSON.stringify(options.match?.exact ?? [])};
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const isVisible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-      const roots = rootSelectors.length
-        ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
-        : [document];
-      const matchesLabel = (label) => {
-        if (!label) return false;
-        if (exact.length && exact.includes(label)) return true;
-        if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
-        if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
-        if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
-        return false;
-      };
-      const candidates = [];
-      for (const root of roots) {
-        if (!root) continue;
-        if (selector) {
-          candidates.push(...Array.from(root.querySelectorAll(selector)));
-        } else {
-          candidates.push(...Array.from(root.querySelectorAll('button,[role=\"button\"],a,[role=\"link\"],[role=\"menuitem\"]')));
-        }
+  for (const interactionStrategy of interactionStrategies) {
+    const info = await dispatchMatchedTrigger(Runtime, options, interactionStrategy);
+    if (!info.ok) {
+      lastReason = info.reason || lastReason;
+      continue;
+    }
+    matchedLabel = info.matchedLabel;
+    if (options.postSelector) {
+      const ok = await waitForSelector(Runtime, options.postSelector, perAttemptTimeoutMs);
+      if (!ok) {
+        lastReason = 'Post selector not found: ' + options.postSelector;
+        continue;
       }
-      const visibleCandidates = requireVisible ? candidates.filter(isVisible) : candidates;
-      let match = null;
-      if (selector) {
-        match = visibleCandidates[0] || null;
-      } else {
-        match = visibleCandidates.find((el) => {
-          const label = normalize(el.getAttribute?.('aria-label') || el.textContent || '');
-          return matchesLabel(label);
-        }) || null;
+    }
+    if (options.postGoneSelector) {
+      const ok = await waitForNotSelector(Runtime, options.postGoneSelector, perAttemptTimeoutMs);
+      if (!ok) {
+        lastReason = 'Post-gone selector still present: ' + options.postGoneSelector;
+        continue;
       }
-      if (!match) {
-        if (${JSON.stringify(options.logCandidatesOnMiss ?? false)}) {
-          const labels = visibleCandidates
-            .map((el) => normalize(el.getAttribute?.('aria-label') || el.textContent || ''))
-            .filter(Boolean)
-            .slice(0, 12);
-          return { ok: false, reason: 'Button not found (candidates: ' + labels.join(', ') + ')' };
-        }
-        return { ok: false, reason: 'Button not found' };
-      }
-      const label = normalize(match.getAttribute?.('aria-label') || match.textContent || '');
-      const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
-      match.dispatchEvent(clickEvent);
-      return { ok: true, matchedLabel: label };
-    })()`,
-    returnByValue: true,
-  });
-  const info = result.result?.value as { ok: boolean; reason?: string; matchedLabel?: string } | undefined;
-  if (!info?.ok) {
-    return { ok: false, reason: info?.reason || 'Button click failed' };
+    }
+    return { ok: true, matchedLabel };
   }
 
-  if (options.postSelector) {
-    const ok = await waitForSelector(Runtime, options.postSelector, timeoutMs);
-    if (!ok) {
-      return { ok: false, reason: 'Post selector not found: ' + options.postSelector };
+  return { ok: false, reason: lastReason };
+}
+
+export async function openSurface(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenSurfaceOptions,
+): Promise<OpenSurfaceResult> {
+  if (!options.readyExpression && !options.readySelector) {
+    throw new Error('openSurface requires readyExpression or readySelector');
+  }
+  const attempts: OpenSurfaceResult['attempts'] = [];
+  const waitForReady = async (timeoutMs: number): Promise<boolean> => {
+    if (options.readySelector) {
+      return waitForSelector(Runtime, options.readySelector, timeoutMs);
+    }
+    const ready = await waitForPredicate(Runtime, options.readyExpression!, {
+      timeoutMs,
+      pollMs: options.pollMs,
+      description: options.readyDescription,
+    });
+    return ready.ok;
+  };
+
+  const alreadyOpen = await waitForReady(options.alreadyOpenTimeoutMs ?? 500);
+  if (alreadyOpen) {
+    return { ok: true, attempt: 'already-open', attempts };
+  }
+
+  for (const attempt of options.attempts) {
+    const pressed = await pressButton(Runtime, {
+      ...attempt.trigger,
+      timeoutMs: attempt.trigger.timeoutMs ?? options.timeoutMs,
+    });
+    const record: OpenSurfaceResult['attempts'][number] = {
+      name: attempt.name,
+      triggerOk: pressed.ok,
+      triggerReason: pressed.reason,
+      matchedLabel: pressed.matchedLabel,
+    };
+    if (!pressed.ok) {
+      attempts.push(record);
+      continue;
+    }
+    const ready = await waitForReady(options.readyTimeoutMs ?? options.timeoutMs ?? 5000);
+    record.readyOk = ready;
+    attempts.push(record);
+    if (ready) {
+      return { ok: true, attempt: attempt.name, attempts };
     }
   }
-  if (options.postGoneSelector) {
-    const ok = await waitForNotSelector(Runtime, options.postGoneSelector, timeoutMs);
-    if (!ok) {
-      return { ok: false, reason: 'Post-gone selector still present: ' + options.postGoneSelector };
-    }
-  }
-  return { ok: true, matchedLabel: info.matchedLabel };
+
+  const last = attempts.at(-1);
+  return {
+    ok: false,
+    reason: last?.triggerReason || `Surface did not become ready${options.readyDescription ? `: ${options.readyDescription}` : ''}`,
+    attempts,
+  };
 }
 
 export async function queryRowsByText(
@@ -1567,79 +1750,52 @@ export async function openDialog(
 export async function openMenu(
   Runtime: ChromeClient['Runtime'],
   options: OpenMenuOptions,
-): Promise<{ ok: boolean; menuSelector?: string }> {
+): Promise<{
+  ok: boolean;
+  menuSelector?: string;
+  interactionStrategy?: UiInteractionStrategy;
+  rootSelectorUsed?: string | null;
+  reason?: string;
+  attemptedStrategies?: UiInteractionStrategy[];
+}> {
   const timeoutMs = options.timeoutMs ?? 5000;
-  const result = await Runtime.evaluate({
-    expression: `(() => {
-      const selector = ${JSON.stringify(options.trigger.selector ?? null)};
-      const rootSelectors = ${JSON.stringify(options.trigger.rootSelectors ?? [])};
-      const requireVisible = ${JSON.stringify(options.trigger.requireVisible ?? true)};
-      const includeAny = ${JSON.stringify(options.trigger.match?.includeAny ?? [])};
-      const includeAll = ${JSON.stringify(options.trigger.match?.includeAll ?? [])};
-      const startsWith = ${JSON.stringify(options.trigger.match?.startsWith ?? [])};
-      const exact = ${JSON.stringify(options.trigger.match?.exact ?? [])};
-      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
-      const isVisible = (el) => {
-        const rect = el.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
+  const interactionStrategies = resolveInteractionStrategies(options.trigger.interactionStrategies, ['pointer']);
+  const perAttemptTimeoutMs = Math.max(250, Math.floor(timeoutMs / Math.max(interactionStrategies.length, 1)));
+  let lastReason = 'Menu trigger not found';
+  let lastRootSelectorUsed: string | null = null;
+
+  for (const interactionStrategy of interactionStrategies) {
+    const info = await dispatchMatchedTrigger(Runtime, options.trigger, interactionStrategy);
+    if (!info.ok) {
+      lastReason = info.reason || lastReason;
+      continue;
+    }
+    lastRootSelectorUsed = info.rootSelectorUsed ?? null;
+    const menuSelector = info.listId ? `#${info.listId}` : options.menuSelector;
+    const ready = await waitForMenuOpen(Runtime, {
+      menuSelector,
+      fallbackSelectors: options.menuSelector
+        ? [options.menuSelector, '[role="menu"], [role="listbox"], [data-radix-collection-item]']
+        : ['[role="menu"], [role="listbox"], [data-radix-collection-item]'],
+      timeoutMs: perAttemptTimeoutMs,
+    });
+    if (ready.ok) {
+      return {
+        ok: true,
+        menuSelector: ready.menuSelector,
+        interactionStrategy,
+        rootSelectorUsed: lastRootSelectorUsed,
+        attemptedStrategies: interactionStrategies,
       };
-      const roots = rootSelectors.length
-        ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
-        : [document];
-      const matchesLabel = (label) => {
-        if (!label) return false;
-        if (exact.length && exact.includes(label)) return true;
-        if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
-        if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
-        if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
-        return false;
-      };
-      const candidates = [];
-      for (const root of roots) {
-        if (!root) continue;
-        if (selector) {
-          candidates.push(...Array.from(root.querySelectorAll(selector)));
-        } else {
-          candidates.push(...Array.from(root.querySelectorAll('button,[role=\"button\"],a,[role=\"link\"],[role=\"menuitem\"]')));
-        }
-      }
-      const visibleCandidates = requireVisible ? candidates.filter(isVisible) : candidates;
-      let match = null;
-      if (selector) {
-        match = visibleCandidates[0] || null;
-      } else {
-        match = visibleCandidates.find((el) => {
-          const label = normalize(el.getAttribute?.('aria-label') || el.textContent || '');
-          return matchesLabel(label);
-        }) || null;
-      }
-      if (!match) {
-        return { ok: false };
-      }
-      const listId = match.getAttribute?.('aria-controls') || '';
-      const pointerOpts = { bubbles: true, cancelable: true, pointerType: 'mouse', button: 0, buttons: 1 };
-      match.dispatchEvent(new PointerEvent('pointerdown', pointerOpts));
-      match.dispatchEvent(new MouseEvent('mousedown', pointerOpts));
-      match.dispatchEvent(new PointerEvent('pointerup', pointerOpts));
-      match.dispatchEvent(new MouseEvent('mouseup', pointerOpts));
-      match.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, view: window }));
-      return { ok: true, listId };
-    })()`,
-    returnByValue: true,
-  });
-  const info = result.result?.value as { ok: boolean; listId?: string } | undefined;
-  if (!info?.ok) {
-    return { ok: false };
+    }
+    lastReason = `Menu did not open after ${interactionStrategy}`;
   }
-  const menuSelector = info.listId ? `#${info.listId}` : options.menuSelector;
-  const ready = await waitForMenuOpen(Runtime, {
-    menuSelector,
-    fallbackSelectors: options.menuSelector
-      ? [options.menuSelector, '[role="menu"], [role="listbox"], [data-radix-collection-item]']
-      : ['[role="menu"], [role="listbox"], [data-radix-collection-item]'],
-    timeoutMs,
-  });
-  return ready.ok ? { ok: true, menuSelector: ready.menuSelector } : { ok: false };
+  return {
+    ok: false,
+    reason: lastReason,
+    rootSelectorUsed: lastRootSelectorUsed,
+    attemptedStrategies: interactionStrategies,
+  };
 }
 
 export async function waitForMenuOpen(

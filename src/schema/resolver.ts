@@ -91,14 +91,17 @@ export async function resolveConfig(
   const effective = mergeRecursively(normalized, cliConfig);
 
   // 4. Resolve Model and Engine Business Logic
-  const cliModelArg = cliConfig.model || effective.model || 'gpt-5.2-pro';
-  
   // Decide engine
   let engine = resolveEngine({
     engine: (typeof effective.engine === 'string' ? (effective.engine as EngineMode) : undefined),
     browserFlag: cliOptions.browser,
     env,
   });
+
+  const cliModelArg =
+    cliConfig.model ||
+    effective.model ||
+    (engine === 'browser' ? 'gpt-5.2-instant' : 'gpt-5.2-pro');
 
   const inferredModel = (engine === 'browser') ? inferModelFromLabel(cliModelArg) : resolveApiModel(cliModelArg);
   

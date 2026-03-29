@@ -10,6 +10,8 @@ as the extraction plan. If a repair looks reusable, prefer moving it into
 Current plan: keep trigger/button scoring in the adapter unless it clearly
 repeats on another real surface/provider; make structured UI diagnostics the
 next browser-service extraction so failures arrive with scoped evidence.
+Use the package-owned interaction strategy and surface-fallback helpers before
+adding more provider-local menu/button glue.
 
 ## Workflow Checklist
 1) **Recon first**
@@ -34,10 +36,18 @@ next browser-service extraction so failures arrive with scoped evidence.
 
 4) **Interact like a user**
   - Hover over rows to surface hidden controls.
-  - Use pointer events when click handlers are picky.
+  - Use ordered interaction strategies when click handlers are picky:
+    - `pointer`
+    - `keyboard-space`
+    - `keyboard-enter`
+    - `keyboard-arrowdown`
   - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
+  - If the same surface can open from multiple valid triggers, prefer
+    `openSurface(...)` over provider-local retry blocks.
   - Prefer `navigateAndSettle(...)` over raw `Page.navigate(...)` when the app is an SPA or a route/ready race has shown up before.
   - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
+  - Pass scoped diagnostics `context` into `withUiDiagnostics(...)` so the
+    failure explains the intended trigger label, scope, and interaction modes.
    - For menu buttons, prefer `aria-label="Open menu"` to avoid picking the profile/user menu.
    - If a menu uses `aria-controls`, wait for the referenced element id but fall back to a generic
      menu selector when the id is missing.

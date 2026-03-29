@@ -1,10 +1,25 @@
 export type ProviderId = 'chatgpt' | 'grok';
+export type ProjectMemoryMode = 'global' | 'project';
+
+export function normalizeProjectMemoryMode(value: string | null | undefined): ProjectMemoryMode | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().toLowerCase().replace(/[\s_]+/g, '-');
+  if (!normalized) return null;
+  if (normalized === 'global' || normalized === 'default') {
+    return 'global';
+  }
+  if (normalized === 'project' || normalized === 'project-only' || normalized === 'projectonly') {
+    return 'project';
+  }
+  return null;
+}
 
 export interface Project {
   id: string;
   name: string;
   provider: ProviderId;
   url?: string;
+  memoryMode?: ProjectMemoryMode;
 }
 
 export interface Conversation {

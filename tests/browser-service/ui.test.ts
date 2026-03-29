@@ -4,7 +4,9 @@ import {
   collectUiDiagnostics,
   findAndClickByLabel,
   navigateAndSettle,
+  openMenu,
   openRevealedRowMenu,
+  openSurface,
   pressButton,
   waitForDocumentReady,
   waitForNotSelector,
@@ -193,6 +195,49 @@ describe('browser-service ui wait helpers', () => {
     });
   });
 
+  test('withUiDiagnostics preserves caller context in the diagnostics payload', async () => {
+    const runtime = createRuntime([
+      {
+        url: 'https://chatgpt.com/',
+        title: 'ChatGPT',
+        readyState: 'complete',
+        activeElement: null,
+        dialogs: [],
+        menus: [],
+        buttons: [],
+        candidates: [],
+        roots: [],
+        context: {
+          triggerLabel: 'Project settings',
+          interactionStrategies: ['pointer', 'keyboard-space'],
+        },
+      },
+    ]);
+
+    await expect(
+      withUiDiagnostics(
+        runtime as never,
+        async () => {
+          throw new Error('Menu did not open');
+        },
+        {
+          label: 'chatgpt-project-memory',
+          context: {
+            triggerLabel: 'Project settings',
+            interactionStrategies: ['pointer', 'keyboard-space'],
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      uiDiagnostics: {
+        context: {
+          triggerLabel: 'Project settings',
+          interactionStrategies: ['pointer', 'keyboard-space'],
+        },
+      },
+    });
+  });
+
   test('navigateAndSettle runs route/document/ready checks after Page.navigate', async () => {
     const runtime = createRuntime([
       { path: '/files' },
@@ -276,6 +321,116 @@ describe('browser-service ui wait helpers', () => {
     });
 
     expect(result).toEqual({ ok: true, matchedLabel: 'submit' });
+  });
+
+  test('openMenu retries interaction strategies until one opens the menu', async () => {
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('"pointer"')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                matchedLabel: 'project settings',
+                rootSelectorUsed: 'dialog[open]',
+                listId: '',
+              },
+            },
+          };
+        }
+        if (options.expression.includes('"keyboard-space"')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                matchedLabel: 'project settings',
+                rootSelectorUsed: 'dialog[open]',
+                listId: 'menu-123',
+              },
+            },
+          };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("[role=\\"menu\\"]"))')) {
+          return { result: { value: false } };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("#menu-123"))')) {
+          return { result: { value: true } };
+        }
+        return { result: { value: false } };
+      }),
+    };
+
+    const result = await openMenu(runtime as never, {
+      trigger: {
+        match: { exact: ['project settings'] },
+        requireVisible: false,
+        interactionStrategies: ['pointer', 'keyboard-space'],
+      },
+      menuSelector: '[role="menu"]',
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      menuSelector: '#menu-123',
+      interactionStrategy: 'keyboard-space',
+      rootSelectorUsed: 'dialog[open]',
+      attemptedStrategies: ['pointer', 'keyboard-space'],
+    });
+  });
+
+  test('openSurface uses fallback triggers until the ready state appears', async () => {
+    const runtime = createRuntime([
+      false,
+      { ok: true, matchedLabel: 'edit the title of oracle' },
+      false,
+      { ok: true, matchedLabel: 'show project details' },
+      { open: true },
+    ]);
+
+    const result = await openSurface(runtime as never, {
+      readyExpression: 'window.__projectSettingsOpen',
+      readyDescription: 'project settings ready',
+      timeoutMs: 50,
+      alreadyOpenTimeoutMs: 50,
+      attempts: [
+        {
+          name: 'edit-title',
+          trigger: {
+            match: { startsWith: ['edit the title of'] },
+            requireVisible: false,
+          },
+        },
+        {
+          name: 'show-project-details',
+          trigger: {
+            match: { exact: ['show project details'] },
+            requireVisible: false,
+          },
+        },
+      ],
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      attempt: 'show-project-details',
+      attempts: [
+        {
+          name: 'edit-title',
+          triggerOk: true,
+          triggerReason: undefined,
+          matchedLabel: 'edit the title of oracle',
+          readyOk: false,
+        },
+        {
+          name: 'show-project-details',
+          triggerOk: true,
+          triggerReason: undefined,
+          matchedLabel: 'show project details',
+          readyOk: true,
+        },
+      ],
+    });
   });
 
   test('clickRevealedRowAction reveals a hover action before pressing it', async () => {

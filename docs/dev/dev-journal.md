@@ -12,6 +12,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-03-28
+- Focus: Freeze the remaining ChatGPT project-management plan in the dev docs before starting live `Sources`-tab work.
+- Progress: Wrote `docs/dev/chatgpt-project-surface-plan.md` to capture the next ordered ChatGPT scope after lifecycle CRUD stabilized: live `Sources` DOM recon, project sources/files CRUD, project instructions get/set, clone only if the native UI exposes it, then one disposable live acceptance pass. Linked that plan from `docs/dev/smoke-tests.md` and `docs/testing.md` so the runbook reflects that ChatGPT lifecycle CRUD is already green on the managed WSL Chrome path and the remaining work is broader project management, not basic project existence.
+- Issues: The plan is intentionally specific about native UI boundaries. ChatGPT clone may not exist as a real browser surface, and file/source rows may only expose labels rather than stable ids, so the implementation needs to confirm those live constraints before adding adapter behavior.
+- Next: Commit/push the checkpoint with the ChatGPT identity/canonical-route/browser-service improvements plus this new plan, then start live `Sources` DOM recon on the authenticated managed ChatGPT project page.
+
+- Date: 2026-03-28
+- Focus: Remove the remaining ChatGPT cache-identity prompt by making the managed browser session itself authoritative for account identity.
+- Progress: Traced the prompt to two separate gaps. First, `LlmService.resolveCacheIdentity(...)` only attempted live browser identity detection when `browser.cache.useDetectedIdentity` was explicitly enabled, so the default path fell straight through to the interactive prompt. Second, ChatGPT did not implement `getUserIdentity(...)` at all. Probed the live signed-in WSL ChatGPT session directly and confirmed the current same-origin `/api/auth/session` payload is stable enough for this purpose: it returned `user-PVyuqYSOU4adOEf6UCUK3eiK` plus `ecochran76@gmail.com` on the managed browser session. Wired `src/browser/providers/chatgptAdapter.ts` to read that payload first, fall back to storage/profile-menu hints if necessary, and normalize it into `ProviderUserIdentity`. Then changed `src/browser/llmService/llmService.ts` so cache identity resolution now prefers detected browser identity by default unless `browser.cache.useDetectedIdentity === false`. While doing the live write verification, also fixed `bin/auracall.ts` so `projects create --target chatgpt ...` actually respects the parent `projects` target flag instead of silently falling back to the configured provider. The follow-up live write smoke then flushed out one more real ChatGPT issue: the adapter still treated any `/g/<segment>/project` route as a project id, so a transient malformed `/g/<url-encoded project name>/project` tab could poison current-project reads and cache writes. Tightened `src/browser/providers/chatgptAdapter.ts` so only canonical `g-p-...` segments count as ChatGPT project ids in URL extraction, route-settle checks, current-project reads, and project scraping. Verified with focused ChatGPT tests, `pnpm run check`, and a clean disposable create/remove cycle (`AuraCall Canonical Route Probe 1774744698`) where the selected tab stayed on `https://chatgpt.com/g/g-p-69c87496161c8191b14903d793282d9c/project`, the refreshed project list reported the canonical id, and name-based removal cleaned it up without manual tab cleanup.
+- Issues: The canonical-id fix closes the transient malformed-route poisoning path, but ChatGPT project creation still depends on the live sidebar/home surfaces being present quickly enough to discover the new project after create. That is much safer now, but it is still worth keeping an eye on if ChatGPT changes its post-create navigation again.
+- Next: Fold ChatGPT identity detection into any browser-account doctor/setup output we want later, then move on to the next ChatGPT project surface now that create/list/remove use stable canonical ids again.
+
 - Date: 2026-03-27
 - Focus: Clear the last scripted WSL Grok acceptance failures so the new live runner and the actual product behavior agree.
 - Progress: The first runs of `scripts/grok-acceptance.ts` were valuable because they flushed out two remaining real gaps that the earlier manual smokes missed. First, `projects clone <id> <new-name>` still treated clone rename as best-effort: the command exited 0 even when the refreshed project list stayed at `(...clone)`. Tightened `bin/auracall.ts` so clone-with-name now waits for the requested name to reappear in the refreshed project list and throws if the rename does not persist. Second, project-scoped conversation refresh could still fail right after a browser prompt with `Project conversations list did not load`. The live failure was that the current project page sometimes would not materialize the Conversations tab from an in-page click alone after the prompt run. Updated `openConversationList(...)` in `src/browser/providers/grokAdapter.ts` so project-scoped flows can fall back to direct `?tab=conversations` navigation before giving up. Also fixed the acceptance runner itself to handle the current top-level `conversations context get` JSON shape and to accept the real assistant context payload, which currently includes the configured project instructions text before the expected assistant reply. After those fixes, `DISPLAY=:0.0 pnpm tsx scripts/grok-acceptance.ts --json` completed cleanly with `ok: true` for disposable suffix `cfiagk` (project `0c7b28e2-610a-4878-8dfa-c3d34c5a970f`, clone `23fb88ea-76bc-41ca-bb23-f21388299423`, conversation `aa3ee50d-cc65-4f9b-85a2-9473d115d727`), and the cleanup removed both disposable projects successfully.
@@ -1347,3 +1359,133 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - cleanup is also complete for stale failed-run Grok projects:
       - removed 42 disposable `AuraCall Cedar (Atlas|Harbor|Orbit) ...` Grok projects from earlier failed acceptance runs
       - verified `projects --target grok --refresh` now leaves `leftoverCount: 0` for that disposable name family
+
+## 2026-03-28 — ChatGPT project CRUD DOM recon + first live repair pass
+
+- Goal:
+  - move from the now-stable WSL Grok CRUD path onto ChatGPT project CRUD
+  - start by switching the browser default model to Instant, then explore the live ChatGPT DOM before committing to adapter behavior
+- Browser-model default:
+  - changed the browser-mode default/fallback model from Pro to Instant
+  - updated:
+    - `src/browser/constants.ts`
+    - `src/cli/runOptions.ts`
+    - `src/schema/resolver.ts`
+  - focused verification passed:
+    - `pnpm vitest run tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+- Live ChatGPT DOM findings on the managed WSL Chrome session:
+  - sidebar project rows expose stable row-menu triggers:
+    - `button[aria-label="Open project options for <Project Name>"]`
+  - the create-project flow is a real modal:
+    - root selector: `[data-testid="modal-new-project-enhanced"]`
+    - name field: `input[name="projectName"]`
+    - confirm button text: `Create project`
+  - project pages expose a stable page-level settings surface:
+    - title edit trigger aria starts with `Edit the title of ...`
+    - details/settings trigger: `Show project details`
+    - tabs: `Chats`, `Sources`
+    - settings dialog fields:
+      - `input[aria-label="Project name"]`
+      - `textarea[aria-label="Instructions"]`
+      - dialog-local `Delete project`
+  - delete is a two-dialog state:
+    - the project settings sheet remains open
+    - the destructive confirmation dialog overlays it with:
+      - text beginning `Delete project?`
+      - buttons `Delete` and `Cancel`
+  - important id-shape finding:
+    - current project routes use bare ids such as `g-p-69c8539d58e08191914b82731ecb32be`
+    - sidebar hrefs append a slug suffix such as `g-p-69c8539d58e08191914b82731ecb32be-auracall-harbor-vector`
+    - Aura-Call should treat the bare `g-p-...` prefix as canonical
+- Implementation:
+  - added `src/browser/providers/chatgptAdapter.ts` and wired it through `src/browser/providers/index.ts`
+  - current ChatGPT adapter surface now covers:
+    - `listProjects`
+    - `createProject`
+    - `renameProject`
+    - `selectRemoveProjectItem`
+    - `pushProjectRemoveConfirmation`
+  - the adapter now:
+    - canonicalizes ChatGPT project ids to bare `g-p-...`
+    - treats a confirmed route change to a new project id as authoritative for creation
+    - waits for the ChatGPT project surface to hydrate before using title/settings controls
+    - recognizes the broader project-settings dialog instead of keying only on one input selector
+    - targets the real destructive confirmation dialog instead of whichever dialog happens to be first in the DOM
+    - retries `listProjects` once with a fresh tab resolution when the initial CDP attachment dies with `WebSocket connection closed`
+- Why the first create attempts looked contradictory:
+  - the earlier manual DOM inspection was happening on a stale manual `9222` ChatGPT tab
+  - the real managed Aura-Call ChatGPT session was on the active service target/port resolved by `browserService`
+  - once inspected on that managed target, project create was genuinely working; the main defect was post-create verification being too strict while the new page title/settings controls were still hydrating
+- Focused tests:
+  - added `tests/browser/chatgptAdapter.test.ts`
+  - coverage currently locks down:
+    - project id extraction/normalization from bare + slugged ChatGPT URLs
+    - normalized exact-name matching for project lookup
+  - verification:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+- Live verification:
+  - disposable create/rename/delete passed end to end on the managed ChatGPT session:
+    - created `AuraCall Harbor Vector`
+    - renamed to `AuraCall Harbor Ledger`
+    - deleted the project successfully
+  - direct rename/delete also passed on a separately created disposable project:
+    - `g-p-69c852c00f7c8191a935698b7b6df07b`
+    - `AuraCall Maple Orbit` -> `AuraCall Maple Harbor` -> deleted
+  - user-facing read path recovered too:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts projects --target chatgpt`
+    - now lists projects instead of dying immediately on a stale CDP websocket
+- Cleanup:
+  - removed the disposable ChatGPT probe projects created during recon/validation:
+    - `AuraCall Probe Signal`
+    - `AuraCall Cedar Vector Manual`
+    - `AuraCall Elm Echo`
+    - `AuraCall Alder Signal`
+    - `AuraCall Maple Harbor`
+    - `AuraCall Harbor Ledger`
+  - current live ChatGPT projects list is back to the user’s real set:
+    - `Support Letters`
+    - `Reviewer`
+    - `SoyLei`
+    - `SABER Company`
+    - `HARVEST Roads`
+- Remaining note:
+  - ChatGPT project list/cache writes still prompt for a cache identity unless `browser.cache.identityKey` (or `browser.cache.identity`) is configured; this is not blocking project CRUD, but it is still noisy on CLI list/write paths
+- Follow-up:
+  - added ChatGPT project-create memory-mode support:
+    - `auracall projects create ... --target chatgpt --memory-mode global|project`
+    - `global` maps to ChatGPT `Default`
+    - `project` maps to ChatGPT `Project-only`
+  - important live DOM finding:
+    - the create-modal `Project settings` gear does not reliably open on a plain synthetic `click`
+    - it does open on a real pointer sequence
+    - keyboard `Space` / `ArrowDown` also open it
+    - Aura-Call now uses the shared pointer-driven menu opener first, then keyboard fallback
+  - fixed a second ChatGPT project CRUD edge during cleanup:
+    - `projects remove g-p-...` now accepts bare ChatGPT project ids directly instead of forcing a cache-name lookup
+    - project delete no longer depends on the page-level settings trigger living under `main`; it now retries the visible `Edit the title of ...` control at document scope and falls back through `Show project details`
+  - live verification:
+    - created disposable memory-mode projects:
+      - `AuraCall Harbor Memory Global`
+      - `AuraCall Harbor Memory Project`
+    - `--memory-mode project` now succeeds end to end on the managed WSL Chrome session
+    - both disposable projects were removed successfully afterward
+- Browser-service extraction follow-up:
+  - moved the ChatGPT/Grok DOM-drift learnings one layer down into `packages/browser-service/src/service/ui.ts`
+  - new package-owned behavior:
+    - `pressButton(...)` now accepts ordered interaction strategies for surfaces that distinguish plain click from pointer or keyboard activation
+    - `openMenu(...)` now retries ordered interaction strategies and reports which strategy opened the menu
+    - `openSurface(...)` now provides a shared “try these triggers until the ready state appears” primitive
+    - `collectUiDiagnostics(...)` / `withUiDiagnostics(...)` now accept caller `context` so failures can record intended trigger labels, scopes, and interaction modes
+  - generalized project-id handling in `llmService`:
+    - provider-native project-id passthrough is now driven by provider hooks instead of a hardcoded ChatGPT special case
+    - `extractProjectId(configuredUrl)` now asks the provider first
+  - ChatGPT adoption:
+    - project-create memory mode now uses `openMenu(...)` with ordered interaction strategies instead of provider-local pointer/keyboard fallback snippets
+    - project settings open now uses `openSurface(...)` instead of provider-local trigger retry glue
+  - focused/browser-service verification:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live verification:
+    - created disposable ChatGPT project `AuraCall BrowserService Surface Probe` with `--memory-mode project`
+    - removed it successfully by bare id `g-p-69c86caa0c308191bb2af23d234cf23f`

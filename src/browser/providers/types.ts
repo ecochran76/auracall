@@ -1,4 +1,4 @@
-import type { Project } from './domain.js';
+import type { Project, ProjectMemoryMode } from './domain.js';
 
 export type SelectorList = readonly string[];
 
@@ -54,6 +54,8 @@ export interface BrowserProvider {
   id: BrowserProviderConfig['id'];
   config: BrowserProviderConfig;
   capabilities?: BrowserProviderCapabilities;
+  normalizeProjectId?: (value: string | null | undefined) => string | null;
+  extractProjectIdFromUrl?: (url: string) => string | null;
   resolveProjectUrl?: (projectId: string) => string;
   resolveConversationUrl?: (conversationId: string, projectId?: string) => string;
   listProjects?: (options?: BrowserProviderListOptions) => Promise<unknown>;
@@ -73,7 +75,7 @@ export interface BrowserProvider {
   ) => Promise<void>;
   openCreateProjectModal?: (options?: BrowserProviderListOptions) => Promise<void>;
   setCreateProjectFields?: (
-    fields: { name?: string; instructions?: string; modelLabel?: string },
+    fields: { name?: string; instructions?: string; modelLabel?: string; memoryMode?: ProjectMemoryMode },
     options?: BrowserProviderListOptions,
   ) => Promise<void>;
   clickCreateProjectNext?: (options?: BrowserProviderListOptions) => Promise<void>;
@@ -87,6 +89,7 @@ export interface BrowserProvider {
       instructions?: string;
       modelLabel?: string;
       files?: string[];
+      memoryMode?: ProjectMemoryMode;
     },
     options?: BrowserProviderListOptions,
   ) => Promise<Project | null>;

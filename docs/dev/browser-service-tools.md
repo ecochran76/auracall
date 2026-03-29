@@ -26,8 +26,8 @@ Current DOM-drift extraction priorities live in the 2026-03-28 section of
 Current active extraction plan:
 - keep trigger/button scoring in adapters unless the same scoring shape repeats
   on another real surface/provider
-- move structured UI diagnostics into browser-service next so failures already
-  include scoped menus/dialogs/button candidates/row evidence
+- use browser-service-owned interaction strategies, surface fallbacks, and
+  diagnostics context before adding new provider-local trigger workarounds
 
 ## Core helpers (packages/browser-service/src/service/ui.ts)
 
@@ -86,16 +86,31 @@ Current active extraction plan:
 - `pressButton(Runtime, options)`
   - Clicks a button by selector or label match and waits for post conditions.
   - Supports scoped roots, visibility filtering, and post selectors.
+  - Supports ordered `interactionStrategies` when a surface responds to pointer
+    or keyboard activation differently than plain click.
   - Use `logCandidatesOnMiss` to include visible labels in failure messages.
 
 - `openDialog(Runtime, options)`
   - Uses `pressButton` then waits for a dialog and optional ready selector.
 
 - `openMenu(Runtime, options)`
-  - Clicks a trigger and waits for the menu/listbox to appear (aria-controls aware).
+  - Opens a trigger and waits for the menu/listbox to appear (aria-controls aware).
+  - Supports ordered interaction strategies and reports which strategy opened
+    the menu.
+
+- `openSurface(Runtime, options)`
+  - Shared “try these triggers until the ready state appears” helper.
+  - Use this when the same surface can be opened from more than one valid
+    trigger and the ready-state is shared.
+  - Returns structured per-attempt history for failure diagnostics.
 
 - `waitForMenuOpen(Runtime, options)`
   - Waits for menu/listbox selectors, with fallback selectors when the primary id is missing.
+
+- `collectUiDiagnostics(Runtime, options)` / `withUiDiagnostics(Runtime, action, options)`
+  - Capture a bounded page snapshot and optionally attach caller `context`.
+  - Use `context` for intended trigger labels, interaction strategies, or root
+    scopes so failure payloads explain what the automation was trying to do.
 
 - `pressMenuButtonByAriaLabel(Runtime, options)`
   - Opens a menu by aria-label match and waits for the menu to render.

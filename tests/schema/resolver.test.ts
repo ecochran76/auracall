@@ -16,6 +16,19 @@ describe('Config Resolver', () => {
     expect(result.browser.headless).toBe(undefined);
   });
 
+  it('should default browser runs to gpt-5.2-instant when no model is configured', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: { browser: {} } as any,
+      path: '/tmp/config.json',
+      loaded: false,
+    });
+
+    const result = await resolveConfig({ engine: 'browser' });
+
+    expect(result.engine).toBe('browser');
+    expect(result.model).toBe('gpt-5.2-instant');
+  });
+
   it('should override defaults with file config', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: { model: 'gpt-4', browser: { headless: true } },

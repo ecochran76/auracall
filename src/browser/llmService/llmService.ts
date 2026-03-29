@@ -7,6 +7,7 @@ import type {
   ConversationSource,
   FileRef,
   Project,
+  ProjectMemoryMode,
   ProviderId,
 } from '../providers/domain.js';
 import {
@@ -440,7 +441,7 @@ export abstract class LlmService {
   }
 
   async setCreateProjectFields(
-    fields: { name?: string; instructions?: string; modelLabel?: string },
+    fields: { name?: string; instructions?: string; modelLabel?: string; memoryMode?: ProjectMemoryMode },
     options?: { listOptions?: BrowserProviderListOptions },
   ): Promise<void> {
     if (!this.provider.setCreateProjectFields) {
@@ -632,6 +633,7 @@ export abstract class LlmService {
       instructions?: string;
       modelLabel?: string;
       files?: string[];
+      memoryMode?: ProjectMemoryMode;
     },
     options?: { listOptions?: BrowserProviderListOptions },
   ): Promise<Project | null> {
@@ -877,6 +879,10 @@ export abstract class LlmService {
       listOptions?: BrowserProviderListOptions;
     },
   ): Promise<string> {
+    const directId = this.provider.normalizeProjectId?.(projectName);
+    if (directId) {
+      return directId;
+    }
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
     const cacheContext = await this.resolveCacheContext(listOptions);
     let cached = await this.cacheStore.readProjects(cacheContext);
@@ -1041,14 +1047,6 @@ export abstract class LlmService {
     const profileIdentity = this.resolveProfileServiceIdentity(this.providerId);
     let userIdentity: ProviderUserIdentity | null = profileIdentity;
     const cacheConfig = this.userConfig.browser?.cache;
-    const useDetectedIdentity = Boolean(cacheConfig?.useDetectedIdentity);
-    if (!userIdentity && useDetectedIdentity) {
-      try {
-        userIdentity = await this.getUserIdentity(listOptions);
-      } catch {
-        userIdentity = null;
-      }
-    }
 
     const identityKeyHint =
       typeof cacheConfig?.identityKey === 'string' && cacheConfig.identityKey.trim().length > 0
@@ -1077,6 +1075,15 @@ export abstract class LlmService {
           email: identityHint.email,
           source: 'config',
         };
+      }
+    }
+
+    const useDetectedIdentity = cacheConfig?.useDetectedIdentity !== false;
+    if (!identityKey && !userIdentity && useDetectedIdentity) {
+      try {
+        userIdentity = await this.getUserIdentity(listOptions);
+      } catch {
+        userIdentity = null;
       }
     }
 
@@ -1193,6 +1200,10 @@ export abstract class LlmService {
 
   private extractProjectId(configuredUrl: string | null): string | null {
     if (!configuredUrl) return null;
+    const providerExtracted = this.provider.extractProjectIdFromUrl?.(configuredUrl);
+    if (providerExtracted) {
+      return this.provider.normalizeProjectId?.(providerExtracted) ?? providerExtracted;
+    }
     try {
       const parsed = new URL(configuredUrl);
       if (this.providerId === 'grok') {

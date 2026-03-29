@@ -237,6 +237,7 @@ describe('resolveBrowserModelLabel', () => {
 
   test('supports undefined or whitespace-only input', () => {
     expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-pro')).toBe('GPT-5.2 Pro');
+    expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-instant')).toBe('GPT-5.2 Instant');
     expect(resolveBrowserModelLabel('   ', 'gpt-5.1')).toBe('GPT-5.2');
   });
 

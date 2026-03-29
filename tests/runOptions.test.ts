@@ -31,6 +31,15 @@ describe('resolveRunOptionsFromConfig', () => {
     expect(runOptions.model).toBe(DEFAULT_MODEL);
   });
 
+  it('defaults browser runs to gpt-5.2-instant when model not provided', () => {
+    const { runOptions, resolvedEngine } = resolveRunOptionsFromConfig({
+      prompt: basePrompt,
+      engine: 'browser',
+    });
+    expect(resolvedEngine).toBe('browser');
+    expect(runOptions.model).toBe('gpt-5.2-instant');
+  });
+
   it('uses config model when caller does not provide one', () => {
     const { runOptions } = resolveRunOptionsFromConfig({
       prompt: basePrompt,

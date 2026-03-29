@@ -20,6 +20,53 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 ## Entries
 
+- Date: 2026-03-28
+- Area: Browser/ChatGPT cache identity auto-detection
+- Symptom: Signed-in ChatGPT project list/write paths still interrupted with `Cache identity for chatgpt (username/email, leave blank to skip):`, and if the operator skipped the prompt Aura-Call followed up with `Failed to update project cache: Cache identity for chatgpt is required...`. That made managed-browser ChatGPT CRUD feel half-working even though the browser session itself was authenticated.
+- Root cause:
+  - `src/browser/llmService/llmService.ts` only attempted live browser identity detection when `browser.cache.useDetectedIdentity` was explicitly enabled, so the default path skipped directly to the interactive prompt.
+  - ChatGPT did not implement `getUserIdentity(...)`, so even enabling that flag would still have produced `null`.
+- Fix:
+  - Probed the live signed-in ChatGPT WSL session and confirmed that same-origin `/api/auth/session` returns a stable browser-auth payload with the signed-in user id and email (`user-PVyuqYSOU4adOEf6UCUK3eiK`, `ecochran76@gmail.com`).
+  - Added ChatGPT browser identity detection in `src/browser/providers/chatgptAdapter.ts` to read `/api/auth/session`, normalize the `user` / `account` payload into `ProviderUserIdentity`, and fall back to storage/profile-menu hints only if the auth-session read fails.
+  - Changed `src/browser/llmService/llmService.ts` so cache identity resolution now prefers detected browser identity by default unless `browser.cache.useDetectedIdentity === false` explicitly disables it.
+  - Fixed `bin/auracall.ts` so `projects create --target chatgpt ...` also honors the parent `projects` target flag; without that, the live write smoke could still fall back to the configured provider and throw unrelated Grok create errors.
+  - Added focused tests in `tests/browser/chatgptAdapter.test.ts` and new service-level coverage in `tests/browser/llmServiceIdentity.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - Live signed-in read: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts projects --target chatgpt`
+    - returned the real project list
+    - did not print any `Cache identity for chatgpt...` prompt
+    - did not print `Failed to update project cache...`
+  - Live disposable write smoke:
+    - `DISPLAY=:0.0 ... pnpm tsx bin/auracall.ts projects create --target chatgpt "AuraCall Cache Identity Probe 1774743669" --memory-mode global`
+    - `DISPLAY=:0.0 ... pnpm tsx bin/auracall.ts projects remove --target chatgpt g-p-69c87098913c81918e11d312ed7077eb`
+    - both completed without the old cache-identity prompt
+- Follow-ups:
+  - If ChatGPT changes its post-create navigation again, keep treating the canonical `g-p-...` route or refreshed sidebar project list as the only authoritative project-id source; do not regress to trusting arbitrary `/g/<segment>/project` paths.
+
+- Date: 2026-03-28
+- Area: Browser/ChatGPT canonical project-id enforcement
+- Symptom: After a successful ChatGPT project create/write smoke, the selected browser tab could transiently sit on a malformed route like `/g/AuraCall%20Cache%20Identity%20Probe%201774743669/project`. Because the adapter treated any `/g/<segment>/project` route as a valid project id, that malformed path polluted `readCurrentProject(...)`, `projects --refresh`, cache entries, and name-based cleanup.
+- Root cause:
+  - `normalizeChatgptProjectId(...)` returned the raw trimmed value when it did not find a `g-p-...` prefix.
+  - The ChatGPT route-change, route-ready, current-project, and scrape helpers all accepted those noncanonical route segments as if they were real project ids.
+- Fix:
+  - Tightened `normalizeChatgptProjectId(...)` in `src/browser/providers/chatgptAdapter.ts` so only canonical `g-p-...` values are treated as project ids.
+  - Updated ChatGPT route-settle expressions, `readCurrentProject(...)`, and `scrapeChatgptProjects(...)` so malformed `/g/<non-g-p>/project` routes are ignored instead of becoming authoritative.
+  - Added focused regression coverage in `tests/browser/chatgptAdapter.test.ts` for malformed noncanonical project routes and ids.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceIdentity.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - Live disposable smoke:
+    - `DISPLAY=:0.0 ... pnpm tsx bin/auracall.ts projects create --target chatgpt "AuraCall Canonical Route Probe 1774744698" --memory-mode global`
+    - selected tab landed on `https://chatgpt.com/g/g-p-69c87496161c8191b14903d793282d9c/project`
+    - `DISPLAY=:0.0 ... pnpm tsx bin/auracall.ts projects --target chatgpt --refresh` reported the canonical `g-p-69c87496161c8191b14903d793282d9c` id
+    - `DISPLAY=:0.0 ... pnpm tsx bin/auracall.ts projects remove --target chatgpt "AuraCall Canonical Route Probe 1774744698"` removed the project successfully
+- Follow-ups:
+  - Keep canonical `g-p-...` ids as the only acceptable ChatGPT project-id contract in future adapters/cache paths, even if ChatGPT briefly renders intermediary noncanonical routes during create or redirect transitions.
+
 - Date: 2026-03-27
 - Area: Browser/Grok WSL acceptance hardening (clone rename verification + project conversation tab fallback)
 - Symptom: The new scripted WSL Grok acceptance runner immediately found two last real product problems that earlier manual spot checks had not forced consistently. `projects clone <id> <new-name>` could return success while the refreshed project list still showed `(<source name> clone)` instead of the requested clone name, and right after a successful project-scoped browser prompt the first `conversations --project-id ... --refresh --include-history` could still die with `Project conversations list did not load`.
@@ -2520,3 +2567,153 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - stale disposable Grok projects from earlier failed runs were cleaned up afterward:
       - removed 42 `AuraCall Cedar (Atlas|Harbor|Orbit) ...` projects
       - verified `leftoverCount: 0` for that disposable family
+
+## 2026-03-28 — ChatGPT project CRUD: DOM findings and first live green pass
+
+- Scope:
+  - start ChatGPT project CRUD after the Grok stabilization work
+  - switch the browser-mode default model to Instant before the live ChatGPT pass
+- Changed:
+  - `src/browser/constants.ts`
+    - browser-mode default model label now points at Instant instead of Pro
+  - `src/cli/runOptions.ts`
+    - browser engine fallback model now resolves to `gpt-5.2-instant`
+  - `src/schema/resolver.ts`
+    - browser-mode model fallback now resolves to `gpt-5.2-instant`
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added initial ChatGPT project CRUD adapter coverage:
+      - `listProjects`
+      - `createProject`
+      - `renameProject`
+      - `selectRemoveProjectItem`
+      - `pushProjectRemoveConfirmation`
+    - canonicalized ChatGPT project ids to the bare `g-p-...` prefix
+    - made create verification route-authoritative:
+      - a post-submit route change to a new project id now counts as success even if the new page title/settings controls are still hydrating
+    - added a ChatGPT project-surface hydration wait before rename/delete/settings work
+    - broadened project-settings readiness detection beyond one specific input selector
+    - targeted the real `Delete project?` confirmation dialog instead of the first dialog node, because the project settings sheet stays open underneath it
+    - retried `listProjects` once with a fresh tab resolution when the initial attachment dies with `WebSocket connection closed`
+  - `src/browser/providers/index.ts`
+    - wired the new ChatGPT adapter into the provider registry
+  - `tests/browser/chatgptAdapter.test.ts`
+    - added focused coverage for:
+      - slugged vs bare ChatGPT project id extraction
+      - normalized project-name matching
+- Live DOM findings that mattered:
+  - sidebar project rows expose stable row-menu triggers:
+    - `Open project options for <Project Name>`
+  - create-project modal:
+    - root: `[data-testid="modal-new-project-enhanced"]`
+    - name: `input[name="projectName"]`
+    - confirm text: `Create project`
+  - project-page settings surface:
+    - page trigger: aria starts with `Edit the title of ...`
+    - secondary trigger: `Show project details`
+    - fields:
+      - `input[aria-label="Project name"]`
+      - `textarea[aria-label="Instructions"]`
+  - delete flow is two dialogs:
+    - settings sheet remains open
+    - destructive confirm dialog overlays it with `Delete` + `Cancel`
+  - ChatGPT uses mixed id shapes:
+    - current route: bare `g-p-...`
+    - sidebar href: `g-p-...-slug`
+    - Aura-Call should keep the bare prefix as the canonical project id
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live:
+    - create/rename/delete disposable ChatGPT project:
+      - `AuraCall Harbor Vector`
+      - rename to `AuraCall Harbor Ledger`
+      - delete successful
+    - direct rename/delete also passed on:
+      - `g-p-69c852c00f7c8191a935698b7b6df07b`
+      - `AuraCall Maple Orbit` -> `AuraCall Maple Harbor` -> deleted
+    - `pnpm tsx bin/auracall.ts projects --target chatgpt`
+      - now survives the stale-target websocket-close case and returns the real project list again
+- Cleanup:
+  - deleted the disposable ChatGPT probe projects created during DOM recon and validation
+  - the remaining live ChatGPT projects list is back to the user’s real set:
+    - `Support Letters`
+    - `Reviewer`
+    - `SoyLei`
+    - `SABER Company`
+    - `HARVEST Roads`
+- Remaining note:
+  - ChatGPT cache writes still prompt for cache identity unless `browser.cache.identityKey` / `browser.cache.identity` is configured; that is not a CRUD blocker, but it is still CLI noise
+- Follow-up:
+  - `bin/auracall.ts`
+    - added `projects create --memory-mode <global|project>` for ChatGPT project creation
+  - `src/browser/providers/domain.ts`
+    - introduced shared `ProjectMemoryMode` plus normalization for `global` / `default` and `project` / `project-only`
+  - `src/browser/providers/types.ts`
+  - `src/browser/llmService/llmService.ts`
+    - threaded optional project memory mode through provider/service create flows
+    - accept bare ChatGPT `g-p-...` ids directly in `resolveProjectIdByName(...)` so `projects remove g-p-...` works without a cache-name lookup
+  - `src/browser/providers/chatgptAdapter.ts`
+    - mapped memory mode selection to ChatGPT's current create-modal gear menu:
+      - `global` -> `Default`
+      - `project` -> `Project-only`
+    - switched the gear open path from a plain synthetic button click to the shared pointer-driven `openMenu(...)` helper, with `Space`/`ArrowDown` keyboard fallbacks for the current modal behavior
+    - broadened project-settings open for rename/delete:
+      - stop scoping the `Edit the title of ...` trigger to `main`
+      - retry through `Show project details` when the page-level settings surface drifts
+  - `tests/browser/chatgptAdapter.test.ts`
+    - added coverage for ChatGPT memory-mode label mapping
+- Live DOM finding that mattered:
+  - ChatGPT create-modal `Project settings` gear is not equivalent to a simple synthetic `click`
+  - on the current live DOM it opens on:
+    - pointer sequence
+    - keyboard `Space`
+    - keyboard `ArrowDown`
+  - Aura-Call now follows that actual interaction model instead of assuming button-click parity
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live:
+    - created disposable ChatGPT projects:
+      - `AuraCall Harbor Memory Global`
+      - `AuraCall Harbor Memory Project`
+    - `--memory-mode project` now creates successfully on the managed WSL Chrome profile
+    - removed both disposable projects successfully by bare `g-p-...` id
+
+## 2026-03-28 — Browser-service absorbed the ChatGPT menu/surface/id learnings
+
+- Scope:
+  - stop re-solving the ChatGPT gear/settings drift in provider code
+  - move the generalizable parts into browser-service and the provider interface
+- Changed:
+  - `packages/browser-service/src/service/ui.ts`
+    - `pressButton(...)` now accepts ordered `interactionStrategies`
+    - `openMenu(...)` now retries ordered interaction strategies and reports which strategy opened the menu
+    - added `openSurface(...)` for shared “try these triggers until ready” flows
+    - `collectUiDiagnostics(...)` / `withUiDiagnostics(...)` now accept caller `context`
+  - `tests/browser-service/ui.test.ts`
+    - added focused coverage for:
+      - menu interaction-strategy fallback
+      - surface trigger fallback
+      - diagnostics context preservation
+  - `src/browser/providers/types.ts`
+    - added provider hooks for project-id normalization/extraction
+  - `src/browser/providers/index.ts`
+    - wired ChatGPT/Grok project-id hooks into the provider registry
+  - `src/browser/llmService/llmService.ts`
+    - provider-native project-id passthrough is now hook-based instead of a hardcoded ChatGPT branch
+    - configured project-url parsing now asks the provider first
+  - `src/browser/providers/chatgptAdapter.ts`
+    - create-modal memory-mode now uses browser-service interaction strategies through `openMenu(...)`
+    - project-settings open now uses `openSurface(...)` instead of provider-local trigger retry blocks
+- Live lesson captured in code:
+  - a UI trigger can be “button-shaped” without being plain-click-equivalent
+  - browser-service now models that explicitly instead of forcing adapters to hand-roll pointer/keyboard fallbacks
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts tests/runOptions.test.ts tests/schema/resolver.test.ts tests/browser/config.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live:
+    - created disposable ChatGPT project `AuraCall BrowserService Surface Probe` with `--memory-mode project`
+    - removed it successfully by bare id `g-p-69c86caa0c308191bb2af23d234cf23f`

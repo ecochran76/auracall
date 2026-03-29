@@ -1469,7 +1469,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async setCreateProjectFields(
-      fields: { name?: string; instructions?: string; modelLabel?: string },
+      fields: { name?: string; instructions?: string; modelLabel?: string; memoryMode?: 'global' | 'project' },
       options?: BrowserProviderListOptions,
     ): Promise<void> {
       const connection = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);
@@ -1728,7 +1728,13 @@ export function createGrokAdapter(): Pick<
     },
 
     async createProject(
-      input: { name: string; instructions?: string; modelLabel?: string; files?: string[] },
+      input: {
+        name: string;
+        instructions?: string;
+        modelLabel?: string;
+        files?: string[];
+        memoryMode?: 'global' | 'project';
+      },
       options?: BrowserProviderListOptions,
     ): Promise<Project | null> {
       const connection = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);

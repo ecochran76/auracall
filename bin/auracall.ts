@@ -76,7 +76,11 @@ import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../src/browser/providers/types.js';
-import type { Conversation, Project } from '../src/browser/providers/domain.js';
+import {
+  normalizeProjectMemoryMode,
+  type Conversation,
+  type Project,
+} from '../src/browser/providers/domain.js';
 import { attachSession, showStatus, formatCompletionSummary } from '../src/cli/sessionDisplay.js';
 import type { ShowStatusOptions } from '../src/cli/sessionDisplay.js';
 import { formatCompactNumber } from '../src/cli/format.js';
@@ -175,6 +179,7 @@ interface CliOptions extends OptionValues {
   projectName?: string;
   noProject?: boolean;
   project?: boolean;
+  memoryMode?: string;
   conversationId?: string;
   conversationName?: string;
   browserTimeout?: string;
@@ -796,7 +801,7 @@ const projectsCommand = program
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
     const userConfig = await resolveConfig({ ...parentOptions, ...commandOptions }, process.cwd(), process.env);
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -868,6 +873,7 @@ projectsCommand
   .option('--instructions-file <path>', 'Read instructions from a file.')
   .option('--instructions-text <value>', 'Use raw instructions text.')
   .option('--model <label>', 'Preferred model label for the project.')
+  .option('--memory-mode <global|project>', 'ChatGPT only: choose global/default memory or project-only memory.')
   .option('-f, --file <paths...>', 'Files to attach to the project.', collectPaths, [])
   .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
   .action(async (projectName, commandOptions) => {
@@ -877,7 +883,7 @@ projectsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -895,6 +901,16 @@ projectsCommand
     const modelLabel = typeof commandOptions.model === 'string' && commandOptions.model.trim().length > 0
       ? commandOptions.model.trim()
       : undefined;
+    const memoryModeRaw = typeof commandOptions.memoryMode === 'string' && commandOptions.memoryMode.trim().length > 0
+      ? commandOptions.memoryMode.trim()
+      : null;
+    const memoryMode = memoryModeRaw ? normalizeProjectMemoryMode(memoryModeRaw) : null;
+    if (memoryModeRaw && !memoryMode) {
+      throw new Error(`Invalid --memory-mode "${memoryModeRaw}". Use "global" or "project".`);
+    }
+    if (memoryMode && target !== 'chatgpt') {
+      throw new Error('--memory-mode is currently only supported for ChatGPT project creation.');
+    }
     const rootOptions = program.opts?.() ?? {};
     const mergedFileInputs = mergePathLikeOptions(
       collectPaths(commandOptions.file, collectPaths((parentOptions as CliOptions).file, collectPaths((rootOptions as CliOptions).file, []))),
@@ -929,6 +945,7 @@ projectsCommand
           instructions: instructions ?? undefined,
           modelLabel,
           files: deduped,
+          memoryMode: memoryMode ?? undefined,
         },
         { listOptions },
       );
@@ -939,7 +956,15 @@ projectsCommand
       }
     } else {
       await llmService.openCreateProjectModal({ listOptions });
-      await llmService.setCreateProjectFields({ name: projectName, instructions, modelLabel }, { listOptions });
+      await llmService.setCreateProjectFields(
+        {
+          name: projectName,
+          instructions,
+          modelLabel,
+          memoryMode: memoryMode ?? undefined,
+        },
+        { listOptions },
+      );
       await llmService.clickCreateProjectNext({ listOptions });
       if (deduped.length > 0) {
         await llmService.clickCreateProjectAttach({ listOptions });
@@ -975,7 +1000,7 @@ projectsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1001,7 +1026,7 @@ projectsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
@@ -1066,7 +1091,7 @@ projectsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }

@@ -28,6 +28,7 @@ describe('resolveBrowserConfig', () => {
   test('returns defaults when config missing', () => {
     const resolved = resolveBrowserConfig(undefined);
     expect(resolved.url).toBe(CHATGPT_URL);
+    expect(resolved.desiredModel).toBe('GPT-5.2 Instant');
     const isWindows = process.platform === 'win32';
     expect(resolved.cookieSync).toBe(!isWindows);
     expect(resolved.headless).toBe(false);

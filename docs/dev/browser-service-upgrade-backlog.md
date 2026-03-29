@@ -34,6 +34,15 @@ Current active plan:
 - Make structured UI diagnostics wrappers the next package-owned extraction so
   future DOM drift failures carry the scoped evidence needed to decide whether a
   selector/action fix belongs in browser-service or stays app-specific.
+- Latest implementation follow-up:
+  - `openMenu(...)` now supports ordered interaction strategies instead of
+    assuming a synthetic click is always equivalent to a real menu open.
+  - `openSurface(...)` now provides a package-owned “try these triggers until
+    the ready state appears” primitive for page/menu/dialog surfaces.
+  - UI diagnostics now accept caller context so failures can record intended
+    scopes/interaction modes alongside the live page snapshot.
+  - provider-native project-id normalization/extraction is now a provider hook
+    instead of a hardcoded ChatGPT special case inside `llmService`.
 
 ### 6. `navigateAndSettle(...)`
 
@@ -136,7 +145,7 @@ Next:
 
 ### 8. Structured UI diagnostics wrapper
 
-Status: started 2026-03-28
+Status: active and expanded 2026-03-28
 
 Why:
 - DOM drift repair is much faster when the failure already contains the
@@ -218,6 +227,81 @@ Implementation plan:
      - triggers
      - rankings
      - diagnostics
+
+Progress:
+- `collectUiDiagnostics(...)` and `withUiDiagnostics(...)` are live in
+  `packages/browser-service/src/service/ui.ts`.
+- Diagnostics now accept caller-owned `context`, so failures can report:
+  - intended trigger labels
+  - attempted interaction strategies
+  - scope/root assumptions
+- ChatGPT project-create memory-mode and project-settings/delete flows now use
+  that context to explain what the automation was trying to open when a live
+  miss occurs.
+
+### 9. Interaction-strategy menu helpers
+
+Status: started 2026-03-28
+
+Why:
+- Real apps do not treat every trigger like a simple synthetic `click`.
+- The current ChatGPT project-create gear menu opens on pointer and keyboard
+  activation, but not reliably on plain `click`.
+
+Files:
+- `packages/browser-service/src/service/ui.ts`
+- `tests/browser-service/ui.test.ts`
+
+Acceptance:
+- Menu/button helpers can try ordered interaction strategies:
+  - `pointer`
+  - `click`
+  - `keyboard-enter`
+  - `keyboard-space`
+  - `keyboard-arrowdown`
+- The helper reports which strategy succeeded.
+- Callers can pass the intended strategy order into diagnostics context.
+
+Progress:
+- `pressButton(...)` now accepts `interactionStrategies`.
+- `openMenu(...)` now retries trigger activation across ordered interaction
+  strategies and reports which one opened the menu.
+- ChatGPT project-create memory-mode now uses the shared helper with:
+  - `pointer`
+  - `keyboard-space`
+  - `keyboard-arrowdown`
+
+### 10. Canonical action-surface fallback helper
+
+Status: started 2026-03-28
+
+Why:
+- The same operation often has multiple valid entry points:
+  - page button
+  - details button
+  - row menu
+  - dialog entry
+- Provider code should not have to hand-roll “try A, then B, then A again”
+  every time a surface drifts.
+
+Files:
+- `packages/browser-service/src/service/ui.ts`
+- `tests/browser-service/ui.test.ts`
+
+Acceptance:
+- A helper can:
+  - try ordered triggers
+  - verify a shared ready-state after each attempt
+  - return which surface succeeded
+  - return structured per-attempt history on failure
+
+Progress:
+- `openSurface(...)` now provides package-owned fallback opening based on:
+  - ordered trigger attempts
+  - shared ready expression or selector
+  - structured per-attempt result history
+- ChatGPT project settings now use `openSurface(...)` instead of provider-local
+  trigger fallback glue.
    - Keep app semantics such as “project row” or “conversation row” in adapters.
 
 Acceptance for this plan:

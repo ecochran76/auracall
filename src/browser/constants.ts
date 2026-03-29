@@ -3,7 +3,7 @@ import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
 
 export const CHATGPT_URL = 'https://chatgpt.com/';
 export const GROK_URL = 'https://grok.com/';
-export const DEFAULT_MODEL_TARGET = 'GPT-5.2 Pro';
+export const DEFAULT_MODEL_TARGET = 'GPT-5.2 Instant';
 export const DEFAULT_MODEL_STRATEGY: BrowserModelStrategy = 'select';
 export const COOKIE_URLS = ['https://chatgpt.com', 'https://chat.openai.com', 'https://atlas.openai.com'];
 

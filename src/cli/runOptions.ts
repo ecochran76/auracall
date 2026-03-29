@@ -8,6 +8,8 @@ import { resolveGeminiModelId } from '../oracle/gemini.js';
 import { PromptValidationError } from '../oracle/errors.js';
 import { normalizeChatGptModelForBrowser } from './browserConfig.js';
 
+const DEFAULT_BROWSER_MODEL: ModelName = 'gpt-5.2-instant';
+
 export interface ResolveRunOptionsInput {
   prompt: string;
   files?: string[];
@@ -38,8 +40,10 @@ export function resolveRunOptionsFromConfig({
   const browserConfigured = userConfig?.engine === 'browser';
   const requestedModelList = Array.isArray(models) ? models : [];
   const normalizedRequestedModels = requestedModelList.map((entry) => normalizeModelOption(entry)).filter(Boolean);
-
-  const cliModelArg = normalizeModelOption(model ?? userConfig?.model) || DEFAULT_MODEL;
+  const configuredModel = normalizeModelOption(model ?? userConfig?.model);
+  const cliModelArg =
+    configuredModel ||
+    (resolvedEngine === 'browser' ? DEFAULT_BROWSER_MODEL : DEFAULT_MODEL);
   const inferredModel =
     resolvedEngine === 'browser' && normalizedRequestedModels.length === 0
       ? inferModelFromLabel(cliModelArg)
