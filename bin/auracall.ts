@@ -199,6 +199,7 @@ interface CliOptions extends OptionValues {
   forceReseedManagedProfile?: boolean;
   browserTarget?: 'chatgpt' | 'gemini' | 'grok';
   browserThinkingTime?: 'light' | 'standard' | 'extended' | 'heavy';
+  browserComposerTool?: string;
   browserAllowCookieErrors?: boolean;
   browserAttachments?: string;
   browserInlineFiles?: boolean;
@@ -618,7 +619,13 @@ program
   .addOption(
     new Option(
       '--browser-thinking-time <level>',
-      "ChatGPT 'thinking' time level (light | standard | extended | heavy).",
+      "ChatGPT 'thinking' time level (standard | extended; light/heavy kept as legacy aliases).",
+    ).hideHelp(),
+  )
+  .addOption(
+    new Option(
+      '--browser-composer-tool <tool>',
+      'Select a ChatGPT composer add-on/tool (for example web-search, deep-research, canvas, google-drive, or gmail).',
     ).hideHelp(),
   )
   .addOption(
@@ -1851,6 +1858,91 @@ const conversationContextCommand = conversationsCommand
   .command('context')
   .description('Read cached/live conversation context payloads.');
 
+const conversationArtifactsCommand = conversationsCommand
+  .command('artifacts')
+  .description('Materialize conversation artifacts into the local cache.');
+
+conversationArtifactsCommand
+  .command('fetch <id>')
+  .description('Fetch supported artifacts for a conversation and store them under conversation-attachments.')
+  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
+  .action(async (id, commandOptions, command) => {
+    const parentOptions = command.parent?.parent?.opts?.() ?? {};
+    const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
+      | 'chatgpt'
+      | 'grok';
+    if (target !== 'chatgpt' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl: userConfig.browser?.url ?? null,
+      includeHistory: true,
+      historyLimit: DEFAULT_CACHE_HISTORY_LIMIT,
+    });
+    const projectArg =
+      commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const selector = String(id || '').trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selector);
+    const conversationId = isUuid
+      ? selector
+      : (
+          await llmService.resolveConversationSelector(selector, {
+            projectId,
+            forceRefresh: true,
+            listOptions: projectId ? { ...listOptions, projectId } : listOptions,
+          })
+        ).id;
+    const result = await llmService.materializeConversationArtifacts(conversationId, {
+      projectId,
+      listOptions,
+      refresh: true,
+    });
+    if (!process.stdout.isTTY) {
+      console.log(
+        JSON.stringify(
+          {
+            provider: target,
+            conversationId,
+            artifactCount: result.artifacts.length,
+            materializedCount: result.files.length,
+            manifestPath: result.manifestPath,
+            files: result.files,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    if (result.artifacts.length === 0) {
+      console.log(`No artifacts found for conversation ${conversationId}.`);
+      return;
+    }
+    if (result.files.length === 0) {
+      console.log(`No supported artifacts were materialized for conversation ${conversationId}.`);
+      if (result.manifestPath) {
+        console.log(chalk.dim(`Artifact fetch manifest: ${result.manifestPath}`));
+      }
+      return;
+    }
+    for (const file of result.files) {
+      console.log(`${file.name}\t${file.localPath ?? ''}`);
+    }
+    const skipped = result.artifacts.length - result.files.length;
+    const suffix = skipped > 0 ? ` (${skipped} unsupported or unavailable)` : '';
+    console.log(chalk.dim(`Materialized ${result.files.length} artifact(s)${suffix}.`));
+    if (result.manifestPath) {
+      console.log(chalk.dim(`Artifact fetch manifest: ${result.manifestPath}`));
+    }
+  });
+
 conversationContextCommand
   .command('get <id>')
   .description('Retrieve conversation context by ID or cached title/selector.')
@@ -2661,7 +2753,6 @@ program
       return new RegExp(regex, 'i');
     };
 
-    const conversationList = await llmService.listConversations(projectId, scopedListOptions);
     const pattern = String(id || '');
     const matchId = normalize(pattern);
     const matcher =
@@ -2670,17 +2761,28 @@ program
         : matchMode === 'glob'
           ? globToRegex(pattern)
           : null;
-    const matches = conversationList.filter((item) => {
-      const title = normalize(item.title ?? '');
-      const idMatch = normalize(item.id) === matchId;
-      if (matchMode === 'exact') {
-        return idMatch || title === matchId;
-      }
-      if (!matcher) {
-        return idMatch || title === matchId;
-      }
-      return matcher.test(item.title ?? '') || matcher.test(item.id);
-    });
+    const directConversationId = matchMode === 'exact' ? llmService.provider.normalizeConversationId?.(pattern) : null;
+    const matches = directConversationId
+      ? [
+          {
+            id: directConversationId,
+            title: directConversationId,
+            provider: target,
+            projectId,
+            url: llmService.provider.resolveConversationUrl?.(directConversationId, projectId),
+          },
+        ]
+      : (await llmService.listConversations(projectId, scopedListOptions)).filter((item) => {
+          const title = normalize(item.title ?? '');
+          const idMatch = normalize(item.id) === matchId;
+          if (matchMode === 'exact') {
+            return idMatch || title === matchId;
+          }
+          if (!matcher) {
+            return idMatch || title === matchId;
+          }
+          return matcher.test(item.title ?? '') || matcher.test(item.id);
+        });
 
     if (matches.length === 0) {
       console.error(`No conversations matched "${id}".`);

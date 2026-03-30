@@ -7,11 +7,24 @@ For generic DOM-drift follow-on work, use
 [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
 as the extraction plan. If a repair looks reusable, prefer moving it into
 `packages/browser-service/` over adding another provider-local workaround.
+For a broader package-boundary review after the ChatGPT MVP/polish cycle, start
+with
+[browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
+before deciding whether the next fix belongs in browser-service or in a
+provider adapter.
 Current plan: keep trigger/button scoring in the adapter unless it clearly
-repeats on another real surface/provider; make structured UI diagnostics the
-next browser-service extraction so failures arrive with scoped evidence.
+repeats on another real surface/provider; use the now package-owned
+menu-family selection, stable visible-menu handles, nested submenu traversal,
+and select-and-reopen verification helpers before adding provider-local menu
+glue.
 Use the package-owned interaction strategy and surface-fallback helpers before
 adding more provider-local menu/button glue.
+For blocking modals/alerts, prefer the package-owned overlay inventory plus
+blocking-surface recovery helpers before adding another provider-local
+`query visible dialog -> dismiss -> sleep -> retry` loop.
+When multiple menus can be open at once, prefer browser-service menu-family
+selection (`openMenu(...)` / `waitForMenuOpen(...)` with expected-item context)
+over provider-local "first visible menu" heuristics.
 
 ## Workflow Checklist
 1) **Recon first**
@@ -42,6 +55,17 @@ adding more provider-local menu/button glue.
     - `keyboard-enter`
     - `keyboard-arrowdown`
   - Prefer browser-service helpers (`pressButton`, `openMenu`, `hoverElement`) over ad-hoc DOM events.
+  - If multiple visible menus can coexist, pass expected menu-item labels into
+    `openMenu(...)` so browser-service can choose the correct menu family.
+  - If `openMenu(...)` or `collectVisibleMenuInventory(...)` returns a specific
+    tagged menu selector, keep using that scoped handle for later submenu/menu
+    work instead of falling back to generic `[role="menu"]` selectors.
+  - For true nested menus like `Add files and more -> More -> Canvas`, prefer
+    `selectNestedMenuPath(...)` / `openSubmenu(...)` over provider-local
+    multi-step menu glue.
+  - If the authoritative selected state only exists inside reopened menu markup,
+    prefer `selectAndVerifyNestedMenuPathOption(...)` over provider-local
+    "click, reopen, inspect" logic.
   - If the same surface can open from multiple valid triggers, prefer
     `openSurface(...)` over provider-local retry blocks.
   - Prefer `navigateAndSettle(...)` over raw `Page.navigate(...)` when the app is an SPA or a route/ready race has shown up before.

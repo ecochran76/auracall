@@ -1,11 +1,11 @@
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions } from '../../src/browser/providers/types.js';
-import type { FileRef } from '../../src/browser/providers/domain.js';
+import type { ConversationArtifact, FileRef } from '../../src/browser/providers/domain.js';
 import type { ProviderCacheContext } from '../../src/browser/providers/cache.js';
 import { JsonCacheStore } from '../../src/browser/llmService/cache/store.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
@@ -197,6 +197,101 @@ describe('llmService project file cache writes', () => {
       expect(provider.readConversationContext).toHaveBeenCalled();
       const cached = await store.readConversationFiles(cacheContext, 'conversation-ctx');
       expect(cached.items).toEqual(files);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('materializeConversationArtifacts writes a sidecar fetch manifest without changing the attachment manifest shape', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-files-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    const artifacts: ConversationArtifact[] = [
+      {
+        id: 'artifact-1',
+        title: 'Artifact One',
+        kind: 'download',
+        uri: 'sandbox:/mnt/data/artifact-one.zip',
+      },
+      {
+        id: 'artifact-2',
+        title: 'Artifact Two',
+        kind: 'spreadsheet',
+        uri: 'sandbox:/mnt/data/artifact-two.xlsx',
+      },
+    ];
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+      readConversationContext: vi.fn(async () => ({
+        provider: 'chatgpt',
+        conversationId: 'conversation-123',
+        messages: [{ role: 'assistant', text: 'done' }],
+        artifacts,
+      })),
+      materializeConversationArtifact: vi.fn(async (_conversationId: string, artifact: ConversationArtifact) => {
+        if (artifact.id === 'artifact-1') {
+          return {
+            id: 'file-1',
+            name: 'artifact-one.zip',
+            provider: 'chatgpt',
+            source: 'conversation',
+            size: 42,
+            localPath: '/tmp/artifact-one.zip',
+            remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_1',
+            mimeType: 'application/zip',
+          } satisfies FileRef;
+        }
+        throw new Error('artifact fetch failed');
+      }),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      const result = await service.materializeConversationArtifacts('conversation-123', {
+        listOptions: {},
+        refresh: true,
+      });
+      expect(result.files).toHaveLength(1);
+      expect(result.manifestPath).toBeTruthy();
+      const cached = await store.readConversationAttachments(cacheContext, 'conversation-123');
+      expect(cached.items).toEqual([
+        {
+          id: 'file-1',
+          name: 'artifact-one.zip',
+          provider: 'chatgpt',
+          source: 'conversation',
+          size: 42,
+          localPath: '/tmp/artifact-one.zip',
+          remoteUrl: 'https://chatgpt.com/backend-api/estuary/content?id=file_1',
+          mimeType: 'application/zip',
+        },
+      ]);
+      const manifest = JSON.parse(await readFile(result.manifestPath as string, 'utf8')) as {
+        artifactCount: number;
+        materializedCount: number;
+        entries: Array<{ artifactId: string; status: string; error?: string; fileName?: string }>;
+      };
+      expect(manifest.artifactCount).toBe(2);
+      expect(manifest.materializedCount).toBe(1);
+      expect(manifest.entries).toEqual([
+        expect.objectContaining({
+          artifactId: 'artifact-1',
+          status: 'materialized',
+          fileName: 'artifact-one.zip',
+        }),
+        expect.objectContaining({
+          artifactId: 'artifact-2',
+          status: 'error',
+          error: 'artifact fetch failed',
+        }),
+      ]);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

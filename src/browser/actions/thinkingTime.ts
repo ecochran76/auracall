@@ -109,14 +109,14 @@ async function evaluateThinkingTimeSelection(
 function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
   const menuContainerLiteral = JSON.stringify(MENU_CONTAINER_SELECTOR);
   const menuItemLiteral = JSON.stringify(MENU_ITEM_SELECTOR);
-  const targetLevelLiteral = JSON.stringify(level.toLowerCase());
+  const targetLevelsLiteral = JSON.stringify(resolveThinkingTimeCandidates(level));
 
   return `(async () => {
     ${buildClickDispatcher()}
 
     const MENU_CONTAINER_SELECTOR = ${menuContainerLiteral};
     const MENU_ITEM_SELECTOR = ${menuItemLiteral};
-    const TARGET_LEVEL = ${targetLevelLiteral};
+    const TARGET_LEVELS = ${targetLevelsLiteral};
 
     const CHIP_SELECTORS = [
       '[data-testid="composer-footer-actions"] button[aria-haspopup="menu"]',
@@ -125,6 +125,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
     ];
 
     const INITIAL_WAIT_MS = 150;
+    const REOPEN_INTERVAL_MS = 400;
     const MAX_WAIT_MS = 10000;
 
     const normalize = (value) => (value || '')
@@ -163,6 +164,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
     return new Promise((resolve) => {
       const start = performance.now();
+      let lastOpenAttemptAt = performance.now();
 
       const findMenu = () => {
         const menus = document.querySelectorAll(MENU_CONTAINER_SELECTOR + ', [role="group"]');
@@ -183,7 +185,7 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
         const items = menu.querySelectorAll(MENU_ITEM_SELECTOR);
         for (const item of items) {
           const text = normalize(item.textContent ?? '');
-          if (text.includes(TARGET_LEVEL)) {
+          if (TARGET_LEVELS.some((target) => text.includes(target))) {
             return item;
           }
         }
@@ -206,6 +208,10 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
             resolve({ status: 'menu-not-found' });
             return;
           }
+          if (performance.now() - lastOpenAttemptAt >= REOPEN_INTERVAL_MS) {
+            dispatchClickSequence(chip);
+            lastOpenAttemptAt = performance.now();
+          }
           setTimeout(attempt, 100);
           return;
         }
@@ -220,8 +226,12 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
           optionIsSelected(targetOption) ||
           optionIsSelected(targetOption.querySelector?.('[aria-checked="true"], [data-state="checked"], [data-state="selected"]'));
         const label = targetOption.textContent?.trim?.() || null;
+        if (alreadySelected) {
+          resolve({ status: 'already-selected', label });
+          return;
+        }
         dispatchClickSequence(targetOption);
-        resolve({ status: alreadySelected ? 'already-selected' : 'switched', label });
+        resolve({ status: 'switched', label });
       };
 
       setTimeout(attempt, INITIAL_WAIT_MS);
@@ -231,4 +241,19 @@ function buildThinkingTimeExpression(level: ThinkingTimeLevel): string {
 
 export function buildThinkingTimeExpressionForTest(level: ThinkingTimeLevel = 'extended'): string {
   return buildThinkingTimeExpression(level);
+}
+
+function resolveThinkingTimeCandidates(level: ThinkingTimeLevel): string[] {
+  const normalized = level.toLowerCase();
+  switch (normalized) {
+    case 'light':
+      return ['light', 'standard'];
+    case 'heavy':
+      return ['heavy', 'extended'];
+    case 'standard':
+      return ['standard'];
+    case 'extended':
+    default:
+      return ['extended'];
+  }
 }

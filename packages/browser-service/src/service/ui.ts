@@ -1,6 +1,22 @@
 import type { ChromeClient } from '../types.js';
 
 export const DEFAULT_DIALOG_SELECTORS = ['[role="dialog"]', 'dialog', '[aria-modal="true"]'] as const;
+const DEFAULT_VISIBLE_MENU_SELECTORS = [
+  '[role="menu"]',
+  '[role="listbox"]',
+  '[data-radix-menu-content][data-state="open"]',
+  '[data-radix-collection-root]',
+] as const;
+const DEFAULT_VISIBLE_MENU_ITEM_SELECTORS = [
+  '[role="menuitem"]',
+  '[role="menuitemradio"]',
+  '[role="option"]',
+  '[data-radix-collection-item]',
+  'button',
+  'a',
+] as const;
+const DEFAULT_VISIBLE_OVERLAY_SELECTORS = ['[role="dialog"]', 'dialog', '[aria-modal="true"]', '[role="alert"]', '[aria-live]'] as const;
+const DEFAULT_VISIBLE_OVERLAY_BUTTON_SELECTORS = ['button', '[role="button"]'] as const;
 
 export type LabelMatchOptions = {
   includeAny?: string[];
@@ -74,6 +90,9 @@ export type RowMatchInfo = {
 export type OpenMenuOptions = {
   trigger: PressButtonOptions;
   menuSelector?: string;
+  anchorSelector?: string;
+  anchorRootSelectors?: readonly string[];
+  expectedItemMatch?: LabelMatchOptions;
   timeoutMs?: number;
 };
 
@@ -119,7 +138,79 @@ export type SelectMenuItemOptions = {
 export type WaitForMenuOpenOptions = {
   menuSelector?: string;
   fallbackSelectors?: string[];
+  anchorSelector?: string;
+  anchorRootSelectors?: readonly string[];
+  expectedItemMatch?: LabelMatchOptions;
+  existingMenuSignatures?: readonly string[];
   timeoutMs?: number;
+};
+
+export type VisibleMenuInventoryItem = {
+  label: string;
+  role?: string | null;
+  selected: boolean;
+};
+
+export type VisibleMenuInventoryEntry = {
+  selector: string;
+  sourceSelector: string;
+  signature: string;
+  rect: { x: number; y: number; width: number; height: number };
+  distanceToAnchor: number | null;
+  items: VisibleMenuInventoryItem[];
+  itemLabels: string[];
+};
+
+export type CollectVisibleMenuInventoryOptions = {
+  menuSelectors?: readonly string[];
+  itemSelectors?: readonly string[];
+  anchorSelector?: string;
+  anchorRootSelectors?: readonly string[];
+  limit?: number;
+};
+
+export type VisibleOverlayInventoryEntry = {
+  selector: string;
+  sourceSelector: string;
+  signature: string;
+  rect: { x: number; y: number; width: number; height: number };
+  distanceToAnchor: number | null;
+  tag: string | null;
+  role: string | null;
+  ariaLabel: string | null;
+  text: string | null;
+  buttonLabels: string[];
+};
+
+export type CollectVisibleOverlayInventoryOptions = {
+  overlaySelectors?: readonly string[];
+  buttonSelectors?: readonly string[];
+  anchorSelector?: string;
+  anchorRootSelectors?: readonly string[];
+  limit?: number;
+};
+
+export type DismissOverlayRootOptions = {
+  closeButtonMatch?: LabelMatchOptions;
+  buttonSelectors?: readonly string[];
+  timeoutMs?: number;
+};
+
+export type BlockingSurfaceMatch = {
+  kind: string;
+  summary: string;
+  selector?: string | null;
+  details?: Record<string, unknown> | null;
+};
+
+export type WithBlockingSurfaceRecoveryOptions<TMatch extends BlockingSurfaceMatch = BlockingSurfaceMatch> = {
+  inspect: () => Promise<TMatch | null>;
+  dismiss?: (match: TMatch) => Promise<void>;
+  classifyError?: (error: unknown) => Promise<TMatch | null> | TMatch | null;
+  pauseMs?: number;
+  retries?: number;
+  label?: string;
+  onRecover?: (event: { match: TMatch; phase: 'pre' | 'post' | 'error'; attempt: number }) => Promise<void> | void;
 };
 
 export type SelectFromListboxOptions = {
@@ -128,6 +219,82 @@ export type SelectFromListboxOptions = {
   listboxSelector?: string;
   timeoutMs?: number;
   closeAfter?: boolean;
+};
+
+export type OpenSubmenuOptions = {
+  parentMenuSelector: string;
+  itemMatch: LabelMatchOptions;
+  submenuSelector?: string;
+  expectedItemMatch?: LabelMatchOptions;
+  interactionStrategies?: readonly UiInteractionStrategy[];
+  timeoutMs?: number;
+};
+
+export type OpenSubmenuResult = {
+  ok: boolean;
+  menuSelector?: string;
+  interactionStrategy?: UiInteractionStrategy;
+  reason?: string;
+};
+
+export type NestedMenuPathStep = {
+  itemMatch: LabelMatchOptions;
+  menuSelector?: string;
+  interactionStrategies?: readonly UiInteractionStrategy[];
+};
+
+export type SelectNestedMenuPathOptions = {
+  trigger: PressButtonOptions;
+  menuSelector?: string;
+  steps: readonly NestedMenuPathStep[];
+  timeoutMs?: number;
+  closeMenuAfter?: boolean;
+};
+
+export type SelectNestedMenuPathResult = {
+  ok: boolean;
+  menuSelector?: string;
+  failedStep?: number;
+  reason?: string;
+};
+
+export type InspectNestedMenuPathSelectionOptions = {
+  trigger: PressButtonOptions;
+  menuSelector?: string;
+  steps: readonly NestedMenuPathStep[];
+  selectedItemMatch?: LabelMatchOptions;
+  timeoutMs?: number;
+  closeMenusAfter?: boolean;
+};
+
+export type InspectNestedMenuPathSelectionResult = {
+  ok: boolean;
+  selected?: boolean;
+  label?: string | null;
+  menuSelector?: string;
+  failedStep?: number;
+  reason?: string;
+  availableLabels?: string[];
+};
+
+export type SelectAndVerifyNestedMenuPathOptionOptions = {
+  trigger: PressButtonOptions;
+  menuSelector?: string;
+  steps: readonly NestedMenuPathStep[];
+  selectedItemMatch?: LabelMatchOptions;
+  timeoutMs?: number;
+  closeMenusAfter?: boolean;
+};
+
+export type SelectAndVerifyNestedMenuPathOptionResult = {
+  ok: boolean;
+  alreadySelected?: boolean;
+  label?: string | null;
+  menuSelector?: string;
+  failedStep?: number;
+  reason?: string;
+  phase?: 'inspect' | 'select' | 'verify';
+  availableLabels?: string[];
 };
 
 export type OpenAndSelectMenuItemOptions = {
@@ -232,6 +399,21 @@ export type SubmitInlineRenameOptions = {
   saveButtonMatch?: LabelMatchOptions;
   timeoutMs?: number;
   closeSelector?: string;
+  requireEditable?: boolean;
+  submitStrategy?: 'synthetic-enter' | 'native-enter' | 'native-then-synthetic';
+  closeGraceMs?: number;
+};
+
+export type DownloadCapture = {
+  href: string | null;
+  downloadName: string | null;
+};
+
+export type CaptureDownloadOptions = {
+  stateKey?: string;
+  timeoutMs?: number;
+  pollMs?: number;
+  requireTarget?: boolean;
 };
 
 export type WaitForPredicateOptions = {
@@ -355,6 +537,85 @@ function resolveInteractionStrategies(
   return Array.from(unique);
 }
 
+function normalizeUiLabel(value: unknown): string {
+  return String(value || '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function scoreLabelMatch(label: string, match: LabelMatchOptions | undefined): number {
+  if (!match) return label ? 1 : 0;
+  const normalized = normalizeUiLabel(label);
+  if (!normalized) return 0;
+
+  let best = 0;
+  for (const token of match.exact ?? []) {
+    const normalizedToken = normalizeUiLabel(token);
+    if (normalizedToken && normalized === normalizedToken) {
+      best = Math.max(best, 4_000 + normalizedToken.length);
+    }
+  }
+  for (const token of match.startsWith ?? []) {
+    const normalizedToken = normalizeUiLabel(token);
+    if (normalizedToken && normalized.startsWith(normalizedToken)) {
+      best = Math.max(best, 3_000 + normalizedToken.length);
+    }
+  }
+  const includeAll = (match.includeAll ?? []).map((token) => normalizeUiLabel(token)).filter(Boolean);
+  if (includeAll.length > 0 && includeAll.every((token) => normalized.includes(token))) {
+    best = Math.max(best, 2_000 + includeAll.join('').length);
+  }
+  for (const token of match.includeAny ?? []) {
+    const normalizedToken = normalizeUiLabel(token);
+    if (normalizedToken && normalized.includes(normalizedToken)) {
+      best = Math.max(best, 1_000 + normalizedToken.length);
+    }
+  }
+  return best;
+}
+
+function findBestVisibleMenuItemMatch(
+  items: readonly VisibleMenuInventoryItem[],
+  match: LabelMatchOptions | undefined,
+): VisibleMenuInventoryItem | null {
+  let best: VisibleMenuInventoryItem | null = null;
+  let bestScore = 0;
+  for (const item of items) {
+    const score = scoreLabelMatch(item.label, match);
+    if (score > bestScore) {
+      best = item;
+      bestScore = score;
+    }
+  }
+  return bestScore > 0 ? best : null;
+}
+
+function isLikelyMenuContainerSelector(selector: string): boolean {
+  const normalized = selector.toLowerCase();
+  return !(
+    normalized.includes('menuitem') ||
+    normalized.includes('collection-item') ||
+    normalized.includes('[role="option"]') ||
+    normalized.includes('[role="button"]')
+  );
+}
+
+function buildMenuFallbackSelectors(primarySelector?: string): string[] {
+  return Array.from(
+    new Set(
+      [
+        primarySelector,
+        '[role="menu"]',
+        '[role="listbox"]',
+        '[data-radix-menu-content][data-state="open"]',
+        '[data-radix-collection-root]',
+        '[data-radix-collection-item]',
+      ].filter((selector): selector is string => Boolean(selector)),
+    ),
+  );
+}
+
 async function dispatchMatchedTrigger(
   Runtime: ChromeClient['Runtime'],
   options: PressButtonOptions,
@@ -428,7 +689,11 @@ async function dispatchMatchedTrigger(
         if (!root) continue;
         const candidates = selector
           ? Array.from(root.querySelectorAll(selector))
-          : Array.from(root.querySelectorAll('button,[role="button"],a,[role="link"],[role="menuitem"]'));
+          : Array.from(
+              root.querySelectorAll(
+                'button,[role="button"],a,[role="link"],[role="menuitem"],[role="menuitemradio"],[role="option"]',
+              )
+            );
         const visibleCandidates = requireVisible ? candidates.filter(isVisible) : candidates;
         const match = selector
           ? visibleCandidates[0] || null
@@ -871,6 +1136,364 @@ export async function collectUiDiagnostics(
   );
 }
 
+export async function collectVisibleMenuInventory(
+  Runtime: ChromeClient['Runtime'],
+  options: CollectVisibleMenuInventoryOptions = {},
+): Promise<VisibleMenuInventoryEntry[]> {
+  const limit = Math.max(1, Math.min(options.limit ?? 8, 20));
+  const menuSelectors = Array.from(
+    new Set((options.menuSelectors?.length ? options.menuSelectors : Array.from(DEFAULT_VISIBLE_MENU_SELECTORS)).filter(Boolean)),
+  );
+  const itemSelectors = Array.from(
+    new Set(
+      (options.itemSelectors?.length ? options.itemSelectors : Array.from(DEFAULT_VISIBLE_MENU_ITEM_SELECTORS)).filter(Boolean),
+    ),
+  );
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const limit = ${JSON.stringify(limit)};
+      const menuSelectors = ${JSON.stringify(menuSelectors)};
+      const itemSelectors = ${JSON.stringify(itemSelectors)};
+      const anchorSelector = ${JSON.stringify(options.anchorSelector ?? null)};
+      const anchorRootSelectors = ${JSON.stringify(options.anchorRootSelectors ?? [])};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const readRect = (node) => {
+        const rect = node.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      };
+      const center = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      const distance = (left, right) => {
+        const dx = left.x - right.x;
+        const dy = left.y - right.y;
+        return Math.round(Math.sqrt(dx * dx + dy * dy));
+      };
+
+      let nextOracleMenuIndex = Array.from(document.querySelectorAll('[data-oracle-visible-menu-index]'))
+        .map((node) => Number.parseInt(node.getAttribute('data-oracle-visible-menu-index') || '', 10))
+        .filter((value) => Number.isFinite(value))
+        .reduce((max, value) => Math.max(max, value), -1) + 1;
+
+      const roots = anchorRootSelectors.length
+        ? anchorRootSelectors
+            .map((selector) => document.querySelector(selector))
+            .filter((node) => node instanceof Element || node instanceof Document)
+        : [document];
+
+      let anchorRect = null;
+      if (anchorSelector) {
+        for (const root of roots) {
+          if (!(root instanceof Element || root instanceof Document)) continue;
+          const nodes = Array.from(root.querySelectorAll(anchorSelector)).filter(isVisible);
+          const node = nodes[0];
+          if (node) {
+            anchorRect = readRect(node);
+            break;
+          }
+        }
+      }
+
+      const seen = new Set();
+      const entries = [];
+      for (const selector of menuSelectors) {
+        for (const node of Array.from(document.querySelectorAll(selector))) {
+          if (!isVisible(node) || seen.has(node)) continue;
+          seen.add(node);
+          const rect = readRect(node);
+          const items = [];
+          const itemSeen = new Set();
+          for (const itemSelector of itemSelectors) {
+            for (const item of Array.from(node.querySelectorAll(itemSelector))) {
+              if (!isVisible(item) || itemSeen.has(item)) continue;
+              itemSeen.add(item);
+              const label = normalize(item.getAttribute?.('aria-label') || item.textContent || '');
+              if (!label) continue;
+              items.push({
+                label,
+                role: item.getAttribute?.('role') ?? null,
+                selected:
+                  item.getAttribute?.('aria-selected') === 'true' ||
+                  item.getAttribute?.('aria-checked') === 'true' ||
+                  item.getAttribute?.('data-selected') === 'true' ||
+                  ['checked', 'selected', 'on', 'true'].includes((item.getAttribute?.('data-state') ?? '').toLowerCase()),
+              });
+              if (items.length >= limit) break;
+            }
+            if (items.length >= limit) break;
+          }
+          const itemLabels = items.map((item) => item.label);
+          const signature = JSON.stringify({
+            selector,
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            items: itemLabels.slice(0, 8),
+          });
+          const oracleIndex =
+            node.getAttribute('data-oracle-visible-menu-index') ||
+            (() => {
+              const assigned = String(nextOracleMenuIndex);
+              nextOracleMenuIndex += 1;
+              node.setAttribute('data-oracle-visible-menu-index', assigned);
+              return assigned;
+            })();
+          entries.push({
+            selector: selector,
+            sourceSelector: selector,
+            oracleSelector: '[data-oracle-visible-menu-index="' + oracleIndex + '"]',
+            signature,
+            rect,
+            distanceToAnchor: anchorRect ? distance(center(rect), center(anchorRect)) : null,
+            items,
+            itemLabels,
+          });
+          if (entries.length >= limit) {
+            return entries;
+          }
+        }
+      }
+      return entries;
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as Array<(VisibleMenuInventoryEntry & { oracleSelector?: string })> | undefined;
+  return (value ?? []).map((entry) => {
+    const { oracleSelector, ...rest } = entry;
+    return {
+      ...rest,
+      sourceSelector: entry.sourceSelector || entry.selector,
+      selector: oracleSelector || entry.selector,
+    };
+  });
+}
+
+export async function collectVisibleOverlayInventory(
+  Runtime: ChromeClient['Runtime'],
+  options: CollectVisibleOverlayInventoryOptions = {},
+): Promise<VisibleOverlayInventoryEntry[]> {
+  const limit = Math.max(1, Math.min(options.limit ?? 8, 20));
+  const overlaySelectors = Array.from(
+    new Set(
+      (options.overlaySelectors?.length ? options.overlaySelectors : Array.from(DEFAULT_VISIBLE_OVERLAY_SELECTORS)).filter(Boolean),
+    ),
+  );
+  const buttonSelectors = Array.from(
+    new Set(
+      (options.buttonSelectors?.length ? options.buttonSelectors : Array.from(DEFAULT_VISIBLE_OVERLAY_BUTTON_SELECTORS)).filter(
+        Boolean,
+      ),
+    ),
+  );
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const limit = ${JSON.stringify(limit)};
+      const overlaySelectors = ${JSON.stringify(overlaySelectors)};
+      const buttonSelectors = ${JSON.stringify(buttonSelectors)};
+      const anchorSelector = ${JSON.stringify(options.anchorSelector ?? null)};
+      const anchorRootSelectors = ${JSON.stringify(options.anchorRootSelectors ?? [])};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const readRect = (node) => {
+        const rect = node.getBoundingClientRect();
+        return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+      };
+      const center = (rect) => ({ x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 });
+      const distance = (left, right) => {
+        const dx = left.x - right.x;
+        const dy = left.y - right.y;
+        return Math.round(Math.sqrt(dx * dx + dy * dy));
+      };
+
+      let nextOracleOverlayIndex = Array.from(document.querySelectorAll('[data-oracle-visible-overlay-index]'))
+        .map((node) => Number.parseInt(node.getAttribute('data-oracle-visible-overlay-index') || '', 10))
+        .filter((value) => Number.isFinite(value))
+        .reduce((max, value) => Math.max(max, value), -1) + 1;
+
+      const roots = anchorRootSelectors.length
+        ? anchorRootSelectors
+            .map((selector) => document.querySelector(selector))
+            .filter((node) => node instanceof Element || node instanceof Document)
+        : [document];
+
+      let anchorRect = null;
+      if (anchorSelector) {
+        for (const root of roots) {
+          if (!(root instanceof Element || root instanceof Document)) continue;
+          const nodes = Array.from(root.querySelectorAll(anchorSelector)).filter(isVisible);
+          const node = nodes[0];
+          if (node) {
+            anchorRect = readRect(node);
+            break;
+          }
+        }
+      }
+
+      const seen = new Set();
+      const entries = [];
+      for (const selector of overlaySelectors) {
+        for (const node of Array.from(document.querySelectorAll(selector))) {
+          if (!isVisible(node) || seen.has(node)) continue;
+          seen.add(node);
+          const rect = readRect(node);
+          const buttonLabels = [];
+          const buttonSeen = new Set();
+          for (const buttonSelector of buttonSelectors) {
+            for (const button of Array.from(node.querySelectorAll(buttonSelector))) {
+              if (!isVisible(button) || buttonSeen.has(button)) continue;
+              buttonSeen.add(button);
+              const label = normalize(button.getAttribute?.('aria-label') || button.getAttribute?.('title') || button.textContent || '');
+              if (!label) continue;
+              buttonLabels.push(label);
+              if (buttonLabels.length >= limit) break;
+            }
+            if (buttonLabels.length >= limit) break;
+          }
+          const text = normalize(node.textContent || '').slice(0, 500) || null;
+          const signature = JSON.stringify({
+            selector,
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+            text: text ? text.slice(0, 120) : null,
+            buttonLabels: buttonLabels.slice(0, 8),
+          });
+          const oracleIndex =
+            node.getAttribute('data-oracle-visible-overlay-index') ||
+            (() => {
+              const assigned = String(nextOracleOverlayIndex);
+              nextOracleOverlayIndex += 1;
+              node.setAttribute('data-oracle-visible-overlay-index', assigned);
+              return assigned;
+            })();
+          entries.push({
+            selector,
+            sourceSelector: selector,
+            oracleSelector: '[data-oracle-visible-overlay-index="' + oracleIndex + '"]',
+            signature,
+            rect,
+            distanceToAnchor: anchorRect ? distance(center(rect), center(anchorRect)) : null,
+            tag: node.tagName?.toLowerCase?.() ?? null,
+            role: node.getAttribute?.('role') ?? null,
+            ariaLabel: normalize(node.getAttribute?.('aria-label') || '') || null,
+            text,
+            buttonLabels,
+          });
+          if (entries.length >= limit) {
+            return entries;
+          }
+        }
+      }
+      return entries;
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value as Array<(VisibleOverlayInventoryEntry & { oracleSelector?: string })> | undefined;
+  return (value ?? []).map((entry) => {
+    const { oracleSelector, ...rest } = entry;
+    return {
+      ...rest,
+      sourceSelector: entry.sourceSelector || entry.selector,
+      selector: oracleSelector || entry.selector,
+    };
+  });
+}
+
+export async function armDownloadCapture(
+  Runtime: ChromeClient['Runtime'],
+  options: CaptureDownloadOptions = {},
+): Promise<void> {
+  const stateKey = options.stateKey ?? '__auracallDownloadCapture';
+  await Runtime.evaluate({
+    expression: `(() => {
+      const stateKey = ${JSON.stringify(stateKey)};
+      const existing = window[stateKey];
+      if (existing && typeof existing === 'object') {
+        existing.href = null;
+        existing.download = null;
+        return true;
+      }
+      const state = {
+        href: null,
+        download: null,
+        originalAnchorClick: HTMLAnchorElement.prototype.click,
+        originalWindowOpen: window.open,
+      };
+      HTMLAnchorElement.prototype.click = function(...args) {
+        try {
+          state.href = this.href || state.href;
+          state.download = this.getAttribute('download') || state.download;
+        } catch {}
+        return state.originalAnchorClick.apply(this, args);
+      };
+      window.open = function(url, target, features) {
+        try {
+          if (typeof url === 'string' && url) {
+            state.href = url;
+          }
+        } catch {}
+        return state.originalWindowOpen.call(this, url, target, features);
+      };
+      window[stateKey] = state;
+      return true;
+    })()`,
+  });
+}
+
+export async function readDownloadCapture(
+  Runtime: ChromeClient['Runtime'],
+  stateKey = '__auracallDownloadCapture',
+): Promise<DownloadCapture> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const state = window[${JSON.stringify(stateKey)}];
+      if (!state || typeof state !== 'object') {
+        return { href: null, downloadName: null };
+      }
+      return {
+        href: typeof state.href === 'string' ? state.href : null,
+        downloadName: typeof state.download === 'string' ? state.download : null,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = result.result?.value;
+  return {
+    href: value && typeof value.href === 'string' ? value.href : null,
+    downloadName: value && typeof value.downloadName === 'string' ? value.downloadName : null,
+  };
+}
+
+export async function waitForDownloadCapture(
+  Runtime: ChromeClient['Runtime'],
+  options: CaptureDownloadOptions = {},
+): Promise<DownloadCapture> {
+  const stateKey = options.stateKey ?? '__auracallDownloadCapture';
+  const timeoutMs = options.timeoutMs ?? 1500;
+  const pollMs = options.pollMs ?? 100;
+  const requireTarget = options.requireTarget ?? true;
+  const deadline = Date.now() + timeoutMs;
+  let lastValue: DownloadCapture = { href: null, downloadName: null };
+  while (Date.now() < deadline) {
+    const value = await readDownloadCapture(Runtime, stateKey);
+    lastValue = value;
+    if (!requireTarget || value.href || value.downloadName) {
+      return value;
+    }
+    await sleep(pollMs);
+  }
+  return lastValue;
+}
+
 export async function withUiDiagnostics<T>(
   Runtime: ChromeClient['Runtime'],
   action: () => Promise<T>,
@@ -912,6 +1535,69 @@ export async function withUiDiagnostics<T>(
     enriched.uiDiagnostics = diagnostics;
     throw enriched;
   }
+}
+
+export async function withBlockingSurfaceRecovery<T, TMatch extends BlockingSurfaceMatch = BlockingSurfaceMatch>(
+  action: () => Promise<T>,
+  options: WithBlockingSurfaceRecoveryOptions<TMatch>,
+): Promise<T> {
+  const pauseMs = options.pauseMs ?? 15_000;
+  const retries = options.retries ?? 1;
+  let lastError: unknown;
+  let lastMatch: TMatch | null = null;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const preMatch = await options.inspect();
+    if (preMatch) {
+      lastMatch = preMatch;
+      await options.dismiss?.(preMatch);
+      await options.onRecover?.({ match: preMatch, phase: 'pre', attempt });
+      if (attempt >= retries) {
+        break;
+      }
+      await sleep(pauseMs);
+      continue;
+    }
+    try {
+      const result = await action();
+      const postMatch = await options.inspect();
+      if (!postMatch) {
+        return result;
+      }
+      lastMatch = postMatch;
+      await options.dismiss?.(postMatch);
+      await options.onRecover?.({ match: postMatch, phase: 'post', attempt });
+      if (attempt >= retries) {
+        break;
+      }
+    } catch (error) {
+      lastError = error;
+      const classified = options.classifyError ? await options.classifyError(error) : null;
+      const errorMatch = classified ?? (await options.inspect());
+      if (!errorMatch) {
+        throw error;
+      }
+      lastMatch = errorMatch;
+      await options.dismiss?.(errorMatch);
+      await options.onRecover?.({ match: errorMatch, phase: 'error', attempt });
+      if (attempt >= retries) {
+        break;
+      }
+    }
+    await sleep(pauseMs);
+  }
+  const prefix = options.label ? `${options.label}: ` : '';
+  if (lastMatch) {
+    const error = new Error(`${prefix}${lastMatch.summary}`) as Error & {
+      blockingSurface?: TMatch;
+      cause?: unknown;
+    };
+    error.blockingSurface = lastMatch;
+    if (lastError !== undefined) {
+      error.cause = lastError;
+    }
+    throw error;
+  }
+  throw lastError instanceof Error ? lastError : new Error(`${prefix}blocking surface recovery failed`);
 }
 
 export async function isDialogOpen(
@@ -1493,6 +2179,130 @@ export async function closeDialog(
   await waitForNotSelector(Runtime, combined, 3000);
 }
 
+export async function dismissOverlayRoot(
+  Runtime: ChromeClient['Runtime'],
+  rootSelector: string,
+  options: DismissOverlayRootOptions = {},
+): Promise<boolean> {
+  const buttonSelectors = Array.from(
+    new Set(
+      (options.buttonSelectors?.length ? options.buttonSelectors : Array.from(DEFAULT_VISIBLE_OVERLAY_BUTTON_SELECTORS)).filter(
+        Boolean,
+      ),
+    ),
+  );
+  const closeButtonMatch: LabelMatchOptions = options.closeButtonMatch ?? {
+    includeAny: ['close', 'dismiss', 'ok', 'okay', 'got it', 'cancel', 'done'],
+  };
+  await Runtime.evaluate({
+    expression: `(() => {
+      const rootSelector = ${JSON.stringify(rootSelector)};
+      const buttonSelectors = ${JSON.stringify(buttonSelectors)};
+      const match = ${JSON.stringify(closeButtonMatch)};
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const matches = (label) => {
+        if (!label) return false;
+        const exact = (match.exact || []).map(normalize);
+        const startsWith = (match.startsWith || []).map(normalize);
+        const includeAll = (match.includeAll || []).map(normalize);
+        const includeAny = (match.includeAny || []).map(normalize);
+        if (exact.length && exact.includes(label)) return true;
+        if (startsWith.length && startsWith.some((token) => label.startsWith(token))) return true;
+        if (includeAll.length && includeAll.every((token) => label.includes(token))) return true;
+        if (includeAny.length && includeAny.some((token) => label.includes(token))) return true;
+        return false;
+      };
+      const root = document.querySelector(rootSelector);
+      if (!root || !isVisible(root)) {
+        return { ok: true, reason: 'overlay-missing' };
+      }
+      const candidates = [];
+      for (const selector of buttonSelectors) {
+        for (const node of Array.from(root.querySelectorAll(selector))) {
+          if (!isVisible(node)) continue;
+          const label = normalize(node.getAttribute?.('aria-label') || node.getAttribute?.('title') || node.textContent || '');
+          if (!label) continue;
+          candidates.push({ node, label });
+        }
+      }
+      const target = candidates.find((entry) => matches(entry.label));
+      if (target?.node instanceof HTMLElement) {
+        target.node.click();
+      }
+      const escapeEvent = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true,
+      });
+      document.body.dispatchEvent(escapeEvent);
+      if (root instanceof HTMLElement) {
+        root.dispatchEvent(escapeEvent);
+      }
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
+  return waitForNotSelector(Runtime, rootSelector, options.timeoutMs ?? 3_000);
+}
+
+export async function dismissOpenMenus(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs = 1_500,
+): Promise<boolean> {
+  const menuSelector = '[role="menu"], [role="listbox"], [data-radix-collection-root]';
+  const visibleMenus = await Runtime.evaluate({
+    expression: `(() => {
+      const nodes = Array.from(document.querySelectorAll(${JSON.stringify(menuSelector)}));
+      return nodes.some((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+    })()`,
+    returnByValue: true,
+  });
+  if (!visibleMenus.result?.value) {
+    return false;
+  }
+
+  await Runtime.evaluate({
+    expression: `(() => {
+      const event = new KeyboardEvent('keydown', {
+        key: 'Escape',
+        code: 'Escape',
+        keyCode: 27,
+        which: 27,
+        bubbles: true,
+        cancelable: true,
+      });
+      document.activeElement?.dispatchEvent?.(event);
+      document.body.dispatchEvent(event);
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const nodes = Array.from(document.querySelectorAll(${JSON.stringify(menuSelector)}));
+      return nodes.every((node) => {
+        const rect = node.getBoundingClientRect();
+        return !(rect.width > 0 && rect.height > 0);
+      });
+    })()`,
+    { timeoutMs, description: 'visible menus dismissed' },
+  );
+  return true;
+}
+
 export async function pressButton(
   Runtime: ChromeClient['Runtime'],
   options: PressButtonOptions,
@@ -1763,6 +2573,23 @@ export async function openMenu(
   const perAttemptTimeoutMs = Math.max(250, Math.floor(timeoutMs / Math.max(interactionStrategies.length, 1)));
   let lastReason = 'Menu trigger not found';
   let lastRootSelectorUsed: string | null = null;
+  const useAnchoredMenuSelection = Boolean(
+    options.anchorSelector || options.expectedItemMatch || (options.anchorRootSelectors && options.anchorRootSelectors.length > 0),
+  );
+  const fallbackSelectors = buildMenuFallbackSelectors(options.menuSelector);
+  const inventorySelectors = Array.from(
+    new Set(
+      fallbackSelectors.filter(isLikelyMenuContainerSelector),
+    ),
+  );
+  const existingMenuSignatures = useAnchoredMenuSelection
+    ? (await collectVisibleMenuInventory(Runtime, {
+        menuSelectors: inventorySelectors,
+        anchorSelector: options.anchorSelector,
+        anchorRootSelectors: options.anchorRootSelectors,
+        limit: 12,
+      })).map((entry) => entry.signature)
+    : [];
 
   for (const interactionStrategy of interactionStrategies) {
     const info = await dispatchMatchedTrigger(Runtime, options.trigger, interactionStrategy);
@@ -1774,9 +2601,11 @@ export async function openMenu(
     const menuSelector = info.listId ? `#${info.listId}` : options.menuSelector;
     const ready = await waitForMenuOpen(Runtime, {
       menuSelector,
-      fallbackSelectors: options.menuSelector
-        ? [options.menuSelector, '[role="menu"], [role="listbox"], [data-radix-collection-item]']
-        : ['[role="menu"], [role="listbox"], [data-radix-collection-item]'],
+      fallbackSelectors,
+      anchorSelector: options.anchorSelector,
+      anchorRootSelectors: options.anchorRootSelectors,
+      expectedItemMatch: options.expectedItemMatch,
+      existingMenuSignatures,
       timeoutMs: perAttemptTimeoutMs,
     });
     if (ready.ok) {
@@ -1803,10 +2632,56 @@ export async function waitForMenuOpen(
   options: WaitForMenuOpenOptions,
 ): Promise<{ ok: boolean; menuSelector?: string }> {
   const timeoutMs = options.timeoutMs ?? 5000;
-  const fallbackSelectors = options.fallbackSelectors ?? [
-    '[role="menu"], [role="listbox"], [data-radix-collection-item]',
-  ];
+  const fallbackSelectors = options.fallbackSelectors ?? buildMenuFallbackSelectors(options.menuSelector);
   const primarySelector = options.menuSelector ?? fallbackSelectors[0];
+  const useInventorySelection = Boolean(
+    options.anchorSelector ||
+      options.expectedItemMatch ||
+      (options.anchorRootSelectors && options.anchorRootSelectors.length > 0) ||
+      (options.existingMenuSignatures && options.existingMenuSignatures.length > 0),
+  );
+  if (useInventorySelection) {
+    const menuSelectors = Array.from(
+      new Set([primarySelector, ...fallbackSelectors].filter(isLikelyMenuContainerSelector)),
+    );
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      const inventory = await collectVisibleMenuInventory(Runtime, {
+        menuSelectors,
+        anchorSelector: options.anchorSelector,
+        anchorRootSelectors: options.anchorRootSelectors,
+        limit: 12,
+      });
+      if (inventory.length > 0) {
+        const existingSignatures = new Set(options.existingMenuSignatures ?? []);
+        const ranked = inventory
+          .map((entry) => {
+            const itemScore = options.expectedItemMatch
+              ? Math.max(0, ...entry.itemLabels.map((label) => scoreLabelMatch(label, options.expectedItemMatch)))
+              : 1;
+            if (options.expectedItemMatch && itemScore <= 0) {
+              return { entry, score: 0 };
+            }
+            const noveltyScore = existingSignatures.size > 0 && !existingSignatures.has(entry.signature) ? 10_000 : 0;
+            const distanceScore =
+              entry.distanceToAnchor == null ? 0 : Math.max(0, 1_000 - Math.min(entry.distanceToAnchor, 1_000));
+            const selectorScore = entry.sourceSelector === primarySelector ? 50 : 0;
+            return {
+              entry,
+              score: itemScore + noveltyScore + distanceScore + selectorScore,
+            };
+          })
+          .filter((entry) => entry.score > 0)
+          .sort((left, right) => right.score - left.score);
+        const best = ranked[0]?.entry;
+        if (best) {
+          return { ok: true, menuSelector: best.selector };
+        }
+      }
+      await sleep(Math.min(DEFAULT_WAIT_POLL_MS, Math.max(25, Math.floor(timeoutMs / 20))));
+    }
+    return { ok: false };
+  }
   const primaryReady = await waitForSelector(Runtime, primarySelector, timeoutMs);
   if (primaryReady) {
     return { ok: true, menuSelector: primarySelector };
@@ -1835,6 +2710,48 @@ export async function pressMenuButtonByAriaLabel(
   });
 }
 
+export async function openSubmenu(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenSubmenuOptions,
+): Promise<OpenSubmenuResult> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const fallbackSelectors = buildMenuFallbackSelectors(options.submenuSelector);
+  const inventorySelectors = Array.from(new Set(fallbackSelectors.filter(isLikelyMenuContainerSelector)));
+  const existingMenuSignatures = (
+    await collectVisibleMenuInventory(Runtime, {
+      menuSelectors: inventorySelectors,
+      limit: 12,
+    })
+  ).map((entry) => entry.signature);
+
+  const interactionStrategies = resolveInteractionStrategies(options.interactionStrategies, ['pointer', 'click']);
+  const pressed = await pressButton(Runtime, {
+    match: options.itemMatch,
+    rootSelectors: [options.parentMenuSelector],
+    requireVisible: true,
+    interactionStrategies,
+    timeoutMs,
+  });
+  if (!pressed.ok) {
+    return { ok: false, reason: pressed.reason };
+  }
+  const ready = await waitForMenuOpen(Runtime, {
+    menuSelector: options.submenuSelector,
+    fallbackSelectors,
+    expectedItemMatch: options.expectedItemMatch,
+    existingMenuSignatures,
+    timeoutMs,
+  });
+  if (!ready.ok) {
+    return { ok: false, reason: 'Submenu did not open' };
+  }
+  return {
+    ok: true,
+    menuSelector: ready.menuSelector,
+    interactionStrategy: interactionStrategies[0],
+  };
+}
+
 export async function openAndSelectMenuItem(
   Runtime: ChromeClient['Runtime'],
   options: OpenAndSelectMenuItemOptions,
@@ -1843,6 +2760,7 @@ export async function openAndSelectMenuItem(
   const opened = await openMenu(Runtime, {
     trigger: options.trigger,
     menuSelector: options.menuSelector,
+    expectedItemMatch: options.itemMatch,
     timeoutMs,
   });
   if (!opened.ok) return false;
@@ -1869,7 +2787,7 @@ export async function selectMenuItem(
   );
   if (!ready) return false;
   const clicked = await findAndClickByLabel(Runtime, {
-    selectors: ['[role="menuitem"]', '[data-radix-collection-item]', 'button', 'a'],
+    selectors: ['[role="menuitem"]', '[role="menuitemradio"]', '[role="option"]', '[data-radix-collection-item]', 'button', 'a'],
     match: options.itemMatch,
     rootSelectors: options.menuRootSelectors ?? (options.menuSelector ? [options.menuSelector] : undefined),
   });
@@ -1885,7 +2803,12 @@ export async function selectFromListbox(
   options: SelectFromListboxOptions,
 ): Promise<boolean> {
   const timeoutMs = options.timeoutMs ?? 5000;
-  const opened = await openMenu(Runtime, { trigger: options.trigger, menuSelector: options.listboxSelector, timeoutMs });
+  const opened = await openMenu(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.listboxSelector,
+    expectedItemMatch: options.itemMatch,
+    timeoutMs,
+  });
   if (!opened.ok) return false;
   const menuSelector = opened.menuSelector || options.listboxSelector;
   const clicked = await findAndClickByLabel(Runtime, {
@@ -1905,6 +2828,226 @@ export async function openAndSelectListbox(
   options: OpenAndSelectListboxOptions,
 ): Promise<boolean> {
   return selectFromListbox(Runtime, options);
+}
+
+export async function selectNestedMenuPath(
+  Runtime: ChromeClient['Runtime'],
+  options: SelectNestedMenuPathOptions,
+): Promise<SelectNestedMenuPathResult> {
+  if (!options.steps.length) {
+    return { ok: false, reason: 'Nested menu path requires at least one step' };
+  }
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const opened = await openMenu(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.menuSelector,
+    expectedItemMatch: options.steps[0]?.itemMatch,
+    timeoutMs,
+  });
+  if (!opened.ok) {
+    return { ok: false, reason: opened.reason };
+  }
+
+  let currentMenuSelector = opened.menuSelector || options.menuSelector;
+  for (let index = 0; index < options.steps.length; index += 1) {
+    const step = options.steps[index];
+    if (!currentMenuSelector) {
+      return { ok: false, failedStep: index, reason: 'Current menu selector unavailable' };
+    }
+    const isLast = index === options.steps.length - 1;
+    if (isLast) {
+      const clicked = await selectMenuItem(Runtime, {
+        menuSelector: currentMenuSelector,
+        menuRootSelectors: [currentMenuSelector],
+        itemMatch: step.itemMatch,
+        timeoutMs,
+        closeMenuAfter: options.closeMenuAfter,
+      });
+      return clicked
+        ? { ok: true, menuSelector: currentMenuSelector }
+        : { ok: false, failedStep: index, reason: 'Nested menu item not found' };
+    }
+
+    const submenu = await openSubmenu(Runtime, {
+      parentMenuSelector: currentMenuSelector,
+      itemMatch: step.itemMatch,
+      submenuSelector: step.menuSelector,
+      expectedItemMatch: options.steps[index + 1]?.itemMatch,
+      interactionStrategies: step.interactionStrategies,
+      timeoutMs,
+    });
+    if (!submenu.ok) {
+      return { ok: false, failedStep: index, reason: submenu.reason };
+    }
+    currentMenuSelector = submenu.menuSelector || step.menuSelector;
+  }
+
+  return { ok: false, reason: 'Nested menu path ended unexpectedly' };
+}
+
+export async function inspectNestedMenuPathSelection(
+  Runtime: ChromeClient['Runtime'],
+  options: InspectNestedMenuPathSelectionOptions,
+): Promise<InspectNestedMenuPathSelectionResult> {
+  if (!options.steps.length) {
+    return { ok: false, reason: 'Nested menu path requires at least one step' };
+  }
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const selectedItemMatch = options.selectedItemMatch ?? options.steps[options.steps.length - 1]?.itemMatch;
+
+  try {
+    const opened = await openMenu(Runtime, {
+      trigger: options.trigger,
+      menuSelector: options.menuSelector,
+      expectedItemMatch: options.steps[0]?.itemMatch,
+      timeoutMs,
+    });
+    if (!opened.ok) {
+      return { ok: false, reason: opened.reason };
+    }
+
+    let currentMenuSelector = opened.menuSelector || options.menuSelector;
+    for (let index = 0; index < options.steps.length - 1; index += 1) {
+      const step = options.steps[index];
+      if (!currentMenuSelector) {
+        return { ok: false, failedStep: index, reason: 'Current menu selector unavailable' };
+      }
+      const submenu = await openSubmenu(Runtime, {
+        parentMenuSelector: currentMenuSelector,
+        itemMatch: step.itemMatch,
+        submenuSelector: step.menuSelector,
+        expectedItemMatch: options.steps[index + 1]?.itemMatch,
+        interactionStrategies: step.interactionStrategies,
+        timeoutMs,
+      });
+      if (!submenu.ok) {
+        return { ok: false, failedStep: index, reason: submenu.reason };
+      }
+      currentMenuSelector = submenu.menuSelector || step.menuSelector;
+    }
+
+    if (!currentMenuSelector) {
+      return { ok: false, failedStep: options.steps.length - 1, reason: 'Current menu selector unavailable' };
+    }
+
+    const inventory = await collectVisibleMenuInventory(Runtime, {
+      menuSelectors: [currentMenuSelector],
+      limit: 12,
+    });
+    const menuEntry = inventory.find((entry) => entry.selector === currentMenuSelector) ?? inventory[0];
+    if (!menuEntry) {
+      return {
+        ok: false,
+        failedStep: options.steps.length - 1,
+        reason: 'Verification menu not found',
+      };
+    }
+
+    const matchedItem = findBestVisibleMenuItemMatch(menuEntry.items, selectedItemMatch);
+    if (!matchedItem) {
+      return {
+        ok: true,
+        selected: false,
+        label: null,
+        menuSelector: menuEntry.selector,
+        availableLabels: menuEntry.itemLabels,
+      };
+    }
+
+    return {
+      ok: true,
+      selected: matchedItem.selected,
+      label: matchedItem.label,
+      menuSelector: menuEntry.selector,
+      availableLabels: menuEntry.itemLabels,
+    };
+  } finally {
+    if (options.closeMenusAfter !== false) {
+      await dismissOpenMenus(Runtime, 500).catch(() => false);
+    }
+  }
+}
+
+export async function selectAndVerifyNestedMenuPathOption(
+  Runtime: ChromeClient['Runtime'],
+  options: SelectAndVerifyNestedMenuPathOptionOptions,
+): Promise<SelectAndVerifyNestedMenuPathOptionResult> {
+  const initial = await inspectNestedMenuPathSelection(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.menuSelector,
+    steps: options.steps,
+    selectedItemMatch: options.selectedItemMatch,
+    timeoutMs: options.timeoutMs,
+    closeMenusAfter: options.closeMenusAfter,
+  });
+  if (!initial.ok) {
+    return {
+      ok: false,
+      phase: 'inspect',
+      reason: initial.reason,
+      failedStep: initial.failedStep,
+      availableLabels: initial.availableLabels,
+    };
+  }
+  if (initial.selected) {
+    return {
+      ok: true,
+      alreadySelected: true,
+      label: initial.label,
+      menuSelector: initial.menuSelector,
+      availableLabels: initial.availableLabels,
+    };
+  }
+
+  const selected = await selectNestedMenuPath(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.menuSelector,
+    steps: options.steps,
+    timeoutMs: options.timeoutMs,
+    closeMenuAfter: options.closeMenusAfter,
+  });
+  if (!selected.ok) {
+    return {
+      ok: false,
+      phase: 'select',
+      reason: selected.reason,
+      failedStep: selected.failedStep,
+    };
+  }
+
+  const verified = await inspectNestedMenuPathSelection(Runtime, {
+    trigger: options.trigger,
+    menuSelector: options.menuSelector,
+    steps: options.steps,
+    selectedItemMatch: options.selectedItemMatch,
+    timeoutMs: options.timeoutMs,
+    closeMenusAfter: options.closeMenusAfter,
+  });
+  if (!verified.ok) {
+    return {
+      ok: false,
+      phase: 'verify',
+      reason: verified.reason,
+      failedStep: verified.failedStep,
+      availableLabels: verified.availableLabels,
+    };
+  }
+  if (!verified.selected) {
+    return {
+      ok: false,
+      phase: 'verify',
+      reason: 'Menu option did not stay selected after activation',
+      menuSelector: verified.menuSelector,
+      availableLabels: verified.availableLabels,
+    };
+  }
+  return {
+    ok: true,
+    alreadySelected: false,
+    label: verified.label,
+    menuSelector: verified.menuSelector,
+    availableLabels: verified.availableLabels,
+  };
 }
 
 export async function setInputValue(
@@ -1986,11 +3129,84 @@ export async function setInputValue(
 export async function submitInlineRename(
   Runtime: ChromeClient['Runtime'],
   options: SubmitInlineRenameOptions,
+  deps?: { Input?: ChromeClient['Input'] },
 ): Promise<{ ok: boolean; reason?: string }> {
   const timeoutMs = options.timeoutMs ?? 5000;
+  const closeGraceMs = options.closeGraceMs ?? Math.min(750, timeoutMs);
+  const submitStrategy =
+    options.submitStrategy ?? (deps?.Input ? 'native-then-synthetic' : 'synthetic-enter');
   if (options.inputSelector) {
     const ready = await waitForSelector(Runtime, options.inputSelector, timeoutMs);
     if (!ready) return { ok: false, reason: 'Rename input not found' };
+  }
+  if (options.requireEditable ?? true) {
+    const editable = await waitForPredicate(
+      Runtime,
+      `(() => {
+        const selector = ${JSON.stringify(options.inputSelector ?? null)};
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+        const includeAny = ${JSON.stringify(options.inputMatch?.includeAny ?? [])};
+        const includeAll = ${JSON.stringify(options.inputMatch?.includeAll ?? [])};
+        const startsWith = ${JSON.stringify(options.inputMatch?.startsWith ?? [])};
+        const exact = ${JSON.stringify(options.inputMatch?.exact ?? [])};
+        const normalize = (v) => String(v || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+        const matchesLabel = (label, match) => {
+          if (!label) return false;
+          if (match.exact.length && match.exact.includes(label)) return true;
+          if (match.startsWith.length && match.startsWith.some((token) => label.startsWith(token))) return true;
+          if (match.includeAll.length && match.includeAll.every((token) => label.includes(token))) return true;
+          if (match.includeAny.length && match.includeAny.some((token) => label.includes(token))) return true;
+          return false;
+        };
+        const visible = (el) => {
+          if (!(el instanceof Element)) return false;
+          const rect = el.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const editable = (el) => {
+          if (!(el instanceof Element) || !visible(el)) return false;
+          if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+            return !el.disabled && !el.readOnly;
+          }
+          return el.getAttribute('contenteditable') === 'true';
+        };
+        const roots = rootSelectors.length
+          ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+          : [document];
+        const root = roots[0] || document;
+        let input = null;
+        if (selector) {
+          input = root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null);
+        } else {
+          const match = { includeAny, includeAll, startsWith, exact };
+          const hasMatch =
+            match.includeAny.length || match.includeAll.length || match.startsWith.length || match.exact.length;
+          const active = document.activeElement;
+          const activeValid = active && editable(active);
+          if (activeValid) {
+            input = active;
+          } else {
+            const candidates = Array.from(root.querySelectorAll('input, textarea, [contenteditable="true"]')).filter(editable);
+            if (hasMatch) {
+              input = candidates.find((el) => {
+                const label = normalize(el.getAttribute?.('aria-label') || el.getAttribute?.('placeholder') || el.textContent || '');
+                return matchesLabel(label, match);
+              }) || null;
+            } else {
+              input = candidates[0] || null;
+            }
+          }
+        }
+        return editable(input) ? { ok: true } : null;
+      })()`,
+      {
+        timeoutMs,
+        description: 'inline rename input editable',
+      },
+    );
+    if (!editable.ok) {
+      return { ok: false, reason: 'Rename input not editable' };
+    }
   }
 
   const result = await Runtime.evaluate({
@@ -2020,6 +3236,13 @@ export async function submitInlineRename(
         const rect = el.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
+      const editable = (el) => {
+        if (!(el instanceof Element) || !visible(el)) return false;
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+          return !el.disabled && !el.readOnly;
+        }
+        return el.getAttribute('contenteditable') === 'true';
+      };
       const roots = rootSelectors.length
         ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
         : [document];
@@ -2037,7 +3260,7 @@ export async function submitInlineRename(
         const activeValid =
           active &&
           (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true') &&
-          visible(active);
+          editable(active);
         if (activeValid) {
           input = active;
         } else if (hasMatch) {
@@ -2050,8 +3273,10 @@ export async function submitInlineRename(
         }
       }
       if (!input) return { ok: false, reason: 'Rename input not found' };
+      if (!editable(input)) return { ok: false, reason: 'Rename input not editable' };
 
       input.focus();
+      let usedSaveButton = false;
       if (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA') {
         const proto = input.tagName === 'INPUT' ? HTMLInputElement.prototype : HTMLTextAreaElement.prototype;
         const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
@@ -2081,23 +3306,95 @@ export async function submitInlineRename(
         }) || null;
         if (saveBtn) {
           saveBtn.click();
+          usedSaveButton = true;
         }
       }
-
-      input.dispatchEvent(
-        new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
-      );
-      input.dispatchEvent(
-        new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
-      );
-      return { ok: true };
+      return { ok: true, usedSaveButton };
     })()`,
     returnByValue: true,
   });
 
-  const info = result.result?.value as { ok: boolean; reason?: string } | undefined;
+  const info = result.result?.value as { ok: boolean; reason?: string; usedSaveButton?: boolean } | undefined;
   if (!info?.ok) {
     return { ok: false, reason: info?.reason || 'Rename submit failed' };
+  }
+
+  const waitForClose = async (ms: number) => {
+    if (!options.closeSelector) return true;
+    return waitForNotSelector(Runtime, options.closeSelector, ms);
+  };
+
+  if (info.usedSaveButton) {
+    const closed = await waitForClose(closeGraceMs);
+    if (closed) {
+      return { ok: true };
+    }
+  }
+
+  const dispatchSyntheticEnter = async () => {
+    await Runtime.evaluate({
+      expression: `(() => {
+        const selector = ${JSON.stringify(options.inputSelector ?? null)};
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+        const roots = rootSelectors.length
+          ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+          : [document];
+        const root = roots[0] || document;
+        const input = selector
+          ? root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null)
+          : document.activeElement;
+        if (!(input instanceof Element)) {
+          return { ok: false, reason: 'Rename input not found for submit' };
+        }
+        input.focus?.();
+        input.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+        );
+        input.dispatchEvent(
+          new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, bubbles: true, cancelable: true }),
+        );
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+  };
+
+  const dispatchNativeEnter = async () => {
+    if (!deps?.Input) return false;
+    await deps.Input.dispatchKeyEvent({
+      type: 'keyDown',
+      key: 'Enter',
+      code: 'Enter',
+      windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
+      text: '\r',
+      unmodifiedText: '\r',
+    });
+    await deps.Input.dispatchKeyEvent({
+      type: 'keyUp',
+      key: 'Enter',
+      code: 'Enter',
+      windowsVirtualKeyCode: 13,
+      nativeVirtualKeyCode: 13,
+    });
+    return true;
+  };
+
+  if (submitStrategy === 'native-enter' || submitStrategy === 'native-then-synthetic') {
+    const nativeSent = await dispatchNativeEnter();
+    if (nativeSent) {
+      const closed = await waitForClose(closeGraceMs);
+      if (closed) {
+        return { ok: true };
+      }
+      if (submitStrategy === 'native-enter') {
+        return { ok: false, reason: 'Rename input did not close after native Enter' };
+      }
+    }
+  }
+
+  if (submitStrategy === 'synthetic-enter' || submitStrategy === 'native-then-synthetic') {
+    await dispatchSyntheticEnter();
   }
 
   if (options.closeSelector) {

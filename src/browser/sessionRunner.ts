@@ -76,6 +76,7 @@ export async function runBrowserSessionExecution(
       formatFinishLine: (options) => formatFinishLine({ ...options, model: options.label }),
       runtimeExtras: (result) => ({
         conversationId: (result as { conversationId?: string }).conversationId,
+        composerTool: (result as { composerTool?: string | null }).composerTool ?? undefined,
       }),
       persistRuntimeHint,
       errorWrapper: (message, cause) => new BrowserAutomationError(message, { stage: 'execute-browser' }, cause),

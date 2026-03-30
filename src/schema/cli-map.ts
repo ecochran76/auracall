@@ -60,6 +60,7 @@ export const CLI_MAPPING: Record<string, string> = {
   // Browser - Behavior
   'browserModelStrategy': 'browser.modelStrategy',
   'browserThinkingTime': 'browser.thinkingTime',
+  'browserComposerTool': 'browser.composerTool',
   'browserAttachments': 'browser.attachments',
   'browserInlineFiles': 'browser.inlineFiles',
   'browserBundleFiles': 'browser.bundleFiles',

@@ -21,10 +21,12 @@ type LlmBrowserFields = {
   desiredModel?: string | null;
   modelStrategy?: BrowserModelStrategy;
   thinkingTime?: ThinkingTimeLevel;
+  composerTool?: string | null;
 };
 
 export type BrowserRuntimeMetadata = BaseTypes.BrowserRuntimeMetadata & {
   conversationId?: string;
+  composerTool?: string | null;
 };
 
 type BrowserBlockingProfileAction =
@@ -48,6 +50,7 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
 
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   conversationId?: string;
+  composerTool?: string | null;
 };
 
 export type ResolvedBrowserConfig = BaseTypes.ResolvedBrowserConfig & LlmBrowserFields;

@@ -52,6 +52,8 @@ export interface BrowserSessionConfig {
   collapseDisposableWindows?: boolean;
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   thinkingTime?: ThinkingTimeLevel;
+  /** ChatGPT composer tool/add-on label (for example "Web search" or "Canvas"). */
+  composerTool?: string | null;
 }
 
 export interface BrowserRuntimeMetadata {
@@ -62,6 +64,7 @@ export interface BrowserRuntimeMetadata {
   chromeTargetId?: string;
   tabUrl?: string;
   conversationId?: string;
+  composerTool?: string | null;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
 }

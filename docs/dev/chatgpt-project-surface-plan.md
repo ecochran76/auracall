@@ -1,10 +1,11 @@
 # ChatGPT Project Surface Plan
 
-Goal: finish the remaining ChatGPT project-management surface after core project lifecycle CRUD stabilized on the managed WSL Chrome path.
+Goal: record the now-finished ChatGPT project-management surface after core project lifecycle CRUD stabilized on the managed WSL Chrome path.
 
 Current status:
-- implemented: canonical `g-p-...` route handling, project list/create/rename/delete, create-time memory mode, browser-derived cache identity via `/api/auth/session`, `projects files list|add|remove --target chatgpt`
-- not implemented: `projects instructions get|set --target chatgpt`, `projects clone --target chatgpt`
+- implemented: canonical `g-p-...` route handling, project list/create/rename/delete, create-time memory mode, browser-derived cache identity via `/api/auth/session`, `projects files list|add|remove --target chatgpt`, `projects instructions get|set --target chatgpt`
+- not implemented: `projects clone --target chatgpt`
+- next active surface: [chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-conversation-surface-plan.md)
 
 ## Phase 1. Sources DOM Recon
 
@@ -46,9 +47,18 @@ Delivered:
 
 ## Phase 3. Project Instructions
 
+Status: complete on the managed WSL Chrome path.
+
 Use the same project settings surface to add:
 - `getProjectInstructions(projectId)`
 - `updateProjectInstructions(projectId, instructions)`
+
+Delivered:
+- `auracall projects instructions set <projectId> --target chatgpt --file <path>`
+- `auracall projects instructions set <projectId> --target chatgpt --text <value>`
+- `auracall projects instructions get <projectId> --target chatgpt`
+- write success is verified by reopening the same settings sheet and confirming the persisted textarea value
+- create-with-instructions now uses the same verification path instead of trusting only the first settings edit pass
 
 Acceptance notes:
 - prefer the existing browser-service interaction helpers instead of provider-local click glue
@@ -61,6 +71,9 @@ Only implement clone if the current ChatGPT UI exposes a real project-clone surf
 Rules:
 - do not fake clone via export/recreate
 - if clone is not present, document that explicitly and stop rather than inventing a non-native behavior
+
+Status:
+- deferred/closed until the native UI exposes a real clone action
 
 ## Phase 5. Live Disposable Acceptance
 
@@ -83,4 +96,4 @@ Run one disposable end-to-end pass on the authenticated WSL Chrome profile:
 
 ## Immediate Next Step
 
-Implement project instructions on the same project settings surface, then reassess whether the current ChatGPT UI exposes a native clone action.
+Project management is green enough to move on. Continue in [chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-conversation-surface-plan.md).

@@ -19,14 +19,14 @@ const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
 // The browser label is passed to the model picker which fuzzy-matches against ChatGPT's UI.
 const BROWSER_MODEL_LABELS: [ModelName, string][] = [
   // Most specific first (e.g., "gpt-5.2-thinking" before "gpt-5.2")
-  ['gpt-5.2-thinking', 'GPT-5.2 Thinking'],
-  ['gpt-5.2-instant', 'GPT-5.2 Instant'],
-  ['gpt-5.2-pro', 'GPT-5.2 Pro'],
-  ['gpt-5.1-pro', 'GPT-5.2 Pro'],
-  ['gpt-5-pro', 'GPT-5.2 Pro'],
+  ['gpt-5.2-thinking', 'Thinking'],
+  ['gpt-5.2-instant', 'Instant'],
+  ['gpt-5.2-pro', 'Pro'],
+  ['gpt-5.1-pro', 'Pro'],
+  ['gpt-5-pro', 'Pro'],
   // Base models last (least specific)
-  ['gpt-5.2', 'GPT-5.2'],       // Selects "Auto" in ChatGPT UI
-  ['gpt-5.1', 'GPT-5.2'],       // Legacy alias → Auto
+  ['gpt-5.2', 'Instant'],
+  ['gpt-5.1', 'Instant'],
   ['gemini-3-pro', 'Gemini 3 Pro'],
 ];
 
@@ -59,6 +59,7 @@ export interface BrowserFlagOptions {
   browserWslChrome?: 'auto' | 'wsl' | 'windows';
   /** Thinking time intensity: 'light', 'standard', 'extended', 'heavy' */
   browserThinkingTime?: ThinkingTimeLevel;
+  browserComposerTool?: string;
   browserModelLabel?: string;
   browserModelStrategy?: BrowserModelStrategy;
   browserAllowCookieErrors?: boolean;
@@ -88,7 +89,7 @@ export function normalizeChatGptModelForBrowser(model: ModelName): ModelName {
     return normalized;
   }
 
-  // Legacy aliases: map to base GPT-5.2 (Auto)
+  // Legacy aliases: map to the current non-Pro default path in ChatGPT.
   if (normalized === 'gpt-5.1') {
     return 'gpt-5.2';
   }
@@ -130,15 +131,15 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const desiredModel = isGrokModel
     ? resolveGrokModeLabel(desiredModelOverride, options.model, servicesRegistry)
     : isChatGptModel
-      ? mapModelToBrowserLabel(options.model)
-      : shouldUseOverride
-        ? desiredModelOverride
-        : mapModelToBrowserLabel(options.model);
+        ? mapModelToBrowserLabel(options.model)
+        : shouldUseOverride
+          ? desiredModelOverride
+          : mapModelToBrowserLabel(options.model);
 
   if (modelStrategy === 'select' && url && isTemporaryChatUrl(url) && /\bpro\b/i.test(desiredModel ?? '')) {
     throw new Error(
       'Temporary Chat mode does not expose Pro models in the ChatGPT model picker. ' +
-        'Remove "temporary-chat=true" from --chatgpt-url (or omit --chatgpt-url), or use a non-Pro model (e.g. --model gpt-5.2).',
+        'Remove "temporary-chat=true" from --chatgpt-url (or omit --chatgpt-url), or use a non-Pro model (e.g. --model gpt-5.2-instant).',
     );
   }
 
@@ -194,7 +195,13 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
     allowCookieErrors: options.browserAllowCookieErrors ?? true,
     remoteChrome,
     thinkingTime: options.browserThinkingTime,
+    composerTool: normalizeComposerTool(options.browserComposerTool),
   };
+}
+
+function normalizeComposerTool(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : undefined;
 }
 
 function selectBrowserPort(options: BrowserFlagOptions): number | null {

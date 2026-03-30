@@ -4,7 +4,7 @@ These are real end-to-end checks for the Grok browser path. Keep them updated as
 
 For the still-open breadth work after this acceptance bar, see [grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/grok-remaining-crud-plan.md).
 If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
-For the remaining ChatGPT project-management surface after lifecycle CRUD + project sources/files, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md).
+For the finished ChatGPT project-management surface, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md). For the work that closed the ChatGPT browser MVP, see [chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-conversation-surface-plan.md). For the active post-MVP polish checklist, see [chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-polish-plan.md).
 
 Current post-acceptance status:
 - the full scripted WSL-primary Grok acceptance pass remains the canonical
@@ -34,8 +34,33 @@ Current ChatGPT project status:
   - `auracall projects files add <projectId> --target chatgpt --file <path>`
   - `auracall projects files list <projectId> --target chatgpt`
   - `auracall projects files remove <projectId> <fileName> --target chatgpt`
+- project instructions CRUD is now green through the real CLI surface:
+  - `auracall projects instructions set <projectId> --target chatgpt --file <path>`
+  - `auracall projects instructions set <projectId> --target chatgpt --text <value>`
+  - `auracall projects instructions get <projectId> --target chatgpt`
 - upload/remove verification now requires a fresh `Sources` reload, not only the first immediate row that appears after file selection
-- remaining work is project instructions next, then clone if the native UI exposes it
+- instructions writes verify by reopening the project settings sheet and confirming the persisted textarea value
+- project clone remains out of scope unless the native UI later exposes a real clone action
+- root conversation CRUD is now green too:
+  - `auracall conversations --target chatgpt --refresh`
+  - `auracall conversations context get <conversationId> --target chatgpt --json-only`
+  - `auracall rename <conversationId> <title> --target chatgpt`
+  - `auracall delete <conversationId> --target chatgpt --yes`
+- conversation-file read parity is now live:
+  - `auracall conversations files list <conversationId> --target chatgpt`
+  - `auracall conversations context get <conversationId> --target chatgpt --json-only`
+  - for real small-text upload validation, use `--browser-attachments always`; under `auto`, ChatGPT can inline the file text instead of creating a real sent-turn file tile
+- already-sent ChatGPT conversation files should be treated as read-only:
+  - users can remove files from the composer before sending
+  - users cannot delete a file from an already-sent chat
+  - durable file deletion on ChatGPT belongs to project `Sources`, not conversation history
+- the full guarded ChatGPT browser acceptance runner is now green:
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`
+  - latest clean pass returned `PASS` on suffix `lyveco`
+  - project `g-p-69c9b2d3940c8191beca8032978bd981`
+  - conversation `69c9b37a-3c94-832d-be89-5ceaf91bd748`
+  - the runner now survives real ChatGPT cooldowns during rename/delete cleanup instead of dying on a harness timeout
+- ChatGPT browser MVP is complete; current work is acceptance/artifact polish tracked in `docs/dev/chatgpt-polish-plan.md`
 
 ## Environment
 

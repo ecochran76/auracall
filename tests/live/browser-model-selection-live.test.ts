@@ -40,25 +40,20 @@ function normalizeLabel(label: string): string {
 
 const CASES = [
   {
-    name: 'auto',
-    desiredModel: 'GPT-5.2',
-    expected: ['5.2'],
-  },
-  {
     name: 'thinking',
-    desiredModel: 'GPT-5.2 Thinking',
-    expected: ['5.2', 'thinking'],
+    desiredModel: 'Thinking',
+    expected: ['thinking'],
   },
   {
     name: 'instant',
-    desiredModel: 'GPT-5.2 Instant',
-    expected: ['5.2', 'instant'],
+    desiredModel: 'Instant',
+    expected: ['instant'],
   },
 ];
 
 (LIVE ? describe : describe.skip)('ChatGPT browser live model selection', () => {
   test(
-    'selects GPT-5.2 variants reliably',
+    'selects non-Pro ChatGPT models reliably',
     async () => {
       if (!(await hasChatGptCookies())) return;
       // Learned: serialize live browser tests to avoid Chrome profile contention.

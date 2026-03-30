@@ -709,6 +709,8 @@ function renderConversationMarkdown(
   conversationId: string,
 ): string {
   const messages = context?.messages ?? [];
+  const sources = context?.sources ?? [];
+  const artifacts = context?.artifacts ?? [];
   const lines: string[] = [`# Conversation ${conversationId}`, ''];
   for (const message of messages) {
     const heading = message.role ? message.role.toUpperCase() : 'MESSAGE';
@@ -720,6 +722,23 @@ function renderConversationMarkdown(
     lines.push(message.text ?? '');
     lines.push('');
   }
+  if (artifacts.length > 0) {
+    lines.push('## ARTIFACTS');
+    for (const artifact of artifacts) {
+      const kind = artifact.kind ? ` (${artifact.kind})` : '';
+      const uri = artifact.uri ? ` -> ${artifact.uri}` : '';
+      lines.push(`- ${artifact.title}${kind}${uri}`);
+    }
+    lines.push('');
+  }
+  if (sources.length > 0) {
+    lines.push('## SOURCES');
+    for (const source of sources) {
+      const title = source.title ? `${source.title} -> ` : '';
+      lines.push(`- ${title}${source.url}`);
+    }
+    lines.push('');
+  }
   return lines.join('\n').trimEnd() + '\n';
 }
 
@@ -728,12 +747,33 @@ function renderConversationHtml(
   conversationId: string,
 ): string {
   const messages = context?.messages ?? [];
+  const sources = context?.sources ?? [];
+  const artifacts = context?.artifacts ?? [];
   const rows = messages.map((message) => {
     const role = escapeHtml(message.role ?? '');
     const time = message.time ? `<div class="time">${escapeHtml(message.time)}</div>` : '';
     const text = escapeHtml(message.text ?? '');
     return `<section class="message"><h3>${role}</h3>${time}<pre>${text}</pre></section>`;
   });
+  const artifactSection =
+    artifacts.length > 0
+      ? `<section class="artifacts"><h2>Artifacts</h2><ul>${artifacts
+          .map((artifact) => {
+            const kind = artifact.kind ? ` (${escapeHtml(artifact.kind)})` : '';
+            const uri = artifact.uri ? ` <code>${escapeHtml(artifact.uri)}</code>` : '';
+            return `<li>${escapeHtml(artifact.title)}${kind}${uri}</li>`;
+          })
+          .join('')}</ul></section>`
+      : '';
+  const sourceSection =
+    sources.length > 0
+      ? `<section class="sources"><h2>Sources</h2><ul>${sources
+          .map((source) => {
+            const label = source.title ? `${escapeHtml(source.title)} &rarr; ` : '';
+            return `<li>${label}<code>${escapeHtml(source.url)}</code></li>`;
+          })
+          .join('')}</ul></section>`
+      : '';
   return `<!doctype html>
 <html>
 <head>
@@ -750,6 +790,8 @@ function renderConversationHtml(
 <body>
   <h1>Conversation ${escapeHtml(conversationId)}</h1>
   ${rows.join('\n')}
+  ${artifactSection}
+  ${sourceSection}
 </body>
 </html>`;
 }

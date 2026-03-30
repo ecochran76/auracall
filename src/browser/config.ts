@@ -42,6 +42,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   hideWindow: false,
   desiredModel: DEFAULT_MODEL_TARGET,
   modelStrategy: DEFAULT_MODEL_STRATEGY,
+  composerTool: null,
   debug: false,
   allowCookieErrors: false,
   remoteChrome: null,
@@ -71,6 +72,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
       ? (rawUrl ?? GROK_URL)
       : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
   const desiredModel = config?.desiredModel ?? DEFAULT_BROWSER_CONFIG.desiredModel ?? DEFAULT_MODEL_TARGET;
+  const composerTool = normalizeComposerTool(config?.composerTool ?? DEFAULT_BROWSER_CONFIG.composerTool);
   const modelStrategy =
     normalizeBrowserModelStrategy(config?.modelStrategy) ??
     DEFAULT_BROWSER_CONFIG.modelStrategy ??
@@ -78,7 +80,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   if (modelStrategy === 'select' && isTemporaryChatUrl(normalizedUrl) && /\bpro\b/i.test(desiredModel)) {
     throw new Error(
       'Temporary Chat mode does not expose Pro models in the ChatGPT model picker. ' +
-        'Remove "temporary-chat=true" from your browser URL, or use a non-Pro model label (e.g. "GPT-5.2").',
+        'Remove "temporary-chat=true" from your browser URL, or use a non-Pro model label (e.g. "Instant").',
     );
   }
   const isWindows = process.platform === 'win32';
@@ -188,6 +190,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     hideWindow: config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
     desiredModel,
     modelStrategy,
+    composerTool,
     chromeProfile: resolvedChromeProfile,
     chromePath: resolvedChromePath,
     chromeCookiePath: resolvedCookiePath,
@@ -331,6 +334,11 @@ function normalizeCookieNames(value: string[] | string | null | undefined): stri
     .map((entry) => entry.trim())
     .filter(Boolean);
   return names.length ? names : null;
+}
+
+function normalizeComposerTool(value: string | null | undefined): string | null {
+  const trimmed = value?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : null;
 }
 
 function normalizeInlineCookies(

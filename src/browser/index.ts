@@ -29,6 +29,8 @@ import {
   ensurePromptReady,
   installJavaScriptDialogAutoDismissal,
   ensureModelSelection,
+  ensureChatgptComposerTool,
+  readCurrentChatgptComposerTool,
   submitPrompt,
   clearPromptComposer,
   waitForAssistantResponse,
@@ -70,6 +72,23 @@ import {
   DEFAULT_DEBUG_PORT_RANGE,
   pickAvailableDebugPort,
 } from './portSelection.js';
+import { dismissOpenMenus } from './service/ui.js';
+import {
+  appendChatgptMutationRecord,
+  CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
+  CHATGPT_MUTATION_MAX_WEIGHT,
+  CHATGPT_MUTATION_WINDOW_MS,
+  CHATGPT_POST_COMMIT_AUTO_WAIT_MAX_MS,
+  CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+  CHATGPT_RATE_LIMIT_COOLDOWN_MS,
+  extractChatgptRateLimitSummary,
+  getChatgptMutationBudgetWaitMs,
+  getChatgptPostCommitQuietWaitMs,
+  isChatgptRateLimitMessage,
+  readChatgptRateLimitGuardState,
+  resolveChatgptRateLimitProfileName,
+  writeChatgptRateLimitGuardState,
+} from './chatgptRateLimitGuard.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -86,6 +105,264 @@ function shouldPreserveBrowserOnError(error: unknown, headless: boolean): boolea
 
 export function shouldPreserveBrowserOnErrorForTest(error: unknown, headless: boolean): boolean {
   return shouldPreserveBrowserOnError(error, headless);
+}
+
+function shouldTreatChatgptAssistantResponseAsStale(options: {
+  baselineText?: string | null;
+  baselineMessageId?: string | null;
+  baselineTurnId?: string | null;
+  answerText?: string | null;
+  answerMessageId?: string | null;
+  answerTurnId?: string | null;
+}): boolean {
+  const normalizeForComparison = (text: string): string =>
+    text.toLowerCase().replace(/\s+/g, ' ').trim();
+  const baselineNormalized = options.baselineText ? normalizeForComparison(options.baselineText) : '';
+  if (!baselineNormalized) {
+    return false;
+  }
+  const normalizedAnswer = options.answerText ? normalizeForComparison(options.answerText) : '';
+  const baselinePrefix =
+    baselineNormalized.length >= 80
+      ? baselineNormalized.slice(0, Math.min(200, baselineNormalized.length))
+      : '';
+  const sameMessageId =
+    Boolean(options.baselineMessageId) &&
+    Boolean(options.answerMessageId) &&
+    options.answerMessageId === options.baselineMessageId;
+  const sameTurnId =
+    Boolean(options.baselineTurnId) &&
+    Boolean(options.answerTurnId) &&
+    options.answerTurnId === options.baselineTurnId;
+  const endsWithBaseline =
+    normalizedAnswer.length > baselineNormalized.length &&
+    normalizedAnswer.endsWith(baselineNormalized);
+  return (
+    sameMessageId ||
+    sameTurnId ||
+    normalizedAnswer === baselineNormalized ||
+    (baselinePrefix.length > 0 && normalizedAnswer.startsWith(baselinePrefix)) ||
+    endsWithBaseline
+  );
+}
+
+export function shouldTreatChatgptAssistantResponseAsStaleForTest(options: {
+  baselineText?: string | null;
+  baselineMessageId?: string | null;
+  baselineTurnId?: string | null;
+  answerText?: string | null;
+  answerMessageId?: string | null;
+  answerTurnId?: string | null;
+}): boolean {
+  return shouldTreatChatgptAssistantResponseAsStale(options);
+}
+
+function resolveChatgptBrowserGuardProfileName(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  managedProfileDir?: string | null,
+): string {
+  return resolveChatgptRateLimitProfileName({
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+}
+
+async function enforceChatgptBrowserRateLimitGuard(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  logger: BrowserLogger,
+  managedProfileDir?: string | null,
+): Promise<void> {
+  const state = await readChatgptRateLimitGuardState({
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+  if (!state) {
+    return;
+  }
+  const now = Date.now();
+  if (typeof state.cooldownUntil === 'number' && state.cooldownUntil > now) {
+    const remainingMs = state.cooldownUntil - now;
+    if (remainingMs <= CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS) {
+      logger(`[browser] Waiting ${Math.ceil(remainingMs / 1000)}s for ChatGPT cooldown to clear.`);
+      await delay(remainingMs);
+    } else {
+      const summary = state.cooldownReason ? ` ${state.cooldownReason}` : '';
+      throw new Error(
+        `ChatGPT rate limit cooldown active until ${new Date(state.cooldownUntil).toISOString()} (${Math.ceil(
+          remainingMs / 1000,
+        )}s remaining).${summary}`.trim(),
+      );
+    }
+  }
+  const postCommitWaitMs = getChatgptPostCommitQuietWaitMs(state, now, {
+    windowMs: CHATGPT_MUTATION_WINDOW_MS,
+  });
+  if (postCommitWaitMs > 0) {
+    if (postCommitWaitMs <= CHATGPT_POST_COMMIT_AUTO_WAIT_MAX_MS) {
+      logger(`[browser] Waiting ${Math.ceil(postCommitWaitMs / 1000)}s for ChatGPT post-write quiet period.`);
+      await delay(postCommitWaitMs);
+    } else {
+      throw new Error(
+        `ChatGPT post-write quiet period active until ${new Date(now + postCommitWaitMs).toISOString()} (${Math.ceil(
+          postCommitWaitMs / 1000,
+        )}s remaining).`,
+      );
+    }
+  }
+  const budgetWaitMs = getChatgptMutationBudgetWaitMs(state, Date.now(), {
+    windowMs: CHATGPT_MUTATION_WINDOW_MS,
+    maxWeight: CHATGPT_MUTATION_MAX_WEIGHT,
+  });
+  if (budgetWaitMs <= 0) {
+    return;
+  }
+  if (budgetWaitMs <= CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS) {
+    logger(`[browser] Waiting ${Math.ceil(budgetWaitMs / 1000)}s for ChatGPT write budget to clear.`);
+    await delay(budgetWaitMs);
+    return;
+  }
+  throw new Error(
+    `ChatGPT write budget active until ${new Date(Date.now() + budgetWaitMs).toISOString()} (${Math.ceil(
+      budgetWaitMs / 1000,
+    )}s remaining).`,
+  );
+}
+
+async function noteChatgptBrowserMutationSuccess(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  managedProfileDir?: string | null,
+): Promise<void> {
+  const profile = resolveChatgptBrowserGuardProfileName(config, managedProfileDir);
+  const current = await readChatgptRateLimitGuardState({
+    profileName: profile,
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+  const now = Date.now();
+  const recentMutations = appendChatgptMutationRecord(
+    current?.recentMutations ?? current?.recentMutationAts,
+    'browserRun',
+    now,
+    CHATGPT_MUTATION_WINDOW_MS,
+  );
+  await writeChatgptRateLimitGuardState(
+    {
+      provider: 'chatgpt',
+      profile,
+      updatedAt: now,
+      lastMutationAt: now,
+      recentMutations,
+      recentMutationAts: recentMutations.map((entry) => entry.at),
+      cooldownUntil:
+        typeof current?.cooldownUntil === 'number' && current.cooldownUntil > now ? current.cooldownUntil : undefined,
+      cooldownDetectedAt:
+        typeof current?.cooldownUntil === 'number' && current.cooldownUntil > now
+          ? current?.cooldownDetectedAt
+          : undefined,
+      cooldownReason:
+        typeof current?.cooldownUntil === 'number' && current.cooldownUntil > now
+          ? current?.cooldownReason
+          : undefined,
+      cooldownAction:
+        typeof current?.cooldownUntil === 'number' && current.cooldownUntil > now
+          ? current?.cooldownAction
+          : undefined,
+    },
+    {
+      profileName: profile,
+      managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+      managedProfileRoot: config.managedProfileRoot ?? null,
+    },
+  );
+}
+
+async function detectVisibleChatgptRateLimitReason(
+  Runtime: ChromeClient['Runtime'],
+): Promise<string | null> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const matches = [];
+      for (const selector of ['[role="dialog"]', '[aria-modal="true"]', '[role="alert"]', '[aria-live]']) {
+        for (const node of Array.from(document.querySelectorAll(selector))) {
+          if (!isVisible(node)) continue;
+          const text = normalize(node.textContent || '');
+          if (!text) continue;
+          if (/too many requests|too quickly|rate limit/i.test(text)) {
+            matches.push(text.slice(0, 240));
+          }
+        }
+      }
+      return matches[0] || null;
+    })()`,
+    returnByValue: true,
+  });
+  return typeof result?.value === 'string' && result.value.trim() ? result.value.trim() : null;
+}
+
+async function handleChatgptBrowserRateLimitFailure(options: {
+  config: ReturnType<typeof resolveBrowserConfig>;
+  logger: BrowserLogger;
+  error: Error;
+  action: string;
+  Runtime?: ChromeClient['Runtime'] | null;
+  managedProfileDir?: string | null;
+}): Promise<Error> {
+  let reason = extractChatgptRateLimitSummary(options.error.message);
+  if (!reason && options.Runtime) {
+    reason = await detectVisibleChatgptRateLimitReason(options.Runtime).catch(() => null);
+  }
+  if (!reason && !isChatgptRateLimitMessage(options.error.message)) {
+    return options.error;
+  }
+  const now = Date.now();
+  const cooldownUntil = now + CHATGPT_RATE_LIMIT_COOLDOWN_MS;
+  const profile = resolveChatgptBrowserGuardProfileName(options.config, options.managedProfileDir);
+  const current = await readChatgptRateLimitGuardState({
+    profileName: profile,
+    managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
+    managedProfileRoot: options.config.managedProfileRoot ?? null,
+  });
+  const recentMutations = appendChatgptMutationRecord(
+    current?.recentMutations ?? current?.recentMutationAts,
+    options.action,
+    now,
+    CHATGPT_MUTATION_WINDOW_MS,
+  );
+  await writeChatgptRateLimitGuardState(
+    {
+      provider: 'chatgpt',
+      profile,
+      updatedAt: now,
+      lastMutationAt: now,
+      recentMutations,
+      recentMutationAts: recentMutations.map((entry) => entry.at),
+      cooldownDetectedAt: now,
+      cooldownUntil,
+      cooldownReason: reason ?? undefined,
+      cooldownAction: options.action,
+    },
+    {
+      profileName: profile,
+      managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
+      managedProfileRoot: options.config.managedProfileRoot ?? null,
+    },
+  );
+  options.logger(
+    `[browser] ChatGPT rate limit detected; cooling down until ${new Date(cooldownUntil).toISOString()}.`,
+  );
+  const detail = reason ? ` ${reason}` : '';
+  return new Error(
+    `ChatGPT rate limit detected while ${options.action}; cooling down until ${new Date(
+      cooldownUntil,
+    ).toISOString()}.${detail}`.trim(),
+    { cause: options.error },
+  );
 }
 
 function createWindowsManagedProfileRetryReset(options: {
@@ -229,6 +506,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     managedProfileRoot: config.managedProfileRoot ?? null,
     target,
   });
+  await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const defaultManagedProfileDir = resolveManagedProfileDir({
     configuredDir: null,
     managedProfileRoot: config.managedProfileRoot ?? null,
@@ -306,6 +584,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let answerText = '';
   let answerMarkdown = '';
   let answerHtml = '';
+  let selectedComposerTool: string | null = null;
   let runStatus: 'attempted' | 'complete' = 'attempted';
   let connectionClosedUnexpectedly = false;
   let stopThinkingMonitor: (() => void) | null = null;
@@ -313,6 +592,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let appliedCookies = 0;
   let removeTerminationHooks: (() => void) | null = null;
   let preserveBrowserOnError = false;
+  let runtimeForGuard: ChromeClient['Runtime'] | null = null;
 
   try {
     try {
@@ -371,7 +651,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     });
     const raceWithDisconnect = <T>(promise: Promise<T>): Promise<T> =>
       Promise.race([promise, disconnectPromise]);
-    const { Network, Page, Runtime, Input, DOM } = client;
+      const { Network, Page, Runtime, Input, DOM } = client;
+      runtimeForGuard = Runtime;
 
     if (!config.headless && config.hideWindow && wasChromeLaunchedByAuracall(chrome)) {
       await hideChromeWindow(chrome, logger);
@@ -526,6 +807,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     await captureRuntimeSnapshot();
     const modelStrategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY;
     if (config.desiredModel && modelStrategy !== 'ignore') {
+      await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
       await raceWithDisconnect(
         withRetries(
           () => ensureModelSelection(Runtime, config.desiredModel as string, logger, modelStrategy),
@@ -557,6 +839,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
+      await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
       await raceWithDisconnect(
         withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
           retries: 2,
@@ -569,10 +852,34 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         }),
       );
     }
+    if (config.composerTool) {
+      await raceWithDisconnect(dismissOpenMenus(Runtime).catch(() => false));
+      await raceWithDisconnect(
+        withRetries(() => ensureChatgptComposerTool(Runtime, config.composerTool as string, logger), {
+          retries: 2,
+          delayMs: 300,
+          onRetry: (attempt, error) => {
+            if (options.verbose) {
+              logger(
+                `[retry] Composer tool (${config.composerTool}) attempt ${attempt + 1}: ${error instanceof Error ? error.message : error}`,
+              );
+            }
+          },
+        }),
+      );
+      const composerSelection = await raceWithDisconnect(readCurrentChatgptComposerTool(Runtime));
+      selectedComposerTool = composerSelection.label;
+      await raceWithDisconnect(ensurePromptReady(Runtime, config.inputTimeoutMs, logger));
+      logger(`Prompt textarea ready (after composer tool, ${promptText.length.toLocaleString()} chars queued)`);
+    }
     const submitOnce = async (prompt: string, submissionAttachments: BrowserAttachment[]) => {
       const baselineSnapshot = await readAssistantSnapshot(Runtime).catch(() => null);
       const baselineAssistantText =
         typeof baselineSnapshot?.text === 'string' ? baselineSnapshot.text.trim() : '';
+      const baselineAssistantMessageId =
+        typeof baselineSnapshot?.messageId === 'string' ? baselineSnapshot.messageId.trim() : '';
+      const baselineAssistantTurnId =
+        typeof baselineSnapshot?.turnId === 'string' ? baselineSnapshot.turnId.trim() : '';
       const attachmentNames = submissionAttachments.map((a) => path.basename(a.path));
       let attachmentWaitTimedOut = false;
       let inputOnlyAttachments = false;
@@ -648,15 +955,24 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       }
       // Reattach needs a /c/ URL; ChatGPT can update it late, so poll in the background.
       scheduleConversationHint('post-submit', config.timeoutMs ?? 120_000);
-      return { baselineTurns, baselineAssistantText };
+      return {
+        baselineTurns,
+        baselineAssistantText,
+        baselineAssistantMessageId,
+        baselineAssistantTurnId,
+      };
     };
 
     let baselineTurns: number | null = null;
     let baselineAssistantText: string | null = null;
+    let baselineAssistantMessageId: string | null = null;
+    let baselineAssistantTurnId: string | null = null;
     try {
       const submission = await raceWithDisconnect(submitOnce(promptText, attachments));
       baselineTurns = submission.baselineTurns;
       baselineAssistantText = submission.baselineAssistantText;
+      baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
+      baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
     } catch (error) {
       const isPromptTooLarge =
         error instanceof BrowserAutomationError &&
@@ -671,6 +987,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         );
         baselineTurns = submission.baselineTurns;
         baselineAssistantText = submission.baselineAssistantText;
+        baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
+        baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
       } else {
         throw error;
       }
@@ -679,6 +997,39 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     // Helper to normalize text for echo detection (collapse whitespace, lowercase)
     const normalizeForComparison = (text: string): string =>
       text.toLowerCase().replace(/\s+/g, ' ').trim();
+    const readFreshAssistantCandidate = async (
+      baselineNormalized: string,
+      baselinePrefix: string,
+    ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> => {
+      const snapshots = await Promise.all([
+        readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null),
+        readAssistantSnapshot(Runtime).catch(() => null),
+      ]);
+      let best:
+        | { text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } }
+        | null = null;
+      for (const snapshot of snapshots) {
+        const text = typeof snapshot?.text === 'string' ? snapshot.text.trim() : '';
+        if (!text) continue;
+        const normalized = normalizeForComparison(text);
+        const isBaseline =
+          normalized === baselineNormalized || (baselinePrefix.length > 0 && normalized.startsWith(baselinePrefix));
+        if (isBaseline) continue;
+        const candidate = {
+          text,
+          html: snapshot?.html ?? undefined,
+          meta: { turnId: snapshot?.turnId ?? undefined, messageId: snapshot?.messageId ?? undefined },
+        };
+        if (
+          !best ||
+          (!best.meta.messageId && Boolean(candidate.meta.messageId)) ||
+          candidate.text.length > best.text.length
+        ) {
+          best = candidate;
+        }
+      }
+      return best;
+    };
     const waitForFreshAssistantResponse = async (baselineNormalized: string, timeoutMs: number) => {
       const baselinePrefix =
         baselineNormalized.length >= 80
@@ -686,19 +1037,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           : '';
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
-        const snapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null);
-        const text = typeof snapshot?.text === 'string' ? snapshot.text.trim() : '';
-        if (text) {
-          const normalized = normalizeForComparison(text);
-          const isBaseline =
-            normalized === baselineNormalized || (baselinePrefix.length > 0 && normalized.startsWith(baselinePrefix));
-          if (!isBaseline) {
-            return {
-              text,
-              html: snapshot?.html ?? undefined,
-              meta: { turnId: snapshot?.turnId ?? undefined, messageId: snapshot?.messageId ?? undefined },
-            };
-          }
+        const candidate = await readFreshAssistantCandidate(baselineNormalized, baselinePrefix);
+        if (candidate) {
+          return candidate;
         }
         await delay(350);
       }
@@ -718,18 +1059,25 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
     if (baselineNormalized) {
       const normalizedAnswer = normalizeForComparison(answer.text ?? '');
-      const baselinePrefix =
-        baselineNormalized.length >= 80
-          ? baselineNormalized.slice(0, Math.min(200, baselineNormalized.length))
-          : '';
-      const isBaseline =
-        normalizedAnswer === baselineNormalized ||
-        (baselinePrefix.length > 0 && normalizedAnswer.startsWith(baselinePrefix));
+      const isBaseline = shouldTreatChatgptAssistantResponseAsStale({
+        baselineText: baselineAssistantText,
+        baselineMessageId: baselineAssistantMessageId,
+        baselineTurnId: baselineAssistantTurnId,
+        answerText: answer.text,
+        answerMessageId: answer.meta?.messageId ?? null,
+        answerTurnId: answer.meta?.turnId ?? null,
+      });
       if (isBaseline) {
         logger('Detected stale assistant response; waiting for new response...');
         const refreshed = await waitForFreshAssistantResponse(baselineNormalized, 15_000);
         if (refreshed) {
           answer = refreshed;
+        } else {
+          const visibleRateLimit = await detectVisibleChatgptRateLimitReason(Runtime).catch(() => null);
+          if (visibleRateLimit) {
+            throw new Error(visibleRateLimit);
+          }
+          throw new Error('Stale ChatGPT assistant response detected after send.');
         }
       }
     }
@@ -856,6 +1204,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     const durationMs = Date.now() - startedAt;
     const answerChars = answerText.length;
     const answerTokens = estimateTokenCount(answerMarkdown);
+    await noteChatgptBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
   return {
     answerText,
     answerMarkdown,
@@ -869,12 +1218,22 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       userDataDir,
       chromeTargetId: lastTargetId,
       tabUrl: lastUrl,
+      conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+      composerTool: selectedComposerTool,
       controllerPid: process.pid,
     };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const guardedError = await handleChatgptBrowserRateLimitFailure({
+      config,
+      logger,
+      error: normalizedError,
+      action: 'browserRun',
+      Runtime: runtimeForGuard,
+      managedProfileDir: userDataDir,
+    });
     stopThinkingMonitor?.();
-    const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(normalizedError);
+    const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
     connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
     if (shouldPreserveBrowserOnError(normalizedError, config.headless)) {
       preserveBrowserOnError = true;
@@ -900,19 +1259,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           runtime,
           reuseProfileHint,
         },
-        normalizedError,
+        guardedError,
       );
     }
     if (!socketClosed) {
-      logger(`Failed to complete ChatGPT run: ${normalizedError.message}`);
-      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
-        logger(normalizedError.stack);
+      logger(`Failed to complete ChatGPT run: ${guardedError.message}`);
+      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && guardedError.stack) {
+        logger(guardedError.stack);
       }
-      throw normalizedError;
+      throw guardedError;
     }
-    if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
-      logger(`Chrome window closed before completion: ${normalizedError.message}`);
-      logger(normalizedError.stack);
+    if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && guardedError.stack) {
+      logger(`Chrome window closed before completion: ${guardedError.message}`);
+      logger(guardedError.stack);
     }
     await emitRuntimeHint();
     throw new BrowserAutomationError(
@@ -929,7 +1288,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           controllerPid: process.pid,
         },
       },
-      normalizedError,
+      guardedError,
     );
   } finally {
     try {
@@ -1061,6 +1420,7 @@ async function runRemoteBrowserMode(
     throw new Error('Remote Chrome configuration missing. Pass --remote-chrome <host:port> to use this mode.');
   }
   const { host, port } = remoteChromeConfig;
+  await enforceChatgptBrowserRateLimitGuard(config, logger, config.manualLoginProfileDir ?? null);
   logger(`Connecting to remote Chrome at ${host}:${port}`);
 
   let client: ChromeClient | null = null;
@@ -1089,9 +1449,11 @@ async function runRemoteBrowserMode(
   let answerText = '';
   let answerMarkdown = '';
   let answerHtml = '';
+  let selectedComposerTool: string | null = null;
   let connectionClosedUnexpectedly = false;
   let stopThinkingMonitor: (() => void) | null = null;
   let removeDialogHandler: (() => void) | null = null;
+  let runtimeForGuard: ChromeClient['Runtime'] | null = null;
 
   try {
     const connection = await connectToRemoteChrome(host, port, logger, config.url, {
@@ -1111,6 +1473,7 @@ async function runRemoteBrowserMode(
     };
     client.on('disconnect', markConnectionLost);
     const { Network, Page, Runtime, Input, DOM } = client;
+    runtimeForGuard = Runtime;
 
     const domainEnablers = [Network.enable({}), Page.enable(), Runtime.enable()];
     if (DOM && typeof DOM.enable === 'function') {
@@ -1142,6 +1505,7 @@ async function runRemoteBrowserMode(
 
     const modelStrategy = config.modelStrategy ?? DEFAULT_MODEL_STRATEGY;
     if (config.desiredModel && modelStrategy !== 'ignore') {
+      await dismissOpenMenus(Runtime).catch(() => false);
       await withRetries(
         () => ensureModelSelection(Runtime, config.desiredModel as string, logger, modelStrategy),
         {
@@ -1162,6 +1526,7 @@ async function runRemoteBrowserMode(
     // Handle thinking time selection if specified
     const thinkingTime = config.thinkingTime;
     if (thinkingTime && shouldApplyThinkingTime(config.desiredModel)) {
+      await dismissOpenMenus(Runtime).catch(() => false);
       await withRetries(() => ensureThinkingTimeIfAvailable(Runtime, thinkingTime, logger), {
         retries: 2,
         delayMs: 300,
@@ -1172,11 +1537,33 @@ async function runRemoteBrowserMode(
         },
       });
     }
+    if (config.composerTool) {
+      await dismissOpenMenus(Runtime).catch(() => false);
+      await withRetries(() => ensureChatgptComposerTool(Runtime, config.composerTool as string, logger), {
+        retries: 2,
+        delayMs: 300,
+        onRetry: (attempt, error) => {
+          if (options.verbose) {
+            logger(
+              `[retry] Composer tool (${config.composerTool}) attempt ${attempt + 1}: ${error instanceof Error ? error.message : error}`,
+            );
+          }
+        },
+      });
+      const composerSelection = await readCurrentChatgptComposerTool(Runtime);
+      selectedComposerTool = composerSelection.label;
+      await ensurePromptReady(Runtime, config.inputTimeoutMs, logger);
+      logger(`Prompt textarea ready (after composer tool, ${promptText.length.toLocaleString()} chars queued)`);
+    }
 
     const submitOnce = async (prompt: string, submissionAttachments: BrowserAttachment[]) => {
       const baselineSnapshot = await readAssistantSnapshot(Runtime).catch(() => null);
       const baselineAssistantText =
         typeof baselineSnapshot?.text === 'string' ? baselineSnapshot.text.trim() : '';
+      const baselineAssistantMessageId =
+        typeof baselineSnapshot?.messageId === 'string' ? baselineSnapshot.messageId.trim() : '';
+      const baselineAssistantTurnId =
+        typeof baselineSnapshot?.turnId === 'string' ? baselineSnapshot.turnId.trim() : '';
       const attachmentNames = submissionAttachments.map((a) => path.basename(a.path));
       if (submissionAttachments.length > 0) {
         if (!DOM) {
@@ -1213,15 +1600,24 @@ async function runRemoteBrowserMode(
           baselineTurns = Math.max(0, committedTurns - 1);
         }
       }
-      return { baselineTurns, baselineAssistantText };
+      return {
+        baselineTurns,
+        baselineAssistantText,
+        baselineAssistantMessageId,
+        baselineAssistantTurnId,
+      };
     };
 
     let baselineTurns: number | null = null;
     let baselineAssistantText: string | null = null;
+    let baselineAssistantMessageId: string | null = null;
+    let baselineAssistantTurnId: string | null = null;
     try {
       const submission = await submitOnce(promptText, attachments);
       baselineTurns = submission.baselineTurns;
       baselineAssistantText = submission.baselineAssistantText;
+      baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
+      baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
     } catch (error) {
       const isPromptTooLarge =
         error instanceof BrowserAutomationError &&
@@ -1233,6 +1629,8 @@ async function runRemoteBrowserMode(
         const submission = await submitOnce(options.fallbackSubmission.prompt, options.fallbackSubmission.attachments);
         baselineTurns = submission.baselineTurns;
         baselineAssistantText = submission.baselineAssistantText;
+        baselineAssistantMessageId = submission.baselineAssistantMessageId || null;
+        baselineAssistantTurnId = submission.baselineAssistantTurnId || null;
       } else {
         throw error;
       }
@@ -1241,6 +1639,39 @@ async function runRemoteBrowserMode(
     // Helper to normalize text for echo detection (collapse whitespace, lowercase)
     const normalizeForComparison = (text: string): string =>
       text.toLowerCase().replace(/\s+/g, ' ').trim();
+    const readFreshAssistantCandidate = async (
+      baselineNormalized: string,
+      baselinePrefix: string,
+    ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> => {
+      const snapshots = await Promise.all([
+        readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null),
+        readAssistantSnapshot(Runtime).catch(() => null),
+      ]);
+      let best:
+        | { text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } }
+        | null = null;
+      for (const snapshot of snapshots) {
+        const text = typeof snapshot?.text === 'string' ? snapshot.text.trim() : '';
+        if (!text) continue;
+        const normalized = normalizeForComparison(text);
+        const isBaseline =
+          normalized === baselineNormalized || (baselinePrefix.length > 0 && normalized.startsWith(baselinePrefix));
+        if (isBaseline) continue;
+        const candidate = {
+          text,
+          html: snapshot?.html ?? undefined,
+          meta: { turnId: snapshot?.turnId ?? undefined, messageId: snapshot?.messageId ?? undefined },
+        };
+        if (
+          !best ||
+          (!best.meta.messageId && Boolean(candidate.meta.messageId)) ||
+          candidate.text.length > best.text.length
+        ) {
+          best = candidate;
+        }
+      }
+      return best;
+    };
     const waitForFreshAssistantResponse = async (baselineNormalized: string, timeoutMs: number) => {
       const baselinePrefix =
         baselineNormalized.length >= 80
@@ -1248,19 +1679,9 @@ async function runRemoteBrowserMode(
           : '';
       const deadline = Date.now() + timeoutMs;
       while (Date.now() < deadline) {
-        const snapshot = await readAssistantSnapshot(Runtime, baselineTurns ?? undefined).catch(() => null);
-        const text = typeof snapshot?.text === 'string' ? snapshot.text.trim() : '';
-        if (text) {
-          const normalized = normalizeForComparison(text);
-          const isBaseline =
-            normalized === baselineNormalized || (baselinePrefix.length > 0 && normalized.startsWith(baselinePrefix));
-          if (!isBaseline) {
-            return {
-              text,
-              html: snapshot?.html ?? undefined,
-              meta: { turnId: snapshot?.turnId ?? undefined, messageId: snapshot?.messageId ?? undefined },
-            };
-          }
+        const candidate = await readFreshAssistantCandidate(baselineNormalized, baselinePrefix);
+        if (candidate) {
+          return candidate;
         }
         await delay(350);
       }
@@ -1276,18 +1697,25 @@ async function runRemoteBrowserMode(
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
     if (baselineNormalized) {
       const normalizedAnswer = normalizeForComparison(answer.text ?? '');
-      const baselinePrefix =
-        baselineNormalized.length >= 80
-          ? baselineNormalized.slice(0, Math.min(200, baselineNormalized.length))
-          : '';
-      const isBaseline =
-        normalizedAnswer === baselineNormalized ||
-        (baselinePrefix.length > 0 && normalizedAnswer.startsWith(baselinePrefix));
+      const isBaseline = shouldTreatChatgptAssistantResponseAsStale({
+        baselineText: baselineAssistantText,
+        baselineMessageId: baselineAssistantMessageId,
+        baselineTurnId: baselineAssistantTurnId,
+        answerText: answer.text,
+        answerMessageId: answer.meta?.messageId ?? null,
+        answerTurnId: answer.meta?.turnId ?? null,
+      });
       if (isBaseline) {
         logger('Detected stale assistant response; waiting for new response...');
         const refreshed = await waitForFreshAssistantResponse(baselineNormalized, 15_000);
         if (refreshed) {
           answer = refreshed;
+        } else {
+          const visibleRateLimit = await detectVisibleChatgptRateLimitReason(Runtime).catch(() => null);
+          if (visibleRateLimit) {
+            throw new Error(visibleRateLimit);
+          }
+          throw new Error('Stale ChatGPT assistant response detected after send.');
         }
       }
     }
@@ -1379,6 +1807,7 @@ async function runRemoteBrowserMode(
     const durationMs = Date.now() - startedAt;
     const answerChars = answerText.length;
     const answerTokens = estimateTokenCount(answerMarkdown);
+    await noteChatgptBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(() => undefined);
 
     return {
       answerText,
@@ -1393,20 +1822,30 @@ async function runRemoteBrowserMode(
       userDataDir: undefined,
       chromeTargetId: remoteTargetId ?? undefined,
       tabUrl: lastUrl,
+      conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
+      composerTool: selectedComposerTool,
       controllerPid: process.pid,
     };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const guardedError = await handleChatgptBrowserRateLimitFailure({
+      config,
+      logger,
+      error: normalizedError,
+      action: 'remoteBrowserRun',
+      Runtime: runtimeForGuard,
+      managedProfileDir: config.manualLoginProfileDir ?? null,
+    });
     stopThinkingMonitor?.();
-    const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(normalizedError);
+    const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(guardedError);
     connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
 
     if (!socketClosed) {
-      logger(`Failed to complete ChatGPT run: ${normalizedError.message}`);
-      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
-        logger(normalizedError.stack);
+      logger(`Failed to complete ChatGPT run: ${guardedError.message}`);
+      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && guardedError.stack) {
+        logger(guardedError.stack);
       }
-      throw normalizedError;
+      throw guardedError;
     }
 
     throw new BrowserAutomationError('Remote Chrome connection lost before Aura-Call finished.', {
@@ -1418,7 +1857,7 @@ async function runRemoteBrowserMode(
         tabUrl: lastUrl,
         controllerPid: process.pid,
       },
-    });
+    }, guardedError);
   } finally {
     try {
       if (!connectionClosedUnexpectedly && client) {

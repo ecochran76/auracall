@@ -19,7 +19,7 @@ describe('buildBrowserConfig', () => {
       headless: undefined,
       keepBrowser: undefined,
       hideWindow: undefined,
-      desiredModel: 'GPT-5.2 Pro',
+      desiredModel: 'Pro',
       debug: undefined,
       allowCookieErrors: true,
     });
@@ -48,6 +48,7 @@ describe('buildBrowserConfig', () => {
       browserHeadless: true,
       browserHideWindow: true,
       browserKeepBrowser: true,
+      browserComposerTool: 'web-search',
       browserAllowCookieErrors: true,
       verbose: true,
     });
@@ -64,7 +65,8 @@ describe('buildBrowserConfig', () => {
       headless: undefined,
       hideWindow: true,
       keepBrowser: true,
-      desiredModel: 'GPT-5.2',
+      composerTool: 'web-search',
+      desiredModel: 'Instant',
       debug: true,
       allowCookieErrors: true,
     });
@@ -75,7 +77,7 @@ describe('buildBrowserConfig', () => {
       model: 'gpt-5.2-pro',
       browserModelLabel: 'Instant',
     });
-    expect(config.desiredModel).toBe('GPT-5.2 Pro');
+    expect(config.desiredModel).toBe('Pro');
   });
 
   test('falls back to canonical label when override matches base model', async () => {
@@ -83,7 +85,7 @@ describe('buildBrowserConfig', () => {
       model: 'gpt-5.1',
       browserModelLabel: 'gpt-5.1',
     });
-    expect(config.desiredModel).toBe('GPT-5.2');
+    expect(config.desiredModel).toBe('Instant');
   });
 
   test('maps thinking Gemini model to thinking label', async () => {
@@ -113,7 +115,7 @@ describe('buildBrowserConfig', () => {
       model: 'gpt-5.1',
       browserModelLabel: '  ChatGPT 5.1 Instant  ',
     });
-    expect(config.desiredModel).toBe('GPT-5.2');
+    expect(config.desiredModel).toBe('Instant');
   });
 
   test('parses remoteChrome host targets', async () => {
@@ -166,7 +168,7 @@ describe('buildBrowserConfig', () => {
       chatgptUrl: 'https://chatgpt.com/?temporary-chat=true',
     });
     expect(config.url).toBe('https://chatgpt.com/?temporary-chat=true');
-    expect(config.desiredModel).toBe('GPT-5.2');
+    expect(config.desiredModel).toBe('Instant');
   });
 
   test('accepts IPv6 remoteChrome targets wrapped in brackets', async () => {
@@ -223,12 +225,12 @@ describe('buildBrowserConfig', () => {
 
 describe('resolveBrowserModelLabel', () => {
   test('returns canonical ChatGPT label when CLI value matches API model', () => {
-    expect(resolveBrowserModelLabel('gpt-5.2-pro', 'gpt-5.2-pro')).toBe('GPT-5.2 Pro');
-    expect(resolveBrowserModelLabel('GPT-5.1', 'gpt-5.1')).toBe('GPT-5.2');
+    expect(resolveBrowserModelLabel('gpt-5.2-pro', 'gpt-5.2-pro')).toBe('Pro');
+    expect(resolveBrowserModelLabel('GPT-5.1', 'gpt-5.1')).toBe('Instant');
   });
 
   test('falls back to canonical label when input is empty', () => {
-    expect(resolveBrowserModelLabel('', 'gpt-5.1')).toBe('GPT-5.2');
+    expect(resolveBrowserModelLabel('', 'gpt-5.1')).toBe('Instant');
   });
 
   test('preserves descriptive labels to target alternate picker entries', () => {
@@ -236,9 +238,9 @@ describe('resolveBrowserModelLabel', () => {
   });
 
   test('supports undefined or whitespace-only input', () => {
-    expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-pro')).toBe('GPT-5.2 Pro');
-    expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-instant')).toBe('GPT-5.2 Instant');
-    expect(resolveBrowserModelLabel('   ', 'gpt-5.1')).toBe('GPT-5.2');
+    expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-pro')).toBe('Pro');
+    expect(resolveBrowserModelLabel(undefined, 'gpt-5.2-instant')).toBe('Instant');
+    expect(resolveBrowserModelLabel('   ', 'gpt-5.1')).toBe('Instant');
   });
 
   test('trims descriptive labels before returning them', () => {

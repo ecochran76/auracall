@@ -19,8 +19,14 @@ describe('browser thinking-time selection expression', () => {
     const levels = ['light', 'standard', 'extended', 'heavy'] as const;
     for (const level of levels) {
       const expression = buildThinkingTimeExpressionForTest(level);
-      expect(expression).toContain('const TARGET_LEVEL');
-      expect(expression).toContain(`"${level}"`);
+      expect(expression).toContain('const TARGET_LEVELS');
+      if (level === 'light') {
+        expect(expression).toContain('"light","standard"');
+      } else if (level === 'heavy') {
+        expect(expression).toContain('"heavy","extended"');
+      } else {
+        expect(expression).toContain(`"${level}"`);
+      }
     }
   });
 });

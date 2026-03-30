@@ -1,19 +1,34 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
+  armDownloadCapture,
+  readDownloadCapture,
   clickRevealedRowAction,
+  collectVisibleOverlayInventory,
+  collectVisibleMenuInventory,
   collectUiDiagnostics,
+  dismissOverlayRoot,
+  dismissOpenMenus,
   findAndClickByLabel,
+  inspectNestedMenuPathSelection,
   navigateAndSettle,
   openMenu,
   openRevealedRowMenu,
+  selectAndVerifyNestedMenuPathOption,
+  openSubmenu,
   openSurface,
   pressButton,
+  selectNestedMenuPath,
+  selectMenuItem,
+  submitInlineRename,
+  waitForDownloadCapture,
   waitForDocumentReady,
+  waitForMenuOpen,
   waitForNotSelector,
   waitForPredicate,
   waitForScriptText,
   waitForSelector,
   waitForVisibleSelector,
+  withBlockingSurfaceRecovery,
   withUiDiagnostics,
 } from '../../packages/browser-service/src/service/ui.js';
 
@@ -46,6 +61,67 @@ describe('browser-service ui wait helpers', () => {
     expect(result.attempts).toBe(3);
     expect(result.description).toBe('custom predicate');
     expect(result.elapsedMs).toBeGreaterThanOrEqual(0);
+  });
+
+  test('armDownloadCapture installs window-level capture hooks for the default state key', async () => {
+    const runtime = createRuntime([true]);
+
+    await armDownloadCapture(runtime as never);
+
+    expect(runtime.evaluate).toHaveBeenCalledTimes(1);
+    const expression = runtime.evaluate.mock.calls[0]?.[0]?.expression as string;
+    expect(expression).toContain('__auracallDownloadCapture');
+    expect(expression).toContain('window.open = function');
+    expect(expression).toContain('HTMLAnchorElement.prototype.click');
+  });
+
+  test('readDownloadCapture returns href and downloadName from runtime state', async () => {
+    const runtime = createRuntime([
+      {
+        href: 'https://chatgpt.com/files/artifact.zip',
+        downloadName: 'artifact.zip',
+      },
+    ]);
+
+    const value = await readDownloadCapture(runtime as never, '__customCapture');
+
+    expect(value).toEqual({
+      href: 'https://chatgpt.com/files/artifact.zip',
+      downloadName: 'artifact.zip',
+    });
+  });
+
+  test('waitForDownloadCapture polls until a capture appears', async () => {
+    const runtime = createRuntime([
+      { href: null, downloadName: null },
+      { href: 'https://chatgpt.com/files/artifact.zip', downloadName: 'artifact.zip' },
+    ]);
+
+    const value = await waitForDownloadCapture(runtime as never, {
+      stateKey: '__customCapture',
+      timeoutMs: 20,
+      pollMs: 1,
+    });
+
+    expect(value).toEqual({
+      href: 'https://chatgpt.com/files/artifact.zip',
+      downloadName: 'artifact.zip',
+    });
+    expect(runtime.evaluate).toHaveBeenCalledTimes(2);
+  });
+
+  test('waitForDownloadCapture can return immediately when target is not required', async () => {
+    const runtime = createRuntime([{ href: null, downloadName: null }]);
+
+    const value = await waitForDownloadCapture(runtime as never, {
+      stateKey: '__customCapture',
+      timeoutMs: 20,
+      pollMs: 1,
+      requireTarget: false,
+    });
+
+    expect(value).toEqual({ href: null, downloadName: null });
+    expect(runtime.evaluate).toHaveBeenCalledTimes(1);
   });
 
   test('waitForDocumentReady requires visible documents when requested', async () => {
@@ -129,6 +205,33 @@ describe('browser-service ui wait helpers', () => {
     expect(clicked).toBe(true);
   });
 
+  test('pressButton default candidate selectors include menuitemradio and option roles', async () => {
+    const runtime = createRuntime([{ ok: true, matchedLabel: 'web search' }]);
+
+    const result = await pressButton(runtime as never, {
+      match: { exact: ['web search'] },
+    });
+
+    expect(result.ok).toBe(true);
+    const expression = runtime.evaluate.mock.calls[0]?.[0]?.expression as string;
+    expect(expression).toContain('[role="menuitemradio"]');
+    expect(expression).toContain('[role="option"]');
+  });
+
+  test('selectMenuItem includes menuitemradio and option selectors', async () => {
+    const runtime = createRuntime([true, true]);
+
+    const clicked = await selectMenuItem(runtime as never, {
+      menuSelector: '[role="menu"]',
+      itemMatch: { exact: ['web search'] },
+    });
+
+    expect(clicked).toBe(true);
+    const expression = runtime.evaluate.mock.calls[1]?.[0]?.expression as string;
+    expect(expression).toContain('[role=\\"menuitemradio\\"]');
+    expect(expression).toContain('[role=\\"option\\"]');
+  });
+
   test('collectUiDiagnostics returns a bounded structured page snapshot', async () => {
     const runtime = createRuntime([
       {
@@ -160,6 +263,412 @@ describe('browser-service ui wait helpers', () => {
       buttons: [{ selector: 'button[aria-label="Options"]', tag: 'button', role: null, ariaLabel: 'Options', text: null }],
       candidates: [{ selector: '[data-oracle-project-row="true"]', count: 1, samples: ['Oracle'] }],
       roots: ['nav'],
+    });
+  });
+
+  test('collectVisibleMenuInventory tags visible menus with specific selectors', async () => {
+    const runtime = createRuntime([
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: '{"selector":"[role=\\"menu\\"]"}',
+          rect: { x: 100, y: 20, width: 240, height: 160 },
+          distanceToAnchor: 18,
+          items: [{ label: 'rename', role: 'menuitem', selected: false }],
+          itemLabels: ['rename'],
+        },
+      ],
+    ]);
+
+    const result = await collectVisibleMenuInventory(runtime as never, {
+      menuSelectors: ['[role="menu"]'],
+      anchorSelector: 'button[aria-label="Options"]',
+    });
+
+    expect(result).toEqual([
+      {
+        selector: '[data-oracle-visible-menu-index="0"]',
+        sourceSelector: '[role="menu"]',
+        signature: '{"selector":"[role=\\"menu\\"]"}',
+        rect: { x: 100, y: 20, width: 240, height: 160 },
+        distanceToAnchor: 18,
+        items: [{ label: 'rename', role: 'menuitem', selected: false }],
+        itemLabels: ['rename'],
+      },
+    ]);
+  });
+
+  test('collectVisibleOverlayInventory tags visible overlays with specific selectors', async () => {
+    const runtime = createRuntime([
+      [
+        {
+          selector: '[role="dialog"]',
+          oracleSelector: '[data-oracle-visible-overlay-index="0"]',
+          signature: '{"selector":"[role=\\"dialog\\"]"}',
+          rect: { x: 80, y: 40, width: 320, height: 180 },
+          distanceToAnchor: 12,
+          tag: 'div',
+          role: 'dialog',
+          ariaLabel: 'Too many requests',
+          text: 'Too many requests You are making requests too quickly.',
+          buttonLabels: ['Okay'],
+        },
+      ],
+    ]);
+
+    const result = await collectVisibleOverlayInventory(runtime as never, {
+      overlaySelectors: ['[role="dialog"]'],
+      anchorSelector: 'button[aria-label="Send"]',
+    });
+
+    expect(result).toEqual([
+      {
+        selector: '[data-oracle-visible-overlay-index="0"]',
+        sourceSelector: '[role="dialog"]',
+        signature: '{"selector":"[role=\\"dialog\\"]"}',
+        rect: { x: 80, y: 40, width: 320, height: 180 },
+        distanceToAnchor: 12,
+        tag: 'div',
+        role: 'dialog',
+        ariaLabel: 'Too many requests',
+        text: 'Too many requests You are making requests too quickly.',
+        buttonLabels: ['Okay'],
+      },
+    ]);
+  });
+
+  test('waitForMenuOpen picks the best visible menu by expected item labels and novelty', async () => {
+    const runtime = createRuntime([
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'old-menu',
+          rect: { x: 400, y: 40, width: 220, height: 150 },
+          distanceToAnchor: 240,
+          items: [{ label: 'delete', role: 'menuitem', selected: false }],
+          itemLabels: ['delete'],
+        },
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="1"]',
+          signature: 'new-menu',
+          rect: { x: 140, y: 48, width: 240, height: 180 },
+          distanceToAnchor: 16,
+          items: [
+            { label: 'project only', role: 'menuitemradio', selected: true },
+            { label: 'default', role: 'menuitemradio', selected: false },
+          ],
+          itemLabels: ['project only', 'default'],
+        },
+      ],
+    ]);
+
+    const result = await waitForMenuOpen(runtime as never, {
+      menuSelector: '[role="menu"]',
+      fallbackSelectors: ['[role="menu"]'],
+      expectedItemMatch: { startsWith: ['project only'] },
+      existingMenuSignatures: ['old-menu'],
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      menuSelector: '[data-oracle-visible-menu-index="1"]',
+    });
+  });
+
+  test('openSubmenu promotes a nested visible menu into a specific selector', async () => {
+    const runtime = createRuntime([
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+      ],
+      { ok: true, matchedLabel: 'more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="1"]',
+          signature: 'submenu',
+          rect: { x: 360, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'canvas', role: 'menuitem', selected: false }],
+          itemLabels: ['canvas'],
+        },
+      ],
+    ]);
+
+    const result = await openSubmenu(runtime as never, {
+      parentMenuSelector: '[data-oracle-visible-menu-index="0"]',
+      itemMatch: { exact: ['more'] },
+      expectedItemMatch: { exact: ['canvas'] },
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      menuSelector: '[data-oracle-visible-menu-index="1"]',
+      interactionStrategy: 'pointer',
+    });
+  });
+
+  test('selectNestedMenuPath can drive a top-level trigger through a submenu path', async () => {
+    const runtime = createRuntime([
+      [],
+      { ok: true, matchedLabel: 'add files and more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+      ],
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+      ],
+      { ok: true, matchedLabel: 'more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="1"]',
+          signature: 'submenu',
+          rect: { x: 360, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'canvas', role: 'menuitem', selected: false }],
+          itemLabels: ['canvas'],
+        },
+      ],
+      true,
+      true,
+    ]);
+
+    const result = await selectNestedMenuPath(runtime as never, {
+      trigger: {
+        selector: '#composer-plus-btn',
+        requireVisible: true,
+        interactionStrategies: ['pointer'],
+      },
+      menuSelector: '[role="menu"]',
+      steps: [
+        { itemMatch: { exact: ['more'] }, interactionStrategies: ['pointer'] },
+        { itemMatch: { exact: ['canvas'] } },
+      ],
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      menuSelector: '[data-oracle-visible-menu-index="1"]',
+    });
+  });
+
+  test('inspectNestedMenuPathSelection reopens nested menus and reads selected state from the final menu', async () => {
+    const runtime = createRuntime([
+      [],
+      { ok: true, matchedLabel: 'add files and more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+      ],
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+      ],
+      { ok: true, matchedLabel: 'more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'more', role: 'menuitem', selected: false }],
+          itemLabels: ['more'],
+        },
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="1"]',
+          signature: 'submenu',
+          rect: { x: 360, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'canvas', role: 'menuitem', selected: true }],
+          itemLabels: ['canvas'],
+        },
+      ],
+      [
+        {
+          selector: '[data-oracle-visible-menu-index="1"]',
+          oracleSelector: '[data-oracle-visible-menu-index="1"]',
+          signature: 'submenu',
+          rect: { x: 360, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'canvas', role: 'menuitem', selected: true }],
+          itemLabels: ['canvas'],
+        },
+      ],
+    ]);
+
+    const result = await inspectNestedMenuPathSelection(runtime as never, {
+      trigger: {
+        selector: '#composer-plus-btn',
+        requireVisible: true,
+        interactionStrategies: ['pointer'],
+      },
+      menuSelector: '[role="menu"]',
+      steps: [
+        { itemMatch: { exact: ['more'] }, interactionStrategies: ['pointer'] },
+        { itemMatch: { exact: ['canvas'] } },
+      ],
+      closeMenusAfter: false,
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      selected: true,
+      label: 'canvas',
+      menuSelector: '[data-oracle-visible-menu-index="1"]',
+      availableLabels: ['canvas'],
+    });
+  });
+
+  test('selectAndVerifyNestedMenuPathOption reopens the menu path and confirms the option stayed selected', async () => {
+    const runtime = createRuntime([
+      [],
+      { ok: true, matchedLabel: 'add files and more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'web search', role: 'menuitem', selected: false }],
+          itemLabels: ['web search'],
+        },
+      ],
+      [
+        {
+          selector: '[data-oracle-visible-menu-index="0"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'web search', role: 'menuitem', selected: false }],
+          itemLabels: ['web search'],
+        },
+      ],
+      [],
+      { ok: true, matchedLabel: 'add files and more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'web search', role: 'menuitem', selected: false }],
+          itemLabels: ['web search'],
+        },
+      ],
+      true,
+      true,
+      [],
+      { ok: true, matchedLabel: 'add files and more' },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'web search', role: 'menuitem', selected: true }],
+          itemLabels: ['web search'],
+        },
+      ],
+      [
+        {
+          selector: '[data-oracle-visible-menu-index="0"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'top-menu',
+          rect: { x: 120, y: 48, width: 240, height: 180 },
+          distanceToAnchor: null,
+          items: [{ label: 'web search', role: 'menuitem', selected: true }],
+          itemLabels: ['web search'],
+        },
+      ],
+    ]);
+
+    const result = await selectAndVerifyNestedMenuPathOption(runtime as never, {
+      trigger: {
+        selector: '#composer-plus-btn',
+        requireVisible: true,
+        interactionStrategies: ['pointer'],
+      },
+      menuSelector: '[role="menu"]',
+      steps: [{ itemMatch: { exact: ['web search'] } }],
+      closeMenusAfter: false,
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({
+      ok: true,
+      alreadySelected: false,
+      label: 'web search',
+      menuSelector: '[data-oracle-visible-menu-index="0"]',
+      availableLabels: ['web search'],
     });
   });
 
@@ -236,6 +745,89 @@ describe('browser-service ui wait helpers', () => {
         },
       },
     });
+  });
+
+  test('withBlockingSurfaceRecovery retries after a pre-existing blocking surface is dismissed', async () => {
+    let inspectCalls = 0;
+    let dismissCalls = 0;
+    let actionCalls = 0;
+
+    const result = await withBlockingSurfaceRecovery(
+      async () => {
+        actionCalls += 1;
+        return 'ok';
+      },
+      {
+        pauseMs: 0,
+        inspect: async () =>
+          inspectCalls++ === 0
+            ? { kind: 'rate-limit', summary: 'Too many requests', selector: '[data-oracle-visible-overlay-index="0"]' }
+            : null,
+        dismiss: async () => {
+          dismissCalls += 1;
+        },
+      },
+    );
+
+    expect(result).toBe('ok');
+    expect(actionCalls).toBe(1);
+    expect(dismissCalls).toBe(1);
+  });
+
+  test('withBlockingSurfaceRecovery can recover from classified action errors', async () => {
+    let actionCalls = 0;
+    let dismissCalls = 0;
+
+    const result = await withBlockingSurfaceRecovery(
+      async () => {
+        actionCalls += 1;
+        if (actionCalls === 1) {
+          throw new Error('Too many requests. You are making requests too quickly.');
+        }
+        return 'ok';
+      },
+      {
+        pauseMs: 0,
+        inspect: async () => null,
+        dismiss: async () => {
+          dismissCalls += 1;
+        },
+        classifyError: async (error) => {
+          const message = error instanceof Error ? error.message : String(error);
+          return /too many requests/i.test(message)
+            ? { kind: 'rate-limit', summary: 'Too many requests' }
+            : null;
+        },
+      },
+    );
+
+    expect(result).toBe('ok');
+    expect(actionCalls).toBe(2);
+    expect(dismissCalls).toBe(1);
+  });
+
+  test('dismissOpenMenus sends Escape only when a visible menu is present', async () => {
+    const runtime = createRuntime([true, true, true]);
+
+    const dismissed = await dismissOpenMenus(runtime as never, 50);
+
+    expect(dismissed).toBe(true);
+    const escapeExpression = runtime.evaluate.mock.calls[1]?.[0]?.expression as string;
+    expect(escapeExpression).toContain('Escape');
+  });
+
+  test('dismissOverlayRoot targets the specific overlay selector before waiting for it to disappear', async () => {
+    const runtime = createRuntime([{ ok: true }, true]);
+
+    const dismissed = await dismissOverlayRoot(runtime as never, '[data-oracle-visible-overlay-index="0"]', {
+      closeButtonMatch: { includeAny: ['okay'] },
+      timeoutMs: 50,
+    });
+
+    expect(dismissed).toBe(true);
+    const expression = runtime.evaluate.mock.calls[0]?.[0]?.expression as string;
+    expect(expression).toContain('[data-oracle-visible-overlay-index=\\"0\\"]');
+    expect(expression).toContain('okay');
   });
 
   test('navigateAndSettle runs route/document/ready checks after Page.navigate', async () => {
@@ -377,7 +969,7 @@ describe('browser-service ui wait helpers', () => {
       rootSelectorUsed: 'dialog[open]',
       attemptedStrategies: ['pointer', 'keyboard-space'],
     });
-  });
+  }, 15_000);
 
   test('openSurface uses fallback triggers until the ready state appears', async () => {
     const runtime = createRuntime([
@@ -431,7 +1023,7 @@ describe('browser-service ui wait helpers', () => {
         },
       ],
     });
-  });
+  }, 15_000);
 
   test('clickRevealedRowAction reveals a hover action before pressing it', async () => {
     const runtime = {
@@ -584,5 +1176,73 @@ describe('browser-service ui wait helpers', () => {
 
     expect(result).toEqual({ ok: true, menuSelector: '[role="menu"]' });
     expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
+  });
+
+  test('submitInlineRename waits for the target input to become editable before submitting', async () => {
+    const runtime = createRuntime([
+      true,
+      { ok: true },
+      { ok: true },
+    ]);
+
+    const result = await submitInlineRename(runtime as never, {
+      value: 'Renamed conversation',
+      inputSelector: 'input[type="text"]',
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({ ok: true });
+    expect(runtime.evaluate).toHaveBeenCalledTimes(4);
+  });
+
+  test('submitInlineRename reports non-editable inputs before trying to submit', async () => {
+    const runtime = createRuntime([
+      true,
+      null,
+    ]);
+
+    const result = await submitInlineRename(runtime as never, {
+      value: 'Renamed conversation',
+      inputSelector: 'input[type="text"]',
+      timeoutMs: 50,
+    });
+
+    expect(result).toEqual({ ok: false, reason: 'Rename input not editable' });
+  });
+
+  test('submitInlineRename can submit with native Enter before synthetic fallback', async () => {
+    const runtime = createRuntime([
+      true,
+      { ok: true },
+      { ok: true, usedSaveButton: false },
+      false,
+      true,
+    ]);
+    const input = {
+      dispatchKeyEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await submitInlineRename(
+      runtime as never,
+      {
+        value: 'Renamed conversation',
+        inputSelector: 'input[type="text"]',
+        closeSelector: 'input[type="text"]',
+        timeoutMs: 50,
+        submitStrategy: 'native-then-synthetic',
+      },
+      { Input: input as never },
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(input.dispatchKeyEvent).toHaveBeenCalledTimes(2);
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ type: 'keyDown', key: 'Enter' }),
+    );
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ type: 'keyUp', key: 'Enter' }),
+    );
   });
 });

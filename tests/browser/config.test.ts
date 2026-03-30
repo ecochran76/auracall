@@ -28,7 +28,7 @@ describe('resolveBrowserConfig', () => {
   test('returns defaults when config missing', () => {
     const resolved = resolveBrowserConfig(undefined);
     expect(resolved.url).toBe(CHATGPT_URL);
-    expect(resolved.desiredModel).toBe('GPT-5.2 Instant');
+    expect(resolved.desiredModel).toBe('Instant');
     const isWindows = process.platform === 'win32';
     expect(resolved.cookieSync).toBe(!isWindows);
     expect(resolved.headless).toBe(false);
@@ -47,6 +47,7 @@ describe('resolveBrowserConfig', () => {
       cookieSync: false,
       headless: true,
       desiredModel: 'Custom',
+      composerTool: 'canvas',
       chromeProfile: 'Profile 1',
       chromePath: '/Applications/Chrome',
       debug: true,
@@ -60,6 +61,7 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.cookieSync).toBe(false);
     expect(resolved.headless).toBe(true);
     expect(resolved.desiredModel).toBe('Custom');
+    expect(resolved.composerTool).toBe('canvas');
     expect(resolved.chromeProfile).toBe('Profile 1');
     expect(resolved.chromePath).toBe('/Applications/Chrome');
     expect(resolved.debug).toBe(true);
@@ -201,7 +203,7 @@ describe('resolveBrowserConfig', () => {
     expect(() =>
       resolveBrowserConfig({
         url: 'https://chatgpt.com/?temporary-chat=true',
-        desiredModel: 'GPT-5.2 Pro',
+        desiredModel: 'Pro',
       }),
     ).toThrow(/Temporary Chat/i);
   });

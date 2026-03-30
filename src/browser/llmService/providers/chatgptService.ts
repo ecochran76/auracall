@@ -30,7 +30,10 @@ export class ChatgptService extends LlmService {
       return [];
     }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return (await this.provider.listProjects(listOptions)) as Project[];
+    return (await this.withRetry(
+      () => this.provider.listProjects?.(listOptions) as Promise<Project[]>,
+      { action: 'listProjects' },
+    )) as Project[];
   }
 
   async listConversations(
@@ -44,7 +47,10 @@ export class ChatgptService extends LlmService {
       await this.buildListOptions(options, { ensurePort: true }),
       projectId,
     );
-    return (await this.provider.listConversations(projectId, listOptions)) as Conversation[];
+    return (await this.withRetry(
+      () => this.provider.listConversations?.(projectId, listOptions) as Promise<Conversation[]>,
+      { action: 'listConversations' },
+    )) as Conversation[];
   }
 
   async renameConversation(
@@ -57,7 +63,10 @@ export class ChatgptService extends LlmService {
       throw new Error(`Rename is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    await this.provider.renameConversation(conversationId, newTitle, projectId, listOptions);
+    await this.withRetry(
+      () => this.provider.renameConversation?.(conversationId, newTitle, projectId, listOptions) as Promise<void>,
+      { action: 'renameConversation' },
+    );
   }
 
   async deleteConversation(
@@ -69,7 +78,10 @@ export class ChatgptService extends LlmService {
       throw new Error(`Delete is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    await this.provider.deleteConversation(conversationId, projectId, listOptions);
+    await this.withRetry(
+      () => this.provider.deleteConversation?.(conversationId, projectId, listOptions) as Promise<void>,
+      { action: 'deleteConversation' },
+    );
   }
 
   async getUserIdentity(

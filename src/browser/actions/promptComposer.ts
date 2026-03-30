@@ -263,7 +263,7 @@ export function buildAttachmentReadyExpressionForTest(attachmentNames: string[])
 async function attemptSendButton(
   Runtime: ChromeClient['Runtime'],
   _logger?: BrowserLogger,
-  attachmentNames?: string[],
+  _attachmentNames?: string[],
 ): Promise<boolean> {
   const script = `(() => {
     ${buildClickDispatcher()}
@@ -292,17 +292,6 @@ async function attemptSendButton(
 
   const deadline = Date.now() + 8_000;
   while (Date.now() < deadline) {
-    const needAttachment = Array.isArray(attachmentNames) && attachmentNames.length > 0;
-    if (needAttachment) {
-      const ready = await Runtime.evaluate({
-        expression: buildAttachmentReadyExpression(attachmentNames),
-        returnByValue: true,
-      });
-      if (!ready?.result?.value) {
-        await delay(150);
-        continue;
-      }
-    }
     const { result } = await Runtime.evaluate({ expression: script, returnByValue: true });
     if (result.value === 'clicked') {
       return true;

@@ -12,6 +12,7 @@ Keep Aura-Call-specific config/bootstrap logic in the thin compatibility wrapper
 
 Current upgrade backlog:
 - generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+- lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
 - Aura-Call-only workflow work: [auracall-browser-onboarding-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/auracall-browser-onboarding-backlog.md)
 
 Current DOM-drift extraction priorities live in the 2026-03-28 section of
@@ -28,6 +29,9 @@ Current active extraction plan:
   on another real surface/provider
 - use browser-service-owned interaction strategies, surface fallbacks, and
   diagnostics context before adding new provider-local trigger workarounds
+- for menu options whose authoritative selected state only lives in reopened
+  menu markup, prefer the package-owned select-and-reopen helpers before adding
+  provider-local reopen logic
 
 ## Core helpers (packages/browser-service/src/service/ui.ts)
 
@@ -35,6 +39,23 @@ Current active extraction plan:
   - Generic polling primitive for truthy page predicates.
   - Returns attempts, elapsed time, and the last truthy value when a condition wins.
   - Prefer this over ad hoc polling loops when the condition is not just a selector.
+
+- `armDownloadCapture(Runtime, options?)`
+  - Installs page-level hooks for `HTMLAnchorElement.click` and `window.open` to
+    capture download intent before a click.
+  - Stores captured `href` and `download` values under a shared state key for
+    provider adapters to consume immediately after an action.
+
+- `readDownloadCapture(Runtime, stateKey?)`
+  - Reads the current captured download payload from page state.
+  - Returns `{ href, downloadName }` with null normalization when no capture is
+    present.
+
+- `waitForDownloadCapture(Runtime, options?)`
+  - Polls `readDownloadCapture(...)` until a target is observed or timeout
+    expires.
+  - Useful for adapter-specific “click then capture” artifact/materialization
+    flows.
 
 - `waitForDocumentReady(Runtime, options)`
   - Waits for `document.readyState` to reach `interactive` / `complete` by default.
@@ -97,6 +118,13 @@ Current active extraction plan:
   - Opens a trigger and waits for the menu/listbox to appear (aria-controls aware).
   - Supports ordered interaction strategies and reports which strategy opened
     the menu.
+  - Supports expected-item-aware menu-family selection, so if multiple menus are
+    visible it can prefer the one that actually contains the intended option.
+  - When inventory selection is used, it returns a specific tagged selector for
+    the chosen visible menu instead of a generic `[role="menu"]`.
+  - That tagged selector is now stable across repeated
+    `collectVisibleMenuInventory(...)` reads while the underlying menu node stays
+    alive, so it is safe to pass into later submenu opens or verify flows.
 
 - `openSurface(Runtime, options)`
   - Shared “try these triggers until the ready state appears” helper.
@@ -106,11 +134,70 @@ Current active extraction plan:
 
 - `waitForMenuOpen(Runtime, options)`
   - Waits for menu/listbox selectors, with fallback selectors when the primary id is missing.
+  - Can use expected labels, existing-menu signatures, and optional anchor
+    proximity to choose the right visible menu family instead of the first one.
+
+- `collectVisibleMenuInventory(Runtime, options)`
+  - Returns a bounded visible-menu census with specific selectors, item labels,
+    geometry, and optional anchor distance.
+  - Use this for menu-family diagnostics and for DOM drift repairs where
+    multiple visible menus or submenus can coexist.
+  - The returned `selector` is intended to be reusable as a scoped handle for
+    later menu work; do not collapse back to a generic `[role="menu"]` unless
+    the menu handle is truly unavailable.
+
+- `collectVisibleOverlayInventory(Runtime, options)`
+  - Returns a bounded visible overlay/dialog/alert census with specific
+    selectors, summary text, visible button labels, geometry, and optional
+    anchor distance.
+  - Use this when multiple blocking surfaces can coexist and the automation
+    needs a stable scoped handle instead of generic `[role="dialog"]`.
+  - The returned `selector` is intended to be reusable as a scoped overlay
+    handle for later dismiss/verify work.
+
+- `openSubmenu(Runtime, options)`
+  - Opens a submenu from a parent menu item and returns the specific submenu
+    selector chosen by browser-service.
+  - Use this when the parent menu is already open and the next valid surface is
+    another menu, not a dialog or route change.
+
+- `selectNestedMenuPath(Runtime, options)`
+  - Drives a trigger through a menu path like top-level item -> submenu item.
+  - Use this instead of provider-local `open menu, find More, open submenu,
+    click target` glue when the UI is a real nested menu structure.
+
+- `inspectNestedMenuPathSelection(Runtime, options)`
+  - Reopens a menu path up to the containing menu for the target option and
+    reads selected state from the current menu markup.
+  - Use this when chips/pills are not authoritative and the app only exposes
+    selected state inside the reopened menu.
+
+- `selectAndVerifyNestedMenuPathOption(Runtime, options)`
+  - Activates a menu option, reopens the same menu path, and verifies the final
+    option stayed selected.
+  - Prefer this over provider-local "click, reopen menu, inspect selected row"
+    flows when the authoritative state lives in the menu itself.
 
 - `collectUiDiagnostics(Runtime, options)` / `withUiDiagnostics(Runtime, action, options)`
   - Capture a bounded page snapshot and optionally attach caller `context`.
   - Use `context` for intended trigger labels, interaction strategies, or root
     scopes so failure payloads explain what the automation was trying to do.
+
+- `dismissOverlayRoot(Runtime, rootSelector, options)`
+  - Dismisses one specific overlay root by stable selector/handle instead of
+    closing the first visible dialog on the page.
+  - Prefer this when multiple overlays can coexist and a provider already knows
+    which root it intends to dismiss.
+
+- `withBlockingSurfaceRecovery(action, options)`
+  - Generic recovery loop for visible blocking surfaces.
+  - Lets package clients supply:
+    - a surface inspector
+    - an optional dismiss handler
+    - an optional error classifier
+    - retry/pause policy
+  - Use this when the mechanic is generic (`detect -> dismiss -> pause ->
+    retry`) but the actual surface classifier/policy stays provider-local.
 
 - `pressMenuButtonByAriaLabel(Runtime, options)`
   - Opens a menu by aria-label match and waits for the menu to render.

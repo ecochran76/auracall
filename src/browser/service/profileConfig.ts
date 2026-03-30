@@ -136,6 +136,9 @@ function applyBrowserProfileDefaults(
   if ((overrideExisting || browser.thinkingTime === undefined) && profileBrowser.thinkingTime !== undefined) {
     browser.thinkingTime = profileBrowser.thinkingTime;
   }
+  if ((overrideExisting || browser.composerTool === undefined) && profileBrowser.composerTool !== undefined) {
+    browser.composerTool = profileBrowser.composerTool;
+  }
   if ((overrideExisting || browser.modelStrategy === undefined) && profileBrowser.modelStrategy !== undefined) {
     browser.modelStrategy = profileBrowser.modelStrategy;
   }
@@ -232,6 +235,9 @@ function applyServiceDefaults(
   }
   if ((overrideExisting || browser.thinkingTime === undefined) && serviceConfig.thinkingTime) {
     browser.thinkingTime = serviceConfig.thinkingTime;
+  }
+  if ((overrideExisting || browser.composerTool === undefined) && serviceConfig.composerTool) {
+    browser.composerTool = serviceConfig.composerTool;
   }
   if ((overrideExisting || browser.manualLogin === undefined) && serviceConfig.manualLogin !== undefined) {
     browser.manualLogin = serviceConfig.manualLogin;

@@ -1,5 +1,11 @@
 import { CHATGPT_PROVIDER } from './chatgpt.js';
-import { createChatgptAdapter, extractChatgptProjectIdFromUrl, normalizeChatgptProjectId } from './chatgptAdapter.js';
+import {
+  createChatgptAdapter,
+  extractChatgptProjectIdFromUrl,
+  normalizeChatgptConversationId,
+  normalizeChatgptProjectId,
+  resolveChatgptConversationUrl,
+} from './chatgptAdapter.js';
 import { GROK_PROVIDER } from './grok.js';
 import { createGrokAdapter, extractGrokProjectIdFromUrl } from './grokAdapter.js';
 import type { BrowserProvider } from './types.js';
@@ -9,9 +15,10 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     id: 'chatgpt',
     config: CHATGPT_PROVIDER,
     normalizeProjectId: normalizeChatgptProjectId,
+    normalizeConversationId: normalizeChatgptConversationId,
     extractProjectIdFromUrl: extractChatgptProjectIdFromUrl,
     resolveProjectUrl: (projectId) => `https://chatgpt.com/g/${projectId}/project`,
-    resolveConversationUrl: (conversationId) => `https://chatgpt.com/c/${conversationId}`,
+    resolveConversationUrl: (conversationId, projectId) => resolveChatgptConversationUrl(conversationId, projectId),
     ...createChatgptAdapter(),
   },
   grok: {

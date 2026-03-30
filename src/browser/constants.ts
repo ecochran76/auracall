@@ -3,7 +3,7 @@ import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
 
 export const CHATGPT_URL = 'https://chatgpt.com/';
 export const GROK_URL = 'https://grok.com/';
-export const DEFAULT_MODEL_TARGET = 'GPT-5.2 Instant';
+export const DEFAULT_MODEL_TARGET = 'Instant';
 export const DEFAULT_MODEL_STRATEGY: BrowserModelStrategy = 'select';
 export const COOKIE_URLS = ['https://chatgpt.com', 'https://chat.openai.com', 'https://atlas.openai.com'];
 
@@ -21,6 +21,8 @@ export const FILE_INPUT_SELECTORS = CHATGPT_PROVIDER.selectors.fileInput;
 // Legacy single selectors kept for compatibility with older call-sites
 export const FILE_INPUT_SELECTOR = FILE_INPUT_SELECTORS[0];
 export const GENERIC_FILE_INPUT_SELECTOR = FILE_INPUT_SELECTORS[3];
+export const ATTACHMENT_MENU_SELECTORS = CHATGPT_PROVIDER.selectors.attachmentMenu;
+export const ATTACHMENT_MENU_SELECTOR = ATTACHMENT_MENU_SELECTORS[0];
 export const MENU_CONTAINER_SELECTOR = '[role="menu"], [data-radix-collection-root]';
 export const MENU_ITEM_SELECTOR = CHATGPT_PROVIDER.selectors.menuItem.join(', ');
 export const UPLOAD_STATUS_SELECTORS = [

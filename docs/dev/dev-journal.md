@@ -12,6 +12,114 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-03-30
+- Focus: Centralize ChatGPT artifact download capture in browser-service helpers.
+- Progress: Added shared download-capture primitives (`armDownloadCapture`, `readDownloadCapture`, `waitForDownloadCapture`) in `packages/browser-service/src/service/ui.ts` so artifact downloads can be captured by any provider. Refactored ChatGPT materialization to use `armWait + waitFor + fetch remote` around the tagged button click instead of local helper versions, and added coverage in `tests/browser-service/ui.test.ts`. The helper contract is now tested for polling and non-target behavior.
+- Issues: No user-facing issues observed; this is a refactor to reduce duplicate provider-local hooking logic and make future download-backed providers less brittle.
+- Next: Finish wiring any remaining provider-specific materializers that still reimplement anchor-click capture and standardize the same helper pattern.
+
+- Date: 2026-03-30
+- Focus: Reclassify spreadsheet-like markdown downloads so ChatGPT `.xlsx` / `.csv` outputs are not flattened into generic download artifacts.
+- Progress: The user provided a logged-in spreadsheet chat (`69ca9d71-1a04-8332-abe1-830d327b2a65`) that the current extractor was already preserving, but only as a generic `download` because ChatGPT exposed it as a markdown `sandbox:/mnt/data/parabola_trendline_demo.xlsx` link rather than an `ada_visualizations` table. That is still a spreadsheet artifact from the user's point of view, so I added `inferChatgptDownloadArtifactKind(...)` in `src/browser/providers/chatgptAdapter.ts` and now classify markdown `sandbox:/...` links ending in `.csv`, `.tsv`, `.xls`, `.xlsx`, or `.ods` as `spreadsheet` instead of `download`. Added focused regression coverage in `tests/browser/chatgptAdapter.test.ts`; `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1` and `pnpm run check` both passed. Live read-only verification on the same chat now returns one artifact, `parabola_trendline_demo.xlsx`, with `kind = spreadsheet` and `uri = sandbox:/mnt/data/parabola_trendline_demo.xlsx`.
+- Issues: Spreadsheet artifacts now come from two distinct ChatGPT shapes: `ada_visualizations` table outputs and spreadsheet-like markdown downloads. If a future table output uses a nonstandard extension or richer file metadata, the classifier may need another pass.
+- Next: Keep extending artifact normalization by concrete observed payload shapes instead of by product-name guesses.
+
+- Date: 2026-03-30
+- Focus: Extend ChatGPT conversation artifact extraction from downloads/images/canvas to spreadsheet-like table outputs.
+- Progress: The user provided a logged-in CSV/table chat (`bc626d18-8b2e-4121-9c4a-93abb9daed4b`) that the current extractor returned as `artifactCount = 0`. Raw payload inspection on the managed ChatGPT browser session showed the missing shape clearly: these artifacts are not markdown `sandbox:/...` links, but `metadata.ada_visualizations` entries with `type: "table"`, a backing `file_id`, and a human title like `New Patents with ISURF Numbers`. I updated `extractChatgptConversationArtifactsFromPayload(...)` in `src/browser/providers/chatgptAdapter.ts` to normalize those `ada_visualizations` table entries into first-class `spreadsheet` artifacts, using `chatgpt://file/<file_id>` as the durable URI and carrying forward `visualizationType` plus `fileId` in metadata. Added focused regression coverage in `tests/browser/chatgptAdapter.test.ts`; `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1` and `pnpm run check` both passed. Live read-only verification then succeeded on the same chat: `auracall conversations context get bc626d18-8b2e-4121-9c4a-93abb9daed4b --target chatgpt --json-only` now returns two `spreadsheet` artifacts, `Patents with ISURF Numbers` and `New Patents with ISURF Numbers`, each backed by a ChatGPT file id.
+- Issues: The public spreadsheet share surface is still visually download-first, so the spreadsheet normalization should stay anchored to the logged-in `ada_visualizations` payload shape rather than any brittle share-page DOM assumptions.
+- Next: If another table-like ChatGPT artifact shows up with a different visualization type or richer per-sheet metadata, extend the spreadsheet extractor from there instead of assuming all tabular outputs use the exact same payload.
+
+- Date: 2026-03-30
+- Focus: Extend ChatGPT conversation artifact extraction to generated images without overcommitting to a spreadsheet-specific class yet.
+- Progress: Re-read the current ChatGPT context/artifact extractor and the live payload findings from the logged-in image conversation `69bc77cf-be28-8326-8f07-88521224abeb`. The key payload shape is a `tool` message with `content_type: "multimodal_text"` whose parts contain JSON objects with `content_type: "image_asset_pointer"`, `asset_pointer: "sediment://file_..."`, `size_bytes`, `width`, `height`, and nested generation metadata. I updated `src/browser/providers/domain.ts` so `ConversationArtifact.kind` now accepts `image` (and reserves `spreadsheet` for later richer payloads), widened `src/browser/llmService/llmService.ts` normalization accordingly, and extended `extractChatgptConversationArtifactsFromPayload(...)` in `src/browser/providers/chatgptAdapter.ts` to normalize those tool parts into first-class image artifacts. The extractor now preserves the `sediment://...` asset pointer as `uri`, captures size/dimensions, and carries forward nested `generation` / `dalle` metadata. Added focused unit coverage in `tests/browser/chatgptAdapter.test.ts`, and both `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1` and `pnpm run check` passed. Live read-only verification also passed: `auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only` now returns four `image` artifacts, including `Harvest Roads logo design`, with `sediment://...` URIs, 1024x1024 dimensions, and generation metadata. I also checked the public spreadsheet share example again in the browser context; at least on the share page it still looks download-first (`Updated bundle ZIP`, `Implementation summary`, etc.) rather than an obviously richer spreadsheet artifact surface, so I documented that we should not normalize a special spreadsheet artifact class until we see a concrete logged-in payload shape beyond downloads/textdocs.
+- Issues: Spreadsheet artifacts are still only a requirement signal, not an implemented extraction path. The current public share surface does not yet justify special spreadsheet normalization beyond existing download/textdoc handling.
+- Next: Keep ChatGPT artifact work focused on proven payload shapes. If we get a logged-in spreadsheet/chat payload with a distinct table/textdoc subtype, add a true `spreadsheet` extractor then instead of guessing from share-page buttons.
+
+- Date: 2026-03-29
+- Focus: Make ChatGPT project-scoped conversation operations explicitly trust the project page `Chats` panel instead of generic `/c/...` scraping.
+- Progress: Live DOM probing on project `g-p-69c9a938ade0819199bee2c3e354a53b` showed the exact surface split the user described: the left sidebar still shows root `Recents`, while the real project-chat catalog lives in the main project page under the `Chats` tab as `role="tabpanel" -> SECTION -> OL -> LI`, with the row-local `Open conversation options for ...` button anchored there. I updated `src/browser/providers/chatgptAdapter.ts` so project-scoped conversation list/rename/delete verification prefers that visible `tabpanel` surface and only falls back to generic anchor scraping if the panel is absent. I also broadened `scripts/chatgpt-acceptance.ts` so it now has a real disposable project-conversation create/read/rename/delete slice using `--project-id`. Focused tests passed (`tests/browser/chatgptAdapter.test.ts`) and `pnpm run check` passed. Targeted live proof passed on project conversation `69c9ceb0-a060-8326-9e94-a9972d567e19`: the project-scoped list returned it, rename to `AC GPT Project Row Probe` succeeded, project-scoped refresh showed the renamed title, delete succeeded, and a fresh `conversations --project-id ... --refresh` returned `[]`.
+- Issues: I have not yet spent the writes on one full guarded `scripts/chatgpt-acceptance.ts` rerun with the new project-chat slice folded in. The product behavior is live-proven, but the expanded runner itself still needs one end-to-end pass.
+- Next: Run one guarded full ChatGPT acceptance pass once write budget/rate-limit conditions look comfortable again, then close the remaining ChatGPT conversation-surface plan items from there.
+
+- Date: 2026-03-29
+- Focus: Re-anchor ChatGPT root-conversation rename verification to the real list-reorder postcondition.
+- Progress: A fresh live disposable root-chat probe confirmed the user-observed behavior exactly: after `Enter`, ChatGPT waits about 1-2 seconds and then the renamed conversation bubbles to the top of the root conversation list. I updated `src/browser/providers/chatgptAdapter.ts` so `waitForChatgptConversationTitleApplied(...)` now succeeds only when the same conversation id is the top visible conversation row with the expected title, instead of accepting any matching title anywhere in the DOM or `document.title`. I also updated `scripts/chatgpt-acceptance.ts` so the rename wait keys off that same refreshed top-row reorder. Focused tests passed (`tests/browser/chatgptAdapter.test.ts`) and `pnpm run check` passed. Live proof succeeded on disposable root conversation `69c9c950-4544-8333-8cbf-492bc1bd7c1c`, which renamed to `AC GPT Top 3wesd8`, refreshed as the first root-list row, and then deleted cleanly.
+- Issues: This postcondition is specific to root conversations. For project-scoped conversations, the authoritative list is still the project page conversation list, not the abbreviated sidebar subset shown while a project is selected.
+- Next: Keep that root-vs-project authority split explicit in future ChatGPT conversation verification and acceptance work.
+
+- Date: 2026-03-29
+- Focus: Finish ChatGPT existing-conversation tool/add-on state as an inspected, persisted browser surface instead of a blind menu click.
+- Progress: Implemented explicit current-tool inspection in `src/browser/actions/chatgptComposerTool.ts` via `readCurrentChatgptComposerTool(...)`, using the live composer chip first and then the reopened top-level / `More` menu selected-state when the chip is absent. Browser-mode ChatGPT runs now persist the actual selected composer tool plus the final normalized `conversationId` into browser runtime metadata through `src/browser/index.ts`, `src/browser/sessionRunner.ts`, `src/browser/types.ts`, `src/sessionManager.ts`, and `packages/browser-service/src/types.ts`, so session metadata can prove what tool was really active on an existing-conversation run. Also upgraded `scripts/chatgpt-acceptance.ts` to poll for the matching browser session by prompt and assert the persisted tool state for `web-search` / `canvas` instead of trusting only the later conversation text. Focused tests passed (`tests/browser/chatgptComposerTool.test.ts`, `tests/browser/chatgptAdapter.test.ts`) and `pnpm run check` passed. Live proof succeeded for session `reply-exactly-with-chatgpt-accept-64`: the existing-conversation `--browser-composer-tool web-search` run completed and `~/.auracall/sessions/reply-exactly-with-chatgpt-accept-64/meta.json` now records `browser.runtime.composerTool = "web search"`.
+- Issues: The full guarded ChatGPT acceptance bar is not re-green yet. The first rerun exposed a harness gap because base/web session lookup needed a persisted final `conversationId`, which is now fixed. The next rerun advanced farther but re-exposed an older acceptance-tail lag around conversation rename title verification before the tool-state steps. That appears to be a separate harness/product timing issue, not a failure of the new tool-state persistence path.
+- Next: Revisit the ChatGPT acceptance rename-title wait as its own lag problem, then rerun the full guarded bar once the account has cooled down again.
+
+- Date: 2026-03-29
+- Focus: Re-green the full scripted ChatGPT acceptance bar after the last delete/project-remove tail failures.
+- Progress: Finished the remaining ChatGPT browser acceptance work. First, the guarded `scripts/chatgpt-acceptance.ts` run proved the earlier timeout was a harness issue, not another rename selector miss: the ChatGPT write-budget guard could legitimately keep a mutating CLI step alive longer than the runner's old `spawnSync(... timeout: 120_000)` ceiling. Upgraded the runner so mutating ChatGPT commands use a longer timeout budget and so guard-aware retries also understand `ChatGPT write budget active until ...`, not just visible `Too many requests` cooldown text. The next live acceptance pass then exposed a real product bug with structured diagnostics: root conversation delete had the correct `Delete chat?` dialog and `delete-conversation-confirm-button` on screen, but the adapter still threw `ChatGPT conversation delete confirmation did not open` because it insisted the dialog text match the earlier page title. Relaxed that detector so the native confirm button inside the real delete dialog is authoritative even when the page-title text has drifted. After that, the acceptance run got one step farther and exposed the last blocker: project removal could fail with `Button not found` because ChatGPT was simultaneously showing the project settings dialog and a separate `Too many requests` dialog, and `selectRemoveProjectItem(...)` was searching generic `DEFAULT_DIALOG_SELECTORS` instead of the tagged settings sheet. Scoped `Delete project` lookup to the tagged project-settings dialog, added UI diagnostics around that path, re-proved both exact leftovers live (`delete 69c9abe2-72c0-8333-b906-63fc027eddba --target chatgpt --yes --verbose` and `projects remove g-p-69c9b039bfd88191af13a04f82b5cf04 --target chatgpt --verbose`), and then reran the full guarded acceptance script to completion. Final clean transcript: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts` returned `PASS` on suffix `lyveco` with disposable project `g-p-69c9b2d3940c8191beca8032978bd981` and conversation `69c9b37a-3c94-832d-be89-5ceaf91bd748`, including two real cooldown sleeps during rename/delete and successful final cleanup.
+- Issues: The ChatGPT browser acceptance bar is now green, but the product is still materially rate-limited on this account during dense live write sequences. That is now an environment constraint the runner survives rather than a remaining CRUD correctness bug.
+- Next: Move to Phase 4 existing-conversation tool/add-on state, with the full ChatGPT acceptance runner now treated as the canonical browser bar.
+
+- Date: 2026-03-29
+- Focus: Close the remaining ChatGPT root delete gap after the rename fix and guarded acceptance rerun.
+- Progress: The next guarded ChatGPT acceptance pass proved the rename fix was real by clearing the old root rename timeout and advancing all the way through tool state + attachment checks. The next blocker turned out to be narrower than expected: standalone `auracall delete <conversationId> --target chatgpt` still depended on the refreshed conversation catalog, so a freshly created root conversation id could fail with `No conversations matched "<id>"` even though the browser route and provider delete path were valid. Added provider-native conversation-id passthrough for ChatGPT (`normalizeChatgptConversationId(...)`) in `src/browser/providers/chatgptAdapter.ts`, advertised it through `src/browser/providers/index.ts`, taught `src/browser/llmService/llmService.ts` to treat a provider-native conversation id as authoritative inside `resolveConversationSelector(...)`, and most importantly updated the delete command in `bin/auracall.ts` so an exact provider-native id bypasses list matching entirely. Focused ChatGPT adapter tests passed, `pnpm run check` passed, and the direct live proof succeeded: `delete 69c9a282-91a4-832e-b8c0-21fa595a24a9 --target chatgpt --yes --verbose` now deletes a just-created root conversation by id without needing a prior `conversations --refresh`.
+- Issues: After that product fix, the next full guarded acceptance rerun got all the way to the final root delete and then correctly tripped the ChatGPT rate-limit guard, not a DOM bug: `ChatGPT rate limit detected while deleteConversation; cooling down until ...`. That is a real environment constraint rather than a broken delete surface.
+- Next: Let the current cooldown clear, then rerun the guarded ChatGPT acceptance script with the new runner backoff in place to confirm the full end-to-end pass goes green again.
+
+- Date: 2026-03-29
+- Focus: Finish the remaining ChatGPT root-conversation acceptance blocker after the rate-limit guard upgrade.
+- Progress: Re-ran the guarded ChatGPT acceptance flow and finally got a precise live failure instead of another rate-limit event: root conversation rename timed out on `rename <conversationId> ...`. Probed the live DOM directly and found the key surface distinction the adapter was getting wrong: the open-conversation header `Open conversation options` menu does not expose `Rename` at all on the current root conversation page; it only shows `View files in chat`, `Move to project`, `Pin chat`, `Archive`, and `Delete`. The real rename surface is the sidebar-row `Open conversation options for ...` menu on the ChatGPT home/list page, and once `Rename` is chosen there, the editable field is just a plain visible `input[type="text"]` holding the current title value. Moved `submitInlineRename(...)` in `packages/browser-service/src/service/ui.ts` onto a stronger browser-service contract by adding optional native-CDP Enter submission (`native-enter` / `native-then-synthetic`) so ChatGPT rename no longer depends only on synthetic DOM key events. Then rewired `src/browser/providers/chatgptAdapter.ts` so root conversation rename always uses the sidebar-row menu from the list surface, falls back from the synthetic tagged-row selector to the real visible rename `input[type="text"]` when React rerenders the row into edit mode, and no longer tries the invalid header-menu rename fallback. Focused tests stayed green (`tests/browser/chatgptAdapter.test.ts`), `pnpm run check` passed, and the exact previously failing live rename path succeeded for disposable root conversation `69c99df4-aaf0-8332-8714-d104d751f75d`, which refreshed as `AC GPT C rsnyfq`.
+- Issues: The next guarded end-to-end acceptance rerun got past root rename and exposed the next actual blocker: root conversation delete was still starting from the conversation page and immediately failing with `ChatGPT conversation row not found for <id>`. I mirrored the rename strategy and moved delete onto the list-first sidebar-row path with header delete kept only as a fallback because the header menu really does expose `Delete`. That code is in place, but the smallest standalone live delete proof immediately ran into a separate resolution nuance: a freshly created root conversation id is not always immediately discoverable through `auracall delete <conversationId> --target chatgpt` unless the conversation has already materialized through the refreshed conversation catalog. That is a different problem from the browser delete surface itself and needs a follow-up service-resolution pass or another guarded acceptance rerun.
+- Next: Re-run the guarded ChatGPT acceptance flow starting from the new list-first delete path, and if delete still blocks, treat the remaining problem as conversation-id resolution/catalog freshness rather than another DOM/menu issue.
+
+- Date: 2026-03-29
+- Focus: Close the remaining ChatGPT rate-limit hole before resuming live acceptance work.
+- Progress: Upgraded the shared ChatGPT guard from simple min-spacing plus post-failure cooldown into a real rolling write-budget gate. `src/browser/chatgptRateLimitGuard.ts` now persists `recentMutationAts[]` alongside the existing cooldown metadata and exposes shared helpers to prune mutation history, append a new write, and calculate the next allowed write time for a profile. Then wired both `src/browser/llmService/llmService.ts` and `src/browser/index.ts` to honor that rolling budget before another ChatGPT mutation/browser send is attempted, while still preserving the existing `Too many requests` cooldown path. Focused rate-limit/browser identity tests passed, and `pnpm run check` passed, all without touching the live ChatGPT account again.
+- Issues: The earlier guard only remembered the last write timestamp, which was enough to space adjacent operations but not enough to catch a full acceptance run that stacked many separate CLI mutations into the same short window. That is why the account could still be rate-limited even though no single command looked especially aggressive in isolation.
+- Next: Resume ChatGPT live work with the rolling budget guard in place, and treat any remaining acceptance failure as a DOM/list-state issue rather than a write-cadence issue.
+
+- Date: 2026-03-29
+- Focus: Finish the package-owned menu-verification pass before returning to ChatGPT conversation CRUD.
+- Progress: Added the shared select-and-reopen verification layer to `packages/browser-service/src/service/ui.ts` via `inspectNestedMenuPathSelection(...)` and `selectAndVerifyNestedMenuPathOption(...)`. The helper reopens a menu path up to the containing menu for the target option, inspects the current selected-state from live menu markup, and returns scoped available-label hints when verification fails. Then rewired `src/browser/actions/chatgptComposerTool.ts` to use that package-owned verification path instead of provider-local reopen logic. Focused browser-service + ChatGPT tests passed, `pnpm run check` passed, and a live non-Pro WSL ChatGPT browser run with `--browser-composer-tool canvas` returned `AURACALL CHATGPT CANVAS VERIFY HELPER PROBE 1.` while logging `Composer tool: canvas`.
+- Issues: The helper is intentionally menu-mechanics-only. It does not decide whether a row is a tool, source, or file; ChatGPT still owns that semantic classification in the adapter, which is the right boundary for this surface.
+- Next: Return to the ChatGPT conversation CRUD plan and only reopen browser-service extraction if the new conversation surfaces expose another clearly reusable failure mode.
+
+- Date: 2026-03-29
+- Focus: Finish the browser-service submenu extraction by making visible-menu handles stable enough for real top-level-menu -> submenu -> verify flows.
+- Progress: Completed the next browser-service package pass instead of adding more ChatGPT-local menu glue. `packages/browser-service/src/service/ui.ts` now keeps synthetic visible-menu selectors stable across repeated `collectVisibleMenuInventory(...)` passes, which closed the real bug we hit while adopting nested submenu support: browser-service was returning `[data-oracle-visible-menu-index="..."]` handles, but a second inventory read silently reindexed those handles and left callers holding dead selectors. With that fixed, `openSubmenu(...)` / `selectNestedMenuPath(...)` are now genuinely reusable for ChatGPT's `Add files and more -> More -> Canvas` path, and `src/browser/actions/chatgptComposerTool.ts` was simplified to rely on the shared nested-path helper for activation while using menu inventory only for verification/error hints. Focused tests passed (`tests/browser-service/ui.test.ts`, `tests/browser/chatgptComposerTool.test.ts`, `tests/browser/chatgptAdapter.test.ts`), `pnpm run check` passed, and a live non-Pro WSL browser run with `--browser-composer-tool canvas` returned `AURACALL CHATGPT CANVAS BROWSER SERVICE PROBE 5.` after logging `Composer tool: canvas`.
+- Issues: The original failure turned out to be a subtle package-level handle-lifetime bug, not a bad ChatGPT selector: opening a top-level menu, reading inventory, then trying to open `More` or reopen for verification was enough to invalidate the old tagged selector before the next step. The fix belongs in browser-service because any provider using menu inventory + submenu traversal would have hit the same issue.
+- Next: Treat select-and-reopen verification as the next browser-service extraction, then go back to the ChatGPT conversation CRUD plan with stable menu-family + submenu primitives as the default tools.
+
+- Date: 2026-03-28
+- Focus: Freeze the next ChatGPT browser plan after project CRUD and capture the reusable browser-service techniques that fell out of the composer/add-on work.
+- Progress: Wrote `docs/dev/chatgpt-conversation-surface-plan.md` as the next active ChatGPT browser plan: conversation DOM recon, conversation CRUD, conversation attachments/files, existing-conversation tool state, then a scripted ChatGPT acceptance runner. Updated `docs/dev/chatgpt-project-surface-plan.md` to mark project management effectively closed except for a future native clone action, and linked the new conversation plan from `docs/dev/smoke-tests.md` and `docs/testing.md` so the runbook no longer implies project work is the active ChatGPT front. Also expanded `docs/dev/browser-service-upgrade-backlog.md` with the concrete reusable lessons from the composer/add-on mapping work: trigger-anchored menu-family selection, nested submenu-path selection, menu inventory helpers, and reopen-to-verify option selection. The main new conclusion is that browser-service should own the mechanics of menu-family picking and submenu traversal, while adapters still own semantic classification like “tool vs source vs file”.
+- Issues: The same ChatGPT menu can mix true tools, source rows, and file/upload rows. That is exactly why the extraction boundary matters: pushing classification into browser-service would be a mistake even though the menu mechanics belong there.
+- Next: Start the live ChatGPT conversation DOM recon from the managed WSL sidebar/header surfaces and use the new browser-service backlog items as the default extraction targets whenever conversation work hits menu drift.
+
+- Date: 2026-03-28
+- Focus: Turn the current ChatGPT composer add-on inventory into a stable selection catalog instead of a one-off `web-search` proof.
+- Progress: Probed the live signed-in WSL ChatGPT composer again and captured the current add-on surface explicitly. The top-level `Add files and more` menu now exposes `Add photos & files`, `Recent files`, `Company knowledge`, `Create image`, `Deep research`, `Web search`, and `More`. The current `More` submenu exposes `Study and learn`, `Agent mode`, `Canvas`, `Adobe Acrobat`, `Adobe Photoshop`, `Canva`, `GitHub`, `Gmail`, `Google Calendar`, `Google Drive`, `Intuit QuickBooks`, and `Quizzes`. Expanded `src/browser/actions/chatgptComposerTool.ts` alias coverage so browser-mode can reach the live labels through stable shorthand inputs like `research -> Deep research`, `image -> Create image`, `knowledge -> Company knowledge`, `study -> Study and learn`, `agent -> Agent mode`, `quiz -> Quizzes`, and `gh -> GitHub`, while keeping the existing `calendar`, `drive`, `quickbooks`, `acrobat`, and `photoshop` mappings. Focused tests stayed green, `pnpm run check` passed, and a live non-Pro browser run with `--browser-composer-tool canvas` returned `AURACALL CHATGPT CANVAS PROBE 1.` so the `More` submenu path is now proven in addition to the earlier top-level `Web search` proof.
+- Issues: Some rows in the top-level menu are not really "tools" in the same sense as the connectors and mode add-ons. `Add photos & files` stays on the normal attachment flow, not `--browser-composer-tool`, and `Recent files` / `Company knowledge` are better thought of as attachment/source surfaces than reasoning tools even though they live in the same menu.
+- Next: Decide whether to expose the live ChatGPT add-on catalog as an explicit CLI help/reference surface, then continue mapping any future menu drift against this concrete top-level + submenu inventory.
+
+- Date: 2026-03-28
+- Focus: Map the current ChatGPT composer add-on surface and live thinking-depth picker so browser-mode can reliably apply the same dialog options a human sees.
+- Progress: Probed the signed-in WSL ChatGPT composer directly and confirmed two current DOM contracts. The thinking-depth menu now uses `Standard` / `Extended` instead of the older `light` / `heavy` wording, so `src/browser/actions/thinkingTime.ts` now treats `light -> standard` and `heavy -> extended` as legacy aliases while targeting the current labels directly. The `Add files and more` control is also a real add-on surface rather than a single flat menu: it exposes direct rows like `Web search`, `Canvas`, and a `More` submenu with additional tools, while the file uploader stays on the normal attachment path instead of belonging to tool selection. Added `src/browser/actions/chatgptComposerTool.ts`, wired `--browser-composer-tool <tool>` through the CLI/schema/config/session stack, taught browser-service menu helpers to recognize `menuitemradio` / `option` roles and dismiss stale open menus between selector steps, and live-verified a non-Pro browser run with `--model gpt-5.2-thinking --browser-thinking-time extended --browser-composer-tool web-search` returning the expected exact reply on the managed ChatGPT session.
+- Issues: Reusing an already-open ChatGPT tab can leave the wrong menu visible. The first composer-tool implementation accidentally trusted the open Thinking menu (`Standard` / `Extended`) because it was simply the first visible menu in the DOM. Fixing that required both a shared `Escape`-based stale-menu dismiss step in browser-service and tighter composer-menu scoring so the add-on selector only trusts menus that actually contain add-on markers like `More`, `Add photos/files`, `Recent files`, or the requested tool label.
+- Next: Continue mapping the remaining ChatGPT add-on variants under `Add files and more` / `More` and keep using the file attachment flow separately from composer-tool selection.
+
+- Date: 2026-03-28
+- Focus: Rebase ChatGPT browser model discovery/selection onto the live semantic picker instead of the stale versioned `GPT-5.2 ...` assumptions.
+- Progress: Probed the authenticated WSL ChatGPT model menu directly and confirmed the current top-level picker is now semantic `Instant` / `Thinking` / `Pro` with a generic `ChatGPT` button label, so the active model has to be discovered from the open menu rather than from the button text. Updated `src/browser/constants.ts` and `src/cli/browserConfig.ts` so browser-mode defaults now resolve to `Instant`, `gpt-5.2` / `gpt-5.1` normalize to the non-Pro `Instant` path, and explicit Pro variants still map to `Pro`. Reworked `src/browser/actions/modelSelection.ts` so ChatGPT model selection scores semantic menu rows instead of hardcoding `GPT-5.2` labels, logs the actual selected menu label, and treats the checked menu row as authoritative. The live DOM recon also exposed one more drift: ChatGPT no longer marks the active row with `aria-*` or a named check icon. The real selected-state signal is a trailing slot (`<div class="trailing" data-trailing-style="default"><svg ...></svg></div>`), so the selector now treats that trailing indicator as selected too. Focused test coverage stayed green for model/config paths, and live non-Pro DOM probes on port `45011` confirmed the menu exposes and accepts `Instant` plus `Thinking` without touching `Pro`; after each click the selected row text resolved to `instant for everyday chats` and `thinking for complex questions`.
+- Issues: Two unrelated `tests/browser/pageActions.test.ts` attachment tests timed out intermittently while rerunning broader suites under host load. The model-selection/config suites themselves stayed green, and the flake did not reproduce consistently on isolated reruns of the model-specific paths.
+- Next: Move from project CRUD into broader ChatGPT conversation/model surfaces with the new semantic picker contract as the default assumption, and keep the live account on non-Pro tiers unless explicitly asked otherwise.
+
+- Date: 2026-03-28
+- Focus: Finish the remaining ChatGPT project-management CRUD slice by implementing project instructions on the live settings surface.
+- Progress: Added `getProjectInstructions(...)` and `updateProjectInstructions(...)` to `src/browser/providers/chatgptAdapter.ts` and advertised ChatGPT instructions support through the adapter capabilities. The implementation reuses the existing project settings sheet (`input[aria-label="Project name"]` plus `textarea[aria-label="Instructions"]`), writes instructions through the same settings path used at create time, then reopens the settings sheet until the textarea value matches the expected multiline text before returning success. Live verification on the authenticated WSL Chrome session used a disposable project `AC GPT Instr 1774749141`: `projects instructions set ... --file` persisted `Keep answers concise.` plus `Always surface risks before suggestions.`, `projects instructions get ... --target chatgpt` returned that exact two-line value, and the project list no longer shows the disposable id afterward. That live pass also exposed one more cleanup nuance: ChatGPT can successfully delete a project while leaving the selected tab on the stale project route. Tightened `pushProjectRemoveConfirmation(...)` so it now accepts deletion as success when a fresh post-delete sidebar scrape no longer contains the deleted `g-p-...` id, instead of requiring an immediate route change away from the project page.
+- Issues: The first disposable create attempt failed for a valid reason rather than UI drift: ChatGPT's current create modal rejects project names longer than 50 characters and leaves the `Create project` button disabled. Aura-Call surfaced that through the existing `button-disabled` path; the successful live verification used a shorter disposable project name.
+- Next: Reassess whether the current ChatGPT UI exposes a native project-clone action. If it does not, document that explicitly and close out the remaining ChatGPT project-surface plan.
+
 - Date: 2026-03-28
 - Focus: Freeze the remaining ChatGPT project-management plan in the dev docs before starting live `Sources`-tab work.
 - Progress: Wrote `docs/dev/chatgpt-project-surface-plan.md` to capture the next ordered ChatGPT scope after lifecycle CRUD stabilized: live `Sources` DOM recon, project sources/files CRUD, project instructions get/set, clone only if the native UI exposes it, then one disposable live acceptance pass. Linked that plan from `docs/dev/smoke-tests.md` and `docs/testing.md` so the runbook reflects that ChatGPT lifecycle CRUD is already green on the managed WSL Chrome path and the remaining work is broader project management, not basic project existence.
@@ -1513,3 +1621,632 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - remaining ChatGPT project work:
     - project instructions get/set
     - clone only if the current native UI exposes it
+
+## 2026-03-29 — Browser-service menu-family selection is now package-owned
+
+- Goal:
+  - keep working the browser-service upgrade before returning to more ChatGPT
+    CRUD surfaces
+  - move "pick the right visible menu when several menus are open" out of
+    provider code and into `packages/browser-service`
+- Implemented:
+  - `packages/browser-service/src/service/ui.ts`
+    - added `collectVisibleMenuInventory(...)`
+      - returns a bounded visible-menu census
+      - tags visible menus with a specific selector so the chosen menu can be
+        addressed directly instead of via a generic `[role="menu"]`
+      - reports item labels, geometry, and optional anchor distance
+    - extended `waitForMenuOpen(...)`
+      - can now select the best visible menu by:
+        - expected item labels
+        - whether the menu is newly opened vs already visible
+        - optional anchor proximity
+    - extended `openMenu(...)`
+      - captures pre-open menu signatures when menu-family selection is in play
+      - passes expected-item context through to `waitForMenuOpen(...)`
+    - `openAndSelectMenuItem(...)` / `selectFromListbox(...)`
+      - now pass their intended option label down to the shared menu opener
+  - `src/browser/providers/chatgptAdapter.ts`
+    - ChatGPT project-create memory mode now passes the expected memory-option
+      label (`Default` / `Project-only`) into the shared menu opener so the
+      settings gear no longer depends on "first visible menu" behavior
+- Why this matters:
+  - it fixes the exact class of drift we saw on ChatGPT composer/project menus:
+    multiple unrelated visible menus, same generic `[role="menu"]` selector,
+    and the need to pick the right family based on intended content instead of
+    DOM order
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - added coverage:
+    - visible-menu inventory returns specific tagged selectors
+    - menu-open waits can prefer the correct menu by expected item labels plus
+      novelty instead of grabbing the wrong visible menu
+  - live:
+    - created disposable ChatGPT project `AC BS Menu Probe 329` with
+      `--memory-mode project`
+    - removed it successfully afterward
+- Follow-up still open in the browser-service backlog:
+  - nested submenu-path helpers
+  - select-and-reopen verification helpers
+  - deciding whether anchor-near-trigger scoring is still app-specific enough
+    to keep in adapters
+
+## 2026-03-29 — ChatGPT root conversation CRUD is live on WSL Chrome
+
+- Goal:
+  - return from browser-service upgrades to the active ChatGPT conversation surface plan
+  - finish root conversation list/read/rename/delete on the managed WSL ChatGPT profile before touching attachment breadth
+- Live DOM findings that mattered:
+  - root/sidebar conversation rows still use the row-local `Open conversation options for ...` button as the authoritative rename surface
+  - the open-conversation header menu still exposes `Delete`, but it was less reliable than the sidebar row menu in the current live layout
+  - ChatGPT can truncate long sidebar conversation titles, so filtering by the full prompt text is not a safe live acceptance pattern
+  - route readiness is not the same as message readiness; context reads sometimes needed a short poll window and one reload before the turn DOM stabilized
+- Implemented:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added ChatGPT conversation helpers for:
+      - canonical root/project conversation URL resolution
+      - sidebar conversation scraping + normalization
+      - root/project conversation navigation + ready-state waits
+      - sidebar row tagging for row-local action buttons
+      - context extraction from the current ChatGPT turn DOM
+      - rename/delete post-condition waits
+    - added provider support for:
+      - `listConversations(...)`
+      - `readConversationContext(...)`
+      - `renameConversation(...)`
+      - `deleteConversation(...)`
+    - made conversation list reads tolerate sidebar hydration lag instead of returning empty immediately
+    - made context reads poll the turn DOM and do one reload/retry before failing
+    - made delete prefer the proven sidebar row action surface, with header-menu fallback only if needed
+    - made row tagging poll for sidebar hydration instead of using a one-shot lookup
+  - `src/browser/providers/index.ts`
+    - ChatGPT `resolveConversationUrl(...)` is now project-aware and reuses the canonical conversation URL helper
+  - `tests/browser/chatgptAdapter.test.ts`
+    - added coverage for:
+      - `extractChatgptConversationIdFromUrl(...)`
+      - `normalizeChatgptConversationLinkProbes(...)`
+      - `resolveChatgptConversationUrl(...)`
+      - ChatGPT capabilities now advertising conversations support
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live non-Pro WSL ChatGPT pass:
+    - created disposable root conversation via:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts "Reply exactly with AURACALL CHATGPT CONVO CRUD PROBE 20260329-3." --chatgpt --verbose`
+    - listed it via:
+      - `... pnpm tsx bin/auracall.ts conversations --target chatgpt --refresh --filter "AURACALL CHATGPT CONVO CRUD"`
+    - read context via:
+      - `... pnpm tsx bin/auracall.ts conversations context get 69c9410c-5678-8331-b6b3-d302ad9b922a --target chatgpt --json-only`
+    - renamed it via:
+      - `... pnpm tsx bin/auracall.ts rename 69c9410c-5678-8331-b6b3-d302ad9b922a "AuraCall ChatGPT CRUD Renamed" --target chatgpt`
+    - verified refreshed list/title via:
+      - `... pnpm tsx bin/auracall.ts conversations --target chatgpt --refresh --filter "69c9410c-5678-8331-b6b3-d302ad9b922a"`
+    - deleted it via:
+      - `... pnpm tsx bin/auracall.ts delete 69c9410c-5678-8331-b6b3-d302ad9b922a --target chatgpt --yes`
+    - verified cleanup via:
+      - `... pnpm tsx bin/auracall.ts conversations --target chatgpt --refresh --filter "69c9410c-5678-8331-b6b3-d302ad9b922a"`
+- Next:
+  - move to ChatGPT conversation attachments/files
+  - only after that, add a broader scripted ChatGPT acceptance runner
+
+## 2026-03-29 — ChatGPT conversation-file read parity is live from sent-turn tiles
+
+- Goal:
+  - start Phase 3 of the ChatGPT conversation surface plan on the managed WSL profile
+  - make ChatGPT conversation files observable through real CLI surfaces before deciding whether delete/removal is even possible in the native UI
+- Live DOM findings that mattered:
+  - small text files are a false attachment smoke under the default `--browser-attachments auto` behavior because ChatGPT can inline the file contents into the prompt instead of creating a real upload artifact
+  - forcing `--browser-attachments always` produced the real upload path and a stable live conversation:
+    - `69c95f14-2ca0-8329-9d3a-be5d1a1967ab`
+  - the authoritative current read surface is the sent user-turn tile:
+    - `section[data-testid^="conversation-turn-"]`
+    - nested user message node with `data-message-author-role="user"` and `data-message-id`
+    - file tile group with `role="group"` and `aria-label=<filename>`
+  - the current header menu still advertises `View files in chat`, but synthetic click recon did not yield a stronger or more reliable dialog surface than the sent-turn tile itself
+- Implemented:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added `ChatgptConversationFileProbe`
+    - added `normalizeChatgptConversationFileProbes(...)`
+    - added `readVisibleChatgptConversationFilesWithClient(...)`
+    - added provider support for `listConversationFiles(...)`
+    - `readConversationContext(...)` now includes `files[]` populated from the sent user-turn file tiles
+  - `tests/browser/chatgptAdapter.test.ts`
+    - added coverage for `normalizeChatgptConversationFileProbes(...)`
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live non-Pro WSL ChatGPT pass:
+    - forced a real upload with:
+      - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts "Reply exactly with CHATGPT REAL UPLOAD PROBE 20260329-B." --chatgpt -f /tmp/chatgpt-real-upload-vmuk.txt --browser-attachments always --verbose`
+    - verified list parity via:
+      - `... pnpm tsx bin/auracall.ts conversations files list 69c95f14-2ca0-8329-9d3a-be5d1a1967ab --target chatgpt`
+      - returned `chatgpt-real-upload-vmuk.txt`
+    - verified context parity via:
+      - `... pnpm tsx bin/auracall.ts conversations context get 69c95f14-2ca0-8329-9d3a-be5d1a1967ab --target chatgpt --json-only`
+      - returned the same file in `files[]` with synthetic id:
+        - `69c95f14-2ca0-8329-9d3a-be5d1a1967ab:1411ca60-9384-407a-a39a-ce9b772c737a:0:chatgpt-real-upload-vmuk.txt`
+      - metadata included:
+        - `label: Document`
+        - `turnId: 1411ca60-9384-407a-a39a-ce9b772c737a`
+        - `messageId: 1411ca60-9384-407a-a39a-ce9b772c737a`
+- Cleanup follow-up:
+  - deleting the first disposable upload conversation exposed a stale-postcondition bug: the destructive action had succeeded, but the verifier was still seeing stale conversation anchors on the current page and falsely reported failure
+  - `waitForChatgptConversationDeleted(...)` now rechecks from the authoritative list surface (`https://chatgpt.com/` or the project page) before calling delete a failure
+  - live reproof:
+    - created disposable upload conversation `69c96223-2708-8329-b563-00e171e22b39`
+    - deleted it successfully via:
+      - `... pnpm tsx bin/auracall.ts delete 69c96223-2708-8329-b563-00e171e22b39 --target chatgpt --yes`
+- Product clarification captured:
+  - users can remove files from the ChatGPT composer before sending a prompt
+  - users cannot delete an already-sent file from a chat
+  - ChatGPT may expire retained files independently later
+  - on ChatGPT, project `Sources` is the only durable file-delete surface Aura-Call should automate
+- Next:
+  - move to existing-conversation tool/add-on state
+  - then add the broader ChatGPT acceptance runner
+
+## 2026-03-29 — Paused ChatGPT surface expansion to harden rate-limit handling
+
+- Trigger:
+  - the acceptance work started surfacing a real ChatGPT dialog:
+    - `Too many requests`
+    - `You're making requests too quickly`
+  - the important lesson was that the limit came from aggregate write cadence across separate `auracall` processes, not from one bad DOM selector
+- Analysis:
+  - the write-heavy sequence was enough to provoke the account-level throttle:
+    - project create/rename
+    - project source add/remove
+    - project instructions set
+    - later conversation rename/delete
+  - each CLI call was starting fresh, so in-memory retry logic could not protect the next command
+- Implemented:
+  - `src/browser/llmService/llmService.ts`
+    - added a profile-scoped persisted ChatGPT guard file at:
+      - `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-<profile>.json`
+    - ChatGPT mutating llmservice operations now wait for a minimum inter-write gap before touching the live browser
+    - when a ChatGPT live failure contains the real rate-limit UI text, llmservice now records a cooldown and subsequent ChatGPT live llmservice calls fail fast (or briefly auto-wait if the cooldown is nearly expired)
+  - `src/browser/llmService/providers/chatgptService.ts`
+    - routed ChatGPT list + rename/delete entry points through the guarded llmservice retry path so the persisted cooldown applies to real CRUD calls instead of only helper methods
+  - `src/browser/chatgptRateLimitGuard.ts`
+    - extracted the shared ChatGPT guard path/profile/message helpers so CRUD and browser-mode can use the same persisted cooldown contract
+  - `src/browser/index.ts`
+    - ChatGPT browser-mode prompt runs now check the same persisted cooldown before they touch the live browser
+    - successful ChatGPT prompt runs now update `lastMutationAt` in the same guard file
+    - prompt-run failures now inspect the visible page for the real ChatGPT rate-limit dialog text and persist cooldown state before surfacing the error
+  - `tests/browser/llmServiceRateLimit.test.ts`
+    - added persistence + cross-instance spacing coverage
+  - `tests/browser/chatgptRateLimitGuard.test.ts`
+    - added path/profile/message coverage for the shared guard helper
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/browserModeExports.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Current reading of the fix:
+  - this does not change ChatGPT's native quota/rate rules
+  - it does stop Aura-Call from rediscovering the same live limit on every fresh CLI process
+  - both ChatGPT CRUD and ChatGPT browser-mode prompt runs now honor the same persisted cooldown file
+
+## 2026-03-29 — Stopped long acceptance auto-resume and hardened ChatGPT project-chat rename verification
+
+- Trigger:
+  - the guarded ChatGPT acceptance runner kept a stale process alive during a long cooldown and was prepared to resume later with the old code
+  - the concrete product failure just before that was project-scoped conversation rename:
+    - `ChatGPT conversation rename did not persist for 69c9db96-9250-8326-b75a-55a4844fc974`
+- Root cause:
+  - `scripts/chatgpt-acceptance.ts` treated any cooldown up to 6 minutes as acceptable wait-and-retry time, which is too aggressive for an interactive debugging loop
+  - `buildConversationTitleAppliedExpression(...)` preferred anchor text before the row menu label, but on ChatGPT project pages the row menu label is often the stronger title signal during rename propagation
+- Implemented:
+  - `scripts/chatgpt-acceptance.ts`
+    - added a short acceptance-only cooldown ceiling (`30s`)
+    - preflight checks now abort before any new mutation if the persisted ChatGPT cooldown is still materially active
+    - post-failure rate-limit handling now aborts instead of sleeping for minutes and resuming later
+  - `src/browser/providers/chatgptAdapter.ts`
+    - project/root conversation rename verification now prefers the row action label (`Open conversation options for ...`) over anchor text when inferring the live title
+    - rename verification now does one list refresh fallback before failing
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Current state:
+  - the stale acceptance process was terminated
+  - the local ChatGPT cooldown file remains the authority for when the next safe live rerun should happen
+
+## 2026-03-29 — Split ChatGPT acceptance into resumable phases for this account's throttle budget
+
+- Trigger:
+  - even with the improved persisted write-budget guard and the no-long-sleep retry policy, the single-pass ChatGPT acceptance run still hit the account's native throttle during the later root/tool portion
+  - the important lesson is that the product guard prevents hammering, but it cannot expand the account's real allowance for one dense end-to-end acceptance burst
+- Implemented:
+  - `scripts/chatgpt-acceptance.ts`
+    - added `--phase full|project|project-chat|root-base|root-followups|cleanup`
+    - added `--project-id` and `--conversation-id` so later phases can resume from earlier disposable entities instead of recreating everything
+    - partial phases now preserve their created entities; only `full` still auto-cleans in `finally`
+    - the help text now documents the phased workflow explicitly
+- Verification:
+  - `pnpm tsx scripts/chatgpt-acceptance.ts --help`
+  - `pnpm run check`
+- Operational consequence:
+  - on this ChatGPT account, the safe validation path is now:
+    - `--phase project`
+    - `--phase project-chat --project-id ...`
+    - `--phase root-base`
+    - `--phase root-followups --conversation-id ...`
+    - `--phase cleanup --project-id ... [--conversation-id ...]`
+
+## 2026-03-29 — Finished ChatGPT context sources/artifacts/canvas extraction
+
+- Trigger:
+  - the remaining ChatGPT context gap was real: `files[]` existed, but `sources[]` and in-chat artifacts were still missing even on conversations that clearly showed both in the live UI
+  - concrete repros:
+    - `69c3e6d0-3550-8325-b10e-79d946e31562` with downloadable outputs like `updated skill.zip`, `combined JSON extraction`, and `combined BibTeX extraction`
+    - `69c8a0fc-c960-8333-8006-c4d6e6704e6e` with a real canvas/textdoc block
+- Root cause:
+  - the service/domain/cache layers already had room for `sources[]`, and I added `artifacts[]`, but the ChatGPT adapter still only scraped visible message text + sent user-turn file tiles
+  - a naive in-page `fetch('/backend-api/conversation/<id>')` looked promising but turned out to return a JSON `conversation_not_found` response even when the live ChatGPT page clearly hydrated that conversation
+  - the first CDP-network fallback attempt also missed because it matched any `/backend-api/conversation/<id>*` response (`stream_status`, `textdocs`, interpreter downloads) and then tried `getResponseBody(...)` too early
+  - llmService then quietly fell back to previously cached context, which hid the provider failure until I called the provider directly
+- Implemented:
+  - `src/browser/providers/domain.ts`
+    - added `ConversationArtifact`
+    - extended `ConversationContext` with `artifacts?: ConversationArtifact[]`
+  - `src/browser/llmService/llmService.ts`
+    - normalize/preserve `artifacts[]` beside `sources[]`
+  - `src/browser/llmService/cache/export.ts`
+    - render `ARTIFACTS` and `SOURCES` sections in Markdown/HTML exports
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added pure payload extractors for:
+      - `extractChatgptConversationSourcesFromPayload(...)`
+      - `extractChatgptConversationArtifactsFromPayload(...)`
+    - file citations now normalize to synthetic `chatgpt://file/<id>` URLs with `sourceGroup`
+    - downloadable assistant outputs now normalize from markdown `sandbox:/...` links
+    - canvas/textdoc tool messages now normalize into `canvas` artifacts with `textdocId`, title, and captured code-preview content
+    - `readConversationContext(...)` now enriches the visible DOM scrape with backend payload data
+    - the reliable payload path is now:
+      - try direct fetch only if it returns a successful body with real `mapping`
+      - otherwise arm CDP `Network.responseReceived`
+      - wait for the exact conversation route response
+      - wait for `Network.loadingFinished`
+      - then call `getResponseBody(...)`
+      - then re-wait for the conversation surface before DOM message scraping, because the payload capture reloads the page
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - direct provider proof on `69c3e6d0-3550-8325-b10e-79d946e31562`:
+    - `sourceCount = 6`
+    - `artifactCount = 30`
+  - live CLI proof on `69c3e6d0-3550-8325-b10e-79d946e31562`:
+    - `sourceCount = 6`
+    - `artifactCount = 30`
+    - includes `updated skill.zip`, `combined JSON extraction`, `combined BibTeX extraction`
+  - live CLI proof on `69c8a0fc-c960-8333-8006-c4d6e6704e6e`:
+    - `artifactCount = 1`
+    - includes canvas artifact `Probe` with `textdocId = 69c8a1018ea08191b3e3cbdb038221e4`
+- Current reading of the fix:
+  - ChatGPT context history is no longer just message text + sent upload tiles
+  - read-only artifact/source/canvas parity is now live on the managed WSL ChatGPT path
+  - the next missing ChatGPT context breadth is only whatever richer non-text artifact classes ChatGPT might surface beyond downloadable links + textdocs
+
+## 2026-03-30 — Added first ChatGPT artifact materialization path and tightened live validation boundaries
+
+- Trigger:
+  - context classification for ChatGPT artifacts was in good shape, but the artifacts were still mostly metadata-only
+  - the first useful next step was to make at least some artifact families actionable in cache/export instead of stopping at `uri` + metadata
+- Implemented:
+  - `src/browser/providers/types.ts`
+    - added provider hook `materializeConversationArtifact(...)`
+  - `src/browser/llmService/llmService.ts`
+    - added `materializeConversationArtifacts(...)`
+    - stores resolved files under the existing `conversation-attachments/<conversationId>/files/...` cache tree and updates the manifest through the normal cache store
+  - `bin/auracall.ts`
+    - added `auracall conversations artifacts fetch <conversationId> --target chatgpt`
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added the first ChatGPT materializers:
+      - `image` artifacts -> fetch live `backend-api/estuary/content?id=file_...` bytes into `.png`
+      - inline `ada_visualizations` table artifacts -> scrape rendered grid rows into CSV
+      - `canvas` artifacts -> write `contentText` to a local text file when that artifact is actually present in context
+    - added artifact-specific readiness waits because conversation-shell readiness is not enough for image/table rendering
+    - tightened image resolution so duplicate-titled images only accept an exact file-id match; title fallback is now reserved for artifacts that truly lack a file id
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live serialized image proof:
+    - `auracall conversations artifacts fetch 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt`
+    - `artifactCount = 4`
+    - `materializedCount = 4`
+  - live serialized table proof:
+    - `auracall conversations artifacts fetch bc626d18-8b2e-4121-9c4a-93abb9daed4b --target chatgpt`
+    - `artifactCount = 2`
+    - `materializedCount = 2`
+  - live serialized markdown-download boundary proof:
+    - `auracall conversations artifacts fetch 69ca9d71-1a04-8332-abe1-830d327b2a65 --target chatgpt`
+    - `artifactCount = 1`
+    - `materializedCount = 0`
+- Important operational notes:
+  - do not run multiple live ChatGPT artifact fetches in parallel against the same managed browser session; they share one active signed-in tab and interfere with each other's navigation/state
+  - the previously used canvas sample `69c8a0fc-c960-8333-8006-c4d6e6704e6e` no longer reproduces a live canvas artifact on this account, so it is no longer a reliable smoke id for that path
+  - the first artifact materializer slice is intentionally narrow: inline tables and image assets are real files now, but markdown-only `sandbox:/...` downloads are still metadata-only until a stable resolver exists
+
+## 2026-03-30 — ChatGPT assistant-turn `behavior-btn` artifacts now surface in context; button-backed binary downloads are narrowed to one remaining materialization gap
+
+- Trigger:
+  - two new real chats exposed the next missing ChatGPT artifact surfaces:
+    - `69caa22d-1e2c-8329-904f-808fb33a4a56` has a DOCX download button plus a live textdoc/canvas block
+    - `69bded7e-4a88-8332-910f-cab6be0daf9b` has many ZIP/JSON/MD-style artifact buttons that were not present in payload extraction at all
+- Implemented:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added DOM-side assistant-turn artifact discovery for visible `button.behavior-btn` controls, scoped to the whole assistant turn `section[data-testid^="conversation-turn-"]` rather than only the `[data-message-author-role]` node
+    - added `normalizeChatgptConversationDownloadArtifactProbes(...)` plus `mergeChatgptConversationArtifacts(...)`
+    - added DOM canvas/textdoc enrichment from `div[id^="textdoc-message-"]`, so canvas artifacts now fill missing `metadata.contentText` from the visible textdoc block even when backend payload metadata omits it
+    - widened artifact-kind inference so DOM-side spreadsheet-ish button titles can still normalize as `spreadsheet`
+    - identified the real transport for ChatGPT's inline binary download buttons: a native button click creates an `<a>` click to a signed `https://chatgpt.com/backend-api/estuary/content?id=file_...` URL
+- Verification:
+  - local:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live context proof:
+    - `auracall conversations context get 69caa22d-1e2c-8329-904f-808fb33a4a56 --target chatgpt --json-only`
+      - still returns `Download the DOCX`
+      - canvas `Short Document With Comments` now carries full `metadata.contentText`
+    - `auracall conversations context get 69bded7e-4a88-8332-910f-cab6be0daf9b --target chatgpt --json-only`
+      - now returns `artifactCount = 86`
+      - includes DOM-only download artifacts like `Codebase status report`, `Machine-readable handoff JSON`, `Fresh investigation bundle`, `Turn report`, etc.
+  - live transport proof:
+    - direct browser probe on the DOCX chat confirmed that native clicking `Download the DOCX` produces an anchor click to:
+      - `https://chatgpt.com/backend-api/estuary/content?id=file_00000000222071f5a05523dec4ce4de7...`
+    - direct in-page fetch of that signed URL returned:
+      - `content-type = application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+      - `content-disposition = attachment; filename="comment_demo.docx"`
+      - bytes successfully downloaded in-page
+- Current blocker:
+  - resolved for the DOCX sample after one more repair:
+    - the product path now waits for the delayed button, then performs the native click and signed-anchor capture in one evaluation instead of assuming capture state survives across separate CDP evals
+  - current live state:
+    - `auracall conversations artifacts fetch 69caa22d-1e2c-8329-904f-808fb33a4a56 --target chatgpt`
+      - `artifactCount = 2`
+      - `materializedCount = 2`
+      - materializes both `comment_demo.docx` and `Short Document With Comments.txt`
+    - DOM-only artifact discovery works on the vibe-coding chat (`artifactCount = 86`)
+    - broader bundle-heavy smoke on the vibe-coding chat is still optional follow-up, not a blocker for the underlying button-backed download transport
+
+## 2026-03-30 — Confirmed the large ChatGPT bundle chat is a poor primary smoke, but partial binary materialization now works there too
+
+- Trigger:
+  - after the DOCX + canvas path was green, I spent one serialized live pass on the large “vibe coding” chat (`69bded7e-4a88-8332-910f-cab6be0daf9b`) to check whether the same button-backed download materializer held up on a chat with many ZIP/JSON/MD outputs
+- Observed:
+  - the full `auracall conversations artifacts fetch ... --target chatgpt` run did not finish promptly enough to be a good routine smoke for that chat
+  - however, the cache tree under `~/.auracall/cache/providers/chatgpt/ecochran76@gmail.com/conversation-attachments/69bded7e-4a88-8332-910f-cab6be0daf9b/files/` did materialize real binary/text files before I stopped the long run
+  - concrete materialized examples:
+    - `codebase-status-report-2026-03-20.md`
+    - `codebase-status-handoff-2026-03-20.json`
+    - `09-phased-development-plan.md`
+- Conclusion:
+  - the signed-anchor button-backed binary transport is not just a one-off DOCX fix; it also works on the larger ZIP/JSON/MD-style artifact family
+  - the remaining issue on that bundle-heavy chat is smoke-test cost/noise, not absence of a working materialization path
+
+## 2026-03-30 — Fixed noisy project-chat titles in the ChatGPT project-page conversation list
+
+- Trigger:
+  - the phased ChatGPT acceptance rerun got through project-chat create/read/rename, but failed the project-chat rename verifier because the project-page conversation list returned the row title plus preview text as one concatenated string:
+    - `AC GPT PC bqeekfReply exactly with CHATGPT ACCEPT PROJECT CHAT bqeekf.`
+- Root cause:
+  - `scrapeChatgptConversations(...)` in `src/browser/providers/chatgptAdapter.ts` was using raw anchor text on the project page
+  - for project chats, the row-menu aria label (`Open conversation options for ...`) is the cleaner title surface; the anchor text can include both title and preview snippet
+- Implemented:
+  - project-page conversation scraping now prefers the row-menu label over raw anchor text when deriving titles
+  - `normalizeChatgptConversationLinkProbes(...)` now also prefers a shorter authoritative title when the competing title is just that same title with preview text appended
+  - added a focused regression in `tests/browser/chatgptAdapter.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+- Current live state:
+  - I started a live project-chat retry and it reached the rename step cleanly, but I stopped short of spending more ChatGPT writes after the user flagged rate-limit risk
+  - no active ChatGPT acceptance process is left running now
+
+## 2026-03-30 — Tightened the ChatGPT rolling write budget again after root-base still tripped a live cooldown
+
+- Trigger:
+  - after the phased rerun got `project` and `project-chat` green, `root-base` still tripped a real ChatGPT cooldown during `renameConversation`
+  - the persisted guard file showed the account had room under the old policy, so the guard was still too permissive for this account's current threshold
+- Implemented:
+  - lowered `CHATGPT_MUTATION_MAX_WRITES` in `src/browser/chatgptRateLimitGuard.ts` from `4` to `3` while keeping the same 2-minute rolling window
+  - the intent is to force a pause before stacking `project-chat` straight into `root-base`, which is where the account hit the cooldown again
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+- Current live state:
+  - the current persisted cooldown is still active until `2026-03-30T19:20:29Z`
+  - the root-base conversation itself exists and context read is fine (`69cacafc-6d18-8326-9a4f-754d5638dbe1`), but the rename step is what hit the live cooldown
+
+## 2026-03-30 — Fixed stale assistant reuse on existing ChatGPT conversations and re-greened the phased acceptance sweep
+
+- Trigger:
+  - after the stricter rolling write budget got `root-base` green, the first `root-followups` retry still failed on the very first `web-search` turn
+  - the browser session log for `reply-exactly-with-chatgpt-accept-75` showed the run reported success with `composerTool = "web search"`, but the conversation itself never got a new turn
+  - a live `browser-tools` probe on the conversation showed the blocking ChatGPT modal:
+    - `Too many requests`
+    - `You’re making requests too quickly. We’ve temporarily limited access to your conversations...`
+  - the browser runner had incorrectly reused the old assistant answer from the previous turn (`CHATGPT ACCEPT BASE ttpopv`) as if it were the new response
+- Root cause:
+  - existing-conversation browser runs already carried a baseline assistant snapshot, but stale-response detection only compared the final answer text to the previous answer text in a weak way
+  - if the reused stale assistant turn came back with extra prelude text like `Thought for a few seconds ...`, the detector could miss that it was still the same underlying assistant turn
+  - when that happened alongside a visible ChatGPT rate-limit modal, browser mode could return a false-success answer instead of surfacing the real rate-limit failure
+- Implemented:
+  - `src/browser/index.ts`
+    - added `shouldTreatChatgptAssistantResponseAsStale(...)`
+    - existing-conversation browser runs now carry baseline assistant `messageId` / `turnId` as well as baseline text
+    - stale detection now treats a reused assistant `messageId`, reused `turnId`, or a response that simply ends with the old answer text as stale
+    - when a stale response is detected and no fresh turn appears, browser mode now checks for a visible ChatGPT rate-limit modal and throws that failure instead of returning the previous answer
+  - `tests/browser/browserModeExports.test.ts`
+    - added focused regressions for same-message-id stale reuse and “old answer with extra prelude text” reuse
+- Verification:
+  - local:
+    - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live phased acceptance:
+    - `project` -> green on `g-p-69cac42e3728819197f969fb4afa0e84`
+    - `project-chat` -> green on the same disposable project after the project-page title parser fix
+    - `root-base` -> green on `69cacd3f-381c-832c-87e5-06979303a03d`
+    - `root-followups` -> green on `69cacd3f-381c-832c-87e5-06979303a03d`
+    - `cleanup` -> green, removing leftover root conversation `69cacafc-6d18-8326-9a4f-754d5638dbe1` and disposable project `g-p-69cac42e3728819197f969fb4afa0e84`
+- Conclusion:
+  - the ChatGPT browser MVP now has a clean phased non-Pro live acceptance sweep again
+  - the two final fixes that mattered were:
+    - project-page conversation titles must come from the row action label, not raw anchor text
+    - existing-conversation browser runs must never accept the previous assistant turn as the “new” answer when ChatGPT throws a blocking rate-limit modal
+
+## 2026-03-30 — Shifted ChatGPT into post-MVP polish mode and documented resumable acceptance
+
+- Trigger:
+  - after the phased live sweep went green, the next useful work was no longer new provider surface coverage; it was making the passing bar easier to rerun safely on a throttled account
+- Implemented:
+  - added `docs/dev/chatgpt-polish-plan.md` as the dedicated post-MVP checklist
+  - updated `docs/testing.md` and `docs/dev/smoke-tests.md` to treat ChatGPT as MVP-complete and to recommend the resumable state-file workflow instead of manual id copy/paste between phases
+  - updated `docs/dev/chatgpt-conversation-surface-plan.md` so it now serves as the historical MVP closure record, with current polish work tracked separately
+  - fixed `scripts/chatgpt-acceptance.ts` state-file writes by importing `mkdir`
+  - made resumed ChatGPT acceptance phases reuse the prior suffix/naming and log the previous recorded failure so the operator sees one coherent disposable run instead of a fresh suffix each time
+  - removed the stray repo-root scratch artifact `undefined:/`
+- Verification:
+  - `pnpm tsx scripts/chatgpt-acceptance.ts --help`
+  - `pnpm run check`
+
+## 2026-03-30 — Closed the ChatGPT workbook artifact gap and added per-run artifact fetch manifests
+
+- Trigger:
+  - the remaining ChatGPT artifact-materialization hole was the workbook chat `69ca9d71-1a04-8332-abe1-830d327b2a65`
+  - the artifact already classified correctly as `kind = "spreadsheet"`, but `auracall conversations artifacts fetch ... --target chatgpt` still returned `materializedCount = 0`
+- Root cause:
+  - the current resolver only knew how to click filename-matching assistant `button.behavior-btn` surfaces or scrape inline `ada_visualizations` tables
+  - this workbook is exposed through the embedded spreadsheet card instead
+  - the actual download affordance is the card's first unlabeled header button, which emits a signed `backend-api/estuary/content?id=file_...` anchor URL when clicked
+- Implemented:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added a `sandbox:/...xlsx` spreadsheet fallback that scopes to the assistant turn containing the artifact title, finds the embedded spreadsheet card, tags its first header button, captures the signed `estuary` URL, and fetches the workbook directly
+  - `src/browser/llmService/llmService.ts`
+    - artifact fetches now write a sidecar `conversation-attachments/<conversationId>/artifact-fetch-manifest.json`
+    - the existing `conversation-attachments/<conversationId>/manifest.json` schema stays unchanged as `FileRef[]`
+    - per-artifact materialization errors now land in the sidecar manifest instead of aborting the whole fetch on the first failure
+  - `bin/auracall.ts`
+    - `conversations artifacts fetch` now returns/prints the sidecar manifest path
+  - `tests/browser/llmServiceFiles.test.ts`
+    - added coverage for the sidecar manifest path and per-artifact status recording
+- Verification:
+  - local:
+    - `pnpm vitest run tests/browser/llmServiceFiles.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts conversations artifacts fetch 69ca9d71-1a04-8332-abe1-830d327b2a65 --target chatgpt`
+    - result:
+      - `artifactCount = 1`
+      - `materializedCount = 1`
+      - materialized file `parabola_trendline_demo.xlsx`
+      - manifest path `/home/ecochran76/.auracall/cache/providers/chatgpt/ecochran76@gmail.com/conversation-attachments/69ca9d71-1a04-8332-abe1-830d327b2a65/artifact-fetch-manifest.json`
+
+## 2026-03-30 — Replaced the flat ChatGPT write guard with a weighted post-commit pacing model
+
+- Trigger:
+  - the flat persisted ChatGPT guard (`15s` minimum spacing plus `3 writes / 2 minutes`) was safer than nothing, but it still did not match the actual UI behavior well
+  - the user correctly called out that short clustered actions like `... -> Rename -> Enter` are usually fine, while the bigger risk is the next refresh-heavy or mutating step after the commit lands
+- Implemented:
+  - `src/browser/chatgptRateLimitGuard.ts`
+    - added persisted weighted mutation records (`recentMutations`) alongside the legacy timestamp array
+    - added action weights so lighter commits like rename/instructions count less than create/upload/browser-send
+    - added `getChatgptPostCommitQuietWaitMs(...)` so every successful write opens a post-commit quiet period before the next action
+    - that quiet period now starts from the action class (`~12s` for rename/update, `~15s` for create/delete/upload, `~18s` for browser sends), adds deterministic jitter, and grows as more weighted activity accumulates in the rolling window
+    - changed the rolling budget from flat write-count based to weighted-budget based
+  - `src/browser/llmService/llmService.ts`
+    - provider guard now applies the post-commit quiet period before follow-up actions and uses the weighted budget before the next mutation
+    - added small scale/jitter override hooks so unit tests can exercise the policy without waiting real 12-18 second windows
+  - `src/browser/index.ts`
+    - browser-mode prompt sends now enforce the same weighted budget + post-commit quiet period and persist weighted mutation records on success/failure
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Current note:
+  - I did not spend live ChatGPT writes on this guard-only refinement because it is specifically intended to reduce further throttling risk
+
+## 2026-03-30 — Added adapter-level rate-limit dialog recovery for ChatGPT context/artifact ingestion
+
+- Trigger:
+  - the user asked for live full-context ingestion checks that include artifact retrieval and explicitly wanted Aura-Call to watch for the ChatGPT rate-limit dialog, dismiss it, then pause if detected
+  - the persisted ChatGPT guard already covered browser sends and CRUD/browser-mode mutations, but the provider-level read/materialization paths for `conversations context get` and `conversations artifacts fetch` did not yet have their own visible-dialog recovery
+- Implemented:
+  - `src/browser/providers/chatgptAdapter.ts`
+    - added visible rate-limit dialog detection across common dialog/alert/live-region roots
+    - added local dialog dismissal via close-like buttons, `Escape`, and shared `closeDialog(...)`
+    - wrapped `readChatgptConversationContextWithClient(...)` and `materializeChatgptConversationArtifactWithClient(...)` in one-shot recovery that:
+      - dismisses a visible ChatGPT rate-limit modal when found
+      - pauses about 15 seconds
+      - retries once
+      - then rethrows a real rate-limit failure so the persisted higher-level guard can still take over on later runs
+- Verification:
+  - local:
+    - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
+    - `pnpm run check`
+  - live serialized full-context ingestion:
+    - image chat `69bc77cf-be28-8326-8f07-88521224abeb`
+      - context: `messages = 4`, `files = 1`, `sources = 0`, `artifacts = 4`
+      - artifact fetch: `materializedCount = 4`
+    - DOCX + canvas chat `69caa22d-1e2c-8329-904f-808fb33a4a56`
+      - context: `messages = 4`, `files = 0`, `sources = 0`, `artifacts = 2`, `canvasArtifacts = 1`
+      - artifact fetch: `materializedCount = 2`
+    - workbook chat `69ca9d71-1a04-8332-abe1-830d327b2a65`
+      - context: `messages = 4`, `files = 0`, `sources = 0`, `artifacts = 1`, `spreadsheetArtifacts = 1`
+      - artifact fetch: `materializedCount = 1`
+- Current note:
+  - this serialized smoke set stayed under the ChatGPT throttle threshold, so the new adapter-level recovery path was present but did not have to fire live during these three proofs
+
+## 2026-03-30 — Wrote the next browser-service lessons review from the ChatGPT cycle
+
+- Trigger:
+  - after the ChatGPT MVP/polish work, the user asked for a full lessons-learned review aimed at further browser-service enhancements for future browser automation tasks
+- Implemented:
+  - added `docs/dev/browser-service-lessons-review-2026-03-30.md`
+    - split the findings into:
+      - confirmed reusable mechanics that should move into `packages/browser-service/`
+      - semantics that should stay provider-local
+      - a concrete next extraction order
+  - linked that review from:
+    - `docs/dev/browser-service-upgrade-backlog.md`
+    - `docs/dev/browser-service-tools.md`
+    - `docs/dev/browser-automation-playbook.md`
+- Main conclusions:
+  - next generic extractions should focus on:
+    - dialog/overlay inventory + stable scoped handles
+    - blocking-surface recovery
+    - native download-target capture
+    - network-response capture on reload/navigation
+    - profile-scoped browser operation leasing
+    - row/list post-condition helpers
+    - generic action-phase instrumentation
+  - provider-local semantics should still own:
+    - id/url normalization
+    - artifact classification
+    - authoritative surface choice
+    - rate-limit copy/weights
+    - stale-response semantics
+- Verification:
+  - docs review only; no code or test changes
+
+## 2026-03-30 — Baked the first ChatGPT lessons into browser-service
+
+- Trigger:
+  - after the lessons review, the user asked to actually bake those lessons into
+    the shared browser-service layer
+- Implemented:
+  - `packages/browser-service/src/service/ui.ts`
+    - added `collectVisibleOverlayInventory(...)` so overlays/dialogs/alerts
+      now have the same kind of stable tagged-handle inventory that menus
+      already had
+    - added `dismissOverlayRoot(...)` so shared code can dismiss one specific
+      overlay root instead of closing the first visible dialog generically
+    - added `withBlockingSurfaceRecovery(...)` so providers can plug in
+      classifier/dismiss policy while reusing the generic
+      detect/dismiss/pause/retry loop
+  - `src/browser/providers/chatgptAdapter.ts`
+    - moved ChatGPT context/artifact rate-limit modal recovery onto the new
+      package-owned overlay inventory + blocking-surface recovery helpers
+  - updated the browser-service docs/backlog/review to mark those extractions as
+    completed and to keep the next follow-on order explicit
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
+  - `pnpm run check`

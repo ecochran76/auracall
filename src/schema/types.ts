@@ -60,6 +60,7 @@ export const ServiceConfigSchema = z.object({
   interactiveLogin: z.boolean().optional(),
   manualLoginProfileDir: z.string().optional(),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+  composerTool: z.string().optional(),
   features: z.record(z.string(), z.unknown()).optional(),
 });
 
@@ -175,6 +176,7 @@ export const BrowserConfigSchema = z.object({
   // Behavior
   modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+  composerTool: z.string().optional(),
   attachments: z.enum(['auto', 'never', 'always']).optional(),
   inlineFiles: z.boolean().optional(),
   bundleFiles: z.boolean().optional(),
@@ -209,6 +211,7 @@ export const OracleProfileBrowserSchema = z.object({
   debugPortRange: z.tuple([z.number(), z.number()]).optional(),
   remoteChrome: z.object({ host: z.string(), port: z.number() }).optional().or(z.string().optional()),
   thinkingTime: z.enum(['light', 'standard', 'extended', 'heavy']).optional(),
+  composerTool: z.string().optional(),
   modelStrategy: z.enum(['select', 'current', 'ignore']).optional(),
   attachments: z.enum(['auto', 'never', 'always']).optional(),
   inlineFiles: z.boolean().optional(),

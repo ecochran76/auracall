@@ -1,4 +1,4 @@
-import type { Project, ProjectMemoryMode } from './domain.js';
+import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from './domain.js';
 
 export type SelectorList = readonly string[];
 
@@ -55,6 +55,7 @@ export interface BrowserProvider {
   config: BrowserProviderConfig;
   capabilities?: BrowserProviderCapabilities;
   normalizeProjectId?: (value: string | null | undefined) => string | null;
+  normalizeConversationId?: (value: string | null | undefined) => string | null;
   extractProjectIdFromUrl?: (url: string) => string | null;
   resolveProjectUrl?: (projectId: string) => string;
   resolveConversationUrl?: (conversationId: string, projectId?: string) => string;
@@ -147,6 +148,13 @@ export interface BrowserProvider {
     options?: BrowserProviderListOptions,
   ) => Promise<unknown>;
   downloadConversationFile?: (conversationId: string, fileId: string, destPath: string) => Promise<void>;
+  materializeConversationArtifact?: (
+    conversationId: string,
+    artifact: ConversationArtifact,
+    destDir: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<FileRef | null>;
   renameConversation?: (conversationId: string, newTitle: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
   deleteConversation?: (conversationId: string, projectId?: string, options?: BrowserProviderListOptions) => Promise<void>;
 }

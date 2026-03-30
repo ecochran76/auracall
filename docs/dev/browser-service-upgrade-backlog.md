@@ -7,6 +7,11 @@ Use this backlog for features that would help any agentic browser workflow:
 DevTools targeting, tab selection, readiness detection, structured probing, and
 instance diagnostics.
 
+Latest cross-provider review:
+- [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)
+  captures the confirmed ChatGPT-era package-boundary lessons and the next
+  recommended extraction order.
+
 ## Current DOM-drift repair plan (2026-03-28)
 
 This is the current follow-on plan from the Grok stabilization work. The main
@@ -28,21 +33,190 @@ Priority order for extraction into `packages/browser-service/`:
 5. explicit client/session focus policy
 6. optional failure snapshots
 
+Post-ChatGPT follow-on order:
+1. dialog/overlay inventory plus stable scoped handles
+2. blocking-surface recovery framework
+3. native download-target capture
+4. network-response capture on reload/navigation
+5. profile-scoped browser operation lease
+6. row/list post-condition helpers
+7. generic action-phase instrumentation
+
+Progress as of 2026-03-30:
+- done enough for first package use:
+  - `collectVisibleOverlayInventory(...)`
+  - `dismissOverlayRoot(...)`
+  - `withBlockingSurfaceRecovery(...)`
+- first provider adoption:
+  - ChatGPT context/artifact rate-limit modal recovery now uses the
+    package-owned blocking-surface recovery path plus package-owned overlay
+    inventory/stable handles
+- still remaining from the post-ChatGPT follow-on order:
+  - native download-target capture
+  - network-response capture on reload/navigation
+  - profile-scoped browser operation lease
+  - row/list post-condition helpers
+  - generic action-phase instrumentation
+
 Current active plan:
 - Keep provider-local trigger scoring in adapters unless the same scoring shape
   repeats on another real surface/provider.
-- Make structured UI diagnostics wrappers the next package-owned extraction so
-  future DOM drift failures carry the scoped evidence needed to decide whether a
-  selector/action fix belongs in browser-service or stays app-specific.
+- The main reusable menu stack is now package-owned:
+  - menu-family selection
+  - stable visible-menu handles
+  - nested submenu traversal
+  - select-and-reopen verification
+- Return to provider work by default and only reopen browser-service extraction
+  when a new surface exposes another clearly reusable failure mode.
 - Latest implementation follow-up:
   - `openMenu(...)` now supports ordered interaction strategies instead of
     assuming a synthetic click is always equivalent to a real menu open.
+  - `collectVisibleMenuInventory(...)` now gives browser-service a bounded,
+    specific-selector menu census instead of forcing adapters to infer the
+    current visible menu family from raw DOM scans.
+  - `collectVisibleMenuInventory(...)` now preserves its synthetic visible-menu
+    selectors across repeated inventory passes, so callers can safely reuse a
+    chosen menu handle for later submenu opens or verify passes instead of
+    chasing a selector that was silently reindexed on the next read.
+  - `waitForMenuOpen(...)` / `openMenu(...)` can now pick the best visible menu
+    by expected item labels, menu novelty, and optional anchor proximity, which
+    is the package-owned form of the ChatGPT composer/project-settings drift fix.
   - `openSurface(...)` now provides a package-owned “try these triggers until
     the ready state appears” primitive for page/menu/dialog surfaces.
   - UI diagnostics now accept caller context so failures can record intended
     scopes/interaction modes alongside the live page snapshot.
   - provider-native project-id normalization/extraction is now a provider hook
     instead of a hardcoded ChatGPT special case inside `llmService`.
+  - `openSubmenu(...)` and `selectNestedMenuPath(...)` are now package-owned, so
+    provider code can express top-level menu -> submenu -> target-item flows
+    without recreating menu traversal glue.
+  - `inspectNestedMenuPathSelection(...)` and
+    `selectAndVerifyNestedMenuPathOption(...)` are now package-owned, so
+    adapters can reopen a menu family, inspect selected-state from menu markup,
+    and keep error hints scoped to the final containing menu without rebuilding
+    that flow locally.
+
+## New reusable learnings from the ChatGPT composer/add-on work (2026-03-28)
+
+The ChatGPT `Add files and more` surface exposed a few more generic browser
+automation patterns that should become package-owned over time.
+
+### A. Trigger-anchored menu-family selection
+
+Problem:
+- multiple unrelated menus can be visible at the same time
+- simply picking "the first visible menu" is wrong
+- label-only matching is also wrong when different parts of the page expose
+  identically named triggers like `More`
+
+What we did manually:
+- dismiss stale open menus before each selection phase
+- prefer menus near the intended trigger/composer region
+- score candidate menus by expected content markers instead of trusting any
+  visible menu
+
+What should move into browser-service:
+- a helper that picks the right menu family from:
+  - trigger element
+  - menu geometry/proximity
+  - expected content markers
+  - optional menu depth (top-level vs submenu)
+
+Candidate extraction:
+- `openAnchoredMenu(...)`
+- `pickMenuFamily(...)`
+
+### B. Nested menu-path selection
+
+Problem:
+- modern web apps increasingly use multi-level menus
+- selecting `Canvas` required:
+  - open the top-level composer menu
+  - detect the correct top-level menu
+  - open `More`
+  - detect the new submenu
+  - then select the target item
+
+What should move into browser-service:
+- a package-owned nested menu path primitive that can express:
+  - trigger -> top-level item -> submenu item
+  - per-level verification and diagnostics
+
+Candidate extraction:
+- `selectNestedMenuPath(...)`
+- `openSubmenu(...)`
+
+### C. Menu inventory / census helper
+
+Problem:
+- DOM drift repair was much faster once we could see the current visible menu
+  inventory as data:
+  - menu bounds
+  - visible item labels
+  - menu depth / relation to the trigger
+
+What should move into browser-service:
+- a bounded menu-census helper for diagnostics and debugging
+- this should be usable both from provider code and from `browser-tools`
+
+Candidate extraction:
+- `collectVisibleMenuInventory(...)`
+
+### D. Tool-vs-source-vs-file classification guardrails
+
+Problem:
+- the same menu can mix true tools/add-ons with source/file rows
+- flattening them into one semantic bucket causes bad UX and bad automation
+
+What we learned:
+- browser-service should not classify app semantics itself
+- but it should make it easy for adapters to keep those categories separate by
+  exposing cleaner menu-path and verification primitives
+
+Implication:
+- keep semantic classification provider-local
+- move only the mechanics of menu discovery, submenu opening, and selected-state
+  verification into the package
+
+### E. Reopen-to-verify selection as a first-class pattern
+
+Problem:
+- chips/pills are not always the sole truth for current state
+- sometimes the only authoritative selected-state is inside the reopened menu
+
+What should move into browser-service:
+- a reusable pattern for:
+  - activate option
+  - reopen the relevant menu family
+  - verify selected-state from menu markup
+
+Candidate extraction:
+- `selectAndVerifyMenuOption(...)`
+
+Current package-owned form:
+- `inspectNestedMenuPathSelection(...)`
+- `selectAndVerifyNestedMenuPathOption(...)`
+
+Priority from these new learnings:
+1. trigger-anchored menu-family selection
+2. nested menu-path selection
+3. menu inventory / diagnostics helper
+4. select-and-reopen verification helper
+
+Progress:
+- Done enough for first package extractions:
+  - `collectVisibleMenuInventory(...)`
+  - stable menu tagging with specific selectors for the chosen visible menu
+  - `openMenu(...)` / `waitForMenuOpen(...)` support for expected-item and
+    existing-menu-family-aware selection
+  - package-owned nested submenu path selection via `openSubmenu(...)` and
+    `selectNestedMenuPath(...)`
+  - package-owned select-and-reopen verification via
+    `inspectNestedMenuPathSelection(...)` and
+    `selectAndVerifyNestedMenuPathOption(...)`
+- Still remaining:
+  - deciding whether anchor-near-trigger scoring repeats enough to move out of
+    adapters entirely
 
 ### 6. `navigateAndSettle(...)`
 

@@ -58,10 +58,21 @@ export interface ConversationSource {
   sourceGroup?: string;
 }
 
+export interface ConversationArtifact {
+  id: string;
+  title: string;
+  kind?: 'download' | 'canvas' | 'generated' | 'image' | 'spreadsheet';
+  uri?: string;
+  messageIndex?: number;
+  messageId?: string;
+  metadata?: Record<string, unknown>;
+}
+
 export interface ConversationContext {
   provider: ProviderId;
   conversationId: string;
   messages: ConversationMessage[];
   files?: FileRef[];
   sources?: ConversationSource[];
+  artifacts?: ConversationArtifact[];
 }
