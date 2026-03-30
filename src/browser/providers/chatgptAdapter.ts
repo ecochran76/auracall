@@ -1965,6 +1965,27 @@ async function readChatgptProjectSourceFilesSettled(
   return last;
 }
 
+function isChatgptProjectSourceFileMatch(fileName: string, candidateName: string): boolean {
+  const expected = normalizeFileKey(fileName);
+  const candidate = normalizeFileKey(candidateName);
+  return expected.length > 0 && candidate.length > 0 && expected === candidate;
+}
+
+async function assertProjectSourceStillPresent(
+  client: ChromeClient,
+  projectId: string,
+  fileName: string,
+): Promise<string | null> {
+  let files = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 5_000, pollMs: 500 });
+  const matched = files.find((file) => isChatgptProjectSourceFileMatch(fileName, file.name));
+  if (matched) {
+    return matched.name;
+  }
+  await reloadProjectSourcesTab(client, projectId);
+  files = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 5_000, pollMs: 500 });
+  return files.find((file) => isChatgptProjectSourceFileMatch(fileName, file.name))?.name ?? null;
+}
+
 async function reloadProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
   await client.Page.reload({ ignoreCache: true });
   const ready = await waitForPredicate(
@@ -4840,8 +4861,22 @@ export function createChatgptAdapter(): Pick<
       const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
       try {
         await openProjectSourcesTab(client, projectId);
-        await readChatgptProjectSourceFilesSettled(client);
-        const selector = await tagChatgptProjectSourceAction(client, fileName);
+        const listedFiles = await readChatgptProjectSourceFilesSettled(client);
+        const matchedFileName = listedFiles.find((file) =>
+          isChatgptProjectSourceFileMatch(fileName, file.name),
+        )?.name;
+        let targetFileName = fileName;
+        if (!matchedFileName) {
+          const refreshedMatch = await assertProjectSourceStillPresent(client, projectId, fileName);
+          if (!refreshedMatch) {
+            return;
+          }
+          targetFileName = refreshedMatch;
+        } else {
+          targetFileName = matchedFileName;
+        }
+        const deletionFileName = targetFileName;
+        const selector = await tagChatgptProjectSourceAction(client, targetFileName);
         await withUiDiagnostics(
           client.Runtime,
           async () => {
@@ -4858,7 +4893,7 @@ export function createChatgptAdapter(): Pick<
               closeMenuAfter: true,
             });
             if (!removed) {
-              throw new Error(`ChatGPT source actions menu did not remove "${fileName}"`);
+              throw new Error(`ChatGPT source actions menu did not remove "${deletionFileName}"`);
             }
           },
           {
@@ -4872,27 +4907,27 @@ export function createChatgptAdapter(): Pick<
         );
         let removal = await waitForPredicate(
           client.Runtime,
-          buildProjectSourceRemovedExpression(fileName),
+          buildProjectSourceRemovedExpression(targetFileName),
           {
             timeoutMs: 4_000,
-            description: `ChatGPT project source removed: ${fileName}`,
+            description: `ChatGPT project source removed: ${targetFileName}`,
           },
         );
         if (!removal.ok) {
-          await confirmChatgptProjectSourceRemovalIfPresent(client, fileName);
+          await confirmChatgptProjectSourceRemovalIfPresent(client, targetFileName);
           removal = await waitForPredicate(
             client.Runtime,
-            buildProjectSourceRemovedExpression(fileName),
+            buildProjectSourceRemovedExpression(targetFileName),
             {
               timeoutMs: 8_000,
-              description: `ChatGPT project source removed after confirmation: ${fileName}`,
+              description: `ChatGPT project source removed after confirmation: ${targetFileName}`,
             },
           );
         }
         if (!removal.ok) {
-          throw new Error(`ChatGPT project source "${fileName}" did not disappear after removal`);
+          throw new Error(`ChatGPT project source "${targetFileName}" did not disappear after removal`);
         }
-        await waitForProjectSourceRemovedPersisted(client, projectId, fileName);
+        await waitForProjectSourceRemovedPersisted(client, projectId, targetFileName);
       } finally {
         await client.close().catch(() => undefined);
       }

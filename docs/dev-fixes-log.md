@@ -21,6 +21,28 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-30
+- Area: Browser/ChatGPT project source deletion should be idempotent across retry attempts
+- Symptom:
+  - `projects files remove <projectId> <file>` could fail during retry with `ChatGPT project source action button not found` after the first attempt already removed the file and the UI list changed.
+  - `deleteProjectFile` proceeded to search for the action button using the passed filename even when the source row was absent after retries or re-renders.
+- Root cause:
+  - there was no row-presence re-check after the initial source snapshot; a successful first deletion could still be reattempted and treated as hard failure instead of success.
+- Fix:
+  - in `src/browser/providers/chatgptAdapter.ts`, added a `deleteProjectFile` flow that:
+    - snapshots source rows,
+    - resolves the target row by normalized filename match,
+    - refreshes source rows when no direct match exists,
+    - returns early when the file is already absent (idempotent success),
+    - otherwise proceeds with action-menu removal using the refreshed/canonical filename.
+  - this keeps existing removal semantics while preventing stale/false-negative action-button targeting.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptRateLimitGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm tsx scripts/chatgpt-acceptance.ts --phase project --resume docs/dev/tmp/chatgpt-acceptance-state.json` (pass after re-run)
+- Follow-ups:
+  - If failures persist, verify the sources action row selector family and add a secondary scoped fallback before further retry tuning.
+
+- Date: 2026-03-30
 - Area: Browser/ChatGPT button-backed binary downloads require a delayed-button wait plus one-eval native-click capture
 - Symptom:
   - after DOM-side artifact discovery was fixed, `auracall conversations artifacts fetch 69caa22d-1e2c-8329-904f-808fb33a4a56 --target chatgpt` still only materialized the canvas text file and missed the visible DOCX download button

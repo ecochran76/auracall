@@ -93,7 +93,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_MODEL = 'gpt-5.2-thinking';
 const DEFAULT_THINKING_TIME = 'standard';
 const DEFAULT_CHATGPT_MUTATION_TIMEOUT_MS = 6 * 60_000;
-const MAX_CHATGPT_ACCEPTANCE_RETRY_WAIT_MS = 30_000;
+const MAX_CHATGPT_ACCEPTANCE_RETRY_WAIT_MS = 60_000;
 
 function parseArgs(argv: string[]): Args {
   const args: Args = {
@@ -359,11 +359,20 @@ function mergeArgsWithAcceptanceState(args: Args, state: AcceptanceState | null)
 }
 
 function extractChatgptCooldownUntilMs(text: string, profile?: string | null): number | null {
-  const match = text.match(/(?:cooling down|write budget active) until ([0-9]{4}-[0-9]{2}-[0-9]{2}T[^.\s]+(?:\.\d+)?Z)/i);
+  const match = text.match(
+    /(?:cooling down|write budget active|post-write quiet period active) until ([0-9]{4}-[0-9]{2}-[0-9]{2}T[^.\s]+(?:\.\d+)?Z)/i,
+  );
   if (match?.[1]) {
     const parsed = Date.parse(match[1]);
     if (Number.isFinite(parsed)) {
       return parsed;
+    }
+  }
+  const relativeMatch = text.match(/(?:post-write quiet period|quiet period active)[^()]*\((\d+)s remaining\)/i);
+  if (relativeMatch?.[1]) {
+    const remaining = Number(relativeMatch[1]);
+    if (Number.isFinite(remaining) && remaining > 0) {
+      return Date.now() + remaining * 1000;
     }
   }
   return readChatgptGuardCooldownUntilMs(profile);
@@ -391,7 +400,9 @@ async function runAuracallWithChatgptRateLimitRetry(
     return runAuracall(args, extra, options);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    if (!/ChatGPT rate limit detected|Too many requests|too quickly|ChatGPT write budget active/i.test(message)) {
+    if (
+      !/ChatGPT rate limit detected|Too many requests|too quickly|ChatGPT write budget active|post-write quiet period active/i.test(message)
+    ) {
       throw error;
     }
     const cooldownUntilMs = extractChatgptCooldownUntilMs(message, args.profile ?? null);

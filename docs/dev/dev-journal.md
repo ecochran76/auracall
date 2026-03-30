@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-30
+- Focus: Harden ChatGPT project source deletion against stale/missing source rows and rate-limit retries.
+- Progress: Added a robust preflight in `deleteProjectFile` to re-check project source rows before menu interaction, then treat already-absent rows as success. If the target is still present after a refresh, the row name is re-resolved from the live source probe before proceeding. This avoids brittle assumptions about row visibility after earlier retry attempts.
+- Issues: During a retry cycle the row can be gone because the first deletion succeeded while the command was retried, producing `ChatGPT project source action button not found` before the prior check ran.
+- Next: Re-run the acceptance runner with the fix, keep the post-write cooldown parser in mind, and verify `projects files remove` is stable under repeat retry scenarios on fresh runs.
+
+- Date: 2026-03-30
 - Focus: Centralize ChatGPT artifact download capture in browser-service helpers.
 - Progress: Added shared download-capture primitives (`armDownloadCapture`, `readDownloadCapture`, `waitForDownloadCapture`) in `packages/browser-service/src/service/ui.ts` so artifact downloads can be captured by any provider. Refactored ChatGPT materialization to use `armWait + waitFor + fetch remote` around the tagged button click instead of local helper versions, and added coverage in `tests/browser-service/ui.test.ts`. The helper contract is now tested for polling and non-target behavior.
 - Issues: No user-facing issues observed; this is a refactor to reduce duplicate provider-local hooking logic and make future download-backed providers less brittle.
