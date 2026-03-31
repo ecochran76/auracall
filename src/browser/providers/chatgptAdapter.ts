@@ -4586,6 +4586,142 @@ async function openChatgptTaggedConversationRenameEditor(
   };
 }
 
+async function openChatgptTaggedConversationDeleteConfirmation(
+  client: ChromeClient,
+  tagged: { rowSelector: string; actionSelector: string },
+  expectedTitle?: string | null,
+  timeoutMs = 12_000,
+): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
+  const collectDiagnostics = async () => {
+    const rowSnapshot = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const isVisible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
+        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
+        const dialog = document.querySelector('[role="dialog"], dialog[open]');
+        return {
+          rowFound: row instanceof Element,
+          rowVisible: isVisible(row),
+          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
+          triggerFound: trigger instanceof Element,
+          triggerVisible: isVisible(trigger),
+          triggerLabel:
+            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
+          dialogVisible: dialog instanceof Element ? isVisible(dialog) : false,
+          dialogText: dialog instanceof Element ? normalize(dialog.textContent || '') : null,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    const menus = await collectVisibleMenuInventory(client.Runtime, {
+      anchorSelector: tagged.actionSelector,
+      anchorRootSelectors: [tagged.rowSelector],
+      limit: 6,
+    }).catch(() => []);
+    const overlays = await collectVisibleOverlayInventory(client.Runtime, {
+      overlaySelectors: DEFAULT_DIALOG_SELECTORS,
+      anchorSelector: tagged.rowSelector,
+      anchorRootSelectors: [tagged.rowSelector],
+      limit: 4,
+    }).catch(() => []);
+    return {
+      row: rowSnapshot.result?.value ?? null,
+      menus,
+      overlays,
+    };
+  };
+
+  const hovered = await hoverElement(client.Runtime, client.Input, {
+    selector: tagged.rowSelector,
+    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+    timeoutMs,
+  });
+  if (!hovered.ok) {
+    return {
+      ok: false,
+      reason: hovered.reason || 'Conversation row did not hover',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const triggerPressed = await pressButton(client.Runtime, {
+    selector: tagged.actionSelector,
+    rootSelectors: [tagged.rowSelector],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!triggerPressed.ok) {
+    return {
+      ok: false,
+      reason: triggerPressed.reason || 'Conversation options trigger did not open',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const menuReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
+        .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase())
+        .filter(Boolean);
+      return items.includes('delete') ? { items } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'ChatGPT delete menu visible',
+    },
+  );
+  if (!menuReady.ok) {
+    return {
+      ok: false,
+      reason: 'Delete menu item did not appear',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const deletePressed = await pressButton(client.Runtime, {
+    match: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
+    rootSelectors: ['[role="menu"]'],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!deletePressed.ok) {
+    return {
+      ok: false,
+      reason: deletePressed.reason || 'Delete menu item did not click',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const confirmationReady = await waitForPredicate(
+    client.Runtime,
+    buildConversationDeleteConfirmationExpression(expectedTitle),
+    {
+      timeoutMs,
+      description: 'ChatGPT delete confirmation ready',
+    },
+  );
+  if (!confirmationReady.ok) {
+    return {
+      ok: false,
+      reason: 'Delete confirmation did not become ready',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  return {
+    ok: true,
+    diagnostics: await collectDiagnostics(),
+  };
+}
+
 function buildChatgptRenameEditorReadyExpression(): string {
   return `(() => {
     const isVisible = (node) => {
@@ -5263,12 +5399,16 @@ async function deleteChatgptConversationWithClient(
   await ensureChatgptSidebarOpen(client);
   let tagged: { rowSelector: string; actionSelector: string } | null = null;
   try {
-    tagged = await tagChatgptConversationRow(client, conversationId, projectId);
+    tagged = !projectId
+      ? await tagChatgptConversationRowExact(client, conversationId)
+      : await tagChatgptConversationRow(client, conversationId, projectId);
   } catch {
     await navigateToChatgptConversation(client, conversationId, projectId);
     await ensureChatgptSidebarOpen(client);
     try {
-      tagged = await tagChatgptConversationRow(client, conversationId, projectId);
+      tagged = !projectId
+        ? await tagChatgptConversationRowExact(client, conversationId)
+        : await tagChatgptConversationRow(client, conversationId, projectId);
     } catch {
       await navigateToChatgptConversation(client, conversationId, projectId);
     }
@@ -5276,11 +5416,11 @@ async function deleteChatgptConversationWithClient(
   await withUiDiagnostics(
     client.Runtime,
     async () => {
-      let deleteMenuSelection =
+      let deleteReady =
         tagged
-          ? await openChatgptTaggedConversationSidebarMenu(client, tagged, CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)
+          ? await openChatgptTaggedConversationDeleteConfirmation(client, tagged, expectedTitle)
           : { ok: false as const, reason: 'Sidebar row unavailable' };
-      if (!deleteMenuSelection.ok) {
+      if (!deleteReady.ok) {
         const headerSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
           triggers: [
             {
@@ -5301,13 +5441,13 @@ async function deleteChatgptConversationWithClient(
           itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
           timeoutMs: 4_000,
         });
-        deleteMenuSelection = headerSelection.ok
-          ? { ok: true, menuSelector: headerSelection.menuSelector }
-          : { ok: false, reason: headerSelection.reason || deleteMenuSelection.reason };
+        deleteReady = headerSelection.ok
+          ? { ok: true }
+          : { ok: false, reason: headerSelection.reason || deleteReady.reason };
       }
-      if (!deleteMenuSelection.ok) {
+      if (!deleteReady.ok) {
         throw new Error(
-          `ChatGPT conversation delete menu did not open for ${conversationId}: ${deleteMenuSelection.reason || 'no matching action surface'}`,
+          `ChatGPT conversation delete menu did not open for ${conversationId}: ${deleteReady.reason || 'no matching action surface'}`,
         );
       }
       let confirmationReady = await waitForPredicate(
