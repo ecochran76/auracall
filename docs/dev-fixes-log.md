@@ -21,6 +21,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: Grok file management diagnostics
+- Symptom:
+  - Grok file-management failures on account and project flows returned generic errors without scoped UI evidence, especially for row actions and save/delete modals.
+- Root cause:
+  - Several high-variance Grok file flows were still executed without package-level diagnostic context, so diagnostics snapshots did not include the relevant modal/tab roots or candidate action surfaces at failure.
+- Fix:
+  - wrapped Grok `listAccountFiles`, `uploadAccountFiles`, and `deleteAccountFile` in `withUiDiagnostics(...)` with account-file scoped roots/candidates/buttons.
+  - wrapped Grok `listProjectFiles`, `uploadProjectFiles`, and `deleteProjectFile` in `withUiDiagnostics(...)` with project-sources/personal-files modal roots, row selectors, and button candidates.
+  - kept behavior and waits unchanged so this is a strict diagnostics adoption slice.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+- Follow-ups:
+  - rerun guarded Grok live file flows when profile session is available.
+  - resolve unrelated `ResolvedBrowserConfig.target` typecheck error in `tests/browser/browserService.test.ts` that currently blocks a full `pnpm run check`.
+
+- Date: 2026-03-31
 - Area: ChatGPT root rename persistence hardening
 - Symptom:
   - rename verification sometimes passed before the renamed conversation became the top row in the root sidebar list, which matched early reports of inconsistent “rename appears to succeed then reverts” timing.

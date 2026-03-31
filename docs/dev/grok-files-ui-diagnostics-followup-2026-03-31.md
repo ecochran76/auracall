@@ -1,7 +1,7 @@
 # Grok Files UI Diagnostics Follow-up
 
 Date: 2026-03-31
-Status: active
+Status: complete
 
 ## Goal
 
@@ -49,6 +49,20 @@ UI diagnostics for the relevant page/modal state:
 The diagnostics should include the relevant modal/page roots, candidate row
 selectors, and visible action buttons without inventing new provider-local
 recovery logic.
+
+## Completion
+
+- Completed: 2026-03-31
+- Result: Wrapped `listAccountFiles`, `uploadAccountFiles`, and `deleteAccountFile`
+  with `withUiDiagnostics(...)` including `account files` root/candidate/button
+  context; wrapped `listProjectFiles`, `uploadProjectFiles`, and `deleteProjectFile`
+  with scoped project modal/tab source context; kept existing behavior and waits
+  unchanged.
+- Verification: `pnpm vitest run tests/browser/grokAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  passed.
+- Note: `pnpm run check` currently fails on an unrelated preexisting
+  `tests/browser/browserService.test.ts` typecheck issue (`ResolvedBrowserConfig.target`
+  is missing).
 
 ## Verification to run on the real dev box
 

@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Add Grok file-management UI diagnostics on account and project file flows.
+- Progress: Wrapped Grok account and project file-management public methods with scoped `withUiDiagnostics(...)` context for list/upload/delete paths, including source/modal roots, action candidates, and explicit flow intent metadata.
+- Issues: `pnpm run check` still fails in `tests/browser/browserService.test.ts` on `ResolvedBrowserConfig.target` typechecking (`TS2339`), unrelated to this slice.
+- Next: Validate with guarded live Grok smoke commands once the authenticated profile is available; keep an eye on diagnostics payload quality if any file-flow failures persist.
+
+- Date: 2026-03-31
 - Focus: Finalize Rename Verification Hardening for Root Conversations.
 - Progress: Added strict rename persistence checking so root conversations verify against the reordered top-of-list state before continuing, with jittered settle delays between mutate and verify and a longer pause before list-refresh verification. This prevents early success when the renamed conversation is not yet promoted in the root list.
 - Issues: No unit-level regressions so far, but this remains live-timing sensitive and should be exercised with a guarded real run.

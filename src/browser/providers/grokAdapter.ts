@@ -1809,8 +1809,29 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, GROK_FILES_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToGrokFiles(client, GROK_FILES_URL);
-        const files = await readVisibleAccountFilesWithClient(client);
+        const files = await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToGrokFiles(client, GROK_FILES_URL);
+            return readVisibleAccountFilesWithClient(client);
+          },
+          {
+            label: 'grok-account-list-files',
+            rootSelectors: ['main', '[role="main"]'],
+            menuSelectors: ['[role="menu"]', '[data-radix-menu-content][data-state="open"]'],
+            candidateSelectors: [
+              '[data-oracle-account-file-row="true"]',
+              GROK_ACCOUNT_FILE_LINK_SELECTOR,
+              'button[aria-label="Delete file"]',
+              'button[aria-label="Delete"]',
+            ],
+            buttonSelectors: ['button', 'button[aria-label="Open menu"]', '[role="button"]'],
+            context: {
+              surface: 'grok-account-files',
+              action: 'list',
+            },
+          },
+        );
         return files.map((file) => ({
           id: file.id,
           name: file.name,
@@ -1834,11 +1855,30 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, GROK_FILES_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToGrokFiles(client, GROK_FILES_URL);
-        await uploadAccountFilesWithClient(client, filePaths);
-        await waitForAccountFilesPersisted(
-          client,
-          filePaths.map((filePath) => path.basename(filePath)),
+        const fileNames = filePaths.map((filePath) => path.basename(filePath));
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToGrokFiles(client, GROK_FILES_URL);
+            await uploadAccountFilesWithClient(client, filePaths);
+            await waitForAccountFilesPersisted(client, fileNames);
+          },
+          {
+            label: 'grok-account-upload-files',
+            rootSelectors: ['main', '[role="main"]'],
+            candidateSelectors: [
+              'input[type="file"]',
+              GROK_ACCOUNT_FILE_UPLOAD_INPUT_SELECTOR,
+              '[data-oracle-account-upload="true"]',
+              GROK_ACCOUNT_FILE_LINK_SELECTOR,
+            ],
+            buttonSelectors: ['button', '[role="button"]', 'button[aria-label="Save"]'],
+            context: {
+              surface: 'grok-account-files',
+              action: 'upload',
+              fileNames,
+            },
+          },
         );
       } finally {
         await client.close();
@@ -1855,9 +1895,31 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokTab(options, GROK_FILES_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToGrokFiles(client, GROK_FILES_URL);
-        await removeAccountFileWithClient(client, fileId);
-        await waitForAccountFileRemoved(client, fileId);
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToGrokFiles(client, GROK_FILES_URL);
+            await removeAccountFileWithClient(client, fileId);
+            await waitForAccountFileRemoved(client, fileId);
+          },
+          {
+            label: 'grok-account-delete-file',
+            rootSelectors: ['main', '[role="main"]'],
+            candidateSelectors: [
+              '[data-oracle-account-file-row="true"]',
+              GROK_ACCOUNT_FILE_LINK_SELECTOR,
+              'button[aria-label="Delete file"]',
+              'button[aria-label="Delete"]',
+            ],
+            buttonSelectors: ['button', 'button[aria-label="Delete file"]', 'button[aria-label="Delete"]'],
+            menuSelectors: ['[role="dialog"]', '[role="menu"]', '[data-radix-menu-content][data-state="open"]'],
+            context: {
+              surface: 'grok-account-files',
+              action: 'delete',
+              fileId,
+            },
+          },
+        );
       } finally {
         await client.close();
         if (shouldClose && targetId) {
@@ -1876,18 +1938,46 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToProject(client, projectUrl);
-        await ensureProjectSourcesTabSelected(client);
-        await waitForProjectSourcesTab(client);
-        await uploadProjectSourceFilesWithClient(client, filePaths);
-        await waitForProjectSourcesUploadsComplete(
-          client,
-          filePaths.map((filePath) => path.basename(filePath)),
-        );
-        await clickPersonalFilesSaveWithClient(client);
-        await waitForProjectFilesPersisted(
-          client,
-          filePaths.map((filePath) => path.basename(filePath)),
+        const fileNames = filePaths.map((filePath) => path.basename(filePath));
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToProject(client, projectUrl);
+            await ensureProjectSourcesTabSelected(client);
+            await waitForProjectSourcesTab(client);
+            await uploadProjectSourceFilesWithClient(client, filePaths);
+            await waitForProjectSourcesUploadsComplete(client, fileNames);
+            await clickPersonalFilesSaveWithClient(client);
+            await waitForProjectFilesPersisted(client, fileNames);
+          },
+          {
+            label: 'grok-project-upload-files',
+            rootSelectors: [
+              `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+              GROK_SOURCES_ROOT_SELECTOR,
+              '[role="dialog"]',
+              'main',
+            ],
+            menuSelectors: ['[role="menu"]', '[data-radix-menu-content][data-state="open"]'],
+            candidateSelectors: [
+              GROK_PERSONAL_FILES_ROW_SELECTOR,
+              `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+              GROK_PERSONAL_FILES_SEARCH_SELECTOR,
+              'button[aria-label="Attach"]',
+            ],
+            buttonSelectors: [
+              'button',
+              '[role="button"]',
+              'button[aria-label="Attach"]',
+              'button[aria-label="Save"]',
+            ],
+            context: {
+              surface: 'grok-project-files',
+              action: 'upload',
+              projectId,
+              fileNames,
+            },
+          },
         );
       } finally {
         await client.close();
@@ -1905,11 +1995,27 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToProject(client, projectUrl);
-        await ensureProjectSourcesTabSelected(client);
-        await waitForProjectSourcesTab(client);
-        await ensureProjectSourcesFilesExpanded(client);
-        const files = await readVisiblePersonalFilesWithClient(client);
+        const files = await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToProject(client, projectUrl);
+            await ensureProjectSourcesTabSelected(client);
+            await waitForProjectSourcesTab(client);
+            await ensureProjectSourcesFilesExpanded(client);
+            return readVisiblePersonalFilesWithClient(client);
+          },
+          {
+            label: 'grok-project-list-files',
+            rootSelectors: [GROK_SOURCES_ROOT_SELECTOR, 'main', `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`],
+            candidateSelectors: [GROK_PERSONAL_FILES_ROW_SELECTOR, GROK_ASSET_ROW_SELECTOR, GROK_SOURCES_FILES_ROW_SELECTOR],
+            buttonSelectors: ['button', '[role="button"]', 'button[aria-label="Attach"]'],
+            context: {
+              surface: 'grok-project-files',
+              action: 'list',
+              projectId,
+            },
+          },
+        );
         const seen = new Set<string>();
         return files
           .filter((file) => {
@@ -1942,13 +2048,46 @@ export function createGrokAdapter(): Pick<
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
-        await navigateToProject(client, projectUrl);
-        await ensureProjectSourcesTabSelected(client);
-        await waitForProjectSourcesTab(client);
-        await ensureProjectSourcesFilesExpanded(client);
-        await removeProjectSourceFileWithClient(client, fileName);
-        await waitForProjectSourceFileMarkedRemoved(client, fileName);
-        await clickPersonalFilesSaveWithClient(client);
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            await navigateToProject(client, projectUrl);
+            await ensureProjectSourcesTabSelected(client);
+            await waitForProjectSourcesTab(client);
+            await ensureProjectSourcesFilesExpanded(client);
+            await removeProjectSourceFileWithClient(client, fileName);
+            await waitForProjectSourceFileMarkedRemoved(client, fileName);
+            await clickPersonalFilesSaveWithClient(client);
+          },
+          {
+            label: 'grok-project-delete-file',
+            rootSelectors: [
+              `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+              GROK_SOURCES_ROOT_SELECTOR,
+              'main',
+            ],
+            menuSelectors: ['[role="menu"]', '[role="dialog"]', '[data-radix-menu-content][data-state="open"]'],
+            candidateSelectors: [
+              GROK_PERSONAL_FILES_ROW_SELECTOR,
+              `[${GROK_PERSONAL_FILES_MODAL_MARKER}="true"]`,
+              GROK_PERSONAL_FILES_SEARCH_SELECTOR,
+            ],
+            buttonSelectors: [
+              'button',
+              '[role="button"]',
+              'button[aria-label="Attach"]',
+              'button[aria-label="Save"]',
+              'button[aria-label="Remove"]',
+              'button[aria-label="Delete"]',
+            ],
+            context: {
+              surface: 'grok-project-files',
+              action: 'delete',
+              projectId,
+              fileName,
+            },
+          },
+        );
       } finally {
         await client.close();
         if (shouldClose && targetId) {
