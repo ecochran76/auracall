@@ -4158,6 +4158,131 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/config.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
 
+## 2026-03-31 — ChatGPT root rename probe moved onto stronger row-menu and commit helpers, but live rename still does not persist
+
+- Area: ChatGPT browser rename investigation
+- Symptom:
+  - live root conversation rename still stalled in the ChatGPT acceptance
+    `root-base` phase, and direct `auracall rename ... --target chatgpt` runs
+    continued to leave the authoritative sidebar row title unchanged
+- Root cause:
+  - still not fully resolved
+  - two partial learnings are now confirmed:
+    - the simple sidebar-row trigger path was too weak for a navigable row
+      surface and needed the same trigger-prep/direct-click semantics we
+      already use for Grok
+    - ChatGPT can close the inline rename editor without actually applying the
+      new title, so "editor disappeared" is not a sufficient completion signal
+- Fix:
+  - switched ChatGPT tagged sidebar-row rename/delete menu opening onto
+    `openRevealedRowMenu(...)` with trigger prep + direct-click fallback in
+    `src/browser/providers/chatgptAdapter.ts`
+  - added `submitInlineRename(..., submitStrategy: 'blur-body-click')` in
+    `packages/browser-service/src/service/ui.ts`
+  - ChatGPT rename now retries one alternate blur/click-away commit if the
+    normal submit closes the inline editor without immediately applying the new
+    title
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live repro still blocked:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts rename 69cc287c-2f0c-832b-99db-3760fa254e7a "AC GPT C najfie" --target chatgpt --verbose`
+  - live DOM after the repro still showed:
+    - row title `CHATGPT ACCEPT BASE najfie`
+    - no open menu
+    - no visible inline rename input
+  - conclusion: the new helpers improved the investigation surface but did not
+    yet produce a persisted ChatGPT root rename
+
+## 2026-03-31 — ChatGPT live rename confirmed the shared hover-reveal plus native-enter technique
+
+- Area: Browser-service row actions / ChatGPT rename investigation
+- Symptom:
+  - provider-level rename attempts were still unreliable, and it was unclear
+    whether the problem was trigger discovery, edit readiness, or commit
+    semantics
+- Root cause:
+  - the surface behaves like the earlier Grok rename case:
+    - the row action trigger is hover-revealed and should be treated as such
+    - the rename editor is a real inline input whose focus/typing semantics
+      matter
+    - editor disappearance alone is not proof of persisted rename
+- Fix / learning:
+  - direct live repro on the managed ChatGPT tab showed that the reliable
+    interaction sequence is:
+    - hover the conversation row
+    - click the revealed `...` button
+    - select `Rename`
+    - wait for `input[name="title-editor"]`
+    - type natively into that input
+    - send one native `Enter`
+    - verify the sidebar row text changed
+  - documented this as a reusable browser-service technique in
+    `docs/dev/browser-service-tools.md`
+- Verification:
+  - live tab on DevTools port `45011`
+  - conversation `69cc287c-2f0c-832b-99db-3760fa254e7a`
+  - sidebar title changed successfully to `AC GPT C najfie`
+
+## 2026-03-31 — Browser-service inline rename now supports native typing for row-local editors
+
+- Area: Browser-service inline rename helpers / ChatGPT rename
+- Symptom:
+  - the successful live ChatGPT rename path required "real" editing semantics,
+    but `submitInlineRename(...)` only supported JS value assignment plus submit
+- Root cause:
+  - some inline rename surfaces accept native focus/typing/Enter reliably while
+    remaining flaky under setter-only input updates
+- Fix:
+  - added `entryStrategy: 'native-input'` to
+    `packages/browser-service/src/service/ui.ts::submitInlineRename(...)`
+  - native entry now clicks the real input by geometry, selects existing text,
+    clears it with native `Backspace`, then types via `Input.insertText(...)`
+  - ChatGPT root rename now targets `input[name="title-editor"]` and uses the
+    native-input + native-enter path
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Remaining gap:
+  - repeated live `auracall rename ... --target chatgpt` repros still did not
+    apply the requested new title end-to-end, even after the native-entry
+    upgrade
+  - this narrows the remaining problem to provider-path orchestration or
+    verification, not the base inline input mechanic itself
+
+## 2026-03-31 — ChatGPT provider root rename now follows the exact live-proven row sequence
+
+- Area: ChatGPT browser rename
+- Symptom:
+  - helper-composed provider renames stayed flaky even after native input and
+    pointer-based menu tweaks, while the direct live manual sequence kept
+    working
+- Root cause:
+  - the root rename path was still depending on the older score/title-based row
+    tagging flow instead of resolving the exact conversation row by id and
+    reproducing the proven interaction path
+- Fix:
+  - added an exact conversation-link row resolver for ChatGPT root rename
+  - replaced the root rename interaction with the direct sequence:
+    - exact row by conversation id
+    - row hover
+    - pointer click on row options
+    - pointer click on `Rename`
+    - wait for edit mode
+    - native text entry
+    - native `Enter`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live DOM after provider rename showed conversation
+    `69cc287c-2f0c-832b-99db-3760fa254e7a` renamed successfully to
+    `AC GPT C najfie provider-7`
+- Remaining issue:
+  - the top-level `auracall rename ... --target chatgpt` invocation still did
+    not return promptly after the rename had already succeeded in the UI
+  - that remaining bug is now post-success command lifecycle/cleanup, not the
+    rename interaction itself
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

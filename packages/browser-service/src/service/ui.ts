@@ -432,7 +432,8 @@ export type SubmitInlineRenameOptions = {
   timeoutMs?: number;
   closeSelector?: string;
   requireEditable?: boolean;
-  submitStrategy?: 'synthetic-enter' | 'native-enter' | 'native-then-synthetic';
+  entryStrategy?: 'setter' | 'native-input';
+  submitStrategy?: 'synthetic-enter' | 'native-enter' | 'native-then-synthetic' | 'blur-body-click';
   closeGraceMs?: number;
 };
 
@@ -3249,6 +3250,7 @@ export async function submitInlineRename(
   const closeGraceMs = options.closeGraceMs ?? Math.min(750, timeoutMs);
   const submitStrategy =
     options.submitStrategy ?? (deps?.Input ? 'native-then-synthetic' : 'synthetic-enter');
+  const entryStrategy = options.entryStrategy ?? 'setter';
   if (options.inputSelector) {
     const ready = await waitForSelector(Runtime, options.inputSelector, timeoutMs);
     if (!ready) return { ok: false, reason: 'Rename input not found' };
@@ -3323,8 +3325,77 @@ export async function submitInlineRename(
     }
   }
 
-  const result = await Runtime.evaluate({
-    expression: `(() => {
+  const resolveInputExpression = `(() => {
+      const selector = ${JSON.stringify(options.inputSelector ?? null)};
+      const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+      const includeAny = ${JSON.stringify(options.inputMatch?.includeAny ?? [])};
+      const includeAll = ${JSON.stringify(options.inputMatch?.includeAll ?? [])};
+      const startsWith = ${JSON.stringify(options.inputMatch?.startsWith ?? [])};
+      const exact = ${JSON.stringify(options.inputMatch?.exact ?? [])};
+      const normalize = (v) => String(v || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const matchesLabel = (label, match) => {
+        if (!label) return false;
+        if (match.exact.length && match.exact.includes(label)) return true;
+        if (match.startsWith.length && match.startsWith.some((token) => label.startsWith(token))) return true;
+        if (match.includeAll.length && match.includeAll.every((token) => label.includes(token))) return true;
+        if (match.includeAny.length && match.includeAny.some((token) => label.includes(token))) return true;
+        return false;
+      };
+      const visible = (el) => {
+        if (!(el instanceof Element)) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const editable = (el) => {
+        if (!(el instanceof Element) || !visible(el)) return false;
+        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+          return !el.disabled && !el.readOnly;
+        }
+        return el.getAttribute('contenteditable') === 'true';
+      };
+      const roots = rootSelectors.length
+        ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+        : [document];
+      const root = roots[0] || document;
+
+      let input = null;
+      if (selector) {
+        input = root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null);
+      } else {
+        const match = { includeAny, includeAll, startsWith, exact };
+        const hasMatch =
+          match.includeAny.length || match.includeAll.length || match.startsWith.length || match.exact.length;
+        const candidates = Array.from(root.querySelectorAll('input, textarea, [contenteditable="true"]')).filter(visible);
+        const active = document.activeElement;
+        const activeValid =
+          active &&
+          (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.getAttribute('contenteditable') === 'true') &&
+          editable(active);
+        if (activeValid) {
+          input = active;
+        } else if (hasMatch) {
+          input = candidates.find((el) => {
+            const label = normalize(el.getAttribute?.('aria-label') || el.getAttribute?.('placeholder') || el.textContent || '');
+            return matchesLabel(label, match);
+          }) || null;
+        } else {
+          input = candidates[0] || null;
+        }
+      }
+      if (!input) return { ok: false, reason: 'Rename input not found' };
+      if (!editable(input)) return { ok: false, reason: 'Rename input not editable' };
+
+      const rect = input.getBoundingClientRect();
+      return {
+        ok: true,
+        rect: { x: rect.x, y: rect.y, width: rect.width, height: rect.height },
+        tag: input.tagName,
+      };
+    })()`;
+
+  const setValueWithSetter = async () =>
+    Runtime.evaluate({
+      expression: `(() => {
       const value = ${JSON.stringify(options.value)};
       const selector = ${JSON.stringify(options.inputSelector ?? null)};
       const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
@@ -3425,10 +3496,89 @@ export async function submitInlineRename(
       }
       return { ok: true, usedSaveButton };
     })()`,
-    returnByValue: true,
-  });
+      returnByValue: true,
+    });
 
-  const info = result.result?.value as { ok: boolean; reason?: string; usedSaveButton?: boolean } | undefined;
+  const setValueWithNativeInput = async () => {
+    if (!deps?.Input) {
+      return { ok: false, reason: 'Native input requested without Input domain' };
+    }
+    const resolved = await Runtime.evaluate({
+      expression: resolveInputExpression,
+      returnByValue: true,
+    });
+    const info = resolved.result?.value as
+      | { ok: true; rect: { x: number; y: number; width: number; height: number }; tag: string }
+      | { ok: false; reason?: string }
+      | undefined;
+    if (!info?.ok) {
+      return { ok: false, reason: info?.reason || 'Rename input not found' };
+    }
+    const x = info.rect.x + Math.min(24, Math.max(8, info.rect.width / 4));
+    const y = info.rect.y + info.rect.height / 2;
+    await deps.Input.dispatchMouseEvent({ type: 'mouseMoved', x, y, button: 'none' });
+    await deps.Input.dispatchMouseEvent({ type: 'mousePressed', x, y, button: 'left', clickCount: 1 });
+    await deps.Input.dispatchMouseEvent({ type: 'mouseReleased', x, y, button: 'left', clickCount: 1 });
+    const selected = await Runtime.evaluate({
+      expression: `(() => {
+        const selector = ${JSON.stringify(options.inputSelector ?? null)};
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+        const roots = rootSelectors.length
+          ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+          : [document];
+        const root = roots[0] || document;
+        const input = selector
+          ? root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null)
+          : document.activeElement;
+        if (!(input instanceof HTMLElement)) {
+          return { ok: false, reason: 'Rename input not found for native typing' };
+        }
+        input.focus();
+        if (input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement) {
+          input.select();
+          return { ok: true };
+        }
+        if (input.getAttribute('contenteditable') === 'true') {
+          const selection = window.getSelection();
+          const range = document.createRange();
+          range.selectNodeContents(input);
+          selection?.removeAllRanges();
+          selection?.addRange(range);
+          return { ok: true };
+        }
+        return { ok: false, reason: 'Rename input not editable for native typing' };
+      })()`,
+      returnByValue: true,
+    });
+    const selectedInfo = selected.result?.value as { ok: boolean; reason?: string } | undefined;
+    if (!selectedInfo?.ok) {
+      return { ok: false, reason: selectedInfo?.reason || 'Rename input not focusable for native typing' };
+    }
+    await deps.Input.dispatchKeyEvent({
+      type: 'rawKeyDown',
+      key: 'Backspace',
+      code: 'Backspace',
+      windowsVirtualKeyCode: 8,
+      nativeVirtualKeyCode: 8,
+    });
+    await deps.Input.dispatchKeyEvent({
+      type: 'keyUp',
+      key: 'Backspace',
+      code: 'Backspace',
+      windowsVirtualKeyCode: 8,
+      nativeVirtualKeyCode: 8,
+    });
+    await deps.Input.insertText({ text: options.value });
+    return { ok: true, usedSaveButton: false };
+  };
+
+  const result =
+    entryStrategy === 'native-input' ? await setValueWithNativeInput() : await setValueWithSetter();
+
+  const info =
+    'result' in result
+      ? (result.result?.value as { ok: boolean; reason?: string; usedSaveButton?: boolean } | undefined)
+      : (result as { ok: boolean; reason?: string; usedSaveButton?: boolean } | undefined);
   if (!info?.ok) {
     return { ok: false, reason: info?.reason || 'Rename submit failed' };
   }
@@ -3494,6 +3644,29 @@ export async function submitInlineRename(
     return true;
   };
 
+  const dispatchBlurBodyClick = async () => {
+    await Runtime.evaluate({
+      expression: `(() => {
+        const selector = ${JSON.stringify(options.inputSelector ?? null)};
+        const rootSelectors = ${JSON.stringify(options.rootSelectors ?? [])};
+        const roots = rootSelectors.length
+          ? rootSelectors.map((sel) => document.querySelector(sel)).filter(Boolean)
+          : [document];
+        const root = roots[0] || document;
+        const input = selector
+          ? root.querySelector(selector) || (root !== document ? document.querySelector(selector) : null)
+          : document.activeElement;
+        if (!(input instanceof HTMLElement)) {
+          return { ok: false, reason: 'Rename input not found for blur submit' };
+        }
+        input.blur();
+        document.body.click();
+        return { ok: true };
+      })()`,
+      returnByValue: true,
+    });
+  };
+
   if (submitStrategy === 'native-enter' || submitStrategy === 'native-then-synthetic') {
     const nativeSent = await dispatchNativeEnter();
     if (nativeSent) {
@@ -3509,6 +3682,10 @@ export async function submitInlineRename(
 
   if (submitStrategy === 'synthetic-enter' || submitStrategy === 'native-then-synthetic') {
     await dispatchSyntheticEnter();
+  }
+
+  if (submitStrategy === 'blur-body-click') {
+    await dispatchBlurBodyClick();
   }
 
   if (options.closeSelector) {

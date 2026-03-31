@@ -17,10 +17,13 @@ import type {
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import {
   armDownloadCapture,
+  collectVisibleMenuInventory,
   collectVisibleOverlayInventory,
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   dismissOverlayRoot,
+  hoverElement,
+  openRevealedRowMenu,
   PressButtonOptions,
   navigateAndSettle,
   openAndSelectMenuItem,
@@ -28,6 +31,7 @@ import {
   openMenu,
   openSurface,
   pressButton,
+  selectMenuItem,
   setInputValue,
   submitInlineRename,
   waitForDownloadCapture,
@@ -1727,7 +1731,6 @@ function buildConversationTitleAppliedExpression(
     requireTopInRootList?: boolean;
   },
 ): string {
-  const requireTopInRootList = Boolean(options?.requireTopInRootList);
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const normalizeDocumentTitle = (value) =>
@@ -1825,27 +1828,9 @@ function buildConversationTitleAppliedExpression(
             return scoped.length > 0 ? scoped : collectAllAnchors();
           })()
         : collectAllAnchors();
-    const hasListSurface = probes.length > 0;
     const matching = probes.find((probe) => probe.id === expectedConversationId && probe.title === expected) || null;
     const route = parseConversationInfo(location.href);
     const top = probes[0] || null;
-    if (!expectedProjectId && ${JSON.stringify(requireTopInRootList)} && top) {
-      if (top.id === expectedConversationId && top.title === expected) {
-        return {
-          matchedConversationId: top.id,
-          matchedProjectId: top.projectId ?? null,
-          matchedTitle: top.title,
-          routeConversationId: route?.id ?? null,
-          routeProjectId: route?.projectId ?? null,
-          documentTitle: document.title,
-          topConversationId: top.id,
-          topTitle: top.title,
-        };
-      }
-      if (hasListSurface) {
-        return null;
-      }
-    }
     if (matching) {
       return {
         matchedConversationId: matching.id,
@@ -4292,52 +4277,418 @@ async function tagChatgptConversationRow(
   throw failure;
 }
 
+async function tagChatgptConversationRowExact(
+  client: ChromeClient,
+  conversationId: string,
+): Promise<{ rowSelector: string; actionSelector: string }> {
+  await ensureChatgptSidebarOpen(client);
+  const deadline = Date.now() + 8_000;
+  while (Date.now() < deadline) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const conversationId = ${JSON.stringify(conversationId)};
+        const rowAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ROW_ATTR)};
+        const actionAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ACTION_ATTR)};
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const isVisible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        for (const node of Array.from(document.querySelectorAll('[' + rowAttr + '], [' + actionAttr + ']'))) {
+          node.removeAttribute(rowAttr);
+          node.removeAttribute(actionAttr);
+        }
+        const anchor = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+          .find((node) => {
+            if (!(node instanceof HTMLAnchorElement)) return false;
+            if (!isVisible(node)) return false;
+            return node.href.includes('/c/' + conversationId);
+          });
+        if (!(anchor instanceof HTMLAnchorElement)) {
+          return { ok: false, reason: 'Exact conversation anchor not found' };
+        }
+        let row = anchor.closest('li') || anchor.parentElement;
+        let button = row ? row.querySelector('button[data-conversation-options-trigger], button[aria-label], button') : null;
+        if (!(button instanceof HTMLButtonElement) || !isVisible(button)) {
+          let current = anchor.parentElement;
+          while (current && current !== document.body) {
+            const candidate = Array.from(current.querySelectorAll('button[data-conversation-options-trigger], button[aria-label], button'))
+              .find((node) => node instanceof HTMLButtonElement && isVisible(node));
+            if (candidate instanceof HTMLButtonElement) {
+              row = current;
+              button = candidate;
+              break;
+            }
+            current = current.parentElement;
+          }
+        }
+        if (!(row instanceof Element) || !(button instanceof HTMLButtonElement) || !isVisible(button)) {
+          return {
+            ok: false,
+            reason: 'Exact conversation row action button not found',
+            diagnostics: {
+              anchorText: normalize(anchor.textContent || ''),
+            },
+          };
+        }
+        row.setAttribute(rowAttr, 'true');
+        button.setAttribute(actionAttr, 'true');
+        return {
+          ok: true,
+          rowSelector: '[' + rowAttr + '="true"]',
+          actionSelector: '[' + actionAttr + '="true"]',
+          diagnostics: {
+            anchorText: normalize(anchor.textContent || ''),
+            buttonLabel: normalize(button.getAttribute('aria-label') || button.textContent || ''),
+          },
+        };
+      })()`,
+      returnByValue: true,
+    });
+    const info = result?.value as
+      | { ok: true; rowSelector: string; actionSelector: string }
+      | { ok: false; reason?: string }
+      | undefined;
+    if (info?.ok) {
+      return {
+        rowSelector: info.rowSelector,
+        actionSelector: info.actionSelector,
+      };
+    }
+    await sleep(300);
+  }
+  throw new Error(`Exact ChatGPT conversation row not found for ${conversationId}`);
+}
+
+async function openChatgptTaggedConversationSidebarMenu(
+  client: ChromeClient,
+  tagged: { rowSelector: string; actionSelector: string },
+  itemLabel: string,
+  timeoutMs = 4_000,
+): Promise<{ ok: boolean; reason?: string; menuSelector?: string; diagnostics?: Record<string, unknown> }> {
+  const collectDiagnostics = async () => {
+    const rowSnapshot = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const isVisible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
+        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
+        return {
+          rowFound: row instanceof Element,
+          rowVisible: isVisible(row),
+          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
+          triggerFound: trigger instanceof Element,
+          triggerVisible: isVisible(trigger),
+          triggerLabel:
+            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
+          activeTag: document.activeElement instanceof Element ? document.activeElement.tagName.toLowerCase() : null,
+          activeAria:
+            document.activeElement instanceof Element
+              ? normalize(document.activeElement.getAttribute('aria-label') || document.activeElement.textContent || '')
+              : null,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    const menus = await collectVisibleMenuInventory(client.Runtime, {
+      anchorSelector: tagged.actionSelector,
+      anchorRootSelectors: [tagged.rowSelector],
+      limit: 6,
+    }).catch(() => []);
+    return {
+      row: rowSnapshot.result?.value ?? null,
+      menus,
+    };
+  };
+
+  const opened = await openRevealedRowMenu(client, {
+    rowSelector: tagged.rowSelector,
+    triggerSelector: tagged.actionSelector,
+    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+    triggerRootSelectors: [tagged.rowSelector],
+    actionMatch: { startsWith: [CHATGPT_CONVERSATION_OPTIONS_PREFIX] },
+    menuSelector: '[role="menu"]',
+    prepareTriggerBeforeOpen: true,
+    directTriggerClickFallback: true,
+    timeoutMs,
+  });
+  if (!opened.ok) {
+    return {
+      ok: false,
+      reason: opened.reason || 'Conversation options menu did not open',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+  const menuSelector = opened.menuSelector || '[role="menu"]';
+  const itemSelected =
+    itemLabel === CHATGPT_CONVERSATION_ACTION_RENAME_LABEL
+      ? (
+          await pressButton(client.Runtime, {
+            match: { exact: [itemLabel] },
+            rootSelectors: [menuSelector],
+            interactionStrategies: ['pointer'],
+            requireVisible: true,
+            timeoutMs,
+          })
+        ).ok
+      : await selectMenuItem(client.Runtime, {
+          menuSelector,
+          menuRootSelectors: [menuSelector],
+          itemMatch: { exact: [itemLabel] },
+          timeoutMs,
+          closeMenuAfter: true,
+        });
+  if (!itemSelected) {
+    return {
+      ok: false,
+      reason: `Menu item ${itemLabel} not found`,
+      menuSelector,
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+  return {
+    ok: true,
+    menuSelector,
+    diagnostics: await collectDiagnostics(),
+  };
+}
+
+async function openChatgptTaggedConversationRenameEditor(
+  client: ChromeClient,
+  tagged: { rowSelector: string; actionSelector: string },
+  timeoutMs = 12_000,
+): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
+  const collectDiagnostics = async () => {
+    const rowSnapshot = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const isVisible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
+        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
+        const editor = document.querySelector('input[name="title-editor"]');
+        return {
+          rowFound: row instanceof Element,
+          rowVisible: isVisible(row),
+          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
+          triggerFound: trigger instanceof Element,
+          triggerVisible: isVisible(trigger),
+          triggerLabel:
+            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
+          editorVisible: editor instanceof HTMLInputElement ? isVisible(editor) : false,
+          editorValue: editor instanceof HTMLInputElement ? editor.value : null,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    const menus = await collectVisibleMenuInventory(client.Runtime, {
+      anchorSelector: tagged.actionSelector,
+      anchorRootSelectors: [tagged.rowSelector],
+      limit: 6,
+    }).catch(() => []);
+    return {
+      row: rowSnapshot.result?.value ?? null,
+      menus,
+    };
+  };
+
+  const hovered = await hoverElement(client.Runtime, client.Input, {
+    selector: tagged.rowSelector,
+    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+    timeoutMs,
+  });
+  if (!hovered.ok) {
+    return {
+      ok: false,
+      reason: hovered.reason || 'Conversation row did not hover',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const triggerPressed = await pressButton(client.Runtime, {
+    selector: tagged.actionSelector,
+    rootSelectors: [tagged.rowSelector],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!triggerPressed.ok) {
+    return {
+      ok: false,
+      reason: triggerPressed.reason || 'Conversation options trigger did not open',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const menuReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
+        .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase())
+        .filter(Boolean);
+      return items.includes('rename') ? { items } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'ChatGPT rename menu visible',
+    },
+  );
+  if (!menuReady.ok) {
+    return {
+      ok: false,
+      reason: 'Rename menu item did not appear',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const renamePressed = await pressButton(client.Runtime, {
+    match: { exact: [CHATGPT_CONVERSATION_ACTION_RENAME_LABEL] },
+    rootSelectors: ['[role="menu"]'],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!renamePressed.ok) {
+    return {
+      ok: false,
+      reason: renamePressed.reason || 'Rename menu item did not click',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  const renameEditorReady = await waitForPredicate(
+    client.Runtime,
+    buildChatgptRenameEditorReadyExpression(),
+    {
+      timeoutMs,
+      description: 'ChatGPT rename editor ready',
+    },
+  );
+  if (!renameEditorReady.ok) {
+    return {
+      ok: false,
+      reason: 'Rename editor did not become ready',
+      diagnostics: await collectDiagnostics(),
+    };
+  }
+
+  return {
+    ok: true,
+    diagnostics: await collectDiagnostics(),
+  };
+}
+
+function buildChatgptRenameEditorReadyExpression(): string {
+  return `(() => {
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const input = document.querySelector('input[name="title-editor"]');
+    if (input instanceof HTMLInputElement && isVisible(input)) {
+      return {
+        mode: 'title-editor',
+        value: input.value,
+        active: document.activeElement === input,
+      };
+    }
+    const active = document.activeElement;
+    if (active instanceof HTMLInputElement && active.type === 'text' && isVisible(active)) {
+      return {
+        mode: 'active-text-input',
+        value: active.value,
+        active: true,
+      };
+    }
+    const selection = window.getSelection();
+    if (selection && !selection.isCollapsed && String(selection).trim().length > 0) {
+      return {
+        mode: 'selected-text',
+        value: String(selection).trim(),
+        active: document.activeElement instanceof Element ? document.activeElement.tagName.toLowerCase() : null,
+      };
+    }
+    return null;
+  })()`;
+}
+
 async function waitForChatgptConversationTitleApplied(
   client: ChromeClient,
   conversationId: string,
   expectedTitle: string,
   projectId?: string | null,
 ): Promise<void> {
+  const collectTitleDiagnostics = async () => {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const links = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+          .slice(0, 12)
+          .map((anchor) => ({
+            href: anchor.href,
+            text: normalize(anchor.textContent || ''),
+            aria: normalize(anchor.getAttribute('aria-label') || ''),
+          }));
+        return {
+          href: location.href,
+          documentTitle: document.title,
+          links,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    return result?.value ?? null;
+  };
+  const titleApplied = async () => {
+    const snapshot = (await collectTitleDiagnostics()) as
+      | { href?: string; documentTitle?: string; links?: Array<{ href?: string; text?: string; aria?: string }> }
+      | null;
+    const normalize = (value: unknown) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+    const expected = normalize(expectedTitle);
+    const routeOk = normalize(snapshot?.href).includes(normalize(conversationId));
+    const linkMatch = Array.isArray(snapshot?.links)
+      ? snapshot!.links.some((link) => {
+          const href = String(link?.href || '');
+          if (!href.includes(`/c/${conversationId}`)) return false;
+          return normalize(link?.text) === expected || normalize(link?.aria) === expected;
+        })
+      : false;
+    const titleMatch =
+      routeOk &&
+      normalize(snapshot?.documentTitle)
+        .replace(/^chatgpt\s*[-:|]\s*/i, '')
+        .replace(/\s*[-:|]\s*chatgpt$/i, '')
+        .trim() === expected;
+    return { ok: linkMatch || titleMatch, snapshot };
+  };
   const shortPause = async () => {
     const min = 800;
     const max = 1_500;
     const ms = min + Math.floor(Math.random() * (max - min + 1));
     await new Promise((resolve) => setTimeout(resolve, ms));
   };
-  const longPause = async () => {
-    const min = 10_000;
-    const max = 15_000;
-    const ms = min + Math.floor(Math.random() * (max - min + 1));
-    await new Promise((resolve) => setTimeout(resolve, ms));
-  };
-  const buildExpectation = () =>
-    buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId, {
-      requireTopInRootList: !projectId,
-    });
-
   await shortPause();
-  let renamed = await waitForPredicate(
-    client.Runtime,
-    buildExpectation(),
-    {
-      timeoutMs: 10_000,
-      description: `ChatGPT conversation ${conversationId} renamed to ${expectedTitle}`,
-    },
-  );
+  let renamed = await titleApplied();
   if (!renamed.ok) {
-    await longPause();
+    await shortPause();
+    await ensureChatgptSidebarOpen(client).catch(() => undefined);
     await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
-    renamed = await waitForPredicate(
-      client.Runtime,
-      buildExpectation(),
-      {
-        timeoutMs: 10_000,
-        description: `ChatGPT conversation ${conversationId} renamed to ${expectedTitle} after list refresh`,
-      },
-    );
+    await ensureChatgptSidebarOpen(client).catch(() => undefined);
+    renamed = await titleApplied();
   }
   if (!renamed.ok) {
-    throw new Error(`ChatGPT conversation rename did not persist for ${conversationId}`);
+    throw new Error(
+      `ChatGPT conversation rename did not persist for ${conversationId} (${JSON.stringify(renamed.snapshot ?? (await collectTitleDiagnostics()))})`,
+    );
   }
 }
 
@@ -4348,7 +4699,21 @@ async function isChatgptConversationTitleAppliedWithClient(
   projectId?: string | null,
 ): Promise<boolean> {
   const { result } = await client.Runtime.evaluate({
-    expression: buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId),
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const expected = normalize(${JSON.stringify(expectedTitle)});
+      const conversationId = ${JSON.stringify(conversationId)};
+      const routeOk = String(location.href || '').includes('/c/' + conversationId);
+      const link = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+        .find((anchor) => String(anchor.href || '').includes('/c/' + conversationId));
+      const linkText = normalize(link?.textContent || '');
+      const linkAria = normalize(link?.getAttribute?.('aria-label') || '');
+      const title = normalize(document.title)
+        .replace(/^chatgpt\\s*[-:|]\\s*/i, '')
+        .replace(/\\s*[-:|]\\s*chatgpt$/i, '')
+        .trim();
+      return Boolean(linkText === expected || linkAria === expected || (routeOk && title === expected));
+    })()`,
     returnByValue: true,
   });
   return Boolean(result?.value);
@@ -4701,7 +5066,6 @@ async function renameChatgptConversationWithClient(
   newTitle: string,
   projectId?: string | null,
 ): Promise<void> {
-  const renameInteractionStrategies = ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const;
   const shortPause = async () => {
     const min = 800;
     const max = 1_500;
@@ -4723,6 +5087,9 @@ async function renameChatgptConversationWithClient(
   const tagFailures: ChatgptConversationRowTagAttemptFailure[] = [];
   const tryTagConversationRow = async (label: string) => {
     try {
+      if (!projectId) {
+        return await tagChatgptConversationRowExact(client, conversationId);
+      }
       return await tagChatgptConversationRow(client, conversationId, projectId);
     } catch (error) {
       tagFailures.push({
@@ -4785,30 +5152,13 @@ async function renameChatgptConversationWithClient(
         throw new Error(summarizeChatgptConversationRowTagFailure(conversationId, tagFailures));
       }
       await shortPause();
-      const renameMenuSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
-        triggers: [
-          {
-            name: 'sidebar-row',
-            trigger: {
-              selector: tagged.actionSelector,
-              rootSelectors: [tagged.rowSelector],
-              interactionStrategies: renameInteractionStrategies,
-              requireVisible: true,
-              timeoutMs: 3_000,
-            },
-            menuSelector: '[role="menu"]',
-            closeMenuAfter: true,
-          },
-        ],
-        itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_RENAME_LABEL] },
-        timeoutMs: 4_000,
-      });
-      if (!renameMenuSelection.ok) {
-        const attemptSummary = renameMenuSelection.attempts
-          .map((attempt) => `${attempt.triggerName}:${attempt.reason || (attempt.menuSelected ? 'selected' : 'failed')}`)
-          .join(', ');
+      const renameEditorOpen = await openChatgptTaggedConversationRenameEditor(
+        client,
+        tagged,
+      );
+      if (!renameEditorOpen.ok) {
         throw new Error(
-          `ChatGPT conversation rename menu did not open for ${conversationId}: ${renameMenuSelection.reason || 'no matching action surface'}${attemptSummary ? ` [${attemptSummary}]` : ''}`,
+          `ChatGPT conversation rename editor did not open for ${conversationId}: ${renameEditorOpen.reason || 'direct rename path failed'} (${JSON.stringify(renameEditorOpen.diagnostics ?? null)})`,
         );
       }
       const submitted = tagged
@@ -4816,29 +5166,63 @@ async function renameChatgptConversationWithClient(
             client.Runtime,
             {
               value: newTitle,
-              inputSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
-              rootSelectors: [tagged.rowSelector],
-              closeSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
+              inputSelector: 'input[name="title-editor"]',
+              closeSelector: 'input[name="title-editor"]',
               timeoutMs: 4_000,
+              entryStrategy: 'native-input',
+              submitStrategy: 'native-enter',
             },
             { Input: client.Input },
           )
         : { ok: false as const, reason: 'Sidebar row unavailable after rename trigger' };
       if (submitted.ok) {
+        await shortPause();
+        if (await isChatgptConversationTitleAppliedWithClient(client, conversationId, newTitle, projectId)) {
+          return;
+        }
+        const nativeRetryEditorOpen = await openChatgptTaggedConversationRenameEditor(
+          client,
+          tagged,
+        );
+        if (nativeRetryEditorOpen.ok) {
+          const nativeRetrySubmitted = await submitInlineRename(
+            client.Runtime,
+            {
+              value: newTitle,
+              inputSelector: 'input[name="title-editor"]',
+              closeSelector: 'input[name="title-editor"]',
+              timeoutMs: 4_000,
+              entryStrategy: 'native-input',
+              submitStrategy: 'native-enter',
+            },
+            { Input: client.Input },
+          );
+          if (nativeRetrySubmitted.ok) {
+            await shortPause();
+            if (await isChatgptConversationTitleAppliedWithClient(client, conversationId, newTitle, projectId)) {
+              return;
+            }
+          }
+        }
         return;
       }
       const submittedFromVisibleRenameInput = await submitInlineRename(
         client.Runtime,
         {
           value: newTitle,
-          inputSelector: 'input[type="text"], textarea',
-          closeSelector: 'input[type="text"], textarea',
+          inputSelector: 'input[name="title-editor"]',
+          closeSelector: 'input[name="title-editor"]',
           timeoutMs: 5_000,
-          submitStrategy: 'native-then-synthetic',
+          entryStrategy: 'native-input',
+          submitStrategy: 'native-enter',
         },
         { Input: client.Input },
       );
       if (submittedFromVisibleRenameInput.ok) {
+        await shortPause();
+        if (await isChatgptConversationTitleAppliedWithClient(client, conversationId, newTitle, projectId)) {
+          return;
+        }
         return;
       }
       if (!submitted.ok) {
@@ -4848,6 +5232,7 @@ async function renameChatgptConversationWithClient(
             `ChatGPT inline rename failed for ${conversationId}`,
         );
       }
+      return;
     },
     {
       label: 'chatgpt-rename-conversation',
@@ -4891,42 +5276,35 @@ async function deleteChatgptConversationWithClient(
   await withUiDiagnostics(
     client.Runtime,
     async () => {
-      const deleteMenuSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
-        triggers: [
-          ...(tagged
-            ? [
-                {
-                  name: 'sidebar-row',
-                  trigger: {
-                    selector: tagged.actionSelector,
-                    rootSelectors: [tagged.rowSelector],
-                    interactionStrategies: deleteInteractionStrategies,
-                    requireVisible: true,
-                    timeoutMs: 3_000,
-                  },
-                  menuSelector: '[role="menu"]',
-                  closeMenuAfter: true,
-                },
-              ]
-            : []),
-          {
-            name: 'conversation-header',
-            beforeAttempt: async () => {
-              await navigateToChatgptConversation(client, conversationId, projectId);
+      let deleteMenuSelection =
+        tagged
+          ? await openChatgptTaggedConversationSidebarMenu(client, tagged, CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)
+          : { ok: false as const, reason: 'Sidebar row unavailable' };
+      if (!deleteMenuSelection.ok) {
+        const headerSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
+          triggers: [
+            {
+              name: 'conversation-header',
+              beforeAttempt: async () => {
+                await navigateToChatgptConversation(client, conversationId, projectId);
+              },
+              trigger: {
+                selector: CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR,
+                interactionStrategies: deleteInteractionStrategies,
+                requireVisible: true,
+                timeoutMs: 3_000,
+              },
+              menuSelector: '[role="menu"]',
+              closeMenuAfter: true,
             },
-            trigger: {
-              selector: CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR,
-              interactionStrategies: deleteInteractionStrategies,
-              requireVisible: true,
-              timeoutMs: 3_000,
-            },
-            menuSelector: '[role="menu"]',
-            closeMenuAfter: true,
-          },
-        ],
-        itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
-        timeoutMs: 4_000,
-      });
+          ],
+          itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
+          timeoutMs: 4_000,
+        });
+        deleteMenuSelection = headerSelection.ok
+          ? { ok: true, menuSelector: headerSelection.menuSelector }
+          : { ok: false, reason: headerSelection.reason || deleteMenuSelection.reason };
+      }
       if (!deleteMenuSelection.ok) {
         throw new Error(
           `ChatGPT conversation delete menu did not open for ${conversationId}: ${deleteMenuSelection.reason || 'no matching action surface'}`,
@@ -5802,6 +6180,10 @@ export function createChatgptAdapter(): Pick<
         resolveChatgptConversationUrl(conversationId, normalizedProjectId),
       );
       try {
+        if (!normalizedProjectId) {
+          await renameChatgptConversationWithClient(client, conversationId, newTitle, normalizedProjectId);
+          return;
+        }
         let lastError: unknown;
         for (let attempt = 0; attempt < 3; attempt += 1) {
           try {

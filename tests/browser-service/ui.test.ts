@@ -1351,4 +1351,53 @@ describe('browser-service ui wait helpers', () => {
       expect.objectContaining({ type: 'keyUp', key: 'Enter' }),
     );
   });
+
+  test('submitInlineRename can use native input typing before native Enter submit', async () => {
+    const runtime = createRuntime([
+      true,
+      { ok: true },
+      { ok: true, rect: { x: 10, y: 20, width: 120, height: 24 }, tag: 'INPUT' },
+      { ok: true },
+      true,
+    ]);
+    const input = {
+      dispatchMouseEvent: vi.fn(async () => undefined),
+      insertText: vi.fn(async () => undefined),
+      dispatchKeyEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await submitInlineRename(
+      runtime as never,
+      {
+        value: 'Renamed conversation',
+        inputSelector: 'input[name="title-editor"]',
+        closeSelector: 'input[name="title-editor"]',
+        timeoutMs: 50,
+        entryStrategy: 'native-input',
+        submitStrategy: 'native-enter',
+      },
+      { Input: input as never },
+    );
+
+    expect(result).toEqual({ ok: true });
+    expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(3);
+    expect(input.insertText).toHaveBeenCalledWith({ text: 'Renamed conversation' });
+    expect(input.dispatchKeyEvent).toHaveBeenCalledTimes(4);
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ type: 'rawKeyDown', key: 'Backspace' }),
+    );
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ type: 'keyUp', key: 'Backspace' }),
+    );
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      3,
+      expect.objectContaining({ type: 'keyDown', key: 'Enter' }),
+    );
+    expect(input.dispatchKeyEvent).toHaveBeenNthCalledWith(
+      4,
+      expect.objectContaining({ type: 'keyUp', key: 'Enter' }),
+    );
+  });
 });

@@ -256,6 +256,16 @@ Current active extraction plan:
 - `submitInlineRename(Runtime, options)`
   - Sets inline rename input value, submits via Enter, optionally clicks Save, and can wait for close.
   - When no selector/match is provided, it prefers the active element and falls back to the first visible input.
+  - Live lesson from Grok and ChatGPT rename surfaces: do not treat "editor closed" as proof that the rename persisted.
+  - For row-local rename flows, the more reliable sequence is:
+    - hover the row first so hidden `...`/Options controls are actually rendered,
+    - open the row menu from that revealed trigger,
+    - wait for the authoritative rename input selector on that surface,
+    - focus the real input by geometry if needed,
+    - type natively,
+    - commit with one native `Enter`,
+    - verify the row title text changed after submit.
+  - Blur/click-away can be a fallback probe, but should not be the primary success path on surfaces where focus loss cancels or silently drops the rename.
 
 - `queryRowsByText(Runtime, options)`
   - Locates rows by visible text in a scoped root. Useful for lists that reorder or virtualize.
