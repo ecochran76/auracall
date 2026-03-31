@@ -23,6 +23,7 @@ export interface ServiceRouteRegistry {
   compatibleHosts?: string[];
   cookieOrigins?: string[];
   project?: string;
+  projectConversations?: string;
   projectSources?: string;
   conversation?: string;
   projectConversation?: string;

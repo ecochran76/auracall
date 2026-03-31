@@ -78,6 +78,11 @@ const GROK_PROJECT_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
   'project',
   'https://grok.com/project/{projectId}',
 );
+const GROK_PROJECT_CONVERSATIONS_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'grok',
+  'projectConversations',
+  'https://grok.com/project/{projectId}?tab=conversations',
+);
 const GROK_PROJECT_SOURCES_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
   'grok',
   'projectSources',
@@ -175,6 +180,10 @@ function interpolateGrokRoute(template: string, params: Record<string, string>):
 
 export function resolveGrokProjectUrl(projectId: string): string {
   return interpolateGrokRoute(GROK_PROJECT_URL_TEMPLATE, { projectId });
+}
+
+export function resolveGrokProjectConversationsUrl(projectId: string): string {
+  return interpolateGrokRoute(GROK_PROJECT_CONVERSATIONS_URL_TEMPLATE, { projectId });
 }
 
 export function resolveGrokProjectSourcesUrl(projectId: string): string {
@@ -514,10 +523,7 @@ export function createGrokAdapter(): Pick<
       files: true,
     },
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
-      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(
-        options,
-        'https://grok.com/project',
-      );
+      const { client, targetId, shouldClose, host, port } = await connectToGrokTab(options, GROK_PROJECTS_INDEX_URL);
       try {
         const debug = process.env.AURACALL_DEBUG_GROK === '1';
         const waitForProjectLinks = async (timeoutMs: number): Promise<void> => {
@@ -591,7 +597,7 @@ export function createGrokAdapter(): Pick<
             linkCount?: number | null;
           };
         };
-        await navigateToProject(client, 'https://grok.com/project');
+        await navigateToProject(client, GROK_PROJECTS_INDEX_URL);
         await waitForProjectLinks(10_000);
         if (debug) {
           const { result } = await client.Runtime.evaluate({
@@ -614,7 +620,7 @@ export function createGrokAdapter(): Pick<
           });
         }
         if (raw.items.length === 0) {
-          await navigateToProject(client, 'https://grok.com/');
+          await navigateToProject(client, GROK_HOME_URL);
           await waitForProjectLinks(10_000);
           if (debug) {
             const { result } = await client.Runtime.evaluate({
@@ -657,7 +663,7 @@ export function createGrokAdapter(): Pick<
     },
     async listConversations(projectId?: string, options?: BrowserProviderListOptions): Promise<Conversation[]> {
       const resolvedProjectId = projectId?.trim() || undefined;
-      const projectUrl = resolvedProjectId ? `https://grok.com/project/${resolvedProjectId}` : undefined;
+      const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
       const connection = projectUrl
         ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
         : await connectToGrokTab(options, projectUrl);
@@ -699,15 +705,15 @@ export function createGrokAdapter(): Pick<
         if (includeHistory) {
           if (options?.configuredUrl?.includes('/project/')) {
             const historyConnection = await connectToGrokTab(
-              { ...options, configuredUrl: 'https://grok.com/' },
-              'https://grok.com/',
+              { ...options, configuredUrl: GROK_HOME_URL },
+              GROK_HOME_URL,
             );
             try {
-              await navigateToProject(historyConnection.client, 'https://grok.com/');
+              await navigateToProject(historyConnection.client, GROK_HOME_URL);
               history = await listHistoryConversations(
                 historyConnection.client,
                 resolvedProjectId,
-                { ...options, configuredUrl: 'https://grok.com/' },
+                { ...options, configuredUrl: GROK_HOME_URL },
               );
             } finally {
               await historyConnection.client.close();
@@ -946,9 +952,7 @@ export function createGrokAdapter(): Pick<
       options?: BrowserProviderListOptions,
     ): Promise<void> {
       const resolvedProjectId = projectId?.trim() || undefined;
-      const projectUrl = resolvedProjectId
-        ? `https://grok.com/project/${resolvedProjectId}`
-        : undefined;
+      const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
       const connection = projectUrl
         ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
         : await connectToGrokTab(options, GROK_HOME_URL);
@@ -998,9 +1002,7 @@ export function createGrokAdapter(): Pick<
       options?: BrowserProviderListOptions,
     ): Promise<void> {
       const resolvedProjectId = projectId?.trim() || undefined;
-      const projectUrl = resolvedProjectId
-        ? `https://grok.com/project/${resolvedProjectId}`
-        : undefined;
+      const projectUrl = resolvedProjectId ? resolveGrokProjectUrl(resolvedProjectId) : undefined;
       const connection = projectUrl
         ? await connectToGrokProjectTab(options, resolvedProjectId ?? null, projectUrl)
         : await connectToGrokTab(options, GROK_HOME_URL);
@@ -1049,7 +1051,7 @@ export function createGrokAdapter(): Pick<
       newTitle: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const projectUrl = `https://grok.com/project/${projectId}`;
+      const projectUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1096,7 +1098,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<Project | null> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       let created: Project | null = null;
@@ -1175,7 +1177,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1196,7 +1198,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1220,7 +1222,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1245,7 +1247,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1275,7 +1277,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1340,7 +1342,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokTab(options);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1367,9 +1369,7 @@ export function createGrokAdapter(): Pick<
       projectId?: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const targetUrl = projectId
-        ? `https://grok.com/project/${projectId}?chat=${conversationId}`
-        : `https://grok.com/c/${conversationId}`;
+      const targetUrl = resolveGrokConversationUrl(conversationId, projectId);
       const connection = await connectToGrokTab(options);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -1978,7 +1978,7 @@ export function createGrokAdapter(): Pick<
       options?: BrowserProviderListOptions,
     ): Promise<void> {
       if (filePaths.length === 0) return;
-      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const projectUrl = resolveGrokProjectSourcesUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -2035,7 +2035,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<FileRef[]> {
-      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const projectUrl = resolveGrokProjectSourcesUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -2088,7 +2088,7 @@ export function createGrokAdapter(): Pick<
       fileName: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const projectUrl = `https://grok.com/project/${projectId}?tab=sources`;
+      const projectUrl = resolveGrokProjectSourcesUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, projectUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -2141,7 +2141,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async toggleProjectSidebar(options?: BrowserProviderListOptions): Promise<void> {
-      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const connection = await connectToGrokTab(options, GROK_HOME_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await clickProjectSidebarToggle(client, { logPrefix: 'browser-toggle-project-sidebar' });
@@ -2154,7 +2154,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async toggleMainSidebar(options?: BrowserProviderListOptions): Promise<void> {
-      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const connection = await connectToGrokTab(options, GROK_HOME_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await clickMainSidebarToggle(client, { logPrefix: 'browser-toggle-main-sidebar' });
@@ -2167,7 +2167,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async clickHistoryItem(options?: BrowserProviderListOptions): Promise<void> {
-      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const connection = await connectToGrokTab(options, GROK_HOME_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await clickHistoryMenuItem(client, { logPrefix: 'browser-history-item' });
@@ -2180,7 +2180,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async clickHistorySeeAll(options?: BrowserProviderListOptions): Promise<void> {
-      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const connection = await connectToGrokTab(options, GROK_HOME_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await clickHistorySeeAll(client, { logPrefix: 'browser-history-see-all' });
@@ -2193,7 +2193,7 @@ export function createGrokAdapter(): Pick<
     },
 
     async clickChatArea(options?: BrowserProviderListOptions): Promise<void> {
-      const connection = await connectToGrokTab(options, 'https://grok.com/');
+      const connection = await connectToGrokTab(options, GROK_HOME_URL);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
         await clickChatArea(client, { logPrefix: 'browser-chat-area' });
@@ -2211,7 +2211,7 @@ export function createGrokAdapter(): Pick<
       options?: BrowserProviderListOptions,
       modelLabel?: string,
     ): Promise<void> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -2294,7 +2294,7 @@ export function createGrokAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<{ text: string; model?: string | null }> {
-      const targetUrl = `https://grok.com/project/${projectId}`;
+      const targetUrl = resolveGrokProjectUrl(projectId);
       const connection = await connectToGrokProjectTab(options, projectId, targetUrl);
       const { client, targetId, shouldClose, host, port } = connection;
       try {
@@ -2322,9 +2322,7 @@ export function createGrokAdapter(): Pick<
       options?: BrowserProviderListOptions,
     ): Promise<ConversationContext> {
       const cleanProjectId = typeof projectId === 'string' && projectId.trim().length > 0 ? projectId.trim() : undefined;
-      const targetUrl = cleanProjectId
-        ? `https://grok.com/project/${cleanProjectId}?chat=${conversationId}`
-        : `https://grok.com/c/${conversationId}`;
+      const targetUrl = resolveGrokConversationUrl(conversationId, cleanProjectId);
       const connection = cleanProjectId
         ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
         : await connectToGrokTab(options, targetUrl);
@@ -2573,9 +2571,7 @@ export function createGrokAdapter(): Pick<
     ): Promise<FileRef[]> {
       const cleanProjectId =
         typeof options?.projectId === 'string' && options.projectId.trim().length > 0 ? options.projectId.trim() : undefined;
-      const targetUrl = cleanProjectId
-        ? `https://grok.com/project/${cleanProjectId}?chat=${conversationId}`
-        : `https://grok.com/c/${conversationId}`;
+      const targetUrl = resolveGrokConversationUrl(conversationId, cleanProjectId);
       const connection = cleanProjectId
         ? await connectToGrokProjectTab(options, cleanProjectId, targetUrl)
         : await connectToGrokTab(options, targetUrl);
@@ -2649,7 +2645,7 @@ async function connectToGrokTab(
         }) => Promise<{ host?: string; port?: number; tab?: { targetId?: string; id?: string } | null }>;
       })
     | undefined;
-  const preferredUrl = urlOverride ?? options?.configuredUrl ?? 'https://grok.com/';
+  const preferredUrl = urlOverride ?? options?.configuredUrl ?? GROK_HOME_URL;
   let resolvedTargetIdFromService: string | undefined;
   if (serviceResolver?.resolveServiceTarget) {
     const target = await serviceResolver.resolveServiceTarget({
@@ -2826,7 +2822,7 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
   }
   let revealed = await tryRevealCreateButton();
   if (!revealed.ok) {
-    await client.Page.navigate({ url: 'https://grok.com/' });
+    await client.Page.navigate({ url: GROK_HOME_URL });
     await waitForDocumentReady(client, 15_000);
     await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
     await closeHistoryDialog(client);
@@ -4296,7 +4292,7 @@ async function recoverCreatedProjectUrlByName(
       return match.url;
     }
     if (match?.id) {
-      return `https://grok.com/project/${match.id}?tab=conversations`;
+      return resolveGrokProjectConversationsUrl(match.id);
     }
   }
   return null;
@@ -6064,7 +6060,7 @@ async function ensureProjectPage(client: ChromeClient, projectId?: string): Prom
     }
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  const fallbackUrl = `https://grok.com/project/${projectId}?tab=conversations`;
+  const fallbackUrl = resolveGrokProjectConversationsUrl(projectId);
   await client.Page.navigate({ url: fallbackUrl });
   const secondaryDeadline = Date.now() + 10_000;
   while (Date.now() < secondaryDeadline) {
@@ -6100,7 +6096,7 @@ async function openConversationList(client: ChromeClient, projectId?: string): P
   });
   let ready = await waitForProjectConversationList(client.Runtime);
   if (!ready.ok && projectId) {
-    await navigateToProject(client, `https://grok.com/project/${projectId}?tab=conversations`);
+    await navigateToProject(client, resolveGrokProjectConversationsUrl(projectId));
     ready = await waitForProjectConversationList(client.Runtime);
   }
   if (!ready.ok) {
@@ -6777,7 +6773,7 @@ async function listHistoryConversations(
 ): Promise<Conversation[]> {
   let opened = await openHistoryDialog(client);
   if (!opened) {
-    const fallbackUrl = options?.configuredUrl?.includes('/project/') ? 'https://grok.com/' : undefined;
+    const fallbackUrl = options?.configuredUrl?.includes('/project/') ? GROK_HOME_URL : undefined;
     if (fallbackUrl) {
       await navigateToProject(client, fallbackUrl);
     }

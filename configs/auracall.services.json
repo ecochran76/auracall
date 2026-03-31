@@ -489,6 +489,7 @@
         "baseUrl": "https://grok.com/",
         "projectIndex": "https://grok.com/project",
         "project": "https://grok.com/project/{projectId}",
+        "projectConversations": "https://grok.com/project/{projectId}?tab=conversations",
         "projectSources": "https://grok.com/project/{projectId}?tab=sources",
         "conversation": "https://grok.com/c/{conversationId}",
         "projectConversation": "https://grok.com/project/{projectId}?chat={conversationId}",

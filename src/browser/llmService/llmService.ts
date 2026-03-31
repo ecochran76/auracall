@@ -38,6 +38,7 @@ import {
   resolveProviderCachePath,
 } from '../providers/cache.js';
 import type { BrowserService } from '../service/browserService.js';
+import { CHATGPT_URL, GROK_URL } from '../constants.js';
 import type {
   CacheContext,
   CacheIdentity,
@@ -316,7 +317,7 @@ export abstract class LlmService {
       ? overrides.configuredUrl ?? null
       : this.getConfiguredUrl();
     const launchUrl =
-      configuredUrl ?? (this.providerId === 'grok' ? 'https://grok.com/' : 'https://chatgpt.com/');
+      configuredUrl ?? (this.providerId === 'grok' ? GROK_URL : CHATGPT_URL);
     const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
     const target = overrides.tabTargetId || hasExplicitEndpoint
       ? null

@@ -21,6 +21,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: Grok manifest-backed route helper adoption
+- Symptom:
+  - Even after Grok/Gemini base route data was added to the services manifest, Grok still had many repeated route strings in provider/listing/navigation helpers and fallback launch paths.
+- Root cause:
+  - The first Grok route-manifest slice only covered central defaults and top-level provider URL builders; several adapter and browser-runtime call sites were still assembling the same routes inline.
+- Fix:
+  - Added manifest-backed `projectConversations` for Grok and reused Grok route helpers/constants across [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts), and [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts).
+  - Kept the slice mechanical: only declarative route assembly was changed, not scrape/recovery behavior.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/services/registry.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - The remaining Grok URL literals should only move if they are still pure route construction. Anything mixed with UI workflow/recovery belongs in the later behavior-aware phase.
+
+- Date: 2026-03-31
 - Area: Browser-service typed config boundary and manifest-backed Grok/Gemini routes
 - Symptom:
   - `pnpm run check` failed in `tests/browser/browserService.test.ts` because `service.getConfig()` was typed as the package-level browser-service config and did not expose Aura-Call's LLM-specific fields like `target`.

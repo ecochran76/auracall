@@ -56,6 +56,7 @@ import { ensureThinkingTimeIfAvailable } from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
+import { resolveGrokConversationUrl, resolveGrokProjectUrl } from './providers/grokAdapter.js';
 import { resolveCompatibleHostsForUrl } from './urlFamilies.js';
 import type { LaunchedChrome } from 'chrome-launcher';
 import { BrowserAutomationError } from '../oracle/errors.js';
@@ -1917,10 +1918,9 @@ async function runRemoteGrokBrowserMode(
   try {
     let grokTargetUrl = config.grokUrl ?? config.url;
     if (config.projectId) {
-      grokTargetUrl = `https://grok.com/project/${config.projectId}`;
-      if (config.conversationId) {
-        grokTargetUrl += `?chat=${config.conversationId}`;
-      }
+      grokTargetUrl = config.conversationId
+        ? resolveGrokConversationUrl(config.conversationId, config.projectId)
+        : resolveGrokProjectUrl(config.projectId);
     }
     const connection = await connectToRemoteChrome(host, port, logger, grokTargetUrl, {
       compatibleHosts: resolveCompatibleHostsForUrl(grokTargetUrl),
@@ -2488,10 +2488,9 @@ async function runGrokBrowserMode({
 
     let grokTargetUrl = config.grokUrl ?? config.url;
     if (config.projectId) {
-      grokTargetUrl = `https://grok.com/project/${config.projectId}`;
-      if (config.conversationId) {
-        grokTargetUrl += `?chat=${config.conversationId}`;
-      }
+      grokTargetUrl = config.conversationId
+        ? resolveGrokConversationUrl(config.conversationId, config.projectId)
+        : resolveGrokProjectUrl(config.projectId);
     }
     await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
     await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));

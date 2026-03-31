@@ -135,6 +135,13 @@ describe('service registry manifest helpers', () => {
     expect(
       resolveBundledServiceRouteTemplate(
         'grok',
+        'projectConversations',
+        'https://fallback.example/project/{projectId}?tab=conversations',
+      ),
+    ).toBe('https://grok.com/project/{projectId}?tab=conversations');
+    expect(
+      resolveBundledServiceRouteTemplate(
+        'grok',
         'projectConversation',
         'https://fallback.example/project/{projectId}?chat={conversationId}',
       ),

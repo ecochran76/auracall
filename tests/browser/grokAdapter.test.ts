@@ -13,6 +13,7 @@ import {
   parseGrokPersonalFilesRowTexts,
   parseGrokWorkspaceCreateError,
   resolveGrokConversationUrl,
+  resolveGrokProjectConversationsUrl,
   resolveGrokProjectSourcesUrl,
   resolveGrokProjectUrl,
 } from '../../src/browser/providers/grokAdapter.js';
@@ -46,6 +47,7 @@ describe('extractGrokProjectIdFromUrl', () => {
 describe('grok route helpers', () => {
   test('builds project and sources URLs from manifest-backed templates', () => {
     expect(resolveGrokProjectUrl('abc123')).toBe('https://grok.com/project/abc123');
+    expect(resolveGrokProjectConversationsUrl('abc123')).toBe('https://grok.com/project/abc123?tab=conversations');
     expect(resolveGrokProjectSourcesUrl('abc123')).toBe('https://grok.com/project/abc123?tab=sources');
   });
 
