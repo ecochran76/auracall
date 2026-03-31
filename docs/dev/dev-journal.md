@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Unblock repeated `chatgpt-acceptance.ts` command-timeout failures during guarded root-base reruns.
+- Progress: Hardened `scripts/chatgpt-acceptance.ts` with a configurable `--command-timeout-ms` used for all auracall/probe invocations and made mutation commands respect that timeout when it is larger than the prior 6-minute default. Updated help text accordingly.
+- Issues: Live `--phase root-base --resume ...` reruns still intermittently timeout in this environment even after timeout tuning, so full live completion still needs a stable window; one in-progress root-base run was manually terminated after prolonged `rename` wait.
+- Next: Re-run guarded root-base in a calmer rate-limit window, then proceed directly to `root-followups` and `cleanup` slices from the same state file.
+
+- Date: 2026-03-31
 - Focus: Establish a consolidated execution plan and align docs for the remaining work.
 - Progress: Created `docs/dev/next-execution-plan.md` as a prioritized, slice-based plan and linked it into `ROADMAP.md` as the active execution board for service-volatility completion, profile-family hardening, and final reliability polish.
 - Issues: Several earlier edits are uncommitted across implementation and planning docs, and live work remains constrained by account rate-limit windows and open-browser session hygiene; these constraints are now part of the execution plan, not blockers to documentation organization.

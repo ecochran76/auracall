@@ -21,6 +21,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: ChatGPT acceptance runner harness timeout configuration
+- Symptom:
+  - `scripts/chatgpt-acceptance.ts --phase root-base` frequently failed with `spawnSync pnpm ETIMEDOUT`, even after command routing and rename logic updates had passed prior regressions.
+- Root cause:
+  - Non-mutating auracall/probe calls and long-running mutate commands were hard-pinned to fixed 120s/6m process-timeout behavior, which is too short for some real ChatGPT windows under active rate-limit pacing.
+- Fix:
+  - Added `commandTimeoutMs` to CLI args (`--command-timeout-ms`) and defaulted it to 180000ms.
+  - Wired `runAuracall`, `probeAuracall`, and `runChatgptMutation` to use the configured timeout instead of hardcoded values.
+  - Kept the rest of the mutation/backoff logic intact.
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts`
+- Follow-ups:
+  - Re-run `scripts/chatgpt-acceptance.ts --phase root-base` with a longer `--command-timeout-ms` during a cooler rate-limit window and verify completion through `root-followups`.
+
+- Date: 2026-03-31
 - Area: ChatGPT project sources readiness and upload open gate
 - Symptom:
   - `auracall ... projects files add <project> --target chatgpt` failed at `chatgpt-open-project-sources` with:

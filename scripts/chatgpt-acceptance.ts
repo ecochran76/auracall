@@ -55,6 +55,7 @@ type Args = {
   model: string;
   thinkingTime: string;
   phase: AcceptancePhase;
+  commandTimeoutMs: number;
   projectId?: string;
   conversationId?: string;
   stateFile?: string;
@@ -93,6 +94,7 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const DEFAULT_MODEL = 'gpt-5.2-thinking';
 const DEFAULT_THINKING_TIME = 'standard';
 const DEFAULT_CHATGPT_MUTATION_TIMEOUT_MS = 6 * 60_000;
+const DEFAULT_CHATGPT_COMMAND_TIMEOUT_MS = 180_000;
 const MAX_CHATGPT_ACCEPTANCE_RETRY_WAIT_MS = 60_000;
 
 function parseArgs(argv: string[]): Args {
@@ -100,6 +102,7 @@ function parseArgs(argv: string[]): Args {
     json: false,
     model: DEFAULT_MODEL,
     thinkingTime: DEFAULT_THINKING_TIME,
+    commandTimeoutMs: DEFAULT_CHATGPT_COMMAND_TIMEOUT_MS,
     phase: 'full',
   };
   for (let index = 0; index < argv.length; index += 1) {
@@ -147,6 +150,15 @@ function parseArgs(argv: string[]): Args {
       index += 1;
       continue;
     }
+    if (token === '--command-timeout-ms' && argv[index + 1]) {
+      const timeoutMs = Number.parseInt(argv[index + 1].trim(), 10);
+      if (!Number.isFinite(timeoutMs) || timeoutMs <= 0) {
+        throw new Error(`Invalid --command-timeout-ms value: ${argv[index + 1]}`);
+      }
+      args.commandTimeoutMs = timeoutMs;
+      index += 1;
+      continue;
+    }
     if (token === '--resume' && argv[index + 1]) {
       args.resumeFile = argv[index + 1].trim();
       index += 1;
@@ -175,6 +187,7 @@ Options:
   --conversation-id <id>  Existing root conversation id for root-followups or cleanup phases
   --state-file <path>     Write phase summary JSON to this path after progress/success/failure
   --resume <path>         Read a prior phase summary JSON and reuse its ids by default
+  --command-timeout-ms     Timeout in ms for auracall and probe commands (default: ${DEFAULT_CHATGPT_COMMAND_TIMEOUT_MS})
   --json                  Print the final summary as JSON
   --help                  Show this message
 `);
@@ -217,7 +230,7 @@ function runAuracall(args: Args, extra: string[], options: RunOptions = {}): Run
   const result = spawnSync('pnpm', cliArgs, {
     cwd: ROOT,
     encoding: 'utf8',
-    timeout: options.timeoutMs ?? 120_000,
+    timeout: options.timeoutMs ?? args.commandTimeoutMs,
     maxBuffer: 20 * 1024 * 1024,
     env: {
       ...process.env,
@@ -427,7 +440,10 @@ async function runAuracallWithChatgptRateLimitRetry(
 async function runChatgptMutation(args: Args, extra: string[], options: RunOptions = {}): Promise<RunResult> {
   return runAuracallWithChatgptRateLimitRetry(args, extra, {
     ...options,
-    timeoutMs: Math.max(options.timeoutMs ?? 0, DEFAULT_CHATGPT_MUTATION_TIMEOUT_MS),
+    timeoutMs: Math.max(
+      options.timeoutMs ?? 0,
+      Math.max(DEFAULT_CHATGPT_MUTATION_TIMEOUT_MS, args.commandTimeoutMs),
+    ),
   });
 }
 
@@ -436,7 +452,7 @@ function probeAuracall(args: Args, extra: string[]): RunResult | null {
   const result = spawnSync('pnpm', cliArgs, {
     cwd: ROOT,
     encoding: 'utf8',
-    timeout: 120_000,
+    timeout: args.commandTimeoutMs,
     maxBuffer: 20 * 1024 * 1024,
     env: {
       ...process.env,
