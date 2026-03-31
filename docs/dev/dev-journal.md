@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Restore repo-wide green checks and continue low-risk manifest extraction outside ChatGPT live flows.
+- Progress: Fixed the `ResolvedBrowserConfig.target` typing mismatch by overriding `getConfig()` in [src/browser/service/browserService.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/browserService.ts), which cleared the repo-wide `pnpm run check` blocker. Then extended `configs/auracall.services.json` with Grok and Gemini route templates/cookie origins, cut central consumers over in [src/browser/constants.ts](/home/ecochran76/workspace.local/oracle/src/browser/constants.ts), [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts), [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts), [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), and [src/browser/providers/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/index.ts), and added focused coverage in [tests/services/registry.test.ts](/home/ecochran76/workspace.local/oracle/tests/services/registry.test.ts) and [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokAdapter.test.ts). Focused Vitest suites and `pnpm run check` now pass.
+- Issues: Live ChatGPT `root-base` acceptance still remains a separate timing/rate-limit problem; this slice deliberately avoided spending more writes there.
+- Next: Keep manifest extraction on low-risk declarative surfaces only, then return to a single guarded ChatGPT live acceptance window once the remaining non-live slice is exhausted.
+
+- Date: 2026-03-31
 - Focus: Unblock repeated `chatgpt-acceptance.ts` command-timeout failures during guarded root-base reruns.
 - Progress: Hardened `scripts/chatgpt-acceptance.ts` with a configurable `--command-timeout-ms` used for all auracall/probe invocations and made mutation commands respect that timeout when it is larger than the prior 6-minute default. Updated help text accordingly.
 - Issues: Live `--phase root-base --resume ...` reruns still intermittently timeout in this environment even after timeout tuning, so full live completion still needs a stable window; one in-progress root-base run was manually terminated after prolonged `rename` wait.

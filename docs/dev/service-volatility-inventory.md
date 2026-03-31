@@ -60,6 +60,12 @@ Code ownership retained:
 - target matching strategy
 - navigation/recovery order
 
+Current status:
+- ChatGPT compatible hosts/base URL/cookie origins and route templates are already manifest-backed.
+- Gemini base/app URL plus cookie origins are now manifest-backed for central login/default-config consumers.
+- Grok base/project/files/conversation route templates are now manifest-backed for central provider URL builders and selected adapter helpers.
+- Remaining route drift is deeper provider-local workflow usage, especially inside `src/browser/providers/grokAdapter.ts`, and should continue in bounded follow-on slices.
+
 ## Service Inventory
 
 ## ChatGPT

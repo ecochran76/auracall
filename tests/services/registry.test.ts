@@ -81,6 +81,15 @@ describe('service registry manifest helpers', () => {
       conversation: 'https://chatgpt.com/c/{conversationId}',
       projectConversation: 'https://chatgpt.com/g/{projectId}/c/{conversationId}',
     });
+    expect(registry.services.gemini?.routes).toMatchObject({
+      baseUrl: 'https://gemini.google.com/',
+      app: 'https://gemini.google.com/app',
+    });
+    expect(registry.services.grok?.routes).toMatchObject({
+      baseUrl: 'https://grok.com/',
+      project: 'https://grok.com/project/{projectId}',
+      conversation: 'https://grok.com/c/{conversationId}',
+    });
   });
 
   test('resolves chatgpt model aliases through the bundled manifest', () => {
@@ -110,6 +119,26 @@ describe('service registry manifest helpers', () => {
       github: ['github'],
       slack: ['slack'],
     });
+  });
+
+  test('resolves gemini and grok route templates through the bundled manifest', () => {
+    expect(resolveBundledServiceRouteTemplate('gemini', 'app', 'https://fallback.example/app')).toBe(
+      'https://gemini.google.com/app',
+    );
+    expect(resolveBundledServiceCompatibleHosts('gemini', ['fallback.example'])).toEqual(['gemini.google.com']);
+    expect(resolveBundledServiceRouteTemplate('grok', 'projectIndex', 'https://fallback.example/project')).toBe(
+      'https://grok.com/project',
+    );
+    expect(resolveBundledServiceRouteTemplate('grok', 'project', 'https://fallback.example/project/{projectId}')).toBe(
+      'https://grok.com/project/{projectId}',
+    );
+    expect(
+      resolveBundledServiceRouteTemplate(
+        'grok',
+        'projectConversation',
+        'https://fallback.example/project/{projectId}?chat={conversationId}',
+      ),
+    ).toBe('https://grok.com/project/{projectId}?chat={conversationId}');
   });
 
   test('resolves chatgpt composer aliases and known labels through the bundled manifest', () => {

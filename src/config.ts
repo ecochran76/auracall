@@ -4,7 +4,7 @@ import JSON5 from 'json5';
 import { getAuracallHomeDir } from './auracallHome.js';
 import type { OracleConfig } from './schema/types.js';
 import type { ResolvedUserConfig } from './config/schema.js';
-import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
+import { CHATGPT_URL, GEMINI_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 import { DEFAULT_MODEL } from './oracle.js';
 
@@ -161,7 +161,7 @@ export async function scaffoldDefaultConfigFile(options: {
     browser: {},
     services: {
       chatgpt: { url: CHATGPT_URL },
-      gemini: { url: 'https://gemini.google.com/app' },
+      gemini: { url: GEMINI_URL },
       grok: { url: GROK_URL },
     },
     auracallProfile: 'default',

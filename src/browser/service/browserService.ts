@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
+import type { ResolvedBrowserConfig } from '../types.js';
 import {
   resolveManagedProfileDirForUserConfig,
   type BrowserProfileTarget,
@@ -67,6 +68,10 @@ export class BrowserService extends BrowserServiceCore {
     target: BrowserProfileTarget = 'chatgpt',
   ): BrowserService {
     return new BrowserService(userConfig, target);
+  }
+
+  override getConfig(): ResolvedBrowserConfig {
+    return super.getConfig() as ResolvedBrowserConfig;
   }
 
   async resolveServiceTarget(

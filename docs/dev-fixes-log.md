@@ -21,6 +21,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: Browser-service typed config boundary and manifest-backed Grok/Gemini routes
+- Symptom:
+  - `pnpm run check` failed in `tests/browser/browserService.test.ts` because `service.getConfig()` was typed as the package-level browser-service config and did not expose Aura-Call's LLM-specific fields like `target`.
+  - Grok and Gemini still had duplicated browser route strings outside the manifest boundary, especially in login/default-config and provider URL builders.
+- Root cause:
+  - The Aura-Call subclass of `BrowserService` inherited the base package `getConfig()` type without re-exposing the richer local `ResolvedBrowserConfig`.
+  - The service manifest carried base URLs for Grok/Gemini, but not the central route templates used by Grok provider URL builders and Gemini login/default config.
+- Fix:
+  - Overrode `getConfig()` in [src/browser/service/browserService.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/browserService.ts) to return Aura-Call's local `ResolvedBrowserConfig`.
+  - Added manifest-owned Gemini/Grok route templates and Gemini cookie origins in [configs/auracall.services.json](/home/ecochran76/workspace.local/oracle/configs/auracall.services.json).
+  - Cut central callers over to manifest-backed routes in [src/browser/constants.ts](/home/ecochran76/workspace.local/oracle/src/browser/constants.ts), [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts), [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts), [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), and [src/browser/providers/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/index.ts).
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/grokAdapter.test.ts tests/browser/browserService.test.ts tests/browser/config.test.ts tests/schema/resolver.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - The remaining Grok hardcoded routes inside deeper adapter workflows should move only in similarly bounded declarative slices, not mixed with workflow behavior changes.
+
+- Date: 2026-03-31
 - Area: ChatGPT acceptance runner harness timeout configuration
 - Symptom:
   - `scripts/chatgpt-acceptance.ts --phase root-base` frequently failed with `spawnSync pnpm ETIMEDOUT`, even after command routing and rename logic updates had passed prior regressions.

@@ -446,8 +446,14 @@
       ],
       "routes": {
         "baseUrl": "https://gemini.google.com/",
+        "app": "https://gemini.google.com/app",
         "compatibleHosts": [
           "gemini.google.com"
+        ],
+        "cookieOrigins": [
+          "https://gemini.google.com",
+          "https://accounts.google.com",
+          "https://www.google.com"
         ]
       }
     },
@@ -481,6 +487,12 @@
       ],
       "routes": {
         "baseUrl": "https://grok.com/",
+        "projectIndex": "https://grok.com/project",
+        "project": "https://grok.com/project/{projectId}",
+        "projectSources": "https://grok.com/project/{projectId}?tab=sources",
+        "conversation": "https://grok.com/c/{conversationId}",
+        "projectConversation": "https://grok.com/project/{projectId}?chat={conversationId}",
+        "files": "https://grok.com/files",
         "compatibleHosts": [
           "grok.com"
         ]

@@ -8,7 +8,12 @@ import {
   resolveChatgptProjectUrl,
 } from './chatgptAdapter.js';
 import { GROK_PROVIDER } from './grok.js';
-import { createGrokAdapter, extractGrokProjectIdFromUrl } from './grokAdapter.js';
+import {
+  createGrokAdapter,
+  extractGrokProjectIdFromUrl,
+  resolveGrokConversationUrl,
+  resolveGrokProjectUrl,
+} from './grokAdapter.js';
 import type { BrowserProvider } from './types.js';
 
 export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
@@ -26,9 +31,8 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     id: 'grok',
     config: GROK_PROVIDER,
     extractProjectIdFromUrl: extractGrokProjectIdFromUrl,
-    resolveProjectUrl: (projectId) => `https://grok.com/project/${projectId}`,
-    resolveConversationUrl: (conversationId, projectId) =>
-      projectId ? `https://grok.com/project/${projectId}?chat=${conversationId}` : `https://grok.com/c/${conversationId}`,
+    resolveProjectUrl: (projectId) => resolveGrokProjectUrl(projectId),
+    resolveConversationUrl: (conversationId, projectId) => resolveGrokConversationUrl(conversationId, projectId),
     ...createGrokAdapter(),
   },
 };

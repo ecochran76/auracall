@@ -17,6 +17,9 @@ export interface ServiceModelEntry {
 
 export interface ServiceRouteRegistry {
   baseUrl?: string;
+  app?: string;
+  files?: string;
+  projectIndex?: string;
   compatibleHosts?: string[];
   cookieOrigins?: string[];
   project?: string;

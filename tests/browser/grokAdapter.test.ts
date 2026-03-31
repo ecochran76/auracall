@@ -12,6 +12,9 @@ import {
   isGrokMainSidebarOpenProbe,
   parseGrokPersonalFilesRowTexts,
   parseGrokWorkspaceCreateError,
+  resolveGrokConversationUrl,
+  resolveGrokProjectSourcesUrl,
+  resolveGrokProjectUrl,
 } from '../../src/browser/providers/grokAdapter.js';
 import type { ChromeClient } from '../../src/browser/types.js';
 
@@ -37,6 +40,18 @@ describe('extractGrokProjectIdFromUrl', () => {
 
   test('does not treat the project index as a concrete project', () => {
     expect(extractGrokProjectIdFromUrl('https://grok.com/project')).toBeNull();
+  });
+});
+
+describe('grok route helpers', () => {
+  test('builds project and sources URLs from manifest-backed templates', () => {
+    expect(resolveGrokProjectUrl('abc123')).toBe('https://grok.com/project/abc123');
+    expect(resolveGrokProjectSourcesUrl('abc123')).toBe('https://grok.com/project/abc123?tab=sources');
+  });
+
+  test('builds root and project conversation URLs from manifest-backed templates', () => {
+    expect(resolveGrokConversationUrl('conv-1')).toBe('https://grok.com/c/conv-1');
+    expect(resolveGrokConversationUrl('conv-1', 'proj-1')).toBe('https://grok.com/project/proj-1?chat=conv-1');
   });
 });
 

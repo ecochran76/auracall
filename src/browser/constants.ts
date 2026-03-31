@@ -3,9 +3,11 @@ import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
 import {
   resolveBundledServiceBaseUrl,
   resolveBundledServiceCookieOrigins,
+  resolveBundledServiceRouteTemplate,
 } from '../services/registry.js';
 
 export const CHATGPT_URL = resolveBundledServiceBaseUrl('chatgpt', 'https://chatgpt.com/');
+export const GEMINI_URL = resolveBundledServiceRouteTemplate('gemini', 'app', 'https://gemini.google.com/app');
 export const GROK_URL = resolveBundledServiceBaseUrl('grok', 'https://grok.com/');
 export const DEFAULT_MODEL_TARGET = 'Instant';
 export const DEFAULT_MODEL_STRATEGY: BrowserModelStrategy = 'select';

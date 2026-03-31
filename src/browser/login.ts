@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { CHATGPT_URL, GROK_URL } from './constants.js';
+import { CHATGPT_URL, GEMINI_URL, GROK_URL } from './constants.js';
+import { resolveBundledServiceCookieOrigins } from '../services/registry.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { bootstrapManagedProfile, type ManagedProfileSeedPolicy } from './profileStore.js';
 import { registerInstance } from './service/stateRegistry.js';
@@ -56,7 +57,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
   }
   const resolvedUrl =
     target === 'gemini'
-      ? geminiUrl ?? 'https://gemini.google.com/app'
+      ? geminiUrl ?? GEMINI_URL
       : target === 'grok'
         ? grokUrl ?? GROK_URL
         : chatgptUrl ?? CHATGPT_URL;
@@ -93,7 +94,11 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     preferCookieProfile: false,
     cookieExport: exportCookies
       ? {
-          urls: ['https://gemini.google.com', 'https://accounts.google.com', 'https://www.google.com'],
+          urls: resolveBundledServiceCookieOrigins('gemini', [
+            'https://gemini.google.com',
+            'https://accounts.google.com',
+            'https://www.google.com',
+          ]),
           requiredCookies: ['__Secure-1PSID', '__Secure-1PSIDTS'],
         }
       : undefined,
