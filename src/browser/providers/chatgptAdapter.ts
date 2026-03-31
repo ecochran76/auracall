@@ -2289,6 +2289,7 @@ async function connectToChatgptTab(
       const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
       await Promise.all([client.Page.enable(), client.Runtime.enable()]);
       setClientSuppressFocus(client, resolveBrowserTabPolicy(options).suppressFocus);
+      await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
       return {
         client,
         targetId: options.tabTargetId,
@@ -2370,7 +2371,59 @@ async function connectToChatgptTab(
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
+  await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
+}
+
+async function dismissCreateProjectDialogIfOpen(Runtime: ChromeClient['Runtime']): Promise<void> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const rootSelectors = ${JSON.stringify(CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS)};
+      const nameInputSelector = ${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)};
+      const normalize = (value) => String(value || '').toLowerCase().replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const isCreateProjectDialog = (dialog) => {
+        if (!(dialog instanceof Element)) return false;
+        if (!isVisible(dialog)) return false;
+        const input = dialog.querySelector(nameInputSelector);
+        if (input && isVisible(input)) {
+          return true;
+        }
+        const text = normalize(dialog.textContent);
+        const hasCreateProjectTrigger = text.includes('create project');
+        const hasProjectNameLabel = text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL)}).toLowerCase());
+        const hasSettingsLabel = text.includes(${JSON.stringify(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)});
+        const hasInstructionsLabel = text.includes(normalize(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL)}));
+        return hasCreateProjectTrigger && (hasProjectNameLabel || hasSettingsLabel || hasInstructionsLabel);
+      };
+
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open], dialog'))
+        .filter((dialog) => rootSelectors.some((selector) => dialog.matches(selector)));
+      if (!dialogs.length) return { ok: false, reason: 'no-dialog' };
+
+      const createDialog = dialogs.find(isCreateProjectDialog);
+      if (!createDialog) return { ok: false, reason: 'not-create-project' };
+
+      const closeButton = createDialog.querySelector(
+        '[aria-label*="close" i], [data-testid*="close" i], button[aria-label*="close" i], button[title*="close" i]',
+      );
+      if (closeButton) {
+        closeButton.click();
+      }
+      document.body.dispatchEvent(
+        new KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', keyCode: 27, bubbles: true, cancelable: true }),
+      );
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  if ((result?.value as { ok?: boolean } | undefined)?.ok) {
+    await waitForNotSelector(Runtime, CHATGPT_PROJECT_DIALOG_SELECTOR, 1_000).catch(() => undefined);
+  }
 }
 
 async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {

@@ -21,6 +21,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: Cross-profile ChatGPT tab selection and stale create-project modal cleanup
+- Symptom:
+  - Running two Aura-Call Chrome windows at once exposed two regressions:
+    - ChatGPT tab resolution could inherit a prior `services` list and appear to “remember” another provider in the same profile.
+    - A stale “Create project” dialog could remain open in one tab, blocking subsequent smoke runs in that window.
+- Root cause:
+  - `resolveServiceTarget(...)` merged each resolved service into the stored instance metadata on every scan.
+  - The ChatGPT connect path did not perform a dedicated startup cleanup for project dialog artifacts before method-specific actions.
+- Fix:
+  - In `src/browser/service/browserService.ts`, removed service-list mutation during scan and left `services` untouched unless a new instance is first registered.
+  - In `src/browser/providers/chatgptAdapter.ts`, added `dismissCreateProjectDialogIfOpen(...)` and invoked it right after Chrome connect so a stale modal is dismissed via close/escape before continuing.
+- Verification:
+  - `pnpm vitest run tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+- Follow-ups:
+  - run a guarded live ChatGPT smoke on the secondary WSL-Chrome profile after account setup to confirm the stale modal no longer blocks automation.
+
+- Date: 2026-03-31
 - Area: Grok file management diagnostics
 - Symptom:
   - Grok file-management failures on account and project flows returned generic errors without scoped UI evidence, especially for row actions and save/delete modals.

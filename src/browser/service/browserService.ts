@@ -17,7 +17,6 @@ import {
   type TabResolutionExplanation,
 } from '../../../packages/browser-service/src/service/instanceScanner.js';
 import {
-  updateInstance,
   listInstances,
   registerInstance,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';
@@ -118,19 +117,16 @@ export class BrowserService extends BrowserServiceCore {
       profilePath,
       profileName,
       options.logger,
-      {
-        services: options.serviceId ? [options.serviceId] : undefined,
-      },
+      {},
     );
-    if (scan?.instance?.services && options.serviceId) {
-      const merged = new Set(scan.instance.services);
-      merged.add(options.serviceId);
-      await updateInstance(
-        { registryPath: this.registryPath },
-        profilePath,
-        profileName,
-        { services: Array.from(merged) },
-      );
+    if (scan?.instance && options.serviceId && options.logger) {
+      const recorded = scan.instance.services;
+      if (recorded && !recorded.includes(options.serviceId)) {
+        options.logger(
+          `[browser-service] Skipping service-affinity merge for ${profilePath}::${profileName} ` +
+            'to avoid cross-provider registry contamination',
+        );
+      }
     }
     const configuredMatcher =
       options.serviceId === 'grok' ? createConfiguredUrlMatcher(options.configuredUrl) : null;

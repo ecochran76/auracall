@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Resolve cross-provider ChatGPT tab contamination and stale modal state across multiple browser windows.
+- Progress: `BrowserService` stopped mutating a matched instance’s service affinity list when resolving by ChatGPT tabs, avoiding cross-provider `services` bleed when multiple profiles are open. Added a guarded ChatGPT startup recovery step that dismisses an existing create-project dialog immediately after browser connect, so tests start from a clean surface even when a second browser has an old modal open.
+- Issues: Modal recovery is currently scoped to the create-project surface only; broader dialog-stale recovery is still handled by existing method-local checks.
+- Next: Run a guarded live smoke on the Pro testing browser and confirm the stale-create-dialog state no longer blocks `auracall` chat operations before moving to broader session orchestration tasks.
+
+- Date: 2026-03-31
 - Focus: Add Grok file-management UI diagnostics on account and project file flows.
 - Progress: Wrapped Grok account and project file-management public methods with scoped `withUiDiagnostics(...)` context for list/upload/delete paths, including source/modal roots, action candidates, and explicit flow intent metadata.
 - Issues: `pnpm run check` still fails in `tests/browser/browserService.test.ts` on `ResolvedBrowserConfig.target` typechecking (`TS2339`), unrelated to this slice.
