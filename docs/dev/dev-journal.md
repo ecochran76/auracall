@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Finish the last pure declarative Grok route cleanup and stop the route-manifest slice at the right boundary.
+- Progress: Replaced the remaining hardcoded Grok root conversation URL fallbacks embedded in browser-evaluated scripts with helper-backed injected values in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts). A final grep now shows only manifest defaults/templates themselves, not duplicated runtime route literals. Focused Grok/registry tests and `pnpm run check` passed.
+- Issues: The remaining Grok-specific strings now mostly sit inside workflow/scrape code paths or the manifest defaults themselves, so continuing this slice further would start mixing declarative extraction with behavior work.
+- Next: Stop the Grok manifest-route work here and switch back to the next real gate: a guarded ChatGPT live acceptance window.
+
+- Date: 2026-03-31
 - Focus: Continue low-risk Grok route extraction after the central manifest/defaults cutover.
 - Progress: Replaced the remaining obvious declarative Grok route strings in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts), and [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts) with manifest-backed helpers/constants. Added `projectConversations` to the Grok route manifest and extended focused coverage in [tests/browser/grokAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokAdapter.test.ts) and [tests/services/registry.test.ts](/home/ecochran76/workspace.local/oracle/tests/services/registry.test.ts). Focused Vitest suites and `pnpm run check` passed.
 - Issues: This still intentionally stops short of deeper provider-local workflow paths where URL handling is tangled with scraping/state recovery logic.

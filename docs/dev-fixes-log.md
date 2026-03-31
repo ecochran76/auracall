@@ -21,6 +21,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: Final pure-declarative Grok route cleanup
+- Symptom:
+  - After the previous Grok route-manifest slices, a few hardcoded Grok conversation URLs still remained inside browser-evaluated scripts in `grokAdapter.ts`.
+- Root cause:
+  - Those scripts synthesize fallback URLs from `conversation:<id>` row data, so they were easy to miss in earlier regex-based route cutovers.
+- Fix:
+  - Injected helper-backed Grok conversation URL prefixes into the browser-evaluated scripts in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts), removing the last obvious duplicated runtime Grok route literals.
+- Verification:
+  - `pnpm vitest run tests/browser/grokAdapter.test.ts tests/services/registry.test.ts`
+  - `pnpm run check`
+- Follow-ups:
+  - Stop the route-only Grok manifest slice here. The remaining Grok-specific strings are either manifest defaults or behavior-coupled workflow logic.
+
+- Date: 2026-03-31
 - Area: Grok manifest-backed route helper adoption
 - Symptom:
   - Even after Grok/Gemini base route data was added to the services manifest, Grok still had many repeated route strings in provider/listing/navigation helpers and fallback launch paths.

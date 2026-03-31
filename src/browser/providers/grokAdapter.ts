@@ -829,7 +829,7 @@ export function createGrokAdapter(): Pick<
 
                 if (dataValue.startsWith('conversation:')) {
                   chatId = dataValue.split(':')[1];
-                  url = 'https://grok.com/c/' + chatId;
+                  url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
                 } else if (href) {
                   try {
                     const fullUrl = href.startsWith('http') ? href : new URL(href, location.origin).toString();
@@ -6212,7 +6212,7 @@ async function listRootSidebarConversations(client: ChromeClient): Promise<Conve
           let url = '';
           if (dataValue.startsWith('conversation:')) {
             chatId = dataValue.split(':')[1];
-            url = 'https://grok.com/c/' + chatId;
+            url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
           } else if (href) {
             try {
               url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
@@ -6393,7 +6393,7 @@ async function listProjectPageConversations(
         let url = '';
         if (dataValue.startsWith('conversation:')) {
           chatId = dataValue.split(':')[1];
-          url = 'https://grok.com/c/' + chatId;
+          url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
         } else if (href) {
           try {
             url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
@@ -6923,7 +6923,7 @@ async function listHistoryConversations(
             
             if (dataValue.startsWith('conversation:')) {
               chatId = dataValue.split(':')[1];
-              url = 'https://grok.com/c/' + chatId;
+              url = ${JSON.stringify(resolveGrokConversationUrl(''))} + chatId;
             } else if (href) {
               try {
                 url = href.startsWith('http') ? href : new URL(href, location.origin).toString();
