@@ -12,6 +12,114 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-03-31
+- Focus: Finalize Rename Verification Hardening for Root Conversations.
+- Progress: Added strict rename persistence checking so root conversations verify against the reordered top-of-list state before continuing, with jittered settle delays between mutate and verify and a longer pause before list-refresh verification. This prevents early success when the renamed conversation is not yet promoted in the root list.
+- Issues: No unit-level regressions so far, but this remains live-timing sensitive and should be exercised with a guarded real run.
+- Next: run a guarded live root rename test and, if needed, tune the post-submit settle + list-refresh windows rather than relaxing the top-row contract.
+
+- Date: 2026-03-31
+- Focus: Align WSL-Chrome profile-family naming for secondary ChatGPT logins.
+- Progress: Added explicit docs and docs-test alignment for `wsl-chrome-2` as the secondary WSL profile-family name, with `profiles.default` as the primary WSL Chrome family. Updated `docs/configuration.md` to show `default` + `wsl-chrome-2` with separate managed profile dirs and documented that `wsl-chrome-2` is for an additional account set (for example, Pro testing). Updated `docs/wsl-chatgpt-runbook.md` with the second-profile setup/login flow so operators can onboard and run `--profile wsl-chrome-2`.
+- Issues: No runtime behavior changes were required for this step; the work is documentation and test alignment only.
+- Next: Verify `--profile wsl-chrome-2` flows in a live smoke once the secondary account is available and keep any onboarding examples aligned with that naming.
+
+- Date: 2026-03-31
+- Focus: Harden ChatGPT rate-limit retry spacing and add safer rename row-retry sequencing.
+- Progress: Completed the pending ChatGPT retry hardening pass by fixing `LlmService` retry delay selection and wiring it into the retry loop via provider-aware adaptive backoff (`getRetryDelayMs`) plus deterministic jitter. Fixed a method-name regression (`isProviderRateLimitError` → `isProviderRateLimitedError`) and moved conversation-row tagging in `renameChatgptConversationWithClient` to clustered attempts with short/long spacing: primary conversation row, two list-page open attempts, and a final list refresh attempt with a longer pause. The rename flow now records each failed row-tag attempt in `tagFailures` and keeps diagnostics attached to the final UI context.
+- Issues: No compile or test failures now, but long-lived live behavior still depends on account-level rate-limit pace and may still trip occasional cooldowns if non-PRO automation is run with dense write sequences.
+- Next: Use the now-stable clustered rename timings in the next guarded live root-conversation pass; if any new failure appears, escalate to package-level UI diagnostics for the rename action surfaces before changing fallback strategy again.
+
+- Date: 2026-03-30
+- Focus: Tighten ChatGPT rename row-tag diagnostics payloads and recovery context.
+- Progress: Updated `tagChatgptConversationRow(...)` to emit a stable diagnostics object when no row can be tagged, including stable candidate counts, scoped-count visibility, selected best-candidate summary, and whether fallback matching was used. The rename flow now records each failed tagging attempt through `tagFailures` and includes that context in UI diagnostics, so live failures can confirm whether the failure came before or after project-list fallback/retry.
+- Issues: No functional regression observed in focused unit coverage, but the live rename stall gate is still not fully closed until a fresh guarded `scripts/chatgpt-acceptance.ts --phase root-base` run confirms the corrected diagnostics path on a real throttling-sensitive environment.
+- Next: Execute the next guarded live root-conversation rename pass and, if rename still stalls, extend the inline-editor assertion around `submitInlineRename(...)` using the structured `tagFailures` evidence.
+
+- Date: 2026-03-30
+- Focus: Finish the ChatGPT root-conversation rename repair by debugging the remaining live-only row-action failure instead of broadening the workflow slice further.
+- Progress: Tightened the rename path in `src/browser/providers/chatgptAdapter.ts` in several steps: root title verification now accepts a matching row anywhere or the current page title signal instead of requiring the renamed row to also be the top row; root rename no longer falls back to the ChatGPT header menu (which exposes delete/archive but not rename); root rename now starts on the conversation page/sidebar instead of `https://chatgpt.com/`; row-tagging waits longer and scores row-action-button ancestry more flexibly; and the flow now short-circuits when ChatGPT has already auto-titled the conversation to the requested name. Repeated focused regression runs stayed green: `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser-service/ui.test.ts tests/cli/browserConfig.test.ts tests/services/registry.test.ts --maxWorkers 1` and `pnpm run check`. The most useful live debugging result came from a direct Puppeteer/js_repl probe against the failing conversation page: the DOM exposes multiple visible `Open conversation options for ChatGPT Accept Base` buttons and the current heuristic can resolve a concrete `LI.list-none` row candidate with the expected title when evaluated against the settled page.
+- Issues: Live `scripts/chatgpt-acceptance.ts --phase root-base` still fails at the rename step with `ChatGPT conversation row action surface unavailable`, even though the settled conversation page visibly contains matching row-action buttons. The diagnostics helper only samples the first few `button[aria-label]` nodes, so the failure bundle does not yet show those matching row buttons. One live run also showed the page title already equal to the requested rename target by the time the rename command failed, which means ChatGPT can auto-title the conversation into the desired state before the row-action path completes.
+- Next: Stop iterating blind on rename. Add a targeted diagnostic wrapper around `tagChatgptConversationRow(...)` / the row-action readiness wait so the live error reports the actual matching-button count, chosen row candidate, and the exact reason the tagger returned `ok: false`; then rerun `root-base`. If the auto-title short-circuit proves sufficient on that rerun, clean up the disposable conversations and move on to `root-followups`.
+
+- Date: 2026-03-30
+- Focus: Take the first behavior-aware ChatGPT workflow slice by extracting one reusable action-surface fallback helper into browser-service and adopting it in ChatGPT conversation flows.
+- Progress: Added `openAndSelectMenuItemFromTriggers(...)` to `packages/browser-service/src/service/ui.ts` plus focused coverage in `tests/browser-service/ui.test.ts`. Adopted that helper in `src/browser/providers/chatgptAdapter.ts` for conversation delete and conversation rename so both flows now model their menu surfaces explicitly as `sidebar-row -> conversation-header` instead of hand-rolled retry glue. Reran `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/browserConfig.test.ts tests/services/registry.test.ts --maxWorkers 1` and `pnpm run check`; both passed. Live signal: `auracall.ts delete 69cb3741-2f58-832f-a6ae-f28779f30741 --target chatgpt --yes --verbose` and `auracall.ts delete 69cb35dd-13fc-832f-9d6b-bc0f88125838 --target chatgpt --yes --verbose` both passed, which cleaned up the disposable conversations from two stalled acceptance runs.
+- Issues: The first `root-base` live rerun failed before this patch with `ChatGPT conversation row not found`, which confirmed the rename gap. After the patch, the same `root-base` rerun no longer failed fast on the missing-row path, but the `auracall.ts rename ...` subprocess still stalled during the rename phase and had to be terminated manually. That points to a remaining post-trigger issue in inline-editor discovery and/or title-persistence verification rather than the menu-surface fallback itself.
+- Next: Debug the root-conversation rename stall specifically: instrument `submitInlineRename(...)` / `waitForChatgptConversationTitleApplied(...)`, verify where the header-initiated rename editor actually appears, and only then rerun the `root-base -> root-followups` acceptance path.
+
+- Date: 2026-03-30
+- Focus: Stop the narrow ChatGPT manifest pilot at the right boundary and write the follow-on workflow/behavior plan.
+- Progress: After landing the artifact-taxonomy slice and re-inventorying `chatgptAdapter.ts`, the remaining ChatGPT drift is now mostly behavioral: adapter-local selector/fallback order, artifact payload parsing/merge/materialization, and rate-limit policy. I wrote `docs/dev/service-volatility-chatgpt-workflow-plan.md` to define that next phase explicitly, then linked it from `docs/dev/service-volatility-chatgpt-plan.md` and `docs/dev/service-volatility-refactor-plan.md` so the repo-wide plan now distinguishes the finished narrow pilot from the upcoming behavior-aware phase.
+- Issues: The main risk now is overextending the manifest concept into workflow logic. The next phase should prefer ownership classification and browser-service extraction over another round of opportunistic config moves.
+- Next: Start the first behavior-aware slice from the new workflow plan, most likely a bounded adapter-local selector/fallback audit or a browser-service extraction candidate that already appears in more than one provider.
+
+- Date: 2026-03-30
+- Focus: Extend the ChatGPT manifest pilot into artifact taxonomy without moving payload parsing or download/materialization logic out of `chatgptAdapter.ts`.
+- Progress: Added an `artifacts` section to `configs/auracall.services.json` for ChatGPT download-kind extensions, content-type-to-extension mappings, extension-to-MIME mappings, default artifact titles, and low-risk payload marker sets. Extended `src/services/registry.ts` with typed artifact helpers, updated `src/browser/providers/chatgptAdapter.ts` so download kind inference, MIME/extension lookup, default image/spreadsheet/canvas titles, and image/table payload marker checks now read from the manifest, and expanded `tests/services/registry.test.ts` plus `tests/browser/chatgptAdapter.test.ts` to cover the new taxonomy. `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1` and `pnpm run check` both passed.
+- Issues: This is intentionally limited to declarative taxonomy. Payload recursion, artifact merge semantics, canvas enrichment, button-tagging, estuary/image fetch, and binary materialization remain code-owned because they are behavioral rather than configuration data.
+- Next: Re-inventory what still remains in ChatGPT artifact handling; if the rest is mostly parsing/materialization logic, stop the narrow pilot and write the dedicated next-phase plan instead of continuing to externalize code-shaped behavior.
+
+- Date: 2026-03-30
+- Focus: Extend the ChatGPT manifest pilot from provider selectors into selected static DOM anchors inside `chatgptAdapter.ts`.
+- Progress: Added a ChatGPT `dom` section to `configs/auracall.services.json`, extended `src/services/registry.ts` with DOM selector/selector-set helpers, and cut a bounded set of repeated adapter anchors over in `src/browser/providers/chatgptAdapter.ts`: project dialog roots, project-source row/tab selectors, conversation-turn/message-role selectors, artifact/textdoc selectors, and the conversation options/delete-confirm buttons. Expanded `tests/services/registry.test.ts`, then reran `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1` and `pnpm run check`; both passed. Updated `docs/dev/service-volatility-chatgpt-plan.md` and `docs/dev/service-volatility-inventory.md` to record the new ownership boundary.
+- Issues: This is intentionally limited to named static anchors. Traversal order, post-condition checks, row-tagging strategy, and dialog/menu recovery still remain in code.
+- Next: Re-inventory what remains in `chatgptAdapter.ts`; if the rest is mostly procedural fallback logic rather than static anchors, stop the manifest pilot there and spin up the dedicated adapter-selector/workflow plan instead of forcing more config.
+
+- Date: 2026-03-30
+- Focus: Move ChatGPT provider selector families out of `src/browser/providers/chatgpt.ts` and into the service manifest while keeping adapter-local selector logic in code.
+- Progress: Added a `selectors` section for ChatGPT to `configs/auracall.services.json`, extended `src/services/registry.ts` with selector-family resolution, and updated `src/browser/providers/chatgpt.ts` to build its provider config from the bundled manifest plus compatible-host login hints. Added focused selector coverage in `tests/services/registry.test.ts` and a new provider-level regression in `tests/browser/chatgptProvider.test.ts`. `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1` and `pnpm run check` both passed. I also updated `docs/dev/service-volatility-chatgpt-plan.md` and `docs/dev/service-volatility-inventory.md` so the docs match the current ownership boundary.
+- Issues: This only moves provider-level static selector families. The adapter-local selector layer in `chatgptAdapter.ts` is still intentionally in code because it is bound up with DOM strategy and fallback sequencing.
+- Next: Re-inventory the remaining adapter-local ChatGPT selectors and decide whether there is another safe declarative sub-slice or whether the manifest pilot should stop here and hand off to a dedicated selector/workflow plan.
+
+- Date: 2026-03-30
+- Focus: Extend the ChatGPT composer manifest cut from visible tool labels into menu/chip heuristic labels without moving the selection workflow itself.
+- Progress: Added composer-owned `moreLabels`, top-menu signal labels/substrings, and chip-ignore tokens to `configs/auracall.services.json`; extended `src/services/registry.ts` with helpers for those arrays; and updated `src/browser/actions/chatgptComposerTool.ts` so top-menu scoring, More-submenu opening, and chip filtering read those values from the manifest instead of embedding them in code. Expanded `tests/services/registry.test.ts`, then reran `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptAdapter.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1` and `pnpm run check`; both passed.
+- Issues: The scoring weights and traversal order are still behavioral logic and remain in code. Only the service-specific menu/chip vocabulary moved.
+- Next: Re-inventory the remaining ChatGPT hard-coded drift and stop once the rest is clearly selector-family or workflow territory instead of declarative taxonomy.
+
+- Date: 2026-03-30
+- Focus: Continue the narrow ChatGPT service-volatility pilot by moving declarative project/conversation UI labels out of `chatgptAdapter.ts`.
+- Progress: Added a `ui` section to `configs/auracall.services.json` for ChatGPT project/settings/conversation labels and label sets, extended `src/services/registry.ts` with bundled UI-label helpers, and finished cutting the remaining low-risk call sites in `src/browser/providers/chatgptAdapter.ts` over to manifest-backed labels. This slice now covers project settings buttons, project name/instructions field labels, the project-title edit prefix, project tab labels, add-sources/upload markers, source-actions button labels, the composer prompt label, the sidebar row-action prefix (`open conversation options for …`), conversation rename/delete menu items, project-source remove, and delete-confirmation dialog labels. Added focused registry coverage in `tests/services/registry.test.ts`; `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1` and `pnpm run check` both passed.
+- Issues: This still stops at declarative UI text and selector-bearing label tokens. Selector families, DOM structure assumptions, menu ordering, and the action workflows themselves remain in code by design.
+- Next: Decide whether the next ChatGPT manifest slice should cover additional low-risk taxonomy surfaces or pause the refactor and return to broader browser-service/platform work.
+
+- Date: 2026-03-30
+- Focus: Move ChatGPT composer/add-on taxonomy out of provider code and into the service manifest without touching the activation flow.
+- Progress: Extended `configs/auracall.services.json` and `src/services/registry.ts` with a `composer` section for aliases, known labels, top-level sentinels, and file-request labels. Updated `src/browser/actions/chatgptComposerTool.ts` to resolve that taxonomy from the manifest while leaving the menu traversal, submenu opening, and selected-state verification in code. Added/updated focused coverage in `tests/services/registry.test.ts` and `tests/browser/chatgptComposerTool.test.ts`; focused Vitest runs and `pnpm run check` passed.
+- Issues: This slice deliberately does not move selector families or menu interaction order into config. Those remain behavioral code, not declarative volatility.
+- Next: Decide whether the next ChatGPT slice should externalize more UI text dictionaries or stop service-volatility work for now and return to broader browser-service extraction.
+
+- Date: 2026-03-30
+- Focus: Start the narrow service-volatility pilot by extending the existing Aura-Call service registry instead of adding a second manifest path.
+- Progress: Renamed the checked-in manifest to `configs/auracall.services.json`, expanded `src/services/registry.ts` with typed routes/features sections plus synchronous bundled-manifest helpers, and cut the first low-risk ChatGPT consumers over: browser label mapping, ChatGPT base URL/cookie origins, compatible-host families, browser-service target matching, ChatGPT route builders, and feature/app probe token dictionaries. Added focused coverage in `tests/services/registry.test.ts` and extended the existing browser/adapter tests. Focused regression suites and `pnpm run check` both passed. Live acceptance also passed with `scripts/chatgpt-acceptance.ts --phase project`, `--phase root-base --resume ...`, and a final `--phase cleanup --resume ...`. During the project phase, the project-source delete step hit a 47-second ChatGPT cooldown and the existing guard paused automatically instead of re-triggering writes.
+- Issues: This is still the narrow pilot, not the whole refactor. Selector families, artifact classification, and rate-limit policy remain in code by design, but the required minimum live gate for this slice is now green.
+- Next: Decide whether the next extraction step should be more route/config fields or the separate selector diagnostics plan, then write the next service-specific implementation slice before expanding scope.
+
+- Date: 2026-03-30
+- Focus: Turn the service-volatility refactor from a generic roadmap item into executable planning artifacts.
+- Progress: Added `docs/dev/service-volatility-inventory.md` with a real inventory of hard-coded volatility across ChatGPT, Grok, Gemini, and the cross-cutting resolver/browser layers. Added the first concrete service plan in `docs/dev/service-volatility-chatgpt-plan.md`, intentionally scoped to low-risk ChatGPT manifest fields only: models, routes, compatible hosts, and feature/app token dictionaries. Linked both docs back into `ROADMAP.md` and the repo-wide plan.
+- Issues: The inventory makes it clear that ChatGPT selectors, artifact classification, and rate-limit tuning are too coupled to workflow code for the first slice. Those need later service plans, not opportunistic extraction during the pilot.
+- Next: Design the manifest schema/loader around the inventory and existing `configs/auracall.services.json` foothold, then only start the ChatGPT pilot once that schema is reviewed.
+
+- Date: 2026-03-30
+- Focus: Plan the service-volatility externalization refactor before implementation starts.
+- Progress: Added a top-level `ROADMAP.md` entry for the initiative, wrote the repo-wide execution guide in `docs/dev/service-volatility-refactor-plan.md`, added `docs/dev/service-volatility-service-plan-template.md` so each service migration must declare scope/tests/acceptance before work starts, and updated `docs/testing.md` to make regression discipline explicit for this refactor family.
+- Issues: This is intentionally a planning-only step. No service code is being migrated yet, because the next safe move is inventory plus manifest-schema design, not immediate extraction.
+- Next: Build the hard-coded volatility inventory and then write the first service-specific plan before touching ChatGPT/Grok/Gemini runtime code.
+
+- Date: 2026-03-30
+- Focus: Reduce ChatGPT/OpenAI Pro model pinning and make provider cache identity sensitive to real feature/app drift.
+- Progress: Replaced several hard-coded `gpt-5.2-pro` generic/default fallbacks with the stable current-Pro alias path in `src/oracle/config.ts`, `src/cli/options.ts`, `src/cli/browserConfig.ts`, `src/schema/resolver.ts`, and scaffolded config defaults. Added cache-level `featureSignature` plumbing so provider caches can invalidate when service capabilities change. ChatGPT now exposes an optional feature probe signature built from visible UI/storage/script evidence for `web_search`, `deep_research`, `company_knowledge`, and a bounded known-apps set, and that signature is merged with configured `services.chatgpt.features` before cache identity is written/read.
+- Issues: The ChatGPT feature probe is intentionally heuristic, not authoritative. It is good enough for cache warming/invalidation and drift detection, but not yet a product-grade “full connected apps inventory” API.
+- Next: Run the focused resolver/browser/cache tests, then decide whether the feature probe should graduate into a first-class operator-facing diagnostics command instead of staying cache-only for now.
+
+- Date: 2026-03-30
+- Focus: Document and verify second ChatGPT browser profile for workspace-scoped runs.
+- Progress: Confirmed profile-level service URL overrides already resolve in the config resolver and added regression coverage for `profiles.<name>.services.chatgpt.url` in `tests/schema/resolver.test.ts` (`work` profile uses `https://chatgpt.com/g/p-...`). Updated operator docs to show both URL-based and `projectId` profile-based workspace scoping in `docs/configuration.md`, and added direct `--profile` examples in `README.md` for `--project-id`, `--project-name`, and URL-based workspace selection.
+- Issues: No functional issues surfaced; this change is primarily a config-path docs/productization pass after resolving that the resolver precedence was already in place.
+- Next: Keep an eye out for any existing users expecting `browser.chatgptUrl` in profile-local service blocks to continue through legacy aliases; expand docs or migration notes if that drift appears.
+
 - Date: 2026-03-30
 - Focus: Harden ChatGPT project source deletion against stale/missing source rows and rate-limit retries.
 - Progress: Added a robust preflight in `deleteProjectFile` to re-check project source rows before menu interaction, then treat already-absent rows as success. If the target is still present after a refresh, the row name is re-resolved from the live source probe before proceeding. This avoids brittle assumptions about row visibility after earlier retry attempts.
@@ -356,7 +464,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - Date: 2026-03-18
 - Focus: Move Grok browser model labels out of hard-coded selector logic and into the service registry.
-- Progress: Replaced the embedded Grok browser alias map with service-registry-driven label resolution. `configs/oracle.services.json` now carries the current Grok browser picker labels plus legacy aliases (`grok-4.1*` -> `Expert`, `grok` / `grok-4.20` -> `Heavy`), while the code keeps only DOM text normalization. Updated the Grok browser config path, runtime mode selection, and project-instructions modal selection to resolve through the registry.
+- Progress: Replaced the embedded Grok browser alias map with service-registry-driven label resolution. `configs/auracall.services.json` now carries the current Grok browser picker labels plus legacy aliases (`grok-4.1*` -> `Expert`, `grok` / `grok-4.20` -> `Heavy`), while the code keeps only DOM text normalization. Updated the Grok browser config path, runtime mode selection, and project-instructions modal selection to resolve through the registry.
 - Issues: CLI model canonicalization still maps `grok` to `grok-4.1` before browser config runs, so the current default browser path still resolves to `Expert` unless the higher-level model registry is updated separately.
 - Next: Finish the Grok smoke/CRUD pass with the WSL Chrome remote session, then decide whether the model canonicalization layer should stop collapsing `grok` to the old `grok-4.1` name.
 
@@ -2256,3 +2364,65 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceFiles.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-03-31 — Fixed explicit provider target plumbing for managed browser profiles
+
+- Trigger:
+  - while preparing multi-account browser profile work, explicit ChatGPT/Grok
+    operations were still vulnerable to silently reusing whatever
+    `userConfig.browser.target` happened to be
+- Implemented:
+  - `src/browser/service/browserService.ts`
+    - `BrowserService.fromConfig(...)` now accepts an explicit provider target
+      and resolves its browser config/profile path against that target
+    - DevTools target discovery now reuses the explicit target instead of
+      falling back to the config-default service
+  - `src/browser/service/portResolution.ts`
+    - browser-state / managed-profile lookup now accepts an explicit service
+      target so target-specific sessions do not attach to the wrong profile
+  - `src/browser/client.ts`
+  - `src/browser/llmService/providers/chatgptService.ts`
+  - `src/browser/llmService/providers/grokService.ts`
+    - all factory paths now thread the explicit provider target into
+      `BrowserService.fromConfig(...)`
+  - `tests/browser/browserService.test.ts`
+    - added a regression test covering mixed-profile target override behavior
+- Verification:
+  - pending focused vitest run after code edits
+
+## 2026-03-31 — Made WSL Linux Chrome launch resolution deterministic
+
+- Trigger:
+  - while opening the `wsl-chrome-2` managed profile for live login, launch
+    behavior still depended on the shell's current `DISPLAY`, which made Linux
+    Chrome look unavailable unless `DISPLAY` had already been exported
+- Implemented:
+  - `src/browser/config.ts`
+    - added deterministic display resolution so WSL + Linux-hosted Chrome now
+      resolves `display=':0.0'` by default unless `browser.display` or
+      `AURACALL_BROWSER_DISPLAY` explicitly overrides it
+  - `src/browser/index.ts`
+    - launch logging now prints the resolved `display` and `chromePath`
+      directly from config instead of reporting the shell's pre-launch
+      environment
+  - `tests/browser/config.test.ts`
+    - added coverage for the new WSL Linux-Chrome `:0.0` default and explicit
+      display override behavior
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+
+## 2026-03-31 — Wrote the browser-profile family refactor handoff plan
+
+- Trigger:
+  - after reviewing the current profile/config architecture, the next step was
+    to write a clean handoff plan for a follow-on implementation agent
+- Implemented:
+  - added `docs/dev/browser-profile-family-refactor-plan.md`
+  - added a matching roadmap entry in `ROADMAP.md`
+  - captured the main architectural issues explicitly:
+    - mutable cross-scope browser/service merges
+    - overloaded `manualLoginProfileDir`
+    - split launch defaults
+    - ambiguous profile terminology in docs/config
+- Verification:
+  - docs-only for this step

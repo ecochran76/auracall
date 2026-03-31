@@ -23,7 +23,7 @@ Why:
 - Each provider needs explicit negative and positive auth signals.
 
 Files:
-- `configs/oracle.services.json`
+- `configs/auracall.services.json`
 - `src/browser/providers/*.ts`
 - `src/services/registry.ts`
 

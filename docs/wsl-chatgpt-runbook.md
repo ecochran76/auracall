@@ -34,20 +34,62 @@ sudo apt-get install -y google-chrome-stable
 }
 ```
 
-Note: `interactiveLogin` is preferred; legacy `manualLogin` keys continue to work.
-
-3) First-time login (keep the window open so you can sign in):
+3) First-time login for primary WSL account (keep the window open so you can sign in):
 
 ```bash
 AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
-oracle login --target chatgpt --browser-keep-browser
+oracle --profile default --target chatgpt login --browser-keep-browser
 ```
 
-4) Run ChatGPT automation:
+4) Optional: configure a profile family for a second account (for example, Pro testing):
+
+```json5
+{
+  auracallProfile: "default",
+  profiles: {
+    default: {
+      services: {
+        chatgpt: {
+          identity: { email: "ecochran76@gmail.com" },
+          manualLoginProfileDir: "/home/you/.auracall/browser-profiles/default/chatgpt",
+        },
+      },
+    },
+    "wsl-chrome-2": {
+      engine: "browser",
+      defaultService: "chatgpt",
+      services: {
+        chatgpt: {
+          identity: { email: "consult@polymerconsultingroup.com" },
+          manualLoginProfileDir: "/home/you/.auracall/browser-profiles/wsl-chrome-2/chatgpt",
+        },
+      },
+    },
+  },
+}
+```
+
+Seed the second account once:
 
 ```bash
 AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
-oracle --engine browser -p "Say hello from Chrome (WSL)"
+oracle --profile wsl-chrome-2 --target chatgpt login --browser-keep-browser
+```
+
+5) Run ChatGPT automation:
+
+Primary account:
+
+```bash
+AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
+oracle --engine browser -p "Say hello from WSL primary"
+```
+
+Secondary account:
+
+```bash
+AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
+oracle --profile wsl-chrome-2 --engine browser -p "Say hello from second profile"
 ```
 
 ## Troubleshooting
@@ -66,5 +108,5 @@ Add to `~/.zshrc`:
 
 ```bash
 alias oracle-wsl='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle'
-alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle login --target chatgpt --browser-keep-browser'
+alias oracle-login='AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 oracle --target chatgpt login --browser-keep-browser'
 ```

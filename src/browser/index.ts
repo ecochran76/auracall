@@ -2246,7 +2246,9 @@ async function runGrokBrowserMode({
   if (config.headless) {
     logger('Grok requires a visible browser; overriding headless=false.');
   }
-  logger(`[browser] launch mode: headless=${headless} display=${process.env.DISPLAY ?? '(unset)'}`);
+  logger(
+    `[browser] launch mode: headless=${headless} display=${launchConfig.display ?? '(unset)'} chromePath=${launchConfig.chromePath ?? '(default)'}`,
+  );
   const emitRuntimeHint = async (): Promise<void> => {
     if (!runtimeHintCb || !chrome?.port) {
       return;

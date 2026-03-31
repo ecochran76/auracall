@@ -20,6 +20,12 @@ describe('chatgpt composer tool selection', () => {
     expect(resolveComposerToolCandidatesForTest('google-drive')).toEqual(['google drive']);
   });
 
+  test('keeps manifest-owned known labels available for current-selection detection', () => {
+    expect(
+      resolveCurrentComposerToolSelectionForTest(null, [], [{ label: 'canvas', selected: true }]),
+    ).toEqual({ label: 'canvas', source: 'more-menu' });
+  });
+
   test('classifies tools as top-level or More submenu choices', () => {
     expect(
       resolveComposerToolLocationForTest('web-search', ['company knowledge', 'create image', 'deep research', 'web search', 'more']),

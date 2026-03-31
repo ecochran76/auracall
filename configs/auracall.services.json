@@ -1,0 +1,490 @@
+{
+  "version": 1,
+  "services": {
+    "chatgpt": {
+      "models": [
+        {
+          "id": "gpt-5.2-thinking",
+          "label": "Thinking",
+          "aliases": [
+            "thinking",
+            "gpt-5-thinking",
+            "gpt 5 thinking",
+            "gpt 5.2 thinking"
+          ]
+        },
+        {
+          "id": "gpt-5.2-instant",
+          "label": "Instant",
+          "aliases": [
+            "instant",
+            "gpt-5.2",
+            "gpt 5.2",
+            "gpt 5 2",
+            "gpt-5.1",
+            "gpt 5.1",
+            "gpt 5 1",
+            "gpt-5.1-instant",
+            "gpt 5.1 instant"
+          ]
+        },
+        {
+          "id": "gpt-5.1-pro",
+          "label": "Pro",
+          "aliases": [
+            "pro",
+            "gpt-5-pro",
+            "gpt 5 pro",
+            "gpt-5.2-pro",
+            "gpt 5.2 pro",
+            "gpt 5 2 pro"
+          ]
+        }
+      ],
+      "routes": {
+        "baseUrl": "https://chatgpt.com/",
+        "compatibleHosts": [
+          "chatgpt.com",
+          "chat.openai.com"
+        ],
+        "cookieOrigins": [
+          "https://chatgpt.com",
+          "https://chat.openai.com",
+          "https://atlas.openai.com"
+        ],
+        "project": "https://chatgpt.com/g/{projectId}/project",
+        "projectSources": "https://chatgpt.com/g/{projectId}/project?tab=sources",
+        "conversation": "https://chatgpt.com/c/{conversationId}",
+        "projectConversation": "https://chatgpt.com/g/{projectId}/c/{conversationId}",
+        "conversationApi": "https://chatgpt.com/backend-api/conversation/{conversationId}"
+      },
+      "features": {
+        "detector": "chatgpt-feature-probe-v1",
+        "flags": {
+          "web_search": [
+            "search the web",
+            "web search"
+          ],
+          "deep_research": [
+            "deep research"
+          ],
+          "company_knowledge": [
+            "company knowledge"
+          ]
+        },
+        "appTokens": {
+          "google drive": [
+            "google drive",
+            "drive"
+          ],
+          "gmail": [
+            "gmail"
+          ],
+          "google calendar": [
+            "google calendar",
+            "calendar"
+          ],
+          "slack": [
+            "slack"
+          ],
+          "github": [
+            "github"
+          ],
+          "dropbox": [
+            "dropbox"
+          ],
+          "notion": [
+            "notion"
+          ],
+          "jira": [
+            "jira"
+          ],
+          "linear": [
+            "linear"
+          ],
+          "asana": [
+            "asana"
+          ],
+          "box": [
+            "box"
+          ],
+          "onedrive": [
+            "onedrive"
+          ],
+          "sharepoint": [
+            "sharepoint"
+          ],
+          "microsoft teams": [
+            "microsoft teams",
+            "teams"
+          ],
+          "hubspot": [
+            "hubspot"
+          ],
+          "zapier": [
+            "zapier"
+          ]
+        }
+      },
+      "composer": {
+        "aliases": {
+          "search": [
+            "web search"
+          ],
+          "web": [
+            "web search"
+          ],
+          "research": [
+            "deep research"
+          ],
+          "image": [
+            "create image"
+          ],
+          "images": [
+            "create image"
+          ],
+          "knowledge": [
+            "company knowledge"
+          ],
+          "study": [
+            "study and learn"
+          ],
+          "learn": [
+            "study and learn"
+          ],
+          "study mode": [
+            "study and learn"
+          ],
+          "agent": [
+            "agent mode"
+          ],
+          "quickbooks": [
+            "intuit quickbooks"
+          ],
+          "acrobat": [
+            "adobe acrobat"
+          ],
+          "photoshop": [
+            "adobe photoshop"
+          ],
+          "quiz": [
+            "quizzes"
+          ],
+          "calendar": [
+            "google calendar"
+          ],
+          "drive": [
+            "google drive"
+          ],
+          "gh": [
+            "github"
+          ],
+          "git hub": [
+            "github"
+          ]
+        },
+        "knownLabels": [
+          "create image",
+          "deep research",
+          "web search",
+          "study and learn",
+          "agent mode",
+          "canvas",
+          "adobe acrobat",
+          "adobe photoshop",
+          "canva",
+          "github",
+          "gmail",
+          "google calendar",
+          "google drive",
+          "intuit quickbooks",
+          "quizzes"
+        ],
+        "topLevelSentinels": [
+          "more",
+          "recent files",
+          "company knowledge",
+          "create image",
+          "deep research",
+          "web search"
+        ],
+        "moreLabels": [
+          "more"
+        ],
+        "topMenuSignalLabels": [
+          "recent files"
+        ],
+        "topMenuSignalSubstrings": [
+          "add photos",
+          "filesctrlu"
+        ],
+        "chipIgnoreTokens": [
+          "add files and more",
+          "thinking"
+        ],
+        "fileRequestLabels": [
+          "file",
+          "files",
+          "upload",
+          "uploads",
+          "recent file",
+          "recent files",
+          "add photos files"
+        ]
+      },
+      "ui": {
+        "labels": {
+          "project_settings_button": "Project settings",
+          "project_name_input": "Project name",
+          "project_instructions_input": "Instructions",
+          "project_memory_global": "Default",
+          "project_memory_project": "Project-only",
+          "project_title_edit_prefix": "edit the title of",
+          "project_controls_details": "show project details",
+          "project_tab_chats": "chats",
+          "project_tab_sources": "sources",
+          "project_source_add": "add sources",
+          "project_source_add_fallback": "add",
+          "project_source_actions": "Source actions",
+          "project_upload_button": "upload",
+          "project_delete_button": "delete project",
+          "new_project": "new project",
+          "open_sidebar": "open sidebar",
+          "conversation_prompt_input": "Chat with ChatGPT",
+          "conversation_options_prefix": "open conversation options for",
+          "conversation_action_rename": "rename",
+          "conversation_action_delete": "delete",
+          "project_source_action_remove": "remove",
+          "dialog_cancel": "cancel",
+          "conversation_delete_dialog": "delete chat?",
+          "project_delete_dialog": "delete project?"
+        },
+        "labelSets": {
+          "dialog_dismiss_buttons": [
+            "ok",
+            "okay",
+            "got it",
+            "dismiss",
+            "close",
+            "cancel",
+            "done"
+          ],
+          "delete_confirmation_buttons": [
+            "delete",
+            "cancel"
+          ],
+          "project_source_add_buttons": [
+            "add sources",
+            "add"
+          ],
+          "project_source_upload_markers": [
+            "add sources",
+            "drag sources here"
+          ]
+        }
+      },
+      "selectors": {
+        "input": [
+          "textarea[data-id=\"prompt-textarea\"]",
+          "textarea[placeholder*=\"Send a message\"]",
+          "textarea[aria-label=\"Message ChatGPT\"]",
+          "textarea:not([disabled])",
+          "textarea[name=\"prompt-textarea\"]",
+          "#prompt-textarea",
+          ".ProseMirror",
+          "[contenteditable=\"true\"][data-virtualkeyboard=\"true\"]",
+          "div[contenteditable=\"true\"][role=\"textbox\"]"
+        ],
+        "sendButton": [
+          "button[data-testid=\"send-button\"]",
+          "button[data-testid*=\"composer-send\"]",
+          "form button[type=\"submit\"]",
+          "button[type=\"submit\"][data-testid*=\"send\"]",
+          "button[aria-label*=\"Send\"]"
+        ],
+        "modelButton": [
+          "[data-testid=\"model-switcher-dropdown-button\"]",
+          "button[aria-label*=\"Model\"]",
+          "button[aria-haspopup=\"menu\"][aria-label*=\"Model\"]"
+        ],
+        "menuItem": [
+          "button",
+          "[role=\"menuitem\"]",
+          "[role=\"menuitemradio\"]",
+          "[data-testid*=\"model-switcher-\"]"
+        ],
+        "assistantBubble": [
+          "article[data-testid^=\"conversation-turn\"]",
+          "div[data-testid^=\"conversation-turn\"]",
+          "section[data-testid^=\"conversation-turn\"]",
+          "article[data-message-author-role]",
+          "div[data-message-author-role]",
+          "section[data-message-author-role]",
+          "article[data-turn]",
+          "div[data-turn]",
+          "section[data-turn]"
+        ],
+        "assistantRole": [
+          "article[data-testid^=\"conversation-turn\"][data-message-author-role=\"assistant\"]",
+          "article[data-testid^=\"conversation-turn\"][data-turn=\"assistant\"]",
+          "article[data-testid^=\"conversation-turn\"] [data-message-author-role=\"assistant\"]",
+          "article[data-testid^=\"conversation-turn\"] [data-turn=\"assistant\"]",
+          "article[data-testid^=\"conversation-turn\"] .markdown",
+          "[data-message-author-role=\"assistant\"] .markdown",
+          "[data-turn=\"assistant\"] .markdown",
+          "[data-message-author-role=\"assistant\"]",
+          "[data-turn=\"assistant\"]"
+        ],
+        "copyButton": [
+          "button[data-testid=\"copy-turn-action-button\"]",
+          "button[aria-label*=\"Copy\"]",
+          "button[title*=\"Copy\"]"
+        ],
+        "composerRoot": [
+          "[data-testid*=\"composer\"]",
+          "form"
+        ],
+        "fileInput": [
+          "form input[type=\"file\"]:not([accept])",
+          "input[type=\"file\"][multiple]:not([accept])",
+          "input[type=\"file\"][multiple]",
+          "input[type=\"file\"]:not([accept])",
+          "form input[type=\"file\"][accept]",
+          "input[type=\"file\"][accept]",
+          "input[type=\"file\"]",
+          "input[type=\"file\"][data-testid*=\"file\"]"
+        ],
+        "attachmentMenu": [
+          "#composer-plus-btn",
+          "button[data-testid=\"composer-plus-btn\"]",
+          "button[aria-label*=\"Attach\"]",
+          "button[aria-label*=\"Upload\"]"
+        ]
+      },
+      "dom": {
+        "selectors": {
+          "project_source_row": "div[class*=\"group/file-row\"]",
+          "project_sources_tab_id": "[role=\"tab\"][id$=\"-sources\"]",
+          "conversation_turn_section": "section[data-testid^=\"conversation-turn-\"]",
+          "message_author_role": "[data-message-author-role]",
+          "user_message_author_role": "[data-message-author-role=\"user\"]",
+          "assistant_artifact_button": "button.behavior-btn",
+          "textdoc_message": "div[id^=\"textdoc-message-\"]",
+          "conversation_options_button": "button[data-testid=\"conversation-options-button\"]",
+          "delete_conversation_confirm_button": "button[data-testid=\"delete-conversation-confirm-button\"]"
+        },
+        "selectorSets": {
+          "project_dialog_roots": [
+            "[data-testid=\"modal-new-project-enhanced\"]",
+            "dialog[open]",
+            "[role=\"dialog\"]",
+            "dialog"
+          ]
+        }
+      },
+      "artifacts": {
+        "downloadKindExtensions": {
+          "spreadsheet": [
+            "csv",
+            "tsv",
+            "xls",
+            "xlsx",
+            "ods"
+          ]
+        },
+        "contentTypeExtensions": {
+          "image/png": ".png",
+          "image/jpeg": ".jpg",
+          "image/webp": ".webp",
+          "image/gif": ".gif",
+          "application/zip": ".zip",
+          "application/json": ".json",
+          "text/markdown": ".md",
+          "text/csv": ".csv",
+          "text/tab-separated-values": ".tsv",
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+          "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+          "application/vnd.ms-excel": ".xls",
+          "text/plain": ".txt"
+        },
+        "nameMimeTypes": {
+          ".zip": "application/zip",
+          ".json": "application/json",
+          ".md": "text/markdown",
+          ".txt": "text/plain",
+          ".csv": "text/csv",
+          ".tsv": "text/tab-separated-values",
+          ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+          ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+          ".xls": "application/vnd.ms-excel"
+        },
+        "defaultTitles": {
+          "image": "Generated image",
+          "spreadsheet": "Spreadsheet artifact",
+          "canvas": "Canvas artifact"
+        },
+        "payloadMarkers": {
+          "image_content_types": [
+            "image_asset_pointer"
+          ],
+          "spreadsheet_visualization_types": [
+            "table"
+          ]
+        }
+      }
+    },
+    "gemini": {
+      "models": [
+        {
+          "id": "gemini-3-pro",
+          "label": "Gemini 3 Pro",
+          "aliases": [
+            "gemini 3 pro",
+            "gemini"
+          ]
+        }
+      ],
+      "routes": {
+        "baseUrl": "https://gemini.google.com/",
+        "compatibleHosts": [
+          "gemini.google.com"
+        ]
+      }
+    },
+    "grok": {
+      "models": [
+        { "id": "auto", "label": "Auto" },
+        { "id": "fast", "label": "Fast" },
+        {
+          "id": "expert",
+          "label": "Expert",
+          "aliases": [
+            "grok-4.1",
+            "grok 4.1",
+            "grok-4.1-thinking",
+            "grok 4.1 thinking",
+            "thinking"
+          ]
+        },
+        {
+          "id": "heavy",
+          "label": "Heavy",
+          "aliases": [
+            "grok",
+            "grok-4.2",
+            "grok 4.2",
+            "grok-4.20",
+            "grok 4.20",
+            "grok-4-20"
+          ]
+        }
+      ],
+      "routes": {
+        "baseUrl": "https://grok.com/",
+        "compatibleHosts": [
+          "grok.com"
+        ]
+      }
+    }
+  }
+}

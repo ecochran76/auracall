@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { BrowserSessionConfig } from '../sessionStore.js';
 import type { ModelName, ThinkingTimeLevel } from '../oracle.js';
+import { CURRENT_OPENAI_PRO_ALIAS } from '../oracle.js';
 import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, isTemporaryChatUrl, normalizeChatgptUrl, parseDuration } from '../browserMode.js';
 import { normalizeBrowserModelStrategy } from '../browser/modelStrategy.js';
 import type { BrowserModelStrategy } from '../browser/types.js';
@@ -9,26 +10,26 @@ import type { CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { resolveManagedProfileDir } from '../browser/profileStore.js';
 import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
-import { ensureServicesRegistry, resolveServiceModelLabels } from '../services/registry.js';
+import {
+  ensureServicesRegistry,
+  resolveBundledServiceModelLabels,
+  resolveServiceModelLabels,
+} from '../services/registry.js';
 import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
 const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
-
-// Ordered array: most specific models first to ensure correct selection.
-// The browser label is passed to the model picker which fuzzy-matches against ChatGPT's UI.
-const BROWSER_MODEL_LABELS: [ModelName, string][] = [
-  // Most specific first (e.g., "gpt-5.2-thinking" before "gpt-5.2")
-  ['gpt-5.2-thinking', 'Thinking'],
-  ['gpt-5.2-instant', 'Instant'],
-  ['gpt-5.2-pro', 'Pro'],
-  ['gpt-5.1-pro', 'Pro'],
-  ['gpt-5-pro', 'Pro'],
-  // Base models last (least specific)
-  ['gpt-5.2', 'Instant'],
-  ['gpt-5.1', 'Instant'],
-  ['gemini-3-pro', 'Gemini 3 Pro'],
-];
+const FALLBACK_BROWSER_MODEL_LABELS: Partial<Record<ModelName, string>> = {
+  'gpt-5.2-thinking': 'Thinking',
+  'gpt-5.2-instant': 'Instant',
+  'gpt-5.2-pro': 'Pro',
+  'gpt-5.1-pro': 'Pro',
+  'gpt-5-pro': 'Pro',
+  'gpt-5.2': 'Instant',
+  'gpt-5.1': 'Instant',
+  'gemini-3-pro': 'Gemini 3 Pro',
+  'grok-4.1': 'Expert',
+};
 
 export interface BrowserFlagOptions {
   auracallProfileName?: string;
@@ -81,7 +82,7 @@ export function normalizeChatGptModelForBrowser(model: ModelName): ModelName {
 
   // Pro variants: always resolve to the latest Pro model in ChatGPT.
   if (normalized === 'gpt-5-pro' || normalized === 'gpt-5.1-pro' || normalized.endsWith('-pro')) {
-    return 'gpt-5.2-pro';
+    return CURRENT_OPENAI_PRO_ALIAS;
   }
 
   // Explicit model variants: keep as-is (they have their own browser labels)
@@ -225,13 +226,14 @@ function selectBrowserPortStrategy(options: BrowserFlagOptions): DebugPortStrate
 
 export function mapModelToBrowserLabel(model: ModelName): string {
   const normalized = normalizeChatGptModelForBrowser(model);
-  // Iterate ordered array to find first match (most specific first)
-  for (const [key, label] of BROWSER_MODEL_LABELS) {
-    if (key === normalized) {
+  const serviceId = inferBrowserServiceId(normalized);
+  if (serviceId) {
+    const label = resolveBundledServiceModelLabels(serviceId, normalized)[0];
+    if (label) {
       return label;
     }
   }
-  return DEFAULT_MODEL_TARGET;
+  return FALLBACK_BROWSER_MODEL_LABELS[normalized] ?? DEFAULT_MODEL_TARGET;
 }
 
 export function resolveBrowserModelLabel(input: string | undefined, model: ModelName): string {
@@ -263,6 +265,19 @@ function resolveGrokModeLabel(
     return resolveServiceModelLabels(servicesRegistry, 'grok', override)[0] ?? override.trim();
   }
   return resolveServiceModelLabels(servicesRegistry, 'grok', model)[0] ?? 'Auto';
+}
+
+function inferBrowserServiceId(model: ModelName): 'chatgpt' | 'gemini' | 'grok' | null {
+  if (model.startsWith('gpt-') && !model.includes('codex')) {
+    return 'chatgpt';
+  }
+  if (model.startsWith('gemini-')) {
+    return 'gemini';
+  }
+  if (model.startsWith('grok-')) {
+    return 'grok';
+  }
+  return null;
 }
 
 function parseRemoteChromeTarget(raw: string): { host: string; port: number } {

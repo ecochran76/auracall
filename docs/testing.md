@@ -1,6 +1,7 @@
 # Testing quickstart
 
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
+- Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-refactor-plan.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).

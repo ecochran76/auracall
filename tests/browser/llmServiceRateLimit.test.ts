@@ -1,7 +1,7 @@
 import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { resolveChatgptRateLimitGuardPath } from '../../src/browser/chatgptRateLimitGuard.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
@@ -37,6 +37,10 @@ class RateLimitTestLlmService extends LlmService {
 
   async runGuarded<T>(action: string, fn: () => Promise<T>): Promise<T> {
     return this.withRetry(fn, { action, retries: 0 });
+  }
+
+  async runGuardedWithRetries<T>(action: string, fn: () => Promise<T>, retries: number): Promise<T> {
+    return this.withRetry(fn, { action, retries });
   }
 
   async listProjects(): Promise<[]> {
@@ -92,6 +96,89 @@ describe('llmService ChatGPT rate-limit guard', () => {
         nextProcess.runGuarded('listConversations', async () => []),
       ).rejects.toThrow(/cooldown active until/i);
     } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('uses clustered adaptive delays for ChatGPT rate-limit responses', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+    const errorMessage = 'Too many requests. You’re making requests too quickly.';
+    const delays: number[] = [];
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation(((callback: TimerHandler, ms?: number) => {
+        delays.push(typeof ms === 'number' ? ms : 0);
+        if (typeof callback === 'function') {
+          callback();
+        }
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as unknown as typeof setTimeout);
+
+    let attempts = 0;
+    try {
+      await expect(
+        service.runGuardedWithRetries('renameConversation', async () => {
+          attempts += 1;
+          if (attempts < 3) {
+            throw new Error(errorMessage);
+          }
+          return undefined;
+        }, 2),
+      ).resolves.toBeUndefined();
+
+      expect(attempts).toBe(3);
+      expect(delays).toHaveLength(2);
+      expect(delays[0]).toBeGreaterThanOrEqual(2_000);
+      expect(delays[0]).toBeLessThanOrEqual(3_500);
+      expect(delays[1]).toBeGreaterThanOrEqual(5_000);
+      expect(delays[1]).toBeLessThanOrEqual(6_500);
+      expect(delays[1]).toBeGreaterThan(delays[0]);
+    } finally {
+      setTimeoutSpy.mockRestore();
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('uses bounded delays for generic ChatGPT retryable failures', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+    const errorMessage = 'WebSocket connection closed';
+    const delays: number[] = [];
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation(((callback: TimerHandler, ms?: number) => {
+        delays.push(typeof ms === 'number' ? ms : 0);
+        if (typeof callback === 'function') {
+          callback();
+        }
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as unknown as typeof setTimeout);
+
+    try {
+      await expect(
+        service.runGuardedWithRetries('renameConversation', async () => {
+          throw new Error(errorMessage);
+        }, 1),
+      ).rejects.toThrow(errorMessage);
+
+      expect(delays).toHaveLength(1);
+      expect(delays[0]).toBeGreaterThanOrEqual(500);
+      expect(delays[0]).toBeLessThanOrEqual(750);
+    } finally {
+      setTimeoutSpy.mockRestore();
       await rm(homeDir, { recursive: true, force: true });
     }
   });

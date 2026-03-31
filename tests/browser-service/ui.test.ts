@@ -13,6 +13,7 @@ import {
   navigateAndSettle,
   openMenu,
   openRevealedRowMenu,
+  openAndSelectMenuItemFromTriggers,
   selectAndVerifyNestedMenuPathOption,
   openSubmenu,
   openSurface,
@@ -970,6 +971,111 @@ describe('browser-service ui wait helpers', () => {
       attemptedStrategies: ['pointer', 'keyboard-space'],
     });
   }, 15_000);
+
+  test('openAndSelectMenuItemFromTriggers falls back to later triggers with per-attempt setup', async () => {
+    const beforeSecondAttempt = vi.fn(async () => undefined);
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('const nodes = Array.from(document.querySelectorAll("[role=\\"menu\\"], [role=\\"listbox\\"], [data-radix-collection-root]"))')) {
+          return { result: { value: false } };
+        }
+        if (options.expression.includes('const menuSelectors =') && options.expression.includes('#menu-456')) {
+          return {
+            result: {
+              value: [
+                {
+                  selector: '#menu-456',
+                  sourceSelector: '#menu-456',
+                  signature: 'menu-456',
+                  rect: { x: 10, y: 20, width: 200, height: 160 },
+                  distanceToAnchor: null,
+                  items: [{ label: 'delete', role: 'menuitem', selected: false }],
+                  itemLabels: ['delete'],
+                },
+              ],
+            },
+          };
+        }
+        if (options.expression.includes('const menuSelectors =')) {
+          return { result: { value: [] } };
+        }
+        if (options.expression.includes('const selector = "[data-row-menu=\\"true\\"]"')) {
+          return { result: { value: { ok: false, reason: 'Button not found' } } };
+        }
+        if (options.expression.includes('const selector = "[data-header-menu=\\"true\\"]"')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                matchedLabel: 'options',
+                rootSelectorUsed: 'document',
+                listId: 'menu-456',
+              },
+            },
+          };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("#menu-456"))')) {
+          return { result: { value: true } };
+        }
+        if (options.expression.includes('[role=\\"menuitemradio\\"]') && options.expression.includes('"delete"')) {
+          return { result: { value: true } };
+        }
+        return { result: { value: false } };
+      }),
+    };
+
+    const result = await openAndSelectMenuItemFromTriggers(runtime as never, {
+      triggers: [
+        {
+          name: 'row',
+          trigger: {
+            selector: '[data-row-menu="true"]',
+            requireVisible: true,
+            timeoutMs: 50,
+          },
+          menuSelector: '[role="menu"]',
+          closeMenuAfter: true,
+        },
+        {
+          name: 'header',
+          beforeAttempt: beforeSecondAttempt,
+          trigger: {
+            selector: '[data-header-menu="true"]',
+            requireVisible: true,
+            timeoutMs: 50,
+          },
+          menuSelector: '[role="menu"]',
+          closeMenuAfter: true,
+        },
+      ],
+      itemMatch: { exact: ['delete'] },
+      timeoutMs: 50,
+    });
+
+    expect(beforeSecondAttempt).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({
+      ok: true,
+      triggerIndex: 1,
+      triggerName: 'header',
+      menuSelector: '#menu-456',
+      attempts: [
+        {
+          triggerIndex: 0,
+          triggerName: 'row',
+          menuOpened: false,
+          menuSelected: false,
+          reason: 'Button not found',
+        },
+        {
+          triggerIndex: 1,
+          triggerName: 'header',
+          menuOpened: true,
+          menuSelected: true,
+          menuSelector: '#menu-456',
+        },
+      ],
+    });
+  });
 
   test('openSurface uses fallback triggers until the ready state appears', async () => {
     const runtime = createRuntime([

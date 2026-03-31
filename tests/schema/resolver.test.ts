@@ -5,14 +5,14 @@ import * as configModule from '../../src/config.js';
 describe('Config Resolver', () => {
   it('should resolve default values when no config/cli provided', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
-      config: { model: 'gpt-5.2-pro', browser: {} },
+      config: { model: 'gpt-5.1-pro', browser: {} },
       path: '/tmp/config.json',
       loaded: false
     });
 
     const result = await resolveConfig({});
     
-    expect(result.model).toBe('gpt-5.2-pro');
+    expect(result.model).toBe('gpt-5.1-pro');
     expect(result.browser.headless).toBe(undefined);
   });
 
@@ -82,7 +82,7 @@ describe('Config Resolver', () => {
         version: 2,
         model: 'gpt-5.2-pro',
         browser: {},
-        auracallProfile: 'wsl-chrome',
+          auracallProfile: 'wsl-chrome-2',
         browserDefaults: {
           chromePath: '/usr/bin/google-chrome',
           chromeCookiePath: '/home/ecochran76/.config/google-chrome/Default/Cookies',
@@ -153,6 +153,7 @@ describe('Config Resolver', () => {
         version: 2,
         model: 'gpt-5.2-pro',
         browser: {},
+        auracallProfile: 'wsl-chrome-2',
         browserDefaults: {
           chromePath: '/usr/bin/google-chrome',
         },
@@ -185,5 +186,87 @@ describe('Config Resolver', () => {
     expect(result.auracallProfile).toBe('windows-chrome-test');
     expect(result.browser.chromePath).toBe('/custom/chrome');
     expect(result.browser.wslChromePreference).toBe('wsl');
+  });
+
+  it('should use profile-specific service URLs for browser targets', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 2,
+        model: 'gpt-5.2-pro',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        profiles: {
+          personal: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                url: 'https://chatgpt.com/',
+              },
+            },
+          },
+          work: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                url: 'https://chatgpt.com/g/p-123456789',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({ profile: 'work' });
+
+    expect(result.auracallProfile).toBe('work');
+    expect(result.browser.chatgptUrl).toBe('https://chatgpt.com/g/p-123456789');
+  });
+
+  it('should resolve CLI-selected service target to profile service config', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 2,
+        model: 'gpt-5.2-pro',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        profiles: {
+          mixed: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/tmp/mixed/chatgpt',
+              },
+              grok: {
+                url: 'https://grok.com/preview',
+                manualLoginProfileDir: '/tmp/mixed/grok',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      profile: 'mixed',
+      engine: 'browser',
+      browserTarget: 'grok',
+    });
+
+    expect(result.auracallProfile).toBe('mixed');
+    expect(result.browser.target).toBe('grok');
+    expect(result.browser.grokUrl).toBe('https://grok.com/preview');
+    expect(result.browser.manualLoginProfileDir).toBe('/tmp/mixed/grok');
   });
 });

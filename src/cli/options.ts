@@ -2,7 +2,7 @@ import { InvalidArgumentError, type Command } from 'commander';
 import path from 'node:path';
 import fg from 'fast-glob';
 import type { ModelName, PreviewMode } from '../oracle.js';
-import { DEFAULT_MODEL, MODEL_CONFIGS } from '../oracle.js';
+import { DEFAULT_MODEL, MODEL_CONFIGS, resolveCurrentOpenAiProModel } from '../oracle.js';
 
 export function collectPaths(value: string | string[] | undefined, previous: string[] = []): string[] {
   if (!value) {
@@ -204,7 +204,7 @@ export function resolveApiModel(modelValue: string): ModelName {
     return 'gemini-3-pro';
   }
   if (normalized.includes('pro')) {
-    return 'gpt-5.2-pro';
+    return resolveCurrentOpenAiProModel(normalized);
   }
   // Passthrough for custom/OpenRouter model IDs.
   return normalized as ModelName;
@@ -261,7 +261,7 @@ export function inferModelFromLabel(modelValue: string): ModelName {
     return 'gpt-5.1-pro';
   }
   if (normalized.includes('pro')) {
-    return 'gpt-5.2-pro';
+    return resolveCurrentOpenAiProModel(normalized);
   }
   if (normalized.includes('5.1') || normalized.includes('5_1')) {
     return 'gpt-5.1';

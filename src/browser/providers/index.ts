@@ -5,6 +5,7 @@ import {
   normalizeChatgptConversationId,
   normalizeChatgptProjectId,
   resolveChatgptConversationUrl,
+  resolveChatgptProjectUrl,
 } from './chatgptAdapter.js';
 import { GROK_PROVIDER } from './grok.js';
 import { createGrokAdapter, extractGrokProjectIdFromUrl } from './grokAdapter.js';
@@ -17,7 +18,7 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     normalizeProjectId: normalizeChatgptProjectId,
     normalizeConversationId: normalizeChatgptConversationId,
     extractProjectIdFromUrl: extractChatgptProjectIdFromUrl,
-    resolveProjectUrl: (projectId) => `https://chatgpt.com/g/${projectId}/project`,
+    resolveProjectUrl: (projectId) => resolveChatgptProjectUrl(projectId),
     resolveConversationUrl: (conversationId, projectId) => resolveChatgptConversationUrl(conversationId, projectId),
     ...createChatgptAdapter(),
   },

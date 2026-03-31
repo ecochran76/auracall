@@ -100,6 +100,32 @@ node --import tsx bin/auracall.ts config migrate --dry-run
         useDetectedIdentity: false,
       },
     },
+    work: {
+      // Separate ChatGPT workspace context for the same identity
+      engine: "browser",
+      defaultService: "chatgpt",
+      keepBrowser: false,
+      services: {
+        chatgpt: {
+          identity: { email: "me@example.com" },
+          // Equivalent to hard-pinning the workspace URL:
+          projectId: "g-p-123456789",
+        },
+      },
+    },
+    // Secondary browser-profile family for another account, same WSL runtime
+    "wsl-chrome-2": {
+      engine: "browser",
+      defaultService: "chatgpt",
+      keepBrowser: false,
+      services: {
+        chatgpt: {
+          identity: { email: "consult@polymerconsultingroup.com" },
+          // Point this profile at the same service family, different managed account.
+          manualLoginProfileDir: "/Users/me/.auracall/browser-profiles/wsl-chrome-2/chatgpt",
+        },
+      },
+    },
   },
 
   // Default target for `auracall serve` remote browser runs
@@ -138,7 +164,14 @@ Within each file, later CLI flags still override config, and environment variabl
 
 - `engine`/`search` can be set globally or inside an `auracallProfile`; profile values apply when `auracallProfile` is selected and no CLI flag overrides them.
 - Use `--profile <name>` to switch profiles for a single run (overrides config).
-- On WSL, keep the primary WSL Chrome setup on `profiles.default` if you want to reuse the long-lived managed profile at `~/.auracall/browser-profiles/default/<service>`; use separate named profiles for Windows Chrome or other experimental runtimes.
+- Profile onboarding and login with managed profiles:
+  - `auracall --profile <name> setup --chatgpt` runs the managed-profile setup for that profile and opens a login flow if needed.
+  - `auracall --profile <name> login --chatgpt` opens only the managed-profile login flow so you can manually authenticate a second account.
+  - `auracall --profile <name> setup --chatgpt --skip-login` verifies an existing session without reopening login.
+  - Use `--chatgpt-url` or `profiles.<name>.services.chatgpt.projectId` once signed in to pin to a workspace.
+- On WSL, keep the primary WSL Chrome setup on `profiles.default` if you want to reuse the long-lived managed profile at `~/.auracall/browser-profiles/default/<service>`.
+- Use family names like `wsl-chrome-2` for secondary WSL account profiles (for example, `consult@polymerconsultingroup.com`) while keeping `default` as primary.
+- Use separate named profiles for Windows Chrome or other experimental runtimes.
 - `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Aura-Call reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.
 - Remote browser defaults follow the same order: `--remote-host/--remote-token` win, then `remote.host` / `remote.token` (or `remoteHost` / `remoteToken`) in the config, then `AURACALL_REMOTE_HOST` / `AURACALL_REMOTE_TOKEN` if still unset.
@@ -146,6 +179,14 @@ Within each file, later CLI flags still override config, and environment variabl
 - `AURACALL_NOTIFY*` env vars still layer on top of the config’s `notify` block.
 - `sessionRetentionHours` controls the default value for `--retain-hours`. When unset, `AURACALL_RETAIN_HOURS` (if present) becomes the fallback, and the CLI flag still wins over both.
 - `services.<service>.url` defines global service URL defaults; `profiles.<name>.services.<service>.url` can override them per profile.
+- `profiles.<name>.services.chatgpt.url` (or legacy `profiles.<name>.browser.url`) is the right way to pin a profile to a second ChatGPT workspace/project.
+  - Example: `auracall --profile work "..."` uses `https://chatgpt.com/g/p-123456789` from `profiles.work`.
+- If your preference is not a hard URL, use `profiles.<name>.services.<service>.projectId` or `.projectName`:
+  - `projectId` is the most explicit; Aura-Call builds the scoped project route from it.
+  - `projectName` is resolved via cache/name lookup at runtime and can be ambiguous if duplicate titles exist.
+- Migration note:
+  - If you already use `projectId`/`projectName` in profile service blocks, you can keep that path and avoid URL pinning entirely.
+  - URL pinning is most useful when you want a literal target route (for example, a specific non-project chat folder URL) instead of config-driven project resolution.
 - `services.<service>.interactiveLogin` can set a global login mode default; `profiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
 - `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.

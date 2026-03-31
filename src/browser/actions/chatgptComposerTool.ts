@@ -8,6 +8,16 @@ import type {
 import { ATTACHMENT_MENU_SELECTOR } from '../constants.js';
 import { logDomFailure } from '../domDebug.js';
 import {
+  resolveBundledServiceComposerAliases,
+  resolveBundledServiceComposerChipIgnoreTokens,
+  resolveBundledServiceComposerFileRequestLabels,
+  resolveBundledServiceComposerKnownLabels,
+  resolveBundledServiceComposerMoreLabels,
+  resolveBundledServiceComposerTopMenuSignalLabels,
+  resolveBundledServiceComposerTopMenuSignalSubstrings,
+  resolveBundledServiceComposerTopLevelSentinels,
+} from '../../services/registry.js';
+import {
   collectVisibleMenuInventory,
   dismissOpenMenus,
   openMenu,
@@ -30,7 +40,7 @@ export type ChatgptComposerToolSelection = {
   availableMore: string[];
 };
 
-const COMPOSER_TOOL_ALIASES: Record<string, string[]> = {
+const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {
   search: ['web search'],
   web: ['web search'],
   research: ['deep research'],
@@ -49,10 +59,23 @@ const COMPOSER_TOOL_ALIASES: Record<string, string[]> = {
   drive: ['google drive'],
   gh: ['github'],
   'git hub': ['github'],
-};
+});
 
-const COMPOSER_TOP_LEVEL_SENTINELS = ['more', 'recent files', 'company knowledge', 'create image', 'deep research', 'web search'];
-const KNOWN_COMPOSER_TOOL_LABELS = [
+const COMPOSER_TOP_LEVEL_SENTINELS = resolveBundledServiceComposerTopLevelSentinels('chatgpt', [
+  'more',
+  'recent files',
+  'company knowledge',
+  'create image',
+  'deep research',
+  'web search',
+]);
+const COMPOSER_MORE_LABELS = resolveBundledServiceComposerMoreLabels('chatgpt', ['more']);
+const COMPOSER_TOP_MENU_SIGNAL_LABELS = resolveBundledServiceComposerTopMenuSignalLabels('chatgpt', ['recent files']);
+const COMPOSER_TOP_MENU_SIGNAL_SUBSTRINGS = resolveBundledServiceComposerTopMenuSignalSubstrings('chatgpt', [
+  'add photos',
+  'filesctrlu',
+]);
+const KNOWN_COMPOSER_TOOL_LABELS = resolveBundledServiceComposerKnownLabels('chatgpt', [
   'create image',
   'deep research',
   'web search',
@@ -68,7 +91,20 @@ const KNOWN_COMPOSER_TOOL_LABELS = [
   'google drive',
   'intuit quickbooks',
   'quizzes',
-] as const;
+]);
+const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLabels('chatgpt', [
+  'file',
+  'files',
+  'upload',
+  'uploads',
+  'recent file',
+  'recent files',
+  'add photos files',
+]);
+const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', [
+  'add files and more',
+  'thinking',
+]);
 
 export async function ensureChatgptComposerTool(
   Runtime: ChromeClient['Runtime'],
@@ -172,15 +208,7 @@ function resolveComposerToolCandidates(requestedTool: string): string[] {
 
 function isComposerFileRequest(requestedTool: string): boolean {
   const normalized = normalizeComposerToolLabel(requestedTool);
-  return (
-    normalized === 'file' ||
-    normalized === 'files' ||
-    normalized === 'upload' ||
-    normalized === 'uploads' ||
-    normalized === 'recent file' ||
-    normalized === 'recent files' ||
-    normalized === 'add photos files'
-  );
+  return COMPOSER_FILE_REQUEST_LABELS.includes(normalized);
 }
 
 function scoreComposerToolLabel(label: string, toolCandidates: readonly string[]): number {
@@ -265,13 +293,21 @@ function buildTopLevelExpectedMatch(toolCandidates: readonly string[]): LabelMat
   };
 }
 
+function includesAnyExact(labels: readonly string[], candidates: readonly string[]): boolean {
+  return labels.some((label) => candidates.includes(label));
+}
+
+function includesAnySubstring(labels: readonly string[], candidates: readonly string[]): boolean {
+  return labels.some((label) => candidates.some((candidate) => candidate.length > 0 && label.includes(candidate)));
+}
+
 function scoreComposerTopLevelMenu(entry: VisibleMenuInventoryEntry, toolCandidates: readonly string[]): number {
   const labels = entry.itemLabels;
   if (!labels.length) return 0;
   let score = 0;
-  if (labels.includes('more')) score += 1_000;
-  if (labels.some((label) => label.includes('add photos') || label.includes('filesctrlu'))) score += 700;
-  if (labels.includes('recent files')) score += 500;
+  if (includesAnyExact(labels, COMPOSER_MORE_LABELS)) score += 1_000;
+  if (includesAnySubstring(labels, COMPOSER_TOP_MENU_SIGNAL_SUBSTRINGS)) score += 700;
+  if (includesAnyExact(labels, COMPOSER_TOP_MENU_SIGNAL_LABELS)) score += 500;
   if (labels.some((label) => scoreComposerToolLabel(label, toolCandidates) > 0)) score += 250;
   return score > 0 ? score + labels.length : 0;
 }
@@ -290,6 +326,7 @@ function findVisibleComposerTopMenu(
 function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): string {
   return `(() => {
     const toolCandidates = ${JSON.stringify(toolCandidates)};
+    const ignoreTokens = ${JSON.stringify(COMPOSER_CHIP_IGNORE_TOKENS)};
     const normalize = (value) => String(value || '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, ' ')
@@ -333,7 +370,7 @@ function buildComposerChipVisibleExpression(toolCandidates: readonly string[]): 
         text: (node.textContent || '').trim() || null,
       }))
       .find((entry) => {
-        if (!entry.label || entry.label.includes('add files and more') || entry.label.includes('thinking')) {
+        if (!entry.label || ignoreTokens.some((token) => token.length > 0 && entry.label.includes(token))) {
           return false;
         }
         return scoreLabel(entry.label) > 0;
@@ -426,7 +463,7 @@ async function openComposerMoreMenu(
 > {
   const opened = await openSubmenu(Runtime, {
     parentMenuSelector: topMenuSelector,
-    itemMatch: { exact: ['more'] },
+    itemMatch: { exact: [...COMPOSER_MORE_LABELS] },
     expectedItemMatch: { includeAny: [...toolCandidates] },
     interactionStrategies: ['pointer', 'click'],
     timeoutMs: 5000,
@@ -475,7 +512,7 @@ export async function readCurrentChatgptComposerTool(
   }
   let moreLabels: string[] = [];
   let moreItems: Pick<VisibleMenuInventoryItem, 'label' | 'selected'>[] = [];
-  if (topOpened.topLevelLabels.includes('more')) {
+  if (includesAnyExact(topOpened.topLevelLabels, COMPOSER_MORE_LABELS)) {
     const moreOpened = await openComposerMoreMenu(Runtime, topOpened.menuSelector, KNOWN_COMPOSER_TOOL_LABELS);
     if (moreOpened.ok) {
       moreLabels = moreOpened.moreLabels;
@@ -499,7 +536,7 @@ async function collectComposerAvailability(
   if (!topOpened.ok) {
     return { availableTopLevel: topOpened.topLevelLabels, availableMore: [] };
   }
-  if (!topOpened.topLevelLabels.includes('more')) {
+  if (!includesAnyExact(topOpened.topLevelLabels, COMPOSER_MORE_LABELS)) {
     return { availableTopLevel: topOpened.topLevelLabels, availableMore: [] };
   }
   const moreOpened = await openComposerMoreMenu(Runtime, topOpened.menuSelector, toolCandidates);
@@ -541,7 +578,7 @@ async function selectComposerTool(
     trigger: buildComposerTriggerOptions(),
     menuSelector: '[role="menu"]',
     steps: [
-      { itemMatch: { exact: ['more'] }, interactionStrategies: ['pointer', 'click'] },
+      { itemMatch: { exact: [...COMPOSER_MORE_LABELS] }, interactionStrategies: ['pointer', 'click'] },
       { itemMatch: { includeAny: [...toolCandidates] } },
     ],
     selectedItemMatch: { includeAny: [...toolCandidates] },

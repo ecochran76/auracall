@@ -110,6 +110,7 @@ export interface BrowserProvider {
     options?: BrowserProviderListOptions,
   ) => Promise<{ text: string; model?: string | null }>;
   getUserIdentity?: (options?: BrowserProviderListOptions) => Promise<ProviderUserIdentity | null>;
+  getFeatureSignature?: (options?: BrowserProviderListOptions) => Promise<string | null>;
   openConversation?: (conversationId: string) => Promise<void>;
   readConversationContext?: (
     conversationId: string,

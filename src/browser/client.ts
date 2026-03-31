@@ -42,7 +42,7 @@ export class BrowserAutomationClient {
     if (target !== 'chatgpt' && target !== 'grok') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
     }
-    const browserService = BrowserService.fromConfig(userConfig);
+    const browserService = BrowserService.fromConfig(userConfig, target);
     await browserService.pruneRegistry().catch(() => undefined);
     return new BrowserAutomationClient(userConfig, target, browserService);
   }

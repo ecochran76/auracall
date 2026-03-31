@@ -57,6 +57,7 @@ describe('llmService cache identity resolution', () => {
         source: 'auth-session',
       },
       identityKey: 'ecochran76@gmail.com',
+      featureSignature: null,
     });
     expect(getUserIdentity).toHaveBeenCalledTimes(1);
     expect(identityPrompt).not.toHaveBeenCalled();
@@ -89,8 +90,46 @@ describe('llmService cache identity resolution', () => {
         source: 'prompt',
       },
       identityKey: 'prompted@example.com',
+      featureSignature: null,
     });
     expect(getUserIdentity).not.toHaveBeenCalled();
     expect(identityPrompt).toHaveBeenCalledTimes(1);
+  });
+
+  test('includes configured and detected feature state in the cache signature', async () => {
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+      getFeatureSignature: vi.fn(async () =>
+        JSON.stringify({ detector: 'chatgpt-feature-probe-v1', web_search: true, apps: ['github'] }),
+      ),
+    } satisfies LlmServiceAdapter;
+    const service = new IdentityTestLlmService(
+      ({
+        model: 'gpt-5.1-pro',
+        browser: { cache: {} },
+        auracallProfile: 'default',
+        auracallProfiles: {
+          default: {
+            services: {
+              chatgpt: {
+                features: {
+                  deep_research: true,
+                },
+              },
+            },
+          },
+        },
+      } as unknown) as ResolvedUserConfig,
+      provider,
+    );
+
+    const identity = await service.resolveCacheIdentity({});
+    expect(identity.userIdentity).toBeNull();
+    expect(identity.identityKey).toBeNull();
+    expect(JSON.parse(identity.featureSignature ?? 'null')).toEqual({
+      configured: { deep_research: true },
+      detected: { detector: 'chatgpt-feature-probe-v1', web_search: true, apps: ['github'] },
+    });
   });
 });

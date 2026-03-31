@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
+  readConversationCache,
   writeConversationCache,
   writeConversationContextCache,
 } from '../../src/browser/providers/cache.js';
@@ -92,6 +93,35 @@ describe('provider cache nested writes', () => {
           },
         ],
       });
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('marks cache stale when the provider feature signature changes', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'oracle-cache-home-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const context: ProviderCacheContext = {
+      provider: 'chatgpt',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+      featureSignature: '{"detector":"chatgpt-feature-probe-v1","apps":["github"]}',
+    };
+    try {
+      await writeConversationCache(context, [
+        {
+          id: 'conversation-123',
+          title: 'Artifacts',
+          provider: 'chatgpt',
+        },
+      ]);
+      const reread = await readConversationCache({
+        ...context,
+        featureSignature: '{"detector":"chatgpt-feature-probe-v1","apps":["github","slack"]}',
+      });
+      expect(reread.items).toHaveLength(1);
+      expect(reread.stale).toBe(true);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

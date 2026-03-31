@@ -27,7 +27,7 @@ export function applyBrowserProfileOverrides(
     asNonEmptyString(profile.defaultService) ??
     asNonEmptyString(browser.target) ??
     asNonEmptyString(mergedBrowser.target);
-  if ((overrideExisting || !browser.target) && defaultService) {
+  if (!browser.target && defaultService) {
     browser.target = defaultService;
   }
   if (profile.keepBrowser !== undefined && (overrideExisting || browser.keepBrowser === undefined)) {

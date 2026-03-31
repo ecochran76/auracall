@@ -135,7 +135,11 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     config?.chromeProfile ?? discoveredProfile?.profileName ?? DEFAULT_BROWSER_CONFIG.chromeProfile ?? 'Default',
   );
   const resolvedDisplay =
-    config?.display ?? process.env.AURACALL_BROWSER_DISPLAY ?? DEFAULT_BROWSER_CONFIG.display;
+    resolveEffectiveDisplay({
+      configuredDisplay: config?.display ?? null,
+      envDisplay: process.env.AURACALL_BROWSER_DISPLAY ?? null,
+      resolvedChromePath,
+    });
   const debugPortRange = normalizeDebugPortRange(config?.debugPortRange);
   const serviceTabLimit = normalizeServiceTabLimit(config?.serviceTabLimit);
   const blankTabLimit = normalizeBlankTabLimit(config?.blankTabLimit);
@@ -266,6 +270,30 @@ function inferWindowsManagedProfileRoot(cookiePath: string | null): string | nul
 
 function isWindowsHostedChromePath(chromePath?: string | null): boolean {
   return isWindowsPath(chromePath ?? null);
+}
+
+function isLinuxHostedChromePath(chromePath?: string | null): boolean {
+  const trimmed = chromePath?.trim();
+  return Boolean(trimmed) && !isWindowsHostedChromePath(trimmed);
+}
+
+function resolveEffectiveDisplay(options: {
+  configuredDisplay?: string | null;
+  envDisplay?: string | null;
+  resolvedChromePath?: string | null;
+}): string | null {
+  const configured = resolveConfiguredBrowserValue(options.configuredDisplay);
+  if (configured) {
+    return configured;
+  }
+  const envDisplay = resolveConfiguredBrowserValue(options.envDisplay);
+  if (envDisplay) {
+    return envDisplay;
+  }
+  if (isWslEnvironment() && isLinuxHostedChromePath(options.resolvedChromePath)) {
+    return ':0.0';
+  }
+  return DEFAULT_BROWSER_CONFIG.display;
 }
 
 function normalizeManualLoginProfileDir(value: string): string {

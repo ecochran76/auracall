@@ -1,7 +1,11 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
-import { resolveManagedProfileDirForUserConfig } from '../profileStore.js';
+import {
+  resolveManagedProfileDirForUserConfig,
+  type BrowserProfileTarget,
+} from '../profileStore.js';
+import { matchesServiceUrl } from '../urlFamilies.js';
 import { resolveBrowserListTarget, pruneRegistry } from './session.js';
 import { launchManualLoginSession } from '../manualLogin.js';
 import { getAuracallHomeDir } from '../../auracallHome.js';
@@ -41,21 +45,29 @@ export type ServiceTargetResolution = {
 export class BrowserService extends BrowserServiceCore {
   private readonly registryPath: string;
   private readonly userConfig: ResolvedUserConfig;
-  private constructor(userConfig: ResolvedUserConfig) {
-    const resolvedConfig = resolveBrowserConfig(userConfig.browser);
+  private readonly serviceTarget: BrowserProfileTarget;
+  private constructor(userConfig: ResolvedUserConfig, target: BrowserProfileTarget) {
+    const resolvedConfig = resolveBrowserConfig({
+      ...(userConfig.browser ?? {}),
+      target,
+    });
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
-      resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig),
+      resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig, target),
       pruneRegistry: () => pruneRegistry(),
       launchManualLoginSession,
     };
     super(resolvedConfig, deps);
     this.registryPath = registryPath;
     this.userConfig = userConfig;
+    this.serviceTarget = target;
   }
 
-  static fromConfig(userConfig: ResolvedUserConfig): BrowserService {
-    return new BrowserService(userConfig);
+  static fromConfig(
+    userConfig: ResolvedUserConfig,
+    target: BrowserProfileTarget = 'chatgpt',
+  ): BrowserService {
+    return new BrowserService(userConfig, target);
   }
 
   async resolveServiceTarget(
@@ -76,10 +88,11 @@ export class BrowserService extends BrowserServiceCore {
     const matchedByPort = knownInstances.find((instance) =>
       instance.port === target.port && (target.host ? instance.host === target.host : true),
     );
+    const profileTarget = options.serviceId ?? this.serviceTarget;
     const profilePath =
       matchedByPort?.profilePath ??
       resolved.manualLoginProfileDir ??
-      resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(), options.serviceId);
+      resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(profileTarget), profileTarget);
     const profileName = matchedByPort?.profileName ?? resolved.chromeProfile ?? 'Default';
     if (!matchedByPort && target.port) {
       const pid = await findChromePidUsingUserDataDir(profilePath);
@@ -121,12 +134,7 @@ export class BrowserService extends BrowserServiceCore {
     }
     const configuredMatcher =
       options.serviceId === 'grok' ? createConfiguredUrlMatcher(options.configuredUrl) : null;
-    const serviceMatcher =
-      options.serviceId === 'chatgpt'
-        ? (url: string) => url.includes('chatgpt.com') || url.includes('chat.openai.com')
-        : options.serviceId === 'gemini'
-          ? (url: string) => url.includes('gemini.google.com')
-          : (url: string) => url.includes('grok.com');
+    const serviceMatcher = (url: string) => matchesServiceUrl(options.serviceId, url);
     const matchUrl = configuredMatcher ?? serviceMatcher;
     const tabSelection = scan?.tabs ? explainTabResolution(scan.tabs, { matchUrl }) : undefined;
     if (options.logger && tabSelection) {
@@ -149,8 +157,8 @@ export class BrowserService extends BrowserServiceCore {
     defaultProfileDir?: string;
   } = {}) {
     const fallbackDir = resolveManagedProfileDirForUserConfig(
-      this.userConfigForProfilePath(),
-      this.userConfig.browser?.target ?? 'chatgpt',
+      this.userConfigForProfilePath(this.serviceTarget),
+      this.serviceTarget,
     );
     return super.resolveDevToolsTarget({
       ...options,
@@ -158,10 +166,12 @@ export class BrowserService extends BrowserServiceCore {
     });
   }
 
-  private userConfigForProfilePath(): Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> {
+  private userConfigForProfilePath(
+    target: BrowserProfileTarget,
+  ): Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> {
     return {
       auracallProfile: this.userConfig.auracallProfile,
-      browser: this.userConfig.browser,
+      browser: this.userConfig.browser ? { ...this.userConfig.browser, target } : { target },
     };
   }
 }

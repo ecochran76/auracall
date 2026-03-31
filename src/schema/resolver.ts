@@ -3,6 +3,7 @@ import { CLI_MAPPING } from './cli-map.js';
 import { loadUserConfig } from '../config.js';
 import type { OptionValues } from 'commander';
 import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/options.js';
+import { DEFAULT_MODEL } from '../oracle.js';
 import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
@@ -101,7 +102,7 @@ export async function resolveConfig(
   const cliModelArg =
     cliConfig.model ||
     effective.model ||
-    (engine === 'browser' ? 'gpt-5.2-instant' : 'gpt-5.2-pro');
+    (engine === 'browser' ? 'gpt-5.2-instant' : DEFAULT_MODEL);
 
   const inferredModel = (engine === 'browser') ? inferModelFromLabel(cliModelArg) : resolveApiModel(cliModelArg);
   

@@ -239,7 +239,7 @@ describe('mergeWizardConfig', () => {
       },
       buildBrowserWizardConfigPatch({
         target: 'grok',
-        profileName: 'wsl-chrome',
+        profileName: 'wsl-chrome-2',
         setAsDefault: false,
         keepBrowser: true,
         choice: createChoice(),
@@ -249,7 +249,7 @@ describe('mergeWizardConfig', () => {
     expect(merged.auracallProfile).toBe('default');
     expect(merged.browserDefaults?.chromePath).toBe('/usr/bin/google-chrome');
     expect(merged.profiles?.default?.defaultService).toBe('chatgpt');
-    expect((merged.profiles as Record<string, unknown>)?.['wsl-chrome']).toEqual({
+    expect((merged.profiles as Record<string, unknown>)?.['wsl-chrome-2']).toEqual({
       engine: 'browser',
       defaultService: 'grok',
       keepBrowser: true,

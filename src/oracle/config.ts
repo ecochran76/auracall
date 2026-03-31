@@ -4,8 +4,28 @@ import type { ModelConfig, ModelName, KnownModelName, ProModelName, TokenizerFn 
 import { countTokens as countTokensAnthropicRaw } from '@anthropic-ai/tokenizer';
 import { stringifyTokenizerInput } from './tokenStringifier.js';
 
-export const DEFAULT_MODEL: ModelName = 'gpt-5.2-pro';
+export const CURRENT_OPENAI_PRO_ALIAS: Extract<KnownModelName, 'gpt-5.1-pro'> = 'gpt-5.1-pro';
+export const CURRENT_OPENAI_PRO_API_MODEL: Extract<KnownModelName, 'gpt-5.2-pro'> = 'gpt-5.2-pro';
+
+export const DEFAULT_MODEL: ModelName = CURRENT_OPENAI_PRO_ALIAS;
 export const PRO_MODELS = new Set<ProModelName>(['gpt-5.1-pro', 'gpt-5-pro', 'gpt-5.2-pro', 'claude-4.5-sonnet', 'claude-4.1-opus']);
+
+export function resolveCurrentOpenAiProModel(model: string | null | undefined): ModelName {
+  const normalized = String(model ?? '').trim().toLowerCase();
+  if (!normalized) {
+    return CURRENT_OPENAI_PRO_ALIAS;
+  }
+  if (normalized === 'gpt-5.1-pro' || normalized === 'gpt-5.2-pro') {
+    return CURRENT_OPENAI_PRO_ALIAS;
+  }
+  if (normalized === 'gpt-5-pro') {
+    return 'gpt-5-pro';
+  }
+  if (normalized.includes('pro')) {
+    return CURRENT_OPENAI_PRO_ALIAS;
+  }
+  return normalized as ModelName;
+}
 
 const countTokensAnthropic: TokenizerFn = (input: unknown): number =>
   countTokensAnthropicRaw(stringifyTokenizerInput(input));
@@ -13,7 +33,7 @@ const countTokensAnthropic: TokenizerFn = (input: unknown): number =>
 export const MODEL_CONFIGS: Record<KnownModelName, ModelConfig> = {
   'gpt-5.1-pro': {
     model: 'gpt-5.1-pro',
-    apiModel: 'gpt-5.2-pro',
+    apiModel: CURRENT_OPENAI_PRO_API_MODEL,
     provider: 'openai',
     tokenizer: countTokensGpt5Pro as TokenizerFn,
     inputLimit: 196000,

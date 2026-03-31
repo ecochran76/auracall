@@ -21,7 +21,7 @@ export class GrokService extends LlmService {
     options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
   ): GrokService {
     const provider = getProvider('grok') as LlmServiceAdapter;
-    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig);
+    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'grok');
     return new GrokService(userConfig, provider, browserService, options);
   }
 

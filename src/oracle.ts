@@ -3,6 +3,9 @@ export {
   MODEL_CONFIGS,
   DEFAULT_MODEL,
   PRO_MODELS,
+  CURRENT_OPENAI_PRO_ALIAS,
+  CURRENT_OPENAI_PRO_API_MODEL,
+  resolveCurrentOpenAiProModel,
   DEFAULT_SYSTEM_PROMPT,
   TOKENIZER_OPTIONS,
 } from './oracle/config.js';

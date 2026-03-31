@@ -6168,11 +6168,14 @@ function resolveBrowserLoginLaunchOptions(
   if (!chromePath) {
     throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');
   }
+  const manualLoginProfileDir = resolvedBrowser.manualLoginProfileDir;
+  if (!manualLoginProfileDir) {
+    throw new Error('Unable to resolve a manual-login Chrome profile directory.');
+  }
   return {
     chromePath,
     chromeProfile: resolvedBrowser.chromeProfile ?? 'Default',
-    manualLoginProfileDir:
-      resolvedBrowser.manualLoginProfileDir ?? resolveManagedProfileDirForUserConfig(userConfig, target),
+    manualLoginProfileDir,
     cookiePath: resolvedBrowser.chromeCookiePath ?? undefined,
     bootstrapCookiePath: resolvedBrowser.bootstrapCookiePath ?? resolvedBrowser.chromeCookiePath ?? undefined,
     chatgptUrl:

@@ -306,6 +306,38 @@ export type OpenAndSelectMenuItemOptions = {
   closeMenuAfter?: boolean;
 };
 
+export type FallbackMenuTriggerOption = {
+  name?: string;
+  trigger: PressButtonOptions;
+  menuSelector?: string;
+  menuRootSelectors?: readonly string[];
+  closeMenuAfter?: boolean;
+  beforeAttempt?: () => Promise<void> | void;
+};
+
+export type OpenAndSelectMenuItemFromTriggersOptions = {
+  triggers: readonly FallbackMenuTriggerOption[];
+  itemMatch: LabelMatchOptions;
+  timeoutMs?: number;
+  dismissOpenMenusBetweenAttempts?: boolean;
+};
+
+export type OpenAndSelectMenuItemFromTriggersResult = {
+  ok: boolean;
+  triggerIndex?: number;
+  triggerName?: string;
+  menuSelector?: string;
+  reason?: string;
+  attempts: Array<{
+    triggerIndex: number;
+    triggerName?: string;
+    menuOpened: boolean;
+    menuSelected: boolean;
+    reason?: string;
+    menuSelector?: string;
+  }>;
+};
+
 export type OpenAndSelectListboxOptions = {
   trigger: PressButtonOptions;
   itemMatch: LabelMatchOptions;
@@ -2773,6 +2805,88 @@ export async function openAndSelectMenuItem(
     closeMenuAfter: options.closeMenuAfter,
   });
   return clicked;
+}
+
+export async function openAndSelectMenuItemFromTriggers(
+  Runtime: ChromeClient['Runtime'],
+  options: OpenAndSelectMenuItemFromTriggersOptions,
+): Promise<OpenAndSelectMenuItemFromTriggersResult> {
+  if (!options.triggers.length) {
+    return {
+      ok: false,
+      reason: 'No menu triggers configured',
+      attempts: [],
+    };
+  }
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const attempts: OpenAndSelectMenuItemFromTriggersResult['attempts'] = [];
+  let lastReason = 'Menu item could not be selected from any trigger';
+
+  for (let index = 0; index < options.triggers.length; index += 1) {
+    const candidate = options.triggers[index]!;
+    if (index > 0 && options.dismissOpenMenusBetweenAttempts !== false) {
+      await dismissOpenMenus(Runtime, Math.min(timeoutMs, 1_500)).catch(() => false);
+    }
+    await candidate.beforeAttempt?.();
+    const opened = await openMenu(Runtime, {
+      trigger: candidate.trigger,
+      menuSelector: candidate.menuSelector,
+      expectedItemMatch: options.itemMatch,
+      timeoutMs,
+    });
+    if (!opened.ok) {
+      const reason = opened.reason || 'Menu did not open';
+      attempts.push({
+        triggerIndex: index,
+        triggerName: candidate.name,
+        menuOpened: false,
+        menuSelected: false,
+        reason,
+      });
+      lastReason = reason;
+      continue;
+    }
+    const menuSelector = opened.menuSelector || candidate.menuSelector;
+    const selected = await selectMenuItem(Runtime, {
+      menuSelector,
+      menuRootSelectors: candidate.menuRootSelectors,
+      itemMatch: options.itemMatch,
+      timeoutMs,
+      closeMenuAfter: candidate.closeMenuAfter,
+    });
+    if (selected) {
+      attempts.push({
+        triggerIndex: index,
+        triggerName: candidate.name,
+        menuOpened: true,
+        menuSelected: true,
+        menuSelector,
+      });
+      return {
+        ok: true,
+        triggerIndex: index,
+        triggerName: candidate.name,
+        menuSelector,
+        attempts,
+      };
+    }
+    const reason = 'Menu item not found';
+    attempts.push({
+      triggerIndex: index,
+      triggerName: candidate.name,
+      menuOpened: true,
+      menuSelected: false,
+      reason,
+      menuSelector,
+    });
+    lastReason = reason;
+  }
+
+  return {
+    ok: false,
+    reason: lastReason,
+    attempts,
+  };
 }
 
 export async function selectMenuItem(

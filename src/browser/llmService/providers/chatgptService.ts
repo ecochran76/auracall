@@ -21,7 +21,7 @@ export class ChatgptService extends LlmService {
     options?: { identityPrompt?: IdentityPrompt; browserService?: BrowserService },
   ): ChatgptService {
     const provider = getProvider('chatgpt') as LlmServiceAdapter;
-    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig);
+    const browserService = options?.browserService ?? BrowserService.fromConfig(userConfig, 'chatgpt');
     return new ChatgptService(userConfig, provider, browserService, options);
   }
 

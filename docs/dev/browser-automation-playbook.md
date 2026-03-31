@@ -68,6 +68,9 @@ over provider-local "first visible menu" heuristics.
     "click, reopen, inspect" logic.
   - If the same surface can open from multiple valid triggers, prefer
     `openSurface(...)` over provider-local retry blocks.
+  - If the same menu action can be reached from multiple real surfaces, prefer
+    `openAndSelectMenuItemFromTriggers(...)` over provider-local
+    `try row menu, then header menu` loops.
   - Prefer `navigateAndSettle(...)` over raw `Page.navigate(...)` when the app is an SPA or a route/ready race has shown up before.
   - When troubleshooting a miss, enable `pressButton` diagnostics (`logCandidatesOnMiss`) to capture visible labels.
   - Pass scoped diagnostics `context` into `withUiDiagnostics(...)` so the

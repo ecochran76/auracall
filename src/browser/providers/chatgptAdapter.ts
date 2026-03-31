@@ -3,6 +3,7 @@ import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import type { ChromeClient } from '../types.js';
+import { ChatgptFeatureSchema } from '../llmService/providers/schema.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
 import type {
   Conversation,
@@ -22,6 +23,7 @@ import {
   dismissOverlayRoot,
   navigateAndSettle,
   openAndSelectMenuItem,
+  openAndSelectMenuItemFromTriggers,
   openMenu,
   openSurface,
   pressButton,
@@ -34,20 +36,287 @@ import {
   withUiDiagnostics,
 } from '../service/ui.js';
 import { extractChatgptRateLimitSummary, isChatgptRateLimitMessage } from '../chatgptRateLimitGuard.js';
+import {
+  resolveBundledServiceArtifactContentTypeExtensions,
+  resolveBundledServiceArtifactDefaultTitle,
+  resolveBundledServiceArtifactKindExtensions,
+  resolveBundledServiceArtifactNameMimeTypes,
+  resolveBundledServiceArtifactPayloadMarkerSet,
+  resolveBundledServiceAppTokens,
+  resolveBundledServiceBaseUrl,
+  resolveBundledServiceCompatibleHosts,
+  resolveBundledServiceDomSelector,
+  resolveBundledServiceDomSelectorSet,
+  resolveBundledServiceFeatureDetector,
+  resolveBundledServiceFeatureFlagTokens,
+  resolveBundledServiceRouteTemplate,
+  resolveBundledServiceUiLabel,
+  resolveBundledServiceUiLabelSet,
+} from '../../services/registry.js';
 
-const CHATGPT_HOME_URL = 'https://chatgpt.com/';
-const CHATGPT_PROJECT_DIALOG_SELECTOR = '[data-testid="modal-new-project-enhanced"], dialog[open], [role="dialog"], dialog';
-const CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS = [
+const CHATGPT_HOME_URL = resolveBundledServiceBaseUrl('chatgpt', 'https://chatgpt.com/');
+const CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS = resolveBundledServiceDomSelectorSet('chatgpt', 'project_dialog_roots', [
   '[data-testid="modal-new-project-enhanced"]',
   'dialog[open]',
   '[role="dialog"]',
   'dialog',
-] as const;
-const CHATGPT_PROJECT_NAME_INPUT_SELECTOR = 'input[name="projectName"], input[aria-label="Project name"], #project-name';
-const CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR = 'textarea[aria-label="Instructions"], textarea#instructions';
-const CHATGPT_PROJECT_SETTINGS_BUTTON_LABEL = 'Project settings';
-const CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH = 'project settings';
-const CHATGPT_COMPATIBLE_HOSTS = ['chatgpt.com', 'chat.openai.com'];
+]);
+const CHATGPT_PROJECT_DIALOG_SELECTOR = CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS.join(', ');
+const CHATGPT_PROJECT_NAME_INPUT_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_name_input', 'Project name');
+const CHATGPT_PROJECT_NAME_INPUT_SELECTOR = [
+  'input[name="projectName"]',
+  `input[aria-label=${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL)}]`,
+  '#project-name',
+].join(', ');
+const CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL = resolveBundledServiceUiLabel(
+  'chatgpt',
+  'project_instructions_input',
+  'Instructions',
+);
+const CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR = [
+  `textarea[aria-label=${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL)}]`,
+  'textarea#instructions',
+].join(', ');
+const CHATGPT_PROJECT_SETTINGS_BUTTON_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_settings_button', 'Project settings');
+const CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH = normalizeUiText(CHATGPT_PROJECT_SETTINGS_BUTTON_LABEL).toLowerCase();
+const CHATGPT_PROJECT_TITLE_EDIT_PREFIX = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_title_edit_prefix', 'edit the title of'),
+).toLowerCase();
+const CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_memory_global', 'Default');
+const CHATGPT_PROJECT_MEMORY_PROJECT_LABEL = resolveBundledServiceUiLabel('chatgpt', 'project_memory_project', 'Project-only');
+const CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_controls_details', 'show project details'),
+).toLowerCase();
+const CHATGPT_PROJECT_TAB_CHATS_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_tab_chats', 'chats'),
+).toLowerCase();
+const CHATGPT_PROJECT_TAB_SOURCES_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_tab_sources', 'sources'),
+).toLowerCase();
+const CHATGPT_PROJECT_SOURCE_ADD_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_source_add', 'add sources'),
+).toLowerCase();
+const CHATGPT_PROJECT_SOURCE_ADD_FALLBACK_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_source_add_fallback', 'add'),
+).toLowerCase();
+const CHATGPT_PROJECT_SOURCE_ACTIONS_LABEL = resolveBundledServiceUiLabel(
+  'chatgpt',
+  'project_source_actions',
+  'Source actions',
+);
+const CHATGPT_PROJECT_SOURCE_ACTIONS_SELECTOR = `button[aria-label=${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTIONS_LABEL)}]`;
+const CHATGPT_PROJECT_SOURCE_ROW_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'project_source_row',
+  'div[class*="group/file-row"]',
+);
+const CHATGPT_PROJECT_SOURCES_TAB_ID_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'project_sources_tab_id',
+  '[role="tab"][id$="-sources"]',
+);
+const CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_upload_button', 'upload'),
+).toLowerCase();
+const CHATGPT_PROJECT_DELETE_BUTTON_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_delete_button', 'delete project'),
+).toLowerCase();
+const CHATGPT_NEW_PROJECT_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'new_project', 'new project'),
+).toLowerCase();
+const CHATGPT_OPEN_SIDEBAR_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'open_sidebar', 'open sidebar'),
+).toLowerCase();
+const CHATGPT_CONVERSATION_PROMPT_INPUT_LABEL = resolveBundledServiceUiLabel(
+  'chatgpt',
+  'conversation_prompt_input',
+  'Chat with ChatGPT',
+);
+const CHATGPT_CONVERSATION_PROMPT_INPUT_SELECTOR = `textarea[aria-label=${JSON.stringify(CHATGPT_CONVERSATION_PROMPT_INPUT_LABEL)}]`;
+const CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'conversation_turn_section',
+  'section[data-testid^="conversation-turn-"]',
+);
+const CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'message_author_role',
+  '[data-message-author-role]',
+);
+const CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'user_message_author_role',
+  '[data-message-author-role="user"]',
+);
+const CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'assistant_artifact_button',
+  'button.behavior-btn',
+);
+const CHATGPT_TEXTDOC_MESSAGE_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'textdoc_message',
+  'div[id^="textdoc-message-"]',
+);
+const CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'conversation_options_button',
+  'button[data-testid="conversation-options-button"]',
+);
+const CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR = resolveBundledServiceDomSelector(
+  'chatgpt',
+  'delete_conversation_confirm_button',
+  'button[data-testid="delete-conversation-confirm-button"]',
+);
+const CHATGPT_CONVERSATION_OPTIONS_PREFIX = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'conversation_options_prefix', 'open conversation options for'),
+).toLowerCase();
+const CHATGPT_CONVERSATION_ACTION_RENAME_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'conversation_action_rename', 'rename'),
+).toLowerCase();
+const CHATGPT_CONVERSATION_ACTION_DELETE_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'conversation_action_delete', 'delete'),
+).toLowerCase();
+const CHATGPT_PROJECT_SOURCE_ACTION_REMOVE_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_source_action_remove', 'remove'),
+).toLowerCase();
+const CHATGPT_DIALOG_CANCEL_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'dialog_cancel', 'cancel'),
+).toLowerCase();
+const CHATGPT_CONVERSATION_DELETE_DIALOG_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'conversation_delete_dialog', 'delete chat?'),
+).toLowerCase();
+const CHATGPT_PROJECT_DELETE_DIALOG_LABEL = normalizeUiText(
+  resolveBundledServiceUiLabel('chatgpt', 'project_delete_dialog', 'delete project?'),
+).toLowerCase();
+const CHATGPT_DIALOG_DISMISS_LABELS = resolveBundledServiceUiLabelSet('chatgpt', 'dialog_dismiss_buttons', [
+  'ok',
+  'okay',
+  'got it',
+  'dismiss',
+  'close',
+  'cancel',
+  'done',
+]).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS = resolveBundledServiceUiLabelSet(
+  'chatgpt',
+  'delete_confirmation_buttons',
+  ['delete', 'cancel'],
+).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS = resolveBundledServiceUiLabelSet(
+  'chatgpt',
+  'project_source_add_buttons',
+  ['add sources', 'add'],
+).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
+  'chatgpt',
+  'project_source_upload_markers',
+  ['add sources', 'drag sources here'],
+).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('chatgpt', ['chatgpt.com', 'chat.openai.com']);
+const CHATGPT_PROJECT_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'chatgpt',
+  'project',
+  'https://chatgpt.com/g/{projectId}/project',
+);
+const CHATGPT_PROJECT_SOURCES_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'chatgpt',
+  'projectSources',
+  'https://chatgpt.com/g/{projectId}/project?tab=sources',
+);
+const CHATGPT_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'chatgpt',
+  'conversation',
+  'https://chatgpt.com/c/{conversationId}',
+);
+const CHATGPT_PROJECT_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'chatgpt',
+  'projectConversation',
+  'https://chatgpt.com/g/{projectId}/c/{conversationId}',
+);
+const CHATGPT_CONVERSATION_API_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
+  'chatgpt',
+  'conversationApi',
+  'https://chatgpt.com/backend-api/conversation/{conversationId}',
+);
+const CHATGPT_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector('chatgpt', 'chatgpt-feature-probe-v1');
+const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens('chatgpt', {
+  web_search: ['search the web', 'web search'],
+  deep_research: ['deep research'],
+  company_knowledge: ['company knowledge'],
+});
+const CHATGPT_APP_TOKENS = resolveBundledServiceAppTokens('chatgpt', {
+  'google drive': ['google drive', 'drive'],
+  gmail: ['gmail'],
+  'google calendar': ['google calendar', 'calendar'],
+  slack: ['slack'],
+  github: ['github'],
+  dropbox: ['dropbox'],
+  notion: ['notion'],
+  jira: ['jira'],
+  linear: ['linear'],
+  asana: ['asana'],
+  box: ['box'],
+  onedrive: ['onedrive'],
+  sharepoint: ['sharepoint'],
+  'microsoft teams': ['microsoft teams', 'teams'],
+  hubspot: ['hubspot'],
+  zapier: ['zapier'],
+});
+const CHATGPT_ARTIFACT_KIND_EXTENSIONS = resolveBundledServiceArtifactKindExtensions('chatgpt', {
+  spreadsheet: ['csv', 'tsv', 'xls', 'xlsx', 'ods'],
+});
+const CHATGPT_ARTIFACT_CONTENT_TYPE_EXTENSIONS = resolveBundledServiceArtifactContentTypeExtensions('chatgpt', {
+  'image/png': '.png',
+  'image/jpeg': '.jpg',
+  'image/webp': '.webp',
+  'image/gif': '.gif',
+  'application/zip': '.zip',
+  'application/json': '.json',
+  'text/markdown': '.md',
+  'text/csv': '.csv',
+  'text/tab-separated-values': '.tsv',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+  'application/vnd.ms-excel': '.xls',
+  'text/plain': '.txt',
+});
+const CHATGPT_ARTIFACT_NAME_MIME_TYPES = resolveBundledServiceArtifactNameMimeTypes('chatgpt', {
+  '.zip': 'application/zip',
+  '.json': 'application/json',
+  '.md': 'text/markdown',
+  '.txt': 'text/plain',
+  '.csv': 'text/csv',
+  '.tsv': 'text/tab-separated-values',
+  '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  '.xls': 'application/vnd.ms-excel',
+});
+const CHATGPT_ARTIFACT_DEFAULT_IMAGE_TITLE = resolveBundledServiceArtifactDefaultTitle(
+  'chatgpt',
+  'image',
+  'Generated image',
+);
+const CHATGPT_ARTIFACT_DEFAULT_SPREADSHEET_TITLE = resolveBundledServiceArtifactDefaultTitle(
+  'chatgpt',
+  'spreadsheet',
+  'Spreadsheet artifact',
+);
+const CHATGPT_ARTIFACT_DEFAULT_CANVAS_TITLE = resolveBundledServiceArtifactDefaultTitle(
+  'chatgpt',
+  'canvas',
+  'Canvas artifact',
+);
+const CHATGPT_ARTIFACT_IMAGE_CONTENT_TYPES = new Set(
+  resolveBundledServiceArtifactPayloadMarkerSet('chatgpt', 'image_content_types', ['image_asset_pointer']).map((value) =>
+    value.trim().toLowerCase(),
+  ),
+);
+const CHATGPT_ARTIFACT_SPREADSHEET_VISUALIZATION_TYPES = new Set(
+  resolveBundledServiceArtifactPayloadMarkerSet('chatgpt', 'spreadsheet_visualization_types', ['table']).map((value) =>
+    value.trim().toLowerCase(),
+  ),
+);
 const CHATGPT_PROJECT_SOURCES_INPUT_ATTR = 'data-auracall-chatgpt-project-source-input';
 const CHATGPT_PROJECT_SETTINGS_DIALOG_ATTR = 'data-auracall-chatgpt-project-settings-dialog';
 const CHATGPT_PROJECT_SOURCE_ACTION_ATTR = 'data-auracall-chatgpt-project-source-action';
@@ -56,6 +325,7 @@ const CHATGPT_CONVERSATION_ACTION_ATTR = 'data-auracall-chatgpt-conversation-act
 const CHATGPT_DOWNLOAD_BUTTON_ATTR = 'data-auracall-chatgpt-download-button';
 const CHATGPT_DOWNLOAD_CAPTURE_STATE_KEY = '__auracallChatgptDownloadCapture';
 const CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS = 15_000;
+const CHATGPT_HOME_LOCATION = new URL(CHATGPT_HOME_URL);
 
 type ChatgptProjectLinkProbe = {
   id: string;
@@ -105,6 +375,90 @@ type ChatgptConversationDownloadButtonProbe = {
   title?: string | null;
 };
 
+type ChatgptConversationRowTagCandidateProbe = {
+  inProjectPanel?: boolean | null;
+  hasConversationAnchor?: boolean | null;
+  buttonCount?: number | null;
+  score?: number | null;
+  rowText?: string | null;
+  buttonLabel?: string | null;
+  hasProjectIdMatch?: boolean | null;
+};
+
+type ChatgptConversationRowTagDiagnostics = {
+  attempts?: number | null;
+  expectedConversationId?: string | null;
+  expectedProjectId?: string | null;
+  totalConversationAnchors?: number | null;
+  visibleConversationAnchors?: number | null;
+  candidateCount?: number | null;
+  scopedCandidateCount?: number | null;
+  fallbackUsed?: boolean | null;
+  reason?: string | null;
+  bestCandidate?: ChatgptConversationRowTagCandidateProbe | null;
+};
+
+type ChatgptConversationRowTagEvaluation = {
+  ok?: boolean;
+  rowSelector?: string;
+  actionSelector?: string;
+  reason?: string;
+  diagnostics?: ChatgptConversationRowTagDiagnostics | null;
+};
+
+type ChatgptConversationRowTagAttemptFailure = {
+  attemptLabel: string;
+  error?: string;
+  diagnostics?: ChatgptConversationRowTagDiagnostics | null;
+};
+
+function summarizeChatgptConversationRowTagFailure(
+  conversationId: string,
+  failures: ReadonlyArray<ChatgptConversationRowTagAttemptFailure>,
+): string {
+  if (failures.length === 0) {
+    return `ChatGPT conversation row not found for ${conversationId}`;
+  }
+  const lines = failures
+    .map((entry, index) => {
+      const diagnostics = entry.diagnostics
+        ? {
+            totalConversationAnchors: entry.diagnostics.totalConversationAnchors ?? null,
+            visibleConversationAnchors: entry.diagnostics.visibleConversationAnchors ?? null,
+            candidateCount: entry.diagnostics.candidateCount ?? null,
+            scopedCandidateCount: entry.diagnostics.scopedCandidateCount ?? null,
+            bestCandidate: entry.diagnostics.bestCandidate ?? null,
+            fallbackUsed: entry.diagnostics.fallbackUsed ?? null,
+            reason: entry.diagnostics.reason ?? null,
+          }
+        : null;
+      return `${index + 1}/${failures.length} ${entry.attemptLabel}: ${entry.error || 'failed'}${
+        diagnostics ? ` (${JSON.stringify(diagnostics)})` : ''
+      }`;
+    })
+    .join(' | ');
+  return `ChatGPT conversation row not found for ${conversationId}: ${lines}`;
+}
+
+function readChatgptConversationRowTagDiagnostics(
+  error: unknown,
+): ChatgptConversationRowTagDiagnostics | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+  const maybe = error as { diagnostics?: ChatgptConversationRowTagDiagnostics | null; cause?: unknown };
+  if (maybe.diagnostics && typeof maybe.diagnostics === 'object') {
+    return maybe.diagnostics;
+  }
+  const cause = maybe.cause as
+    | { diagnostics?: ChatgptConversationRowTagDiagnostics | null; ok?: boolean }
+    | undefined;
+  if (cause?.diagnostics && typeof cause.diagnostics === 'object') {
+    return cause.diagnostics;
+  }
+  return null;
+}
+
 type ChatgptConversationCanvasProbe = {
   textdocId?: string | null;
   title?: string | null;
@@ -115,6 +469,17 @@ type ChatgptDeleteConfirmationProbe = {
   dialogText?: string | null;
   buttonLabels?: string[] | null;
   hasVisibleConfirmButton?: boolean | null;
+};
+
+type ChatgptConversationTitleProbe = {
+  matchedConversationId?: string | null;
+  matchedProjectId?: string | null;
+  matchedTitle?: string | null;
+  routeConversationId?: string | null;
+  routeProjectId?: string | null;
+  documentTitle?: string | null;
+  topConversationId?: string | null;
+  topTitle?: string | null;
 };
 
 type ChatgptConversationPayloadResponse = {
@@ -152,6 +517,14 @@ type ChatgptConversationMessageProbe = {
   messageId?: string;
 };
 
+type ChatgptFeatureProbe = {
+  detector?: string | null;
+  web_search?: boolean | null;
+  deep_research?: boolean | null;
+  company_knowledge?: boolean | null;
+  apps?: string[] | null;
+};
+
 export function normalizeChatgptProjectId(value: string | null | undefined): string | null {
   if (typeof value !== 'string') return null;
   const trimmed = value.trim();
@@ -179,6 +552,22 @@ function setClientSuppressFocus(client: ChromeClient, suppressFocus: boolean | u
 
 async function sleep(ms: number): Promise<void> {
   await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function interpolateChatgptRoute(template: string, params: Record<string, string>): string {
+  return template.replace(/\{(\w+)\}/g, (_match, key: string) => params[key] ?? '');
+}
+
+export function resolveChatgptProjectUrl(projectId: string): string {
+  return interpolateChatgptRoute(CHATGPT_PROJECT_URL_TEMPLATE, { projectId });
+}
+
+export function resolveChatgptProjectSourcesUrl(projectId: string): string {
+  return interpolateChatgptRoute(CHATGPT_PROJECT_SOURCES_URL_TEMPLATE, { projectId });
+}
+
+function resolveChatgptConversationApiUrl(conversationId: string): string {
+  return interpolateChatgptRoute(CHATGPT_CONVERSATION_API_URL_TEMPLATE, { conversationId });
 }
 
 async function readVisibleChatgptRateLimitMatchWithClient(
@@ -218,7 +607,7 @@ async function dismissVisibleChatgptRateLimitDialogWithClient(
   if (resolved.selector) {
     await dismissOverlayRoot(client.Runtime, resolved.selector, {
       closeButtonMatch: {
-        includeAny: ['ok', 'okay', 'got it', 'dismiss', 'close', 'cancel', 'done'],
+        includeAny: [...CHATGPT_DIALOG_DISMISS_LABELS],
       },
       timeoutMs: 3_000,
     }).catch(() => undefined);
@@ -319,6 +708,18 @@ function normalizeInstructionComparisonText(value: string | null | undefined): s
     .trimEnd();
 }
 
+function normalizeChatgptConversationTitle(value: string | null | undefined): string {
+  return normalizeUiText(value).toLowerCase();
+}
+
+function normalizeChatgptDocumentTitle(value: string | null | undefined): string {
+  return normalizeUiText(value)
+    .replace(/^chatgpt\s*[-:|]\s*/i, '')
+    .replace(/\s*[-:|]\s*chatgpt$/i, '')
+    .trim()
+    .toLowerCase();
+}
+
 export function matchesChatgptDeleteConfirmationProbe(
   probe: ChatgptDeleteConfirmationProbe | null | undefined,
   expectedTitle?: string | null,
@@ -327,13 +728,13 @@ export function matchesChatgptDeleteConfirmationProbe(
     return false;
   }
   const text = normalizeUiText(probe.dialogText).toLowerCase();
-  if (!text.includes('delete chat?')) {
+  if (!text.includes(CHATGPT_CONVERSATION_DELETE_DIALOG_LABEL)) {
     return false;
   }
   const labels = Array.isArray(probe.buttonLabels)
     ? probe.buttonLabels.map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean)
     : [];
-  if (!labels.includes('delete') || !labels.includes('cancel')) {
+  if (!CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS.every((label) => labels.includes(label))) {
     return false;
   }
   const expected = normalizeUiText(expectedTitle).toLowerCase();
@@ -344,6 +745,58 @@ export function matchesChatgptDeleteConfirmationProbe(
     return true;
   }
   return text.includes(expected);
+}
+
+export function matchesChatgptConversationTitleProbe(
+  probe: ChatgptConversationTitleProbe | null | undefined,
+  expectedConversationId: string,
+  expectedTitle: string,
+  projectId?: string | null,
+  options?: {
+    requireTopForRootMatch?: boolean;
+  },
+): boolean {
+  if (!probe) {
+    return false;
+  }
+  const expected = normalizeChatgptConversationTitle(expectedTitle);
+  if (!expected) {
+    return false;
+  }
+  const normalizedExpectedConversationId = normalizeChatgptConversationId(expectedConversationId);
+  if (!normalizedExpectedConversationId) {
+    return false;
+  }
+  const normalizedExpectedProjectId = normalizeChatgptProjectId(projectId ?? null);
+  const matchedConversationId = normalizeChatgptConversationId(probe.matchedConversationId);
+  const matchedProjectId = normalizeChatgptProjectId(probe.matchedProjectId ?? null);
+  const matchedTitle = normalizeChatgptConversationTitle(probe.matchedTitle);
+  const requireTopForRootMatch = Boolean(options?.requireTopForRootMatch);
+  const topConversationId = normalizeChatgptConversationId(probe.topConversationId);
+  const topTitle = normalizeChatgptConversationTitle(probe.topTitle);
+  const rootTopMatches = topConversationId === normalizedExpectedConversationId && topTitle === expected;
+  if (
+    matchedConversationId === normalizedExpectedConversationId &&
+    matchedTitle === expected &&
+    (!normalizedExpectedProjectId || matchedProjectId === normalizedExpectedProjectId)
+  ) {
+    if (requireTopForRootMatch && !normalizedExpectedProjectId && topConversationId && !rootTopMatches) {
+      return false;
+    }
+    return true;
+  }
+  if (normalizedExpectedProjectId) {
+    return false;
+  }
+  const routeConversationId = normalizeChatgptConversationId(probe.routeConversationId);
+  const routeProjectId = normalizeChatgptProjectId(probe.routeProjectId ?? null);
+  if (routeConversationId !== normalizedExpectedConversationId || routeProjectId) {
+    return false;
+  }
+  if (requireTopForRootMatch && topConversationId && !rootTopMatches) {
+    return false;
+  }
+  return normalizeChatgptDocumentTitle(probe.documentTitle) === expected;
 }
 
 function isRetryableConnectionError(error: unknown): boolean {
@@ -381,8 +834,8 @@ export function findChatgptProjectByName<T extends { id: string; name: string; u
   return projects.find((project) => normalizeProjectName(project.name) === target) ?? null;
 }
 
-export function resolveChatgptProjectMemoryLabel(mode: ProjectMemoryMode): 'Default' | 'Project-only' {
-  return mode === 'project' ? 'Project-only' : 'Default';
+export function resolveChatgptProjectMemoryLabel(mode: ProjectMemoryMode): string {
+  return mode === 'project' ? CHATGPT_PROJECT_MEMORY_PROJECT_LABEL : CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL;
 }
 
 export function normalizeChatgptAuthSessionIdentity(
@@ -625,8 +1078,15 @@ function inferChatgptDownloadArtifactKind(
   uri: string | null | undefined,
 ): ConversationArtifact['kind'] {
   const value = `${title ?? ''} ${uri ?? ''}`.toLowerCase();
-  if (/\.(csv|tsv|xls|xlsx|ods)\b/.test(value)) {
-    return 'spreadsheet';
+  for (const [kind, extensions] of Object.entries(CHATGPT_ARTIFACT_KIND_EXTENSIONS)) {
+    if (
+      extensions.some((extension) => {
+        const normalized = String(extension ?? '').trim().replace(/^\./, '').toLowerCase();
+        return normalized.length > 0 && new RegExp(`\\.${normalized}\\b`).test(value);
+      })
+    ) {
+      return kind as ConversationArtifact['kind'];
+    }
   }
   return 'download';
 }
@@ -679,19 +1139,11 @@ function extractChatgptArtifactFileId(uri: string | null | undefined): string | 
 
 function contentTypeToExtension(contentType: string | null | undefined): string {
   const normalized = String(contentType ?? '').toLowerCase();
-  if (normalized.includes('image/png')) return '.png';
-  if (normalized.includes('image/jpeg')) return '.jpg';
-  if (normalized.includes('image/webp')) return '.webp';
-  if (normalized.includes('image/gif')) return '.gif';
-  if (normalized.includes('application/zip')) return '.zip';
-  if (normalized.includes('application/json')) return '.json';
-  if (normalized.includes('text/markdown')) return '.md';
-  if (normalized.includes('text/csv')) return '.csv';
-  if (normalized.includes('text/tab-separated-values')) return '.tsv';
-  if (normalized.includes('application/vnd.openxmlformats-officedocument.wordprocessingml.document')) return '.docx';
-  if (normalized.includes('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')) return '.xlsx';
-  if (normalized.includes('application/vnd.ms-excel')) return '.xls';
-  if (normalized.includes('text/plain')) return '.txt';
+  for (const [token, extension] of Object.entries(CHATGPT_ARTIFACT_CONTENT_TYPE_EXTENSIONS)) {
+    if (normalized.includes(token.toLowerCase())) {
+      return extension;
+    }
+  }
   return '.bin';
 }
 
@@ -730,19 +1182,11 @@ function extractFilenameFromArtifactUri(uri: string | null | undefined): string 
 function inferMimeTypeFromArtifactName(name: string | null | undefined): string | undefined {
   const normalized = String(name ?? '').trim().toLowerCase();
   if (!normalized) return undefined;
-  if (normalized.endsWith('.zip')) return 'application/zip';
-  if (normalized.endsWith('.json')) return 'application/json';
-  if (normalized.endsWith('.md')) return 'text/markdown';
-  if (normalized.endsWith('.txt')) return 'text/plain';
-  if (normalized.endsWith('.csv')) return 'text/csv';
-  if (normalized.endsWith('.tsv')) return 'text/tab-separated-values';
-  if (normalized.endsWith('.docx')) {
-    return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+  for (const [extension, mimeType] of Object.entries(CHATGPT_ARTIFACT_NAME_MIME_TYPES)) {
+    if (normalized.endsWith(extension.toLowerCase())) {
+      return mimeType;
+    }
   }
-  if (normalized.endsWith('.xlsx')) {
-    return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
-  }
-  if (normalized.endsWith('.xls')) return 'application/vnd.ms-excel';
   return undefined;
 }
 
@@ -985,7 +1429,8 @@ export function extractChatgptConversationArtifactsFromPayload(
     const metadata = isRecord(message.metadata) ? message.metadata : null;
     for (const part of extractChatgptPayloadMessageStructuredParts(message)) {
       const contentType = readStringField(part, 'content_type');
-      if (contentType !== 'image_asset_pointer') {
+      const normalizedContentType = String(contentType ?? '').trim().toLowerCase();
+      if (!CHATGPT_ARTIFACT_IMAGE_CONTENT_TYPES.has(normalizedContentType)) {
         continue;
       }
       const assetPointer = readStringField(part, 'asset_pointer', 'assetPointer');
@@ -1001,7 +1446,7 @@ export function extractChatgptConversationArtifactsFromPayload(
         title:
           readStringField(metadata ?? {}, 'title', 'image_gen_title') ??
           readStringField(part, 'title', 'name') ??
-          'Generated image',
+          CHATGPT_ARTIFACT_DEFAULT_IMAGE_TITLE,
         kind: 'image',
         uri: assetPointer ?? undefined,
         messageIndex,
@@ -1023,7 +1468,8 @@ export function extractChatgptConversationArtifactsFromPayload(
         : [];
     for (const visualization of visualizations) {
       const visualizationType = readStringField(visualization, 'type');
-      if (visualizationType !== 'table') {
+      const normalizedVisualizationType = String(visualizationType ?? '').trim().toLowerCase();
+      if (!CHATGPT_ARTIFACT_SPREADSHEET_VISUALIZATION_TYPES.has(normalizedVisualizationType)) {
         continue;
       }
       const fileId = readStringField(visualization, 'file_id', 'fileId');
@@ -1035,7 +1481,7 @@ export function extractChatgptConversationArtifactsFromPayload(
         title:
           readStringField(visualization, 'title', 'name') ??
           readStringField(metadata ?? {}, 'title') ??
-          'Spreadsheet artifact',
+          CHATGPT_ARTIFACT_DEFAULT_SPREADSHEET_TITLE,
         kind: 'spreadsheet',
         uri: fileId ? `chatgpt://file/${encodeURIComponent(fileId)}` : undefined,
         messageIndex,
@@ -1051,7 +1497,7 @@ export function extractChatgptConversationArtifactsFromPayload(
     const textdocId = readStringField(canvas, 'textdoc_id', 'id');
     const metadataTitle = metadata ? readStringField(metadata, 'title') : null;
     const metadataCommand = metadata ? readStringField(metadata, 'command') : null;
-    const title = readStringField(canvas, 'title') ?? metadataTitle ?? 'Canvas artifact';
+    const title = readStringField(canvas, 'title') ?? metadataTitle ?? CHATGPT_ARTIFACT_DEFAULT_CANVAS_TITLE;
     const artifactId = textdocId ? `canvas:${textdocId}` : `${messageId ?? `node-${index}`}:canvas`;
     if (seen.has(artifactId)) continue;
     seen.add(artifactId);
@@ -1137,7 +1583,7 @@ async function readChatgptConversationPayloadWithClient(
     return directPayload;
   }
 
-  const targetUrl = `https://chatgpt.com/backend-api/conversation/${conversationId}`;
+  const targetUrl = resolveChatgptConversationApiUrl(conversationId);
   await client.Network.enable().catch(() => undefined);
   await client.Page.enable().catch(() => undefined);
 
@@ -1260,11 +1706,11 @@ function buildConversationSurfaceReadyExpression(conversationId: string, project
     const route = (${buildConversationRouteExpression(conversationId, projectId)});
     if (!route) return null;
     const hasTurns = Boolean(
-      document.querySelector('[data-testid^="conversation-turn-"]') ||
-      document.querySelector('[data-message-author-role]'),
+      document.querySelector(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}) ||
+      document.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}),
     );
     const hasComposer = Boolean(
-      document.querySelector('textarea[aria-label="Chat with ChatGPT"]') ||
+      document.querySelector(${JSON.stringify(CHATGPT_CONVERSATION_PROMPT_INPUT_SELECTOR)}) ||
       document.querySelector('[data-testid="composer-plus-btn"]'),
     );
     return hasTurns || hasComposer ? route : null;
@@ -1275,9 +1721,18 @@ function buildConversationTitleAppliedExpression(
   conversationId: string,
   expectedTitle: string,
   projectId?: string | null,
+  options?: {
+    requireTopInRootList?: boolean;
+  },
 ): string {
+  const requireTopInRootList = Boolean(options?.requireTopInRootList);
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const normalizeDocumentTitle = (value) =>
+      normalize(value)
+        .replace(/^chatgpt\\s*[-:|]\\s*/i, '')
+        .replace(/\\s*[-:|]\\s*chatgpt$/i, '')
+        .trim();
     const expected = normalize(${JSON.stringify(expectedTitle)});
     if (!expected) return null;
     const expectedConversationId = ${JSON.stringify(conversationId)};
@@ -1313,10 +1768,13 @@ function buildConversationTitleAppliedExpression(
             if (!(node instanceof HTMLButtonElement)) return false;
             if (!isVisible(node)) return false;
             const label = normalize(node.getAttribute('aria-label') || '');
-            return label.startsWith('open conversation options for ');
+            return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
           });
         if (button instanceof HTMLButtonElement) {
-          return normalize(button.getAttribute('aria-label') || '').replace(/^open conversation options for\\s+/, '');
+          const label = normalize(button.getAttribute('aria-label') || '');
+          return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX)
+            ? label.slice(CHATGPT_CONVERSATION_OPTIONS_PREFIX.length).trim()
+            : label;
         }
         current = current.parentElement;
       }
@@ -1365,26 +1823,109 @@ function buildConversationTitleAppliedExpression(
             return scoped.length > 0 ? scoped : collectAllAnchors();
           })()
         : collectAllAnchors();
+    const hasListSurface = probes.length > 0;
     const matching = probes.find((probe) => probe.id === expectedConversationId && probe.title === expected) || null;
-    if (expectedProjectId) {
-      return matching
-        ? {
-            id: matching.id,
-            title: matching.title,
-            projectId: matching.projectId ?? null,
-          }
-        : null;
-    }
+    const route = parseConversationInfo(location.href);
     const top = probes[0] || null;
-    if (matching && top && top.id === expectedConversationId && top.title === expected) {
+    if (!expectedProjectId && ${JSON.stringify(requireTopInRootList)} && top) {
+      if (top.id === expectedConversationId && top.title === expected) {
+        return {
+          matchedConversationId: top.id,
+          matchedProjectId: top.projectId ?? null,
+          matchedTitle: top.title,
+          routeConversationId: route?.id ?? null,
+          routeProjectId: route?.projectId ?? null,
+          documentTitle: document.title,
+          topConversationId: top.id,
+          topTitle: top.title,
+        };
+      }
+      if (hasListSurface) {
+        return null;
+      }
+    }
+    if (matching) {
       return {
-        id: matching.id,
-        title: matching.title,
-        topId: top.id,
-        topTitle: top.title,
+        matchedConversationId: matching.id,
+        matchedProjectId: matching.projectId ?? null,
+        matchedTitle: matching.title,
+        routeConversationId: route?.id ?? null,
+        routeProjectId: route?.projectId ?? null,
+        documentTitle: document.title,
+        topConversationId: top?.id ?? null,
+        topTitle: top?.title ?? null,
+      };
+    }
+    if (
+      !expectedProjectId &&
+      route &&
+      !route.projectId &&
+      route.id === expectedConversationId &&
+      normalizeDocumentTitle(document.title) === expected
+    ) {
+      return {
+        matchedConversationId: null,
+        matchedProjectId: null,
+        matchedTitle: null,
+        routeConversationId: route.id,
+        routeProjectId: route.projectId ?? null,
+        documentTitle: document.title,
+        topConversationId: top?.id ?? null,
+        topTitle: top?.title ?? null,
       };
     }
     return null;
+  })()`;
+}
+
+function buildConversationRowActionReadyExpression(conversationId: string, projectId?: string | null): string {
+  return `(() => {
+    const expectedConversationId = ${JSON.stringify(conversationId)};
+    const expectedProjectId = ${JSON.stringify(projectId ?? null)};
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const normalizeDocumentTitle = (value) =>
+      normalize(value)
+        .replace(/^chatgpt\\s*[-:|]\\s*/i, '')
+        .replace(/\\s*[-:|]\\s*chatgpt$/i, '')
+        .trim();
+    const normalizeProjectId = (value) => {
+      const trimmed = String(value || '').trim();
+      const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+      return match ? match[1] : null;
+    };
+    const parse = (href) => {
+      try {
+        const parsed = new URL(href, location.origin);
+        const match = parsed.pathname.match(/^\\/(?:g\\/([^/]+)\\/)?c\\/([a-zA-Z0-9-]+)\\/?$/);
+        if (!match) return null;
+        return {
+          conversationId: String(match[2] || '').trim(),
+          projectId: normalizeProjectId(match[1]),
+        };
+      } catch {
+        return null;
+      }
+    };
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const current = parse(location.href);
+    if (!current || current.conversationId !== expectedConversationId || current.projectId !== expectedProjectId) {
+      return null;
+    }
+    const currentTitle = normalizeDocumentTitle(document.title);
+    if (!currentTitle) {
+      return null;
+    }
+    const targetLabel = CHATGPT_CONVERSATION_OPTIONS_PREFIX + currentTitle;
+    const count = Array.from(document.querySelectorAll('button[aria-label], button'))
+      .filter((node) => node instanceof HTMLButtonElement)
+      .filter((node) => isVisible(node))
+      .filter((node) => normalize(node.getAttribute('aria-label') || '') === targetLabel)
+      .length;
+    return count > 0 ? { count, title: currentTitle } : null;
   })()`;
 }
 
@@ -1404,9 +1945,9 @@ function buildConversationDeleteConfirmationExpression(expectedTitle?: string | 
       const labels = Array.from(dialog.querySelectorAll('button'))
         .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
         .filter(Boolean);
-      const confirmButton = dialog.querySelector('button[data-testid="delete-conversation-confirm-button"]');
-      if (!text.includes('delete chat?')) continue;
-      if (!labels.includes('delete') || !labels.includes('cancel')) continue;
+      const confirmButton = dialog.querySelector(${JSON.stringify(CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR)});
+      if (!text.includes(${JSON.stringify(CHATGPT_CONVERSATION_DELETE_DIALOG_LABEL)})) continue;
+      if (!${JSON.stringify(CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS)}.every((label) => labels.includes(label))) continue;
       if (confirmButton instanceof HTMLButtonElement && isVisible(confirmButton)) {
         return { ok: true, matchedExpected: !expected || text.includes(expected) };
       }
@@ -1484,18 +2025,19 @@ function buildProjectRouteChangeExpression(initialProjectId?: string | null): st
 function buildProjectNameAppliedExpression(projectId: string, expectedName: string): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const titleEditPrefix = ${JSON.stringify(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)};
     const expected = normalize(${JSON.stringify(expectedName)});
     if (!expected) return null;
     const values = new Set();
     const title = document.title.replace(/^ChatGPT\\s*-\\s*/i, '');
     values.add(normalize(title));
     const titleButton = Array.from(document.querySelectorAll('button,[role="button"]'))
-      .find((node) => normalize(node.getAttribute('aria-label') || '').startsWith('edit the title of '));
+      .find((node) => normalize(node.getAttribute('aria-label') || '').startsWith(titleEditPrefix));
     if (titleButton) {
       values.add(normalize(titleButton.textContent || ''));
       const aria = normalize(titleButton.getAttribute('aria-label') || '');
-      if (aria.startsWith('edit the title of ')) {
-        values.add(aria.replace(/^edit the title of\\s+/, ''));
+      if (aria.startsWith(titleEditPrefix)) {
+        values.add(aria.slice(titleEditPrefix.length).trim());
       }
     }
     const projectLink = document.querySelector(${JSON.stringify(`a[href*="/g/${projectId}/project"]`)});
@@ -1521,9 +2063,9 @@ function buildProjectSurfaceReadyExpression(projectId?: string | null): string {
       .map((node) => normalize(node.getAttribute('aria-label') || node.textContent || ''))
       .filter(Boolean);
     const hasProjectControls =
-      labels.some((label) => label.startsWith('edit the title of ')) ||
-      labels.includes('show project details') ||
-      (labels.includes('chats') && labels.includes('sources'));
+      labels.some((label) => label.startsWith(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)) ||
+      labels.includes(CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL) ||
+      (labels.includes(CHATGPT_PROJECT_TAB_CHATS_LABEL) && labels.includes(CHATGPT_PROJECT_TAB_SOURCES_LABEL));
     return hasProjectControls ? { id: normalizedId, href: location.href, labels: labels.slice(0, 20) } : null;
   })()`;
 }
@@ -1534,11 +2076,11 @@ function buildProjectSettingsReadyExpression(): string {
     const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
     for (const dialog of dialogs) {
       const text = normalize(dialog.textContent || '');
-      const hasNameInput = Boolean(dialog.querySelector('input[aria-label="Project name"]'));
-      const hasInstructions = Boolean(dialog.querySelector('textarea[aria-label="Instructions"], textarea#instructions'));
+      const hasNameInput = Boolean(dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)}));
+      const hasInstructions = Boolean(dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)}));
       const hasDelete = Array.from(dialog.querySelectorAll('button'))
-        .some((button) => normalize(button.textContent || '') === 'delete project');
-      if (hasNameInput || hasInstructions || hasDelete || text.includes('project settings')) {
+        .some((button) => normalize(button.textContent || '') === CHATGPT_PROJECT_DELETE_BUTTON_LABEL);
+      if (hasNameInput || hasInstructions || hasDelete || text.includes(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)) {
         return { ok: true };
       }
     }
@@ -1562,16 +2104,16 @@ function buildProjectSourcesReadyExpression(projectId?: string | null): string {
       .find((node) => {
         const id = String(node.getAttribute('id') || '');
         const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        return id.endsWith('-sources') || label === 'sources';
+        return id.endsWith('-sources') || label === CHATGPT_PROJECT_TAB_SOURCES_LABEL;
       });
     const selected = String(sourceTab?.getAttribute('aria-selected') || '').toLowerCase() === 'true';
     const addSources = Array.from(document.querySelectorAll('button,[role="button"]'))
       .find((node) => {
         const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        return label === 'add sources' || label === 'add';
+        return CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS.includes(label);
       });
-    const hasRows = document.querySelectorAll('button[aria-label="Source actions"]').length > 0;
-    return (selected || queryTab === 'sources') && (Boolean(addSources) || hasRows)
+    const hasRows = document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTIONS_SELECTOR)}).length > 0;
+    return (selected || queryTab === ${JSON.stringify(CHATGPT_PROJECT_TAB_SOURCES_LABEL)}) && (Boolean(addSources) || hasRows)
       ? { id: normalizedId, href: location.href, selected, hasRows }
       : null;
   })()`;
@@ -1585,8 +2127,8 @@ function buildProjectSourcesUploadDialogReadyExpression(): string {
       const text = normalize(dialog.textContent || '');
       const hasInput = Boolean(dialog.querySelector('input[type="file"][multiple]'));
       const hasUpload = Array.from(dialog.querySelectorAll('button,[role="button"]'))
-        .some((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === 'upload');
-      if ((text.includes('add sources') || text.includes('drag sources here')) && hasInput && hasUpload) {
+        .some((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL);
+      if (${JSON.stringify(CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS)}.some((marker) => text.includes(marker)) && hasInput && hasUpload) {
         return { ok: true };
       }
     }
@@ -1600,7 +2142,7 @@ function buildProjectSourcesSnapshotExpression(): string {
     const panel = Array.from(document.querySelectorAll('[role="tabpanel"]'))
       .find((node) => String(node.getAttribute('aria-labelledby') || '').endsWith('-sources'));
     const scope = panel || document;
-    const rows = Array.from(scope.querySelectorAll('div[class*="group/file-row"]'));
+    const rows = Array.from(scope.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ROW_SELECTOR)}));
     return rows.map((row) => {
       const leafTexts = Array.from(row.querySelectorAll('div,span,p'))
         .map((node) => normalize(node.textContent || ''))
@@ -1625,7 +2167,7 @@ function buildProjectSourceNamesPresentExpression(fileNames: readonly string[]):
       const normalized = String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       if (normalized) texts.push(normalized);
     };
-    for (const row of Array.from(document.querySelectorAll('div[class*="group/file-row"]'))) {
+    for (const row of Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ROW_SELECTOR)}))) {
       pushText(row.textContent || '');
       for (const node of Array.from(row.querySelectorAll('div,span,p'))) {
         pushText(node.textContent || '');
@@ -1645,7 +2187,7 @@ function buildProjectSourceRemovedExpression(fileName: string): string {
       const normalized = String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
       if (normalized) texts.push(normalized);
     };
-    for (const row of Array.from(document.querySelectorAll('div[class*="group/file-row"]'))) {
+    for (const row of Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ROW_SELECTOR)}))) {
       pushText(row.textContent || '');
       for (const node of Array.from(row.querySelectorAll('div,span,p'))) {
         pushText(node.textContent || '');
@@ -1718,7 +2260,10 @@ function buildProjectDeleteConfirmationExpression(): string {
       const labels = Array.from(dialog.querySelectorAll('button'))
         .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
         .filter(Boolean);
-      if (text.includes('delete project?') && labels.includes('delete') && labels.includes('cancel')) {
+      if (
+        text.includes(CHATGPT_PROJECT_DELETE_DIALOG_LABEL) &&
+        ${JSON.stringify(CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS)}.every((label) => labels.includes(label))
+      ) {
         return { ok: true };
       }
     }
@@ -1836,13 +2381,13 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
         ...Array.from(document.querySelectorAll('button,a,[role="button"]'))
           .map((node) => String(node.getAttribute('aria-label') || node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase()),
       ];
-      return sidebarMarkers.includes('new project') ? { ok: true } : null;
+      return sidebarMarkers.includes(${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)}) ? { ok: true } : null;
     })()`,
     { timeoutMs: 800 },
   );
   if (sidebarReady.ok) return;
   const opened = await pressButton(client.Runtime, {
-    match: { exact: ['open sidebar'] },
+    match: { exact: [CHATGPT_OPEN_SIDEBAR_LABEL] },
     requireVisible: true,
     timeoutMs: 2000,
   });
@@ -1852,7 +2397,7 @@ async function ensureChatgptSidebarOpen(client: ChromeClient): Promise<void> {
   await waitForPredicate(
     client.Runtime,
     `(() => Array.from(document.querySelectorAll('button,a,[role="button"]'))
-      .some((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase() === 'new project') || null)()`,
+      .some((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase() === ${JSON.stringify(CHATGPT_NEW_PROJECT_LABEL)}) || null)()`,
     { timeoutMs: 3000 },
   );
 }
@@ -1873,7 +2418,7 @@ async function navigateToChatgptUrl(client: ChromeClient, url: string, projectId
 }
 
 async function openProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
-  const url = `https://chatgpt.com/g/${projectId}/project?tab=sources`;
+  const url = resolveChatgptProjectSourcesUrl(projectId);
   const settled = await navigateAndSettle(client, {
     url,
     routeExpression: buildProjectRouteExpression(projectId),
@@ -1899,7 +2444,7 @@ async function openProjectSourcesTab(client: ChromeClient, projectId: string): P
           {
             name: 'sources-tab-id',
             trigger: {
-              selector: '[role="tab"][id$="-sources"]',
+              selector: CHATGPT_PROJECT_SOURCES_TAB_ID_SELECTOR,
               interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
               requireVisible: true,
               timeoutMs: 3_000,
@@ -1908,7 +2453,7 @@ async function openProjectSourcesTab(client: ChromeClient, projectId: string): P
           {
             name: 'sources-tab-label',
             trigger: {
-              match: { exact: ['sources'] },
+              match: { exact: [CHATGPT_PROJECT_TAB_SOURCES_LABEL] },
               rootSelectors: ['[role="tablist"]'],
               interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
               requireVisible: true,
@@ -1928,7 +2473,7 @@ async function openProjectSourcesTab(client: ChromeClient, projectId: string): P
     },
     {
       label: 'chatgpt-open-project-sources',
-      candidateSelectors: ['[role="tab"]', 'button', '[role="button"]', 'div[class*="group/file-row"]'],
+      candidateSelectors: ['[role="tab"]', 'button', '[role="button"]', CHATGPT_PROJECT_SOURCE_ROW_SELECTOR],
       context: {
         surface: 'chatgpt-project-sources',
         projectId,
@@ -2065,7 +2610,7 @@ async function openProjectSourcesUploadDialog(client: ChromeClient, projectId: s
           {
             name: 'add-sources',
             trigger: {
-              match: { exact: ['add sources'] },
+              match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_LABEL] },
               interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
               requireVisible: true,
               timeoutMs: 3_000,
@@ -2074,7 +2619,7 @@ async function openProjectSourcesUploadDialog(client: ChromeClient, projectId: s
           {
             name: 'add-empty-state',
             trigger: {
-              match: { exact: ['add'] },
+              match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_FALLBACK_LABEL] },
               interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
               requireVisible: true,
               timeoutMs: 3_000,
@@ -2107,6 +2652,7 @@ async function tagChatgptProjectSourceInput(client: ChromeClient): Promise<strin
     expression: `(() => {
       const attribute = ${JSON.stringify(CHATGPT_PROJECT_SOURCES_INPUT_ATTR)};
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const uploadMarkers = ${JSON.stringify(CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS)}.map((value) => normalize(value));
       const isVisible = (el) => {
         if (!(el instanceof Element)) return false;
         const rect = el.getBoundingClientRect();
@@ -2120,8 +2666,8 @@ async function tagChatgptProjectSourceInput(client: ChromeClient): Promise<strin
         .sort((left, right) => {
           const leftText = normalize(left.textContent || '');
           const rightText = normalize(right.textContent || '');
-          const leftScore = Number(leftText.includes('add sources') || leftText.includes('drag sources here'));
-          const rightScore = Number(rightText.includes('add sources') || rightText.includes('drag sources here'));
+          const leftScore = Number(uploadMarkers.some((marker) => marker.length > 0 && leftText.includes(marker)));
+          const rightScore = Number(uploadMarkers.some((marker) => marker.length > 0 && rightText.includes(marker)));
           return rightScore - leftScore;
         });
       const scopes = dialogs.length > 0 ? dialogs : [document];
@@ -2221,7 +2767,7 @@ async function tagChatgptProjectSourceAction(client: ChromeClient, fileName: str
       for (const node of Array.from(document.querySelectorAll('[' + attribute + ']'))) {
         node.removeAttribute(attribute);
       }
-      const rows = Array.from(document.querySelectorAll('div[class*="group/file-row"]'));
+      const rows = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ROW_SELECTOR)}));
       const extractName = (row) => {
         const rowText = String(row.textContent || '').replace(/\\s+/g, ' ').trim();
         const leafTexts = Array.from(row.querySelectorAll('div,span,p'))
@@ -2239,7 +2785,7 @@ async function tagChatgptProjectSourceAction(client: ChromeClient, fileName: str
       for (const row of rows) {
         const name = normalize(extractName(row));
         if (!name || name !== expected) continue;
-        const button = row.querySelector('button[aria-label="Source actions"]');
+        const button = row.querySelector(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTIONS_SELECTOR)});
         if (!(button instanceof HTMLButtonElement)) continue;
         button.setAttribute(attribute, 'true');
         return { ok: true, selector: 'button[' + attribute + '="true"]' };
@@ -2271,12 +2817,18 @@ async function confirmChatgptProjectSourceRemovalIfPresent(client: ChromeClient,
       const expected = normalize(${JSON.stringify(fileName)});
       for (const dialog of Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))) {
         const text = normalize(dialog.textContent || '');
-        if (!text.includes('remove') && !text.includes('delete')) continue;
+        if (
+          !text.includes(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTION_REMOVE_LABEL)}) &&
+          !text.includes(${JSON.stringify(CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)})
+        ) continue;
         if (expected && text && !text.includes(expected) && !text.includes('source')) continue;
         const button = Array.from(dialog.querySelectorAll('button'))
           .find((node) => {
             const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-            return label === 'remove' || label === 'delete';
+            return (
+              label === ${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTION_REMOVE_LABEL)} ||
+              label === ${JSON.stringify(CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)}
+            );
           });
         if (button instanceof HTMLButtonElement) {
           button.click();
@@ -2301,7 +2853,7 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
         await closeDialog(client.Runtime, CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS).catch(() => undefined);
       }
       const pressed = await pressButton(client.Runtime, {
-        match: { exact: ['new project'] },
+        match: { exact: [CHATGPT_NEW_PROJECT_LABEL] },
         requireVisible: true,
         timeoutMs: 3000,
       });
@@ -2375,6 +2927,103 @@ async function readChatgptUserIdentity(client: ChromeClient): Promise<ProviderUs
   });
   return normalizeChatgptAuthSessionIdentity(
     (fallbackResult.result?.value as ChatgptAuthSessionProbe | null | undefined) ?? null,
+  );
+}
+
+function buildChatgptFeatureProbeExpression(): string {
+  const detector = JSON.stringify(CHATGPT_FEATURE_DETECTOR);
+  const flagTokens = JSON.stringify(CHATGPT_FEATURE_FLAG_TOKENS);
+  const appTokens = JSON.stringify(CHATGPT_APP_TOKENS);
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const lower = (value) => normalize(value).toLowerCase();
+    const addText = (sink, value) => {
+      const normalized = lower(value);
+      if (normalized) sink.push(normalized);
+    };
+    const detector = ${detector};
+    const flagTokens = ${flagTokens};
+    const appTokens = ${appTokens};
+    const corpus = [];
+    addText(corpus, document.body?.innerText || '');
+    for (const node of Array.from(document.querySelectorAll('button, [role="button"], a, [aria-label], [title]')).slice(0, 500)) {
+      addText(corpus, node.textContent || '');
+      addText(corpus, node.getAttribute?.('aria-label') || '');
+      addText(corpus, node.getAttribute?.('title') || '');
+    }
+    for (const key of Object.keys(localStorage).slice(0, 100)) {
+      addText(corpus, key);
+      try { addText(corpus, localStorage.getItem(key) || ''); } catch {}
+    }
+    for (const key of Object.keys(sessionStorage).slice(0, 100)) {
+      addText(corpus, key);
+      try { addText(corpus, sessionStorage.getItem(key) || ''); } catch {}
+    }
+    for (const script of Array.from(document.querySelectorAll('script[type="application/json"], script#__NEXT_DATA__')).slice(0, 20)) {
+      addText(corpus, (script.textContent || '').slice(0, 40000));
+    }
+    const haystack = corpus.join('\\n');
+    const apps = [];
+    for (const [name, tokens] of Object.entries(appTokens)) {
+      if (tokens.some((token) => haystack.includes(token))) {
+        apps.push(name);
+      }
+    }
+    const flags = {};
+    for (const [name, tokens] of Object.entries(flagTokens)) {
+      flags[name] = tokens.some((token) => haystack.includes(token));
+    }
+    return {
+      detector,
+      web_search: Boolean(flags.web_search),
+      deep_research: Boolean(flags.deep_research),
+      company_knowledge: Boolean(flags.company_knowledge),
+      apps,
+    };
+  })()`;
+}
+
+function normalizeChatgptFeatureSignature(probe: ChatgptFeatureProbe | null | undefined): string | null {
+  if (!probe || typeof probe !== 'object') {
+    return null;
+  }
+  const parsed = ChatgptFeatureSchema.safeParse({
+    web_search: probe.web_search,
+    deep_research: probe.deep_research,
+    company_knowledge: probe.company_knowledge,
+    apps: probe.apps,
+  });
+  if (!parsed.success) {
+    return null;
+  }
+  const apps = Array.isArray(probe.apps)
+    ? Array.from(new Set(probe.apps.map((entry) => normalizeUiText(entry)).filter(Boolean))).sort()
+    : [];
+  const normalized = {
+    detector: normalizeUiText(probe.detector) || CHATGPT_FEATURE_DETECTOR,
+    web_search: typeof probe.web_search === 'boolean' ? probe.web_search : undefined,
+    deep_research: typeof probe.deep_research === 'boolean' ? probe.deep_research : undefined,
+    company_knowledge: typeof probe.company_knowledge === 'boolean' ? probe.company_knowledge : undefined,
+    apps,
+  };
+  const hasAnySignal =
+    normalized.web_search !== undefined ||
+    normalized.deep_research !== undefined ||
+    normalized.company_knowledge !== undefined ||
+    normalized.apps.length > 0;
+  if (!hasAnySignal) {
+    return null;
+  }
+  return JSON.stringify(normalized);
+}
+
+async function readChatgptFeatureSignature(client: ChromeClient): Promise<string | null> {
+  const result = await client.Runtime.evaluate({
+    expression: buildChatgptFeatureProbeExpression(),
+    returnByValue: true,
+  });
+  return normalizeChatgptFeatureSignature(
+    (result.result?.value as ChatgptFeatureProbe | null | undefined) ?? null,
   );
 }
 
@@ -2516,7 +3165,7 @@ async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promis
 }
 
 async function openProjectSettingsPanel(client: ChromeClient, projectId: string): Promise<void> {
-  const projectUrl = `https://chatgpt.com/g/${projectId}/project`;
+  const projectUrl = resolveChatgptProjectUrl(projectId);
   let readySurface:
     | Awaited<ReturnType<typeof waitForPredicate>>
     | null = null;
@@ -2552,7 +3201,7 @@ async function openProjectSettingsPanel(client: ChromeClient, projectId: string)
           {
             name: 'edit-title',
             trigger: {
-              match: { startsWith: ['edit the title of'] },
+              match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
               requireVisible: true,
               timeoutMs: 5_000,
             },
@@ -2560,7 +3209,7 @@ async function openProjectSettingsPanel(client: ChromeClient, projectId: string)
           {
             name: 'show-project-details',
             trigger: {
-              match: { exact: ['show project details'] },
+              match: { exact: [CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL] },
               requireVisible: true,
               timeoutMs: 3_000,
             },
@@ -2568,7 +3217,7 @@ async function openProjectSettingsPanel(client: ChromeClient, projectId: string)
           {
             name: 'edit-title-retry',
             trigger: {
-              match: { startsWith: ['edit the title of'] },
+              match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
               requireVisible: true,
               timeoutMs: 5_000,
             },
@@ -2613,7 +3262,7 @@ async function waitForProjectSettingsFields(
       };
       return dialogs.some((dialog) => {
         if (!isVisible(dialog)) return false;
-        const nameInput = dialog.querySelector('input[aria-label="Project name"]');
+        const nameInput = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)});
         const instructions = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)});
         if (requireName && !(nameInput && isVisible(nameInput))) {
           return false;
@@ -2652,7 +3301,7 @@ async function tagProjectSettingsDialog(
       const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
         .filter((dialog) => isVisible(dialog));
       for (const dialog of dialogs) {
-        const nameInput = dialog.querySelector('input[aria-label="Project name"]');
+        const nameInput = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)});
         const instructions = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)});
         if (requireName && !(nameInput && isVisible(nameInput))) {
           continue;
@@ -2697,7 +3346,7 @@ async function applyProjectSettings(
   });
   if (fields.name) {
     const renamed = await setInputValue(client.Runtime, {
-      selector: 'input[aria-label="Project name"]',
+      selector: CHATGPT_PROJECT_NAME_INPUT_SELECTOR,
       rootSelectors: [settingsRootSelector],
       value: fields.name,
       requireVisible: true,
@@ -2815,15 +3464,19 @@ async function readProjectSettingsSnapshot(
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const memoryLabels = ${JSON.stringify([
+        CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL,
+        CHATGPT_PROJECT_MEMORY_PROJECT_LABEL,
+      ])}.map((value) => normalize(value));
       const dialog = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
-        .find((node) => node.querySelector('input[aria-label="Project name"]') || node.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)}));
+        .find((node) => node.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)}) || node.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)}));
       if (!dialog) return null;
-      const nameInput = dialog.querySelector('input[aria-label="Project name"]');
+      const nameInput = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)});
       const textarea = dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)});
       const selectedMemory = Array.from(dialog.querySelectorAll('button,[role="button"]'))
         .find((node) => {
           const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-          return (label === 'Default' || label === 'Project-only') && node.hasAttribute('disabled');
+          return memoryLabels.includes(label) && node.hasAttribute('disabled');
         });
       return {
         name: nameInput instanceof HTMLInputElement ? nameInput.value || '' : '',
@@ -2891,11 +3544,12 @@ async function waitForProjectNameApplied(
 async function readCurrentProject(client: ChromeClient): Promise<Project | null> {
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
+      const titleEditPrefix = ${JSON.stringify(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)};
       const match = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
       if (!match) return null;
       const projectId = match[1];
       const titleButton = Array.from(document.querySelectorAll('button,[role="button"]'))
-        .find((node) => String(node.getAttribute('aria-label') || '').toLowerCase().startsWith('edit the title of '));
+        .find((node) => String(node.getAttribute('aria-label') || '').toLowerCase().startsWith(titleEditPrefix));
       const title = (titleButton?.textContent || document.title.replace(/^ChatGPT\\s*-\\s*/i, '') || projectId)
         .replace(/\\s+/g, ' ')
         .trim();
@@ -2914,7 +3568,7 @@ async function readCurrentProject(client: ChromeClient): Promise<Project | null>
     id: normalizedId,
     name: value?.name || normalizedId,
     provider: 'chatgpt',
-    url: value?.url || `https://chatgpt.com/g/${normalizedId}/project`,
+    url: value?.url || resolveChatgptProjectUrl(normalizedId),
   };
 }
 
@@ -2922,6 +3576,7 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const titleEditPrefix = ${JSON.stringify(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)};
       const parseProjectId = (href) => {
         try {
           const url = new URL(href, location.origin);
@@ -2938,7 +3593,7 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
       const currentId = parseProjectId(location.href);
       if (currentId) {
         const titleButton = Array.from(document.querySelectorAll('button,[role="button"]'))
-          .find((node) => String(node.getAttribute('aria-label') || '').toLowerCase().startsWith('edit the title of '));
+          .find((node) => String(node.getAttribute('aria-label') || '').toLowerCase().startsWith(titleEditPrefix));
         const currentName = normalize(titleButton?.textContent || document.title.replace(/^ChatGPT\\s*-\\s*/i, '') || currentId);
         projects.set(currentId, {
           id: currentId,
@@ -2965,22 +3620,23 @@ async function scrapeChatgptProjects(client: ChromeClient): Promise<Project[]> {
     id: project.id,
     name: project.name,
     provider: 'chatgpt',
-    url: project.url ?? `https://chatgpt.com/g/${project.id}/project`,
+    url: project.url ?? resolveChatgptProjectUrl(project.id),
   }));
 }
 
 export function resolveChatgptConversationUrl(conversationId: string, projectId?: string | null): string {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
   return normalizedProjectId
-    ? `https://chatgpt.com/g/${normalizedProjectId}/c/${conversationId}`
-    : `https://chatgpt.com/c/${conversationId}`;
+    ? interpolateChatgptRoute(CHATGPT_PROJECT_CONVERSATION_URL_TEMPLATE, {
+        projectId: normalizedProjectId,
+        conversationId,
+      })
+    : interpolateChatgptRoute(CHATGPT_CONVERSATION_URL_TEMPLATE, { conversationId });
 }
 
 function resolveChatgptConversationListUrl(projectId?: string | null): string {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
-  return normalizedProjectId
-    ? `https://chatgpt.com/g/${normalizedProjectId}/project`
-    : CHATGPT_HOME_URL;
+  return normalizedProjectId ? resolveChatgptProjectUrl(normalizedProjectId) : CHATGPT_HOME_URL;
 }
 
 async function navigateToChatgptConversation(
@@ -3015,7 +3671,7 @@ async function scrapeChatgptConversations(
 ): Promise<Conversation[]> {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
   if (normalizedProjectId) {
-    await navigateToChatgptUrl(client, `https://chatgpt.com/g/${normalizedProjectId}/project`, normalizedProjectId);
+    await navigateToChatgptUrl(client, resolveChatgptProjectUrl(normalizedProjectId), normalizedProjectId);
   }
   await ensureChatgptSidebarOpen(client);
   const readConversations = async (): Promise<Conversation[]> => {
@@ -3074,10 +3730,13 @@ async function scrapeChatgptConversations(
               if (!(node instanceof HTMLButtonElement)) return false;
               if (!isVisible(node)) return false;
               const label = normalize(node.getAttribute('aria-label') || '').toLowerCase();
-              return label.startsWith('open conversation options for ');
+              return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
             });
           if (button instanceof HTMLButtonElement) {
-            return normalize(button.getAttribute('aria-label') || '').replace(/^open conversation options for\\s+/i, '');
+            const label = normalize(button.getAttribute('aria-label') || '').toLowerCase();
+            return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX)
+              ? label.slice(CHATGPT_CONVERSATION_OPTIONS_PREFIX.length).trim()
+              : label;
           }
           current = current.parentElement;
         }
@@ -3149,15 +3808,23 @@ async function tagChatgptConversationRow(
 ): Promise<{ rowSelector: string; actionSelector: string }> {
   await ensureChatgptSidebarOpen(client);
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
-  const deadline = Date.now() + 6_000;
-  let lastInfo: { ok?: boolean; rowSelector?: string; actionSelector?: string } | undefined;
+  const deadline = Date.now() + 10_000;
+  let lastInfo: ChatgptConversationRowTagEvaluation | undefined;
+  let attempts = 0;
   while (Date.now() < deadline) {
+    attempts += 1;
     const { result } = await client.Runtime.evaluate({
       expression: `(() => {
         const conversationId = ${JSON.stringify(conversationId)};
         const expectedProjectId = ${JSON.stringify(normalizedProjectId ?? null)};
         const rowAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ROW_ATTR)};
         const actionAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ACTION_ATTR)};
+        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const normalizeDocumentTitle = (value) =>
+          normalize(value)
+            .replace(/^chatgpt\\s*[-:|]\\s*/i, '')
+            .replace(/\\s*[-:|]\\s*chatgpt$/i, '')
+            .trim();
         const normalizeProjectId = (value) => {
           const trimmed = String(value || '').trim();
           const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
@@ -3193,8 +3860,8 @@ async function tagChatgptConversationRow(
               .find((node) => {
                 if (!(node instanceof HTMLButtonElement)) return false;
                 if (!isVisible(node)) return false;
-                const label = String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-                return label.startsWith('open conversation options for ');
+                const label = normalize(node.getAttribute('aria-label') || '');
+                return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
               });
             if (button instanceof HTMLButtonElement) {
               return { row: current, button };
@@ -3202,6 +3869,38 @@ async function tagChatgptConversationRow(
             current = current.parentElement;
           }
           return null;
+        };
+        const findRowFromActionButton = (button, expectedTitle) => {
+          let current = button instanceof Element ? button.parentElement : null;
+          let best = null;
+          while (current && current !== document.body) {
+            if (isVisible(current)) {
+              const text = normalize(current.textContent || '');
+              const conversationButtonCount = Array.from(current.querySelectorAll('button[aria-label], button'))
+                .filter((node) => {
+                  if (!(node instanceof HTMLButtonElement)) return false;
+                  if (!isVisible(node)) return false;
+                  const label = normalize(node.getAttribute('aria-label') || '');
+                  return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
+                })
+                .length;
+              const hasConversationAnchor = Array.from(current.querySelectorAll('a[href*="/c/"]'))
+                .some((anchor) => isVisible(anchor));
+              if (hasConversationAnchor || conversationButtonCount > 0) {
+                const rect = current.getBoundingClientRect();
+                const area = rect.width * rect.height;
+                const score =
+                  (expectedTitle && text.includes(expectedTitle) ? 1_000_000 : 0) +
+                  (hasConversationAnchor ? 100_000 : 0) -
+                  area;
+                if (!best || score > best.score) {
+                  best = { row: current, button, score };
+                }
+              }
+            }
+            current = current.parentElement;
+          }
+          return best ? { row: best.row, button: best.button } : null;
         };
         const isInsideVisibleProjectPanel = (anchor) => {
           let current = anchor instanceof Element ? anchor : null;
@@ -3217,19 +3916,44 @@ async function tagChatgptConversationRow(
           return false;
         };
 
+        const conversationAnchors = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+          .map((anchor) => {
+            if (!(anchor instanceof HTMLAnchorElement)) return null;
+            const info = parse(anchor.getAttribute('href') || '');
+            if (!info) return null;
+            return { anchor, info };
+          })
+          .filter(Boolean);
+        const totalConversationAnchors = conversationAnchors.length;
+        const visibleConversationAnchors = conversationAnchors.filter((entry) => isVisible(entry.anchor)).length;
         const candidates = Array.from(document.querySelectorAll('a[href*="/c/"]'))
           .map((anchor) => {
+            if (!(anchor instanceof HTMLAnchorElement)) return null;
             const info = parse(anchor.getAttribute('href') || '');
             if (!info || info.conversationId !== conversationId) return null;
             if (expectedProjectId && info.projectId !== expectedProjectId) return null;
             const rowButton = findRowButton(anchor);
             if (!rowButton) return null;
             const rowRect = rowButton.row.getBoundingClientRect();
+            const rowConversationButtons = Array.from(rowButton.row.querySelectorAll('button[aria-label], button'))
+              .filter((node) => {
+                if (!(node instanceof HTMLButtonElement)) return false;
+                if (!isVisible(node)) return false;
+                const label = normalize(node.getAttribute('aria-label') || '');
+                return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
+              });
+            const rowText = normalize(rowButton.row.textContent || '');
+            const buttonLabel = normalize(rowButton.button.getAttribute('aria-label') || '');
             const inProjectPanel = isInsideVisibleProjectPanel(anchor);
             return {
               row: rowButton.row,
               button: rowButton.button,
               inProjectPanel,
+              hasConversationAnchor: true,
+              rowText: rowText || null,
+              buttonLabel: buttonLabel || null,
+              buttonCount: rowConversationButtons.length,
+              hasProjectIdMatch: expectedProjectId ? info.projectId === expectedProjectId : false,
               score:
                 (inProjectPanel ? 10_000 : 0) +
                 (info.projectId === expectedProjectId ? 1000 : 0) +
@@ -3240,12 +3964,13 @@ async function tagChatgptConversationRow(
           })
           .filter(Boolean);
         const scopedCandidates =
-          expectedProjectId && candidates.some((candidate) => candidate.inProjectPanel)
-            ? candidates.filter((candidate) => candidate.inProjectPanel)
+          expectedProjectId && candidates.some((candidate) => candidate?.inProjectPanel)
+            ? candidates.filter((candidate) => candidate?.inProjectPanel)
             : candidates;
         const rankedCandidates = scopedCandidates
           .sort((left, right) => right.score - left.score);
         let best = rankedCandidates[0] || null;
+        let fallbackUsed = false;
         if (!best) {
           const currentAnchor = Array.from(document.querySelectorAll('a[aria-current="page"], a[aria-current="true"]'))
             .find((anchor) => {
@@ -3262,23 +3987,98 @@ async function tagChatgptConversationRow(
                 button: rowButton.button,
                 score: 1,
               };
+              fallbackUsed = true;
             }
           }
         }
         if (!best) {
-          return { ok: false };
+          const currentConversation = parse(location.href);
+          const currentTitle = normalizeDocumentTitle(document.title);
+          if (
+            currentConversation &&
+            currentConversation.conversationId === conversationId &&
+            currentConversation.projectId === expectedProjectId &&
+            currentTitle
+          ) {
+            const matchingButton = Array.from(document.querySelectorAll('button[aria-label], button'))
+              .find((node) => {
+                if (!(node instanceof HTMLButtonElement)) return false;
+                if (!isVisible(node)) return false;
+                const label = normalize(node.getAttribute('aria-label') || '');
+                return label === CHATGPT_CONVERSATION_OPTIONS_PREFIX + currentTitle;
+              });
+            if (matchingButton instanceof HTMLButtonElement) {
+              const rowButton = findRowFromActionButton(matchingButton, currentTitle);
+              if (rowButton) {
+                best = {
+                  row: rowButton.row,
+                  button: rowButton.button,
+                  score: 2,
+                  hasProjectIdMatch: false,
+                };
+                fallbackUsed = true;
+              }
+            }
+          }
+        }
+        if (!best) {
+          return {
+            ok: false,
+            reason: 'No conversation row candidate matched',
+            diagnostics: {
+              expectedConversationId: conversationId,
+              expectedProjectId: expectedProjectId ?? null,
+              totalConversationAnchors,
+              visibleConversationAnchors,
+              candidateCount: candidates.length,
+              scopedCandidateCount: scopedCandidates.length,
+              fallbackUsed,
+              reason: 'No conversation row candidate matched',
+              bestCandidate: null,
+            },
+          };
         }
         best.row.setAttribute(rowAttr, 'true');
         best.button.setAttribute(actionAttr, 'true');
+        const rowText = normalize(best.row.textContent || '');
+        const buttonLabel = normalize(best.button.getAttribute('aria-label') || '');
+        const buttonCount = Array.from(best.row.querySelectorAll('button[aria-label], button'))
+          .filter((node) => {
+            if (!(node instanceof HTMLButtonElement)) return false;
+            if (!isVisible(node)) return false;
+            const label = normalize(node.getAttribute('aria-label') || '');
+            return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
+          })
+          .length;
         return {
           ok: true,
           rowSelector: '[' + rowAttr + '="true"]',
           actionSelector: '[' + actionAttr + '="true"]',
+          diagnostics: {
+            expectedConversationId: conversationId,
+            expectedProjectId: expectedProjectId ?? null,
+            totalConversationAnchors,
+            visibleConversationAnchors,
+            candidateCount: candidates.length,
+            scopedCandidateCount: scopedCandidates.length,
+            fallbackUsed,
+            bestCandidate: {
+              inProjectPanel: best.inProjectPanel ?? Boolean(
+                best.row.closest('[role="tabpanel"]') && best.row.closest('[role="tabpanel"]').offsetParent !== null,
+              ),
+              hasConversationAnchor: true,
+              buttonCount,
+              buttonLabel: buttonLabel || null,
+              score: best.score,
+              rowText: rowText || null,
+              hasProjectIdMatch: best.hasProjectIdMatch ?? false,
+            },
+          },
         };
       })()` ,
       returnByValue: true,
     });
-    lastInfo = result?.value as { ok?: boolean; rowSelector?: string; actionSelector?: string } | undefined;
+    lastInfo = result?.value as ChatgptConversationRowTagEvaluation | undefined;
     if (lastInfo?.ok && lastInfo.rowSelector && lastInfo.actionSelector) {
       return {
         rowSelector: lastInfo.rowSelector,
@@ -3287,7 +4087,17 @@ async function tagChatgptConversationRow(
     }
     await sleep(400);
   }
-  throw new Error(`ChatGPT conversation row not found for ${conversationId}`);
+  const failure: Error & { diagnostics?: ChatgptConversationRowTagDiagnostics } = new Error(
+    summarizeChatgptConversationRowTagFailure(conversationId, [
+      {
+        attemptLabel: `attempt-${attempts}`,
+        diagnostics: lastInfo?.diagnostics ?? null,
+        error: lastInfo?.reason || 'not found',
+      },
+    ]),
+  ) as Error & { diagnostics?: ChatgptConversationRowTagDiagnostics };
+  failure.diagnostics = lastInfo?.diagnostics ?? undefined;
+  throw failure;
 }
 
 async function waitForChatgptConversationTitleApplied(
@@ -3296,19 +4106,38 @@ async function waitForChatgptConversationTitleApplied(
   expectedTitle: string,
   projectId?: string | null,
 ): Promise<void> {
+  const shortPause = async () => {
+    const min = 800;
+    const max = 1_500;
+    const ms = min + Math.floor(Math.random() * (max - min + 1));
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  };
+  const longPause = async () => {
+    const min = 10_000;
+    const max = 15_000;
+    const ms = min + Math.floor(Math.random() * (max - min + 1));
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  };
+  const buildExpectation = () =>
+    buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId, {
+      requireTopInRootList: !projectId,
+    });
+
+  await shortPause();
   let renamed = await waitForPredicate(
     client.Runtime,
-    buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId),
+    buildExpectation(),
     {
       timeoutMs: 10_000,
       description: `ChatGPT conversation ${conversationId} renamed to ${expectedTitle}`,
     },
   );
   if (!renamed.ok) {
+    await longPause();
     await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
     renamed = await waitForPredicate(
       client.Runtime,
-      buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId),
+      buildExpectation(),
       {
         timeoutMs: 10_000,
         description: `ChatGPT conversation ${conversationId} renamed to ${expectedTitle} after list refresh`,
@@ -3318,6 +4147,19 @@ async function waitForChatgptConversationTitleApplied(
   if (!renamed.ok) {
     throw new Error(`ChatGPT conversation rename did not persist for ${conversationId}`);
   }
+}
+
+async function isChatgptConversationTitleAppliedWithClient(
+  client: ChromeClient,
+  conversationId: string,
+  expectedTitle: string,
+  projectId?: string | null,
+): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: buildConversationTitleAppliedExpression(conversationId, expectedTitle, projectId),
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
 }
 
 async function waitForChatgptConversationDeleted(
@@ -3384,12 +4226,15 @@ async function readChatgptConversationContextWithClient(
             .replace(/\\r/g, '\\n')
             .replace(/\\n{3,}/g, '\\n\\n')
             .trim();
-          const roleNodes = Array.from(document.querySelectorAll('section[data-testid^="conversation-turn-"] [data-message-author-role]'))
-            .filter((node) => !node.parentElement?.closest('[data-message-author-role]'));
+          const roleNodes = Array.from(
+            document.querySelectorAll(
+              ${JSON.stringify(`${CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR} ${CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR}`)},
+            ),
+          ).filter((node) => !node.parentElement?.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}));
           const fallbackNodes = roleNodes.length > 0
             ? roleNodes
-            : Array.from(document.querySelectorAll('[data-message-author-role]'))
-                .filter((node) => !node.parentElement?.closest('[data-message-author-role]'));
+            : Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}))
+                .filter((node) => !node.parentElement?.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}));
           const messages = fallbackNodes
             .map((node) => {
               const role = String(node.getAttribute('data-message-author-role') || '').trim();
@@ -3398,7 +4243,7 @@ async function readChatgptConversationContextWithClient(
               if (!text) return null;
               const messageId = normalize(
                 node.getAttribute('data-message-id') ||
-                node.closest('section[data-testid^="conversation-turn-"]')?.getAttribute('data-turn-id') ||
+                node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)})?.getAttribute('data-turn-id') ||
                 '',
               );
               return { role, text, messageId: messageId || null };
@@ -3497,9 +4342,9 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
         return rect.width > 0 && rect.height > 0;
       };
       const collect = () => {
-        const roots = Array.from(document.querySelectorAll('section[data-testid^="conversation-turn-"]'))
+        const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((section, messageIndex) => {
-            const roleNode = section.querySelector('[data-message-author-role]');
+            const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
             return {
               section,
               messageIndex,
@@ -3511,8 +4356,8 @@ async function readVisibleChatgptDownloadArtifactProbesWithClient(
         return roots.flatMap((entry) => {
           const role = entry.role;
           if (role !== 'assistant') return [];
-          const buttons = Array.from(entry.section.querySelectorAll('button.behavior-btn'))
-            .filter((button) => isVisible(button) && !button.closest('div[id^="textdoc-message-"]'))
+          const buttons = Array.from(entry.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
+            .filter((button) => isVisible(button) && !button.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
             .map((button, buttonIndex) => ({
               turnId: entry.turnId || null,
               messageId: entry.messageId || null,
@@ -3559,7 +4404,7 @@ async function readVisibleChatgptCanvasProbesWithClient(
       const normalize = (value) => String(value || '').replace(/\\r\\n/g, '\\n').replace(/\\r/g, '\\n');
       const trimLine = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const toolbarPattern = /^(copy|edit|download|expand|collapse)(\\s+(copy|edit|download|expand|collapse))*$/i;
-      return Array.from(document.querySelectorAll('div[id^="textdoc-message-"]'))
+      return Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
         .map((node) => {
           const textdocId = trimLine((node.getAttribute('id') || '').replace(/^textdoc-message-/, ''));
           const title = trimLine(node.querySelector('span.font-semibold, [class*="font-semibold"]')?.textContent || '');
@@ -3610,10 +4455,14 @@ async function readVisibleChatgptConversationFilesWithClient(
       };
       const collect = () => {
         const items = [];
-        const nodes = Array.from(document.querySelectorAll('section[data-testid^="conversation-turn-"] [data-message-author-role="user"]'))
-          .filter((node) => !node.parentElement?.closest('[data-message-author-role]'));
+        const nodes = Array.from(
+          document.querySelectorAll(
+            ${JSON.stringify(`${CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR} ${CHATGPT_USER_MESSAGE_AUTHOR_ROLE_SELECTOR}`)},
+          ),
+        )
+          .filter((node) => !node.parentElement?.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}));
         nodes.forEach((node) => {
-          const section = node.closest('section[data-testid^="conversation-turn-"]');
+          const section = node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)});
           const turnId = normalize(section?.getAttribute('data-turn-id') || '');
           const messageId = normalize(node.getAttribute('data-message-id') || '');
           const tiles = Array.from(node.querySelectorAll('[role="group"][aria-label]'))
@@ -3660,54 +4509,129 @@ async function renameChatgptConversationWithClient(
   newTitle: string,
   projectId?: string | null,
 ): Promise<void> {
-  await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
+  const renameInteractionStrategies = ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const;
+  const shortPause = async () => {
+    const min = 800;
+    const max = 1_500;
+    const ms = min + Math.floor(Math.random() * (max - min + 1));
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  };
+  const longPause = async () => {
+    const min = 10_000;
+    const max = 15_000;
+    const ms = min + Math.floor(Math.random() * (max - min + 1));
+    await new Promise((resolve) => setTimeout(resolve, ms));
+  };
+  await navigateToChatgptConversation(client, conversationId, projectId);
   await ensureChatgptSidebarOpen(client);
+  if (await isChatgptConversationTitleAppliedWithClient(client, conversationId, newTitle, projectId)) {
+    return;
+  }
   let tagged: { rowSelector: string; actionSelector: string } | null = null;
-  try {
-    tagged = await tagChatgptConversationRow(client, conversationId, projectId);
-  } catch {
-    await navigateToChatgptConversation(client, conversationId, projectId);
+  const tagFailures: ChatgptConversationRowTagAttemptFailure[] = [];
+  const tryTagConversationRow = async (label: string) => {
+    try {
+      return await tagChatgptConversationRow(client, conversationId, projectId);
+    } catch (error) {
+      tagFailures.push({
+        attemptLabel: label,
+        error: error instanceof Error ? error.message : String(error),
+        diagnostics: readChatgptConversationRowTagDiagnostics(error),
+      });
+      return null;
+    }
+  };
+  const tagAttemptPlans: Array<{
+    label: string;
+    target: 'conversation' | 'list';
+    useLongPause?: boolean;
+  }> = [
+    { label: 'primary', target: 'conversation' },
+    { label: 'list-open-1', target: 'list' },
+    { label: 'list-open-2', target: 'list' },
+    { label: 'list-refresh', target: 'list', useLongPause: true },
+  ];
+
+  for (const [index, attempt] of tagAttemptPlans.entries()) {
+    if (index > 0) {
+      if (attempt.useLongPause) {
+        await longPause();
+      } else {
+        await shortPause();
+      }
+    }
+    if (attempt.target === 'conversation') {
+      await navigateToChatgptConversation(client, conversationId, projectId);
+    } else {
+      await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
+    }
     await ensureChatgptSidebarOpen(client);
     try {
-      tagged = await tagChatgptConversationRow(client, conversationId, projectId);
+      await waitForPredicate(
+        client.Runtime,
+        buildConversationRowActionReadyExpression(conversationId, projectId),
+        {
+          timeoutMs: 4_000,
+          description: `ChatGPT conversation row actions ready for ${conversationId}`,
+        },
+      );
     } catch {
-      await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
-      await ensureChatgptSidebarOpen(client);
+      // Intentional fallback: tagging logic has polling and can proceed without this gate.
+    }
+    tagged = await tryTagConversationRow(attempt.label);
+    if (tagged) {
+      break;
     }
   }
   await withUiDiagnostics(
     client.Runtime,
     async () => {
+      if (await isChatgptConversationTitleAppliedWithClient(client, conversationId, newTitle, projectId)) {
+        return;
+      }
       if (!tagged) {
-        throw new Error(`ChatGPT conversation row not found for ${conversationId}`);
+        throw new Error(summarizeChatgptConversationRowTagFailure(conversationId, tagFailures));
       }
-      const renamed = await openAndSelectMenuItem(client.Runtime, {
-        trigger: {
-          selector: tagged.actionSelector,
-          rootSelectors: [tagged.rowSelector],
-          interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-          requireVisible: true,
-          timeoutMs: 3_000,
-        },
-        menuSelector: '[role="menu"]',
-        itemMatch: { exact: ['rename'] },
+      await shortPause();
+      const renameMenuSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
+        triggers: [
+          {
+            name: 'sidebar-row',
+            trigger: {
+              selector: tagged.actionSelector,
+              rootSelectors: [tagged.rowSelector],
+              interactionStrategies: renameInteractionStrategies,
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+            menuSelector: '[role="menu"]',
+            closeMenuAfter: true,
+          },
+        ],
+        itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_RENAME_LABEL] },
         timeoutMs: 4_000,
-        closeMenuAfter: true,
       });
-      if (!renamed) {
-        throw new Error(`ChatGPT conversation rename menu did not open for ${conversationId}`);
+      if (!renameMenuSelection.ok) {
+        const attemptSummary = renameMenuSelection.attempts
+          .map((attempt) => `${attempt.triggerName}:${attempt.reason || (attempt.menuSelected ? 'selected' : 'failed')}`)
+          .join(', ');
+        throw new Error(
+          `ChatGPT conversation rename menu did not open for ${conversationId}: ${renameMenuSelection.reason || 'no matching action surface'}${attemptSummary ? ` [${attemptSummary}]` : ''}`,
+        );
       }
-      const submitted = await submitInlineRename(
-        client.Runtime,
-        {
-          value: newTitle,
-          inputSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
-          rootSelectors: [tagged.rowSelector],
-          closeSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
-          timeoutMs: 4_000,
-        },
-        { Input: client.Input },
-      );
+      const submitted = tagged
+        ? await submitInlineRename(
+            client.Runtime,
+            {
+              value: newTitle,
+              inputSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
+              rootSelectors: [tagged.rowSelector],
+              closeSelector: `${tagged.rowSelector} input[type="text"], ${tagged.rowSelector} textarea`,
+              timeoutMs: 4_000,
+            },
+            { Input: client.Input },
+          )
+        : { ok: false as const, reason: 'Sidebar row unavailable after rename trigger' };
       if (submitted.ok) {
         return;
       }
@@ -3715,8 +4639,8 @@ async function renameChatgptConversationWithClient(
         client.Runtime,
         {
           value: newTitle,
-          inputSelector: 'input[type="text"]',
-          closeSelector: 'input[type="text"]',
+          inputSelector: 'input[type="text"], textarea',
+          closeSelector: 'input[type="text"], textarea',
           timeoutMs: 5_000,
           submitStrategy: 'native-then-synthetic',
         },
@@ -3739,6 +4663,7 @@ async function renameChatgptConversationWithClient(
       context: {
         conversationId,
         projectId: projectId ?? null,
+        tagFailures,
       },
     },
   );
@@ -3750,6 +4675,7 @@ async function deleteChatgptConversationWithClient(
   conversationId: string,
   projectId?: string | null,
 ): Promise<void> {
+  const deleteInteractionStrategies = ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const;
   await navigateToChatgptConversation(client, conversationId, projectId);
   const { result } = await client.Runtime.evaluate({
     expression: `(() => document.title.replace(/^ChatGPT\\s*-\\s*/i, '').replace(/\\s+/g, ' ').trim())()`,
@@ -3773,39 +4699,46 @@ async function deleteChatgptConversationWithClient(
   await withUiDiagnostics(
     client.Runtime,
     async () => {
-      let deletedFromSidebar = false;
-      if (tagged) {
-        deletedFromSidebar = await openAndSelectMenuItem(client.Runtime, {
-          trigger: {
-            selector: tagged.actionSelector,
-            rootSelectors: [tagged.rowSelector],
-            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-            requireVisible: true,
-            timeoutMs: 3_000,
+      const deleteMenuSelection = await openAndSelectMenuItemFromTriggers(client.Runtime, {
+        triggers: [
+          ...(tagged
+            ? [
+                {
+                  name: 'sidebar-row',
+                  trigger: {
+                    selector: tagged.actionSelector,
+                    rootSelectors: [tagged.rowSelector],
+                    interactionStrategies: deleteInteractionStrategies,
+                    requireVisible: true,
+                    timeoutMs: 3_000,
+                  },
+                  menuSelector: '[role="menu"]',
+                  closeMenuAfter: true,
+                },
+              ]
+            : []),
+          {
+            name: 'conversation-header',
+            beforeAttempt: async () => {
+              await navigateToChatgptConversation(client, conversationId, projectId);
+            },
+            trigger: {
+              selector: CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR,
+              interactionStrategies: deleteInteractionStrategies,
+              requireVisible: true,
+              timeoutMs: 3_000,
+            },
+            menuSelector: '[role="menu"]',
+            closeMenuAfter: true,
           },
-          menuSelector: '[role="menu"]',
-          itemMatch: { exact: ['delete'] },
-          timeoutMs: 4_000,
-          closeMenuAfter: true,
-        });
-      }
-      if (!deletedFromSidebar) {
-        await navigateToChatgptConversation(client, conversationId, projectId);
-        const deletedFromHeader = await openAndSelectMenuItem(client.Runtime, {
-          trigger: {
-            selector: 'button[data-testid="conversation-options-button"]',
-            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-            requireVisible: true,
-            timeoutMs: 3_000,
-          },
-          menuSelector: '[role="menu"]',
-          itemMatch: { exact: ['delete'] },
-          timeoutMs: 4_000,
-          closeMenuAfter: true,
-        });
-        if (!deletedFromHeader) {
-          throw new Error(`ChatGPT conversation delete menu did not open for ${conversationId}`);
-        }
+        ],
+        itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
+        timeoutMs: 4_000,
+      });
+      if (!deleteMenuSelection.ok) {
+        throw new Error(
+          `ChatGPT conversation delete menu did not open for ${conversationId}: ${deleteMenuSelection.reason || 'no matching action surface'}`,
+        );
       }
       let confirmationReady = await waitForPredicate(
         client.Runtime,
@@ -3816,20 +4749,30 @@ async function deleteChatgptConversationWithClient(
         },
       );
       if (!confirmationReady.ok) {
-        const deletedFromHeaderRetry = await openAndSelectMenuItem(client.Runtime, {
-          trigger: {
-            selector: 'button[data-testid="conversation-options-button"]',
-            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-            requireVisible: true,
-            timeoutMs: 3_000,
-          },
-          menuSelector: '[role="menu"]',
-          itemMatch: { exact: ['delete'] },
+        const headerRetry = await openAndSelectMenuItemFromTriggers(client.Runtime, {
+          triggers: [
+            {
+              name: 'conversation-header',
+              beforeAttempt: async () => {
+                await navigateToChatgptConversation(client, conversationId, projectId);
+              },
+              trigger: {
+                selector: CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR,
+                interactionStrategies: deleteInteractionStrategies,
+                requireVisible: true,
+                timeoutMs: 3_000,
+              },
+              menuSelector: '[role="menu"]',
+              closeMenuAfter: true,
+            },
+          ],
+          itemMatch: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
           timeoutMs: 4_000,
-          closeMenuAfter: true,
         });
-        if (!deletedFromHeaderRetry) {
-          throw new Error(`ChatGPT conversation delete confirmation did not open for ${conversationId}`);
+        if (!headerRetry.ok) {
+          throw new Error(
+            `ChatGPT conversation delete confirmation did not open for ${conversationId}: ${headerRetry.reason || 'header retry failed'}`,
+          );
         }
         confirmationReady = await waitForPredicate(
           client.Runtime,
@@ -3844,7 +4787,7 @@ async function deleteChatgptConversationWithClient(
         }
       }
       const pressed = await pressButton(client.Runtime, {
-        selector: 'button[data-testid="delete-conversation-confirm-button"]',
+        selector: CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR,
         rootSelectors: DEFAULT_DIALOG_SELECTORS,
         requireVisible: true,
         timeoutMs: 3_000,
@@ -3857,10 +4800,10 @@ async function deleteChatgptConversationWithClient(
       label: 'chatgpt-delete-conversation',
       candidateSelectors: [
         `[${CHATGPT_CONVERSATION_ACTION_ATTR}="true"]`,
-        'button[data-testid="conversation-options-button"]',
+        CHATGPT_CONVERSATION_OPTIONS_BUTTON_SELECTOR,
         '[role="menu"]',
         '[role="dialog"]',
-        'button[data-testid="delete-conversation-confirm-button"]',
+        CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR,
       ],
       context: {
         conversationId,
@@ -3878,7 +4821,7 @@ async function readChatgptTableArtifactRowsWithClient(
   const expression = `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const expected = normalize(${JSON.stringify(title)}).toLowerCase();
-    const sections = Array.from(document.querySelectorAll('[data-testid^="conversation-turn-"]'));
+    const sections = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}));
     for (const section of sections) {
       const sectionText = normalize(section.textContent).toLowerCase();
       if (!sectionText.includes(expected)) continue;
@@ -3916,7 +4859,7 @@ async function waitForChatgptTableArtifactRowsWithClient(
   const predicate = `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
     const expected = normalize(${JSON.stringify(title)}).toLowerCase();
-    const sections = Array.from(document.querySelectorAll('[data-testid^="conversation-turn-"]'));
+    const sections = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}));
     for (const section of sections) {
       const sectionText = normalize(section.textContent).toLowerCase();
       if (!sectionText.includes(expected)) continue;
@@ -4099,9 +5042,9 @@ async function tagChatgptDownloadButtonWithClient(
           typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
         )};
         const expectedButtonIndex = ${JSON.stringify(buttonIndex)};
-        const roots = Array.from(document.querySelectorAll('section[data-testid^="conversation-turn-"]'))
+        const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((section, messageIndex) => {
-            const roleNode = section.querySelector('[data-message-author-role]');
+            const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
             return {
               section,
               messageIndex,
@@ -4112,8 +5055,8 @@ async function tagChatgptDownloadButtonWithClient(
           })
           .filter((entry) => entry.role === 'assistant');
         const resolveButtons = (root) =>
-          Array.from(root.section.querySelectorAll('button.behavior-btn'))
-            .filter((button) => isVisible(button) && !button.closest('div[id^="textdoc-message-"]'))
+          Array.from(root.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
+            .filter((button) => isVisible(button) && !button.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
             .map((button, index) => ({
               button,
               index,
@@ -4172,9 +5115,9 @@ async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
         const expectedMessageIndex = ${JSON.stringify(
           typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
         )};
-        const roots = Array.from(document.querySelectorAll('section[data-testid^="conversation-turn-"]'))
+        const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((section, messageIndex) => {
-            const roleNode = section.querySelector('[data-message-author-role]');
+            const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
             return {
               section,
               messageIndex,
@@ -4501,6 +5444,7 @@ export function createChatgptAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
   | 'getUserIdentity'
+  | 'getFeatureSignature'
   | 'listProjects'
   | 'updateProjectInstructions'
   | 'getProjectInstructions'
@@ -4536,6 +5480,14 @@ export function createChatgptAdapter(): Pick<
         await client.close().catch(() => undefined);
       }
     },
+    async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
+      const { client } = await connectToChatgptTab(options, options?.configuredUrl ?? CHATGPT_HOME_URL);
+      try {
+        return await readChatgptFeatureSignature(client);
+      } finally {
+        await client.close().catch(() => undefined);
+      }
+    },
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
       const attempt = async (currentOptions?: BrowserProviderListOptions): Promise<Project[]> => {
         const { client } = await connectToChatgptTab(currentOptions, currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
@@ -4560,7 +5512,7 @@ export function createChatgptAdapter(): Pick<
       const normalizedProjectId = normalizeChatgptProjectId(projectId);
       const attempt = async (currentOptions?: BrowserProviderListOptions): Promise<Conversation[]> => {
         const targetUrl = normalizedProjectId
-          ? `https://chatgpt.com/g/${normalizedProjectId}/project`
+          ? resolveChatgptProjectUrl(normalizedProjectId)
           : (currentOptions?.configuredUrl ?? CHATGPT_HOME_URL);
         const { client } = await connectToChatgptTab(currentOptions, targetUrl);
         try {
@@ -4778,7 +5730,7 @@ export function createChatgptAdapter(): Pick<
                   ? current.name
                   : input.name,
               provider: 'chatgpt',
-              url: current?.url ?? routeValue?.href ?? `https://chatgpt.com/g/${createdId}/project`,
+              url: current?.url ?? routeValue?.href ?? resolveChatgptProjectUrl(createdId),
               memoryMode: input.memoryMode,
             };
           }
@@ -4829,7 +5781,7 @@ export function createChatgptAdapter(): Pick<
       options?: BrowserProviderListOptions,
     ): Promise<void> {
       if (filePaths.length === 0) return;
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
         await uploadChatgptProjectSourceFilesWithClient(client, projectId, filePaths);
       } finally {
@@ -4840,7 +5792,7 @@ export function createChatgptAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<FileRef[]> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
         await openProjectSourcesTab(client, projectId);
         const initial = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000 });
@@ -4858,7 +5810,7 @@ export function createChatgptAdapter(): Pick<
       fileName: string,
       options?: BrowserProviderListOptions,
     ): Promise<void> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project?tab=sources`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectSourcesUrl(projectId));
       try {
         await openProjectSourcesTab(client, projectId);
         const listedFiles = await readChatgptProjectSourceFilesSettled(client);
@@ -4887,7 +5839,7 @@ export function createChatgptAdapter(): Pick<
                 requireVisible: true,
                 timeoutMs: 3_000,
               },
-              itemMatch: { exact: ['remove'] },
+              itemMatch: { exact: [CHATGPT_PROJECT_SOURCE_ACTION_REMOVE_LABEL] },
               menuSelector: '[role="menu"]',
               timeoutMs: 4_000,
               closeMenuAfter: true,
@@ -4898,7 +5850,7 @@ export function createChatgptAdapter(): Pick<
           },
           {
             label: 'chatgpt-remove-project-source',
-            candidateSelectors: ['button[aria-label="Source actions"]', '[role="menu"]', '[role="menuitem"]'],
+            candidateSelectors: [CHATGPT_PROJECT_SOURCE_ACTIONS_SELECTOR, '[role="menu"]', '[role="menuitem"]'],
             context: {
               projectId,
               fileName,
@@ -4941,7 +5893,7 @@ export function createChatgptAdapter(): Pick<
       if (typeof modelLabel === 'string' && modelLabel.trim().length > 0) {
         throw new Error('ChatGPT project instructions model selection is not supported');
       }
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await applyProjectSettings(client, projectId, { instructions });
         await waitForProjectInstructionsApplied(client, projectId, instructions);
@@ -4953,7 +5905,7 @@ export function createChatgptAdapter(): Pick<
       projectId: string,
       options?: BrowserProviderListOptions,
     ): Promise<{ text: string; model?: string | null }> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await openProjectSettingsPanel(client, projectId);
         const snapshot = await readProjectSettingsSnapshot(client);
@@ -4964,7 +5916,7 @@ export function createChatgptAdapter(): Pick<
       }
     },
     async renameProject(projectId: string, newTitle: string, options?: BrowserProviderListOptions): Promise<void> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await applyProjectSettings(client, projectId, { name: newTitle });
         await waitForProjectNameApplied(client, projectId, newTitle);
@@ -4973,7 +5925,7 @@ export function createChatgptAdapter(): Pick<
       }
     },
     async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await openProjectSettingsPanel(client, projectId);
         const settingsRootSelector = await tagProjectSettingsDialog(client, { name: true, instructions: true });
@@ -4981,7 +5933,7 @@ export function createChatgptAdapter(): Pick<
           client.Runtime,
           async () => {
             const pressed = await pressButton(client.Runtime, {
-              match: { exact: ['delete project'] },
+              match: { exact: [CHATGPT_PROJECT_DELETE_BUTTON_LABEL] },
               rootSelectors: [settingsRootSelector],
               requireVisible: true,
               timeoutMs: 5000,
@@ -5016,17 +5968,19 @@ export function createChatgptAdapter(): Pick<
       }
     },
     async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
-      const { client } = await connectToChatgptTab(options, `https://chatgpt.com/g/${projectId}/project`);
+      const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         const { result } = await client.Runtime.evaluate({
           expression: `(() => {
             const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+            const deleteDialogLabel = normalize(${JSON.stringify(CHATGPT_PROJECT_DELETE_DIALOG_LABEL)});
+            const deleteButtonLabel = normalize(${JSON.stringify(CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)});
             const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
             for (const dialog of dialogs) {
               const text = normalize(dialog.textContent || '');
-              if (!text.includes('delete project?')) continue;
+              if (!text.includes(deleteDialogLabel)) continue;
               const button = Array.from(dialog.querySelectorAll('button'))
-                .find((node) => normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
+                .find((node) => normalize(node.getAttribute('aria-label') || node.textContent || '') === deleteButtonLabel);
               if (!button) {
                 return { ok: false, reason: 'delete-button-missing' };
               }
@@ -5061,7 +6015,10 @@ export function createChatgptAdapter(): Pick<
           routeExpression: `(() => {
             try {
               const parsed = new URL(location.href);
-              return parsed.origin === 'https://chatgpt.com' && parsed.pathname === '/' ? { href: location.href } : null;
+              return parsed.origin === ${JSON.stringify(CHATGPT_HOME_LOCATION.origin)} &&
+                parsed.pathname === ${JSON.stringify(CHATGPT_HOME_LOCATION.pathname)}
+                ? { href: location.href }
+                : null;
             } catch {
               return null;
             }

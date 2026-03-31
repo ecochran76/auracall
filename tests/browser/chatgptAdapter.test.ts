@@ -10,6 +10,7 @@ import {
   findChatgptProjectByName,
   mergeChatgptCanvasArtifactContent,
   mergeChatgptConversationArtifacts,
+  matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
   normalizeChatgptAuthSessionIdentity,
   normalizeChatgptConversationId,
@@ -19,6 +20,7 @@ import {
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
   resolveChatgptConversationUrl,
+  resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
   serializeChatgptGridRowsToCsv,
 } from '../../src/browser/providers/chatgptAdapter.js';
@@ -146,6 +148,14 @@ describe('resolveChatgptProjectMemoryLabel', () => {
 
   test('maps project mode to the ChatGPT Project-only label', () => {
     expect(resolveChatgptProjectMemoryLabel('project')).toBe('Project-only');
+  });
+});
+
+describe('resolveChatgptProjectUrl', () => {
+  test('builds project routes from the service manifest template', () => {
+    expect(resolveChatgptProjectUrl('g-p-69c851be8cc88191afe109bea1b2a28d')).toBe(
+      'https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d/project',
+    );
   });
 });
 
@@ -602,6 +612,85 @@ describe('extractChatgptConversationArtifactsFromPayload', () => {
       },
     ]);
   });
+
+  test('uses manifest-backed default artifact titles when payload titles are absent', () => {
+    expect(
+      extractChatgptConversationArtifactsFromPayload({
+        mapping: {
+          image: {
+            message: {
+              id: 'tool-image-untitled',
+              author: { role: 'tool' },
+              content: {
+                content_type: 'multimodal_text',
+                parts: [
+                  JSON.stringify({
+                    content_type: 'image_asset_pointer',
+                    asset_pointer: 'sediment://file_untitled_image',
+                  }),
+                ],
+              },
+            },
+          },
+          table: {
+            message: {
+              id: 'tool-table-untitled',
+              author: { role: 'tool' },
+              metadata: {
+                ada_visualizations: [
+                  {
+                    type: 'table',
+                  },
+                ],
+              },
+            },
+          },
+          canvas: {
+            message: {
+              id: 'tool-canvas-untitled',
+              author: { role: 'tool' },
+              metadata: {
+                canvas: {
+                  textdoc_id: 'canvas-untitled',
+                },
+              },
+            },
+          },
+        },
+      }),
+    ).toEqual([
+      {
+        id: 'tool-image-untitled:image:sediment://file_untitled_image',
+        title: 'Generated image',
+        kind: 'image',
+        uri: 'sediment://file_untitled_image',
+        messageId: 'tool-image-untitled',
+        metadata: {
+          contentType: 'image_asset_pointer',
+          assetPointer: 'sediment://file_untitled_image',
+        },
+      },
+      {
+        id: 'tool-table-untitled:spreadsheet',
+        title: 'Spreadsheet artifact',
+        kind: 'spreadsheet',
+        messageId: 'tool-table-untitled',
+        metadata: {
+          visualizationType: 'table',
+        },
+      },
+      {
+        id: 'canvas:canvas-untitled',
+        title: 'Canvas artifact',
+        kind: 'canvas',
+        uri: 'chatgpt://canvas/canvas-untitled',
+        messageId: 'tool-canvas-untitled',
+        metadata: {
+          textdocId: 'canvas-untitled',
+        },
+      },
+    ]);
+  });
 });
 
 describe('normalizeChatgptConversationDownloadArtifactProbes', () => {
@@ -661,6 +750,32 @@ describe('normalizeChatgptConversationDownloadArtifactProbes', () => {
           extraction: 'dom-behavior-button',
           turnId: 'turn-2',
           buttonIndex: 1,
+        },
+      },
+    ]);
+  });
+
+  test('classifies ods downloads as spreadsheet artifacts via manifest taxonomy', () => {
+    expect(
+      normalizeChatgptConversationDownloadArtifactProbes([
+        {
+          turnId: 'turn-3',
+          messageIndex: 6,
+          buttonIndex: 2,
+          title: 'Analysis export.ods',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: 'download-dom:turn-3:2',
+        title: 'Analysis export.ods',
+        kind: 'spreadsheet',
+        uri: 'chatgpt://download-button/turn-3/2',
+        messageIndex: 6,
+        metadata: {
+          extraction: 'dom-behavior-button',
+          turnId: 'turn-3',
+          buttonIndex: 2,
         },
       },
     ]);
@@ -829,6 +944,89 @@ describe('matchesChatgptDeleteConfirmationProbe', () => {
           hasVisibleConfirmButton: false,
         },
         'Older page title that no longer matches',
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('matchesChatgptConversationTitleProbe', () => {
+  test('accepts a matching root conversation row even when another row remains at the top', () => {
+    expect(
+      matchesChatgptConversationTitleProbe(
+        {
+          matchedConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          matchedProjectId: null,
+          matchedTitle: 'AC GPT C tpuivt',
+          topConversationId: '69ca9d71-1a04-8332-abe1-830d327b2a65',
+          topTitle: 'Something else',
+        },
+        '69cb3741-2f58-832f-a6ae-f28779f30741',
+        'AC GPT C tpuivt',
+      ),
+    ).toBe(true);
+  });
+
+  test('requires the matching row to be top for strict root checks', () => {
+    expect(
+      matchesChatgptConversationTitleProbe(
+        {
+          matchedConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          matchedProjectId: null,
+          matchedTitle: 'AC GPT C tpuivt',
+          topConversationId: '69ca9d71-1a04-8332-abe1-830d327b2a65',
+          topTitle: 'Something else',
+        },
+        '69cb3741-2f58-832f-a6ae-f28779f30741',
+        'AC GPT C tpuivt',
+        null,
+        { requireTopForRootMatch: true },
+      ),
+    ).toBe(false);
+  });
+
+  test('passes strict root checks when the matching row is already top', () => {
+    expect(
+      matchesChatgptConversationTitleProbe(
+        {
+          matchedConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          matchedProjectId: null,
+          matchedTitle: 'AC GPT C tpuivt',
+          topConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          topTitle: 'AC GPT C tpuivt',
+        },
+        '69cb3741-2f58-832f-a6ae-f28779f30741',
+        'AC GPT C tpuivt',
+        null,
+        { requireTopForRootMatch: true },
+      ),
+    ).toBe(true);
+  });
+
+  test('accepts root conversation page-title fallback when the sidebar row is unavailable', () => {
+    expect(
+      matchesChatgptConversationTitleProbe(
+        {
+          routeConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          routeProjectId: null,
+          documentTitle: 'AC GPT C tpuivt - ChatGPT',
+        },
+        '69cb3741-2f58-832f-a6ae-f28779f30741',
+        'AC GPT C tpuivt',
+      ),
+    ).toBe(true);
+  });
+
+  test('does not apply the root page-title fallback to project conversations', () => {
+    expect(
+      matchesChatgptConversationTitleProbe(
+        {
+          routeConversationId: '69cb3741-2f58-832f-a6ae-f28779f30741',
+          routeProjectId: 'g-p-69c851be8cc88191afe109bea1b2a28d',
+          documentTitle: 'AC GPT C tpuivt - ChatGPT',
+        },
+        '69cb3741-2f58-832f-a6ae-f28779f30741',
+        'AC GPT C tpuivt',
+        'g-p-69c851be8cc88191afe109bea1b2a28d',
       ),
     ).toBe(false);
   });

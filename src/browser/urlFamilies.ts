@@ -1,8 +1,10 @@
+import { resolveBundledServiceCompatibleHosts } from '../services/registry.js';
+
 type BrowserServiceTarget = 'chatgpt' | 'gemini' | 'grok';
 
-const CHATGPT_COMPATIBLE_HOSTS = ['chatgpt.com', 'chat.openai.com'];
-const GEMINI_COMPATIBLE_HOSTS = ['gemini.google.com'];
-const GROK_COMPATIBLE_HOSTS = ['grok.com'];
+const CHATGPT_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('chatgpt', ['chatgpt.com', 'chat.openai.com']);
+const GEMINI_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('gemini', ['gemini.google.com']);
+const GROK_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('grok', ['grok.com']);
 
 export function resolveCompatibleHostsForTarget(target: BrowserServiceTarget): string[] {
   switch (target) {
@@ -16,7 +18,7 @@ export function resolveCompatibleHostsForTarget(target: BrowserServiceTarget): s
 }
 
 export function resolveCompatibleHostsForUrl(url: string | null | undefined): string[] {
-  const host = extractHost(url);
+  const host = extractHostname(url);
   if (!host) {
     return [];
   }
@@ -32,13 +34,21 @@ export function resolveCompatibleHostsForUrl(url: string | null | undefined): st
   return [host];
 }
 
-function extractHost(url: string | null | undefined): string | null {
+export function matchesServiceUrl(target: BrowserServiceTarget, url: string | null | undefined): boolean {
+  const host = extractHostname(url);
+  if (!host) {
+    return false;
+  }
+  return resolveCompatibleHostsForTarget(target).includes(host);
+}
+
+function extractHostname(url: string | null | undefined): string | null {
   const trimmed = url?.trim();
   if (!trimmed) {
     return null;
   }
   try {
-    return new URL(trimmed).host.toLowerCase();
+    return new URL(trimmed).hostname.toLowerCase();
   } catch {
     return null;
   }

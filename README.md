@@ -166,6 +166,39 @@ Put defaults in `~/.auracall/config.json` (JSON5). Example:
 Use `browser.chatgptUrl` (or the legacy alias `browser.url`) to target a specific ChatGPT workspace/folder for browser automation.
 See [docs/configuration.md](docs/configuration.md) for precedence and full schema.
 
+For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.json` and select one at runtime:
+
+```json5
+{
+  auracallProfile: "default",
+  profiles: {
+    default: {
+      services: {
+        chatgpt: { url: "https://chatgpt.com/" },
+      },
+    },
+    work: {
+      services: {
+        chatgpt: { url: "https://chatgpt.com/g/p-691edc9fec088191b553a35093da1ea8-oracle/project" },
+      },
+    },
+    review: {
+      services: {
+        chatgpt: {
+          projectId: "g-p-abcdef123456789", // no hardcoded URL needed
+        },
+      },
+    },
+  },
+}
+```
+
+```bash
+auracall --profile work --engine browser -p "Draft to share" --file notes.md
+auracall --profile review --engine browser --project-name "Sprint Review Notes" -p "Clean this draft"
+auracall --profile review --engine browser --project-id g-p-abcdef123456789 -p "Review this branch"
+```
+
 Advanced flags
 
 | Area | Flags |

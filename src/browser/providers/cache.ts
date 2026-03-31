@@ -13,6 +13,7 @@ interface ProviderCache<T> {
   sourceUrl?: string | null;
   userIdentity?: ProviderUserIdentity | null;
   identityKey?: string | null;
+  featureSignature?: string | null;
 }
 
 export interface CacheReadResult<T> {
@@ -27,6 +28,7 @@ export interface ProviderCacheContext {
   listOptions: BrowserProviderListOptions;
   userIdentity?: ProviderUserIdentity | null;
   identityKey?: string | null;
+  featureSignature?: string | null;
   cacheRoot?: string | null;
   ttlMs?: number | null;
 }
@@ -329,6 +331,7 @@ async function writeProviderCache<T>(
     sourceUrl: configuredUrl ?? null,
     userIdentity: identity,
     identityKey: resolveIdentityKey(context),
+    featureSignature: normalizeFeatureSignature(context.featureSignature),
   };
   await fs.writeFile(cacheFile, JSON.stringify(payload, null, 2), 'utf8');
 }
@@ -357,8 +360,15 @@ function hasIdentityMismatch(
 ): boolean {
   const currentKey = (context.identityKey ?? deriveIdentityKey(context.userIdentity ?? null) ?? '').trim();
   const cachedKey = (cached.identityKey ?? deriveIdentityKey(cached.userIdentity ?? null) ?? '').trim();
-  if (!currentKey || !cachedKey) return false;
-  return currentKey !== cachedKey;
+  if (currentKey && cachedKey && currentKey !== cachedKey) {
+    return true;
+  }
+  const currentFeatureSignature = normalizeFeatureSignature(context.featureSignature);
+  const cachedFeatureSignature = normalizeFeatureSignature(cached.featureSignature);
+  if (!currentFeatureSignature || !cachedFeatureSignature) {
+    return false;
+  }
+  return currentFeatureSignature !== cachedFeatureSignature;
 }
 
 function sanitizeUserIdentity(identity: ProviderUserIdentity | null): ProviderUserIdentity | null {
@@ -378,4 +388,10 @@ function resolveCacheTtl(context: ProviderCacheContext): number {
     return context.ttlMs;
   }
   return PROVIDER_CACHE_TTL_MS;
+}
+
+function normalizeFeatureSignature(value: string | null | undefined): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }

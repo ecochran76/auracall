@@ -53,6 +53,14 @@ import type { CacheStore, CachedConversationContextEntry } from './cache/store.j
 import { createCacheStore, type CacheStoreKind } from './cache/store.js';
 
 const DEFAULT_HISTORY_LIMIT = 2000;
+const CHATGPT_RATE_LIMIT_RETRY_BASE_MS = 2_000;
+const CHATGPT_RATE_LIMIT_RETRY_STEP_MS = 3_000;
+const CHATGPT_RATE_LIMIT_RETRY_JITTER_MS = 1_500;
+const CHATGPT_RATE_LIMIT_RETRY_MAX_MS = 15_000;
+const CHATGPT_RETRY_BASE_MS = 500;
+const CHATGPT_RETRY_STEP_MS = 500;
+const CHATGPT_RETRY_MAX_MS = 2_500;
+const CHATGPT_RETRY_JITTER_MS = 250;
 
 type ProviderGuardSettings = {
   cooldownMs: number;
@@ -91,6 +99,20 @@ type ConversationArtifactFetchManifest = {
   materializedCount: number;
   entries: ConversationArtifactFetchManifestEntry[];
 };
+
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) {
+    return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
+  }
+  if (value && typeof value === 'object') {
+    const record = value as Record<string, unknown>;
+    const entries = Object.keys(record)
+      .sort()
+      .map((key) => `${JSON.stringify(key)}:${stableStringify(record[key])}`);
+    return `{${entries.join(',')}}`;
+  }
+  return JSON.stringify(value);
+}
 
 function normalizeProjectInstructionsForPrefix(value: string): string {
   return value.replace(/\r\n/g, '\n').trim();
@@ -1303,7 +1325,28 @@ export abstract class LlmService {
         null;
     }
 
-    return { userIdentity, identityKey };
+    const configuredFeatures = this.resolveConfiguredServiceFeatures();
+    let detectedFeatureSignature: string | null = null;
+    if (this.provider.getFeatureSignature) {
+      try {
+        detectedFeatureSignature = await this.provider.getFeatureSignature(listOptions);
+      } catch {
+        detectedFeatureSignature = null;
+      }
+    }
+    const configuredFeatureSignature =
+      configuredFeatures && Object.keys(configuredFeatures).length > 0
+        ? stableStringify(configuredFeatures)
+        : null;
+    const featureSignature =
+      configuredFeatureSignature && detectedFeatureSignature
+        ? stableStringify({
+            configured: JSON.parse(configuredFeatureSignature),
+            detected: JSON.parse(detectedFeatureSignature),
+          })
+        : detectedFeatureSignature ?? configuredFeatureSignature;
+
+    return { userIdentity, identityKey, featureSignature };
   }
 
   private resolveProfileServiceIdentity(provider: ProviderId): ProviderUserIdentity | null {
@@ -1338,6 +1381,24 @@ export abstract class LlmService {
     if (profiles.default) return 'default';
     const keys = Object.keys(profiles);
     return keys.length ? keys[0] : null;
+  }
+
+  private resolveConfiguredServiceFeatures(): Record<string, unknown> | null {
+    const profileName = this.resolveActiveProfileName();
+    const globalFeatures = this.userConfig.services?.[this.providerId]?.features;
+    if (!profileName) {
+      return isRecord(globalFeatures) ? globalFeatures : null;
+    }
+    const profile = this.userConfig.auracallProfiles?.[profileName];
+    const profileFeatures = profile?.services?.[this.providerId]?.features;
+    const merged: Record<string, unknown> = {};
+    if (isRecord(globalFeatures)) {
+      Object.assign(merged, globalFeatures);
+    }
+    if (isRecord(profileFeatures)) {
+      Object.assign(merged, profileFeatures);
+    }
+    return Object.keys(merged).length > 0 ? merged : null;
   }
 
   private async refreshProjectKnowledgeCache(
@@ -1578,7 +1639,8 @@ export abstract class LlmService {
         if (attempt >= retries || !this.isRetryableError(nextError)) {
           throw nextError;
         }
-        await this.delay(500);
+        const delayMs = this.getRetryDelayMs(attempt, nextError);
+        await this.delay(delayMs);
       }
     }
   }
@@ -1810,12 +1872,46 @@ export abstract class LlmService {
 
   private isRetryableError(error: unknown): boolean {
     const message = error instanceof Error ? error.message : String(error);
+    if (this.providerId === 'chatgpt' && isChatgptRateLimitMessage(message)) {
+      return true;
+    }
     return message.includes('WebSocket connection closed') || message.includes('ECONNRESET');
+  }
+
+  private getRetryDelayMs(attempt: number, error: unknown): number {
+    if (this.providerId !== 'chatgpt') {
+      return 500;
+    }
+    const isRateLimited = this.isProviderRateLimitedError(error);
+    const base = isRateLimited
+      ? CHATGPT_RATE_LIMIT_RETRY_BASE_MS + attempt * CHATGPT_RATE_LIMIT_RETRY_STEP_MS
+      : CHATGPT_RETRY_BASE_MS + attempt * CHATGPT_RETRY_STEP_MS;
+    const maxMs = isRateLimited ? CHATGPT_RATE_LIMIT_RETRY_MAX_MS : CHATGPT_RETRY_MAX_MS;
+    const jitter = this.getDeterministicJitterMs(
+      `${String(error)}|${String(attempt)}`,
+      isRateLimited ? CHATGPT_RATE_LIMIT_RETRY_JITTER_MS : CHATGPT_RETRY_JITTER_MS,
+    );
+    return Math.min(base + jitter, maxMs);
+  }
+
+  private getDeterministicJitterMs(seed: string, maxMs: number): number {
+    if (!Number.isFinite(maxMs) || maxMs <= 0) {
+      return 0;
+    }
+    let hash = 0;
+    for (let index = 0; index < seed.length; index += 1) {
+      hash = (hash * 31 + seed.charCodeAt(index)) >>> 0;
+    }
+    return hash % (Math.floor(maxMs) + 1);
   }
 
   private delay(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function parseLatestSelector(value: string): number | null {

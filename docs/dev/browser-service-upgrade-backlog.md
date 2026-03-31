@@ -66,6 +66,8 @@ Current active plan:
   - stable visible-menu handles
   - nested submenu traversal
   - select-and-reopen verification
+  - ordered menu-trigger action-surface fallback via
+    `openAndSelectMenuItemFromTriggers(...)`
 - Return to provider work by default and only reopen browser-service extraction
   when a new surface exposes another clearly reusable failure mode.
 - Latest implementation follow-up:

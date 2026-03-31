@@ -6,6 +6,7 @@ import type { OracleConfig } from './schema/types.js';
 import type { ResolvedUserConfig } from './config/schema.js';
 import { CHATGPT_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
+import { DEFAULT_MODEL } from './oracle.js';
 
 export type UserConfig = OracleConfig;
 export type { ResolvedUserConfig };
@@ -154,9 +155,9 @@ export async function scaffoldDefaultConfigFile(options: {
     globals: {},
     browserDefaults: browser,
     llmDefaults: {
-      model: 'gpt-5.2-pro',
+      model: DEFAULT_MODEL,
     },
-    model: 'gpt-5.2-pro',
+    model: DEFAULT_MODEL,
     browser: {},
     services: {
       chatgpt: { url: CHATGPT_URL },

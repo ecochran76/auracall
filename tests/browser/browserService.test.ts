@@ -235,4 +235,21 @@ describe('BrowserService resolveServiceTarget', () => {
       tab: { targetId: 'legacy-grok-1' },
     });
   });
+
+  test('explicit constructor target overrides configured browser target for managed profile resolution', () => {
+    const service = BrowserService.fromConfig(
+      {
+        auracallProfile: 'mixed',
+        browser: {
+          target: 'chatgpt',
+          managedProfileRoot: '/tmp/managed-root',
+          chromeProfile: 'Default',
+        },
+      } as unknown as ResolvedUserConfig,
+      'grok',
+    );
+
+    expect(service.getConfig().target).toBe('grok');
+    expect(service.getConfig().manualLoginProfileDir).toBe('/tmp/managed-root/default/grok');
+  });
 });

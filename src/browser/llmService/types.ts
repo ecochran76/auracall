@@ -23,6 +23,7 @@ export type CacheSettings = {
 export type CacheIdentity = {
   userIdentity: ProviderUserIdentity | null;
   identityKey: string | null;
+  featureSignature: string | null;
 };
 
 export type CacheContext = CacheSettings & {
@@ -31,6 +32,7 @@ export type CacheContext = CacheSettings & {
   listOptions: BrowserProviderListOptions;
   userIdentity?: ProviderUserIdentity | null;
   identityKey?: string | null;
+  featureSignature?: string | null;
 };
 
 export type ProjectListResult = Project[];

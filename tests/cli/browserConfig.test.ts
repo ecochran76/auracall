@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { buildBrowserConfig, resolveBrowserModelLabel } from '../../src/cli/browserConfig.js';
+import { buildBrowserConfig, mapModelToBrowserLabel, resolveBrowserModelLabel } from '../../src/cli/browserConfig.js';
 
 describe('buildBrowserConfig', () => {
   afterEach(() => {
@@ -93,6 +93,12 @@ describe('buildBrowserConfig', () => {
       model: 'gemini-3-pro',
     });
     expect(config.desiredModel).toBe('Gemini 3 Pro');
+  });
+
+  test('resolves ChatGPT browser picker labels from the bundled services manifest', () => {
+    expect(mapModelToBrowserLabel('gpt-5.2-thinking')).toBe('Thinking');
+    expect(mapModelToBrowserLabel('gpt-5.2')).toBe('Instant');
+    expect(mapModelToBrowserLabel('gpt-5.2-pro')).toBe('Pro');
   });
 
   test('maps Grok aliases to the current browser picker labels', async () => {

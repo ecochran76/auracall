@@ -90,6 +90,43 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.chromeCookiePath).toBe(
       '/home/ecochran76/.config/google-chrome/Default/Network/Cookies',
     );
+    expect(resolved.display).toBe(':0.0');
+  });
+
+  test('defaults WSL Linux Chrome display to :0.0 when not explicitly configured', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+    profileMocks.discoverDefaultBrowserProfile.mockReturnValue({
+      userDataDir: '/home/ecochran76/.config/google-chrome',
+      profileName: 'Default',
+      cookiePath: '/home/ecochran76/.config/google-chrome/Default/Network/Cookies',
+      chromePath: '/usr/bin/google-chrome',
+      source: 'wsl',
+    });
+
+    const resolved = resolveBrowserConfig({
+      wslChromePreference: 'wsl',
+    });
+
+    expect(resolved.chromePath).toBe('/usr/bin/google-chrome');
+    expect(resolved.display).toBe(':0.0');
+  });
+
+  test('keeps an explicit display override for WSL Linux Chrome', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+    profileMocks.discoverDefaultBrowserProfile.mockReturnValue({
+      userDataDir: '/home/ecochran76/.config/google-chrome',
+      profileName: 'Default',
+      cookiePath: '/home/ecochran76/.config/google-chrome/Default/Network/Cookies',
+      chromePath: '/usr/bin/google-chrome',
+      source: 'wsl',
+    });
+
+    const resolved = resolveBrowserConfig({
+      wslChromePreference: 'wsl',
+      display: ':1',
+    });
+
+    expect(resolved.display).toBe(':1');
   });
 
   test('keeps an explicit bootstrap cookie path even when WSL runtime Chrome is preferred', () => {

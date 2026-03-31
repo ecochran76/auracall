@@ -132,6 +132,15 @@ Current active extraction plan:
     trigger and the ready-state is shared.
   - Returns structured per-attempt history for failure diagnostics.
 
+- `openAndSelectMenuItemFromTriggers(Runtime, options)`
+  - Shared ordered action-surface fallback helper for menu-backed actions.
+  - Tries multiple menu triggers in order, optionally running per-attempt setup
+    before each trigger, and returns structured attempt history.
+  - Use this when the same action may live in more than one real surface, such
+    as a hover row menu first and a page/header menu second.
+  - Keep the trigger list provider-local; move only the fallback mechanics into
+    browser-service.
+
 - `waitForMenuOpen(Runtime, options)`
   - Waits for menu/listbox selectors, with fallback selectors when the primary id is missing.
   - Can use expected labels, existing-menu signatures, and optional anchor
