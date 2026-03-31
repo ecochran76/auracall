@@ -1,4 +1,7 @@
-import { describe, expect, test } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   ensureServicesRegistry,
   readBundledServicesRegistry,
@@ -26,8 +29,51 @@ import {
   resolveBundledServiceUiLabel,
   resolveBundledServiceUiLabelSet,
 } from '../../src/services/registry.js';
+import { parseServicesManifest, parseServicesRegistryCache } from '../../src/services/manifest.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 
 describe('service registry manifest helpers', () => {
+  beforeEach(() => {
+    setAuracallHomeDirOverrideForTest(null);
+  });
+
+  afterEach(() => {
+    setAuracallHomeDirOverrideForTest(null);
+  });
+
+  test('fails fast on invalid bundled manifest JSON', () => {
+    const result = parseServicesManifest('{', 'test manifest');
+    expect(result).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('not valid JSON'),
+    });
+  });
+
+  test('fails fast on invalid bundled manifest structure', () => {
+    const result = parseServicesManifest('{"version":1}', 'test manifest');
+    expect(result).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('invalid structure'),
+    });
+  });
+
+  test('fails fast on invalid cached registry JSON', async () => {
+    const testHome = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-registry-'));
+    const cachePath = path.join(testHome, 'services.json');
+    await fs.mkdir(testHome, { recursive: true });
+    await fs.writeFile(cachePath, '{');
+    setAuracallHomeDirOverrideForTest(testHome);
+
+    const cacheResult = parseServicesRegistryCache(await fs.readFile(cachePath, 'utf8'), 'test cache');
+    expect(cacheResult).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('not valid JSON'),
+    });
+
+    const registry = await ensureServicesRegistry();
+    expect(registry.services.chatgpt?.routes?.baseUrl).toBe('https://chatgpt.com/');
+  });
+
   test('loads the bundled auracall services manifest with chatgpt pilot data', () => {
     const registry = readBundledServicesRegistry();
     expect(registry.services.chatgpt?.routes).toMatchObject({

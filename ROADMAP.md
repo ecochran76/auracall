@@ -2,6 +2,12 @@
 
 ## Active Initiatives
 
+### Current Execution Board
+
+Status: in progress
+
+Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for the remaining browser reliability and refactor slices.
+
 ### Browser Profile Family Refactor
 Status: planned
 

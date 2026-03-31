@@ -21,6 +21,37 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-03-31
+- Area: ChatGPT project sources readiness and upload open gate
+- Symptom:
+  - `auracall ... projects files add <project> --target chatgpt` failed at `chatgpt-open-project-sources` with:
+    - `Surface did not become ready: ChatGPT project sources ready for <id>`
+    - diagnostics still showed `/g/<id>/project?tab=sources` and tab labels `Chats`, `Sources`, but no file rows.
+- Root cause:
+  - The sources-ready predicate was brittle: it required stricter tab state than ChatGPT exposes in fresh empty-project states.
+- Fix:
+  - In `buildProjectSourcesReadyExpression`, broadened the readiness condition to accept valid source-route pages with source tabs/query even when source rows are still empty.
+  - In `openProjectSourcesTab`, added a route-only fallback (`buildProjectRouteExpression`) so we proceed when we are on the correct routed project even if the stricter predicate is momentarily false.
+  - In `openProjectSourcesUploadDialog`, added an existing-dialog pre-check and replaced the single generic open-surface wait with explicit click attempts plus upload-markers/global-file-input detection.
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts projects files add g-p-69cbf9f685c08191b57b5a74253a1b53 --target chatgpt --file /tmp/chatgpt-source-smoke.txt --verbose --browser-keep-browser`
+- Follow-ups:
+  - add one negative/empty-project fixture assertion for upload pre-check (existing vs. opened dialog path) in unit coverage and decide whether to keep the route-only fallback long-term.
+
+- Date: 2026-03-31
+- Area: ChatGPT project rename/side-panel smoke stability
+- Symptom:
+  - Live smoke for project create->refresh->rename still fails at rename with `ChatGPT project surface did not hydrate for <id>` after the earlier create modal and service-target fixes.
+- Root cause:
+  - `openProjectSettingsPanel(...)` still depends on the existing `buildProjectSurfaceReadyExpression(...)` predicate before opening settings; that predicate can reject a routed project page when control labels/tabs are not yet hydrated or are in an unexpected state.
+- Fix:
+  - Logged and isolated the failure in project-flow smoke; no functional changes in this pass.
+- Verification:
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`
+- Follow-ups:
+  - adjust project-surface readiness in `openProjectSettingsPanel(...)` to avoid early hard-fail when route is valid but control surface is temporarily inert, then rerun smoke end-to-end.
+
+- Date: 2026-03-31
 - Area: Cross-profile ChatGPT tab selection and stale create-project modal cleanup
 - Symptom:
   - Running two Aura-Call Chrome windows at once exposed two regressions:

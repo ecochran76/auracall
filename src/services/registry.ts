@@ -4,6 +4,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getAuracallHomeDir } from '../auracallHome.js';
+import {
+  parseServicesManifest,
+  parseServicesRegistryCache,
+} from './manifest.js';
 
 export interface ServiceModelEntry {
   id: string;
@@ -103,10 +107,6 @@ function hashContents(payload: string): string {
   return crypto.createHash('sha256').update(payload).digest('hex');
 }
 
-function parseRegistry(payload: string): ServicesRegistry {
-  return JSON.parse(payload) as ServicesRegistry;
-}
-
 function normalizeStringList(values: readonly string[] | undefined, fallback: readonly string[]): string[] {
   const entries = Array.isArray(values) ? values : fallback;
   return Array.from(
@@ -194,7 +194,12 @@ export function readBundledServicesRegistry(): ServicesRegistry {
   if (bundledRegistryCache) {
     return bundledRegistryCache;
   }
-  bundledRegistryCache = parseRegistry(fsSync.readFileSync(getTemplatePath(), 'utf8'));
+  const payload = fsSync.readFileSync(getTemplatePath(), 'utf8');
+  const result = parseServicesManifest(payload, 'bundled services manifest');
+  if (!result.ok) {
+    throw new Error(result.message);
+  }
+  bundledRegistryCache = result.value as ServicesRegistry;
   return bundledRegistryCache;
 }
 
@@ -202,30 +207,39 @@ export async function ensureServicesRegistry(): Promise<ServicesRegistry> {
   const templatePath = getTemplatePath();
   const templateContents = await fs.readFile(templatePath, 'utf8');
   const templateHash = hashContents(templateContents);
-  const template = parseRegistry(templateContents);
+  const templateResult = parseServicesManifest(templateContents, 'bundled services manifest');
+  if (!templateResult.ok) {
+    throw new Error(templateResult.message);
+  }
+  const template = templateResult.value as ServicesRegistry;
 
   const registryPath = path.join(getAuracallHomeDir(), 'services.json');
-  let registry: ServicesRegistryFile | null = null;
+  let registry: (ServicesRegistryFile & { templateHash?: string }) | null = null;
   try {
     const existing = await fs.readFile(registryPath, 'utf8');
-    registry = JSON.parse(existing) as ServicesRegistryFile;
+    const existingResult = parseServicesRegistryCache(existing, `cached services registry at ${registryPath}`);
+    if (!existingResult.ok) {
+      registry = null;
+    } else {
+      registry = existingResult.value as ServicesRegistryFile;
+    }
   } catch {
     registry = null;
   }
 
   if (!registry || registry.templateHash !== templateHash) {
-    const next: ServicesRegistryFile = {
+    const next = {
       ...template,
       templateHash,
-    };
+    } as ServicesRegistryFile;
     await fs.mkdir(path.dirname(registryPath), { recursive: true });
     await fs.writeFile(registryPath, JSON.stringify(next, null, 2));
     registry = next;
   }
 
   return {
-    version: registry.version,
-    services: registry.services,
+    version: registry!.version,
+    services: registry!.services,
   };
 }
 

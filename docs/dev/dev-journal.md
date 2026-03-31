@@ -13,6 +13,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-03-31
+- Focus: Establish a consolidated execution plan and align docs for the remaining work.
+- Progress: Created `docs/dev/next-execution-plan.md` as a prioritized, slice-based plan and linked it into `ROADMAP.md` as the active execution board for service-volatility completion, profile-family hardening, and final reliability polish.
+- Issues: Several earlier edits are uncommitted across implementation and planning docs, and live work remains constrained by account rate-limit windows and open-browser session hygiene; these constraints are now part of the execution plan, not blockers to documentation organization.
+- Next: Execute the plan slices in order (manifest hardening, profile-family determinism, reusable helper boundary decisions, production reliability gates) and keep journal entries per slice with explicit verification outcomes.
+
+- Date: 2026-03-31
+- Focus: Complete targeted ChatGPT project-sources upload smoke.
+- Progress: Relaxed source-surface readiness in `buildProjectSourcesReadyExpression`, added route-only short-circuit in `openProjectSourcesTab`, and added a pre-check + broader click strategy in `openProjectSourcesUploadDialog`.
+- Issues: Existing unit tests did not cover the specific empty-source `Sources` tab ready path in live DOM; relied on live diagnostics to expose this mismatch.
+- Next: Keep this smoke passing and move to cleanup assertions: verify that route-only fallback does not allow false positives if query/path lands on `/project` without source-context before running broader source lifecycle smoke.
+
+- Date: 2026-03-31
+- Focus: Run smoke for ChatGPT project lifecycle after modal-cleanup and service-target fixes.
+- Progress: Executed `pnpm tsx scripts/chatgpt-acceptance.ts` with the current `default` profile and captured a live result.
+- Issues: `projects rename` still failed with `ChatGPT project surface did not hydrate for g-p-69cbf209362c8191b7fe15f5e531e955` at the project rename phase, same stack path through `openProjectSettingsPanel`. Cleanup removal still ran afterward.
+- Next: Harden `openProjectSettingsPanel` readiness/opening behavior (or project surface detection) and re-run this smoke path in `project` flow before attempting broad platform-level smoke passes.
+
+- Date: 2026-03-31
 - Focus: Resolve cross-provider ChatGPT tab contamination and stale modal state across multiple browser windows.
 - Progress: `BrowserService` stopped mutating a matched instance’s service affinity list when resolving by ChatGPT tabs, avoiding cross-provider `services` bleed when multiple profiles are open. Added a guarded ChatGPT startup recovery step that dismisses an existing create-project dialog immediately after browser connect, so tests start from a clean surface even when a second browser has an old modal open.
 - Issues: Modal recovery is currently scoped to the create-project surface only; broader dialog-stale recovery is still handled by existing method-local checks.

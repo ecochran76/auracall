@@ -21,6 +21,7 @@ import {
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
   dismissOverlayRoot,
+  PressButtonOptions,
   navigateAndSettle,
   openAndSelectMenuItem,
   openAndSelectMenuItemFromTriggers,
@@ -32,6 +33,7 @@ import {
   waitForDownloadCapture,
   waitForPredicate,
   waitForSelector,
+  waitForNotSelector,
   withBlockingSurfaceRecovery,
   withUiDiagnostics,
 } from '../service/ui.js';
@@ -2073,14 +2075,44 @@ function buildProjectSurfaceReadyExpression(projectId?: string | null): string {
 function buildProjectSettingsReadyExpression(): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
+    const normalizeLabel = (el) => {
+      if (!(el instanceof Element)) return '';
+      return normalize(
+        el.getAttribute('aria-label') ||
+          el.getAttribute('placeholder') ||
+          el.getAttribute('name') ||
+          '',
+      );
+    };
+    const hasProjectNameField = Array.from(document.querySelectorAll('input, textarea')).some((node) => {
+      const label = normalizeLabel(node);
+      return (
+        label.includes('project name') ||
+        label.includes(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_LABEL.toLowerCase())}) ||
+        /projectname/i.test(node.getAttribute('name') || '')
+      );
+    });
+    const hasProjectInstructionsField = Array.from(document.querySelectorAll('textarea')).some((node) => {
+      const label = normalizeLabel(node);
+      return (
+        label.includes('instructions') ||
+        label.includes(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_INPUT_LABEL.toLowerCase())})
+      );
+    });
+    const isSettingsDeleteButton = (button) =>
+      normalize(button.textContent || '').includes('delete project') ||
+      normalize(button.textContent || '') === CHATGPT_PROJECT_DELETE_BUTTON_LABEL;
+    if (hasProjectNameField || hasProjectInstructionsField) {
+      return { ok: true };
+    }
+    const dialogs = Array.from(document.querySelectorAll('dialog, [role="dialog"], dialog[open]'));
     for (const dialog of dialogs) {
       const text = normalize(dialog.textContent || '');
       const hasNameInput = Boolean(dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_NAME_INPUT_SELECTOR)}));
       const hasInstructions = Boolean(dialog.querySelector(${JSON.stringify(CHATGPT_PROJECT_INSTRUCTIONS_SELECTOR)}));
-      const hasDelete = Array.from(dialog.querySelectorAll('button'))
-        .some((button) => normalize(button.textContent || '') === CHATGPT_PROJECT_DELETE_BUTTON_LABEL);
-      if (hasNameInput || hasInstructions || hasDelete || text.includes(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)) {
+      const hasTextInput = Boolean(dialog.querySelector('input, textarea'));
+      const hasDelete = Array.from(dialog.querySelectorAll('button')).some(isSettingsDeleteButton);
+      if (hasNameInput || hasInstructions || hasTextInput || hasDelete || text.includes(CHATGPT_PROJECT_SETTINGS_BUTTON_MATCH)) {
         return { ok: true };
       }
     }
@@ -2099,23 +2131,31 @@ function buildProjectSourcesReadyExpression(projectId?: string | null): string {
     const expected = ${JSON.stringify(projectId ?? null)};
     if (expected && normalizedId !== expected) return null;
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const queryTab = new URL(location.href).searchParams.get('tab');
-    const sourceTab = Array.from(document.querySelectorAll('[role="tab"]'))
-      .find((node) => {
-        const id = String(node.getAttribute('id') || '');
-        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        return id.endsWith('-sources') || label === CHATGPT_PROJECT_TAB_SOURCES_LABEL;
-      });
-    const selected = String(sourceTab?.getAttribute('aria-selected') || '').toLowerCase() === 'true';
-    const addSources = Array.from(document.querySelectorAll('button,[role="button"]'))
-      .find((node) => {
-        const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
-        return CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS.includes(label);
-      });
-    const hasRows = document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ACTIONS_SELECTOR)}).length > 0;
-    return (selected || queryTab === ${JSON.stringify(CHATGPT_PROJECT_TAB_SOURCES_LABEL)}) && (Boolean(addSources) || hasRows)
-      ? { id: normalizedId, href: location.href, selected, hasRows }
-      : null;
+    const queryTab = normalize(new URL(location.href).searchParams.get('tab'));
+    const sourceTabs = Array.from(document.querySelectorAll('[role="tab"]'));
+    const tabLabels = sourceTabs.map((node) => normalize(node.textContent || node.getAttribute('aria-label') || ''));
+    const sourceTab = sourceTabs.find((node) => {
+      const id = String(node.getAttribute('id') || '');
+      const label = normalize(node.textContent || node.getAttribute('aria-label') || '');
+      return id.endsWith('-sources') || label === CHATGPT_PROJECT_TAB_SOURCES_LABEL || label === 'sources';
+    });
+    const rows = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_PROJECT_SOURCE_ROW_SELECTOR)}));
+    const hasRows = rows.length > 0;
+    const hasSourceTablist = document.querySelector('[role="tablist"] [role="tab"]') !== null;
+    const hasAnyTab = sourceTabs.length > 0;
+    const hasSourcesTab = Boolean(sourceTab) || tabLabels.includes(CHATGPT_PROJECT_TAB_SOURCES_LABEL) || tabLabels.includes('sources');
+    const hasSourcesQuery =
+      queryTab === ${JSON.stringify(CHATGPT_PROJECT_TAB_SOURCES_LABEL)} || queryTab === 'sources' || queryTab === 'project-sources';
+    const isReady = (hasSourceTablist || hasAnyTab) && (hasSourcesQuery || hasSourcesTab || hasRows);
+    return isReady ? {
+      ok: true,
+      id: normalizedId,
+      href: location.href,
+      hasAnyTab,
+      hasRows,
+      hasSourcesQuery,
+      hasSourcesTab,
+    } : null;
   })()`;
 }
 
@@ -2123,14 +2163,35 @@ function buildProjectSourcesUploadDialogReadyExpression(): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
     const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
+    const globalFileInput =
+      Boolean(
+        document.querySelector('input[type="file"]') ||
+          document.querySelector('input[accept]') ||
+          document.querySelector('input[data-testid="file-upload"]'),
+      );
+    const markerSet = ${JSON.stringify(CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS)}.map((value) => normalize(value));
     for (const dialog of dialogs) {
       const text = normalize(dialog.textContent || '');
-      const hasInput = Boolean(dialog.querySelector('input[type="file"][multiple]'));
-      const hasUpload = Array.from(dialog.querySelectorAll('button,[role="button"]'))
+      const hasInput = Boolean(
+        dialog.querySelector('input[type="file"]') || dialog.querySelector('input[accept]') || dialog.querySelector('input[data-testid="file-upload"]'),
+      );
+      const hasUploadAction = Array.from(dialog.querySelectorAll('button,[role="button"],label'))
+        .some((node) =>
+          ['upload', 'browse', 'upload file'].some(
+            (label) => normalize(node.textContent || node.getAttribute('aria-label') || '').includes(label),
+          ),
+      );
+      const hasUploadButton = Array.from(dialog.querySelectorAll('button,[role="button"]'))
         .some((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL);
-      if (${JSON.stringify(CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS)}.some((marker) => text.includes(marker)) && hasInput && hasUpload) {
+      const hasUploadMarker = markerSet.some((marker) =>
+        text.includes(marker),
+      );
+      if ((hasUploadAction || hasUploadButton || hasUploadMarker) && (hasInput || globalFileInput)) {
         return { ok: true };
       }
+    }
+    if (globalFileInput) {
+      return { ok: true };
     }
     return null;
   })()`;
@@ -2476,14 +2537,34 @@ async function openProjectSourcesTab(client: ChromeClient, projectId: string): P
     url,
     routeExpression: buildProjectRouteExpression(projectId),
     routeDescription: `chatgpt project ${projectId}`,
-    readyExpression: buildProjectSourcesReadyExpression(projectId),
-    readyDescription: `ChatGPT project sources ready for ${projectId}`,
     waitForDocumentReady: true,
     fallbackToLocationAssign: true,
     timeoutMs: 10_000,
     fallbackTimeoutMs: 10_000,
   });
-  if (settled.ok) return;
+  if (!settled.ok) {
+    throw new Error(settled.reason || `ChatGPT project sources route did not settle for ${projectId}`);
+  }
+  const ready = await waitForPredicate(
+    client.Runtime,
+    buildProjectSourcesReadyExpression(projectId),
+    {
+      timeoutMs: 3_000,
+      description: `ChatGPT project sources tab ready for ${projectId}`,
+    },
+  );
+  if (ready.ok) return;
+  const routeOnlyReady = await waitForPredicate(
+    client.Runtime,
+    buildProjectRouteExpression(projectId),
+    {
+      timeoutMs: 2_000,
+      description: `ChatGPT project route for ${projectId}`,
+    },
+  );
+  if (routeOnlyReady.ok) {
+    return;
+  }
   await withUiDiagnostics(
     client.Runtime,
     async () => {
@@ -2650,42 +2731,94 @@ async function waitForProjectSourceRemovedPersisted(
 
 async function openProjectSourcesUploadDialog(client: ChromeClient, projectId: string): Promise<void> {
   await openProjectSourcesTab(client, projectId);
+  const existingDialog = await waitForPredicate(
+    client.Runtime,
+    buildProjectSourcesUploadDialogReadyExpression(),
+    {
+      timeoutMs: 1_000,
+      description: `ChatGPT project sources upload dialog already ready for ${projectId}`,
+    },
+  );
+  if (existingDialog.ok) return;
   await withUiDiagnostics(
     client.Runtime,
     async () => {
-      const opened = await openSurface(client.Runtime, {
-        readyExpression: buildProjectSourcesUploadDialogReadyExpression(),
-        readyDescription: `ChatGPT project sources upload dialog ready for ${projectId}`,
-        alreadyOpenTimeoutMs: 800,
-        readyTimeoutMs: 3_000,
-        timeoutMs: 5_000,
-        attempts: [
-          {
-            name: 'add-sources',
-            trigger: {
-              match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_LABEL] },
-              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-              requireVisible: true,
-              timeoutMs: 3_000,
-            },
+      const attempts: Array<{ name: string; trigger: PressButtonOptions }> = [
+        {
+          name: 'add-sources',
+          trigger: {
+            match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_LABEL] },
+            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const,
+            requireVisible: true,
+            timeoutMs: 3_000,
           },
-          {
-            name: 'add-empty-state',
-            trigger: {
-              match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_FALLBACK_LABEL] },
-              interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-              requireVisible: true,
-              timeoutMs: 3_000,
+        },
+        {
+          name: 'add-sources',
+          trigger: {
+            match: {
+              includeAny: [CHATGPT_PROJECT_SOURCE_ADD_LABEL, CHATGPT_PROJECT_SOURCE_ADD_FALLBACK_LABEL, 'upload', 'drag sources', 'add source', 'add sources'],
             },
+            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const,
+            requireVisible: true,
+            timeoutMs: 3_000,
           },
-        ],
-      });
-      if (!opened.ok) {
+        },
+        {
+          name: 'add-empty-state',
+          trigger: {
+            match: { exact: [CHATGPT_PROJECT_SOURCE_ADD_FALLBACK_LABEL] },
+            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const,
+            requireVisible: true,
+            timeoutMs: 3_000,
+          },
+        },
+        {
+          name: 'sources-action-contains-drag-or-upload',
+          trigger: {
+            match: {
+              includeAny: ['add sources', 'drag sources', 'upload sources', 'upload file', 'upload'],
+            },
+            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const,
+            requireVisible: true,
+            timeoutMs: 3_000,
+          },
+        },
+        {
+          name: 'fallback-upload-selector',
+          trigger: {
+            selector: 'label,button,[role="button"],a,[role="menuitem"]',
+            match: { includeAny: ['upload'] },
+            interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'] as const,
+            requireVisible: true,
+            timeoutMs: 2_000,
+          },
+        },
+      ];
+      let opened = false;
+      const attemptLog = [];
+      for (const attempt of attempts) {
+        const pressed = await pressButton(client.Runtime, attempt.trigger);
+        attemptLog.push({ name: attempt.name, triggerOk: pressed.ok, triggerReason: pressed.reason, matchedLabel: pressed.matchedLabel });
+        if (pressed.ok) {
+          opened = true;
+          break;
+        }
+      }
+      if (!opened) {
+        throw new Error(`ChatGPT project sources add action did not open (${JSON.stringify(attemptLog)})`);
+      }
+      const ready = await waitForPredicate(
+        client.Runtime,
+        buildProjectSourcesUploadDialogReadyExpression(),
+        {
+          timeoutMs: 5_000,
+          description: `ChatGPT project sources upload dialog ready for ${projectId}`,
+        },
+      );
+      if (!ready.ok) {
         throw new Error(
-          `ChatGPT project sources upload dialog did not open (${JSON.stringify({
-            reason: opened.reason,
-            attempts: opened.attempts,
-          })})`,
+          `ChatGPT project sources upload dialog did not open (${JSON.stringify({ attempts: attemptLog })})`,
         );
       }
     },
@@ -3219,82 +3352,88 @@ async function clickCreateProjectConfirmWithClient(client: ChromeClient): Promis
 
 async function openProjectSettingsPanel(client: ChromeClient, projectId: string): Promise<void> {
   const projectUrl = resolveChatgptProjectUrl(projectId);
-  let readySurface:
+  let routeReady:
     | Awaited<ReturnType<typeof waitForPredicate>>
     | null = null;
   for (let attempt = 0; attempt < 2; attempt += 1) {
     await navigateToChatgptUrl(client, projectUrl, projectId);
-    readySurface = await waitForPredicate(
+    routeReady = await waitForPredicate(
       client.Runtime,
-      buildProjectSurfaceReadyExpression(projectId),
+      buildProjectRouteExpression(projectId),
       {
         timeoutMs: 15_000,
-        description: `ChatGPT project surface ready for ${projectId}`,
+        description: `ChatGPT project route ready for ${projectId}`,
       },
     );
-    if (readySurface.ok) {
-      break;
+    if (routeReady.ok) {
+      try {
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            const opened = await openSurface(client.Runtime, {
+              readyExpression: buildProjectSettingsReadyExpression(),
+              readyDescription: 'ChatGPT project settings ready',
+              alreadyOpenTimeoutMs: 800,
+              readyTimeoutMs: 3_000,
+              timeoutMs: 5_000,
+              attempts: [
+                {
+                  name: 'edit-title',
+                  trigger: {
+                    match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
+                    requireVisible: true,
+                    timeoutMs: 5_000,
+                  },
+                },
+                {
+                  name: 'show-project-details',
+                  trigger: {
+                    match: { exact: [CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL] },
+                    requireVisible: true,
+                    timeoutMs: 3_000,
+                  },
+                },
+                {
+                  name: 'edit-title-retry',
+                  trigger: {
+                    match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
+                    requireVisible: true,
+                    timeoutMs: 5_000,
+                  },
+                },
+              ],
+            });
+            if (!opened.ok) {
+              throw new Error(
+                `ChatGPT project settings did not open (${JSON.stringify({
+                  reason: opened.reason,
+                  attempts: opened.attempts,
+                })})`,
+              );
+            }
+          },
+          {
+            label: 'chatgpt-open-project-settings',
+            candidateSelectors: ['button', '[role="button"]', 'input', 'textarea'],
+            context: {
+              surface: 'chatgpt-project-settings',
+              fallbackTriggers: ['edit-title', 'show-project-details', 'edit-title-retry'],
+            },
+          },
+        );
+        return;
+      } catch (error) {
+        if (attempt === 1) {
+          throw error;
+        }
+      }
     }
     await client.Page.reload({ ignoreCache: false }).catch(() => undefined);
-    await sleep(1_000);
+    await sleep(1_000 + attempt * 750);
   }
-  if (!readySurface?.ok) {
+  if (!routeReady?.ok) {
     throw new Error(`ChatGPT project surface did not hydrate for ${projectId}`);
   }
-  await withUiDiagnostics(
-    client.Runtime,
-    async () => {
-      const opened = await openSurface(client.Runtime, {
-        readyExpression: buildProjectSettingsReadyExpression(),
-        readyDescription: 'ChatGPT project settings ready',
-        alreadyOpenTimeoutMs: 800,
-        readyTimeoutMs: 3_000,
-        timeoutMs: 5_000,
-        attempts: [
-          {
-            name: 'edit-title',
-            trigger: {
-              match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
-              requireVisible: true,
-              timeoutMs: 5_000,
-            },
-          },
-          {
-            name: 'show-project-details',
-            trigger: {
-              match: { exact: [CHATGPT_PROJECT_CONTROLS_DETAILS_LABEL] },
-              requireVisible: true,
-              timeoutMs: 3_000,
-            },
-          },
-          {
-            name: 'edit-title-retry',
-            trigger: {
-              match: { startsWith: [CHATGPT_PROJECT_TITLE_EDIT_PREFIX] },
-              requireVisible: true,
-              timeoutMs: 5_000,
-            },
-          },
-        ],
-      });
-      if (!opened.ok) {
-        throw new Error(
-          `ChatGPT project settings did not open (${JSON.stringify({
-            reason: opened.reason,
-            attempts: opened.attempts,
-          })})`,
-        );
-      }
-    },
-    {
-      label: 'chatgpt-open-project-settings',
-      candidateSelectors: ['button', '[role="button"]', 'input', 'textarea'],
-      context: {
-        surface: 'chatgpt-project-settings',
-        fallbackTriggers: ['edit-title', 'show-project-details', 'edit-title-retry'],
-      },
-    },
-  );
 }
 
 async function waitForProjectSettingsFields(
