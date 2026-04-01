@@ -4511,6 +4511,16 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+- Policy correction:
+  - browser-mode visible ChatGPT bad-state detection now returns structured
+    `kind + summary` instead of flattening everything into a rate-limit-like
+    reason string
+  - only classified `rate-limit` surfaces are allowed to feed the persisted
+    cooldown guard path
+  - `retry-affordance`, `connection-failed`, and `transient-error` states now
+    surface operation-specific stale-send failures instead of being mistaken for
+    cooldowns
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

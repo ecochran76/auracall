@@ -2833,3 +2833,11 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Additional verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+- Policy correction:
+  - browser-mode stale-response handling now distinguishes visible ChatGPT
+    `retry-affordance`, `connection-failed`, and `transient-error` states from
+    true `rate-limit`
+  - only `rate-limit` is allowed to feed the persisted cooldown guard path
+  - other visible broken-chat states now surface operation-specific stale-send
+    errors instead of being misinterpreted as cooldowns

@@ -278,9 +278,9 @@ async function noteChatgptBrowserMutationSuccess(
   );
 }
 
-async function detectVisibleChatgptBlockingSurfaceReason(
+async function detectVisibleChatgptBlockingSurface(
   Runtime: ChromeClient['Runtime'],
-): Promise<string | null> {
+): Promise<{ kind: string; summary: string } | null> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -336,7 +336,22 @@ async function detectVisibleChatgptBlockingSurfaceReason(
     | null
     | undefined;
   const classified = classifyChatgptBlockingSurfaceProbe(value?.probe ?? null);
-  return classified?.summary ?? null;
+  return classified ? { kind: classified.kind, summary: classified.summary } : null;
+}
+
+function formatChatgptBlockingSurfaceError(surface: { kind: string; summary: string }): string {
+  switch (surface.kind) {
+    case 'retry-affordance':
+      return `ChatGPT assistant turn failed and exposed a retry/regenerate control: ${surface.summary}`;
+    case 'connection-failed':
+      return `ChatGPT conversation entered a connection-failed state: ${surface.summary}`;
+    case 'transient-error':
+      return `ChatGPT surfaced a transient error state: ${surface.summary}`;
+    case 'rate-limit':
+      return surface.summary;
+    default:
+      return surface.summary;
+  }
 }
 
 async function handleChatgptBrowserRateLimitFailure(options: {
@@ -349,7 +364,10 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 }): Promise<Error> {
   let reason = extractChatgptRateLimitSummary(options.error.message);
   if (!reason && options.Runtime) {
-    reason = await detectVisibleChatgptBlockingSurfaceReason(options.Runtime).catch(() => null);
+    const surface = await detectVisibleChatgptBlockingSurface(options.Runtime).catch(() => null);
+    if (surface?.kind === 'rate-limit') {
+      reason = surface.summary;
+    }
   }
   if (!reason && !isChatgptRateLimitMessage(options.error.message)) {
     return options.error;
@@ -1107,9 +1125,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         if (refreshed) {
           answer = refreshed;
         } else {
-          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurfaceReason(Runtime).catch(() => null);
+          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurface(Runtime).catch(() => null);
           if (visibleBlockingSurface) {
-            throw new Error(visibleBlockingSurface);
+            throw new Error(formatChatgptBlockingSurfaceError(visibleBlockingSurface));
           }
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }
@@ -1745,9 +1763,9 @@ async function runRemoteBrowserMode(
         if (refreshed) {
           answer = refreshed;
         } else {
-          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurfaceReason(Runtime).catch(() => null);
+          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurface(Runtime).catch(() => null);
           if (visibleBlockingSurface) {
-            throw new Error(visibleBlockingSurface);
+            throw new Error(formatChatgptBlockingSurfaceError(visibleBlockingSurface));
           }
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }
