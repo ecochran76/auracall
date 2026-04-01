@@ -165,6 +165,11 @@ Current progress:
 - development-mode browser runs now log structured ChatGPT bad-state events for:
   - visible blocking surfaces after stale-send detection
   - stale-send failures that do not present a visible classified surface
+  - read/recovery-path blocking-surface detections during:
+    - conversation list refresh
+    - conversation context reads
+    - conversation file reads
+    - artifact materialization
 - each structured log currently includes:
   - classified surface kind + summary when available
   - source/probe details when available
@@ -178,6 +183,9 @@ Current progress:
     - visible overlays with button labels
     - visible retry/regenerate buttons
     - recent conversation turns
+  - and, for non-send debug-mode adapter recoveries, the same snapshot is now
+    also written to a bounded JSON file under `~/.auracall/postmortems/browser/`
+    so later post-mortem tooling can consume it without scraping session text
 
 ## Recommended implementation order
 
@@ -188,9 +196,10 @@ Current progress:
 5. Broader live smoke for hostile-state scenarios
 
 Current next slice:
-6. Extend the same structured development-mode logging to non-send read/recovery
-   paths when a classified bad state is detected and recovered, so reload/reopen
-   actions are visible in post-mortems too
+6. Expand the persisted post-mortem payload to capture the recovery action
+   itself (`reload`, `dismiss`, `reopen`, outcome), not only the pre/post DOM
+   state, so deterministic clustering can distinguish "same symptom, different
+   recovery path"
 
 ## Acceptance bar for hardening
 

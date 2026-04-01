@@ -38,6 +38,7 @@ export type BrowserServiceConfig = Pick<
   | 'serviceTabLimit'
   | 'blankTabLimit'
   | 'collapseDisposableWindows'
+  | 'debug'
 >;
 
 export type CredentialHint = {

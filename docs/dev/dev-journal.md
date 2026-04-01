@@ -2872,3 +2872,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     it captures route/title/readiness, active element, visible overlays,
     retry buttons, and recent turns in one machine-readable `Browser
     postmortem (...)` record in the session log
+
+## 2026-04-01 — ChatGPT read/recovery paths now persist bounded post-mortem bundles
+
+- Focus: make non-send ChatGPT recoveries leave the same kind of durable
+  post-mortem evidence as send-path failures
+- Implemented:
+  - added reusable browser-postmortem capture/persist helpers in
+    `src/browser/domDebug.ts`
+  - ChatGPT `withChatgptBlockingSurfaceRecovery(...)` now writes bounded JSON
+    post-mortem bundles under `~/.auracall/postmortems/browser/` when debug is
+    enabled
+  - wired that persistence into:
+    - conversation list recovery
+    - conversation context reads
+    - conversation file reads
+    - artifact materialization
+  - the persisted payload includes the classified blocking surface, current
+    browser snapshot, action label, phase (`pre` / `post` / `error` /
+    `final-error`), and relevant ids such as conversation/project/artifact
+- Verification:
+  - `pnpm vitest run tests/browser/domDebug.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/browserModeExports.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Next:
+  - capture the specific recovery action/outcome in the same persisted bundle so
+    later clustering can distinguish reload-vs-dismiss-vs-reopen recoveries

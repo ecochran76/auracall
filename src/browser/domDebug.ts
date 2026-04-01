@@ -1,5 +1,8 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import type { ChromeClient, BrowserLogger } from './types.js';
 import { CONVERSATION_TURN_SELECTOR } from './constants.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
 
 export function buildConversationDebugExpression(): string {
   return `(() => {
@@ -79,6 +82,36 @@ export function buildBrowserPostmortemExpression(): string {
   })()`;
 }
 
+export async function captureBrowserPostmortemSnapshot(
+  Runtime: ChromeClient['Runtime'],
+): Promise<Record<string, unknown> | null> {
+  const expression = buildBrowserPostmortemExpression();
+  const { result } = await Runtime.evaluate({ expression, returnByValue: true });
+  return result?.value && typeof result.value === 'object' ? (result.value as Record<string, unknown>) : null;
+}
+
+function normalizePostmortemContext(value: string): string {
+  const normalized = String(value || '')
+    .replace(/[^a-z0-9._-]+/gi, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase();
+  return normalized || 'browser';
+}
+
+export async function persistBrowserPostmortemRecord(options: {
+  context: string;
+  payload: Record<string, unknown>;
+}): Promise<string> {
+  const root = path.join(getAuracallHomeDir(), 'postmortems', 'browser');
+  await fs.mkdir(root, { recursive: true });
+  const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const fileName = `${stamp}-${normalizePostmortemContext(options.context)}.json`;
+  const target = path.join(root, fileName);
+  await fs.writeFile(target, `${JSON.stringify(options.payload, null, 2)}\n`, 'utf8');
+  return target;
+}
+
 export async function logBrowserPostmortemSnapshot(
   Runtime: ChromeClient['Runtime'],
   logger: BrowserLogger,
@@ -87,10 +120,9 @@ export async function logBrowserPostmortemSnapshot(
   if (!logger?.verbose) {
     return;
   }
-  const expression = buildBrowserPostmortemExpression();
-  const { result } = await Runtime.evaluate({ expression, returnByValue: true });
-  if (result?.value && typeof result.value === 'object') {
-    emitDebugLog(logger, `Browser postmortem (${context}): ${JSON.stringify(result.value)}`);
+  const snapshot = await captureBrowserPostmortemSnapshot(Runtime);
+  if (snapshot) {
+    emitDebugLog(logger, `Browser postmortem (${context}): ${JSON.stringify(snapshot)}`);
   }
 }
 

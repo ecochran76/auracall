@@ -4542,6 +4542,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     visible overlays + button labels, visible retry/regenerate buttons, and
     recent turns under a `Browser postmortem (...)` line so later tooling can
     cluster deterministic failure signatures
+- Follow-up:
+  - the same bounded browser snapshot is now also persisted for debug-mode
+    ChatGPT read/recovery paths under `~/.auracall/postmortems/browser/`
+  - current covered read surfaces:
+    - conversation list refresh
+    - conversation context reads
+    - conversation file reads
+    - artifact materialization
+  - each persisted record includes the recovery phase and classified blocking
+    surface, so repeated failure classes can be grouped without re-scraping the
+    raw session log
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

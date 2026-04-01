@@ -1,11 +1,16 @@
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { describe, expect, test, vi } from 'vitest';
 import {
   logBrowserPostmortemSnapshot,
   logDomFailure,
   logConversationSnapshot,
+  persistBrowserPostmortemRecord,
   logStructuredDebugEvent,
 } from '../../src/browser/domDebug.js';
 import type { ChromeClient } from '../../src/browser/types.js';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 
 const makeRuntime = (value: unknown) =>
   ({
@@ -74,5 +79,26 @@ describe('domDebug utilities', () => {
     expect(logger.sessionLog).toHaveBeenCalledWith(
       expect.stringContaining('"retryButtons":["Retry"]'),
     );
+  });
+
+  test('persistBrowserPostmortemRecord writes a bounded json bundle under auracall home', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-postmortem-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    try {
+      const saved = await persistBrowserPostmortemRecord({
+        context: 'chatgpt-read-context-error',
+        payload: {
+          provider: 'chatgpt',
+          snapshot: { href: 'https://chatgpt.com/c/example' },
+        },
+      });
+      const stored = JSON.parse(await fs.readFile(saved, 'utf8')) as Record<string, unknown>;
+      expect(saved).toContain(path.join('postmortems', 'browser'));
+      expect(stored.provider).toBe('chatgpt');
+      expect(stored.snapshot).toEqual({ href: 'https://chatgpt.com/c/example' });
+    } finally {
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
   });
 });
