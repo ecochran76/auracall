@@ -22,19 +22,37 @@ export async function logConversationSnapshot(Runtime: ChromeClient['Runtime'], 
   }
 }
 
+function emitDebugLog(logger: BrowserLogger, message: string): void {
+  logger(message);
+  if (logger.sessionLog && logger.sessionLog !== logger) {
+    logger.sessionLog(message);
+  }
+}
+
+export function logStructuredDebugEvent(
+  logger: BrowserLogger,
+  context: string,
+  payload: Record<string, unknown>,
+): void {
+  if (!logger?.verbose) {
+    return;
+  }
+  try {
+    emitDebugLog(logger, `Browser debug (${context}): ${JSON.stringify(payload)}`);
+  } catch {
+    // ignore structured debug logging failures
+  }
+}
+
 export async function logDomFailure(Runtime: ChromeClient['Runtime'], logger: BrowserLogger, context: string) {
   if (!logger?.verbose) {
     return;
   }
   try {
     const entry = `Browser automation failure (${context}); capturing DOM snapshot for debugging...`;
-    logger(entry);
-    if (logger.sessionLog && logger.sessionLog !== logger) {
-      logger.sessionLog(entry);
-    }
+    emitDebugLog(logger, entry);
     await logConversationSnapshot(Runtime, logger);
   } catch {
     // ignore snapshot failures
   }
 }
-

@@ -4521,6 +4521,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     surface operation-specific stale-send failures instead of being mistaken for
     cooldowns
 
+- Follow-up:
+  - browser-mode stale-send handling now logs structured unexpected-state
+    context in development mode (`browser.debug` / verbose logger) before
+    failing:
+    - classified ChatGPT bad-state kind/summary
+    - source/probe details when available
+    - explicit retry-affordance policy
+    - baseline/answer ids when available
+    - recent conversation snapshot
+  - retry/regenerate failures now say explicitly that auto-click is disabled,
+    which closes the remaining ambiguity in the send-path policy
+- Additional verification:
+  - `pnpm vitest run tests/browser/domDebug.test.ts tests/browser/browserModeExports.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

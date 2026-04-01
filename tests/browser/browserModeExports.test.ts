@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
 import {
+  formatChatgptBlockingSurfaceErrorForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
 } from '../../src/browser/index.js';
@@ -51,5 +52,14 @@ describe('browserMode exports', () => {
         answerMessageId: 'assist-2',
       }),
     ).toBe(false);
+  });
+
+  test('retry affordance send failures stay explicit about no auto-click policy', () => {
+    expect(
+      formatChatgptBlockingSurfaceErrorForTest({
+        kind: 'retry-affordance',
+        summary: 'retry',
+      }),
+    ).toContain('auto-click disabled');
   });
 });

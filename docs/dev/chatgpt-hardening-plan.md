@@ -11,6 +11,17 @@ Current baseline:
 - conversation context/history ingestion is green
 - artifact extraction/materialization is green for the current representative smoke set
 - fresh-state full ChatGPT acceptance is green
+- visible bad-state classification is implemented for:
+  - `rate-limit`
+  - `connection-failed`
+  - `retry-affordance`
+  - `transient-error`
+- read-path recovery is already wired into:
+  - conversation context reads
+  - artifact materialization
+  - root/project conversation list refresh
+- stale browser-send rejection now distinguishes real rate limits from other
+  classified bad states and keeps cooldown persistence rate-limit-only
 
 What is not yet hardened enough:
 - visible transient error toasts/banners, especially red/white error surfaces
@@ -105,6 +116,15 @@ Definition of done:
 - mutation flows do not report false success on stale or broken chat state
 - recovery remains bounded and explicit
 
+Current progress:
+- browser send flows now fail fast on visible `retry-affordance` state instead
+  of flattening it into generic stale-send behavior
+- the operator-facing error now states that auto-clicking retry/regenerate is
+  intentionally disabled
+- in development mode (`browser.debug` / verbose logger), stale-send failures
+  now emit structured bad-state logs plus a recent conversation snapshot for
+  post-mortem download
+
 ### 5. Post-condition and bad-state verification
 
 Strengthen the distinction between:
@@ -141,6 +161,17 @@ Definition of done:
 - common transient failures can be understood from the error/log output alone
 - docs/testing and polish docs describe the current operator workflow
 
+Current progress:
+- development-mode browser runs now log structured ChatGPT bad-state events for:
+  - visible blocking surfaces after stale-send detection
+  - stale-send failures that do not present a visible classified surface
+- each structured log currently includes:
+  - classified surface kind + summary when available
+  - source/probe details when available
+  - policy label for retry-affordance handling
+  - baseline/answer message and turn ids when present
+  - a recent conversation snapshot
+
 ## Recommended implementation order
 
 1. Blocking/transient surface classifier
@@ -148,6 +179,11 @@ Definition of done:
 3. Failure classification in llmservice retry policy
 4. Send/mutation bad-state handling
 5. Broader live smoke for hostile-state scenarios
+
+Current next slice:
+6. Extend the same structured development-mode logging to non-send read/recovery
+   paths when a classified bad state is detected and recovered, so reload/reopen
+   actions are visible in post-mortems too
 
 ## Acceptance bar for hardening
 

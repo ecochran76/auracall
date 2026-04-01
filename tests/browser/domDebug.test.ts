@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { logDomFailure, logConversationSnapshot } from '../../src/browser/domDebug.js';
+import { logDomFailure, logConversationSnapshot, logStructuredDebugEvent } from '../../src/browser/domDebug.js';
 import type { ChromeClient } from '../../src/browser/types.js';
 
 const makeRuntime = (value: unknown) =>
@@ -36,5 +36,18 @@ describe('domDebug utilities', () => {
     expect(runtime.evaluate).not.toHaveBeenCalled();
     expect(logger).not.toHaveBeenCalled();
   });
-});
 
+  test('logStructuredDebugEvent mirrors to session log when verbose', () => {
+    const logger = Object.assign(vi.fn(), { verbose: true, sessionLog: vi.fn() });
+    logStructuredDebugEvent(logger, 'chatgpt-stale-send-blocked', {
+      surface: { kind: 'retry-affordance', summary: 'retry' },
+      policy: 'fail-fast-no-auto-retry-click',
+    });
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining('Browser debug (chatgpt-stale-send-blocked):'),
+    );
+    expect(logger.sessionLog).toHaveBeenCalledWith(
+      expect.stringContaining('"policy":"fail-fast-no-auto-retry-click"'),
+    );
+  });
+});

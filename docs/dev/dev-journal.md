@@ -2841,3 +2841,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - only `rate-limit` is allowed to feed the persisted cooldown guard path
   - other visible broken-chat states now surface operation-specific stale-send
     errors instead of being misinterpreted as cooldowns
+
+## 2026-04-01 — ChatGPT send-path hardening now logs unexpected states for post-mortems
+
+- Focus: make stale-send and broken-turn failures easier to diagnose in
+  development mode without weakening the current "never auto-click retry" rule
+- Implemented:
+  - added `logStructuredDebugEvent(...)` to `src/browser/domDebug.ts` so
+    verbose/dev browser runs can emit structured JSON-style failure context to
+    both the live logger and session log
+  - extended browser-mode visible ChatGPT bad-state probes to preserve extra
+    source/probe details alongside `kind + summary`
+  - updated stale-send handling in `src/browser/index.ts` so visible
+    `retry-affordance` states now log:
+    - classified bad-state details
+    - explicit `fail-fast-no-auto-retry-click` policy
+    - baseline/answer message ids and turn ids when available
+    - a recent conversation snapshot
+  - added equivalent structured logging when stale-send failure occurs without a
+    visible classified surface, so post-mortems still have route-turn context
+  - made the operator-facing retry/regenerate error explicit that auto-click is
+    intentionally disabled
+- Verification:
+  - `pnpm vitest run tests/browser/domDebug.test.ts tests/browser/browserModeExports.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Next:
+  - extend the same structured logging to read/list recovery paths so classified
+    reload/reopen recoveries are visible in dev-mode post-mortems too

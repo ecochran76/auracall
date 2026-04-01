@@ -91,6 +91,7 @@ import {
   resolveChatgptRateLimitProfileName,
   writeChatgptRateLimitGuardState,
 } from './chatgptRateLimitGuard.js';
+import { logConversationSnapshot, logStructuredDebugEvent } from './domDebug.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -278,9 +279,15 @@ async function noteChatgptBrowserMutationSuccess(
   );
 }
 
+type ChatgptVisibleBlockingSurface = {
+  kind: string;
+  summary: string;
+  details?: Record<string, unknown>;
+};
+
 async function detectVisibleChatgptBlockingSurface(
   Runtime: ChromeClient['Runtime'],
-): Promise<{ kind: string; summary: string } | null> {
+): Promise<ChatgptVisibleBlockingSurface | null> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -336,13 +343,22 @@ async function detectVisibleChatgptBlockingSurface(
     | null
     | undefined;
   const classified = classifyChatgptBlockingSurfaceProbe(value?.probe ?? null);
-  return classified ? { kind: classified.kind, summary: classified.summary } : null;
+  return classified
+    ? {
+        kind: classified.kind,
+        summary: classified.summary,
+        details: {
+          source: value?.type ?? null,
+          probe: value?.probe ?? null,
+        },
+      }
+    : null;
 }
 
 function formatChatgptBlockingSurfaceError(surface: { kind: string; summary: string }): string {
   switch (surface.kind) {
     case 'retry-affordance':
-      return `ChatGPT assistant turn failed and exposed a retry/regenerate control: ${surface.summary}`;
+      return `ChatGPT assistant turn failed and exposed a retry/regenerate control (auto-click disabled): ${surface.summary}`;
     case 'connection-failed':
       return `ChatGPT conversation entered a connection-failed state: ${surface.summary}`;
     case 'transient-error':
@@ -352,6 +368,33 @@ function formatChatgptBlockingSurfaceError(surface: { kind: string; summary: str
     default:
       return surface.summary;
   }
+}
+
+export function formatChatgptBlockingSurfaceErrorForTest(surface: { kind: string; summary: string }): string {
+  return formatChatgptBlockingSurfaceError(surface);
+}
+
+async function logChatgptUnexpectedState(options: {
+  Runtime: ChromeClient['Runtime'];
+  logger: BrowserLogger;
+  context: string;
+  surface?: ChatgptVisibleBlockingSurface | null;
+  extra?: Record<string, unknown>;
+}): Promise<void> {
+  if (!options.logger?.verbose) {
+    return;
+  }
+  logStructuredDebugEvent(options.logger, options.context, {
+    surface: options.surface
+      ? {
+          kind: options.surface.kind,
+          summary: options.surface.summary,
+          details: options.surface.details ?? null,
+        }
+      : null,
+    ...(options.extra ?? {}),
+  });
+  await logConversationSnapshot(options.Runtime, options.logger).catch(() => undefined);
 }
 
 async function handleChatgptBrowserRateLimitFailure(options: {
@@ -1127,8 +1170,32 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         } else {
           const visibleBlockingSurface = await detectVisibleChatgptBlockingSurface(Runtime).catch(() => null);
           if (visibleBlockingSurface) {
+            await logChatgptUnexpectedState({
+              Runtime,
+              logger,
+              context: 'chatgpt-stale-send-blocked',
+              surface: visibleBlockingSurface,
+              extra: {
+                policy: visibleBlockingSurface.kind === 'retry-affordance' ? 'fail-fast-no-auto-retry-click' : 'fail-fast',
+                baselineMessageId: baselineAssistantMessageId ?? null,
+                baselineTurnId: baselineAssistantTurnId ?? null,
+                answerMessageId: answer.meta?.messageId ?? null,
+                answerTurnId: answer.meta?.turnId ?? null,
+              },
+            });
             throw new Error(formatChatgptBlockingSurfaceError(visibleBlockingSurface));
           }
+          await logChatgptUnexpectedState({
+            Runtime,
+            logger,
+            context: 'chatgpt-stale-send-without-visible-surface',
+            extra: {
+              baselineMessageId: baselineAssistantMessageId ?? null,
+              baselineTurnId: baselineAssistantTurnId ?? null,
+              answerMessageId: answer.meta?.messageId ?? null,
+              answerTurnId: answer.meta?.turnId ?? null,
+            },
+          });
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }
       }
@@ -1765,8 +1832,32 @@ async function runRemoteBrowserMode(
         } else {
           const visibleBlockingSurface = await detectVisibleChatgptBlockingSurface(Runtime).catch(() => null);
           if (visibleBlockingSurface) {
+            await logChatgptUnexpectedState({
+              Runtime,
+              logger,
+              context: 'chatgpt-stale-send-blocked',
+              surface: visibleBlockingSurface,
+              extra: {
+                policy: visibleBlockingSurface.kind === 'retry-affordance' ? 'fail-fast-no-auto-retry-click' : 'fail-fast',
+                baselineMessageId: baselineAssistantMessageId ?? null,
+                baselineTurnId: baselineAssistantTurnId ?? null,
+                answerMessageId: answer.meta?.messageId ?? null,
+                answerTurnId: answer.meta?.turnId ?? null,
+              },
+            });
             throw new Error(formatChatgptBlockingSurfaceError(visibleBlockingSurface));
           }
+          await logChatgptUnexpectedState({
+            Runtime,
+            logger,
+            context: 'chatgpt-stale-send-without-visible-surface',
+            extra: {
+              baselineMessageId: baselineAssistantMessageId ?? null,
+              baselineTurnId: baselineAssistantTurnId ?? null,
+              answerMessageId: answer.meta?.messageId ?? null,
+              answerTurnId: answer.meta?.turnId ?? null,
+            },
+          });
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }
       }
