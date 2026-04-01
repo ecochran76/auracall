@@ -4050,62 +4050,63 @@ async function scrapeChatgptConversations(
   client: ChromeClient,
   projectId?: string | null,
 ): Promise<Conversation[]> {
-  const normalizedProjectId = normalizeChatgptProjectId(projectId);
-  if (normalizedProjectId) {
-    await navigateToChatgptUrl(client, resolveChatgptProjectUrl(normalizedProjectId), normalizedProjectId);
-    const ready = await waitForPredicate(
-      client.Runtime,
-      buildProjectChatsReadyExpression(normalizedProjectId),
-      {
-        timeoutMs: 3_000,
-        description: `ChatGPT project chats ready for ${normalizedProjectId}`,
-      },
-    );
-    if (!ready.ok) {
-      await withUiDiagnostics(
+  return withChatgptBlockingSurfaceRecovery(client, `scrapeChatgptConversations:${projectId ?? 'root'}`, async () => {
+    const normalizedProjectId = normalizeChatgptProjectId(projectId);
+    if (normalizedProjectId) {
+      await navigateToChatgptUrl(client, resolveChatgptProjectUrl(normalizedProjectId), normalizedProjectId);
+      const ready = await waitForPredicate(
         client.Runtime,
-        async () => {
-          const opened = await openSurface(client.Runtime, {
-            readyExpression: buildProjectChatsReadyExpression(normalizedProjectId),
-            readyDescription: `ChatGPT project chats ready for ${normalizedProjectId}`,
-            alreadyOpenTimeoutMs: 800,
-            readyTimeoutMs: 3_000,
-            timeoutMs: 5_000,
-            attempts: [
-              {
-                name: 'chats-tab-label',
-                trigger: {
-                  match: { exact: [CHATGPT_PROJECT_TAB_CHATS_LABEL] },
-                  rootSelectors: ['[role="tablist"]'],
-                  interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
-                  requireVisible: true,
-                  timeoutMs: 3_000,
-                },
-              },
-            ],
-          });
-          if (!opened.ok) {
-            throw new Error(
-              `ChatGPT project chats tab did not open (${JSON.stringify({
-                reason: opened.reason,
-                attempts: opened.attempts,
-              })})`,
-            );
-          }
-        },
+        buildProjectChatsReadyExpression(normalizedProjectId),
         {
-          label: 'chatgpt-open-project-chats',
-          candidateSelectors: ['[role="tab"]', '[role="tabpanel"]', 'a[href*="/c/"]'],
-          context: {
-            surface: 'chatgpt-project-chats',
-            projectId: normalizedProjectId,
-          },
+          timeoutMs: 3_000,
+          description: `ChatGPT project chats ready for ${normalizedProjectId}`,
         },
       );
+      if (!ready.ok) {
+        await withUiDiagnostics(
+          client.Runtime,
+          async () => {
+            const opened = await openSurface(client.Runtime, {
+              readyExpression: buildProjectChatsReadyExpression(normalizedProjectId),
+              readyDescription: `ChatGPT project chats ready for ${normalizedProjectId}`,
+              alreadyOpenTimeoutMs: 800,
+              readyTimeoutMs: 3_000,
+              timeoutMs: 5_000,
+              attempts: [
+                {
+                  name: 'chats-tab-label',
+                  trigger: {
+                    match: { exact: [CHATGPT_PROJECT_TAB_CHATS_LABEL] },
+                    rootSelectors: ['[role="tablist"]'],
+                    interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+                    requireVisible: true,
+                    timeoutMs: 3_000,
+                  },
+                },
+              ],
+            });
+            if (!opened.ok) {
+              throw new Error(
+                `ChatGPT project chats tab did not open (${JSON.stringify({
+                  reason: opened.reason,
+                  attempts: opened.attempts,
+                })})`,
+              );
+            }
+          },
+          {
+            label: 'chatgpt-open-project-chats',
+            candidateSelectors: ['[role="tab"]', '[role="tabpanel"]', 'a[href*="/c/"]'],
+            context: {
+              surface: 'chatgpt-project-chats',
+              projectId: normalizedProjectId,
+            },
+          },
+        );
+      }
     }
-  }
-  await ensureChatgptSidebarOpen(client);
-  const readConversations = async (): Promise<Conversation[]> => {
+    await ensureChatgptSidebarOpen(client);
+    const readConversations = async (): Promise<Conversation[]> => {
     const { result } = await client.Runtime.evaluate({
       expression: `(() => {
       const expectedProjectId = ${JSON.stringify(normalizedProjectId ?? null)};
@@ -4245,17 +4246,18 @@ async function scrapeChatgptConversations(
     return normalizeChatgptConversationLinkProbes(probes);
   };
 
-  const deadline = Date.now() + 6_000;
-  let last: Conversation[] = [];
-  while (Date.now() < deadline) {
-    const conversations = await readConversations();
-    if (conversations.length > 0) {
-      return conversations;
+    const deadline = Date.now() + 6_000;
+    let last: Conversation[] = [];
+    while (Date.now() < deadline) {
+      const conversations = await readConversations();
+      if (conversations.length > 0) {
+        return conversations;
+      }
+      last = conversations;
+      await sleep(600);
     }
-    last = conversations;
-    await sleep(600);
-  }
-  return last;
+    return last;
+  });
 }
 
 async function tagChatgptConversationRow(

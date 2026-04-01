@@ -56,6 +56,7 @@ import { ensureThinkingTimeIfAvailable } from './actions/thinkingTime.js';
 import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
+import { classifyChatgptBlockingSurfaceProbe } from './providers/chatgptAdapter.js';
 import { resolveGrokConversationUrl, resolveGrokProjectUrl } from './providers/grokAdapter.js';
 import { resolveCompatibleHostsForUrl } from './urlFamilies.js';
 import type { LaunchedChrome } from 'chrome-launcher';
@@ -277,7 +278,7 @@ async function noteChatgptBrowserMutationSuccess(
   );
 }
 
-async function detectVisibleChatgptRateLimitReason(
+async function detectVisibleChatgptBlockingSurfaceReason(
   Runtime: ChromeClient['Runtime'],
 ): Promise<string | null> {
   const { result } = await Runtime.evaluate({
@@ -294,16 +295,48 @@ async function detectVisibleChatgptRateLimitReason(
           if (!isVisible(node)) continue;
           const text = normalize(node.textContent || '');
           if (!text) continue;
-          if (/too many requests|too quickly|rate limit/i.test(text)) {
-            matches.push(text.slice(0, 240));
-          }
+          const buttonLabels = Array.from(node.querySelectorAll('button,[role="button"]'))
+            .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
+            .filter(Boolean)
+            .slice(0, 8);
+          matches.push({
+            text: text.slice(0, 240),
+            ariaLabel: normalize(node.getAttribute('aria-label') || ''),
+            buttonLabels,
+          });
         }
       }
-      return matches[0] || null;
+      if (matches.length > 0) {
+        return { type: 'overlay', probe: matches[0] };
+      }
+      const retryLabels = ['retry', 'try again', 'regenerate', 'regenerate response', 'continue generating'];
+      for (const node of Array.from(document.querySelectorAll('button,[role="button"]'))) {
+        if (!(node instanceof HTMLElement) || !isVisible(node)) continue;
+        const label = normalize(node.getAttribute('aria-label') || node.textContent || '');
+        if (!retryLabels.includes(label)) continue;
+        const scope =
+          node.closest('section[data-testid^="conversation-turn-"]') ||
+          node.closest('[data-message-author-role]') ||
+          node.parentElement;
+        return {
+          type: 'retry',
+          probe: {
+            text: normalize(scope?.textContent || node.textContent || '').slice(0, 240),
+            ariaLabel: '',
+            buttonLabels: [label],
+          },
+        };
+      }
+      return null;
     })()`,
     returnByValue: true,
   });
-  return typeof result?.value === 'string' && result.value.trim() ? result.value.trim() : null;
+  const value = result?.value as
+    | { type?: string; probe?: { text?: string; ariaLabel?: string; buttonLabels?: string[] } | null }
+    | null
+    | undefined;
+  const classified = classifyChatgptBlockingSurfaceProbe(value?.probe ?? null);
+  return classified?.summary ?? null;
 }
 
 async function handleChatgptBrowserRateLimitFailure(options: {
@@ -316,7 +349,7 @@ async function handleChatgptBrowserRateLimitFailure(options: {
 }): Promise<Error> {
   let reason = extractChatgptRateLimitSummary(options.error.message);
   if (!reason && options.Runtime) {
-    reason = await detectVisibleChatgptRateLimitReason(options.Runtime).catch(() => null);
+    reason = await detectVisibleChatgptBlockingSurfaceReason(options.Runtime).catch(() => null);
   }
   if (!reason && !isChatgptRateLimitMessage(options.error.message)) {
     return options.error;
@@ -1074,9 +1107,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         if (refreshed) {
           answer = refreshed;
         } else {
-          const visibleRateLimit = await detectVisibleChatgptRateLimitReason(Runtime).catch(() => null);
-          if (visibleRateLimit) {
-            throw new Error(visibleRateLimit);
+          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurfaceReason(Runtime).catch(() => null);
+          if (visibleBlockingSurface) {
+            throw new Error(visibleBlockingSurface);
           }
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }
@@ -1712,9 +1745,9 @@ async function runRemoteBrowserMode(
         if (refreshed) {
           answer = refreshed;
         } else {
-          const visibleRateLimit = await detectVisibleChatgptRateLimitReason(Runtime).catch(() => null);
-          if (visibleRateLimit) {
-            throw new Error(visibleRateLimit);
+          const visibleBlockingSurface = await detectVisibleChatgptBlockingSurfaceReason(Runtime).catch(() => null);
+          if (visibleBlockingSurface) {
+            throw new Error(visibleBlockingSurface);
           }
           throw new Error('Stale ChatGPT assistant response detected after send.');
         }

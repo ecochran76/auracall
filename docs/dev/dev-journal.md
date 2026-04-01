@@ -2821,3 +2821,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Additional verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+- Next hardening slice:
+  - `scrapeChatgptConversations(...)` now also runs under
+    `withChatgptBlockingSurfaceRecovery(...)`, so root/project conversation
+    list reads get the same reload-based recovery treatment as context/artifact
+    reads when ChatGPT is visibly in a transient bad state
+  - browser-mode stale-assistant rejection in `src/browser/index.ts` now checks
+    for any classified visible ChatGPT blocking surface, not only the rate-limit
+    modal, before surfacing the stale-response failure
+- Additional verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
