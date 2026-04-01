@@ -4380,6 +4380,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - `root-followups` PASS
     - `cleanup` PASS
 
+## 2026-04-01 — ChatGPT exact-row actions now share one local menu-item opener
+
+- Area: ChatGPT browser conversation row actions / project cleanup tests
+- Symptom:
+  - the recently repaired ChatGPT rename/delete paths still duplicated the same
+    exact-row hover -> trigger -> menu-item sequence in separate helpers, which
+    increases the risk that future DOM drift fixes only land in one path
+- Fix:
+  - extracted `openChatgptTaggedConversationMenuItem(...)` and reused it for
+    the exact-row rename and delete openers
+  - added `matchesChatgptProjectDeleteConfirmationProbe(...)` plus focused
+    tests so the project delete confirmation shape has direct unit coverage
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

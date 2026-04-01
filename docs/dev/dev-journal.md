@@ -2711,3 +2711,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `root-base` PASS
     - `root-followups` PASS
     - `cleanup` PASS
+
+## 2026-04-01 — ChatGPT row-action/menu and project-delete confirmation now have tighter local structure
+
+- Focus: reduce the chance that the recent ChatGPT repairs drift apart again
+  before the next browser-service extraction pass
+- Implemented:
+  - extracted the repeated exact-row hover -> trigger -> menu-item pointer-click
+    sequence into one local helper,
+    `openChatgptTaggedConversationMenuItem(...)`, and rewired both the root/project
+    rename and delete openers to use it
+  - added a pure matcher,
+    `matchesChatgptProjectDeleteConfirmationProbe(...)`, and focused tests for
+    the project delete confirmation shape so the split remove-confirm cleanup
+    bug has direct unit coverage in addition to the live acceptance proof
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

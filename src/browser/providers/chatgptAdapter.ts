@@ -477,6 +477,11 @@ type ChatgptDeleteConfirmationProbe = {
   hasVisibleConfirmButton?: boolean | null;
 };
 
+type ChatgptProjectDeleteConfirmationProbe = {
+  dialogText?: string | null;
+  buttonLabels?: string[] | null;
+};
+
 type ChatgptConversationTitleProbe = {
   matchedConversationId?: string | null;
   matchedProjectId?: string | null;
@@ -751,6 +756,22 @@ export function matchesChatgptDeleteConfirmationProbe(
     return true;
   }
   return text.includes(expected);
+}
+
+export function matchesChatgptProjectDeleteConfirmationProbe(
+  probe: ChatgptProjectDeleteConfirmationProbe | null | undefined,
+): boolean {
+  if (!probe) {
+    return false;
+  }
+  const text = normalizeUiText(probe.dialogText).toLowerCase();
+  if (!text.includes(CHATGPT_PROJECT_DELETE_DIALOG_LABEL)) {
+    return false;
+  }
+  const labels = Array.isArray(probe.buttonLabels)
+    ? probe.buttonLabels.map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean)
+    : [];
+  return CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS.every((label) => labels.includes(label));
 }
 
 export function matchesChatgptConversationTitleProbe(
@@ -4671,68 +4692,16 @@ async function openChatgptTaggedConversationRenameEditor(
     };
   };
 
-  const hovered = await hoverElement(client.Runtime, client.Input, {
-    selector: tagged.rowSelector,
-    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+  const renameOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
+    itemLabel: CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
+    itemReadyDescription: 'ChatGPT rename menu visible',
+    itemReadyReason: 'Rename menu item did not appear',
+    itemPressedReason: 'Rename menu item did not click',
+    collectDiagnostics,
     timeoutMs,
   });
-  if (!hovered.ok) {
-    return {
-      ok: false,
-      reason: hovered.reason || 'Conversation row did not hover',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const triggerPressed = await pressButton(client.Runtime, {
-    selector: tagged.actionSelector,
-    rootSelectors: [tagged.rowSelector],
-    interactionStrategies: ['pointer'],
-    requireVisible: true,
-    timeoutMs,
-  });
-  if (!triggerPressed.ok) {
-    return {
-      ok: false,
-      reason: triggerPressed.reason || 'Conversation options trigger did not open',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const menuReady = await waitForPredicate(
-    client.Runtime,
-    `(() => {
-      const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
-        .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase())
-        .filter(Boolean);
-      return items.includes('rename') ? { items } : null;
-    })()`,
-    {
-      timeoutMs,
-      description: 'ChatGPT rename menu visible',
-    },
-  );
-  if (!menuReady.ok) {
-    return {
-      ok: false,
-      reason: 'Rename menu item did not appear',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const renamePressed = await pressButton(client.Runtime, {
-    match: { exact: [CHATGPT_CONVERSATION_ACTION_RENAME_LABEL] },
-    rootSelectors: ['[role="menu"]'],
-    interactionStrategies: ['pointer'],
-    requireVisible: true,
-    timeoutMs,
-  });
-  if (!renamePressed.ok) {
-    return {
-      ok: false,
-      reason: renamePressed.reason || 'Rename menu item did not click',
-      diagnostics: await collectDiagnostics(),
-    };
+  if (!renameOpened.ok) {
+    return renameOpened;
   }
 
   const renameEditorReady = await waitForPredicate(
@@ -4807,68 +4776,16 @@ async function openChatgptTaggedConversationDeleteConfirmation(
     };
   };
 
-  const hovered = await hoverElement(client.Runtime, client.Input, {
-    selector: tagged.rowSelector,
-    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+  const deleteOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
+    itemLabel: CHATGPT_CONVERSATION_ACTION_DELETE_LABEL,
+    itemReadyDescription: 'ChatGPT delete menu visible',
+    itemReadyReason: 'Delete menu item did not appear',
+    itemPressedReason: 'Delete menu item did not click',
+    collectDiagnostics,
     timeoutMs,
   });
-  if (!hovered.ok) {
-    return {
-      ok: false,
-      reason: hovered.reason || 'Conversation row did not hover',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const triggerPressed = await pressButton(client.Runtime, {
-    selector: tagged.actionSelector,
-    rootSelectors: [tagged.rowSelector],
-    interactionStrategies: ['pointer'],
-    requireVisible: true,
-    timeoutMs,
-  });
-  if (!triggerPressed.ok) {
-    return {
-      ok: false,
-      reason: triggerPressed.reason || 'Conversation options trigger did not open',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const menuReady = await waitForPredicate(
-    client.Runtime,
-    `(() => {
-      const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
-        .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase())
-        .filter(Boolean);
-      return items.includes('delete') ? { items } : null;
-    })()`,
-    {
-      timeoutMs,
-      description: 'ChatGPT delete menu visible',
-    },
-  );
-  if (!menuReady.ok) {
-    return {
-      ok: false,
-      reason: 'Delete menu item did not appear',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  const deletePressed = await pressButton(client.Runtime, {
-    match: { exact: [CHATGPT_CONVERSATION_ACTION_DELETE_LABEL] },
-    rootSelectors: ['[role="menu"]'],
-    interactionStrategies: ['pointer'],
-    requireVisible: true,
-    timeoutMs,
-  });
-  if (!deletePressed.ok) {
-    return {
-      ok: false,
-      reason: deletePressed.reason || 'Delete menu item did not click',
-      diagnostics: await collectDiagnostics(),
-    };
+  if (!deleteOpened.ok) {
+    return deleteOpened;
   }
 
   const confirmationReady = await waitForPredicate(
@@ -4890,6 +4807,89 @@ async function openChatgptTaggedConversationDeleteConfirmation(
   return {
     ok: true,
     diagnostics: await collectDiagnostics(),
+  };
+}
+
+async function openChatgptTaggedConversationMenuItem(
+  client: ChromeClient,
+  tagged: { rowSelector: string; actionSelector: string },
+  options: {
+    itemLabel: string;
+    itemReadyDescription: string;
+    itemReadyReason: string;
+    itemPressedReason: string;
+    collectDiagnostics: () => Promise<Record<string, unknown>>;
+    timeoutMs: number;
+  },
+): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
+  const hovered = await hoverElement(client.Runtime, client.Input, {
+    selector: tagged.rowSelector,
+    rootSelectors: ['nav', 'aside', tagged.rowSelector],
+    timeoutMs: options.timeoutMs,
+  });
+  if (!hovered.ok) {
+    return {
+      ok: false,
+      reason: hovered.reason || 'Conversation row did not hover',
+      diagnostics: await options.collectDiagnostics(),
+    };
+  }
+
+  const triggerPressed = await pressButton(client.Runtime, {
+    selector: tagged.actionSelector,
+    rootSelectors: [tagged.rowSelector],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs: options.timeoutMs,
+  });
+  if (!triggerPressed.ok) {
+    return {
+      ok: false,
+      reason: triggerPressed.reason || 'Conversation options trigger did not open',
+      diagnostics: await options.collectDiagnostics(),
+    };
+  }
+
+  const menuReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const expected = ${JSON.stringify(options.itemLabel)};
+      const items = Array.from(document.querySelectorAll('[role="menuitem"]'))
+        .map((node) => String(node.textContent || '').replace(/\\s+/g, ' ').trim().toLowerCase())
+        .filter(Boolean);
+      return items.includes(expected) ? { items } : null;
+    })()`,
+    {
+      timeoutMs: options.timeoutMs,
+      description: options.itemReadyDescription,
+    },
+  );
+  if (!menuReady.ok) {
+    return {
+      ok: false,
+      reason: options.itemReadyReason,
+      diagnostics: await options.collectDiagnostics(),
+    };
+  }
+
+  const itemPressed = await pressButton(client.Runtime, {
+    match: { exact: [options.itemLabel] },
+    rootSelectors: ['[role="menu"]'],
+    interactionStrategies: ['pointer'],
+    requireVisible: true,
+    timeoutMs: options.timeoutMs,
+  });
+  if (!itemPressed.ok) {
+    return {
+      ok: false,
+      reason: itemPressed.reason || options.itemPressedReason,
+      diagnostics: await options.collectDiagnostics(),
+    };
+  }
+
+  return {
+    ok: true,
+    diagnostics: await options.collectDiagnostics(),
   };
 }
 

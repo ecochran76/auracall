@@ -12,6 +12,7 @@ import {
   mergeChatgptConversationArtifacts,
   matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
+  matchesChatgptProjectDeleteConfirmationProbe,
   normalizeChatgptAuthSessionIdentity,
   normalizeChatgptConversationId,
   normalizeChatgptConversationDownloadArtifactProbes,
@@ -972,6 +973,27 @@ describe('matchesChatgptDeleteConfirmationProbe', () => {
         },
         'Older page title that no longer matches',
       ),
+    ).toBe(false);
+  });
+});
+
+describe('matchesChatgptProjectDeleteConfirmationProbe', () => {
+  test('accepts the project delete dialog when the expected buttons are visible', () => {
+    expect(
+      matchesChatgptProjectDeleteConfirmationProbe({
+        dialogText:
+          'Delete project? This will permanently delete all project files and chats. To save chats, move them to your chat list or another project before deleting. Delete Cancel',
+        buttonLabels: ['Delete', 'Cancel'],
+      }),
+    ).toBe(true);
+  });
+
+  test('rejects non-project dialogs even if delete and cancel buttons exist', () => {
+    expect(
+      matchesChatgptProjectDeleteConfirmationProbe({
+        dialogText: 'Delete chat? This will delete AC GPT C seodiu. Delete Cancel',
+        buttonLabels: ['Delete', 'Cancel'],
+      }),
     ).toBe(false);
   });
 });
