@@ -2636,3 +2636,49 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the row-action CRUD path itself appears healthy now; the next likely cleanup
     target is project conversation list/read consistency on the project `Chats`
     panel
+
+## 2026-03-31 — ChatGPT project conversation list/read now trusts the real project Chats panel
+
+- Focus: repair project-scoped conversation listing after rename/delete so it
+  reflects the real project `Chats` panel instead of oscillating between `[]`
+  and placeholder titles
+- Findings:
+  - live project page DOM on
+    `https://chatgpt.com/g/g-p-69cc275fdfac8191be921387165ca803/project`
+    showed the authoritative shape:
+    - `[role="tab"]` entries `Chats` and `Sources`
+    - one `[role="tabpanel"]`
+    - one project conversation row as `li.group/project-item`
+    - a relative conversation anchor whose raw text concatenated title + preview
+      (`AC GPT PC title fixedReply exactly with: ...`)
+    - the clean title lived in the shortest leaf text inside that row
+  - the list/read bug had two causes:
+    - browser-evaluated expressions still referenced package constants like
+      `CHATGPT_PROJECT_TAB_CHATS_LABEL` and
+      `CHATGPT_CONVERSATION_OPTIONS_PREFIX` directly instead of interpolating
+      literals, so the page-side predicates silently failed
+    - the project conversation title extractor trusted generic or concatenated
+      anchor/button text instead of the concrete shortest row leaf title
+- Implemented:
+  - fixed `buildProjectChatsReadyExpression(...)` to interpolate the expected
+    `Chats` label into the page expression
+  - fixed the project conversation scraper expression to interpolate the
+    conversation-options prefix instead of referencing the TS constant directly
+  - added a project `Chats` surface-open step before scraping project
+    conversations
+  - tightened project row title extraction so the scraper prefers the shortest
+    concrete leaf text from the row and ignores generic placeholders like
+    `ChatGPT` / `New chat`
+  - hardened `normalizeChatgptConversationLinkProbes(...)` so generic
+    placeholder titles do not overwrite real titles
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live project list/read proof on project
+    `g-p-69cc275fdfac8191be921387165ca803`
+    - project conversation `69cc7d43-acc0-832f-b1c2-5486459b4825` renamed to
+      `AC GPT PC title fixed`
+    - fresh `auracall conversations --project-id ... --target chatgpt --refresh`
+      returned that exact titled row
+    - deleting that conversation succeeded, and a fresh project conversation
+      list returned `[]`

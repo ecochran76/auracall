@@ -1632,11 +1632,16 @@ async function readChatgptConversationPayloadWithClient(
 export function normalizeChatgptConversationLinkProbes(
   probes: readonly ChatgptConversationLinkProbe[],
 ): Conversation[] {
+  const isGenericTitle = (value: string): boolean => {
+    const normalized = normalizeUiText(value).toLowerCase();
+    return normalized === 'chatgpt' || normalized === 'new chat';
+  };
   const conversations = new Map<string, Conversation>();
   for (const probe of probes) {
     const id = typeof probe.id === 'string' ? probe.id.trim() : '';
     if (!id) continue;
-    const title = normalizeUiText(probe.title) || id;
+    const probeTitle = normalizeUiText(probe.title);
+    const title = probeTitle && !isGenericTitle(probeTitle) ? probeTitle : id;
     const normalizedProjectId = normalizeChatgptProjectId(probe.projectId) ?? undefined;
     const url = typeof probe.url === 'string' && probe.url.trim().length > 0 ? probe.url.trim() : undefined;
     const next: Conversation = {
@@ -1656,6 +1661,8 @@ export function normalizeChatgptConversationLinkProbes(
     const useNext =
       (!previousTitle || previousTitle === previous.id) && nextTitle.length > 0
         ? true
+        : isGenericTitle(previousTitle) && nextTitle.length > 0 && !isGenericTitle(nextTitle)
+          ? true
         : previousTitle.length > 0 &&
             nextTitle.length > 0 &&
             previousTitle !== nextTitle &&
@@ -2141,6 +2148,54 @@ function buildProjectSourcesReadyExpression(projectId?: string | null): string {
       hasSourcesQuery,
       hasSourcesTab,
     } : null;
+  })()`;
+}
+
+function buildProjectChatsReadyExpression(projectId?: string | null): string {
+  return `(() => {
+    const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
+    if (!route) return null;
+    const rawId = String(route[1] || '').trim();
+    const match = rawId.match(/^(g-p-[a-z0-9]+)/i);
+    if (!match) return null;
+    const normalizedId = match[1];
+    const expected = ${JSON.stringify(projectId ?? null)};
+    if (expected && normalizedId !== expected) return null;
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const expectedChatsLabel = ${JSON.stringify(CHATGPT_PROJECT_TAB_CHATS_LABEL)};
+    const chatTab = Array.from(document.querySelectorAll('[role="tab"]'))
+      .find((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === expectedChatsLabel);
+    const chatTabSelected = Boolean(
+      chatTab &&
+      (chatTab.getAttribute('aria-selected') === 'true' || String(chatTab.getAttribute('data-state') || '').toLowerCase() === 'active')
+    );
+    const chatPanels = Array.from(document.querySelectorAll('[role="tabpanel"]'));
+    const chatPanel = chatPanels.find((panel) => {
+      const labelledBy = String(panel.getAttribute('aria-labelledby') || '').toLowerCase();
+      if (labelledBy.endsWith('-chats')) return true;
+      const text = normalize(panel.textContent || '');
+      return (
+        Array.from(panel.querySelectorAll('a[href*="/c/"]')).length > 0 ||
+        text.length > 0 ||
+        text.includes('new chat') ||
+        text.includes('search chats') ||
+        text.includes('no chats')
+      );
+    });
+    return chatTabSelected || chatPanel
+      ? {
+          ok: true,
+          id: normalizedId,
+          href: location.href,
+          hasChatPanel: Boolean(chatPanel),
+          hasConversationAnchors: Boolean(chatPanel?.querySelector('a[href*="/c/"]')),
+        }
+      : null;
   })()`;
 }
 
@@ -3849,12 +3904,63 @@ async function scrapeChatgptConversations(
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
   if (normalizedProjectId) {
     await navigateToChatgptUrl(client, resolveChatgptProjectUrl(normalizedProjectId), normalizedProjectId);
+    const ready = await waitForPredicate(
+      client.Runtime,
+      buildProjectChatsReadyExpression(normalizedProjectId),
+      {
+        timeoutMs: 3_000,
+        description: `ChatGPT project chats ready for ${normalizedProjectId}`,
+      },
+    );
+    if (!ready.ok) {
+      await withUiDiagnostics(
+        client.Runtime,
+        async () => {
+          const opened = await openSurface(client.Runtime, {
+            readyExpression: buildProjectChatsReadyExpression(normalizedProjectId),
+            readyDescription: `ChatGPT project chats ready for ${normalizedProjectId}`,
+            alreadyOpenTimeoutMs: 800,
+            readyTimeoutMs: 3_000,
+            timeoutMs: 5_000,
+            attempts: [
+              {
+                name: 'chats-tab-label',
+                trigger: {
+                  match: { exact: [CHATGPT_PROJECT_TAB_CHATS_LABEL] },
+                  rootSelectors: ['[role="tablist"]'],
+                  interactionStrategies: ['pointer', 'keyboard-space', 'keyboard-arrowdown'],
+                  requireVisible: true,
+                  timeoutMs: 3_000,
+                },
+              },
+            ],
+          });
+          if (!opened.ok) {
+            throw new Error(
+              `ChatGPT project chats tab did not open (${JSON.stringify({
+                reason: opened.reason,
+                attempts: opened.attempts,
+              })})`,
+            );
+          }
+        },
+        {
+          label: 'chatgpt-open-project-chats',
+          candidateSelectors: ['[role="tab"]', '[role="tabpanel"]', 'a[href*="/c/"]'],
+          context: {
+            surface: 'chatgpt-project-chats',
+            projectId: normalizedProjectId,
+          },
+        },
+      );
+    }
   }
   await ensureChatgptSidebarOpen(client);
   const readConversations = async (): Promise<Conversation[]> => {
     const { result } = await client.Runtime.evaluate({
       expression: `(() => {
       const expectedProjectId = ${JSON.stringify(normalizedProjectId ?? null)};
+      const conversationOptionsPrefix = ${JSON.stringify(CHATGPT_CONVERSATION_OPTIONS_PREFIX)};
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
       const normalizeProjectId = (value) => {
         const trimmed = String(value || '').trim();
@@ -3907,13 +4013,34 @@ async function scrapeChatgptConversations(
               if (!(node instanceof HTMLButtonElement)) return false;
               if (!isVisible(node)) return false;
               const label = normalize(node.getAttribute('aria-label') || '').toLowerCase();
-              return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX);
+              return label.startsWith(conversationOptionsPrefix);
             });
           if (button instanceof HTMLButtonElement) {
             const label = normalize(button.getAttribute('aria-label') || '').toLowerCase();
-            return label.startsWith(CHATGPT_CONVERSATION_OPTIONS_PREFIX)
-              ? label.slice(CHATGPT_CONVERSATION_OPTIONS_PREFIX.length).trim()
+            return label.startsWith(conversationOptionsPrefix)
+              ? label.slice(conversationOptionsPrefix.length).trim()
               : label;
+          }
+          current = current.parentElement;
+        }
+        return '';
+      };
+      const extractLeafTexts = (root) =>
+        Array.from(root.querySelectorAll('div, span, p'))
+          .map((node) => normalize(node.textContent || ''))
+          .filter(Boolean);
+      const findRowTitle = (anchor) => {
+        let current = anchor instanceof Element ? anchor : null;
+        while (current && current !== document.body) {
+          const leafTexts = Array.from(new Set(extractLeafTexts(current)))
+            .filter((text) => {
+              const lowered = normalize(text).toLowerCase();
+              return lowered.length > 0 && !['chatgpt', 'new chat'].includes(lowered);
+            })
+            .sort((left, right) => left.length - right.length);
+          const concreteLeaf = leafTexts[0] || '';
+          if (concreteLeaf) {
+            return concreteLeaf;
           }
           current = current.parentElement;
         }
@@ -3923,12 +4050,17 @@ async function scrapeChatgptConversations(
         const info = parse(anchor.getAttribute('href') || '');
         if (!info) return null;
         const rowLabel = findRowButtonLabel(anchor);
-        const title =
+        const rowTitle = findRowTitle(anchor);
+        const titleCandidate =
+          rowTitle ||
           rowLabel ||
           normalize(anchor.getAttribute('aria-label') || '') ||
           normalize(anchor.textContent || '') ||
-          normalize(anchor.getAttribute('title') || '') ||
-          info.id;
+          normalize(anchor.getAttribute('title') || '');
+        const title =
+          titleCandidate && !['chatgpt', 'new chat'].includes(normalize(titleCandidate).toLowerCase())
+            ? titleCandidate
+            : info.id;
         return {
           ...info,
           title,
@@ -3945,7 +4077,6 @@ async function scrapeChatgptConversations(
 
       const projectPanelAnchors = expectedProjectId
         ? Array.from(document.querySelectorAll('[role="tabpanel"]'))
-            .filter((panel) => isVisible(panel))
             .flatMap((panel) => Array.from(panel.querySelectorAll('a[href*="/c/"]')))
         : [];
       const anchors = projectPanelAnchors.length > 0

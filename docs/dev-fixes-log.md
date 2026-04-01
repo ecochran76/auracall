@@ -4315,6 +4315,41 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     `[]`) while the live tab still showed the conversation route, so project
     conversation list/read consistency remains a separate follow-up surface
 
+## 2026-03-31 — ChatGPT project conversation listing now reads the real Chats-panel title
+
+- Area: ChatGPT browser project conversation list/read
+- Symptom:
+  - project-scoped `auracall conversations --project-id ... --target chatgpt`
+    could return `[]` even when the project page visibly contained the chat row,
+    and earlier reads could surface placeholder/generic titles
+- Root cause:
+  - the project list reader had the same page-expression bug as the earlier
+    `Chats` readiness probe: browser-evaluated code referenced TS constants like
+    `CHATGPT_PROJECT_TAB_CHATS_LABEL` and
+    `CHATGPT_CONVERSATION_OPTIONS_PREFIX` directly instead of interpolating
+    their literal values
+  - after the project page loaded, the scraper also trusted concatenated anchor
+    text or generic placeholders instead of the concrete title leaf inside the
+    `li.group/project-item` row
+- Fix:
+  - interpolated the `Chats` label and conversation-options prefix into the
+    project-page browser expressions
+  - kept the provider on the real project `Chats` surface before scraping
+  - updated project row title extraction to prefer the shortest concrete leaf
+    text and ignore generic placeholders such as `ChatGPT` / `New chat`
+  - hardened `normalizeChatgptConversationLinkProbes(...)` so generic titles
+    do not overwrite real titles
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live proof on project `g-p-69cc275fdfac8191be921387165ca803`
+    - renamed conversation `69cc7d43-acc0-832f-b1c2-5486459b4825` to
+      `AC GPT PC title fixed`
+    - fresh project conversation list returned:
+      `AC GPT PC title fixed`
+    - deleting that conversation succeeded and a fresh project list returned
+      `[]`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

@@ -292,6 +292,33 @@ describe('normalizeChatgptConversationLinkProbes', () => {
       },
     ]);
   });
+
+  test('does not keep a generic ChatGPT title when a concrete row title exists', () => {
+    expect(
+      normalizeChatgptConversationLinkProbes([
+        {
+          id: '69cc7121-eca0-832c-ab8a-9dde700e87d7',
+          title: 'ChatGPT',
+          projectId: 'g-p-69cc275fdfac8191be921387165ca803',
+          url: 'https://chatgpt.com/g/g-p-69cc275fdfac8191be921387165ca803-ac-gpt-r-najfie/c/69cc7121-eca0-832c-ab8a-9dde700e87d7',
+        },
+        {
+          id: '69cc7121-eca0-832c-ab8a-9dde700e87d7',
+          title: 'AC GPT PC live exact',
+          projectId: 'g-p-69cc275fdfac8191be921387165ca803',
+          url: 'https://chatgpt.com/g/g-p-69cc275fdfac8191be921387165ca803-ac-gpt-r-najfie/c/69cc7121-eca0-832c-ab8a-9dde700e87d7',
+        },
+      ]),
+    ).toEqual([
+      {
+        id: '69cc7121-eca0-832c-ab8a-9dde700e87d7',
+        title: 'AC GPT PC live exact',
+        provider: 'chatgpt',
+        projectId: 'g-p-69cc275fdfac8191be921387165ca803',
+        url: 'https://chatgpt.com/g/g-p-69cc275fdfac8191be921387165ca803-ac-gpt-r-najfie/c/69cc7121-eca0-832c-ab8a-9dde700e87d7',
+      },
+    ]);
+  });
 });
 
 describe('normalizeChatgptConversationFileProbes', () => {
