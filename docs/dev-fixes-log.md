@@ -4557,6 +4557,14 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     used by the current ChatGPT recovery path, which makes it possible to
     separate "same visible symptom, different remediation" during later
     clustering
+- Follow-up:
+  - ChatGPT read-path recovery now performs one bounded authoritative re-anchor
+    after the current dismiss/reload step
+  - current re-anchor actions:
+    - `reopen-list` for conversation list refresh
+    - `reopen-conversation` for context/files/artifact reads
+  - persisted post-mortem bundles now capture the full recovery sequence, not
+    just the first recovery action
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

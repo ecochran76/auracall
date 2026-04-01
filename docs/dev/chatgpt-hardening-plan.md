@@ -203,8 +203,9 @@ Current next slice:
    Status:
    - now includes current action/outcome for the implemented ChatGPT recovery
      paths (`reload-page`, `dismiss-overlay`, `close-dialog`)
-   - still missing any future `reopen conversation from authoritative list`
-     recovery path until that behavior exists
+   - now also includes one bounded authoritative re-anchor step for read paths:
+     - `reopen-list` for list refresh
+     - `reopen-conversation` for context/files/artifact reads
 
 ## Acceptance bar for hardening
 

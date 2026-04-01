@@ -2900,3 +2900,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the persisted bundle now includes the currently implemented recovery action
     and outcome (`reload-page`, `dismiss-overlay`, `close-dialog`); the next
     missing piece is a true conversation re-open recovery path where warranted
+
+## 2026-04-01 — ChatGPT read recovery now re-anchors once to authoritative surfaces
+
+- Focus: stop relying on reload/dismiss alone when a ChatGPT read surface is in
+  a classified bad state
+- Implemented:
+  - extended `withChatgptBlockingSurfaceRecovery(...)` to support one bounded
+    re-anchor callback after the current dismiss/reload step
+  - wired read surfaces to use authoritative reopen steps:
+    - `reopen-list` for conversation list refresh
+    - `reopen-conversation` for context reads, conversation file reads, and
+      artifact materialization
+  - persisted post-mortem bundles now capture the full recovery sequence rather
+    than a single action
+- Verification:
+  - `pnpm vitest run tests/browser/domDebug.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/browserModeExports.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Next:
+  - exercise these hostile-state recoveries live so the new reopen steps are
+    proven against real ChatGPT failure surfaces, not only unit/regression code

@@ -449,7 +449,7 @@ type ChatgptRecoveryDebugContext = {
 };
 
 type ChatgptRecoveryActionResult = {
-  action: 'dismiss-overlay' | 'close-dialog' | 'reload-page';
+  action: 'dismiss-overlay' | 'close-dialog' | 'reload-page' | 'reopen-conversation' | 'reopen-list';
   outcome: 'attempted' | 'failed';
   summary: string | null;
 };
@@ -814,10 +814,15 @@ async function withChatgptBlockingSurfaceRecovery<T>(
   client: ChromeClient,
   action: string,
   fn: () => Promise<T>,
-  options?: { pauseMs?: number; retries?: number; debugContext?: ChatgptRecoveryDebugContext },
+  options?: {
+    pauseMs?: number;
+    retries?: number;
+    debugContext?: ChatgptRecoveryDebugContext;
+    reopen?: () => Promise<ChatgptRecoveryActionResult | null>;
+  },
 ): Promise<T> {
   const debugContext = options?.debugContext;
-  let lastRecoveryAction: ChatgptRecoveryActionResult | null = null;
+  let lastRecoveryActions: ChatgptRecoveryActionResult[] = [];
   const persistDebugRecord = async (
     phase: 'pre' | 'post' | 'error' | 'final-error',
     match: ChatgptBlockingSurfaceMatch | null,
@@ -841,18 +846,33 @@ async function withChatgptBlockingSurfaceRecovery<T>(
               details: match.details ?? null,
             }
           : null,
-        recovery: lastRecoveryAction
-          ? {
-              action: lastRecoveryAction.action,
-              outcome: lastRecoveryAction.outcome,
-              summary: lastRecoveryAction.summary,
-            }
-          : null,
+        recovery: lastRecoveryActions.map((entry) => ({
+          action: entry.action,
+          outcome: entry.outcome,
+          summary: entry.summary,
+        })),
         snapshot,
         ...(debugContext.metadata ?? {}),
         ...(extra ?? {}),
       },
     }).catch(() => undefined);
+  };
+  const runRecoverySequence = async (match: ChatgptBlockingSurfaceMatch): Promise<void> => {
+    lastRecoveryActions = [];
+    const primary = await recoverVisibleChatgptBlockingSurfaceWithClient(client, match);
+    if (primary) {
+      lastRecoveryActions.push(primary);
+    }
+    if (options?.reopen) {
+      const reopen = await options.reopen().catch(() => ({
+        action: (match.kind === 'rate-limit' ? 'reopen-list' : 'reopen-conversation') as ChatgptRecoveryActionResult['action'],
+        outcome: 'failed' as const,
+        summary: match.summary,
+      }));
+      if (reopen) {
+        lastRecoveryActions.push(reopen);
+      }
+    }
   };
   try {
     return await withBlockingSurfaceRecovery(fn, {
@@ -860,9 +880,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
       pauseMs: options?.pauseMs ?? CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS,
       retries: options?.retries ?? 1,
       inspect: () => readVisibleChatgptBlockingSurfaceMatchWithClient(client),
-      dismiss: async (match) => {
-        lastRecoveryAction = await recoverVisibleChatgptBlockingSurfaceWithClient(client, match);
-      },
+      dismiss: async (match) => runRecoverySequence(match),
       classifyError: (error) => {
         const directMessage = error instanceof Error ? error.message : String(error);
         const match = classifyChatgptBlockingSurfaceProbe({ text: directMessage });
@@ -896,6 +914,51 @@ function resolveChatgptRecoveryDebugContext(
     enabled: true,
     context,
     metadata,
+  };
+}
+
+function buildChatgptConversationReopen(
+  client: ChromeClient,
+  conversationId: string,
+  projectId?: string | null,
+): () => Promise<ChatgptRecoveryActionResult> {
+  return async () => {
+    try {
+      await navigateToChatgptConversation(client, conversationId, projectId);
+      return {
+        action: 'reopen-conversation',
+        outcome: 'attempted',
+        summary: conversationId,
+      };
+    } catch {
+      return {
+        action: 'reopen-conversation',
+        outcome: 'failed',
+        summary: conversationId,
+      };
+    }
+  };
+}
+
+function buildChatgptListReopen(
+  client: ChromeClient,
+  projectId?: string | null,
+): () => Promise<ChatgptRecoveryActionResult> {
+  return async () => {
+    try {
+      await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId), normalizeChatgptProjectId(projectId) ?? undefined);
+      return {
+        action: 'reopen-list',
+        outcome: 'attempted',
+        summary: normalizeChatgptProjectId(projectId) ?? 'root',
+      };
+    } catch {
+      return {
+        action: 'reopen-list',
+        outcome: 'failed',
+        summary: normalizeChatgptProjectId(projectId) ?? 'root',
+      };
+    }
   };
 }
 
@@ -4380,7 +4443,10 @@ async function scrapeChatgptConversations(
       await sleep(600);
     }
     return last;
-  }, { debugContext });
+  }, {
+    debugContext,
+    reopen: buildChatgptListReopen(client, projectId),
+  });
 }
 
 async function tagChatgptConversationRow(
@@ -5319,7 +5385,10 @@ async function readChatgptConversationContextWithClient(
       sources,
       artifacts,
     };
-  }, { debugContext });
+  }, {
+    debugContext,
+    reopen: buildChatgptConversationReopen(client, conversationId, projectId),
+  });
 }
 
 async function readVisibleChatgptDownloadArtifactProbesWithClient(
@@ -6441,7 +6510,10 @@ async function materializeChatgptConversationArtifactWithClient(
       }
       return null;
     },
-    { debugContext },
+    {
+      debugContext,
+      reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId),
+    },
   );
 }
 
@@ -6596,7 +6668,10 @@ export function createChatgptAdapter(): Pick<
             }
             return await readVisibleChatgptConversationFilesWithClient(client, conversationId);
           },
-          { debugContext },
+          {
+            debugContext,
+            reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId),
+          },
         );
       } finally {
         await client.close().catch(() => undefined);
