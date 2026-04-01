@@ -4396,6 +4396,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+## 2026-04-01 — Fresh ChatGPT acceptance no longer depends on warm state
+
+- Area: ChatGPT browser acceptance
+- Symptom:
+  - after the phased rerun went green, there was still a risk that ChatGPT
+    acceptance only passed because the browser/session/project state was already
+    warm from prior live debugging and partial sweeps
+- Fix:
+  - reran `scripts/chatgpt-acceptance.ts` from a brand-new state file so the
+    full ChatGPT flow had to recreate and verify state from scratch
+- Verification:
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --state-file docs/dev/tmp/chatgpt-fresh-state.json --command-timeout-ms 900000`
+  - result: `PASS (full)`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

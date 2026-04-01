@@ -2728,3 +2728,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-01 — Fresh-state ChatGPT acceptance sweep is green
+
+- Focus: confirm the repaired ChatGPT browser path does not depend on warm
+  browser/session state from earlier phased runs
+- Implemented:
+  - ran `scripts/chatgpt-acceptance.ts` from a new state file:
+    `docs/dev/tmp/chatgpt-fresh-state.json`
+  - let the sweep execute end to end from a cold acceptance state across:
+    project CRUD, project conversation CRUD, root conversation CRUD, root
+    followups/files, and final cleanup/project removal
+- Verification:
+  - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --state-file docs/dev/tmp/chatgpt-fresh-state.json --command-timeout-ms 900000`
+  - result: `PASS (full)`
