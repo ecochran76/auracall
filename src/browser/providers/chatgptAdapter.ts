@@ -23,7 +23,7 @@ import {
   DEFAULT_DIALOG_SELECTORS,
   dismissOverlayRoot,
   hoverElement,
-  openRevealedRowMenu,
+  openAndSelectRevealedRowMenuItem,
   PressButtonOptions,
   navigateAndSettle,
   openAndSelectMenuItem,
@@ -4598,15 +4598,18 @@ async function openChatgptTaggedConversationSidebarMenu(
     };
   };
 
-  const opened = await openRevealedRowMenu(client, {
+  const opened = await openAndSelectRevealedRowMenuItem(client, {
     rowSelector: tagged.rowSelector,
     triggerSelector: tagged.actionSelector,
     rootSelectors: ['nav', 'aside', tagged.rowSelector],
     triggerRootSelectors: [tagged.rowSelector],
     actionMatch: { startsWith: [CHATGPT_CONVERSATION_OPTIONS_PREFIX] },
     menuSelector: '[role="menu"]',
+    itemMatch: { exact: [itemLabel] },
     prepareTriggerBeforeOpen: true,
     directTriggerClickFallback: true,
+    itemInteractionStrategies: ['pointer'],
+    closeMenuAfter: itemLabel !== CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
     timeoutMs,
   });
   if (!opened.ok) {
@@ -4616,36 +4619,9 @@ async function openChatgptTaggedConversationSidebarMenu(
       diagnostics: await collectDiagnostics(),
     };
   }
-  const menuSelector = opened.menuSelector || '[role="menu"]';
-  const itemSelected =
-    itemLabel === CHATGPT_CONVERSATION_ACTION_RENAME_LABEL
-      ? (
-          await pressButton(client.Runtime, {
-            match: { exact: [itemLabel] },
-            rootSelectors: [menuSelector],
-            interactionStrategies: ['pointer'],
-            requireVisible: true,
-            timeoutMs,
-          })
-        ).ok
-      : await selectMenuItem(client.Runtime, {
-          menuSelector,
-          menuRootSelectors: [menuSelector],
-          itemMatch: { exact: [itemLabel] },
-          timeoutMs,
-          closeMenuAfter: true,
-        });
-  if (!itemSelected) {
-    return {
-      ok: false,
-      reason: `Menu item ${itemLabel} not found`,
-      menuSelector,
-      diagnostics: await collectDiagnostics(),
-    };
-  }
   return {
     ok: true,
-    menuSelector,
+    menuSelector: opened.menuSelector || '[role="menu"]',
     diagnostics: await collectDiagnostics(),
   };
 }

@@ -4410,6 +4410,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --state-file docs/dev/tmp/chatgpt-fresh-state.json --command-timeout-ms 900000`
   - result: `PASS (full)`
 
+## 2026-04-01 — Revealed row menu-item selection moved into browser-service
+
+- Area: Browser-service row actions / ChatGPT conversation CRUD
+- Symptom:
+  - the repaired ChatGPT root/project rename/delete flow still carried its own
+    local `hover row -> open row menu -> pointer-select item` mechanics even
+    after the surface had stabilized, which left other providers with no
+    package-owned primitive for the same pattern
+- Fix:
+  - added `openAndSelectRevealedRowMenuItem(...)` to
+    `packages/browser-service/src/service/ui.ts`
+  - rewired the ChatGPT exact-row rename/delete menu opener to use the new
+    package helper while leaving exact row identity resolution and follow-up
+    verification in the provider adapter
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

@@ -416,6 +416,13 @@ export type OpenRevealedRowMenuOptions = {
   timeoutMs?: number;
 };
 
+export type OpenAndSelectRevealedRowMenuItemOptions = OpenRevealedRowMenuOptions & {
+  itemMatch: LabelMatchOptions;
+  closeMenuAfter?: boolean;
+  itemInteractionStrategies?: readonly UiInteractionStrategy[];
+  itemRootSelectors?: readonly string[];
+};
+
 export type PressDialogButtonOptions = {
   match: LabelMatchOptions;
   rootSelectors?: readonly string[];
@@ -2069,6 +2076,39 @@ export async function openRevealedRowMenu(
     return { ok: false, reason: 'Row menu did not open' };
   }
   return { ok: true, menuSelector: opened.menuSelector || options.menuSelector };
+}
+
+export async function openAndSelectRevealedRowMenuItem(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  options: OpenAndSelectRevealedRowMenuItemOptions,
+): Promise<{ ok: boolean; reason?: string; menuSelector?: string }> {
+  const timeoutMs = options.timeoutMs ?? 5000;
+  const opened = await openRevealedRowMenu(client, options);
+  if (!opened.ok) {
+    return opened;
+  }
+
+  const menuSelector = opened.menuSelector || options.menuSelector;
+  const itemRootSelectors = options.itemRootSelectors ?? (menuSelector ? [menuSelector] : ['[role="menu"]']);
+  const interactionStrategies = resolveInteractionStrategies(options.itemInteractionStrategies, ['pointer']);
+  const clicked = await pressButton(client.Runtime, {
+    match: options.itemMatch,
+    rootSelectors: itemRootSelectors,
+    interactionStrategies,
+    requireVisible: true,
+    timeoutMs,
+  });
+  if (!clicked.ok) {
+    return {
+      ok: false,
+      reason: clicked.reason || 'Row menu item not found',
+      menuSelector,
+    };
+  }
+  if (options.closeMenuAfter) {
+    await waitForNotSelector(client.Runtime, menuSelector || '[role="menu"], [role="listbox"]', timeoutMs);
+  }
+  return { ok: true, menuSelector };
 }
 
 export async function pressDialogButton(

@@ -2742,3 +2742,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --state-file docs/dev/tmp/chatgpt-fresh-state.json --command-timeout-ms 900000`
   - result: `PASS (full)`
+
+## 2026-04-01 — Browser-service now owns revealed row-menu item selection
+
+- Focus: move the now-stable ChatGPT row-action mechanics down into
+  `packages/browser-service/` without moving provider-specific row resolution
+- Implemented:
+  - added package-owned `openAndSelectRevealedRowMenuItem(...)` to combine:
+    hover-reveal row, open the row menu from a specific trigger, and pointer-
+    select a specific menu item
+  - rewired the ChatGPT exact-row rename/delete opener to use that helper while
+    keeping the exact conversation-row resolver and post-condition waits inside
+    the adapter
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

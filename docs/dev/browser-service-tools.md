@@ -250,6 +250,12 @@ Current active extraction plan:
   - Supports optional trigger preparation plus a direct trigger-click fallback for
     link-adjacent menu buttons that need navigation suppression before the menu opens.
 
+- `openAndSelectRevealedRowMenuItem({ Runtime, Input }, options)`
+  - Shared “hover row, open its menu, then pointer-select a specific item”
+    helper for stable row-local menu actions like Rename/Delete.
+  - Prefer this when the provider-specific logic starts after the menu item has
+    been invoked rather than at menu-open time.
+
 - `pressDialogButton(Runtime, options)`
   - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.
 

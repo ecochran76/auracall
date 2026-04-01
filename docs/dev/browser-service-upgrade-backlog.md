@@ -92,6 +92,10 @@ Current active plan:
   - `openSubmenu(...)` and `selectNestedMenuPath(...)` are now package-owned, so
     provider code can express top-level menu -> submenu -> target-item flows
     without recreating menu traversal glue.
+  - `openAndSelectRevealedRowMenuItem(...)` is now package-owned for the stable
+    “hover row -> open revealed menu -> pointer-select item” interaction shape;
+    keep exact row identity resolution and post-condition verification in the
+    provider unless those also repeat elsewhere.
   - `inspectNestedMenuPathSelection(...)` and
     `selectAndVerifyNestedMenuPathOption(...)` are now package-owned, so
     adapters can reopen a menu family, inspect selected-state from menu markup,

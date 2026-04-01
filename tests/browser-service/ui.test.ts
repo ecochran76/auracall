@@ -12,6 +12,7 @@ import {
   inspectNestedMenuPathSelection,
   navigateAndSettle,
   openMenu,
+  openAndSelectRevealedRowMenuItem,
   openRevealedRowMenu,
   openAndSelectMenuItemFromTriggers,
   selectAndVerifyNestedMenuPathOption,
@@ -1281,6 +1282,60 @@ describe('browser-service ui wait helpers', () => {
     );
 
     expect(result).toEqual({ ok: true, menuSelector: '[role="menu"]' });
+    expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
+  });
+
+  test('openAndSelectRevealedRowMenuItem opens a revealed row menu and pointer-selects an item', async () => {
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression.includes('document.elementFromPoint')) {
+          return { result: { value: { ok: true, element: { tag: 'button' } } } };
+        }
+        if (options.expression.includes('const matchOptions =')) {
+          return { result: { value: { ok: true, actions: [{ label: 'options' }] } } };
+        }
+        if (options.expression.includes('const selector = "[data-options=\\"true\\"]"')) {
+          return { result: { value: { ok: true, matchedLabel: 'options', listId: 'menu-123', rootSelectorUsed: '[data-row=\\"true\\"]' } } };
+        }
+        if (options.expression.includes('const selector = null;')) {
+          return { result: { value: { ok: true, matchedLabel: 'rename', rootSelectorUsed: '#menu-123' } } };
+        }
+        if (options.expression.includes('Boolean(document.querySelector("#menu-123"))')) {
+          return { result: { value: true } };
+        }
+        if (options.expression.includes('center: { x: rect.left + rect.width / 2')) {
+          return {
+            result: {
+              value: {
+                ok: true,
+                rect: { x: 10, y: 20, width: 100, height: 32 },
+                center: { x: 60, y: 36 },
+              },
+            },
+          };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const input = {
+      dispatchMouseEvent: vi.fn(async () => undefined),
+    };
+
+    const result = await openAndSelectRevealedRowMenuItem(
+      { Runtime: runtime as never, Input: input as never },
+      {
+        rowSelector: '[data-row="true"]',
+        triggerSelector: '[data-options="true"]',
+        rootSelectors: ['nav'],
+        triggerRootSelectors: ['[data-row="true"]'],
+        actionMatch: { exact: ['options'] },
+        menuSelector: '[role="menu"]',
+        itemMatch: { exact: ['rename'] },
+        timeoutMs: 50,
+      },
+    );
+
+    expect(result).toEqual({ ok: true, menuSelector: '#menu-123' });
     expect(input.dispatchMouseEvent).toHaveBeenCalledTimes(2);
   });
 
