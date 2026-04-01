@@ -4428,6 +4428,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+## 2026-04-01 — Anchored row-action diagnostics moved into browser-service
+
+- Area: Browser-service diagnostics / ChatGPT row actions
+- Symptom:
+  - ChatGPT still carried three almost-identical local diagnostics collectors
+    for exact-row menu open, rename-editor readiness, and delete-confirmation
+    readiness, each rebuilding row/trigger visibility plus menu/overlay
+    snapshots separately
+- Fix:
+  - added `collectAnchoredActionDiagnostics(...)` to the browser-service UI
+    helpers
+  - rewired the ChatGPT exact-row rename/delete diagnostics to use the shared
+    helper while preserving provider-specific row matching and post-condition
+    logic
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

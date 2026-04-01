@@ -17,7 +17,7 @@ import type {
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import {
   armDownloadCapture,
-  collectVisibleMenuInventory,
+  collectAnchoredActionDiagnostics,
   collectVisibleOverlayInventory,
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
@@ -4559,44 +4559,14 @@ async function openChatgptTaggedConversationSidebarMenu(
   itemLabel: string,
   timeoutMs = 4_000,
 ): Promise<{ ok: boolean; reason?: string; menuSelector?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () => {
-    const rowSnapshot = await client.Runtime.evaluate({
-      expression: `(() => {
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const isVisible = (node) => {
-          if (!(node instanceof Element)) return false;
-          const rect = node.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
-        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
-        return {
-          rowFound: row instanceof Element,
-          rowVisible: isVisible(row),
-          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
-          triggerFound: trigger instanceof Element,
-          triggerVisible: isVisible(trigger),
-          triggerLabel:
-            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
-          activeTag: document.activeElement instanceof Element ? document.activeElement.tagName.toLowerCase() : null,
-          activeAria:
-            document.activeElement instanceof Element
-              ? normalize(document.activeElement.getAttribute('aria-label') || document.activeElement.textContent || '')
-              : null,
-        };
-      })()`,
-      returnByValue: true,
-    });
-    const menus = await collectVisibleMenuInventory(client.Runtime, {
+  const collectDiagnostics = async () =>
+    collectAnchoredActionDiagnostics(client.Runtime, {
+      rowSelector: tagged.rowSelector,
+      triggerSelector: tagged.actionSelector,
       anchorSelector: tagged.actionSelector,
       anchorRootSelectors: [tagged.rowSelector],
-      limit: 6,
-    }).catch(() => []);
-    return {
-      row: rowSnapshot.result?.value ?? null,
-      menus,
-    };
-  };
+      context: { itemLabel },
+    });
 
   const opened = await openAndSelectRevealedRowMenuItem(client, {
     rowSelector: tagged.rowSelector,
@@ -4631,42 +4601,15 @@ async function openChatgptTaggedConversationRenameEditor(
   tagged: { rowSelector: string; actionSelector: string },
   timeoutMs = 12_000,
 ): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () => {
-    const rowSnapshot = await client.Runtime.evaluate({
-      expression: `(() => {
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const isVisible = (node) => {
-          if (!(node instanceof Element)) return false;
-          const rect = node.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
-        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
-        const editor = document.querySelector('input[name="title-editor"]');
-        return {
-          rowFound: row instanceof Element,
-          rowVisible: isVisible(row),
-          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
-          triggerFound: trigger instanceof Element,
-          triggerVisible: isVisible(trigger),
-          triggerLabel:
-            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
-          editorVisible: editor instanceof HTMLInputElement ? isVisible(editor) : false,
-          editorValue: editor instanceof HTMLInputElement ? editor.value : null,
-        };
-      })()`,
-      returnByValue: true,
-    });
-    const menus = await collectVisibleMenuInventory(client.Runtime, {
+  const collectDiagnostics = async () =>
+    collectAnchoredActionDiagnostics(client.Runtime, {
+      rowSelector: tagged.rowSelector,
+      triggerSelector: tagged.actionSelector,
+      editorSelector: 'input[name="title-editor"]',
       anchorSelector: tagged.actionSelector,
       anchorRootSelectors: [tagged.rowSelector],
-      limit: 6,
-    }).catch(() => []);
-    return {
-      row: rowSnapshot.result?.value ?? null,
-      menus,
-    };
-  };
+      context: { phase: 'rename-editor' },
+    });
 
   const renameOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
     itemLabel: CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
@@ -4708,49 +4651,15 @@ async function openChatgptTaggedConversationDeleteConfirmation(
   expectedTitle?: string | null,
   timeoutMs = 12_000,
 ): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () => {
-    const rowSnapshot = await client.Runtime.evaluate({
-      expression: `(() => {
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const isVisible = (node) => {
-          if (!(node instanceof Element)) return false;
-          const rect = node.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        const row = document.querySelector(${JSON.stringify(tagged.rowSelector)});
-        const trigger = document.querySelector(${JSON.stringify(tagged.actionSelector)});
-        const dialog = document.querySelector('[role="dialog"], dialog[open]');
-        return {
-          rowFound: row instanceof Element,
-          rowVisible: isVisible(row),
-          rowText: row instanceof Element ? normalize(row.textContent || '') : null,
-          triggerFound: trigger instanceof Element,
-          triggerVisible: isVisible(trigger),
-          triggerLabel:
-            trigger instanceof Element ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') : null,
-          dialogVisible: dialog instanceof Element ? isVisible(dialog) : false,
-          dialogText: dialog instanceof Element ? normalize(dialog.textContent || '') : null,
-        };
-      })()`,
-      returnByValue: true,
-    });
-    const menus = await collectVisibleMenuInventory(client.Runtime, {
-      anchorSelector: tagged.actionSelector,
-      anchorRootSelectors: [tagged.rowSelector],
-      limit: 6,
-    }).catch(() => []);
-    const overlays = await collectVisibleOverlayInventory(client.Runtime, {
-      overlaySelectors: DEFAULT_DIALOG_SELECTORS,
+  const collectDiagnostics = async () =>
+    collectAnchoredActionDiagnostics(client.Runtime, {
+      rowSelector: tagged.rowSelector,
+      triggerSelector: tagged.actionSelector,
+      dialogSelectors: DEFAULT_DIALOG_SELECTORS,
       anchorSelector: tagged.rowSelector,
       anchorRootSelectors: [tagged.rowSelector],
-      limit: 4,
-    }).catch(() => []);
-    return {
-      row: rowSnapshot.result?.value ?? null,
-      menus,
-      overlays,
-    };
-  };
+      context: { phase: 'delete-confirmation', expectedTitle: expectedTitle ?? null },
+    });
 
   const deleteOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
     itemLabel: CHATGPT_CONVERSATION_ACTION_DELETE_LABEL,

@@ -96,6 +96,10 @@ Current active plan:
     “hover row -> open revealed menu -> pointer-select item” interaction shape;
     keep exact row identity resolution and post-condition verification in the
     provider unless those also repeat elsewhere.
+  - `collectAnchoredActionDiagnostics(...)` is now package-owned for row-action
+    failure evidence; adapters should prefer it over local
+    `row/trigger/menu/dialog` probe collectors when the diagnostic shape is the
+    same.
   - `inspectNestedMenuPathSelection(...)` and
     `selectAndVerifyNestedMenuPathOption(...)` are now package-owned, so
     adapters can reopen a menu family, inspect selected-state from menu markup,

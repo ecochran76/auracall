@@ -256,6 +256,14 @@ Current active extraction plan:
   - Prefer this when the provider-specific logic starts after the menu item has
     been invoked rather than at menu-open time.
 
+- `collectAnchoredActionDiagnostics(Runtime, options)`
+  - Captures a compact row-action snapshot: row state, trigger state, optional
+    editor state, optional dialog state, active element, visible menus, and
+    visible overlays around an anchor.
+  - Prefer this over provider-local `Runtime.evaluate(...)` snapshots when a
+    row/menu/editor/dialog flow needs failure evidence tied to one specific row
+    action surface.
+
 - `pressDialogButton(Runtime, options)`
   - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.
 

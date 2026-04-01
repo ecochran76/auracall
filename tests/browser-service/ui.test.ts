@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
   armDownloadCapture,
+  collectAnchoredActionDiagnostics,
   readDownloadCapture,
   clickRevealedRowAction,
   collectVisibleOverlayInventory,
@@ -338,6 +339,87 @@ describe('browser-service ui wait helpers', () => {
         buttonLabels: ['Okay'],
       },
     ]);
+  });
+
+  test('collectAnchoredActionDiagnostics captures row, trigger, editor, dialog, menu, and overlay state', async () => {
+    const runtime = createRuntime([
+      {
+        row: { found: true, visible: true, text: 'AC GPT C demo' },
+        trigger: { found: true, visible: true, label: 'Open conversation options for AC GPT C demo' },
+        editor: { found: true, visible: true, value: 'AC GPT C demo' },
+        dialog: { found: true, visible: true, text: 'Delete this chat?' },
+        activeElement: { tag: 'input', ariaLabel: null, text: null },
+      },
+      [
+        {
+          selector: '[role="menu"]',
+          oracleSelector: '[data-oracle-visible-menu-index="0"]',
+          signature: 'menu-1',
+          rect: { x: 100, y: 20, width: 240, height: 160 },
+          distanceToAnchor: 18,
+          items: [{ label: 'rename', role: 'menuitem', selected: false }],
+          itemLabels: ['rename'],
+        },
+      ],
+      [
+        {
+          selector: '[role="dialog"]',
+          oracleSelector: '[data-oracle-visible-overlay-index="0"]',
+          signature: 'overlay-1',
+          rect: { x: 80, y: 40, width: 320, height: 180 },
+          distanceToAnchor: 12,
+          tag: 'div',
+          role: 'dialog',
+          ariaLabel: 'Delete chat',
+          text: 'Delete this chat?',
+          buttonLabels: ['Delete'],
+        },
+      ],
+    ]);
+
+    const result = await collectAnchoredActionDiagnostics(runtime as never, {
+      rowSelector: '[data-row="true"]',
+      triggerSelector: '[data-options="true"]',
+      editorSelector: 'input[name="title-editor"]',
+      dialogSelectors: ['[role="dialog"]'],
+      anchorSelector: '[data-options="true"]',
+      anchorRootSelectors: ['[data-row="true"]'],
+      context: { phase: 'rename' },
+    });
+
+    expect(result).toEqual({
+      row: { found: true, visible: true, text: 'AC GPT C demo' },
+      trigger: { found: true, visible: true, label: 'Open conversation options for AC GPT C demo' },
+      editor: { found: true, visible: true, value: 'AC GPT C demo' },
+      dialog: { found: true, visible: true, text: 'Delete this chat?' },
+      activeElement: { tag: 'input', ariaLabel: null, text: null },
+      menus: [
+        {
+          selector: '[data-oracle-visible-menu-index="0"]',
+          sourceSelector: '[role="menu"]',
+          signature: 'menu-1',
+          rect: { x: 100, y: 20, width: 240, height: 160 },
+          distanceToAnchor: 18,
+          items: [{ label: 'rename', role: 'menuitem', selected: false }],
+          itemLabels: ['rename'],
+        },
+      ],
+      overlays: [
+        {
+          selector: '[data-oracle-visible-overlay-index="0"]',
+          sourceSelector: '[role="dialog"]',
+          signature: 'overlay-1',
+          rect: { x: 80, y: 40, width: 320, height: 180 },
+          distanceToAnchor: 12,
+          tag: 'div',
+          role: 'dialog',
+          ariaLabel: 'Delete chat',
+          text: 'Delete this chat?',
+          buttonLabels: ['Delete'],
+        },
+      ],
+      context: { phase: 'rename' },
+    });
   });
 
   test('waitForMenuOpen picks the best visible menu by expected item labels and novelty', async () => {

@@ -2757,3 +2757,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-01 — Browser-service now owns anchored row-action diagnostics
+
+- Focus: replace repeated provider-local row/menu/editor/dialog state collectors
+  with one package-owned diagnostic shape
+- Implemented:
+  - added `collectAnchoredActionDiagnostics(...)` to
+    `packages/browser-service/src/service/ui.ts`
+  - rewired the ChatGPT exact-row rename/delete diagnostics collectors to use
+    the new helper instead of three local `Runtime.evaluate(...)` snapshots
+    plus ad hoc menu/overlay inventory stitching
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

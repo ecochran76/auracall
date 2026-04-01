@@ -520,6 +520,48 @@ export type CollectUiDiagnosticsOptions = {
   context?: Record<string, unknown>;
 };
 
+export type CollectAnchoredActionDiagnosticsOptions = {
+  rowSelector?: string;
+  triggerSelector?: string;
+  editorSelector?: string;
+  dialogSelectors?: readonly string[];
+  menuSelectors?: readonly string[];
+  anchorSelector?: string;
+  anchorRootSelectors?: readonly string[];
+  context?: Record<string, unknown>;
+};
+
+export type AnchoredActionDiagnostics = {
+  row: {
+    found: boolean;
+    visible: boolean;
+    text: string | null;
+  };
+  trigger: {
+    found: boolean;
+    visible: boolean;
+    label: string | null;
+  };
+  editor: {
+    found: boolean;
+    visible: boolean;
+    value: string | null;
+  } | null;
+  dialog: {
+    found: boolean;
+    visible: boolean;
+    text: string | null;
+  } | null;
+  activeElement: {
+    tag: string | null;
+    ariaLabel: string | null;
+    text: string | null;
+  } | null;
+  menus: VisibleMenuInventoryEntry[];
+  overlays: VisibleOverlayInventoryEntry[];
+  context?: Record<string, unknown>;
+};
+
 export type UiDiagnosticElement = {
   selector: string;
   tag: string | null;
@@ -1174,6 +1216,115 @@ export async function collectUiDiagnostics(
       context: options.context,
     }
   );
+}
+
+export async function collectAnchoredActionDiagnostics(
+  Runtime: ChromeClient['Runtime'],
+  options: CollectAnchoredActionDiagnosticsOptions = {},
+): Promise<AnchoredActionDiagnostics> {
+  const rowSelector = options.rowSelector ?? null;
+  const triggerSelector = options.triggerSelector ?? null;
+  const editorSelector = options.editorSelector ?? null;
+  const dialogSelectors = Array.from(options.dialogSelectors ?? DEFAULT_DIALOG_SELECTORS);
+  const menuSelectors = Array.from(options.menuSelectors ?? DEFAULT_VISIBLE_MENU_SELECTORS);
+  const anchorSelector = options.anchorSelector ?? triggerSelector ?? rowSelector ?? null;
+  const anchorRootSelectors = options.anchorRootSelectors ?? [rowSelector, triggerSelector].filter(
+    (selector): selector is string => Boolean(selector),
+  );
+
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const rowSelector = ${JSON.stringify(rowSelector)};
+      const triggerSelector = ${JSON.stringify(triggerSelector)};
+      const editorSelector = ${JSON.stringify(editorSelector)};
+      const dialogSelectors = ${JSON.stringify(dialogSelectors)};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const summarizeEditor = (node) => {
+        if (!(node instanceof Element)) {
+          return { found: false, visible: false, value: null };
+        }
+        const value =
+          node instanceof HTMLInputElement || node instanceof HTMLTextAreaElement
+            ? node.value
+            : normalize(node.textContent || '');
+        return {
+          found: true,
+          visible: isVisible(node),
+          value: value || null,
+        };
+      };
+      const summarizeElement = (node) => ({
+        found: node instanceof Element,
+        visible: isVisible(node),
+        text: node instanceof Element ? normalize(node.textContent || '') || null : null,
+      });
+      const row = rowSelector ? document.querySelector(rowSelector) : null;
+      const trigger = triggerSelector ? document.querySelector(triggerSelector) : null;
+      const editor = editorSelector ? document.querySelector(editorSelector) : null;
+      const dialog =
+        dialogSelectors
+          .map((selector) => document.querySelector(selector))
+          .find((node) => node instanceof Element && isVisible(node)) || null;
+      const active = document.activeElement instanceof Element ? document.activeElement : null;
+      return {
+        row: summarizeElement(row),
+        trigger: {
+          found: trigger instanceof Element,
+          visible: isVisible(trigger),
+          label:
+            trigger instanceof Element
+              ? normalize(trigger.getAttribute('aria-label') || trigger.textContent || '') || null
+              : null,
+        },
+        editor: editorSelector ? summarizeEditor(editor) : null,
+        dialog: dialogSelectors.length
+          ? {
+              found: dialog instanceof Element,
+              visible: isVisible(dialog),
+              text: dialog instanceof Element ? normalize(dialog.textContent || '') || null : null,
+            }
+          : null,
+        activeElement: active
+          ? {
+              tag: active.tagName?.toLowerCase?.() ?? null,
+              ariaLabel: normalize(active.getAttribute('aria-label') || '') || null,
+              text: normalize(active.textContent || '') || null,
+            }
+          : null,
+      };
+    })()`,
+    returnByValue: true,
+  });
+
+  const snapshot = (result?.value ?? null) as Omit<AnchoredActionDiagnostics, 'menus' | 'overlays' | 'context'> | null;
+  const menus = await collectVisibleMenuInventory(Runtime, {
+    menuSelectors,
+    anchorSelector: anchorSelector ?? undefined,
+    anchorRootSelectors,
+    limit: 6,
+  }).catch(() => []);
+  const overlays = await collectVisibleOverlayInventory(Runtime, {
+    overlaySelectors: dialogSelectors,
+    anchorSelector: anchorSelector ?? undefined,
+    anchorRootSelectors,
+    limit: 4,
+  }).catch(() => []);
+
+  return {
+    row: snapshot?.row ?? { found: false, visible: false, text: null },
+    trigger: snapshot?.trigger ?? { found: false, visible: false, label: null },
+    editor: snapshot?.editor ?? null,
+    dialog: snapshot?.dialog ?? null,
+    activeElement: snapshot?.activeElement ?? null,
+    menus,
+    overlays,
+    context: options.context,
+  };
 }
 
 export async function collectVisibleMenuInventory(
