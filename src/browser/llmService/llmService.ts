@@ -1876,6 +1876,14 @@ export abstract class LlmService {
     if (this.providerId === 'chatgpt' && isChatgptRateLimitMessage(message)) {
       return true;
     }
+    if (
+      this.providerId === 'chatgpt' &&
+      /server connection failed|connection failed|connection lost|network error|failed to connect|unable to connect|something went wrong|an error occurred|message could not be generated|please try again/i.test(
+        message,
+      )
+    ) {
+      return true;
+    }
     return message.includes('WebSocket connection closed') || message.includes('ECONNRESET');
   }
 

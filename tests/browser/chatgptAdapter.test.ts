@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import { normalizeProjectMemoryMode } from '../../src/browser/providers/domain.js';
 import {
+  classifyChatgptBlockingSurfaceProbe,
   createChatgptAdapter,
   extractChatgptConversationArtifactsFromPayload,
   extractChatgptConversationIdFromUrl,
@@ -20,6 +21,7 @@ import {
   normalizeChatgptConversationLinkProbes,
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
+  isRetryableChatgptTransientMessage,
   resolveChatgptConversationUrl,
   resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
@@ -157,6 +159,65 @@ describe('resolveChatgptProjectUrl', () => {
     expect(resolveChatgptProjectUrl('g-p-69c851be8cc88191afe109bea1b2a28d')).toBe(
       'https://chatgpt.com/g/g-p-69c851be8cc88191afe109bea1b2a28d/project',
     );
+  });
+});
+
+describe('classifyChatgptBlockingSurfaceProbe', () => {
+  test('classifies rate limit surfaces', () => {
+    expect(
+      classifyChatgptBlockingSurfaceProbe({
+        text: 'Too many requests. You are making requests too quickly. Please try again later.',
+      }),
+    ).toEqual({
+      kind: 'rate-limit',
+      summary: 'Too many requests.',
+    });
+  });
+
+  test('classifies connection failures', () => {
+    expect(
+      classifyChatgptBlockingSurfaceProbe({
+        text: 'Server connection failed. Please check your network and try again.',
+      }),
+    ).toEqual({
+      kind: 'connection-failed',
+      summary: 'Server connection failed.',
+    });
+  });
+
+  test('classifies retry affordances on failed chat turns', () => {
+    expect(
+      classifyChatgptBlockingSurfaceProbe({
+        text: 'Server connection failed.',
+        buttonLabels: ['Retry'],
+      }),
+    ).toEqual({
+      kind: 'retry-affordance',
+      summary: 'retry',
+    });
+  });
+
+  test('classifies generic transient error surfaces', () => {
+    expect(
+      classifyChatgptBlockingSurfaceProbe({
+        text: 'Something went wrong while generating the response. Please try again.',
+      }),
+    ).toEqual({
+      kind: 'transient-error',
+      summary: 'Something went wrong while generating the response.',
+    });
+  });
+});
+
+describe('isRetryableChatgptTransientMessage', () => {
+  test('treats known transient ChatGPT failures as retryable', () => {
+    expect(isRetryableChatgptTransientMessage('Server connection failed.')).toBe(true);
+    expect(isRetryableChatgptTransientMessage('Something went wrong. Please try again.')).toBe(true);
+    expect(isRetryableChatgptTransientMessage('Too many requests.')).toBe(true);
+  });
+
+  test('does not mark unrelated text as retryable', () => {
+    expect(isRetryableChatgptTransientMessage('Project settings')).toBe(false);
   });
 });
 

@@ -92,6 +92,7 @@
     - `cleanup` green
   - Existing-conversation browser runs now reject reused assistant turns when a visible ChatGPT rate-limit modal blocks the new send, instead of returning the previous assistant answer as false success.
   - Post-MVP polish work is tracked in [chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-polish-plan.md).
+  - Broader hostile-state hardening work is tracked in [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md).
 - MCP focused: `pnpm test:mcp` (builds then stdio smoke via mcporter).
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.

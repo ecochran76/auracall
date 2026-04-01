@@ -4463,6 +4463,30 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+## 2026-04-01 — ChatGPT transient blocking-surface classification started
+
+- Area: ChatGPT browser reliability / bad-state recovery
+- Symptom:
+  - ChatGPT CRUD/history/context surfaces were green, but hostile-state handling
+    still focused mostly on the visible rate-limit modal and generic connection
+    resets
+  - that left red/white transient error surfaces, `server connection failed`
+    states, and visible retry affordances under-classified
+- Fix:
+  - added `docs/dev/chatgpt-hardening-plan.md` as the dedicated hardening plan
+  - added pure blocking-surface classifiers in `chatgptAdapter.ts` for:
+    - `rate-limit`
+    - `connection-failed`
+    - `retry-affordance`
+    - `transient-error`
+  - expanded the existing ChatGPT blocking-surface recovery inspector to look
+    beyond the rate-limit modal and include visible retry-affordance buttons
+  - widened llmservice ChatGPT retryability matching for known transient
+    connection/error strings
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

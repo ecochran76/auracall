@@ -1,0 +1,164 @@
+# ChatGPT Hardening Plan
+
+Goal: move ChatGPT browser support from "green on the happy path with guarded acceptance" to "resilient against real bad-state UI and backend instability" on the managed WSL Chrome path.
+
+This is a reliability plan, not a new-surface plan. Core ChatGPT CRUD/history/context/artifact surfaces are already implemented and acceptance-green. The remaining work is hostile-state detection, recovery, and operator-visible failure classification.
+
+Current baseline:
+- root conversation CRUD is green
+- project conversation CRUD is green
+- project CRUD/files/instructions are green
+- conversation context/history ingestion is green
+- artifact extraction/materialization is green for the current representative smoke set
+- fresh-state full ChatGPT acceptance is green
+
+What is not yet hardened enough:
+- visible transient error toasts/banners, especially red/white error surfaces
+- `server connection failed` / network/server-side bad-chat states
+- conversations that surface visible `Retry` / `Try again` / `Regenerate response` affordances
+- sluggish server/network conditions that create partial or stale DOM
+- distinction between "transient and retryable" vs "conversation genuinely in a bad state"
+- operator-facing diagnostics that classify the failure without requiring DOM spelunking
+
+## Hardening targets
+
+### 1. Blocking/transient surface classification
+
+Add a provider-owned classifier for visible ChatGPT bad states:
+- rate-limit modal/dialog
+- transient connection/server failure
+- visible retry-affordance state
+- generic transient error toast/banner
+
+Requirements:
+- classify from visible overlay/button state first, not only thrown text
+- keep the classifier conservative; avoid matching normal confirm dialogs
+- expose a short summary suitable for logs and error messages
+
+Definition of done:
+- provider can return a structured `kind + summary + selector/details`
+- unit tests cover at least the known strings:
+  - `Too many requests`
+  - `server connection failed`
+  - `Retry` / `Try again`
+  - generic `Something went wrong`
+
+### 2. Recovery policy matrix
+
+For each classified bad state, define an explicit recovery policy:
+- `rate-limit`
+  - dismiss if possible
+  - pause
+  - retry once
+  - then defer to persisted cooldown guard
+- `connection-failed`
+  - do not blindly mutate the chat
+  - refresh/reopen conversation route once
+  - re-check conversation surface readiness
+- `retry-affordance`
+  - for read-only operations, never click retry automatically
+  - classify and attempt a non-mutating recover path first:
+    - refresh
+    - reopen conversation from authoritative list
+    - retry read
+  - for send/mutate flows, policy must be explicit before any automatic click is allowed
+- `transient-error`
+  - dismiss if the surface is a toast/dialog with a close affordance
+  - otherwise pause briefly and retry once
+
+Definition of done:
+- each class has one package/provider-visible policy
+- recovery is bounded and does not loop indefinitely
+- failures that survive recovery are surfaced with classed errors
+
+### 3. Read-path hardening
+
+Apply the classifier/recovery matrix first to the highest-value read paths:
+- `conversations context get`
+- `conversations artifacts fetch`
+- `conversations files list`
+- conversation list refresh on root/project surfaces
+
+Requirements:
+- read paths should prefer refresh/reopen/re-read over failing on the first transient UI problem
+- if a stale/partial DOM is suspected, use current route + authoritative list/page surface to re-anchor
+- rejection should preserve classified diagnostics
+
+Definition of done:
+- the read paths survive one transient visible bad state without operator intervention
+- retryable failures are distinguishable from permanent/not-implemented failures
+
+### 4. Send/mutation hardening
+
+Extend hardening to mutating/chat-driving paths:
+- browser prompt send
+- rename/delete/project remove
+- project file/instructions writes
+
+Requirements:
+- never auto-click ChatGPT controls that materially change model behavior (`Answer now` remains forbidden)
+- do not auto-click retry/regenerate on failed assistant turns until there is a clear operation-specific policy
+- if a send appears blocked by a transient state, reject stale assistant reuse and surface the classified reason
+- if a mutation loses route/session state, re-anchor on the authoritative row/list surface before retrying
+
+Definition of done:
+- mutation flows do not report false success on stale or broken chat state
+- recovery remains bounded and explicit
+
+### 5. Post-condition and bad-state verification
+
+Strengthen the distinction between:
+- action fired
+- UI changed
+- intended state persisted
+- chat is actually healthy again
+
+Examples:
+- rename success = authoritative row text changed
+- delete success = authoritative row disappeared
+- read success = conversation DOM + payload/turn state are both coherent
+- send success = fresh assistant/user state exists and is not blocked by a visible bad-state surface
+
+Definition of done:
+- verification helpers reject partial/bad-state DOMs
+- success means the target state is healthy, not just that one click landed
+
+### 6. Diagnostics and operator workflow
+
+Expand durable failure context for ChatGPT:
+- classified failure kind
+- short summary
+- whether recovery was attempted
+- whether the path refreshed/reopened
+- row/menu/dialog diagnostics where applicable
+
+Operator guidance to preserve:
+- phased acceptance remains the default
+- fresh-state sweep remains the periodic confidence bar
+- no Pro testing on this account
+
+Definition of done:
+- common transient failures can be understood from the error/log output alone
+- docs/testing and polish docs describe the current operator workflow
+
+## Recommended implementation order
+
+1. Blocking/transient surface classifier
+2. Read-path recovery adoption
+3. Failure classification in llmservice retry policy
+4. Send/mutation bad-state handling
+5. Broader live smoke for hostile-state scenarios
+
+## Acceptance bar for hardening
+
+Required before calling this plan substantially complete:
+- focused unit coverage for classifier/recovery helpers
+- `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+- `pnpm exec tsc -p tsconfig.json --noEmit`
+- one guarded live rerun of ChatGPT acceptance after the read-path hardening slice lands
+
+Non-goals for this plan:
+- inventing UI actions ChatGPT does not expose
+- auto-clicking assistant-turn retry/regenerate by default
+- Pro-specific behavior on this account
+- share-page parity

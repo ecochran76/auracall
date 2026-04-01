@@ -418,6 +418,26 @@ type ChatgptConversationRowTagAttemptFailure = {
   diagnostics?: ChatgptConversationRowTagDiagnostics | null;
 };
 
+type ChatgptBlockingSurfaceKind =
+  | 'rate-limit'
+  | 'connection-failed'
+  | 'transient-error'
+  | 'retry-affordance';
+
+type ChatgptBlockingSurfaceProbe = {
+  text?: string | null;
+  ariaLabel?: string | null;
+  buttonLabels?: string[] | null;
+  role?: string | null;
+};
+
+type ChatgptBlockingSurfaceMatch = {
+  kind: ChatgptBlockingSurfaceKind;
+  summary: string;
+  selector?: string | null;
+  details?: Record<string, unknown> | null;
+};
+
 function summarizeChatgptConversationRowTagFailure(
   conversationId: string,
   failures: ReadonlyArray<ChatgptConversationRowTagAttemptFailure>,
@@ -444,6 +464,63 @@ function summarizeChatgptConversationRowTagFailure(
     })
     .join(' | ');
   return `ChatGPT conversation row not found for ${conversationId}: ${lines}`;
+}
+
+function summarizeChatgptBlockingSurfaceText(value: string): string {
+  const normalized = normalizeUiText(value);
+  if (!normalized) {
+    return 'Unknown ChatGPT blocking surface';
+  }
+  const sentence = normalized.split(/(?<=[.!?])\s+/)[0] || normalized;
+  return sentence.slice(0, 160);
+}
+
+export function classifyChatgptBlockingSurfaceProbe(
+  probe: ChatgptBlockingSurfaceProbe | null | undefined,
+): Pick<ChatgptBlockingSurfaceMatch, 'kind' | 'summary'> | null {
+  if (!probe || typeof probe !== 'object') {
+    return null;
+  }
+  const text = normalizeUiText(probe.text);
+  const ariaLabel = normalizeUiText(probe.ariaLabel);
+  const buttonLabels = (probe.buttonLabels ?? []).map((value) => normalizeFileKey(value)).filter(Boolean);
+  const combined = [text, ariaLabel, ...buttonLabels].filter(Boolean).join(' ').trim();
+  if (!combined) {
+    return null;
+  }
+  if (isChatgptRateLimitMessage(combined)) {
+    return {
+      kind: 'rate-limit',
+      summary: extractChatgptRateLimitSummary(combined) ?? summarizeChatgptBlockingSurfaceText(combined),
+    };
+  }
+  const retryAffordance = buttonLabels.find((label) =>
+    /^(retry|try again|regenerate|regenerate response|continue generating)$/.test(label),
+  );
+  if (retryAffordance) {
+    return {
+      kind: 'retry-affordance',
+      summary: retryAffordance,
+    };
+  }
+  if (/server connection failed|connection failed|connection lost|network error|failed to connect|unable to connect/i.test(combined)) {
+    return {
+      kind: 'connection-failed',
+      summary: summarizeChatgptBlockingSurfaceText(combined),
+    };
+  }
+  if (/something went wrong|an error occurred|message could not be generated|please try again|failed to /i.test(combined)) {
+    return {
+      kind: 'transient-error',
+      summary: summarizeChatgptBlockingSurfaceText(combined),
+    };
+  }
+  return null;
+}
+
+export function isRetryableChatgptTransientMessage(message: string | null | undefined): boolean {
+  const match = classifyChatgptBlockingSurfaceProbe({ text: message ?? '' });
+  return Boolean(match);
 }
 
 function readChatgptConversationRowTagDiagnostics(
@@ -581,21 +658,23 @@ function resolveChatgptConversationApiUrl(conversationId: string): string {
   return interpolateChatgptRoute(CHATGPT_CONVERSATION_API_URL_TEMPLATE, { conversationId });
 }
 
-async function readVisibleChatgptRateLimitMatchWithClient(
+async function readVisibleChatgptBlockingSurfaceMatchWithClient(
   client: ChromeClient,
-): Promise<{ kind: 'rate-limit'; summary: string; selector?: string | null; details?: Record<string, unknown> | null } | null> {
+): Promise<ChatgptBlockingSurfaceMatch | null> {
   const overlays = await collectVisibleOverlayInventory(client.Runtime, {
     overlaySelectors: [...Array.from(DEFAULT_DIALOG_SELECTORS), '[role="alert"]', '[aria-live]'],
     limit: 8,
   });
   for (const overlay of overlays) {
-    const text = normalizeUiText(overlay.text);
-    if (!text || !/too many requests|too quickly|rate limit/i.test(text)) {
-      continue;
-    }
+    const match = classifyChatgptBlockingSurfaceProbe({
+      text: overlay.text,
+      ariaLabel: overlay.ariaLabel,
+      buttonLabels: overlay.buttonLabels,
+      role: overlay.role,
+    });
+    if (!match) continue;
     return {
-      kind: 'rate-limit',
-      summary: extractChatgptRateLimitSummary(text) ?? text,
+      ...match,
       selector: overlay.selector,
       details: {
         sourceSelector: overlay.sourceSelector,
@@ -604,16 +683,60 @@ async function readVisibleChatgptRateLimitMatchWithClient(
       },
     };
   }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const labels = ['retry', 'try again', 'regenerate', 'regenerate response', 'continue generating'];
+      for (const node of Array.from(document.querySelectorAll('button, [role="button"]'))) {
+        if (!(node instanceof HTMLElement) || !isVisible(node)) continue;
+        const label = normalize(node.getAttribute('aria-label') || node.textContent || '');
+        if (!labels.includes(label)) continue;
+        const scope =
+          node.closest(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}) ||
+          node.closest(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)}) ||
+          node.parentElement;
+        return {
+          label,
+          text: normalize(scope?.textContent || node.textContent || ''),
+        };
+      }
+      return null;
+    })()`,
+    returnByValue: true,
+  });
+  const retryProbe = result?.value as { label?: string | null; text?: string | null } | null | undefined;
+  const retryMatch = classifyChatgptBlockingSurfaceProbe({
+    text: retryProbe?.text ?? null,
+    buttonLabels: retryProbe?.label ? [retryProbe.label] : [],
+  });
+  if (retryMatch) {
+    return {
+      ...retryMatch,
+      selector: null,
+      details: {
+        sourceSelector: 'button',
+        buttonLabel: retryProbe?.label ?? null,
+      },
+    };
+  }
   return null;
 }
 
 async function dismissVisibleChatgptRateLimitDialogWithClient(
   client: ChromeClient,
-  match?: { kind: 'rate-limit'; summary: string; selector?: string | null; details?: Record<string, unknown> | null } | null,
+  match?: ChatgptBlockingSurfaceMatch | null,
 ): Promise<string | null> {
-  const resolved = match ?? (await readVisibleChatgptRateLimitMatchWithClient(client));
+  const resolved = match ?? (await readVisibleChatgptBlockingSurfaceMatchWithClient(client));
   if (!resolved) {
     return null;
+  }
+  if (resolved.kind !== 'rate-limit' || !resolved.selector) {
+    return resolved.summary;
   }
   if (resolved.selector) {
     await dismissOverlayRoot(client.Runtime, resolved.selector, {
@@ -638,18 +761,12 @@ async function withChatgptRateLimitDialogRecovery<T>(
     label: action,
     pauseMs: options?.pauseMs ?? CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS,
     retries: options?.retries ?? 1,
-    inspect: () => readVisibleChatgptRateLimitMatchWithClient(client),
+    inspect: () => readVisibleChatgptBlockingSurfaceMatchWithClient(client),
     dismiss: (match) => dismissVisibleChatgptRateLimitDialogWithClient(client, match).then(() => undefined),
     classifyError: (error) => {
       const directMessage = error instanceof Error ? error.message : String(error);
-      if (!isChatgptRateLimitMessage(directMessage)) {
-        return null;
-      }
-      return {
-        kind: 'rate-limit' as const,
-        summary: extractChatgptRateLimitSummary(directMessage) ?? directMessage,
-        selector: null,
-      };
+      const match = classifyChatgptBlockingSurfaceProbe({ text: directMessage });
+      return match ? { ...match, selector: null } : null;
     },
   });
 }
@@ -828,7 +945,11 @@ export function matchesChatgptConversationTitleProbe(
 
 function isRetryableConnectionError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
-  return message.includes('WebSocket connection closed') || message.includes('ECONNRESET');
+  return (
+    message.includes('WebSocket connection closed') ||
+    message.includes('ECONNRESET') ||
+    isRetryableChatgptTransientMessage(message)
+  );
 }
 
 export function extractChatgptProjectIdFromUrl(url: string): string | null {

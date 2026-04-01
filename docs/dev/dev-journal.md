@@ -2787,3 +2787,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-01 — ChatGPT hardening plan started with transient/blocking-state classification
+
+- Focus: shift from happy-path ChatGPT CRUD/history work to hostile-state
+  recovery for bad chat state, connection failures, retry affordances, and
+  transient error surfaces
+- Implemented:
+  - wrote `docs/dev/chatgpt-hardening-plan.md` as the dedicated reliability
+    plan for post-MVP ChatGPT bad-state handling
+  - added pure ChatGPT blocking-surface classification helpers in
+    `chatgptAdapter.ts` for:
+    - rate limit
+    - connection failure
+    - retry affordance
+    - generic transient error
+  - expanded the existing ChatGPT read/materialization recovery hook so it now
+    inspects visible overlays and retry-affordance buttons, not only the
+    rate-limit modal
+  - broadened retryability classification in the llmservice ChatGPT path to
+    treat known transient connection/error strings as retryable
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

@@ -2,6 +2,10 @@
 
 Goal: preserve the now-green ChatGPT browser MVP while making the validation and artifact paths cheaper to rerun and easier to operate on a throttled account.
 
+Companion plan:
+- reliability/bad-state hardening is tracked in
+  [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+
 Status:
 - MVP is complete on the authenticated managed WSL Chrome path.
 - The active work is polish, not new core surface coverage.
