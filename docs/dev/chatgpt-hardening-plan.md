@@ -186,6 +186,9 @@ Current progress:
 - and, for non-send debug-mode adapter recoveries, the same snapshot is now
   also written to a bounded JSON file under `~/.auracall/postmortems/browser/`
   so later post-mortem tooling can consume it without scraping session text
+- send-side stale-response failures in debug mode now also persist bounded JSON
+  post-mortems to the same `~/.auracall/postmortems/browser/` store, with
+  `mode = send` and the same classified surface + browser snapshot payload
 - live proof now exists for synthetic-on-real `transient-error` recovery on:
   - root conversation list refresh (`reload-page` + `reopen-list`)
   - conversation context read (`reload-page` + `reopen-conversation`)

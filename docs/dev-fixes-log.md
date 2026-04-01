@@ -4586,6 +4586,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
       `auracall conversations files list 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt`
       - persisted `connection-failed` -> `reload-page` -> `reopen-conversation`
       - command still returned the expected conversation file list
+- Follow-up:
+  - debug-mode send-side stale-response failures now persist bounded JSON
+    post-mortems to the same `~/.auracall/postmortems/browser/` store as the
+    read-side recoveries
+  - those send bundles include `mode = send`, the classified surface, the
+    browser snapshot, and policy metadata like
+    `fail-fast-no-auto-retry-click`
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

@@ -91,7 +91,12 @@ import {
   resolveChatgptRateLimitProfileName,
   writeChatgptRateLimitGuardState,
 } from './chatgptRateLimitGuard.js';
-import { logBrowserPostmortemSnapshot, logStructuredDebugEvent } from './domDebug.js';
+import {
+  captureBrowserPostmortemSnapshot,
+  logBrowserPostmortemSnapshot,
+  logStructuredDebugEvent,
+  persistBrowserPostmortemRecord,
+} from './domDebug.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -394,7 +399,37 @@ async function logChatgptUnexpectedState(options: {
       : null,
     ...(options.extra ?? {}),
   });
+  const snapshot = await captureBrowserPostmortemSnapshot(options.Runtime).catch(() => null);
+  if (snapshot) {
+    await persistBrowserPostmortemRecord({
+      context: options.context,
+      payload: {
+        provider: 'chatgpt',
+        mode: 'send',
+        context: options.context,
+        surface: options.surface
+          ? {
+              kind: options.surface.kind,
+              summary: options.surface.summary,
+              details: options.surface.details ?? null,
+            }
+          : null,
+        snapshot,
+        ...(options.extra ?? {}),
+      },
+    }).catch(() => undefined);
+  }
   await logBrowserPostmortemSnapshot(options.Runtime, options.logger, options.context).catch(() => undefined);
+}
+
+export async function logChatgptUnexpectedStateForTest(options: {
+  Runtime: ChromeClient['Runtime'];
+  logger: BrowserLogger;
+  context: string;
+  surface?: ChatgptVisibleBlockingSurface | null;
+  extra?: Record<string, unknown>;
+}): Promise<void> {
+  await logChatgptUnexpectedState(options);
 }
 
 async function handleChatgptBrowserRateLimitFailure(options: {

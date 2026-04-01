@@ -2986,3 +2986,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the remaining meaningful live target is a real organically occurring broken
     turn or connection-failed state, but the classified recovery matrix itself
     is now exercised across the main read surfaces
+
+## 2026-04-01 — ChatGPT send-side bad states now persist bounded post-mortems too
+
+- Focus: align stale-send failure handling with the newer read-side
+  post-mortem store
+- Implemented:
+  - `logChatgptUnexpectedState(...)` in `src/browser/index.ts` now persists a
+    bounded JSON post-mortem bundle under `~/.auracall/postmortems/browser/`
+    when debug/verbose mode is active
+  - send-side bundles include:
+    - `mode = send`
+    - classified surface details
+    - browser snapshot
+    - send-policy metadata such as `fail-fast-no-auto-retry-click`
+  - added focused unit coverage in
+    `tests/browser/browserModeExports.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/domDebug.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Next:
+  - if we want a final live proof on the send path, we need a controlled stale
+    send repro on a disposable conversation so the persisted send post-mortem
+    can be inspected the same way as the read-side cases
