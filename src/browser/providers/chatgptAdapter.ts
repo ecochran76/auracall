@@ -4280,16 +4280,37 @@ async function tagChatgptConversationRow(
 async function tagChatgptConversationRowExact(
   client: ChromeClient,
   conversationId: string,
+  projectId?: string | null,
 ): Promise<{ rowSelector: string; actionSelector: string }> {
   await ensureChatgptSidebarOpen(client);
+  const normalizedProjectId = normalizeChatgptProjectId(projectId);
   const deadline = Date.now() + 8_000;
   while (Date.now() < deadline) {
     const { result } = await client.Runtime.evaluate({
       expression: `(() => {
         const conversationId = ${JSON.stringify(conversationId)};
+        const expectedProjectId = ${JSON.stringify(normalizedProjectId ?? null)};
         const rowAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ROW_ATTR)};
         const actionAttr = ${JSON.stringify(CHATGPT_CONVERSATION_ACTION_ATTR)};
         const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+        const normalizeProjectId = (value) => {
+          const trimmed = String(value || '').trim();
+          const match = trimmed.match(/^(g-p-[a-z0-9]+)/i);
+          return match ? match[1] : null;
+        };
+        const parse = (href) => {
+          try {
+            const parsed = new URL(href, location.origin);
+            const match = parsed.pathname.match(/^\\/(?:g\\/([^/]+)\\/)?c\\/([a-zA-Z0-9-]+)\\/?$/);
+            if (!match) return null;
+            return {
+              conversationId: String(match[2] || '').trim(),
+              projectId: normalizeProjectId(match[1]),
+            };
+          } catch {
+            return null;
+          }
+        };
         const isVisible = (node) => {
           if (!(node instanceof Element)) return false;
           const rect = node.getBoundingClientRect();
@@ -4299,11 +4320,29 @@ async function tagChatgptConversationRowExact(
           node.removeAttribute(rowAttr);
           node.removeAttribute(actionAttr);
         }
-        const anchor = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+        const visibleProjectPanels = expectedProjectId
+          ? Array.from(document.querySelectorAll('[role="tabpanel"]')).filter((panel) => {
+              if (!(panel instanceof HTMLElement)) return false;
+              if (!isVisible(panel)) return false;
+              return Array.from(panel.querySelectorAll('a[href*="/c/"]')).some((anchor) => {
+                if (!(anchor instanceof HTMLAnchorElement)) return false;
+                const info = parse(anchor.getAttribute('href') || anchor.href || '');
+                return info?.projectId === expectedProjectId;
+              });
+            })
+          : [];
+        const anchorPool =
+          expectedProjectId && visibleProjectPanels.length > 0
+            ? visibleProjectPanels.flatMap((panel) => Array.from(panel.querySelectorAll('a[href*="/c/"]')))
+            : Array.from(document.querySelectorAll('a[href*="/c/"]'));
+        const anchor = anchorPool
           .find((node) => {
             if (!(node instanceof HTMLAnchorElement)) return false;
             if (!isVisible(node)) return false;
-            return node.href.includes('/c/' + conversationId);
+            const info = parse(node.getAttribute('href') || node.href || '');
+            if (!info || info.conversationId !== conversationId) return false;
+            if (expectedProjectId && info.projectId !== expectedProjectId) return false;
+            return true;
           });
         if (!(anchor instanceof HTMLAnchorElement)) {
           return { ok: false, reason: 'Exact conversation anchor not found' };
@@ -5223,10 +5262,7 @@ async function renameChatgptConversationWithClient(
   const tagFailures: ChatgptConversationRowTagAttemptFailure[] = [];
   const tryTagConversationRow = async (label: string) => {
     try {
-      if (!projectId) {
-        return await tagChatgptConversationRowExact(client, conversationId);
-      }
-      return await tagChatgptConversationRow(client, conversationId, projectId);
+      return await tagChatgptConversationRowExact(client, conversationId, projectId);
     } catch (error) {
       tagFailures.push({
         attemptLabel: label,
@@ -5399,16 +5435,12 @@ async function deleteChatgptConversationWithClient(
   await ensureChatgptSidebarOpen(client);
   let tagged: { rowSelector: string; actionSelector: string } | null = null;
   try {
-    tagged = !projectId
-      ? await tagChatgptConversationRowExact(client, conversationId)
-      : await tagChatgptConversationRow(client, conversationId, projectId);
+    tagged = await tagChatgptConversationRowExact(client, conversationId, projectId);
   } catch {
     await navigateToChatgptConversation(client, conversationId, projectId);
     await ensureChatgptSidebarOpen(client);
     try {
-      tagged = !projectId
-        ? await tagChatgptConversationRowExact(client, conversationId)
-        : await tagChatgptConversationRow(client, conversationId, projectId);
+      tagged = await tagChatgptConversationRowExact(client, conversationId, projectId);
     } catch {
       await navigateToChatgptConversation(client, conversationId, projectId);
     }

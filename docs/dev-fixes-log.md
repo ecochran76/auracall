@@ -4283,6 +4283,38 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - that remaining bug is now post-success command lifecycle/cleanup, not the
     rename interaction itself
 
+## 2026-03-31 — ChatGPT project conversation row actions now use the exact project-panel row
+
+- Area: ChatGPT browser project conversation CRUD
+- Symptom:
+  - project-scoped rename/delete still depended on the older ranked row tagger,
+    even after root-chat CRUD had moved to the more reliable exact-row path
+- Root cause:
+  - the old project row selection searched broadly across `/c/...` anchors and
+    scored candidates, which is less reliable than directly resolving the
+    authoritative project `Chats` panel row
+- Fix:
+  - extended `tagChatgptConversationRowExact(...)` with optional `projectId`
+    scoping
+  - when project-scoped, the resolver now prefers visible `role="tabpanel"`
+    project chat rows whose parsed route project id matches the normalized
+    project id exactly
+  - switched ChatGPT project rename/delete flows onto that exact resolver so
+    they use the same hover-reveal/pointer-driven row action path as root chats
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live project conversation smoke on
+    `g-p-69cc275fdfac8191be921387165ca803`
+    - created conversation `69cc7121-eca0-832c-ab8a-9dde700e87d7`
+    - rename returned `Renamed successfully.`
+    - delete returned `Deleted successfully.` and `Conversation cache refreshed.`
+    - fresh project conversation list returned `[]`
+- Remaining gap:
+  - immediate post-rename project list reads were inconsistent (`ChatGPT`, then
+    `[]`) while the live tab still showed the conversation route, so project
+    conversation list/read consistency remains a separate follow-up surface
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

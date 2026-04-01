@@ -2602,3 +2602,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     return promptly after the rename had already succeeded in the UI
   - that is now a separate post-success lifecycle/cleanup bug, not a rename
     interaction bug
+
+## 2026-03-31 — ChatGPT project conversation rename/delete now use the exact-row path too
+
+- Focus: carry the root-chat exact-row repair over to project-scoped
+  conversations without reintroducing the older score-based row picker
+- Implemented:
+  - updated `src/browser/providers/chatgptAdapter.ts` so
+    `tagChatgptConversationRowExact(...)` accepts an optional `projectId`
+  - when `projectId` is present, the exact resolver now scopes itself to the
+    visible project `Chats` `tabpanel` first and only matches anchors whose
+    parsed route project id equals the normalized project id
+  - switched ChatGPT project rename/delete callers onto that exact resolver, so
+    project row actions now follow the same interaction model as root:
+    exact conversation anchor -> row hover -> pointer menu -> rename/delete
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live project smoke on disposable project
+    `g-p-69cc275fdfac8191be921387165ca803`
+    - created project conversation `69cc7121-eca0-832c-ab8a-9dde700e87d7`
+    - `auracall rename ... --project-id ... --target chatgpt` returned
+      `Renamed successfully.`
+    - `auracall delete ... --project-id ... --target chatgpt --yes` returned
+      `Deleted successfully.` and `Conversation cache refreshed.`
+    - fresh `auracall conversations --project-id ... --target chatgpt --refresh`
+      returned `[]`
+- Remaining note:
+  - project-conversation rename verification is still noisier than the root
+    path: an immediate follow-up project conversation list read briefly returned
+    the row title as `ChatGPT`, and another refresh returned `[]` while the live
+    tab was still on the project conversation URL
+  - the row-action CRUD path itself appears healthy now; the next likely cleanup
+    target is project conversation list/read consistency on the project `Chats`
+    panel
