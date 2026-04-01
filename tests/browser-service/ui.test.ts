@@ -32,6 +32,7 @@ import {
   waitForSelector,
   waitForVisibleSelector,
   withBlockingSurfaceRecovery,
+  withAnchoredActionDiagnostics,
   withUiDiagnostics,
 } from '../../packages/browser-service/src/service/ui.js';
 
@@ -827,6 +828,81 @@ describe('browser-service ui wait helpers', () => {
           triggerLabel: 'Project settings',
           interactionStrategies: ['pointer', 'keyboard-space'],
         },
+      },
+    });
+  });
+
+  test('withAnchoredActionDiagnostics attaches anchored diagnostics to false result objects', async () => {
+    const runtime = createRuntime([
+      {
+        row: { found: true, visible: true, text: 'AC GPT C demo' },
+        trigger: { found: true, visible: true, label: 'Options' },
+        editor: null,
+        dialog: null,
+        activeElement: null,
+      },
+      [],
+      [],
+    ]);
+
+    const result = await withAnchoredActionDiagnostics(
+      runtime as never,
+      async () => ({ ok: false, reason: 'Menu item not found' }),
+      {
+        rowSelector: '[data-row="true"]',
+        triggerSelector: '[data-options="true"]',
+        context: { phase: 'menu-open' },
+      },
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      reason: 'Menu item not found',
+      diagnostics: {
+        row: { found: true, visible: true, text: 'AC GPT C demo' },
+        trigger: { found: true, visible: true, label: 'Options' },
+        editor: null,
+        dialog: null,
+        activeElement: null,
+        menus: [],
+        overlays: [],
+        context: { phase: 'menu-open' },
+      },
+    });
+  });
+
+  test('withAnchoredActionDiagnostics appends anchored diagnostics to thrown errors', async () => {
+    const runtime = createRuntime([
+      {
+        row: { found: true, visible: true, text: 'AC GPT C demo' },
+        trigger: { found: true, visible: true, label: 'Options' },
+        editor: null,
+        dialog: null,
+        activeElement: null,
+      },
+      [],
+      [],
+    ]);
+
+    await expect(
+      withAnchoredActionDiagnostics(
+        runtime as never,
+        async () => {
+          throw new Error('Rename editor did not become ready');
+        },
+        {
+          label: 'chatgpt-rename',
+          rowSelector: '[data-row="true"]',
+          triggerSelector: '[data-options="true"]',
+          context: { phase: 'rename-editor' },
+        },
+      ),
+    ).rejects.toMatchObject({
+      message: expect.stringContaining('chatgpt-rename: Rename editor did not become ready'),
+      anchoredActionDiagnostics: {
+        row: { found: true, visible: true, text: 'AC GPT C demo' },
+        trigger: { found: true, visible: true, label: 'Options' },
+        context: { phase: 'rename-editor' },
       },
     });
   });

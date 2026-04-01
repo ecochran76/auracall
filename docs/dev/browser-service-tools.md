@@ -264,6 +264,16 @@ Current active extraction plan:
     row/menu/editor/dialog flow needs failure evidence tied to one specific row
     action surface.
 
+- `withAnchoredActionDiagnostics(Runtime, action, options)`
+  - Wraps an anchored row/menu/editor action phase and automatically attaches
+    anchored diagnostics on failure.
+  - For result-style helpers, it augments `{ ok: false }` objects with
+    diagnostics.
+  - For thrown errors, it appends an `Anchored action diagnostics:` payload to
+    the error and exposes it on `error.anchoredActionDiagnostics`.
+  - Prefer this over provider-local `collectDiagnostics` lambdas when the
+    provider helper already returns `{ ok: boolean }` or throws on failure.
+
 - `pressDialogButton(Runtime, options)`
   - Clicks a dialog action button by label, with optional `preferLast` for destructive confirms.
 

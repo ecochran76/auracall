@@ -2771,3 +2771,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-01 — Browser-service now owns anchored action-phase failure wrapping
+
+- Focus: stop making adapters manually stitch anchored diagnostics onto every
+  `{ ok: false }` branch in row/menu/editor flows
+- Implemented:
+  - added `withAnchoredActionDiagnostics(...)` to
+    `packages/browser-service/src/service/ui.ts`
+  - the helper now attaches `collectAnchoredActionDiagnostics(...)` output to
+    false-result objects and to thrown errors for anchored row-action phases
+  - rewired the ChatGPT exact-row menu / rename-editor / delete-confirmation
+    helpers to use the wrapper instead of provider-local `collectDiagnostics`
+    callbacks
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

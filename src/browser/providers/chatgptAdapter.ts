@@ -17,7 +17,6 @@ import type {
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import {
   armDownloadCapture,
-  collectAnchoredActionDiagnostics,
   collectVisibleOverlayInventory,
   closeDialog,
   DEFAULT_DIALOG_SELECTORS,
@@ -38,6 +37,7 @@ import {
   waitForPredicate,
   waitForSelector,
   waitForNotSelector,
+  withAnchoredActionDiagnostics,
   withBlockingSurfaceRecovery,
   withUiDiagnostics,
 } from '../service/ui.js';
@@ -4559,41 +4559,42 @@ async function openChatgptTaggedConversationSidebarMenu(
   itemLabel: string,
   timeoutMs = 4_000,
 ): Promise<{ ok: boolean; reason?: string; menuSelector?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () =>
-    collectAnchoredActionDiagnostics(client.Runtime, {
+  return withAnchoredActionDiagnostics(
+    client.Runtime,
+    async () => {
+      const opened = await openAndSelectRevealedRowMenuItem(client, {
+        rowSelector: tagged.rowSelector,
+        triggerSelector: tagged.actionSelector,
+        rootSelectors: ['nav', 'aside', tagged.rowSelector],
+        triggerRootSelectors: [tagged.rowSelector],
+        actionMatch: { startsWith: [CHATGPT_CONVERSATION_OPTIONS_PREFIX] },
+        menuSelector: '[role="menu"]',
+        itemMatch: { exact: [itemLabel] },
+        prepareTriggerBeforeOpen: true,
+        directTriggerClickFallback: true,
+        itemInteractionStrategies: ['pointer'],
+        closeMenuAfter: itemLabel !== CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
+        timeoutMs,
+      });
+      if (!opened.ok) {
+        return {
+          ok: false,
+          reason: opened.reason || 'Conversation options menu did not open',
+        };
+      }
+      return {
+        ok: true,
+        menuSelector: opened.menuSelector || '[role="menu"]',
+      };
+    },
+    {
       rowSelector: tagged.rowSelector,
       triggerSelector: tagged.actionSelector,
       anchorSelector: tagged.actionSelector,
       anchorRootSelectors: [tagged.rowSelector],
       context: { itemLabel },
-    });
-
-  const opened = await openAndSelectRevealedRowMenuItem(client, {
-    rowSelector: tagged.rowSelector,
-    triggerSelector: tagged.actionSelector,
-    rootSelectors: ['nav', 'aside', tagged.rowSelector],
-    triggerRootSelectors: [tagged.rowSelector],
-    actionMatch: { startsWith: [CHATGPT_CONVERSATION_OPTIONS_PREFIX] },
-    menuSelector: '[role="menu"]',
-    itemMatch: { exact: [itemLabel] },
-    prepareTriggerBeforeOpen: true,
-    directTriggerClickFallback: true,
-    itemInteractionStrategies: ['pointer'],
-    closeMenuAfter: itemLabel !== CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
-    timeoutMs,
-  });
-  if (!opened.ok) {
-    return {
-      ok: false,
-      reason: opened.reason || 'Conversation options menu did not open',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-  return {
-    ok: true,
-    menuSelector: opened.menuSelector || '[role="menu"]',
-    diagnostics: await collectDiagnostics(),
-  };
+    },
+  );
 }
 
 async function openChatgptTaggedConversationRenameEditor(
@@ -4601,48 +4602,47 @@ async function openChatgptTaggedConversationRenameEditor(
   tagged: { rowSelector: string; actionSelector: string },
   timeoutMs = 12_000,
 ): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () =>
-    collectAnchoredActionDiagnostics(client.Runtime, {
+  return withAnchoredActionDiagnostics(
+    client.Runtime,
+    async () => {
+      const renameOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
+        itemLabel: CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
+        itemReadyDescription: 'ChatGPT rename menu visible',
+        itemReadyReason: 'Rename menu item did not appear',
+        itemPressedReason: 'Rename menu item did not click',
+        timeoutMs,
+      });
+      if (!renameOpened.ok) {
+        return renameOpened;
+      }
+
+      const renameEditorReady = await waitForPredicate(
+        client.Runtime,
+        buildChatgptRenameEditorReadyExpression(),
+        {
+          timeoutMs,
+          description: 'ChatGPT rename editor ready',
+        },
+      );
+      if (!renameEditorReady.ok) {
+        return {
+          ok: false,
+          reason: 'Rename editor did not become ready',
+        };
+      }
+
+      return { ok: true };
+    },
+    {
       rowSelector: tagged.rowSelector,
       triggerSelector: tagged.actionSelector,
       editorSelector: 'input[name="title-editor"]',
       anchorSelector: tagged.actionSelector,
       anchorRootSelectors: [tagged.rowSelector],
       context: { phase: 'rename-editor' },
-    });
-
-  const renameOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
-    itemLabel: CHATGPT_CONVERSATION_ACTION_RENAME_LABEL,
-    itemReadyDescription: 'ChatGPT rename menu visible',
-    itemReadyReason: 'Rename menu item did not appear',
-    itemPressedReason: 'Rename menu item did not click',
-    collectDiagnostics,
-    timeoutMs,
-  });
-  if (!renameOpened.ok) {
-    return renameOpened;
-  }
-
-  const renameEditorReady = await waitForPredicate(
-    client.Runtime,
-    buildChatgptRenameEditorReadyExpression(),
-    {
-      timeoutMs,
-      description: 'ChatGPT rename editor ready',
+      includeOnSuccess: true,
     },
   );
-  if (!renameEditorReady.ok) {
-    return {
-      ok: false,
-      reason: 'Rename editor did not become ready',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  return {
-    ok: true,
-    diagnostics: await collectDiagnostics(),
-  };
 }
 
 async function openChatgptTaggedConversationDeleteConfirmation(
@@ -4651,48 +4651,47 @@ async function openChatgptTaggedConversationDeleteConfirmation(
   expectedTitle?: string | null,
   timeoutMs = 12_000,
 ): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
-  const collectDiagnostics = async () =>
-    collectAnchoredActionDiagnostics(client.Runtime, {
+  return withAnchoredActionDiagnostics(
+    client.Runtime,
+    async () => {
+      const deleteOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
+        itemLabel: CHATGPT_CONVERSATION_ACTION_DELETE_LABEL,
+        itemReadyDescription: 'ChatGPT delete menu visible',
+        itemReadyReason: 'Delete menu item did not appear',
+        itemPressedReason: 'Delete menu item did not click',
+        timeoutMs,
+      });
+      if (!deleteOpened.ok) {
+        return deleteOpened;
+      }
+
+      const confirmationReady = await waitForPredicate(
+        client.Runtime,
+        buildConversationDeleteConfirmationExpression(expectedTitle),
+        {
+          timeoutMs,
+          description: 'ChatGPT delete confirmation ready',
+        },
+      );
+      if (!confirmationReady.ok) {
+        return {
+          ok: false,
+          reason: 'Delete confirmation did not become ready',
+        };
+      }
+
+      return { ok: true };
+    },
+    {
       rowSelector: tagged.rowSelector,
       triggerSelector: tagged.actionSelector,
       dialogSelectors: DEFAULT_DIALOG_SELECTORS,
       anchorSelector: tagged.rowSelector,
       anchorRootSelectors: [tagged.rowSelector],
       context: { phase: 'delete-confirmation', expectedTitle: expectedTitle ?? null },
-    });
-
-  const deleteOpened = await openChatgptTaggedConversationMenuItem(client, tagged, {
-    itemLabel: CHATGPT_CONVERSATION_ACTION_DELETE_LABEL,
-    itemReadyDescription: 'ChatGPT delete menu visible',
-    itemReadyReason: 'Delete menu item did not appear',
-    itemPressedReason: 'Delete menu item did not click',
-    collectDiagnostics,
-    timeoutMs,
-  });
-  if (!deleteOpened.ok) {
-    return deleteOpened;
-  }
-
-  const confirmationReady = await waitForPredicate(
-    client.Runtime,
-    buildConversationDeleteConfirmationExpression(expectedTitle),
-    {
-      timeoutMs,
-      description: 'ChatGPT delete confirmation ready',
+      includeOnSuccess: true,
     },
   );
-  if (!confirmationReady.ok) {
-    return {
-      ok: false,
-      reason: 'Delete confirmation did not become ready',
-      diagnostics: await collectDiagnostics(),
-    };
-  }
-
-  return {
-    ok: true,
-    diagnostics: await collectDiagnostics(),
-  };
 }
 
 async function openChatgptTaggedConversationMenuItem(
@@ -4703,7 +4702,6 @@ async function openChatgptTaggedConversationMenuItem(
     itemReadyDescription: string;
     itemReadyReason: string;
     itemPressedReason: string;
-    collectDiagnostics: () => Promise<Record<string, unknown>>;
     timeoutMs: number;
   },
 ): Promise<{ ok: boolean; reason?: string; diagnostics?: Record<string, unknown> }> {
@@ -4716,7 +4714,6 @@ async function openChatgptTaggedConversationMenuItem(
     return {
       ok: false,
       reason: hovered.reason || 'Conversation row did not hover',
-      diagnostics: await options.collectDiagnostics(),
     };
   }
 
@@ -4731,7 +4728,6 @@ async function openChatgptTaggedConversationMenuItem(
     return {
       ok: false,
       reason: triggerPressed.reason || 'Conversation options trigger did not open',
-      diagnostics: await options.collectDiagnostics(),
     };
   }
 
@@ -4753,7 +4749,6 @@ async function openChatgptTaggedConversationMenuItem(
     return {
       ok: false,
       reason: options.itemReadyReason,
-      diagnostics: await options.collectDiagnostics(),
     };
   }
 
@@ -4768,14 +4763,10 @@ async function openChatgptTaggedConversationMenuItem(
     return {
       ok: false,
       reason: itemPressed.reason || options.itemPressedReason,
-      diagnostics: await options.collectDiagnostics(),
     };
   }
 
-  return {
-    ok: true,
-    diagnostics: await options.collectDiagnostics(),
-  };
+  return { ok: true };
 }
 
 function buildChatgptRenameEditorReadyExpression(): string {

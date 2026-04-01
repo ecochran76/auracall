@@ -602,6 +602,11 @@ export type WithUiDiagnosticsOptions = CollectUiDiagnosticsOptions & {
   label?: string;
 };
 
+export type WithAnchoredActionDiagnosticsOptions = CollectAnchoredActionDiagnosticsOptions & {
+  label?: string;
+  includeOnSuccess?: boolean;
+};
+
 const DEFAULT_WAIT_POLL_MS = 200;
 
 async function sleep(ms: number): Promise<void> {
@@ -1724,6 +1729,83 @@ export async function withUiDiagnostics<T>(
     };
     enriched.cause = error;
     enriched.uiDiagnostics = diagnostics;
+    throw enriched;
+  }
+}
+
+export async function withAnchoredActionDiagnostics<T>(
+  Runtime: ChromeClient['Runtime'],
+  action: () => Promise<T>,
+  options: WithAnchoredActionDiagnosticsOptions = {},
+): Promise<T> {
+  const attachDiagnostics = async (result: T): Promise<T> => {
+    const shouldAttach =
+      options.includeOnSuccess ||
+      (typeof result === 'object' &&
+        result !== null &&
+        'ok' in result &&
+        (result as { ok?: unknown }).ok === false &&
+        !('diagnostics' in (result as object)) );
+    if (!shouldAttach) {
+      return result;
+    }
+    const diagnostics = await collectAnchoredActionDiagnostics(Runtime, options).catch((diagError) => ({
+      row: { found: false, visible: false, text: null },
+      trigger: { found: false, visible: false, label: null },
+      editor: null,
+      dialog: null,
+      activeElement: null,
+      menus: [],
+      overlays: [],
+      context: {
+        ...(options.context ?? {}),
+        collectionError: String(diagError),
+      },
+    }));
+    if (typeof result === 'object' && result !== null) {
+      return {
+        ...(result as Record<string, unknown>),
+        diagnostics: (result as Record<string, unknown>).diagnostics ?? diagnostics,
+      } as T;
+    }
+    return result;
+  };
+
+  try {
+    const result = await action();
+    return attachDiagnostics(result);
+  } catch (error) {
+    const diagnostics = await collectAnchoredActionDiagnostics(Runtime, options).catch((diagError) => ({
+      row: { found: false, visible: false, text: null },
+      trigger: { found: false, visible: false, label: null },
+      editor: null,
+      dialog: null,
+      activeElement: null,
+      menus: [],
+      overlays: [],
+      context: {
+        ...(options.context ?? {}),
+        collectionError: String(diagError),
+      },
+    }));
+    const labelPrefix = options.label ? `${options.label}: ` : '';
+    const serialized = JSON.stringify(diagnostics);
+    if (error instanceof Error) {
+      const enriched = error as Error & { anchoredActionDiagnostics?: unknown };
+      enriched.anchoredActionDiagnostics = diagnostics;
+      if (!enriched.message.includes('Anchored action diagnostics:')) {
+        enriched.message = `${labelPrefix}${enriched.message}\nAnchored action diagnostics: ${serialized}`;
+      } else if (labelPrefix && !enriched.message.startsWith(labelPrefix)) {
+        enriched.message = `${labelPrefix}${enriched.message}`;
+      }
+      throw enriched;
+    }
+    const enriched = new Error(`${labelPrefix}${String(error)}\nAnchored action diagnostics: ${serialized}`) as Error & {
+      cause?: unknown;
+      anchoredActionDiagnostics?: unknown;
+    };
+    enriched.cause = error;
+    enriched.anchoredActionDiagnostics = diagnostics;
     throw enriched;
   }
 }

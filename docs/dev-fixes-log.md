@@ -4446,6 +4446,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+## 2026-04-01 — Anchored action-phase failures now auto-attach diagnostics
+
+- Area: Browser-service diagnostics wrappers / ChatGPT row-action phases
+- Symptom:
+  - even after moving anchored diagnostics into browser-service, adapters still
+    had to manually call the collector on every false-result branch, which kept
+    the package boundary noisy and easy to drift
+- Fix:
+  - added `withAnchoredActionDiagnostics(...)` to browser-service
+  - it now attaches anchored diagnostics to `{ ok: false }` result objects and
+    also enriches thrown errors with the same diagnostic payload
+  - rewired the ChatGPT exact-row menu/rename/delete phase helpers to use the
+    package wrapper instead of provider-local `collectDiagnostics` lambdas
+- Verification:
+  - `pnpm vitest run tests/browser-service/ui.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration

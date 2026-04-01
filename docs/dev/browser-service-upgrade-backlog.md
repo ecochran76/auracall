@@ -100,6 +100,10 @@ Current active plan:
     failure evidence; adapters should prefer it over local
     `row/trigger/menu/dialog` probe collectors when the diagnostic shape is the
     same.
+  - `withAnchoredActionDiagnostics(...)` is now package-owned for anchored
+    row-action phase wrappers; adapters should prefer it over manual
+    `collectDiagnostics` callback plumbing when helper phases already report
+    `{ ok: false }` or throw on failure.
   - `inspectNestedMenuPathSelection(...)` and
     `selectAndVerifyNestedMenuPathOption(...)` are now package-owned, so
     adapters can reopen a menu family, inspect selected-state from menu markup,
