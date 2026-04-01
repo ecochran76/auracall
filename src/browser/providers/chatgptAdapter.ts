@@ -2355,6 +2355,7 @@ function buildChatgptFallbackIdentityExpression(): string {
 function buildProjectDeleteConfirmationExpression(): string {
   return `(() => {
     const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const deleteDialogLabel = normalize(${JSON.stringify(CHATGPT_PROJECT_DELETE_DIALOG_LABEL)});
     const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
     for (const dialog of dialogs) {
       const text = normalize(dialog.textContent || '');
@@ -2362,7 +2363,7 @@ function buildProjectDeleteConfirmationExpression(): string {
         .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
         .filter(Boolean);
       if (
-        text.includes(CHATGPT_PROJECT_DELETE_DIALOG_LABEL) &&
+        text.includes(deleteDialogLabel) &&
         ${JSON.stringify(CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS)}.every((label) => labels.includes(label))
       ) {
         return { ok: true };
@@ -6847,28 +6848,56 @@ export function createChatgptAdapter(): Pick<
     async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
-        const { result } = await client.Runtime.evaluate({
-          expression: `(() => {
-            const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-            const deleteDialogLabel = normalize(${JSON.stringify(CHATGPT_PROJECT_DELETE_DIALOG_LABEL)});
-            const deleteButtonLabel = normalize(${JSON.stringify(CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)});
-            const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
-            for (const dialog of dialogs) {
-              const text = normalize(dialog.textContent || '');
-              if (!text.includes(deleteDialogLabel)) continue;
-              const button = Array.from(dialog.querySelectorAll('button'))
-                .find((node) => normalize(node.getAttribute('aria-label') || node.textContent || '') === deleteButtonLabel);
-              if (!button) {
-                return { ok: false, reason: 'delete-button-missing' };
+        const pressDeleteConfirmation = async (): Promise<{ ok?: boolean; reason?: string } | undefined> => {
+          const { result } = await client.Runtime.evaluate({
+            expression: `(() => {
+              const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+              const deleteDialogLabel = normalize(${JSON.stringify(CHATGPT_PROJECT_DELETE_DIALOG_LABEL)});
+              const deleteButtonLabel = normalize(${JSON.stringify(CHATGPT_CONVERSATION_ACTION_DELETE_LABEL)});
+              const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
+              for (const dialog of dialogs) {
+                const text = normalize(dialog.textContent || '');
+                if (!text.includes(deleteDialogLabel)) continue;
+                const button = Array.from(dialog.querySelectorAll('button'))
+                  .find((node) => normalize(node.getAttribute('aria-label') || node.textContent || '') === deleteButtonLabel);
+                if (!button) {
+                  return { ok: false, reason: 'delete-button-missing' };
+                }
+                button.click();
+                return { ok: true };
               }
-              button.click();
-              return { ok: true };
-            }
-            return { ok: false, reason: 'confirmation-dialog-missing' };
-          })()`,
-          returnByValue: true,
-        });
-        const pressed = result?.value as { ok?: boolean; reason?: string } | undefined;
+              return { ok: false, reason: 'confirmation-dialog-missing' };
+            })()`,
+            returnByValue: true,
+          });
+          return result?.value as { ok?: boolean; reason?: string } | undefined;
+        };
+        let pressed = await pressDeleteConfirmation();
+        if (!pressed?.ok && pressed?.reason === 'confirmation-dialog-missing') {
+          await openProjectSettingsPanel(client, projectId);
+          const settingsRootSelector = await tagProjectSettingsDialog(client, { name: true, instructions: true });
+          const deletePressed = await pressButton(client.Runtime, {
+            match: { exact: [CHATGPT_PROJECT_DELETE_BUTTON_LABEL] },
+            rootSelectors: [settingsRootSelector],
+            requireVisible: true,
+            timeoutMs: 5000,
+          });
+          if (!deletePressed.ok) {
+            throw new Error(deletePressed.reason || 'ChatGPT delete project button not found');
+          }
+          const confirmation = await waitForPredicate(
+            client.Runtime,
+            buildProjectDeleteConfirmationExpression(),
+            {
+              timeoutMs: 5_000,
+              description: 'ChatGPT project delete confirmation ready',
+            },
+          );
+          if (!confirmation.ok) {
+            throw new Error('confirmation-dialog-missing');
+          }
+          pressed = await pressDeleteConfirmation();
+        }
         if (!pressed?.ok) {
           throw new Error(pressed?.reason || 'ChatGPT delete confirmation button not found');
         }

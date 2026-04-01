@@ -2682,3 +2682,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       returned that exact titled row
     - deleting that conversation succeeded, and a fresh project conversation
       list returned `[]`
+
+## 2026-03-31 — ChatGPT phased acceptance is green again after project-delete cleanup recovery
+
+- Focus: close the last acceptance blocker after `project-chat`, `root-base`,
+  and `root-followups` were already green
+- Findings:
+  - the only remaining failing phase was `cleanup`
+  - `projects remove ... --target chatgpt` is split across two provider calls:
+    `selectRemoveProjectItem(...)` then `pushProjectRemoveConfirmation(...)`
+  - the project delete confirmation dialog did not survive across those two
+    separate provider sessions, so `pushProjectRemoveConfirmation(...)` could
+    reconnect onto the project page with no confirmation dialog present
+  - `buildProjectDeleteConfirmationExpression()` also had the same
+    browser-expression constant interpolation bug as the earlier project `Chats`
+    fixes
+- Implemented:
+  - fixed `buildProjectDeleteConfirmationExpression()` to interpolate the
+    expected delete-dialog label into the browser-evaluated expression
+  - updated `pushProjectRemoveConfirmation(...)` so if the confirmation dialog
+    is missing after reconnect, it reopens project settings, presses
+    `Delete project`, waits for the confirmation dialog again, then confirms
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - phased live acceptance rerun:
+    - `project-chat` PASS
+    - `root-base` PASS
+    - `root-followups` PASS
+    - `cleanup` PASS

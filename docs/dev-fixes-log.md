@@ -4350,6 +4350,36 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - deleting that conversation succeeded and a fresh project list returned
       `[]`
 
+## 2026-03-31 — ChatGPT project cleanup now survives the split remove-confirm command flow
+
+- Area: ChatGPT browser project delete / acceptance cleanup
+- Symptom:
+  - phased ChatGPT acceptance was green through `project-chat`, `root-base`,
+    and `root-followups`, but `cleanup` still failed on
+    `projects remove <projectId> --target chatgpt`
+- Root cause:
+  - project removal is executed as two separate provider calls:
+    `selectRemoveProjectItem(...)` then `pushProjectRemoveConfirmation(...)`
+  - the second call reconnects in a fresh browser session, so the confirmation
+    dialog may no longer exist even though the first step succeeded
+  - `buildProjectDeleteConfirmationExpression()` also referenced the TS
+    delete-dialog constant directly inside a browser-evaluated expression
+- Fix:
+  - interpolated the delete-dialog label into
+    `buildProjectDeleteConfirmationExpression()`
+  - updated `pushProjectRemoveConfirmation(...)` so if the confirmation dialog
+    is missing after reconnect, it reopens project settings, presses
+    `Delete project`, waits for the confirmation dialog, then confirms from
+    that reconstructed state
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser-service/ui.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - phased live acceptance rerun:
+    - `project-chat` PASS
+    - `root-base` PASS
+    - `root-followups` PASS
+    - `cleanup` PASS
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration
