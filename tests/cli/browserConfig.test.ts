@@ -95,10 +95,14 @@ describe('buildBrowserConfig', () => {
     expect(config.desiredModel).toBe('Gemini 3 Pro');
   });
 
-  test('resolves ChatGPT browser picker labels from the bundled services manifest', () => {
+  test('resolves browser picker labels from the bundled services manifest', () => {
     expect(mapModelToBrowserLabel('gpt-5.2-thinking')).toBe('Thinking');
     expect(mapModelToBrowserLabel('gpt-5.2')).toBe('Instant');
     expect(mapModelToBrowserLabel('gpt-5.2-pro')).toBe('Pro');
+    expect(mapModelToBrowserLabel('gpt-5.1')).toBe('Instant');
+    expect(mapModelToBrowserLabel('gpt-5-pro')).toBe('Pro');
+    expect(mapModelToBrowserLabel('gemini-3-pro')).toBe('Gemini 3 Pro');
+    expect(mapModelToBrowserLabel('grok-4.1')).toBe('Expert');
   });
 
   test('maps Grok aliases to the current browser picker labels', async () => {

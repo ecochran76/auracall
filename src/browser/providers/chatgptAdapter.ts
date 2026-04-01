@@ -53,18 +53,18 @@ import {
   resolveBundledServiceArtifactNameMimeTypes,
   resolveBundledServiceArtifactPayloadMarkerSet,
   resolveBundledServiceAppTokens,
-  resolveBundledServiceBaseUrl,
-  resolveBundledServiceCompatibleHosts,
+  requireBundledServiceBaseUrl,
+  requireBundledServiceCompatibleHosts,
   resolveBundledServiceDomSelector,
   resolveBundledServiceDomSelectorSet,
   resolveBundledServiceFeatureDetector,
   resolveBundledServiceFeatureFlagTokens,
-  resolveBundledServiceRouteTemplate,
+  requireBundledServiceRouteTemplate,
   resolveBundledServiceUiLabel,
   resolveBundledServiceUiLabelSet,
 } from '../../services/registry.js';
 
-const CHATGPT_HOME_URL = resolveBundledServiceBaseUrl('chatgpt', 'https://chatgpt.com/');
+const CHATGPT_HOME_URL = requireBundledServiceBaseUrl('chatgpt');
 const CHATGPT_PROJECT_DIALOG_ROOT_SELECTORS = resolveBundledServiceDomSelectorSet('chatgpt', 'project_dialog_roots', [
   '[data-testid="modal-new-project-enhanced"]',
   'dialog[open]',
@@ -223,32 +223,12 @@ const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
   'project_source_upload_markers',
   ['add sources', 'drag sources here'],
 ).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
-const CHATGPT_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('chatgpt', ['chatgpt.com', 'chat.openai.com']);
-const CHATGPT_PROJECT_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'chatgpt',
-  'project',
-  'https://chatgpt.com/g/{projectId}/project',
-);
-const CHATGPT_PROJECT_SOURCES_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'chatgpt',
-  'projectSources',
-  'https://chatgpt.com/g/{projectId}/project?tab=sources',
-);
-const CHATGPT_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'chatgpt',
-  'conversation',
-  'https://chatgpt.com/c/{conversationId}',
-);
-const CHATGPT_PROJECT_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'chatgpt',
-  'projectConversation',
-  'https://chatgpt.com/g/{projectId}/c/{conversationId}',
-);
-const CHATGPT_CONVERSATION_API_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'chatgpt',
-  'conversationApi',
-  'https://chatgpt.com/backend-api/conversation/{conversationId}',
-);
+const CHATGPT_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('chatgpt');
+const CHATGPT_PROJECT_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'project');
+const CHATGPT_PROJECT_SOURCES_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'projectSources');
+const CHATGPT_CONVERSATION_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'conversation');
+const CHATGPT_PROJECT_CONVERSATION_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'projectConversation');
+const CHATGPT_CONVERSATION_API_URL_TEMPLATE = requireBundledServiceRouteTemplate('chatgpt', 'conversationApi');
 const CHATGPT_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector('chatgpt', 'chatgpt-feature-probe-v1');
 const CHATGPT_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens('chatgpt', {
   web_search: ['search the web', 'web search'],

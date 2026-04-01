@@ -13,8 +13,8 @@ import {
 } from './grokIdentity.js';
 import {
   ensureServicesRegistry,
-  resolveBundledServiceBaseUrl,
-  resolveBundledServiceRouteTemplate,
+  requireBundledServiceBaseUrl,
+  requireBundledServiceRouteTemplate,
   resolveServiceModelLabels,
 } from '../../services/registry.js';
 import { GROK_MODEL_LABEL_NORMALIZER, normalizeGrokModelLabel } from './grokModelMenu.js';
@@ -70,34 +70,14 @@ const GROK_PROJECT_SOURCES_ATTACH_SELECTOR = `button[aria-label="Attach"]${cssCl
 const GROK_PERSONAL_FILES_SEARCH_SELECTOR = 'input[placeholder*="Search"][placeholder*="files"], input[placeholder*="Search files"]';
 const GROK_PERSONAL_FILES_ROW_SELECTOR = `div${cssClassContains('hover:bg-surface-l1')}${cssClassContains('group')}`;
 const GROK_PERSONAL_FILES_MODAL_MARKER = 'data-oracle-personal-files-modal';
-const GROK_HOME_URL = resolveBundledServiceBaseUrl('grok', 'https://grok.com/');
-const GROK_FILES_URL = resolveBundledServiceRouteTemplate('grok', 'files', 'https://grok.com/files');
-const GROK_PROJECTS_INDEX_URL = resolveBundledServiceRouteTemplate('grok', 'projectIndex', 'https://grok.com/project');
-const GROK_PROJECT_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'grok',
-  'project',
-  'https://grok.com/project/{projectId}',
-);
-const GROK_PROJECT_CONVERSATIONS_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'grok',
-  'projectConversations',
-  'https://grok.com/project/{projectId}?tab=conversations',
-);
-const GROK_PROJECT_SOURCES_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'grok',
-  'projectSources',
-  'https://grok.com/project/{projectId}?tab=sources',
-);
-const GROK_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'grok',
-  'conversation',
-  'https://grok.com/c/{conversationId}',
-);
-const GROK_PROJECT_CONVERSATION_URL_TEMPLATE = resolveBundledServiceRouteTemplate(
-  'grok',
-  'projectConversation',
-  'https://grok.com/project/{projectId}?chat={conversationId}',
-);
+const GROK_HOME_URL = requireBundledServiceBaseUrl('grok');
+const GROK_FILES_URL = requireBundledServiceRouteTemplate('grok', 'files');
+const GROK_PROJECTS_INDEX_URL = requireBundledServiceRouteTemplate('grok', 'projectIndex');
+const GROK_PROJECT_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'project');
+const GROK_PROJECT_CONVERSATIONS_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'projectConversations');
+const GROK_PROJECT_SOURCES_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'projectSources');
+const GROK_CONVERSATION_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'conversation');
+const GROK_PROJECT_CONVERSATION_URL_TEMPLATE = requireBundledServiceRouteTemplate('grok', 'projectConversation');
 const GROK_CREATE_PROJECT_DIALOG_SELECTOR = '[data-oracle-create-project-dialog="true"]';
 const GROK_ACCOUNT_FILE_LINK_SELECTOR = 'a[href*="/files?file="], a[href*="?file="]';
 const GROK_ACCOUNT_FILE_UPLOAD_INPUT_SELECTOR = 'main header input[type="file"]';

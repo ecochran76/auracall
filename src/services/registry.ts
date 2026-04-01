@@ -194,6 +194,25 @@ function getBundledServiceEntry(serviceId: string): ServiceRegistryEntry | undef
   return readBundledServicesRegistry().services[serviceId];
 }
 
+function requireBundledServiceEntry(serviceId: string): ServiceRegistryEntry {
+  const entry = getBundledServiceEntry(serviceId);
+  if (!entry) {
+    throw new Error(`Bundled services manifest is missing the "${serviceId}" service entry.`);
+  }
+  return entry;
+}
+
+function requireNonEmptyBundledString(
+  value: string | undefined,
+  description: string,
+): string {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  if (!normalized) {
+    throw new Error(`Bundled services manifest is missing ${description}.`);
+  }
+  return normalized;
+}
+
 export function readBundledServicesRegistry(): ServicesRegistry {
   if (bundledRegistryCache) {
     return bundledRegistryCache;
@@ -251,9 +270,24 @@ export function resolveBundledServiceModelLabels(serviceId: string, input: strin
   return resolveServiceModelLabels(readBundledServicesRegistry(), serviceId, input);
 }
 
+export function requireBundledServiceModelLabel(serviceId: string, input: string): string {
+  const label = resolveBundledServiceModelLabels(serviceId, input)[0];
+  if (!label) {
+    throw new Error(`Bundled services manifest is missing a model label for ${serviceId} input "${input}".`);
+  }
+  return label;
+}
+
 export function resolveBundledServiceBaseUrl(serviceId: string, fallback: string): string {
   const configured = getBundledServiceEntry(serviceId)?.routes?.baseUrl?.trim();
   return configured && configured.length > 0 ? configured : fallback;
+}
+
+export function requireBundledServiceBaseUrl(serviceId: string): string {
+  return requireNonEmptyBundledString(
+    requireBundledServiceEntry(serviceId).routes?.baseUrl,
+    `${serviceId}.routes.baseUrl`,
+  );
 }
 
 export function resolveBundledServiceCompatibleHosts(
@@ -263,11 +297,27 @@ export function resolveBundledServiceCompatibleHosts(
   return normalizeStringList(getBundledServiceEntry(serviceId)?.routes?.compatibleHosts, fallback);
 }
 
+export function requireBundledServiceCompatibleHosts(serviceId: string): string[] {
+  const hosts = normalizeStringList(requireBundledServiceEntry(serviceId).routes?.compatibleHosts, []);
+  if (hosts.length === 0) {
+    throw new Error(`Bundled services manifest is missing ${serviceId}.routes.compatibleHosts.`);
+  }
+  return hosts;
+}
+
 export function resolveBundledServiceCookieOrigins(
   serviceId: string,
   fallback: readonly string[],
 ): string[] {
   return normalizeStringList(getBundledServiceEntry(serviceId)?.routes?.cookieOrigins, fallback);
+}
+
+export function requireBundledServiceCookieOrigins(serviceId: string): string[] {
+  const origins = normalizeStringList(requireBundledServiceEntry(serviceId).routes?.cookieOrigins, []);
+  if (origins.length === 0) {
+    throw new Error(`Bundled services manifest is missing ${serviceId}.routes.cookieOrigins.`);
+  }
+  return origins;
 }
 
 export function resolveBundledServiceRouteTemplate(
@@ -277,6 +327,16 @@ export function resolveBundledServiceRouteTemplate(
 ): string {
   const configured = getBundledServiceEntry(serviceId)?.routes?.[route];
   return typeof configured === 'string' && configured.trim().length > 0 ? configured.trim() : fallback;
+}
+
+export function requireBundledServiceRouteTemplate(
+  serviceId: string,
+  route: ServiceRouteTemplateKey,
+): string {
+  return requireNonEmptyBundledString(
+    requireBundledServiceEntry(serviceId).routes?.[route],
+    `${serviceId}.routes.${route}`,
+  );
 }
 
 export function resolveBundledServiceFeatureDetector(serviceId: string, fallback: string): string {

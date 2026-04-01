@@ -5,6 +5,11 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import {
   ensureServicesRegistry,
   readBundledServicesRegistry,
+  requireBundledServiceBaseUrl,
+  requireBundledServiceModelLabel,
+  requireBundledServiceCompatibleHosts,
+  requireBundledServiceCookieOrigins,
+  requireBundledServiceRouteTemplate,
   resolveBundledServiceArtifactContentTypeExtensions,
   resolveBundledServiceArtifactDefaultTitle,
   resolveBundledServiceArtifactKindExtensions,
@@ -57,6 +62,50 @@ describe('service registry manifest helpers', () => {
     });
   });
 
+  test('fails fast on unexpected manifest route keys', () => {
+    const result = parseServicesManifest(
+      JSON.stringify({
+        version: 1,
+        services: {
+          chatgpt: {
+            routes: {
+              baseUrl: 'https://chatgpt.com/',
+              unexpectedRoute: 'https://chatgpt.com/oops',
+            },
+          },
+        },
+      }),
+      'test manifest',
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('unexpectedRoute'),
+    });
+  });
+
+  test('fails fast on unexpected manifest service sections', () => {
+    const result = parseServicesManifest(
+      JSON.stringify({
+        version: 1,
+        services: {
+          chatgpt: {
+            routes: {
+              baseUrl: 'https://chatgpt.com/',
+            },
+            unknownSection: {
+              enabled: true,
+            },
+          },
+        },
+      }),
+      'test manifest',
+    );
+    expect(result).toMatchObject({
+      ok: false,
+      message: expect.stringContaining('unknownSection'),
+    });
+  });
+
   test('fails fast on invalid cached registry JSON', async () => {
     const testHome = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-registry-'));
     const cachePath = path.join(testHome, 'services.json');
@@ -96,6 +145,30 @@ describe('service registry manifest helpers', () => {
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.2-thinking')).toEqual(['Thinking']);
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.2')).toEqual(['Instant']);
     expect(resolveBundledServiceModelLabels('chatgpt', 'gpt-5.2-pro')).toEqual(['Pro']);
+  });
+
+  test('requires bundled model labels for manifest-owned browser models', () => {
+    expect(requireBundledServiceModelLabel('chatgpt', 'gpt-5.2')).toBe('Instant');
+    expect(requireBundledServiceModelLabel('chatgpt', 'gpt-5.1-pro')).toBe('Pro');
+    expect(requireBundledServiceModelLabel('gemini', 'gemini-3-pro')).toBe('Gemini 3 Pro');
+    expect(requireBundledServiceModelLabel('grok', 'grok-4.1')).toBe('Expert');
+  });
+
+  test('requires bundled route and host data for manifest-owned service fields', () => {
+    expect(requireBundledServiceBaseUrl('chatgpt')).toBe('https://chatgpt.com/');
+    expect(requireBundledServiceCookieOrigins('chatgpt')).toEqual([
+      'https://chatgpt.com',
+      'https://chat.openai.com',
+      'https://atlas.openai.com',
+    ]);
+    expect(requireBundledServiceCompatibleHosts('chatgpt')).toEqual(['chatgpt.com', 'chat.openai.com']);
+    expect(requireBundledServiceRouteTemplate('chatgpt', 'conversationApi')).toBe(
+      'https://chatgpt.com/backend-api/conversation/{conversationId}',
+    );
+    expect(requireBundledServiceRouteTemplate('grok', 'projectConversations')).toBe(
+      'https://grok.com/project/{projectId}?tab=conversations',
+    );
+    expect(requireBundledServiceRouteTemplate('gemini', 'app')).toBe('https://gemini.google.com/app');
   });
 
   test('resolves chatgpt route templates and feature tokens through the bundled manifest', () => {

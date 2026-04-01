@@ -1,10 +1,10 @@
-import { resolveBundledServiceCompatibleHosts } from '../services/registry.js';
+import { requireBundledServiceCompatibleHosts } from '../services/registry.js';
 
 type BrowserServiceTarget = 'chatgpt' | 'gemini' | 'grok';
 
-const CHATGPT_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('chatgpt', ['chatgpt.com', 'chat.openai.com']);
-const GEMINI_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('gemini', ['gemini.google.com']);
-const GROK_COMPATIBLE_HOSTS = resolveBundledServiceCompatibleHosts('grok', ['grok.com']);
+const CHATGPT_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('chatgpt');
+const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('gemini');
+const GROK_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('grok');
 
 export function resolveCompatibleHostsForTarget(target: BrowserServiceTarget): string[] {
   switch (target) {

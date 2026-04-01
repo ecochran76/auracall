@@ -1,6 +1,6 @@
 import type { BrowserProviderConfig } from './types.js';
 import {
-  resolveBundledServiceCompatibleHosts,
+  requireBundledServiceCompatibleHosts,
   resolveBundledServiceSelectors,
 } from '../../services/registry.js';
 
@@ -86,5 +86,5 @@ const CHATGPT_SELECTORS = resolveBundledServiceSelectors('chatgpt', {
 export const CHATGPT_PROVIDER: BrowserProviderConfig = {
   id: 'chatgpt',
   selectors: CHATGPT_SELECTORS,
-  loginUrlHints: resolveBundledServiceCompatibleHosts('chatgpt', ['chatgpt.com', 'chat.openai.com']),
+  loginUrlHints: requireBundledServiceCompatibleHosts('chatgpt'),
 };

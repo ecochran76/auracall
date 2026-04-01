@@ -1,21 +1,17 @@
 import type { BrowserModelStrategy } from './types.js';
 import { CHATGPT_PROVIDER } from './providers/chatgpt.js';
 import {
-  resolveBundledServiceBaseUrl,
-  resolveBundledServiceCookieOrigins,
-  resolveBundledServiceRouteTemplate,
+  requireBundledServiceBaseUrl,
+  requireBundledServiceCookieOrigins,
+  requireBundledServiceRouteTemplate,
 } from '../services/registry.js';
 
-export const CHATGPT_URL = resolveBundledServiceBaseUrl('chatgpt', 'https://chatgpt.com/');
-export const GEMINI_URL = resolveBundledServiceRouteTemplate('gemini', 'app', 'https://gemini.google.com/app');
-export const GROK_URL = resolveBundledServiceBaseUrl('grok', 'https://grok.com/');
+export const CHATGPT_URL = requireBundledServiceBaseUrl('chatgpt');
+export const GEMINI_URL = requireBundledServiceRouteTemplate('gemini', 'app');
+export const GROK_URL = requireBundledServiceBaseUrl('grok');
 export const DEFAULT_MODEL_TARGET = 'Instant';
 export const DEFAULT_MODEL_STRATEGY: BrowserModelStrategy = 'select';
-export const COOKIE_URLS = resolveBundledServiceCookieOrigins('chatgpt', [
-  'https://chatgpt.com',
-  'https://chat.openai.com',
-  'https://atlas.openai.com',
-]);
+export const COOKIE_URLS = requireBundledServiceCookieOrigins('chatgpt');
 
 export const INPUT_SELECTORS = CHATGPT_PROVIDER.selectors.input;
 

@@ -4612,3 +4612,91 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - added a matching roadmap entry in `ROADMAP.md`
 - Verification:
   - docs review only
+
+## 2026-04-01 — Services manifest now fails fast on unexpected section drift
+
+- Area: Service-volatility manifest core
+- Symptom:
+  - the checked-in `configs/auracall.services.json` manifest was nominally
+    typed, but several route fields were only surviving because
+    `src/services/manifest.ts` used permissive `.passthrough()` schemas
+  - that meant new route or section drift could silently land in the manifest
+    without the typed loader/schema catching it
+- Fix:
+  - added the already-real route fields to the explicit schema:
+    - `app`
+    - `files`
+    - `projectIndex`
+    - `projectConversations`
+  - changed the manifest section schemas and top-level manifest schema to
+    strict validation
+  - added regression tests proving that:
+    - unexpected route keys fail fast
+    - unexpected service sections fail fast
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
+  - `pnpm run check`
+
+## 2026-04-01 — Main route/host consumers now require bundled manifest-owned fields
+
+- Area: Service-volatility manifest ownership boundary
+- Symptom:
+  - even after the manifest pilot landed, several core route/host consumers
+    still restated bundled service defaults in code as fallback literals
+  - that blurred the ownership boundary and made manifest-backed fields look
+    optional when they are now intended to be authoritative checked-in data
+- Fix:
+  - added required bundled registry helpers for manifest-owned static fields:
+    - `requireBundledServiceBaseUrl(...)`
+    - `requireBundledServiceCompatibleHosts(...)`
+    - `requireBundledServiceCookieOrigins(...)`
+    - `requireBundledServiceRouteTemplate(...)`
+  - rewired the main static route/host consumers to use those helpers instead
+    of repeating duplicated fallback literals:
+    - `src/browser/constants.ts`
+    - `src/browser/urlFamilies.ts`
+    - `src/browser/providers/chatgpt.ts`
+    - `src/browser/providers/chatgptAdapter.ts`
+    - `src/browser/providers/grokAdapter.ts`
+  - added focused registry tests proving the bundled manifest provides the
+    required ChatGPT/Grok/Gemini route and host data directly
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+
+
+## 2026-04-01 — Browser picker labels now come from the bundled services manifest
+
+- Area: Service-volatility model-label ownership
+- Symptom:
+  - `src/cli/browserConfig.ts` still carried a local browser-label lookup table
+    for ChatGPT/Gemini/Grok models even though those picker labels were already
+    checked into `configs/auracall.services.json`
+  - that duplicated ownership made the manifest-backed label slice look less
+    complete than it really was
+- Fix:
+  - added `requireBundledServiceModelLabel(...)` to
+    `src/services/registry.ts`
+  - rewired `mapModelToBrowserLabel(...)` to require manifest-backed labels
+    for inferred browser services instead of reading a local fallback table
+  - kept model normalization in code (`gpt-5.1` -> `gpt-5.2`,
+    Pro alias normalization) so only the declarative picker labels moved to
+    authoritative manifest ownership
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/cli/browserConfig.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+
+## 2026-04-01 — ChatGPT composer vocabulary no longer duplicates manifest-owned defaults
+
+- Area: Service-volatility ChatGPT pilot
+- Symptom:
+  - `src/browser/actions/chatgptComposerTool.ts` still carried duplicated
+    static alias and label fallback tables even though those values were
+    already owned by the bundled services manifest
+- Fix:
+  - removed the duplicated local composer alias/label fallback bundle and now
+    read the ChatGPT composer vocabulary directly from the bundled manifest
+    through the existing registry helpers
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/cli/browserConfig.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`

@@ -12,25 +12,13 @@ import { resolveManagedProfileDir } from '../browser/profileStore.js';
 import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
 import {
   ensureServicesRegistry,
-  resolveBundledServiceModelLabels,
+  requireBundledServiceModelLabel,
   resolveServiceModelLabels,
 } from '../services/registry.js';
 import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
 const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
-const FALLBACK_BROWSER_MODEL_LABELS: Partial<Record<ModelName, string>> = {
-  'gpt-5.2-thinking': 'Thinking',
-  'gpt-5.2-instant': 'Instant',
-  'gpt-5.2-pro': 'Pro',
-  'gpt-5.1-pro': 'Pro',
-  'gpt-5-pro': 'Pro',
-  'gpt-5.2': 'Instant',
-  'gpt-5.1': 'Instant',
-  'gemini-3-pro': 'Gemini 3 Pro',
-  'grok-4.1': 'Expert',
-};
-
 export interface BrowserFlagOptions {
   auracallProfileName?: string;
   managedProfileRoot?: string | null;
@@ -228,12 +216,9 @@ export function mapModelToBrowserLabel(model: ModelName): string {
   const normalized = normalizeChatGptModelForBrowser(model);
   const serviceId = inferBrowserServiceId(normalized);
   if (serviceId) {
-    const label = resolveBundledServiceModelLabels(serviceId, normalized)[0];
-    if (label) {
-      return label;
-    }
+    return requireBundledServiceModelLabel(serviceId, normalized);
   }
-  return FALLBACK_BROWSER_MODEL_LABELS[normalized] ?? DEFAULT_MODEL_TARGET;
+  return DEFAULT_MODEL_TARGET;
 }
 
 export function resolveBrowserModelLabel(input: string | undefined, model: ModelName): string {

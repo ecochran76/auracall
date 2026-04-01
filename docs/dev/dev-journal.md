@@ -3009,3 +3009,107 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - if we want a final live proof on the send path, we need a controlled stale
     send repro on a disposable conversation so the persisted send post-mortem
     can be inspected the same way as the read-side cases
+
+## 2026-04-01 — Pivoted back to the roadmap with manifest-core hardening
+
+- Focus: resume the next roadmap item from `docs/dev/next-execution-plan.md`
+  instead of continuing ChatGPT-specific hardening past the current green bar
+- Decision:
+  - the highest-confidence next item remains Slice 1,
+    service-volatility extraction completion
+  - the first bounded follow-up is manifest-core hardening, not the
+    browser-profile-family refactor yet
+- Implemented:
+  - tightened `src/services/manifest.ts` so the checked-in services manifest is
+    no longer "typed plus passthrough"
+  - added explicit route keys already in real use but previously accepted only
+    through permissive parsing:
+    - `app`
+    - `files`
+    - `projectIndex`
+    - `projectConversations`
+  - switched the manifest section schemas and the top-level manifest schema to
+    strict validation so unexpected route keys/sections now fail fast
+  - added focused regression coverage in `tests/services/registry.test.ts` for:
+    - unexpected route keys
+    - unexpected service sections
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - continue the same Slice 1 track by identifying the remaining low-risk
+    ChatGPT manifest-owned static fields that are still only implicitly typed or
+    still duplicated in code
+  - keep the browser-profile-family refactor as the next major planned item
+    after the service-volatility pilot is in a cleaner finished state
+
+## 2026-04-01 — Bundled route/host ownership now reads directly from the manifest
+
+- Focus: remove duplicated fallback literals from the main route/host consumers
+  for manifest-owned static service data
+- Implemented:
+  - added required bundled registry helpers in `src/services/registry.ts` for:
+    - `requireBundledServiceBaseUrl(...)`
+    - `requireBundledServiceCompatibleHosts(...)`
+    - `requireBundledServiceCookieOrigins(...)`
+    - `requireBundledServiceRouteTemplate(...)`
+  - cut the main static route/host consumers over to those helpers:
+    - `src/browser/constants.ts`
+    - `src/browser/urlFamilies.ts`
+    - `src/browser/providers/chatgpt.ts`
+    - `src/browser/providers/chatgptAdapter.ts`
+    - `src/browser/providers/grokAdapter.ts`
+  - added focused registry coverage proving the bundled manifest now acts as the
+    authoritative source for those required fields
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - inspect the remaining ChatGPT low-risk manifest pilot fields for any other
+    duplicated static defaults, especially model-label/browser-normalization
+    ownership and any still-implicit config compatibility shims
+  - once that surface is materially clean, move on to the browser-profile-family
+    refactor as the next roadmap initiative
+
+
+## 2026-04-01 — Browser model labels now resolve from the bundled manifest
+
+- Focus: remove the remaining duplicated browser-label table from
+  `src/cli/browserConfig.ts` where the bundled services manifest already owns
+  the ChatGPT/Gemini/Grok picker labels
+- Implemented:
+  - added `requireBundledServiceModelLabel(...)` in
+    `src/services/registry.ts`
+  - rewired `mapModelToBrowserLabel(...)` in
+    `src/cli/browserConfig.ts` to use required bundled manifest labels for all
+    inferred browser services
+  - removed the local fallback browser-label table for manifest-owned service
+    models while keeping the existing model-normalization behavior in code
+  - added focused coverage in:
+    - `tests/services/registry.test.ts`
+    - `tests/cli/browserConfig.test.ts`
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/cli/browserConfig.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/grokAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - do one more pass for any remaining duplicated low-risk static defaults in
+    the ChatGPT manifest pilot surface
+  - if that pass is thin, stop the pilot there and pivot to the browser-profile-family refactor
+
+## 2026-04-01 — ChatGPT composer tool labels now read directly from the manifest
+
+- Focus: remove the last worthwhile duplicated static ChatGPT composer-label
+  defaults from the low-risk manifest pilot surface
+- Implemented:
+  - rewired `src/browser/actions/chatgptComposerTool.ts` to consume the
+    manifest-owned composer aliases and label sets directly with empty
+    fallbacks instead of repeating a local static dictionary/list bundle
+  - this keeps workflow behavior unchanged while making the checked-in
+    manifest the clear owner of the current ChatGPT composer vocabulary
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/cli/browserConfig.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Assessment:
+  - the remaining ChatGPT manifest-pilot cleanup now looks thin enough that
+    the low-risk pilot can reasonably stop here
+  - the next main roadmap item should be the browser-profile-family refactor

@@ -12,15 +12,19 @@ const ServiceModelEntrySchema = z.object({
 const ServiceRouteRegistrySchema = z
   .object({
     baseUrl: z.string().optional(),
+    app: z.string().optional(),
+    files: z.string().optional(),
+    projectIndex: z.string().optional(),
     compatibleHosts: StringListSchema.optional(),
     cookieOrigins: StringListSchema.optional(),
     project: z.string().optional(),
+    projectConversations: z.string().optional(),
     projectSources: z.string().optional(),
     conversation: z.string().optional(),
     projectConversation: z.string().optional(),
     conversationApi: z.string().optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceFeatureRegistrySchema = z
   .object({
@@ -28,7 +32,7 @@ const ServiceFeatureRegistrySchema = z
     flags: z.record(z.string(), StringListSchema).optional(),
     appTokens: z.record(z.string(), StringListSchema).optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceComposerRegistrySchema = z
   .object({
@@ -41,14 +45,14 @@ const ServiceComposerRegistrySchema = z
     chipIgnoreTokens: StringListSchema.optional(),
     fileRequestLabels: StringListSchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceUiRegistrySchema = z
   .object({
     labels: z.record(z.string(), z.string()).optional(),
     labelSets: z.record(z.string(), StringListSchema).optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceSelectorRegistrySchema = z
   .object({
@@ -63,14 +67,14 @@ const ServiceSelectorRegistrySchema = z
     fileInput: StringListSchema.optional(),
     attachmentMenu: StringListSchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceDomRegistrySchema = z
   .object({
     selectors: StringToStringMapSchema.optional(),
     selectorSets: z.record(z.string(), StringListSchema).optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceArtifactRegistrySchema = z
   .object({
@@ -80,7 +84,7 @@ const ServiceArtifactRegistrySchema = z
     defaultTitles: StringToStringMapSchema.optional(),
     payloadMarkers: z.record(z.string(), StringListSchema).optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceRegistryEntrySchema = z
   .object({
@@ -93,14 +97,14 @@ const ServiceRegistryEntrySchema = z
     dom: ServiceDomRegistrySchema.optional(),
     artifacts: ServiceArtifactRegistrySchema.optional(),
   })
-  .passthrough();
+  .strict();
 
 const ServiceManifestSchema = z
   .object({
     version: z.number(),
     services: z.record(z.string(), ServiceRegistryEntrySchema),
   })
-  .passthrough();
+  .strict();
 
 const ServiceRegistryFileSchema = ServiceManifestSchema.extend({
   templateHash: z.string().optional(),

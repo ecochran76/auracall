@@ -40,71 +40,15 @@ export type ChatgptComposerToolSelection = {
   availableMore: string[];
 };
 
-const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {
-  search: ['web search'],
-  web: ['web search'],
-  research: ['deep research'],
-  image: ['create image'],
-  images: ['create image'],
-  knowledge: ['company knowledge'],
-  study: ['study and learn'],
-  learn: ['study and learn'],
-  'study mode': ['study and learn'],
-  agent: ['agent mode'],
-  quickbooks: ['intuit quickbooks'],
-  acrobat: ['adobe acrobat'],
-  photoshop: ['adobe photoshop'],
-  quiz: ['quizzes'],
-  calendar: ['google calendar'],
-  drive: ['google drive'],
-  gh: ['github'],
-  'git hub': ['github'],
-});
+const COMPOSER_TOOL_ALIASES = resolveBundledServiceComposerAliases('chatgpt', {});
 
-const COMPOSER_TOP_LEVEL_SENTINELS = resolveBundledServiceComposerTopLevelSentinels('chatgpt', [
-  'more',
-  'recent files',
-  'company knowledge',
-  'create image',
-  'deep research',
-  'web search',
-]);
-const COMPOSER_MORE_LABELS = resolveBundledServiceComposerMoreLabels('chatgpt', ['more']);
-const COMPOSER_TOP_MENU_SIGNAL_LABELS = resolveBundledServiceComposerTopMenuSignalLabels('chatgpt', ['recent files']);
-const COMPOSER_TOP_MENU_SIGNAL_SUBSTRINGS = resolveBundledServiceComposerTopMenuSignalSubstrings('chatgpt', [
-  'add photos',
-  'filesctrlu',
-]);
-const KNOWN_COMPOSER_TOOL_LABELS = resolveBundledServiceComposerKnownLabels('chatgpt', [
-  'create image',
-  'deep research',
-  'web search',
-  'study and learn',
-  'agent mode',
-  'canvas',
-  'adobe acrobat',
-  'adobe photoshop',
-  'canva',
-  'github',
-  'gmail',
-  'google calendar',
-  'google drive',
-  'intuit quickbooks',
-  'quizzes',
-]);
-const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLabels('chatgpt', [
-  'file',
-  'files',
-  'upload',
-  'uploads',
-  'recent file',
-  'recent files',
-  'add photos files',
-]);
-const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', [
-  'add files and more',
-  'thinking',
-]);
+const COMPOSER_TOP_LEVEL_SENTINELS = resolveBundledServiceComposerTopLevelSentinels('chatgpt', []);
+const COMPOSER_MORE_LABELS = resolveBundledServiceComposerMoreLabels('chatgpt', []);
+const COMPOSER_TOP_MENU_SIGNAL_LABELS = resolveBundledServiceComposerTopMenuSignalLabels('chatgpt', []);
+const COMPOSER_TOP_MENU_SIGNAL_SUBSTRINGS = resolveBundledServiceComposerTopMenuSignalSubstrings('chatgpt', []);
+const KNOWN_COMPOSER_TOOL_LABELS = resolveBundledServiceComposerKnownLabels('chatgpt', []);
+const COMPOSER_FILE_REQUEST_LABELS = resolveBundledServiceComposerFileRequestLabels('chatgpt', []);
+const COMPOSER_CHIP_IGNORE_TOKENS = resolveBundledServiceComposerChipIgnoreTokens('chatgpt', []);
 
 export async function ensureChatgptComposerTool(
   Runtime: ChromeClient['Runtime'],
