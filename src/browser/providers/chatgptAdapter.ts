@@ -727,7 +727,7 @@ async function readVisibleChatgptBlockingSurfaceMatchWithClient(
   return null;
 }
 
-async function dismissVisibleChatgptRateLimitDialogWithClient(
+async function recoverVisibleChatgptBlockingSurfaceWithClient(
   client: ChromeClient,
   match?: ChatgptBlockingSurfaceMatch | null,
 ): Promise<string | null> {
@@ -735,7 +735,13 @@ async function dismissVisibleChatgptRateLimitDialogWithClient(
   if (!resolved) {
     return null;
   }
-  if (resolved.kind !== 'rate-limit' || !resolved.selector) {
+  if (resolved.kind !== 'rate-limit') {
+    await client.Page.reload({ ignoreCache: true }).catch(async () => {
+      await client.Runtime.evaluate({
+        expression: 'location.reload()',
+        awaitPromise: false,
+      }).catch(() => undefined);
+    });
     return resolved.summary;
   }
   if (resolved.selector) {
@@ -751,7 +757,7 @@ async function dismissVisibleChatgptRateLimitDialogWithClient(
   return resolved.summary;
 }
 
-async function withChatgptRateLimitDialogRecovery<T>(
+async function withChatgptBlockingSurfaceRecovery<T>(
   client: ChromeClient,
   action: string,
   fn: () => Promise<T>,
@@ -762,7 +768,7 @@ async function withChatgptRateLimitDialogRecovery<T>(
     pauseMs: options?.pauseMs ?? CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS,
     retries: options?.retries ?? 1,
     inspect: () => readVisibleChatgptBlockingSurfaceMatchWithClient(client),
-    dismiss: (match) => dismissVisibleChatgptRateLimitDialogWithClient(client, match).then(() => undefined),
+    dismiss: (match) => recoverVisibleChatgptBlockingSurfaceWithClient(client, match).then(() => undefined),
     classifyError: (error) => {
       const directMessage = error instanceof Error ? error.message : String(error);
       const match = classifyChatgptBlockingSurfaceProbe({ text: directMessage });
@@ -5057,7 +5063,7 @@ async function readChatgptConversationContextWithClient(
   conversationId: string,
   projectId?: string | null,
 ): Promise<ConversationContext> {
-  return withChatgptRateLimitDialogRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
+  return withChatgptBlockingSurfaceRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
     await navigateToChatgptConversation(client, conversationId, projectId);
     const ready = await waitForPredicate(
       client.Runtime,
@@ -6082,7 +6088,7 @@ async function materializeChatgptConversationArtifactWithClient(
   projectId?: string | null,
 ): Promise<FileRef | null> {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
-  return withChatgptRateLimitDialogRecovery(
+  return withChatgptBlockingSurfaceRecovery(
     client,
     `materializeChatgptConversationArtifact:${conversationId}:${artifact.id}`,
     async () => {

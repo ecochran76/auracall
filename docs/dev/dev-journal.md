@@ -2810,3 +2810,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+- Follow-up implementation:
+  - generalized the old rate-limit-only read/materialization wrapper into
+    `withChatgptBlockingSurfaceRecovery(...)`
+  - visible `connection-failed`, `retry-affordance`, and generic transient
+    blocking surfaces now trigger a reload-based recovery attempt for the
+    wrapped read/materialization path instead of a no-op dismiss
+  - kept visible rate-limit dialogs on the existing dismiss-and-pause path
+- Additional verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

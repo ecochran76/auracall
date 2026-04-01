@@ -4487,6 +4487,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+- Follow-up:
+  - the old rate-limit-only read/materialization wrapper is now
+    `withChatgptBlockingSurfaceRecovery(...)`
+  - for non-rate-limit ChatGPT bad states (`connection-failed`,
+    `retry-affordance`, `transient-error`), the recovery path now reloads the
+    page before retrying the wrapped read/materialization operation instead of
+    only attempting a dialog dismiss
+- Additional verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
 - Area: Browser profile family configuration
