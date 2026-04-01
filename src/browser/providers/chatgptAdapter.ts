@@ -448,6 +448,12 @@ type ChatgptRecoveryDebugContext = {
   metadata?: Record<string, unknown>;
 };
 
+type ChatgptRecoveryActionResult = {
+  action: 'dismiss-overlay' | 'close-dialog' | 'reload-page';
+  outcome: 'attempted' | 'failed';
+  summary: string | null;
+};
+
 function summarizeChatgptConversationRowTagFailure(
   conversationId: string,
   failures: ReadonlyArray<ChatgptConversationRowTagAttemptFailure>,
@@ -740,31 +746,68 @@ async function readVisibleChatgptBlockingSurfaceMatchWithClient(
 async function recoverVisibleChatgptBlockingSurfaceWithClient(
   client: ChromeClient,
   match?: ChatgptBlockingSurfaceMatch | null,
-): Promise<string | null> {
+): Promise<ChatgptRecoveryActionResult | null> {
   const resolved = match ?? (await readVisibleChatgptBlockingSurfaceMatchWithClient(client));
   if (!resolved) {
     return null;
   }
   if (resolved.kind !== 'rate-limit') {
-    await client.Page.reload({ ignoreCache: true }).catch(async () => {
-      await client.Runtime.evaluate({
-        expression: 'location.reload()',
-        awaitPromise: false,
-      }).catch(() => undefined);
-    });
-    return resolved.summary;
+    try {
+      await client.Page.reload({ ignoreCache: true }).catch(async () => {
+        await client.Runtime.evaluate({
+          expression: 'location.reload()',
+          awaitPromise: false,
+        }).catch(() => undefined);
+      });
+      return {
+        action: 'reload-page',
+        outcome: 'attempted',
+        summary: resolved.summary,
+      };
+    } catch {
+      return {
+        action: 'reload-page',
+        outcome: 'failed',
+        summary: resolved.summary,
+      };
+    }
   }
   if (resolved.selector) {
-    await dismissOverlayRoot(client.Runtime, resolved.selector, {
-      closeButtonMatch: {
-        includeAny: [...CHATGPT_DIALOG_DISMISS_LABELS],
-      },
-      timeoutMs: 3_000,
-    }).catch(() => undefined);
+    try {
+      await dismissOverlayRoot(client.Runtime, resolved.selector, {
+        closeButtonMatch: {
+          includeAny: [...CHATGPT_DIALOG_DISMISS_LABELS],
+        },
+        timeoutMs: 3_000,
+      }).catch(() => undefined);
+      return {
+        action: 'dismiss-overlay',
+        outcome: 'attempted',
+        summary: resolved.summary,
+      };
+    } catch {
+      return {
+        action: 'dismiss-overlay',
+        outcome: 'failed',
+        summary: resolved.summary,
+      };
+    }
   } else {
-    await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS).catch(() => undefined);
+    try {
+      await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS).catch(() => undefined);
+      return {
+        action: 'close-dialog',
+        outcome: 'attempted',
+        summary: resolved.summary,
+      };
+    } catch {
+      return {
+        action: 'close-dialog',
+        outcome: 'failed',
+        summary: resolved.summary,
+      };
+    }
   }
-  return resolved.summary;
 }
 
 async function withChatgptBlockingSurfaceRecovery<T>(
@@ -774,6 +817,7 @@ async function withChatgptBlockingSurfaceRecovery<T>(
   options?: { pauseMs?: number; retries?: number; debugContext?: ChatgptRecoveryDebugContext },
 ): Promise<T> {
   const debugContext = options?.debugContext;
+  let lastRecoveryAction: ChatgptRecoveryActionResult | null = null;
   const persistDebugRecord = async (
     phase: 'pre' | 'post' | 'error' | 'final-error',
     match: ChatgptBlockingSurfaceMatch | null,
@@ -797,6 +841,13 @@ async function withChatgptBlockingSurfaceRecovery<T>(
               details: match.details ?? null,
             }
           : null,
+        recovery: lastRecoveryAction
+          ? {
+              action: lastRecoveryAction.action,
+              outcome: lastRecoveryAction.outcome,
+              summary: lastRecoveryAction.summary,
+            }
+          : null,
         snapshot,
         ...(debugContext.metadata ?? {}),
         ...(extra ?? {}),
@@ -809,7 +860,9 @@ async function withChatgptBlockingSurfaceRecovery<T>(
       pauseMs: options?.pauseMs ?? CHATGPT_RATE_LIMIT_RECOVERY_PAUSE_MS,
       retries: options?.retries ?? 1,
       inspect: () => readVisibleChatgptBlockingSurfaceMatchWithClient(client),
-      dismiss: (match) => recoverVisibleChatgptBlockingSurfaceWithClient(client, match).then(() => undefined),
+      dismiss: async (match) => {
+        lastRecoveryAction = await recoverVisibleChatgptBlockingSurfaceWithClient(client, match);
+      },
       classifyError: (error) => {
         const directMessage = error instanceof Error ? error.message : String(error);
         const match = classifyChatgptBlockingSurfaceProbe({ text: directMessage });

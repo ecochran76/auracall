@@ -200,6 +200,11 @@ Current next slice:
    itself (`reload`, `dismiss`, `reopen`, outcome), not only the pre/post DOM
    state, so deterministic clustering can distinguish "same symptom, different
    recovery path"
+   Status:
+   - now includes current action/outcome for the implemented ChatGPT recovery
+     paths (`reload-page`, `dismiss-overlay`, `close-dialog`)
+   - still missing any future `reopen conversation from authoritative list`
+     recovery path until that behavior exists
 
 ## Acceptance bar for hardening
 

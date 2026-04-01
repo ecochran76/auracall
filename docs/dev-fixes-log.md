@@ -4553,6 +4553,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - each persisted record includes the recovery phase and classified blocking
     surface, so repeated failure classes can be grouped without re-scraping the
     raw session log
+  - the persisted record now also includes the actual recovery action/outcome
+    used by the current ChatGPT recovery path, which makes it possible to
+    separate "same visible symptom, different remediation" during later
+    clustering
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

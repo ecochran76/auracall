@@ -2897,3 +2897,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - capture the specific recovery action/outcome in the same persisted bundle so
     later clustering can distinguish reload-vs-dismiss-vs-reopen recoveries
+  - the persisted bundle now includes the currently implemented recovery action
+    and outcome (`reload-page`, `dismiss-overlay`, `close-dialog`); the next
+    missing piece is a true conversation re-open recovery path where warranted
