@@ -4576,6 +4576,16 @@ This log captures notable fixes, what broke, why, and how we verified the repair
       `auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only`
       - persisted `transient-error` -> `reload-page` -> `reopen-conversation`
       - command still returned a valid payload (`messages = 4`)
+  - live hostile-state validation is now also green for the remaining
+    classified non-rate-limit read-side states:
+    - synthetic-on-real `retry-affordance` on
+      `auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only`
+      - persisted `retry-affordance` -> `reload-page` -> `reopen-conversation`
+      - command still returned a valid payload (`messages = 4`)
+    - synthetic-on-real `connection-failed` on
+      `auracall conversations files list 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt`
+      - persisted `connection-failed` -> `reload-page` -> `reopen-conversation`
+      - command still returned the expected conversation file list
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

@@ -2951,3 +2951,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - extend live hostile-state validation to at least one more read surface
     (`conversations files list` or `artifacts fetch`) and then shift to real
     retry-affordance / connection-failed cases when available
+
+## 2026-04-01 — Live ChatGPT retry-affordance and connection-failed recovery are green
+
+- Focus: prove the remaining classified read-side bad states, not just generic
+  transient overlays
+- Implemented:
+  - synthetic-on-real retry-affordance validation on live conversation
+    `69bc77cf-be28-8326-8f07-88521224abeb`
+    - injected visible `Retry` control with nearby `Server connection failed`
+      text
+    - ran
+      `CHATGPT_DEVTOOLS_TRACE=1 ... auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only`
+    - persisted post-mortem:
+      - `kind = retry-affordance`
+      - `reload-page`
+      - `reopen-conversation`
+    - command still returned a valid payload (`messages = 4`)
+  - synthetic-on-real connection-failed validation on the same live
+    conversation
+    - injected visible `Server connection failed...` alert without retry button
+    - ran
+      `CHATGPT_DEVTOOLS_TRACE=1 ... auracall conversations files list 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt`
+    - persisted post-mortem:
+      - `kind = connection-failed`
+      - `reload-page`
+      - `reopen-conversation`
+    - command still returned the expected conversation file list
+- Verification:
+  - live post-mortem artifacts:
+    - `2026-04-01T15-58-22-987Z-chatgpt-read-conversation-context-pre.json`
+    - `2026-04-01T15-59-11-069Z-chatgpt-list-conversation-files-pre.json`
+- Next:
+  - the remaining meaningful live target is a real organically occurring broken
+    turn or connection-failed state, but the classified recovery matrix itself
+    is now exercised across the main read surfaces
