@@ -3113,3 +3113,197 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the remaining ChatGPT manifest-pilot cleanup now looks thin enough that
     the low-risk pilot can reasonably stop here
   - the next main roadmap item should be the browser-profile-family refactor
+
+## 2026-04-01 — Browser-profile-family refactor Slice 1 started with typed resolved objects
+
+- Focus: begin the refactor with a non-breaking seam instead of rewiring the
+  current mutable browser merge flow in one step
+- Implemented:
+  - added `src/browser/service/profileResolution.ts`
+  - introduced typed resolved objects for:
+    - profile family
+    - browser family
+    - service binding
+    - browser launch profile
+  - added `resolveBrowserProfileResolution(...)` as a pure helper over the
+    current merge shape so later slices can replace generic record mutation
+    incrementally
+  - added focused coverage in `tests/browser/profileResolution.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - wire one light runtime integration point to consume the new typed
+    resolved-object seam
+  - then move on to extracting the browser-family resolver out of the current
+    `applyBrowserProfileOverrides(...)` path
+
+## 2026-04-01 — Profile-family Slice 1 now feeds one real runtime path
+
+- Focus: move beyond a pure seam and prove the typed resolution objects can
+  drive a real part of the current config flow without behavior drift
+- Implemented:
+  - rewired `src/browser/service/profileConfig.ts` to use
+    `resolveBrowserProfileResolution(...)` for:
+    - selected/default service resolution
+    - service URL layering
+    - service-scoped browser defaults such as project/conversation ids,
+      model strategy, thinking time, composer tool, and manual-login fields
+  - added focused runtime coverage in
+    `tests/browser/profileConfig.test.ts`
+  - corrected the typed resolution seam so explicit CLI/browser target
+    selection wins over the profile default service
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - extract browser-family resolution out of the current
+    `applyBrowserProfileOverrides(...)` path
+  - keep launch-plan consumption for a later slice once browser-family and
+    service-binding resolution are both explicit
+
+## 2026-04-01 — Profile-family Slice 2 starts extracting browser-family defaults
+
+- Focus: move browser-family-owned defaults out of ad hoc profile-browser
+  mutation and onto the typed resolution seam
+- Implemented:
+  - rewired `src/browser/service/profileConfig.ts` so
+    `applyBrowserProfileDefaults(...)` now uses the typed
+    `ResolvedBrowserFamily` layer for:
+    - chrome path
+    - display
+    - managed profile root
+    - blocking profile action
+    - source profile name
+    - source/bootstrap cookie paths
+    - debug port
+    - debug port strategy
+    - WSL Chrome preference
+    - service/blank tab limits
+    - disposable-window collapsing
+  - kept service-owned manual-login selection in the service-binding phase
+    instead of letting browser-family fallback claim it too early
+  - pinned the runtime precedence in `tests/browser/profileConfig.test.ts`
+    so explicit browser target still beats profile default service while
+    browser-family defaults still override generic browser defaults
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - continue Slice 2 by making browser-family resolution more explicit inside
+    the surrounding config flow, then decide whether the launch-profile seam is
+    ready for a first real consumer
+
+## 2026-04-01 — Profile-family Slice 2 now also owns debug-port-range and cache defaults
+
+- Focus: remove two remaining raw profile reads from `profileConfig.ts` so
+  the typed seam covers more of the current layering behavior
+- Implemented:
+  - rewired `applyBrowserProfileOverrides(...)` to source
+    `debugPortRange` from `ResolvedBrowserFamily`
+  - rewired cache default application to use
+    `ResolvedProfileFamily.cacheDefaults` instead of reading raw
+    `profile.cache`
+  - extended `tests/browser/profileConfig.test.ts` to pin the
+    debug-port-range and cache-default behavior
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - decide whether the next slice should start first real launch-profile
+    consumption or continue pulling residual browser/profile layering out of
+    the legacy mutable config path
+
+## 2026-04-01 — Profile-family Slice 3 adds first real launch-profile consumers
+
+- Focus: move one real runtime path from ad hoc browser/profile reconstruction to
+  the typed launch-profile seam before attempting a larger launch/config refactor
+- Implemented:
+  - added `resolveBrowserProfileResolutionFromResolvedConfig(...)` in
+    `src/browser/service/profileResolution.ts` for the already-resolved
+    config/runtime path
+  - taught that helper to derive a target-scoped managed profile dir from
+    `managedProfileRoot + auracallProfile + target` when a flattened config
+    does not carry a raw `manualLoginProfileDir`
+  - rewired:
+    - `src/browser/service/portResolution.ts`
+    - `src/browser/service/browserService.ts`
+    so the DevTools attach/list target path now reads launch-owned fields from
+    the typed launch profile instead of rebuilding them locally
+  - added regression coverage proving:
+    - flattened launch-profile derivation keeps target-scoped managed profile
+      paths
+    - `BrowserService.resolveServiceTarget(...)` uses the requested service
+      launch profile when scanning fallback tabs
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - decide whether the next consumer should be `resolveBrowserConfig(...)`
+    itself or the surrounding browser doctor/login bootstrap paths
+  - bias toward the smallest path that removes another round of local
+    launch-profile reconstruction
+
+## 2026-04-01 — Profile-family Slice 3 now feeds resolveBrowserConfig too
+
+- Focus: make the typed launch-profile seam influence the final resolved browser
+  config, not just attach/list-target paths
+- Implemented:
+  - rewired `src/browser/config.ts` so launch-owned output fields are now
+    projected through `resolveBrowserProfileResolutionFromResolvedConfig(...)`
+    after environment/discovery normalization
+  - current launch-owned fields now read from the typed launch profile in the
+    final resolved config path:
+    - chrome path
+    - display
+    - chrome profile
+    - runtime/bootstrap cookie paths
+    - managed profile root
+    - debug port
+    - debug-port strategy
+    - remote Chrome target
+    - keep/headless/hide-window toggles
+    - manual-login flag/profile dir
+    - WSL Chrome preference
+    - service/blank tab limits
+    - disposable-window collapsing
+    - blocking profile action
+  - added a regression in `tests/browser/config.test.ts` proving
+    `manualLogin: false` still keeps `manualLoginProfileDir = null`
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - the remaining local ownership in `resolveBrowserConfig(...)` is mostly
+    environment/discovery normalization, URL/model semantics, and platform
+    heuristics
+  - the next clean target is either the browser doctor/login bootstrap path or
+    a tighter type cleanup in `profileResolution.ts` so launch/browser fields
+    stop flowing around as generic strings
+
+## 2026-04-01 — Profile-family type cleanup removes the remaining launch-profile casts
+
+- Focus: tighten the typed seam so launch/browser consumers no longer need to
+  cast generic strings back into browser config unions
+- Implemented:
+  - `src/browser/service/profileResolution.ts` now models:
+    - `debugPortStrategy` as `DebugPortStrategy`
+    - `blockingProfileAction` as the real resolved browser-config union
+  - added explicit parsers for those fields instead of treating them as generic
+    strings
+  - removed the remaining runtime consumer casts in:
+    - `src/browser/config.ts`
+    - `src/browser/service/portResolution.ts`
+  - corrected a stale invalid test fixture in
+    `tests/browser/profileConfig.test.ts`:
+    `blockingProfileAction: 'reuse'` was never part of the schema and is now
+    pinned to a real supported value
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - the remaining worthwhile refactor work is less about typing and more about
+    ownership boundaries:
+    - either move browser doctor/login bootstrap to the same resolved launch
+      profile
+    - or cut a checkpoint and reassess the next roadmap slice

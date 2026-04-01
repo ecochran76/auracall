@@ -196,6 +196,18 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.manualLoginProfileDir).toBe('/home/ecochran76/.auracall/browser-profile-wsl');
   });
 
+  test('does not derive a managed profile dir when manualLogin is disabled', () => {
+    const resolved = resolveBrowserConfig({
+      target: 'grok',
+      manualLogin: false,
+      managedProfileRoot: '/tmp/managed-root',
+    });
+
+    expect(resolved.manualLogin).toBe(false);
+    expect(resolved.manualLoginProfileDir).toBeNull();
+    expect(resolved.managedProfileRoot).toBe('/tmp/managed-root');
+  });
+
   test('derives deterministic managed profile dirs from the browser target', () => {
     const resolved = resolveBrowserConfig({
       target: 'grok',

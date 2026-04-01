@@ -4,6 +4,7 @@ import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js'
 import { resolveManagedProfileDir, resolveManagedProfileRoot } from './profileStore.js';
 import { isTemporaryChatUrl, normalizeChatgptUrl } from './utils.js';
 import { discoverDefaultBrowserProfile, resolveProfileDirectoryName, type WslChromePreference } from './service/profile.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
 import path from 'node:path';
 import {
   inferWindowsLocalAppDataRoot,
@@ -171,17 +172,45 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     normalizeBlockingProfileAction(config?.blockingProfileAction) ??
     normalizeBlockingProfileAction(mapProfileConflictAction(config?.profileConflictAction)) ??
     DEFAULT_BROWSER_CONFIG.blockingProfileAction;
+  const launchResolution = resolveBrowserProfileResolutionFromResolvedConfig({
+    browser: {
+      ...(config ?? {}),
+      target,
+      chromeProfile: resolvedChromeProfile,
+      chromePath: resolvedChromePath,
+      chromeCookiePath: resolvedCookiePath,
+      bootstrapCookiePath: resolvedBootstrapCookiePath,
+      display: resolvedDisplay,
+      managedProfileRoot,
+      debugPort: debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
+      debugPortStrategy,
+      remoteChrome: normalizedRemoteChrome,
+      headless: config?.headless ?? DEFAULT_BROWSER_CONFIG.headless,
+      hideWindow: config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
+      keepBrowser: config?.keepBrowser ?? DEFAULT_BROWSER_CONFIG.keepBrowser,
+      manualLogin,
+      manualLoginProfileDir: manualLogin ? resolvedProfileDir : null,
+      wslChromePreference,
+      serviceTabLimit,
+      blankTabLimit,
+      collapseDisposableWindows:
+        config?.collapseDisposableWindows ?? DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
+      blockingProfileAction,
+    },
+    target,
+  });
+  const launchProfile = launchResolution.launchProfile;
   return {
     ...DEFAULT_BROWSER_CONFIG,
     ...(config ?? {}),
-    blockingProfileAction,
-    managedProfileRoot,
+    blockingProfileAction: launchProfile.blockingProfileAction ?? blockingProfileAction,
+    managedProfileRoot: launchProfile.managedProfileRoot ?? managedProfileRoot,
     target,
     url: normalizedUrl,
     chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
     timeoutMs: config?.timeoutMs ?? DEFAULT_BROWSER_CONFIG.timeoutMs,
-    debugPort: debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
-    debugPortStrategy,
+    debugPort: launchProfile.debugPort ?? debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
+    debugPortStrategy: launchProfile.debugPortStrategy ?? debugPortStrategy,
     debugPortRange,
     inputTimeoutMs: config?.inputTimeoutMs ?? DEFAULT_BROWSER_CONFIG.inputTimeoutMs,
     cookieSync: config?.cookieSync ?? cookieSyncDefault,
@@ -189,31 +218,34 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
     cookieSyncWaitMs: config?.cookieSyncWaitMs ?? DEFAULT_BROWSER_CONFIG.cookieSyncWaitMs,
     inlineCookies: normalizedInlineCookies,
     inlineCookiesSource: config?.inlineCookiesSource ?? DEFAULT_BROWSER_CONFIG.inlineCookiesSource,
-    headless: config?.headless ?? DEFAULT_BROWSER_CONFIG.headless,
-    keepBrowser: config?.keepBrowser ?? DEFAULT_BROWSER_CONFIG.keepBrowser,
-    hideWindow: config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
+    headless: launchProfile.headless ?? config?.headless ?? DEFAULT_BROWSER_CONFIG.headless,
+    keepBrowser: launchProfile.keepBrowser ?? config?.keepBrowser ?? DEFAULT_BROWSER_CONFIG.keepBrowser,
+    hideWindow: launchProfile.hideWindow ?? config?.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
     desiredModel,
     modelStrategy,
     composerTool,
-    chromeProfile: resolvedChromeProfile,
-    chromePath: resolvedChromePath,
-    chromeCookiePath: resolvedCookiePath,
-    bootstrapCookiePath: resolvedBootstrapCookiePath,
-    display: resolvedDisplay,
+    chromeProfile: launchProfile.chromeProfile ?? resolvedChromeProfile,
+    chromePath: launchProfile.chromePath ?? resolvedChromePath,
+    chromeCookiePath: launchProfile.chromeCookiePath ?? resolvedCookiePath,
+    bootstrapCookiePath: launchProfile.bootstrapCookiePath ?? resolvedBootstrapCookiePath,
+    display: launchProfile.display ?? resolvedDisplay,
     geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
     grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
     debug: config?.debug ?? DEFAULT_BROWSER_CONFIG.debug,
     allowCookieErrors: config?.allowCookieErrors ?? envAllowCookieErrors ?? DEFAULT_BROWSER_CONFIG.allowCookieErrors,
     remoteChrome: normalizedRemoteChrome,
     thinkingTime: config?.thinkingTime,
-    manualLogin,
-    manualLoginProfileDir: manualLogin ? resolvedProfileDir : null,
+    manualLogin: launchProfile.manualLogin ?? manualLogin,
+    manualLoginProfileDir:
+      manualLogin ? launchProfile.manualLoginProfileDir ?? resolvedProfileDir : null,
     manualLoginCookieSync: config?.manualLoginCookieSync ?? DEFAULT_BROWSER_CONFIG.manualLoginCookieSync,
-    wslChromePreference,
-    serviceTabLimit,
-    blankTabLimit,
+    wslChromePreference: launchProfile.wslChromePreference ?? wslChromePreference,
+    serviceTabLimit: launchProfile.serviceTabLimit ?? serviceTabLimit,
+    blankTabLimit: launchProfile.blankTabLimit ?? blankTabLimit,
     collapseDisposableWindows:
-      config?.collapseDisposableWindows ?? DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
+      launchProfile.collapseDisposableWindows ??
+      config?.collapseDisposableWindows ??
+      DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
   };
 }
 

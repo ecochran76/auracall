@@ -236,6 +236,48 @@ describe('BrowserService resolveServiceTarget', () => {
     });
   });
 
+  test('resolveServiceTarget uses the requested service launch profile when scanning fallback tabs', async () => {
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: {
+        pid: 9999,
+        port: 9222,
+        host: '127.0.0.1',
+        profilePath: '/tmp/managed-root/mixed/grok',
+        profileName: 'Default',
+        type: 'chrome',
+        launchedAt: new Date().toISOString(),
+        lastSeenAt: new Date().toISOString(),
+      },
+      tabs: [],
+    });
+
+    const service = BrowserService.fromConfig(
+      {
+        auracallProfile: 'mixed',
+        browser: {
+          target: 'chatgpt',
+          managedProfileRoot: '/tmp/managed-root',
+          chromeProfile: 'Default',
+        },
+      } as unknown as ResolvedUserConfig,
+      'chatgpt',
+    );
+
+    await service.resolveServiceTarget({
+      serviceId: 'grok',
+      configuredUrl: 'https://grok.com/',
+      ensurePort: true,
+    });
+
+    expect(instanceScannerMocks.scanRegisteredInstance).toHaveBeenLastCalledWith(
+      { registryPath: expect.stringContaining('browser-state.json') },
+      '/tmp/managed-root/mixed/grok',
+      'Default',
+      undefined,
+      {},
+    );
+  });
+
   test('explicit constructor target overrides configured browser target for managed profile resolution', () => {
     const service = BrowserService.fromConfig(
       {

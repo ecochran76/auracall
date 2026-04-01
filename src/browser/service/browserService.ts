@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from './profileResolution.js';
 import type { ResolvedBrowserConfig } from '../types.js';
 import {
   resolveManagedProfileDirForUserConfig,
@@ -77,6 +78,7 @@ export class BrowserService extends BrowserServiceCore {
   async resolveServiceTarget(
     options: ServiceTargetMatchOptions,
   ): Promise<ServiceTargetResolution> {
+    const launchProfile = this.resolveLaunchProfile(options.serviceId);
     const target = await this.resolveDevToolsTarget({
       host: undefined,
       port: undefined,
@@ -95,9 +97,10 @@ export class BrowserService extends BrowserServiceCore {
     const profileTarget = options.serviceId ?? this.serviceTarget;
     const profilePath =
       matchedByPort?.profilePath ??
+      launchProfile.manualLoginProfileDir ??
       resolved.manualLoginProfileDir ??
       resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(profileTarget), profileTarget);
-    const profileName = matchedByPort?.profileName ?? resolved.chromeProfile ?? 'Default';
+    const profileName = matchedByPort?.profileName ?? launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
     if (!matchedByPort && target.port) {
       const pid = await findChromePidUsingUserDataDir(profilePath);
       if (pid) {
@@ -157,14 +160,25 @@ export class BrowserService extends BrowserServiceCore {
     launchUrl?: string;
     defaultProfileDir?: string;
   } = {}) {
-    const fallbackDir = resolveManagedProfileDirForUserConfig(
-      this.userConfigForProfilePath(this.serviceTarget),
-      this.serviceTarget,
-    );
+    const launchProfile = this.resolveLaunchProfile(this.serviceTarget);
+    const fallbackDir =
+      launchProfile.manualLoginProfileDir ??
+      resolveManagedProfileDirForUserConfig(
+        this.userConfigForProfilePath(this.serviceTarget),
+        this.serviceTarget,
+      );
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,
     });
+  }
+
+  private resolveLaunchProfile(target: BrowserProfileTarget) {
+    return resolveBrowserProfileResolutionFromResolvedConfig({
+      auracallProfile: this.userConfig.auracallProfile ?? null,
+      browser: this.userConfig.browser ?? {},
+      target,
+    }).launchProfile;
   }
 
   private userConfigForProfilePath(
