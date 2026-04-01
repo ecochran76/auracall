@@ -183,9 +183,12 @@ Current progress:
     - visible overlays with button labels
     - visible retry/regenerate buttons
     - recent conversation turns
-  - and, for non-send debug-mode adapter recoveries, the same snapshot is now
-    also written to a bounded JSON file under `~/.auracall/postmortems/browser/`
-    so later post-mortem tooling can consume it without scraping session text
+- and, for non-send debug-mode adapter recoveries, the same snapshot is now
+  also written to a bounded JSON file under `~/.auracall/postmortems/browser/`
+  so later post-mortem tooling can consume it without scraping session text
+- live proof now exists for synthetic-on-real `transient-error` recovery on:
+  - root conversation list refresh (`reload-page` + `reopen-list`)
+  - conversation context read (`reload-page` + `reopen-conversation`)
 
 ## Recommended implementation order
 

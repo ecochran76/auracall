@@ -2920,3 +2920,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - exercise these hostile-state recoveries live so the new reopen steps are
     proven against real ChatGPT failure surfaces, not only unit/regression code
+
+## 2026-04-01 — Live hostile-state validation for ChatGPT read recovery is green
+
+- Focus: prove the new bounded recovery path against a real signed-in ChatGPT
+  browser, not just unit coverage
+- Implemented:
+  - injected a visible transient-error `[role="alert"]` overlay into the live
+    managed ChatGPT tab on port `45011`
+  - validated root conversation list recovery with:
+    - `CHATGPT_DEVTOOLS_TRACE=1 ... auracall conversations --target chatgpt --refresh`
+    - persisted post-mortem:
+      - `transient-error`
+      - `reload-page`
+      - `reopen-list`
+    - command still returned the refreshed conversation list successfully
+  - validated conversation context recovery with:
+    - `CHATGPT_DEVTOOLS_TRACE=1 ... auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only`
+    - persisted post-mortem:
+      - `transient-error`
+      - `reload-page`
+      - `reopen-conversation`
+    - command still returned a valid context payload (`messages = 4`)
+- Verification:
+  - live only; the post-mortem artifacts written under
+    `~/.auracall/postmortems/browser/` were:
+    - `2026-04-01T15-52-55-478Z-chatgpt-list-conversations-pre.json`
+    - `2026-04-01T15-54-04-699Z-chatgpt-read-conversation-context-pre.json`
+- Next:
+  - extend live hostile-state validation to at least one more read surface
+    (`conversations files list` or `artifacts fetch`) and then shift to real
+    retry-affordance / connection-failed cases when available

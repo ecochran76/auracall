@@ -4565,6 +4565,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - `reopen-conversation` for context/files/artifact reads
   - persisted post-mortem bundles now capture the full recovery sequence, not
     just the first recovery action
+- Verification:
+  - live hostile-state validation on the managed WSL ChatGPT browser is now
+    green for two synthetic-on-real transient-error cases:
+    - injected alert on the active ChatGPT tab, then ran
+      `auracall conversations --target chatgpt --refresh`
+      - persisted `transient-error` -> `reload-page` -> `reopen-list`
+      - command still returned the refreshed list
+    - injected alert on the active ChatGPT tab, then ran
+      `auracall conversations context get 69bc77cf-be28-8326-8f07-88521224abeb --target chatgpt --json-only`
+      - persisted `transient-error` -> `reload-page` -> `reopen-conversation`
+      - command still returned a valid payload (`messages = 4`)
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 
