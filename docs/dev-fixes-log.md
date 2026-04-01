@@ -4535,6 +4535,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Additional verification:
   - `pnpm vitest run tests/browser/domDebug.test.ts tests/browser/browserModeExports.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-up:
+  - the dev-mode post-mortem record is now a bounded machine-readable browser
+    snapshot, not only a recent-turn string dump
+  - the session log now preserves route/title/readiness, active element,
+    visible overlays + button labels, visible retry/regenerate buttons, and
+    recent turns under a `Browser postmortem (...)` line so later tooling can
+    cluster deterministic failure signatures
 
 ## 2026-03-31 — Browser/profile architecture now has an explicit refactor handoff plan
 

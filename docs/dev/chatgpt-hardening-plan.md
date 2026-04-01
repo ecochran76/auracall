@@ -170,7 +170,14 @@ Current progress:
   - source/probe details when available
   - policy label for retry-affordance handling
   - baseline/answer message and turn ids when present
-  - a recent conversation snapshot
+  - a bounded browser post-mortem snapshot containing:
+    - `href`
+    - `document.title`
+    - `document.readyState`
+    - active-element tag/attrs
+    - visible overlays with button labels
+    - visible retry/regenerate buttons
+    - recent conversation turns
 
 ## Recommended implementation order
 

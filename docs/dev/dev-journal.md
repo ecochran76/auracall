@@ -2868,3 +2868,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - extend the same structured logging to read/list recovery paths so classified
     reload/reopen recoveries are visible in dev-mode post-mortems too
+  - the dev-mode snapshot is now richer than the earlier simple turn-only log:
+    it captures route/title/readiness, active element, visible overlays,
+    retry buttons, and recent turns in one machine-readable `Browser
+    postmortem (...)` record in the session log

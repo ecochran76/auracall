@@ -91,7 +91,7 @@ import {
   resolveChatgptRateLimitProfileName,
   writeChatgptRateLimitGuardState,
 } from './chatgptRateLimitGuard.js';
-import { logConversationSnapshot, logStructuredDebugEvent } from './domDebug.js';
+import { logBrowserPostmortemSnapshot, logStructuredDebugEvent } from './domDebug.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -394,7 +394,7 @@ async function logChatgptUnexpectedState(options: {
       : null,
     ...(options.extra ?? {}),
   });
-  await logConversationSnapshot(options.Runtime, options.logger).catch(() => undefined);
+  await logBrowserPostmortemSnapshot(options.Runtime, options.logger, options.context).catch(() => undefined);
 }
 
 async function handleChatgptBrowserRateLimitFailure(options: {

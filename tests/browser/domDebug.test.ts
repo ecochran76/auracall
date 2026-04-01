@@ -1,5 +1,10 @@
 import { describe, expect, test, vi } from 'vitest';
-import { logDomFailure, logConversationSnapshot, logStructuredDebugEvent } from '../../src/browser/domDebug.js';
+import {
+  logBrowserPostmortemSnapshot,
+  logDomFailure,
+  logConversationSnapshot,
+  logStructuredDebugEvent,
+} from '../../src/browser/domDebug.js';
 import type { ChromeClient } from '../../src/browser/types.js';
 
 const makeRuntime = (value: unknown) =>
@@ -48,6 +53,26 @@ describe('domDebug utilities', () => {
     );
     expect(logger.sessionLog).toHaveBeenCalledWith(
       expect.stringContaining('"policy":"fail-fast-no-auto-retry-click"'),
+    );
+  });
+
+  test('logBrowserPostmortemSnapshot emits a machine-readable DOM/browser snapshot', async () => {
+    const runtime = makeRuntime({
+      href: 'https://chatgpt.com/c/example',
+      title: 'ChatGPT',
+      readyState: 'complete',
+      activeElement: { tag: 'INPUT', text: '', attrs: { name: 'prompt-textarea' } },
+      overlays: [{ role: 'dialog', text: 'Server connection failed', buttons: ['Retry'] }],
+      retryButtons: ['Retry'],
+      recentTurns: [{ role: 'assistant', text: 'failure', testid: 'assistant-1' }],
+    });
+    const logger = Object.assign(vi.fn(), { verbose: true, sessionLog: vi.fn() });
+    await logBrowserPostmortemSnapshot(runtime, logger, 'chatgpt-stale-send-blocked');
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining('Browser postmortem (chatgpt-stale-send-blocked):'),
+    );
+    expect(logger.sessionLog).toHaveBeenCalledWith(
+      expect.stringContaining('"retryButtons":["Retry"]'),
     );
   });
 });

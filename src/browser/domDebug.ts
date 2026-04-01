@@ -22,6 +22,78 @@ export async function logConversationSnapshot(Runtime: ChromeClient['Runtime'], 
   }
 }
 
+export function buildBrowserPostmortemExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const describeElement = (node) => {
+      if (!(node instanceof Element)) return null;
+      const attrs = ['role', 'type', 'name', 'aria-label', 'data-testid']
+        .map((key) => [key, normalize(node.getAttribute(key) || '')])
+        .filter(([, value]) => value);
+      return {
+        tag: node.tagName,
+        text: normalize(node.textContent || '').slice(0, 120),
+        attrs: Object.fromEntries(attrs),
+      };
+    };
+    const turns = Array.from(document.querySelectorAll(${JSON.stringify(CONVERSATION_TURN_SELECTOR)}))
+      .slice(-4)
+      .map((node) => ({
+        role: normalize(node.getAttribute('data-message-author-role') || ''),
+        text: normalize(node.textContent || '').slice(0, 240),
+        testid: normalize(node.getAttribute('data-testid') || ''),
+      }));
+    const overlays = Array.from(document.querySelectorAll('[role="dialog"], dialog, [aria-modal="true"], [role="alert"], [aria-live]'))
+      .filter((node) => isVisible(node))
+      .slice(0, 6)
+      .map((node) => ({
+        tag: node.tagName,
+        role: normalize(node.getAttribute('role') || ''),
+        ariaLabel: normalize(node.getAttribute('aria-label') || ''),
+        text: normalize(node.textContent || '').slice(0, 240),
+        buttons: Array.from(node.querySelectorAll('button,[role="button"]'))
+          .filter((button) => isVisible(button))
+          .slice(0, 8)
+          .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
+          .filter(Boolean),
+      }));
+    const retryButtons = Array.from(document.querySelectorAll('button,[role="button"]'))
+      .filter((node) => isVisible(node))
+      .map((node) => normalize(node.getAttribute('aria-label') || node.textContent || ''))
+      .filter((label) => /^(retry|try again|regenerate|regenerate response|continue generating)$/i.test(label))
+      .slice(0, 8);
+    return {
+      href: location.href,
+      title: document.title,
+      readyState: document.readyState,
+      activeElement: describeElement(document.activeElement),
+      overlays,
+      retryButtons,
+      recentTurns: turns,
+    };
+  })()`;
+}
+
+export async function logBrowserPostmortemSnapshot(
+  Runtime: ChromeClient['Runtime'],
+  logger: BrowserLogger,
+  context: string,
+): Promise<void> {
+  if (!logger?.verbose) {
+    return;
+  }
+  const expression = buildBrowserPostmortemExpression();
+  const { result } = await Runtime.evaluate({ expression, returnByValue: true });
+  if (result?.value && typeof result.value === 'object') {
+    emitDebugLog(logger, `Browser postmortem (${context}): ${JSON.stringify(result.value)}`);
+  }
+}
+
 function emitDebugLog(logger: BrowserLogger, message: string): void {
   logger(message);
   if (logger.sessionLog && logger.sessionLog !== logger) {
@@ -51,7 +123,7 @@ export async function logDomFailure(Runtime: ChromeClient['Runtime'], logger: Br
   try {
     const entry = `Browser automation failure (${context}); capturing DOM snapshot for debugging...`;
     emitDebugLog(logger, entry);
-    await logConversationSnapshot(Runtime, logger);
+    await logBrowserPostmortemSnapshot(Runtime, logger, context);
   } catch {
     // ignore snapshot failures
   }
