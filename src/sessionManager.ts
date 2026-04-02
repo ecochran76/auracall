@@ -56,6 +56,24 @@ export interface BrowserSessionConfig {
   composerTool?: string | null;
 }
 
+export interface BrowserDiscardedRegistryCandidateMetadata {
+  key: string;
+  profilePath: string;
+  profileName: string;
+  port: number;
+  host: string;
+  liveness: string;
+  actualPid?: number | null;
+  reason: 'selected-port-stale' | 'expected-profile-stale';
+}
+
+export interface BrowserReattachDiagnosticsMetadata {
+  capturedAt: string;
+  failureKind?: string | null;
+  failureMessage?: string | null;
+  discardedRegistryCandidates?: BrowserDiscardedRegistryCandidateMetadata[];
+}
+
 export interface BrowserRuntimeMetadata {
   chromePid?: number;
   chromePort?: number;
@@ -67,6 +85,7 @@ export interface BrowserRuntimeMetadata {
   composerTool?: string | null;
   /** PID of the controller process that launched this browser run. Helps detect orphaned sessions. */
   controllerPid?: number;
+  reattachDiagnostics?: BrowserReattachDiagnosticsMetadata;
 }
 
 export interface BrowserContextMetadata {

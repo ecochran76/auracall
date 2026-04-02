@@ -3592,3 +3592,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - thread stale registry candidate evidence into reattach/session metadata so a
     failed reattach can correlate current browser drift with prior stale
     browser-state entries
+
+
+## 2026-04-01 — Reattach failures now persist stale registry evidence in session metadata
+
+- Focus: bridge attach-side stale registry diagnostics into failed session
+  reattach postmortems
+- Implemented:
+  - extracted the stale registry candidate collector into a shared helper for
+    attach and reattach flows
+  - failed `auracall session <id>` reattach now persists
+    `browser.runtime.reattachDiagnostics` with the classified failure and any
+    discarded stale registry candidates
+  - added focused tests for the new helper and the session metadata update path
+- Next:
+  - use the persisted `reattachDiagnostics` in session/status output so operators
+    can inspect the last stale-candidate set without reopening raw metadata

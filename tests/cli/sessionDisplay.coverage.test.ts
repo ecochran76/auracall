@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SessionMetadata } from '../../src/sessionStore.js';
 
+const mockCollectReattachRegistryDiagnostics = vi.hoisted(() => vi.fn(async () => null));
+
 const mockSessionStore = {
   listSessions: vi.fn(),
   filterSessions: vi.fn(),
@@ -9,6 +11,7 @@ const mockSessionStore = {
   readModelLog: vi.fn(),
   readLog: vi.fn(),
   readRequest: vi.fn(),
+  updateSession: vi.fn(),
 };
 
 vi.mock('../../src/sessionStore.js', () => ({
@@ -16,8 +19,14 @@ vi.mock('../../src/sessionStore.js', () => ({
   wait: vi.fn(async () => {}),
 }));
 
+vi.mock('../../src/browser/service/registryDiagnostics.js', () => ({
+  collectReattachRegistryDiagnostics: mockCollectReattachRegistryDiagnostics,
+}));
+
 describe('sessionDisplay helpers', () => {
   beforeEach(() => {
+    mockCollectReattachRegistryDiagnostics.mockReset();
+    mockCollectReattachRegistryDiagnostics.mockResolvedValue(null as any);
     Object.values(mockSessionStore).forEach((fn) => {
       if ('mockReset' in fn) {
         (fn as unknown as { mockReset: () => void }).mockReset();
@@ -56,6 +65,21 @@ describe('sessionDisplay helpers', () => {
     });
     mockSessionStore.readLog.mockResolvedValue('Answer:\nreattach log');
     mockSessionStore.readRequest.mockResolvedValue({ prompt: 'Prompt here' });
+    mockCollectReattachRegistryDiagnostics.mockResolvedValue({
+      capturedAt: '2026-04-02T02:20:00.000Z',
+      discardedRegistryCandidates: [
+        {
+          key: '/tmp/profile::default::selected-port-stale',
+          profilePath: '/tmp/profile',
+          profileName: 'Default',
+          port: 51559,
+          host: '127.0.0.1',
+          liveness: 'dead-port',
+          actualPid: 9001,
+          reason: 'selected-port-stale',
+        },
+      ],
+    } as any);
     mockResumeBrowserSession.mockRejectedValue(
       new ReattachFailure({
         kind: 'wrong-browser-profile',
@@ -77,6 +101,19 @@ describe('sessionDisplay helpers', () => {
       ),
     );
     expect(write).toHaveBeenCalledWith(expect.stringContaining('Answer:\nreattach log'));
+    expect(mockSessionStore.updateSession).toHaveBeenCalledWith(
+      'sess-browser',
+      expect.objectContaining({
+        browser: expect.objectContaining({
+          runtime: expect.objectContaining({
+            reattachDiagnostics: expect.objectContaining({
+              failureKind: 'wrong-browser-profile',
+              discardedRegistryCandidates: [expect.objectContaining({ reason: 'selected-port-stale' })],
+            }),
+          }),
+        }),
+      }),
+    );
   }, 15_000);
 
   it('prints cleanup tip and examples when no sessions are found', async () => {

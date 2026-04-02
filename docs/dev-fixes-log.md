@@ -5186,3 +5186,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-01 — Failed reattach now persists stale registry evidence into session metadata
+
+- Area: Browser-service registry / reattach diagnostics
+- Symptom:
+  - reattach failures now classified target loss versus wrong-browser drift, but
+    the stale registry candidates that explained nearby dead or mismatched
+    browser-state were still only visible in live attach logs
+- Root cause:
+  - session reattach did not persist the discarded stale registry candidates it
+    could have correlated with the classified failure
+- Fix:
+  - extracted the stale registry candidate collector into a shared helper used
+    by attach and reattach flows
+  - failed reattach now writes `browser.runtime.reattachDiagnostics` with:
+    - classified failure kind/message
+    - discarded stale registry candidates captured at failure time
+- Verification:
+  - `pnpm vitest run tests/browser/registryDiagnostics.test.ts tests/browser/reattach.test.ts tests/cli/sessionDisplay.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm run check`

@@ -11,7 +11,8 @@ import { formatFinishLine } from '../oracle/finishLine.js';
 import { sessionStore, wait } from '../sessionStore.js';
 import { formatTokenCount, formatTokenValue } from '../oracle/runUtils.js';
 import type { BrowserLogger } from '../browser/types.js';
-import { resumeBrowserSession, describeReattachFailure } from '../browser/reattach.js';
+import { resumeBrowserSession, describeReattachFailure, ReattachFailure } from '../browser/reattach.js';
+import { collectReattachRegistryDiagnostics } from '../browser/service/registryDiagnostics.js';
 import { estimateTokenCount } from '../browser/utils.js';
 import { formatSessionTableHeader, formatSessionTableRow, resolveSessionCost } from './sessionTable.js';
 import { isProcessAlive } from '../browser/processCheck.js';
@@ -182,6 +183,29 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
     } catch (error) {
       const classified = describeReattachFailure(error);
       const message = error instanceof Error ? error.message : String(error);
+      const diagnostics = runtime
+        ? await collectReattachRegistryDiagnostics({
+            runtime,
+            config: metadata.browser?.config,
+          }).catch(() => null)
+        : null;
+      if (runtime && diagnostics) {
+        await sessionStore.updateSession(sessionId, {
+          browser: {
+            config: metadata.browser?.config,
+            context: metadata.browser?.context,
+            runtime: {
+              ...runtime,
+              reattachDiagnostics: {
+                capturedAt: diagnostics.capturedAt,
+                failureKind: error instanceof ReattachFailure ? error.details.kind : null,
+                failureMessage: error instanceof ReattachFailure ? error.details.message : message,
+                discardedRegistryCandidates: diagnostics.discardedRegistryCandidates,
+              },
+            },
+          },
+        });
+      }
       console.log(chalk.red(`Reattach failed: ${classified ?? message}`));
     }
   }

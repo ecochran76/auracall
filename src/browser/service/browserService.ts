@@ -22,8 +22,11 @@ import {
   listInstances,
   listInstancesWithLiveness,
   registerInstance,
-  type BrowserInstanceLiveness,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';
+import {
+  collectDiscardedRegistryCandidates,
+  type DiscardedRegistryCandidate as ServiceTargetDiscardedRegistryCandidate,
+} from './registryDiagnostics.js';
 import { findChromePidUsingUserDataDir } from '../../../packages/browser-service/src/processCheck.js';
 import {
   BrowserService as BrowserServiceCore,
@@ -35,17 +38,6 @@ type ServiceTargetMatchOptions = {
   configuredUrl?: string | null;
   ensurePort?: boolean;
   logger?: (message: string) => void;
-};
-
-export type ServiceTargetDiscardedRegistryCandidate = {
-  key: string;
-  profilePath: string;
-  profileName: string;
-  port: number;
-  host: string;
-  liveness: BrowserInstanceLiveness;
-  actualPid: number | null;
-  reason: 'selected-port-stale' | 'expected-profile-stale';
 };
 
 export type ServiceTargetResolution = {
@@ -279,47 +271,3 @@ function normalizeConfiguredSearch(searchParams: URLSearchParams): string {
     .join('&');
 }
 
-
-function collectDiscardedRegistryCandidates(input: {
-  classifiedInstances: Awaited<ReturnType<typeof listInstancesWithLiveness>>;
-  targetHost: string;
-  targetPort: number;
-  expectedProfilePath: string;
-  expectedProfileName: string;
-}): ServiceTargetDiscardedRegistryCandidate[] {
-  const normalizedExpectedPath = path.resolve(input.expectedProfilePath);
-  const normalizedExpectedName = input.expectedProfileName.trim().toLowerCase();
-  const candidates = new Map<string, ServiceTargetDiscardedRegistryCandidate>();
-  for (const entry of input.classifiedInstances) {
-    if (entry.alive) continue;
-    const normalizedPath = path.resolve(entry.instance.profilePath);
-    const normalizedName = (entry.instance.profileName ?? 'Default').trim().toLowerCase();
-    const samePort =
-      entry.instance.port === input.targetPort &&
-      (entry.instance.host || '127.0.0.1') === input.targetHost;
-    const sameExpectedProfile =
-      normalizedPath === normalizedExpectedPath && normalizedName === normalizedExpectedName;
-    const reason = samePort
-      ? 'selected-port-stale'
-      : sameExpectedProfile
-        ? 'expected-profile-stale'
-        : null;
-    if (!reason) continue;
-    const key = `${path.normalize(entry.instance.profilePath)}::${normalizedName}::${reason}`;
-    candidates.set(key, {
-      key,
-      profilePath: normalizedPath,
-      profileName: entry.instance.profileName ?? 'Default',
-      port: entry.instance.port,
-      host: entry.instance.host,
-      liveness: entry.liveness,
-      actualPid: entry.actualPid,
-      reason,
-    });
-  }
-  return Array.from(candidates.values()).sort((left, right) => {
-    if (left.reason !== right.reason) return left.reason.localeCompare(right.reason);
-    if (left.liveness !== right.liveness) return left.liveness.localeCompare(right.liveness);
-    return left.profilePath.localeCompare(right.profilePath);
-  });
-}
