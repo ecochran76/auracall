@@ -5286,3 +5286,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Session JSON payload now has explicit exported types and a doc
+
+- Area: Session CLI / machine-readable contract
+- Symptom:
+  - session/status JSON had become useful enough for tooling, but the contract
+    still had to be inferred from implementation and tests
+- Root cause:
+  - the CLI payload helpers existed without named exported payload interfaces or
+    a dedicated contract note
+- Fix:
+  - exported explicit session JSON payload types from `src/cli/sessionCommand.ts`
+  - added `docs/dev/session-json-contract.md` as the current contract note
+- Verification:
+  - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`

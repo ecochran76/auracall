@@ -3673,3 +3673,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - if postmortem tooling needs even richer state, consider adding a dedicated
     exported CLI/session JSON schema doc instead of continuing to evolve it only
     through tests
+
+
+## 2026-04-02 — Session JSON contract is now explicitly typed and documented
+
+- Focus: stop making downstream tooling infer the session JSON contract only
+  from tests
+- Implemented:
+  - exported explicit session JSON payload types from `sessionCommand.ts`
+  - documented the contract in `docs/dev/session-json-contract.md`
+  - kept the normalized `reattachSummary` payload shape aligned with those
+    exported types
+- Next:
+  - if other tools start consuming this payload heavily, consider moving these
+    JSON contract types into a dedicated shared module instead of leaving them
+    next to the CLI command handler

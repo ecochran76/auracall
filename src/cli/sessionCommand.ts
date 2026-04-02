@@ -33,6 +33,31 @@ export interface StatusOptions extends OptionValues {
   browserProfile?: string;
 }
 
+export interface SessionReattachSummaryCount {
+  reason: string;
+  liveness: string;
+  count: number;
+}
+
+export interface SessionReattachSummary {
+  capturedAt: string;
+  failureKind: string | null;
+  failureMessage: string | null;
+  discardedCandidateCount: number;
+  discardedCandidateCounts: SessionReattachSummaryCount[];
+  summary: string | null;
+}
+
+export type SessionJsonEntry<T> = T & {
+  reattachSummary: SessionReattachSummary | null;
+};
+
+export interface SessionListJsonPayload<T> {
+  entries: Array<SessionJsonEntry<T>>;
+  truncated: boolean;
+  total: number;
+}
+
 interface SessionCommandDependencies {
   showStatus: (options: ShowStatusOptions) => Promise<void> | void;
   attachSession: (sessionId: string, options?: AttachSessionOptions) => Promise<void>;
@@ -362,11 +387,7 @@ export function buildSessionListJsonPayload<T extends { browser?: { runtime?: { 
   entries: T[];
   truncated: boolean;
   total: number;
-}): {
-  entries: Array<T & { reattachSummary: ReturnType<typeof buildReattachSummary> }>;
-  truncated: boolean;
-  total: number;
-} {
+}): SessionListJsonPayload<T> {
   return {
     entries: input.entries.map((entry) => buildSessionJsonEntry(entry)),
     truncated: input.truncated,
@@ -382,14 +403,7 @@ export function buildSessionJsonEntry<T extends { browser?: { runtime?: { reatta
   };
 }
 
-function buildReattachSummary(metadata?: BrowserReattachDiagnosticsMetadata): {
-  capturedAt: string;
-  failureKind: string | null;
-  failureMessage: string | null;
-  discardedCandidateCount: number;
-  discardedCandidateCounts: Array<{ reason: string; liveness: string; count: number }>;
-  summary: string | null;
-} | null {
+function buildReattachSummary(metadata?: BrowserReattachDiagnosticsMetadata): SessionReattachSummary | null {
   if (!metadata) {
     return null;
   }
