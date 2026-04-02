@@ -3435,3 +3435,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - commit this planning pass
   - then return to the next bounded execution slice instead of expanding the
     planning work indefinitely
+
+## 2026-04-01 — Wizard and scaffold now emit browser-profile-backed config
+
+- Focus: make the config entry points reinforce the browser-profile bridge instead
+  of writing the older profile-local browser shape
+- Implemented:
+  - updated `src/cli/browserWizard.ts` so wizard-created profiles now emit:
+    - `browserFamilies.<name>`
+    - `profiles.<name>.browserFamily`
+    - an empty per-profile `browser` override block unless local overrides are needed
+  - updated `src/config.ts` so missing-config scaffolding now creates:
+    - `browserFamilies.default`
+    - `profiles.default.browserFamily = "default"`
+  - updated onboarding/config docs and regression tests
+- Next:
+  - verify the onboarding tests stay green
+  - then decide whether a later compatibility slice should rename
+    `browserFamilies` externally, or keep that decision deferred to the larger
+    config-model refactor

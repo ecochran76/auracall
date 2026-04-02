@@ -2,7 +2,7 @@
 
 Aura-Call reads layered config files (system → user → project tree). Files use JSON5 parsing, so trailing commas and comments are allowed.
 
-If no config file exists, Aura-Call scaffolds a default `auracallProfile` using your detected browser profile. You can also run `auracall profile scaffold` to regenerate it.
+If no config file exists, Aura-Call scaffolds a default `auracallProfile` using your detected browser profile. The scaffold now emits a named browser-profile bridge (`browserFamilies.default` plus `profiles.default.browserFamily = "default"`) instead of only teaching profile-local browser blobs. You can also run `auracall profile scaffold` to regenerate it.
 Use `auracall config migrate` to write a v2-style layout from an existing config file:
 
 ```sh
@@ -211,7 +211,8 @@ Within each file, later CLI flags still override config, and environment variabl
   - Use `--chatgpt-url` or `profiles.<name>.services.chatgpt.projectId` once signed in to pin to a workspace.
 - On WSL, keep the primary WSL Chrome setup on `profiles.default` if you want to reuse the long-lived managed profile at `~/.auracall/browser-profiles/default/<service>`.
 - Use family names like `wsl-chrome-2` for secondary WSL account profiles (for example, `consult@polymerconsultingroup.com`) while keeping `default` as primary.
-- Prefer a named `browserFamilies.<family>` block plus `profiles.<name>.browserFamily` for secondary runtime families instead of teaching raw path wiring as the main pattern.
+- Prefer a named `browserFamilies.<family>` block plus `profiles.<name>.browserFamily` for runtime/browser-profile wiring instead of teaching raw path wiring as the main pattern.
+- `auracall wizard` now emits that browser-profile bridge directly for new profile setup.
 - Use separate named profiles for Windows Chrome or other experimental runtimes.
 - `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Aura-Call reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.

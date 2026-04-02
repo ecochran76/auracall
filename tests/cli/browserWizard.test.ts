@@ -6,6 +6,7 @@ import {
   suggestBrowserWizardProfileName,
   validateBrowserWizardProfileName,
   type BrowserWizardChoice,
+  type BrowserWizardConfigOverlay,
 } from '../../src/cli/browserWizard.js';
 
 function createChoice(overrides: Partial<BrowserWizardChoice> = {}): BrowserWizardChoice {
@@ -104,22 +105,26 @@ describe('buildBrowserWizardConfigPatch', () => {
     expect(patch).toEqual({
       version: 2,
       auracallProfile: 'windows-chrome',
+      browserFamilies: {
+        'windows-chrome': {
+          chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
+          chromeProfile: 'Default',
+          chromeCookiePath: '/mnt/c/Users/test/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
+          bootstrapCookiePath: '/mnt/c/Users/test/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
+          managedProfileRoot: '/mnt/c/Users/test/AppData/Local/AuraCall/browser-profiles',
+          manualLogin: true,
+          keepBrowser: true,
+          wslChromePreference: 'windows',
+          debugPortStrategy: 'auto',
+        },
+      },
       profiles: {
         'windows-chrome': {
           engine: 'browser',
+          browserFamily: 'windows-chrome',
           defaultService: 'grok',
           keepBrowser: true,
-          browser: {
-            chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
-            chromeProfile: 'Default',
-            chromeCookiePath: '/mnt/c/Users/test/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
-            bootstrapCookiePath: '/mnt/c/Users/test/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
-            managedProfileRoot: '/mnt/c/Users/test/AppData/Local/AuraCall/browser-profiles',
-            manualLogin: true,
-            keepBrowser: true,
-            wslChromePreference: 'windows',
-            debugPortStrategy: 'auto',
-          },
+          browser: {},
           services: {
             grok: {
               model: 'grok-4.1',
@@ -220,23 +225,24 @@ describe('pickPreferredBrowserWizardChoiceIndex', () => {
 
 describe('mergeWizardConfig', () => {
   test('merges the new wizard profile without clobbering existing config', () => {
-    const merged = mergeWizardConfig(
-      {
-        version: 2,
-        auracallProfile: 'default',
-        browserDefaults: {
-          chromePath: '/usr/bin/google-chrome',
-        },
-        profiles: {
-          default: {
-            engine: 'browser',
-            defaultService: 'chatgpt',
-            browser: {
-              keepBrowser: false,
-            },
+    const base: BrowserWizardConfigOverlay = {
+      version: 2,
+      auracallProfile: 'default',
+      browserDefaults: {
+        chromePath: '/usr/bin/google-chrome',
+      },
+      profiles: {
+        default: {
+          engine: 'browser',
+          defaultService: 'chatgpt',
+          browser: {
+            keepBrowser: false,
           },
         },
       },
+    };
+    const merged = mergeWizardConfig(
+      base,
       buildBrowserWizardConfigPatch({
         target: 'grok',
         profileName: 'wsl-chrome-2',
@@ -249,20 +255,22 @@ describe('mergeWizardConfig', () => {
     expect(merged.auracallProfile).toBe('default');
     expect(merged.browserDefaults?.chromePath).toBe('/usr/bin/google-chrome');
     expect(merged.profiles?.default?.defaultService).toBe('chatgpt');
+    expect((merged.browserFamilies as Record<string, unknown>)?.['wsl-chrome-2']).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+      chromeProfile: 'Default',
+      chromeCookiePath: '/home/test/.config/google-chrome/Default/Cookies',
+      bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Cookies',
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+      manualLogin: true,
+      keepBrowser: true,
+      wslChromePreference: 'wsl',
+    });
     expect((merged.profiles as Record<string, unknown>)?.['wsl-chrome-2']).toEqual({
       engine: 'browser',
+      browserFamily: 'wsl-chrome-2',
       defaultService: 'grok',
       keepBrowser: true,
-      browser: {
-        chromePath: '/usr/bin/google-chrome',
-        chromeProfile: 'Default',
-        chromeCookiePath: '/home/test/.config/google-chrome/Default/Cookies',
-        bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Cookies',
-        managedProfileRoot: '/home/test/.auracall/browser-profiles',
-        manualLogin: true,
-        keepBrowser: true,
-        wslChromePreference: 'wsl',
-      },
+      browser: {},
       services: {
         grok: {
           model: 'grok-4.1',

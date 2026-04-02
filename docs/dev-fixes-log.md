@@ -4978,3 +4978,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     final public config-shape decisions are deferred to that larger refactor
 - Verification:
   - planning docs reviewed locally after update
+
+
+## 2026-04-01 — Wizard and default scaffold now emit browser-profile-backed config
+
+- Area: Browser-profile onboarding and config ergonomics
+- Symptom:
+  - the docs now described browser profiles as first-class config concepts, but
+    the wizard and default config scaffold still wrote the older shape directly
+    into `profiles.<name>.browser`
+- Root cause:
+  - the onboarding/config-entry path had not been updated after the
+    `browserFamilies` bridge landed, so the easiest path for users still
+    taught the pre-refactor mental model
+- Fix:
+  - updated `src/cli/browserWizard.ts` so wizard-created runtime profiles now
+    emit a named browser profile in `browserFamilies` and bind to it via
+    `profiles.<name>.browserFamily`
+  - updated `src/config.ts` so missing-config scaffolding now emits
+    `browserFamilies.default` plus
+    `profiles.default.browserFamily = "default"`
+  - updated onboarding/config docs to say the wizard/scaffold now emit the
+    browser-profile bridge directly
+- Verification:
+  - targeted onboarding/config tests updated and reviewed locally

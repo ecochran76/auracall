@@ -75,7 +75,8 @@ describe('loadUserConfig', () => {
     const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
     expect(result.config.version).toBe(2);
-    expect(result.config.profiles?.default).toBeDefined();
+    expect(result.config.browserFamilies?.default).toBeDefined();
+    expect(result.config.profiles?.default?.browserFamily).toBe('default');
   });
 
   afterAll(() => {

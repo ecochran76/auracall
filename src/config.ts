@@ -144,7 +144,8 @@ export async function scaffoldDefaultConfigFile(options: {
   }
 
   const discovered = discoverDefaultBrowserProfile({ preference: 'auto' });
-  const browser: Record<string, unknown> = {
+  const browserProfileName = 'default';
+  const browserProfile: Record<string, unknown> = {
     chromePath: discovered?.chromePath,
     profilePath: discovered?.userDataDir,
     profileName: discovered?.profileName,
@@ -153,7 +154,10 @@ export async function scaffoldDefaultConfigFile(options: {
   const scaffolded: UserConfig = {
     version: 2,
     globals: {},
-    browserDefaults: browser,
+    browserDefaults: {},
+    browserFamilies: {
+      [browserProfileName]: browserProfile,
+    },
     llmDefaults: {
       model: DEFAULT_MODEL,
     },
@@ -168,6 +172,7 @@ export async function scaffoldDefaultConfigFile(options: {
     profiles: {
       default: {
         engine: 'browser',
+        browserFamily: browserProfileName,
         defaultService: 'chatgpt',
         browser: {},
         llm: {},

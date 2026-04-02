@@ -130,7 +130,8 @@ export function pickPreferredBrowserWizardChoiceIndex(
 }
 
 export function buildBrowserWizardConfigPatch(input: BrowserWizardConfigPatchInput): BrowserWizardConfigOverlay {
-  const browserPatch: Record<string, unknown> = {
+  const browserProfileName = input.profileName;
+  const browserProfilePatch: Record<string, unknown> = {
     chromePath: input.choice.discovery.chromePath,
     chromeProfile: input.choice.discovery.profileName,
     chromeCookiePath: input.choice.discovery.cookiePath,
@@ -141,20 +142,24 @@ export function buildBrowserWizardConfigPatch(input: BrowserWizardConfigPatchInp
   };
 
   if (input.choice.runtime === 'windows') {
-    browserPatch.wslChromePreference = 'windows';
-    browserPatch.debugPortStrategy = 'auto';
+    browserProfilePatch.wslChromePreference = 'windows';
+    browserProfilePatch.debugPortStrategy = 'auto';
   } else if (input.choice.runtime === 'wsl') {
-    browserPatch.wslChromePreference = 'wsl';
+    browserProfilePatch.wslChromePreference = 'wsl';
   }
 
   const patch: BrowserWizardConfigOverlay = {
     version: 2,
+    browserFamilies: {
+      [browserProfileName]: browserProfilePatch,
+    },
     profiles: {
       [input.profileName]: {
         engine: 'browser',
+        browserFamily: browserProfileName,
         defaultService: input.target,
         keepBrowser: input.keepBrowser,
-        browser: browserPatch,
+        browser: {},
         services: {
           [input.target]: {
             model: defaultWizardModelForTarget(input.target),
