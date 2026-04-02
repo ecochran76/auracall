@@ -4210,3 +4210,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `browserFamilies`
     - `profiles`
     - `profiles.<name>.browserFamily`
+
+## 2026-04-02 14:16 CDT
+
+- Focus:
+  - push the same bridge-aware config seam into migration/normalization so the
+    compatibility path stops open-coding browser-profile reference handling
+- What changed:
+  - updated
+    [migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    to use the bridge-aware helpers when:
+    - reading a runtime profile's browser-profile bridge
+    - copying `auracallProfiles` back into `profiles`
+  - added direct migration coverage in
+    [configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    for:
+    - `normalizeConfigV1toV2(...)`
+    - `materializeConfigV2(...)`
+- Verification:
+  - `pnpm vitest run tests/configMigrate.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still no public config behavior change
+  - the bridge-aware seam now covers:
+    - schema/types
+    - typed resolution
+    - config-producing helpers
+    - config migration/normalization

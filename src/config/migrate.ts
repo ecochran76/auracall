@@ -1,4 +1,10 @@
 import type { OracleConfig } from './schema.js';
+import {
+  ensureRuntimeProfiles,
+  getRuntimeProfileBrowserProfileId,
+  getRuntimeProfiles,
+  setRuntimeProfileBrowserProfile,
+} from './model.js';
 
 type MutableConfig = Record<string, unknown>;
 
@@ -135,7 +141,9 @@ export function normalizeConfigV1toV2(
 
   const profiles = isRecord(normalized.profiles) ? normalized.profiles : null;
   if (profiles) {
-    const auracallProfiles = isRecord(normalized.auracallProfiles) ? normalized.auracallProfiles : {};
+    const auracallProfiles = getRuntimeProfiles(
+      isRecord(normalized.auracallProfiles) ? { profiles: normalized.auracallProfiles } : {},
+    );
     for (const [name, profileValue] of Object.entries(profiles)) {
       if (!isRecord(profileValue)) continue;
       const legacyProfile = isRecord(auracallProfiles[name]) ? auracallProfiles[name] : {};
@@ -149,8 +157,11 @@ export function normalizeConfigV1toV2(
       if (legacyProfile.defaultService === undefined && profileValue.defaultService !== undefined) {
         legacyProfile.defaultService = profileValue.defaultService;
       }
-      if (legacyProfile.browserFamily === undefined && profileValue.browserFamily !== undefined) {
-        legacyProfile.browserFamily = profileValue.browserFamily;
+      if (getRuntimeProfileBrowserProfileId(legacyProfile) === null && profileValue.browserFamily !== undefined) {
+        setRuntimeProfileBrowserProfile(
+          legacyProfile,
+          String(profileValue.browserFamily),
+        );
       }
       if (legacyProfile.keepBrowser === undefined && profileValue.keepBrowser !== undefined) {
         legacyProfile.keepBrowser = profileValue.keepBrowser;
@@ -232,7 +243,6 @@ export function normalizeConfigV1toV2(
           legacyProfile.services = legacyServices;
         }
       }
-
       auracallProfiles[name] = legacyProfile;
     }
     normalized.auracallProfiles = auracallProfiles;
@@ -278,7 +288,12 @@ export function materializeConfigV2(
     }
   }
   if (!isRecord(result.profiles) && isRecord(result.auracallProfiles)) {
-    result.profiles = result.auracallProfiles;
+    const runtimeProfiles = ensureRuntimeProfiles(result);
+    for (const [name, runtimeProfile] of Object.entries(result.auracallProfiles)) {
+      if (isRecord(runtimeProfile)) {
+        runtimeProfiles[name] = runtimeProfile;
+      }
+    }
   }
 
   if (options.stripLegacy) {
