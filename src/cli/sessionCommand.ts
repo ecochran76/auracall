@@ -1,8 +1,14 @@
 import chalk from 'chalk';
 import type { Command, OptionValues } from 'commander';
 import { usesDefaultStatusFilters } from './options.js';
-import { attachSession, showStatus, type AttachSessionOptions, type ShowStatusOptions } from './sessionDisplay.js';
-import { sessionStore } from '../sessionStore.js';
+import {
+  attachSession,
+  showStatus,
+  formatReattachDiagnostics,
+  type AttachSessionOptions,
+  type ShowStatusOptions,
+} from './sessionDisplay.js';
+import { sessionStore, type BrowserReattachDiagnosticsMetadata } from '../sessionStore.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { createLlmService } from '../browser/llmService/index.js';
 import { spawn } from 'node:child_process';
@@ -151,7 +157,7 @@ export async function handleSessionCommand(
         process.exitCode = 1;
         return;
       }
-      console.log(JSON.stringify(metadata, null, 2));
+      console.log(JSON.stringify(buildSessionJsonEntry(metadata), null, 2));
       return;
     }
     const metas = await deps.listSessions();
@@ -165,7 +171,7 @@ export async function handleSessionCommand(
     console.log(
       JSON.stringify(
         {
-          entries: filteredEntries,
+          entries: filteredEntries.map((entry) => buildSessionJsonEntry(entry)),
           truncated,
           total,
         },
@@ -349,4 +355,65 @@ function matchesModel(
     entry.models?.map((model) => model.model.toLowerCase()) ??
     (entry.model ? [entry.model.toLowerCase()] : []);
   return availableModels.includes(modelFilter);
+}
+
+
+export function buildSessionListJsonPayload<T extends { browser?: { runtime?: { reattachDiagnostics?: BrowserReattachDiagnosticsMetadata } } }>(input: {
+  entries: T[];
+  truncated: boolean;
+  total: number;
+}): {
+  entries: Array<T & { reattachSummary: ReturnType<typeof buildReattachSummary> }>;
+  truncated: boolean;
+  total: number;
+} {
+  return {
+    entries: input.entries.map((entry) => buildSessionJsonEntry(entry)),
+    truncated: input.truncated,
+    total: input.total,
+  };
+}
+export function buildSessionJsonEntry<T extends { browser?: { runtime?: { reattachDiagnostics?: BrowserReattachDiagnosticsMetadata } } }>(
+  entry: T,
+): T & { reattachSummary: ReturnType<typeof buildReattachSummary> } {
+  return {
+    ...entry,
+    reattachSummary: buildReattachSummary(entry.browser?.runtime?.reattachDiagnostics),
+  };
+}
+
+function buildReattachSummary(metadata?: BrowserReattachDiagnosticsMetadata): {
+  capturedAt: string;
+  failureKind: string | null;
+  failureMessage: string | null;
+  discardedCandidateCount: number;
+  discardedCandidateCounts: Array<{ reason: string; liveness: string; count: number }>;
+  summary: string | null;
+} | null {
+  if (!metadata) {
+    return null;
+  }
+  const candidates = Array.isArray(metadata.discardedRegistryCandidates) ? metadata.discardedRegistryCandidates : [];
+  const counts = new Map<string, { reason: string; liveness: string; count: number }>();
+  for (const candidate of candidates) {
+    const key = `${candidate.reason}/${candidate.liveness}`;
+    const existing = counts.get(key);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      counts.set(key, {
+        reason: candidate.reason,
+        liveness: candidate.liveness,
+        count: 1,
+      });
+    }
+  }
+  return {
+    capturedAt: metadata.capturedAt,
+    failureKind: metadata.failureKind ?? null,
+    failureMessage: metadata.failureMessage ?? null,
+    discardedCandidateCount: candidates.length,
+    discardedCandidateCounts: Array.from(counts.values()),
+    summary: formatReattachDiagnostics(metadata),
+  };
 }

@@ -85,7 +85,7 @@ describe('handleSessionCommand', () => {
     expect(logSpy).toHaveBeenCalledWith(
       JSON.stringify(
         {
-          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {} }],
+          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {}, reattachSummary: null }],
           truncated: false,
           total: 2,
         },
@@ -157,6 +157,130 @@ describe('handleSessionCommand', () => {
               },
             },
           },
+          reattachSummary: {
+            capturedAt: '2026-04-02T03:00:00.000Z',
+            failureKind: 'wrong-browser-profile',
+            failureMessage: 'wrong browser',
+            discardedCandidateCount: 0,
+            discardedCandidateCounts: [],
+            summary: 'wrong-browser-profile | message=wrong browser',
+          },
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+  test('adds normalized reattach summaries to list JSON entries', async () => {
+    const command = createCommandWithOptions({ hours: 12, limit: 5, all: false, json: true } as StatusOptions);
+    const listSessions = vi.fn().mockResolvedValue([]);
+    const filterSessions = vi.fn().mockReturnValue({
+      entries: [
+        {
+          id: 'sess-reattach',
+          createdAt: '2025-11-20T00:00:00.000Z',
+          status: 'error',
+          options: {},
+          browser: {
+            runtime: {
+              reattachDiagnostics: {
+                capturedAt: '2026-04-02T03:00:00.000Z',
+                failureKind: 'wrong-browser-profile',
+                failureMessage: 'wrong browser',
+                discardedRegistryCandidates: [
+                  {
+                    key: 'a',
+                    profilePath: '/tmp/p',
+                    profileName: 'Default',
+                    port: 1,
+                    host: '127.0.0.1',
+                    liveness: 'dead-port',
+                    reason: 'selected-port-stale',
+                  },
+                  {
+                    key: 'b',
+                    profilePath: '/tmp/p',
+                    profileName: 'Default',
+                    port: 2,
+                    host: '127.0.0.1',
+                    liveness: 'dead-port',
+                    reason: 'selected-port-stale',
+                  },
+                ],
+              },
+            },
+          },
+        },
+      ],
+      truncated: false,
+      total: 1,
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await handleSessionCommand(undefined, command, {
+      showStatus: vi.fn(),
+      attachSession: vi.fn(),
+      usesDefaultStatusFilters: vi.fn(),
+      deleteSessionsOlderThan: vi.fn(),
+      getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions,
+      filterSessions,
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      JSON.stringify(
+        {
+          entries: [
+            {
+              id: 'sess-reattach',
+              createdAt: '2025-11-20T00:00:00.000Z',
+              status: 'error',
+              options: {},
+              browser: {
+                runtime: {
+                  reattachDiagnostics: {
+                    capturedAt: '2026-04-02T03:00:00.000Z',
+                    failureKind: 'wrong-browser-profile',
+                    failureMessage: 'wrong browser',
+                    discardedRegistryCandidates: [
+                      {
+                        key: 'a',
+                        profilePath: '/tmp/p',
+                        profileName: 'Default',
+                        port: 1,
+                        host: '127.0.0.1',
+                        liveness: 'dead-port',
+                        reason: 'selected-port-stale',
+                      },
+                      {
+                        key: 'b',
+                        profilePath: '/tmp/p',
+                        profileName: 'Default',
+                        port: 2,
+                        host: '127.0.0.1',
+                        liveness: 'dead-port',
+                        reason: 'selected-port-stale',
+                      },
+                    ],
+                  },
+                },
+              },
+              reattachSummary: {
+                capturedAt: '2026-04-02T03:00:00.000Z',
+                failureKind: 'wrong-browser-profile',
+                failureMessage: 'wrong browser',
+                discardedCandidateCount: 2,
+                discardedCandidateCounts: [
+                  { reason: 'selected-port-stale', liveness: 'dead-port', count: 2 },
+                ],
+                summary: 'wrong-browser-profile | message=wrong browser | stale=selected-port-stale/dead-port x2',
+              },
+            },
+          ],
+          truncated: false,
+          total: 1,
         },
         null,
         2,

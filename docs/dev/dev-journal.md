@@ -3652,3 +3652,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - if we keep expanding machine-readable session tooling, consider extracting a
     shared session JSON payload helper instead of duplicating the list wrapper in
     both command entrypoints
+
+
+## 2026-04-02 — Session/status JSON now includes normalized reattach summaries
+
+- Focus: make machine-readable session diagnostics easier to consume without
+  custom post-processing of nested metadata
+- Implemented:
+  - added a normalized `reattachSummary` sibling object to both single-session
+    and session-list JSON payloads
+  - `reattachSummary` includes:
+    - `capturedAt`
+    - `failureKind` / `failureMessage`
+    - `discardedCandidateCount`
+    - normalized `discardedCandidateCounts[]` grouped by `reason + liveness`
+    - the human-readable summary string used in text output
+  - aligned both `auracall session --json` and `auracall status --json` on the
+    same helper-backed payload contract
+- Next:
+  - if postmortem tooling needs even richer state, consider adding a dedicated
+    exported CLI/session JSON schema doc instead of continuing to evolve it only
+    through tests

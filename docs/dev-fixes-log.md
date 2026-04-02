@@ -5265,3 +5265,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Session/status JSON now emits normalized `reattachSummary` objects
+
+- Area: Session CLI / machine-readable reattach diagnostics
+- Symptom:
+  - raw nested `browser.runtime.reattachDiagnostics` was now available in JSON,
+    but tooling still had to traverse nested metadata and aggregate discarded
+    stale candidates itself
+- Root cause:
+  - the machine-readable payload exposed storage-shaped data only, not a stable
+    operator-oriented summary object
+- Fix:
+  - added helper-backed `reattachSummary` objects to single-session and list JSON
+    payloads
+  - included normalized stale-candidate counts grouped by `reason + liveness`
+  - aligned the direct `status` subcommand JSON path with the `session` command
+    helper path so both emit the same contract
+- Verification:
+  - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`

@@ -89,7 +89,13 @@ import { warnIfOversizeBundle } from '../src/cli/bundleWarnings.js';
 import { formatRenderedMarkdown } from '../src/cli/renderOutput.js';
 import { resolveRenderFlag, resolveRenderPlain } from '../src/cli/renderFlags.js';
 import { resolveGeminiModelId } from '../src/oracle/gemini.js';
-import { handleSessionCommand, type StatusOptions, formatSessionCleanupMessage } from '../src/cli/sessionCommand.js';
+import {
+  handleSessionCommand,
+  buildSessionJsonEntry,
+  buildSessionListJsonPayload,
+  type StatusOptions,
+  formatSessionCleanupMessage,
+} from '../src/cli/sessionCommand.js';
 import { isErrorLogged } from '../src/cli/errorUtils.js';
 import { handleSessionAlias, handleStatusFlag } from '../src/cli/rootAlias.js';
 import { resolveOutputPath } from '../src/cli/writeOutputPath.js';
@@ -7005,7 +7011,7 @@ const statusCommand = program
           process.exitCode = 1;
           return;
         }
-        console.log(JSON.stringify(metadata, null, 2));
+        console.log(JSON.stringify(buildSessionJsonEntry(metadata), null, 2));
         return;
       }
       const metas = await sessionStore.listSessions();
@@ -7023,7 +7029,9 @@ const statusCommand = program
             return availableModels.includes(modelFilter);
           })
         : entries;
-      console.log(JSON.stringify({ entries: filteredEntries, truncated, total }, null, 2));
+      console.log(
+        JSON.stringify(buildSessionListJsonPayload({ entries: filteredEntries, truncated, total }), null, 2),
+      );
       return;
     }
     if (sessionId) {
