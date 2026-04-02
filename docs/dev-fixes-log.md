@@ -5632,3 +5632,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - `auracall doctor --target chatgpt --prune-browser-state --json`
       now attaches runtime probes to the real ChatGPT browser on `38155`
     - `browserToolsError` is now `null`
+
+## 2026-04-02 - config-model target shape is now explicit and the bridge names are documented as transitional
+
+- Durable lesson:
+  - the docs had the right semantics, but not one explicit target public shape
+  - that made it too easy for implementation work to keep landing on bridge
+    names like `browserFamilies` and `profiles` without a clear end-state
+- Decision:
+  - the design authority is now the layered target shape:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `agents`
+    - `teams`
+  - the currently implemented public keys remain bridge names for now:
+    - `browserFamilies`
+    - `profiles`
+    - `profiles.<name>.browserFamily`
+- Implication for future slices:
+  - keep current bridge keys stable enough for normal use
+  - do not treat bridge names as the long-term model
+  - land non-breaking schema/runtime seams toward the target shape before
+    doing broad renames

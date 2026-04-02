@@ -1,148 +1,131 @@
-# Next Execution Plan (2026-03-31)
+# Next Execution Plan (2026-04-02)
 
 ## Current status
 
-ChatGPT browser functionality is now materially complete for:
-- project lifecycle (create/read/list/update/delete, source add/remove),
-- root conversation CRUD (with latest row-action + rate-limit hardening),
-- conversation source/tool surfaces,
-- artifact extraction for core artifact families,
-- and service-volatility extraction for a substantial ChatGPT pilot slice (`configs/auracall.services.json` + manifest-backed helpers).
+The browser reliability line is in a much better state:
 
-The browser-profile-family refactor has also crossed its useful Phase 1 boundary:
-- typed resolved objects are in place,
-- launch-profile consumption now reaches config, browser-service, doctor, login,
-  and runtime bootstrap,
-- and the remaining work in that track is now cleanup and secondary-profile UX,
-  not core derivation ambiguity.
+- dual browser-profile ChatGPT runs are live-proven on:
+  - `default`
+  - `wsl-chrome-2`
+- stale browser-state pruning, reattach classification, and doctor probe routing
+  are now scoped to the selected managed browser profile
+- cross-browser-profile reattach drift is live-proven blocked
+- fresh-launch `wsl-chrome-2` reattach recovery is live-proven green
 
-The remaining work is to complete the last high-value reliability/refactor slices without introducing behavioral drift.
+The profile-family refactor has also crossed its useful first boundary:
 
-A new planning constraint now applies:
-- the larger config-model refactor should be designed before agents/teams are
-  implemented
-- but it does not block small reliability or hardening slices in the meantime
+- typed resolved objects exist
+- launch-profile consumption now reaches config, browser-service, doctor,
+  login, and runtime bootstrap
+- docs now lock the correct terminology:
+  - browser profile
+  - source browser profile
+  - managed browser profile
+  - AuraCall runtime profile
+
+That means the next active architecture track should be the larger
+config-model refactor, not more opportunistic browser cleanup.
 
 ## Execution principle
 
 - Work in small, bounded slices.
-- Keep behavior ownership where it is currently stable in providers and browser-service:
-  - keep workflow orchestration in code,
-  - keep volatile service labels/selectors/models/features/artifact hints in manifest/config.
-- Don’t move to next slice until the current slice acceptance gate is green.
-- Respect observed runtime constraints:
-  - ChatGPT rate limits are environment-driven,
-  - do not trigger "Answer now",
-  - avoid dense write bursts when cooling window is active.
+- Prefer semantic clarity over new aliases.
+- Keep browser reliability in maintenance mode:
+  - fix real regressions or operator pain,
+  - do not keep polishing that area just because it is warm.
+- Do the config-model work before agent or team implementation.
+- Avoid broad code-symbol renames until the target config model is explicit.
 
-## Slice plan (order: highest confidence first)
+## Active slice plan
 
-### 1) Browser profile family Phase 2 cleanup (secondary-profile clarity)
+### 1) Config-model target shape
 
-Goal: finish the high-value cleanup after the Phase 1 refactor seam landed.
-
-Deliverables
-- explicit first-class browser-family config for secondary WSL Chrome / `wsl-chrome-2`
-- docs/schema clarity around:
-  - Aura-Call profile
-  - browser family
-  - source browser profile
-  - managed browser profile
-- confirm default WSL and secondary WSL families no longer depend on raw-path
-  teaching or ambient shell assumptions
-
-Acceptance
-- `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/browser/browserService.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
-- `pnpm run check`
-- smoke run default WSL profile with existing non-Pro account
-- smoke run secondary `wsl-chrome-2` profile with clean startup and no cross-profile bleed
-
-### 2) Config-model refactor planning
-
-Goal: define the next stable config shape before agent/team work starts.
+Goal: define the target public config shape clearly enough that implementation
+can proceed without more semantic drift.
 
 Deliverables
-- explicit plan for:
+- explicit target objects for:
   - browser profiles
   - AuraCall runtime profiles
   - agents
   - teams
-- sequencing guidance for compatibility shims and deferred code renames
-- acceptance criteria for the future config migration
+- one canonical example config using the intended layering
+- migration notes describing which current keys are bridges versus likely final
+  public shape
 
 Acceptance
-- plan captured in `docs/dev/config-model-refactor-plan.md`
-- linked from `ROADMAP.md` and kept consistent with
-  `docs/dev/browser-profile-family-refactor-plan.md`
-- reserved schema/docs landing zone exists for top-level `agents` and `teams`
-- agent inheritance/override boundary is documented before behavior work starts
+- target shape documented in:
+  - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+  - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+- linked consistently from:
+  - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+  - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
 
-### 3) Browser-service registry + reattach reliability
+### 2) Non-breaking schema/runtime seam
 
-Goal: make stale browser-state cleanup and session reattach deterministic inside
-the selected browser profile boundary.
+Goal: make the runtime/config code read more like the target model without
+forcing a big-bang migration.
 
 Deliverables
-- package-owned registry liveness classification:
-  - `live`
-  - `dead-process`
-  - `dead-port`
-  - `profile-mismatch`
-- doctor/reporting that surfaces stale-entry reasons instead of a generic stale count
-- tighter attach/reattach diagnostics before any broader reattach behavior changes
+- introduce narrow compatibility seams where runtime profiles explicitly
+  reference browser profiles
+- reduce new call sites that treat browser-bearing state as if it belongs to
+  AuraCall runtime profiles directly
+- keep current config loading behavior intact while moving the code toward the
+  target layering
 
 Acceptance
-- `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
-- `pnpm run check`
-- plan tracked in
-  `docs/dev/browser-service-reattach-reliability-plan.md`
+- focused schema/profile-resolution/config tests stay green
+- no live browser behavior regresses for:
+  - `default`
+  - `wsl-chrome-2`
 
-### 4) Service-volatility workflow boundary (ChatGPT behavior slice)
+### 3) Browser reliability maintenance
 
-Goal: keep the manifest extraction boundary clean and move reusable mechanics out of providers only when they are truly shared.
+Goal: keep the current browser path stable while the config-model work becomes
+the primary track.
 
 Deliverables
-- convert reusable menu/row/action diagnostics into package-owned helpers only where a second provider/use case justifies extraction.
-- keep single-provider heuristics and workflow sequencing in provider code.
-- refresh backlog docs with concrete extraction candidates and why extraction is deferred/permitted.
+- only bounded fixes for:
+  - reattach regressions
+  - doctor/probe routing regressions
+  - managed browser profile boundary regressions
 
 Acceptance
-- provider flow tests for any touched shared helper.
-- ChatGPT smoke path remains green on the targeted phases.
+- relevant focused tests green
+- one targeted live smoke only if the touched fix affects real browser flow
 
-### 4) Completion of production-facing polish and reliability gates
+### 4) Service-volatility maintenance
 
-Goal: keep MVP criteria for ChatGPT browser delivery stable under constrained live conditions.
+Goal: keep low-risk manifest work moving only when there is a clear, declarative
+candidate.
 
 Deliverables
-- codify a minimal acceptance matrix and run it from stateful resume files only.
-- keep bounded live artifact checks:
-  - one image path,
-  - one canvas/textdoc path,
-  - one workbook-like/CSV path.
-- expand diagnostics where stale/ambiguous modal or rename timing remains.
+- extract only thin label/model/route families that are clearly manifest-owned
+- do not move workflow sequencing or recovery policy out of code just to keep
+  the refactor warm
 
 Acceptance
-- `pnpm vitest run tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts tests/browser/llmServiceRateLimit.test.ts`
-- `pnpm run check`
-- guarded live smoke at scoped phase granularity (project -> root -> project-followups), stopping on first real blocker with diagnostics.
+- touched service/provider regression set stays green
 
-## Cross-cutting work order
+## Near-term order
 
-- Any change that touches config parsing and profile resolution goes through `docs/dev/service-volatility-refactor-plan.md` and `docs/dev/browser-profile-family-refactor-plan.md`.
-- Any change that risks acceptance regressions adds/updates:
-  - `docs/dev/dev-journal.md`,
-  - `docs/dev-fixes-log.md` (only if behavior changed),
-  - and the run log/state file that triggered the run.
+1. Lock the target config shape in docs.
+2. Land the next non-breaking runtime/schema seam toward that shape.
+3. Keep browser reliability in maintenance mode.
+4. Resume larger implementation only after the target config model is explicit.
 
-## Not in scope this phase
+## Not in scope for this slice
 
-- full Gemini/Grok workflow migrations,
-- new artifact subtypes without repeatable live shape,
-- nonessential Pro-account behavior while the non-Pro WSL profile remains unstable from rate-limit cadence.
+- agent execution behavior
+- team execution behavior
+- broad code renames from `browserFamily` to future public names
+- migration ergonomics aimed at a large installed user base
 
-## Immediate next 3 checkpoints
+## Immediate next checkpoints
 
-1. Keep the browser-profile-family work at bounded Phase 2 cleanup, not open-ended runtime churn.
-2. Finish the config-model refactor planning before any agent/team implementation starts.
-3. Lock the agent inheritance/override boundary before any agent behavior work starts.
+1. Make the config-model refactor the active roadmap track.
+2. Publish the target public shape and layering examples.
+3. Start one small implementation seam that follows that target without
+   breaking current config behavior.

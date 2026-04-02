@@ -4094,3 +4094,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - runtime doctor now attaches to the real ChatGPT managed browser profile
       on `38155`
     - `browserToolsError` is now `null`
+
+## 2026-04-02 13:46 CDT
+
+- Focus:
+  - pivot the active execution track from browser reliability back to the
+    larger config-model refactor
+- What changed:
+  - promoted the config-model refactor to the active architecture track in
+    [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - replaced the execution board in
+    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    so it now centers:
+    - target config shape
+    - one non-breaking schema/runtime seam
+    - browser reliability in maintenance mode
+  - added a new target-shape doc:
+    [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+    with the intended public layering:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `agents`
+    - `teams`
+  - updated
+    [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    and
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    so the current bridge keys are explicitly documented as transitional
+- Notes:
+  - no runtime behavior changed in this slice
+  - the immediate next implementation work should be one small non-breaking
+    seam that makes runtime-profile-to-browser-profile ownership more explicit

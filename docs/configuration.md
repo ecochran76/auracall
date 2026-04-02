@@ -47,6 +47,19 @@ Reserved future layers:
 - `teams`
   - will group agents without redefining browser or runtime-profile state
 
+Target-model note:
+- the current public bridge keys are still:
+  - `browserFamilies`
+  - `profiles`
+- the longer-term target shape is documented in
+  [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+  and will likely evolve toward:
+  - `browserProfiles`
+  - `runtimeProfiles`
+- until that refactor lands, prefer treating:
+  - `browserFamilies` as the browser-profile bridge
+  - `profiles` as the AuraCall runtime-profile bridge
+
 ## Example (`~/.auracall/config.json`)
 
 ```json5

@@ -6,7 +6,7 @@
 
 Status: in progress
 
-Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for the remaining browser reliability and refactor slices.
+Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for the active config-model work plus any bounded browser reliability follow-ups.
 
 ### Browser Profile Family Refactor
 Status: in progress
@@ -27,10 +27,11 @@ Execution docs:
 - Repo-wide plan: [docs/dev/browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-profile-family-refactor-plan.md)
 
 Current note:
-- Phase 1 is complete enough through commit `196aad27`; next work is Phase 2 cleanup around explicit secondary WSL browser-profile config, naming clarity, and live/manual validation.
+- Phase 1 is complete enough through commit `196aad27`
+- named secondary browser profiles, dual-profile live smokes, and reattach/doctor boundary fixes are now green enough that this track can remain in maintenance mode while the larger config-model refactor becomes the active architecture track
 
 ### Config Model Refactor
-Status: planned
+Status: in progress
 
 Aura-Call now has clearer semantics in docs, but the config shape is still
 transitional. Browser concerns, AuraCall runtime concerns, and future higher
@@ -47,9 +48,12 @@ This refactor should establish the long-term layering:
 Sequencing rule:
 - do the config-model refactor before implementing agents
 - do not burn time on broad code symbol renames before that refactor
+- keep browser reliability in maintenance mode while this refactor becomes the
+  main planning/implementation track
 
 Execution docs:
 - Repo-wide plan: [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+- Target public shape: [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
 
 ### Service Volatility Externalization
