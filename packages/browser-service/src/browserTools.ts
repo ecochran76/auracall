@@ -14,6 +14,8 @@ export interface BrowserToolsPortResolverOptions {
   chromePath?: string;
   profileDir?: string;
   copyProfile?: boolean;
+  auracallProfile?: string;
+  browserTarget?: 'chatgpt' | 'gemini' | 'grok';
 }
 
 export interface BrowserToolsCliOptions {
@@ -845,6 +847,31 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Lightweight Chrome DevTools helpers (no MCP required).')
     .configureHelp({ sortSubcommands: true })
     .showSuggestionAfterError();
+  program
+    .option('--auracall-profile <name>', 'AuraCall runtime profile to resolve before launching/attaching.')
+    .option('--browser-target <target>', 'Browser target to resolve before launching/attaching (chatgpt|gemini|grok).');
+
+  const withResolverOptions = (
+    commandOptions: Record<string, unknown> & {
+      port?: number;
+      chromePath?: string;
+      profileDir?: string;
+      profile?: boolean;
+    },
+  ): BrowserToolsPortResolverOptions => {
+    const globalOptions = program.opts<{
+      auracallProfile?: string;
+      browserTarget?: 'chatgpt' | 'gemini' | 'grok';
+    }>();
+    return {
+      port: commandOptions.port,
+      chromePath: typeof commandOptions.chromePath === 'string' ? commandOptions.chromePath : undefined,
+      profileDir: typeof commandOptions.profileDir === 'string' ? commandOptions.profileDir : undefined,
+      copyProfile: Boolean(commandOptions.profile),
+      auracallProfile: globalOptions.auracallProfile,
+      browserTarget: globalOptions.browserTarget,
+    };
+  };
 
   program
     .command('start')
@@ -854,12 +881,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--profile-dir <path>', 'Directory for the temporary Chrome profile.', options.defaultProfileDir ?? path.join(os.homedir(), '.cache', 'scraping'))
     .option('--chrome-path <path>', 'Path to the Chrome binary.', options.defaultChromeBin ?? 'google-chrome')
     .action(async (commandOptions) => {
-      const resolvedPort = await options.resolvePortOrLaunch({
-        port: commandOptions.port as number | undefined,
-        chromePath: commandOptions.chromePath as string | undefined,
-        profileDir: commandOptions.profileDir as string | undefined,
-        copyProfile: Boolean(commandOptions.profile),
-      });
+      const resolvedPort = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       console.log(`✓ Chrome listening on http://localhost:${resolvedPort}${commandOptions.profile ? ' (profile copied)' : ''}`);
     });
 
@@ -870,7 +892,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const census = await collectBrowserToolsTabCensus(port, {
         urlContains: commandOptions.urlContains as string | undefined,
       });
@@ -897,7 +919,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--case-sensitive', 'Treat script-text tokens as case-sensitive.', false)
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const report = await collectBrowserToolsDoctorReport(port, {
         urlContains: commandOptions.urlContains as string | undefined,
         selectors: commandOptions.selector as string[],
@@ -937,7 +959,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--case-sensitive', 'Treat script-text tokens as case-sensitive.', false)
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const report = await collectBrowserToolsDoctorReport(port, {
         urlContains: commandOptions.urlContains as string | undefined,
         selectors: commandOptions.selector as string[],
@@ -963,7 +985,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .option('--new', 'Open in a new tab.', false)
     .action(async (url: string, commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const browser = await connectBrowser(port);
       try {
         if (commandOptions.new) {
@@ -991,7 +1013,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
     .action(async (code: string[], commandOptions) => {
       const snippet = code.join(' ');
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
       try {
         const result = await page.evaluate((body) => {
@@ -1025,7 +1047,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Capture the current viewport and print the temp PNG path.')
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const { browser, page } = await getActivePage(port);
       try {
         const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -1054,7 +1076,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--timeout <ms>', 'Auto-cancel after N milliseconds.', (value) => Number.parseInt(value, 10))
     .action(async (messageParts: string[], commandOptions) => {
       const message = messageParts.join(' ');
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
       try {
         const cycleValue = commandOptions.cycle;
@@ -1323,7 +1345,7 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Dump cookies from the active tab as JSON.')
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch({ port: commandOptions.port as number | undefined });
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       const { browser, page } = await getActivePage(port);
       try {
         const cookies = await page.cookies();

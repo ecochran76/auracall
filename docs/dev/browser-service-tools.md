@@ -9,6 +9,10 @@ The `browser-tools` DevTools helper CLI now lives in
 [`packages/browser-service/src/browserTools.ts`](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/browserTools.ts).
 Keep Aura-Call-specific config/bootstrap logic in the thin compatibility wrapper
 [`scripts/browser-tools.ts`](/home/ecochran76/workspace.local/oracle/scripts/browser-tools.ts).
+When targeting managed Aura-Call sessions through that wrapper, prefer
+`--auracall-profile <name>` and `--browser-target <target>` so it resolves the
+same AuraCall runtime profile and managed browser profile that the real product
+path would use.
 
 Current upgrade backlog:
 - generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
@@ -333,6 +337,13 @@ Current active extraction plan:
 - For workflow guidance, see `docs/dev/browser-automation-playbook.md`.
 
 ## Smoke helpers
+
+- `pnpm tsx scripts/browser-tools.ts --auracall-profile <name> --browser-target <target> start`
+  - Resolves the selected AuraCall runtime profile plus browser target before
+    attaching or launching.
+  - Prefer this over ad hoc launches when you want the same managed browser
+    profile Aura-Call itself would use, for example:
+    - `pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
 
 - `pnpm tsx scripts/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
   - Shows the live tab census for one DevTools browser instance.

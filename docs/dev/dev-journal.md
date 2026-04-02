@@ -3733,3 +3733,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - decide whether to add a first-class live vitest for this exact ambiguous
     multi-tab scenario, or leave it as a manual/live operator smoke because it
     depends on deliberately staging conflicting ChatGPT pages
+
+
+## 2026-04-02 — browser-tools must resolve AuraCall runtime profiles before launching or attaching
+
+- Focus: explain why `wsl-chrome-2` looked unstable when opened through
+  `scripts/browser-tools.ts` even though the real managed WSL Chrome launch path
+  was viable
+- Progress:
+  - traced the drift to the thin Aura-Call wrapper in
+    `scripts/browser-tools.ts`, which still loaded raw user config and resolved
+    only the flattened browser block instead of resolving the selected AuraCall
+    runtime profile plus browser target first
+  - updated the package-owned CLI to accept `--auracall-profile` and
+    `--browser-target`, then forwarded those options through the wrapper to
+    `resolveConfig(...)` and `BrowserService.fromConfig(...)`
+  - browser-tools now launches/attaches against the same managed browser
+    profile that Aura-Call itself would use, instead of silently falling back to
+    the default flattened browser config
+  - added a focused regression in `tests/browser/browserTools.test.ts` to prove
+    `start` forwards the selected AuraCall runtime profile and browser target to
+    the port resolver
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - the real product-style WSL Chrome launch contract for
+    `~/.auracall/browser-profiles/wsl-chrome-2/chatgpt` is viable; the earlier
+    confusion came from browser-tools bypassing AuraCall runtime profile
+    resolution, plus ad hoc debug launches that did not match the real contract
+- Next:
+  - rerun the full repo checks, document the new browser-tools flags, and use
+    the fixed wrapper for future `wsl-chrome-2` inspection instead of ad hoc
+    launches

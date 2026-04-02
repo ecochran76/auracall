@@ -1,7 +1,8 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import {
   BROWSER_TOOLS_CONTRACT_VERSION,
   collectBrowserToolsPageProbe,
+  createBrowserToolsProgram,
   createBrowserToolsDoctorContract,
   createBrowserToolsProbeContract,
   explainBrowserToolsPageSelection,
@@ -360,5 +361,29 @@ describe('selectBrowserToolsPageIndex', () => {
       generatedAt: '2026-03-25T20:31:00.000Z',
       report,
     });
+  });
+
+  test('browser-tools start forwards AuraCall runtime profile and browser target to the resolver', async () => {
+    const resolvePortOrLaunch = vi.fn(async () => 45013);
+    const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const program = createBrowserToolsProgram({
+      resolvePortOrLaunch,
+      argv: ['node', 'browser-tools', '--auracall-profile', 'wsl-chrome-2', '--browser-target', 'chatgpt', 'start'],
+      defaultChromeBin: 'google-chrome',
+      defaultProfileDir: '/tmp/browser-tools',
+    });
+
+    try {
+      await program.parseAsync(['node', 'browser-tools', '--auracall-profile', 'wsl-chrome-2', '--browser-target', 'chatgpt', 'start']);
+    } finally {
+      log.mockRestore();
+    }
+
+    expect(resolvePortOrLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({
+        auracallProfile: 'wsl-chrome-2',
+        browserTarget: 'chatgpt',
+      }),
+    );
   });
 });

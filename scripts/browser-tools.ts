@@ -5,8 +5,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { runBrowserToolsCli, type BrowserToolsPortResolverOptions } from '../packages/browser-service/src/browserTools.js';
-import { loadUserConfig } from '../src/config.js';
-import { resolveBrowserConfig } from '../src/browser/config.js';
+import { resolveConfig } from '../src/schema/resolver.js';
 import { launchManualLoginSession } from '../src/browser/manualLogin.js';
 import { BrowserService } from '../src/browser/service/browserService.js';
 import {
@@ -31,13 +30,17 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
   if (options.port) {
     return options.port;
   }
-  const { config: userConfig } = await loadUserConfig();
-  const browserService = BrowserService.fromConfig(userConfig);
-  const target = await browserService.resolveDevToolsTarget({ ensurePort: false });
-  if (target.port) {
-    return target.port;
+  const resolvedConfig = await resolveConfig({
+    auracallProfile: options.auracallProfile,
+    browserTarget: options.browserTarget,
+  });
+  const browserTarget = resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt';
+  const browserService = BrowserService.fromConfig(resolvedConfig, browserTarget);
+  const devToolsTarget = await browserService.resolveDevToolsTarget({ ensurePort: false });
+  if (devToolsTarget.port) {
+    return devToolsTarget.port;
   }
-  const resolved = resolveBrowserConfig(userConfig.browser);
+  const resolved = browserService.getConfig();
   const baseDir =
     options.profileDir ??
     resolved.manualLoginProfileDir ??

@@ -5348,3 +5348,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - live direct `resumeBrowserSessionCore(...)` repro on a real browser now logs
     `ambiguous` for the staged root-plus-Explore-GPTs conflict
+
+
+## 2026-04-02 — browser-tools must honor AuraCall runtime profile resolution
+
+- Area: Browser-service tooling / WSL Chrome profile handling
+- Symptom:
+  - opening `wsl-chrome-2` through `scripts/browser-tools.ts` could appear to
+    launch the wrong managed browser profile or behave inconsistently compared
+    with real Aura-Call/browser-service launches
+- Root cause:
+  - the thin Aura-Call wrapper still bypassed AuraCall runtime profile
+    resolution
+  - it loaded raw user config and resolved only the flattened browser block,
+    ignoring AuraCall runtime profile selection and browser target selection
+- Fix:
+  - added package-owned CLI flags `--auracall-profile` and `--browser-target`
+  - forwarded those through `BrowserToolsPortResolverOptions`
+  - changed `scripts/browser-tools.ts` to call `resolveConfig(...)` and
+    `BrowserService.fromConfig(...)` before attach/launch, so browser-tools now
+    uses the same managed browser profile selection logic as Aura-Call
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
