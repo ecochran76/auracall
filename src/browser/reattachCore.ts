@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises';
 import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfig } from './types.js';
 import type { BrowserLogger, ChromeClient } from './types.js';
 import { resolveManagedProfileDir } from './profileStore.js';
+import { isDevToolsResponsive } from './processCheck.js';
 import {
   connectToChromeTarget as connectToChromeTargetCore,
   listChromeTargets as listChromeTargetsCore,
@@ -174,6 +175,9 @@ export interface ReattachRuntimeDeps {
     timeoutMs: number | undefined,
     logger: BrowserLogger,
   ) => Promise<void>;
+  probeDevToolsResponsive?: (
+    input: { port: number; host: string; attempts: number; timeoutMs: number },
+  ) => Promise<boolean>;
 }
 
 export async function resumeBrowserSessionCore(
@@ -335,7 +339,23 @@ async function resumeBrowserSessionViaNewChrome(
   await mkdir(userDataDir, { recursive: true });
   const chrome = await runtimeDeps.launchChrome(resolved, userDataDir, logger);
   const chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
-  const client = await runtimeDeps.connectToChrome(chrome.port, logger, chromeHost);
+  let client: ChromeClient;
+  try {
+    client = await runtimeDeps.connectToChrome(chrome.port, logger, chromeHost);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    const reachable = await (runtimeDeps.probeDevToolsResponsive ?? isDevToolsResponsive)({
+      port: chrome.port,
+      host: chromeHost,
+      attempts: 4,
+      timeoutMs: 2000,
+    });
+    if (!reachable) {
+      throw error;
+    }
+    logger(`Fresh DevTools connection failed (${message}); retrying attach once after probe.`);
+    client = await runtimeDeps.connectToChrome(chrome.port, logger, chromeHost);
+  }
   const { Network, Page, Runtime, DOM } = client;
 
   if (Runtime?.enable) {

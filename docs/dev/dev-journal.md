@@ -3902,3 +3902,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - confirmed the reattach path now classifies that as
       `wrong-browser-profile` instead of attaching across browser profiles or
       collapsing into generic ambiguity
+
+
+## 2026-04-02 — reattach recovery needs one bounded fresh-port attach retry
+
+- Focus: finish the live reattach smoke after pruning stale browser-state
+  entries
+- Progress:
+  - pruned the live registry with:
+    - `auracall doctor --target chatgpt --local-only --prune-browser-state`
+    - `auracall doctor --profile wsl-chrome-2 --target chatgpt --local-only --prune-browser-state`
+  - built fresh ChatGPT browser sessions on both browser profiles
+  - confirmed `default` reattach now completes from the `chrome-disconnected`
+    state even when the existing DevTools endpoint is gone and the recovery
+    path has to launch a fresh managed browser
+  - the `wsl-chrome-2` smoke exposed a narrower race:
+    - `resumeBrowserSessionViaNewChrome(...)` could hit `ECONNREFUSED` on a
+      just-launched DevTools port
+    - fixed that by probing the fresh port once and retrying the attach once
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Live status:
+  - `default` browser profile: reattach smoke green after stale-registry prune
+  - `wsl-chrome-2` browser profile: still not green, but for a different
+    reason now
+    - once reattach falls back to launching a fresh managed browser, ChatGPT
+      presents a visible login CTA in that new browser even though the
+      already-open managed `wsl-chrome-2` browser is signed in
+    - that is no longer a port-race or browser-profile drift problem; it is a
+      managed-browser session persistence problem on fresh launch

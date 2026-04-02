@@ -5505,3 +5505,32 @@ This log captures notable fixes, what broke, why, and how we verified the repair
       from `wsl-chrome-2`
     - confirmed the reattach path classified the attempt as
       `wrong-browser-profile`
+
+
+## 2026-04-02 — reattach recovery must retry one fresh DevTools attach after launch
+
+- Area: Browser reattach recovery / fresh Chrome launch
+- Symptom:
+  - `resumeBrowserSessionViaNewChrome(...)` could fail immediately with
+    `connect ECONNREFUSED 127.0.0.1:<port>` even after a fresh managed browser
+    launch succeeded
+- Root cause:
+  - the reattach recovery path connected to the new DevTools port too eagerly
+  - the main browser-run path already had a bounded `isDevToolsResponsive(...)`
+    probe and attach retry, but reattach recovery did not
+- Fix:
+  - added the same bounded recovery pattern to reattach recovery:
+    - first connect attempt
+    - if it fails, probe the fresh DevTools port once
+    - if reachable, retry the attach once and continue
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - after pruning stale browser-state entries, the `default` ChatGPT
+      reattach smoke completed successfully through the fresh-browser recovery
+      path
+- Remaining follow-up:
+  - `wsl-chrome-2` still has a separate fresh-launch issue:
+    when reattach has to launch a new managed browser, ChatGPT shows a login
+    CTA even though the already-open managed browser is signed in

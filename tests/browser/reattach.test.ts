@@ -1,5 +1,6 @@
 import { describe, expect, test, vi } from 'vitest';
 import { resumeBrowserSession, describeReattachFailure, ReattachFailure, __test__ } from '../../src/browser/reattach.js';
+import { resumeBrowserSessionCore } from '../../src/browser/reattachCore.js';
 import type { BrowserLogger, ChromeClient } from '../../src/browser/types.js';
 
 type FakeTarget = { targetId?: string; type?: string; url?: string };
@@ -235,6 +236,97 @@ describe('resumeBrowserSession', () => {
 
     expect(result.answerText).toBe('fallback');
     expect(recoverSession).toHaveBeenCalled();
+  });
+
+  test('retries fresh devtools attach once after a successful liveness probe', async () => {
+    const runtime = {
+      chromePort: 51559,
+      chromeHost: '127.0.0.1',
+      tabUrl: 'https://chatgpt.com/c/demo',
+    };
+    const logger = vi.fn() as BrowserLogger;
+    const launchChrome = vi.fn(async () => ({
+      port: 51559,
+      host: '127.0.0.1',
+      launchedByAuracall: true,
+      kill: async () => undefined,
+    }));
+    const connect = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('connect ECONNREFUSED 127.0.0.1:51559'))
+      .mockResolvedValueOnce({
+        Runtime: {
+          enable: vi.fn(),
+          evaluate: vi.fn(async ({ expression }: { expression: string }) => {
+            if (expression === 'location.href') {
+              return { result: { type: 'string', value: runtime.tabUrl } };
+            }
+            return { result: { type: 'object', value: null } };
+          }),
+        },
+        DOM: { enable: vi.fn() },
+        Network: {},
+        Page: {},
+        close: vi.fn(async () => {}),
+      } as any);
+    const waitForAssistantResponse = vi.fn(async () => ({
+      text: 'Recovered after retry',
+      meta: { messageId: 'm1', turnId: 'conversation-turn-1' },
+    }));
+    const captureAssistantMarkdown = vi.fn(async () => 'Recovered after retry');
+    const result = await resumeBrowserSessionCore(
+      runtime,
+        { manualLogin: true, manualLoginProfileDir: '/tmp/profile', target: 'chatgpt' } as any,
+        logger,
+        {
+          listTargets: async () => [],
+          waitForAssistantResponse,
+          captureAssistantMarkdown,
+          helpers: {
+          pickTarget: (targets) => targets[0],
+          extractConversationIdFromUrl: () => 'demo',
+          buildConversationUrl: () => runtime.tabUrl,
+          withTimeout: async (promise) => promise,
+          openConversationFromSidebar: async () => true,
+          openConversationFromSidebarWithRetry: async () => true,
+          waitForLocationChange: async () => undefined,
+          readConversationTurnIndex: async () => null,
+          buildPromptEchoMatcher: () => null,
+          recoverPromptEcho: async (_Runtime, answer) => answer as any,
+          alignPromptEchoMarkdown: (text, markdown) => ({ answerText: text, answerMarkdown: markdown }),
+        },
+      },
+      {
+        resolveBrowserConfig: (config: any) => ({
+          ...config,
+          headless: false,
+          hideWindow: true,
+          keepBrowser: true,
+          inputTimeoutMs: 60000,
+          timeoutMs: 120000,
+          url: 'https://chatgpt.com/',
+          target: 'chatgpt',
+        }),
+        launchChrome: launchChrome as any,
+        connectToChrome: connect as any,
+        hideChromeWindow: async () => undefined,
+        syncCookies: async () => 0,
+        cleanupStaleProfileState: async () => undefined,
+        navigateToChatGPT: async () => undefined,
+        ensureNotBlocked: async () => undefined,
+        ensureLoggedIn: async () => undefined,
+        ensurePromptReady: async () => undefined,
+        probeDevToolsResponsive: async () => true,
+      },
+    );
+
+    expect(result.answerText).toBe('Recovered after retry');
+    expect(connect).toHaveBeenCalledTimes(2);
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Fresh DevTools connection failed (connect ECONNREFUSED 127.0.0.1:51559); retrying attach once after probe.',
+      ),
+    );
   });
 });
 
