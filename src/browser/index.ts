@@ -75,6 +75,7 @@ import {
   pickAvailableDebugPort,
 } from './portSelection.js';
 import { dismissOpenMenus } from './service/ui.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
 import {
   appendChatgptMutationRecord,
   CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
@@ -101,6 +102,51 @@ import {
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
 export { parseDuration, delay, normalizeChatgptUrl, isTemporaryChatUrl } from './utils.js';
+
+function resolveManagedBrowserLaunchContext(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  target: 'chatgpt' | 'grok' | 'gemini',
+) {
+  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+    browser: config,
+    target,
+  }).launchProfile;
+  const userDataDir = resolveManagedProfileDir({
+    configuredDir: launchProfile.manualLoginProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
+    target,
+  });
+  const defaultManagedProfileDir = resolveManagedProfileDir({
+    configuredDir: null,
+    managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
+    target,
+  });
+  const chromeProfile = launchProfile.chromeProfile ?? config.chromeProfile ?? 'Default';
+  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
+    configuredCookiePath:
+      launchProfile.bootstrapCookiePath ??
+      launchProfile.chromeCookiePath ??
+      config.bootstrapCookiePath ??
+      config.chromeCookiePath ??
+      null,
+    managedProfileDir: userDataDir,
+    managedProfileName: chromeProfile,
+  });
+  return {
+    launchProfile,
+    userDataDir,
+    defaultManagedProfileDir,
+    chromeProfile,
+    bootstrapCookiePath,
+  };
+}
+
+export function resolveManagedBrowserLaunchContextForTest(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  target: 'chatgpt' | 'grok' | 'gemini',
+) {
+  return resolveManagedBrowserLaunchContext(config, target);
+}
 
 function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
   if (!(error instanceof BrowserAutomationError)) return false;
@@ -631,30 +677,17 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   };
 
   const manualLogin = true;
-  const userDataDir = resolveManagedProfileDir({
-    configuredDir: config.manualLoginProfileDir ?? null,
-    managedProfileRoot: config.managedProfileRoot ?? null,
-    target,
-  });
+  const launchContext = resolveManagedBrowserLaunchContext(config, target);
+  const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
-  const defaultManagedProfileDir = resolveManagedProfileDir({
-    configuredDir: null,
-    managedProfileRoot: config.managedProfileRoot ?? null,
-    target,
-  });
   const allowDestructiveProfileRetryReset =
     path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
   await mkdir(userDataDir, { recursive: true });
   logger(`Using managed browser profile at ${userDataDir}`);
   logger(`Browser profile selection: ${userDataDir}`);
-  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath: config.bootstrapCookiePath ?? config.chromeCookiePath ?? null,
-    managedProfileDir: userDataDir,
-    managedProfileName: config.chromeProfile ?? 'Default',
-  });
   const bootstrapResult = await bootstrapManagedProfile({
     managedProfileDir: userDataDir,
-    managedProfileName: config.chromeProfile ?? 'Default',
+    managedProfileName: chromeProfile,
     sourceCookiePath: bootstrapCookiePath,
     logger,
   });
@@ -794,7 +827,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     await Promise.all(domainEnablers);
     removeDialogHandler = installJavaScriptDialogAutoDismissal(Page, logger);
-    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, config.chromeProfile ?? 'Default');
+    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, chromeProfile);
     const shouldSeedManagedProfile =
       config.cookieSync &&
       !config.inlineCookies &&
@@ -812,7 +845,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           'Heads-up: macOS may prompt for your Keychain password to read Chrome cookies; use --copy or --render for manual flow.',
         );
       }
-      const cookieCount = await syncCookies(Network, config.url, config.chromeProfile, logger, {
+      const cookieCount = await syncCookies(Network, config.url, chromeProfile, logger, {
         allowErrors: config.allowCookieErrors ?? false,
         filterNames: config.cookieNames ?? undefined,
         inlineCookies: config.inlineCookies ?? undefined,
@@ -828,8 +861,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           ? config.inlineCookies
             ? `Applied ${cookieCount} inline cookies`
             : shouldSeedManagedProfile
-              ? `Seeded ${cookieCount} cookies into managed profile ${config.chromeProfile ?? 'Default'}`
-              : `Copied ${cookieCount} cookies from Chrome profile ${config.chromeProfile ?? 'Default'}`
+              ? `Seeded ${cookieCount} cookies into managed profile ${chromeProfile}`
+              : `Copied ${cookieCount} cookies from Chrome profile ${chromeProfile}`
           : config.inlineCookies
             ? 'No inline cookies applied; continuing without session reuse'
             : shouldSeedManagedProfile
@@ -2449,29 +2482,17 @@ async function runGrokBrowserMode({
     }
   };
   const manualLogin = true;
-  const userDataDir = resolveManagedProfileDir({
-    configuredDir: config.manualLoginProfileDir ?? null,
-    managedProfileRoot: config.managedProfileRoot ?? null,
-    target: config.target ?? 'grok',
-  });
-  const defaultManagedProfileDir = resolveManagedProfileDir({
-    configuredDir: null,
-    managedProfileRoot: config.managedProfileRoot ?? null,
-    target: config.target ?? 'grok',
-  });
+  const runtimeTarget = (config.target ?? 'grok') as 'grok';
+  const launchContext = resolveManagedBrowserLaunchContext(config, runtimeTarget);
+  const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
   const allowDestructiveProfileRetryReset =
     path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
   await mkdir(userDataDir, { recursive: true });
   logger(`Using managed browser profile at ${userDataDir}`);
   logger(`Browser profile selection: ${userDataDir}`);
-  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath: config.bootstrapCookiePath ?? config.chromeCookiePath ?? null,
-    managedProfileDir: userDataDir,
-    managedProfileName: config.chromeProfile ?? 'Default',
-  });
   const bootstrapResult = await bootstrapManagedProfile({
     managedProfileDir: userDataDir,
-    managedProfileName: config.chromeProfile ?? 'Default',
+    managedProfileName: chromeProfile,
     sourceCookiePath: bootstrapCookiePath,
     logger,
   });
@@ -2640,7 +2661,7 @@ async function runGrokBrowserMode({
     await Promise.all(domainEnablers);
     installJavaScriptDialogAutoDismissal(Page, logger);
 
-    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, config.chromeProfile ?? 'Default');
+    const existingManagedCookieFile = findBrowserCookieFile(userDataDir, chromeProfile);
     const shouldSeedManagedProfile =
       config.cookieSync &&
       !config.inlineCookies &&
@@ -2648,7 +2669,7 @@ async function runGrokBrowserMode({
       (Boolean(config.manualLoginCookieSync) || !existingManagedCookieFile);
     if (shouldSeedManagedProfile) {
       logger(`Bootstrapping managed Grok profile from source cookies at ${bootstrapCookiePath}.`);
-      await syncCookies(Network, config.url, undefined, logger, {
+      await syncCookies(Network, config.url, chromeProfile, logger, {
         cookiePath: bootstrapCookiePath ?? undefined,
         waitMs: 500,
         allowErrors: config.allowCookieErrors ?? false,

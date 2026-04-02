@@ -4869,3 +4869,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-01 — Browser runtime no longer duplicates managed profile/bootstrap derivation
+
+- Area: Browser/profile-family refactor runtime cleanup
+- Symptom:
+  - both ChatGPT and Grok browser runtime paths in `src/browser/index.ts`
+    still duplicated the same managed-profile/bootstrap derivation logic even
+    after config, browser-service, doctor, and login prep had moved onto the
+    resolved launch/profile seam
+- Fix:
+  - added one shared
+    `resolveManagedBrowserLaunchContext(...)`
+    helper in `src/browser/index.ts`
+  - both runtime paths now use it for managed profile dir, default managed
+    profile dir, chrome profile, and preferred bootstrap cookie path
+  - added a direct export-backed regression in
+    `tests/browser/browserModeExports.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/config.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`

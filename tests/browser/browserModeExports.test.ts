@@ -5,6 +5,7 @@ import {
   logChatgptUnexpectedStateForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
+  resolveManagedBrowserLaunchContextForTest,
 } from '../../src/browser/index.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -57,6 +58,30 @@ describe('browserMode exports', () => {
         answerMessageId: 'assist-2',
       }),
     ).toBe(false);
+  });
+
+  test('resolves managed browser launch context from the typed launch profile', () => {
+    const context = resolveManagedBrowserLaunchContextForTest(
+      {
+        target: 'grok',
+        chromeProfile: 'Default',
+        chromeCookiePath:
+          '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies',
+        bootstrapCookiePath:
+          '/mnt/c/Users/ecoch/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Network/Cookies',
+        managedProfileRoot: '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles',
+      } as any,
+      'grok',
+    );
+
+    expect(context.userDataDir).toBe('/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/default/grok');
+    expect(context.defaultManagedProfileDir).toBe(
+      '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/default/grok',
+    );
+    expect(context.chromeProfile).toBe('Default');
+    expect(context.bootstrapCookiePath).toBe(
+      '/mnt/c/Users/ecoch/AppData/Local/BraveSoftware/Brave-Browser/User Data/Default/Network/Cookies',
+    );
   });
 
   test('retry affordance send failures stay explicit about no auto-click policy', () => {

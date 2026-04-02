@@ -3335,3 +3335,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     execution path in `src/browser/index.ts` and related setup flows
   - before pushing further, it may be worth cutting another checkpoint because
     the main profile-family boundary is now materially cleaner end to end
+
+## 2026-04-01 — Browser runtime now shares one managed launch-context helper
+
+- Focus: remove the last obvious duplicate managed-profile/bootstrap derivation
+  inside the browser runtime path before going deeper into `index.ts`
+- Implemented:
+  - added `resolveManagedBrowserLaunchContext(...)` in
+    `src/browser/index.ts`
+  - both ChatGPT and Grok browser runtime flows now use that helper for:
+    - managed profile dir
+    - default managed profile dir
+    - chrome profile
+    - preferred bootstrap cookie path
+  - added `resolveManagedBrowserLaunchContextForTest(...)` and direct
+    regression coverage in `tests/browser/browserModeExports.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/config.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - the remaining runtime work in `index.ts` is now less about profile
+    derivation and more about broader execution/lifecycle policy
+  - this is a reasonable place either to cut another checkpoint or to step back
+    and reassess the next roadmap item
