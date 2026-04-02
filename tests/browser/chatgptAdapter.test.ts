@@ -26,6 +26,7 @@ import {
   resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
   resolveChatgptProjectSettingsCommitLabelsForTest,
+  resolveChatgptProjectSourceUploadActionLabelsForTest,
   serializeChatgptGridRowsToCsv,
 } from '../../src/browser/providers/chatgptAdapter.js';
 
@@ -159,6 +160,14 @@ describe('resolveChatgptProjectSettingsCommitLabelsForTest', () => {
   test('uses manifest-owned project settings commit button labels', () => {
     expect(resolveChatgptProjectSettingsCommitLabelsForTest()).toEqual(
       expect.arrayContaining(['save', 'save changes', 'done', 'apply']),
+    );
+  });
+});
+
+describe('resolveChatgptProjectSourceUploadActionLabelsForTest', () => {
+  test('uses manifest-owned project source upload action labels', () => {
+    expect(resolveChatgptProjectSourceUploadActionLabelsForTest()).toEqual(
+      expect.arrayContaining(['upload', 'browse', 'upload file']),
     );
   });
 });

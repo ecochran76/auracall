@@ -223,6 +223,11 @@ const CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS = resolveBundledServiceUiLab
   'project_settings_commit_buttons',
   ['save', 'save changes', 'done', 'apply'],
 ).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_PROJECT_SOURCE_UPLOAD_ACTION_LABELS = resolveBundledServiceUiLabelSet(
+  'chatgpt',
+  'project_source_upload_actions',
+  ['upload', 'browse', 'upload file'],
+).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
 const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
   'chatgpt',
   'project_source_upload_markers',
@@ -1164,6 +1169,10 @@ export function resolveChatgptProjectMemoryLabel(mode: ProjectMemoryMode): strin
 
 export function resolveChatgptProjectSettingsCommitLabelsForTest(): string[] {
   return [...CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS];
+}
+
+export function resolveChatgptProjectSourceUploadActionLabelsForTest(): string[] {
+  return [...CHATGPT_PROJECT_SOURCE_UPLOAD_ACTION_LABELS];
 }
 
 export function normalizeChatgptAuthSessionIdentity(
@@ -2537,12 +2546,12 @@ function buildProjectSourcesUploadDialogReadyExpression(): string {
       const hasInput = Boolean(
         dialog.querySelector('input[type="file"]') || dialog.querySelector('input[accept]') || dialog.querySelector('input[data-testid="file-upload"]'),
       );
+      const uploadActionLabels = ${JSON.stringify(CHATGPT_PROJECT_SOURCE_UPLOAD_ACTION_LABELS)}.map((value) => normalize(value));
       const hasUploadAction = Array.from(dialog.querySelectorAll('button,[role="button"],label'))
-        .some((node) =>
-          ['upload', 'browse', 'upload file'].some(
-            (label) => normalize(node.textContent || node.getAttribute('aria-label') || '').includes(label),
-          ),
-      );
+        .some((node) => {
+          const text = normalize(node.textContent || node.getAttribute('aria-label') || '');
+          return uploadActionLabels.some((label) => text.includes(label));
+        });
       const hasUploadButton = Array.from(dialog.querySelectorAll('button,[role="button"]'))
         .some((node) => normalize(node.textContent || node.getAttribute('aria-label') || '') === CHATGPT_PROJECT_UPLOAD_BUTTON_LABEL);
       const hasUploadMarker = markerSet.some((marker) =>

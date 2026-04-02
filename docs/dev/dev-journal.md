@@ -3510,3 +3510,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - look for the next similarly low-risk declarative ChatGPT label set or stop
     the manifest slice again if the remaining adapter strings are too
     workflow-coupled
+
+
+## 2026-04-01 — Moved ChatGPT project-source upload action labels into the service manifest
+
+- Focus: take one more bounded ChatGPT service-volatility slice while the
+  remaining adapter strings were re-evaluated
+- Implemented:
+  - added `ui.labelSets.project_source_upload_actions` to the checked-in
+    ChatGPT service manifest
+  - rewired the project-sources upload dialog readiness probe to use the
+    manifest-owned upload-action label set instead of hard-coded
+    `upload/browse/upload file` literals
+  - added focused registry and adapter regression coverage
+- Next:
+  - stop the ChatGPT manifest pilot again unless another equally low-risk
+    declarative label set is identified; most remaining adapter strings are now
+    entangled with state heuristics or fallback order

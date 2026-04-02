@@ -5081,3 +5081,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-01 — ChatGPT project-source upload action labels are now manifest-owned
+
+- Area: ChatGPT service-volatility extraction
+- Symptom:
+  - the ChatGPT adapter still had a hard-coded low-risk upload-action label set
+    inside the project-sources upload-dialog readiness probe
+- Root cause:
+  - those labels (`upload`, `browse`, `upload file`) had not yet been
+    promoted into the checked-in service manifest even though adjacent
+    project-source labels already were
+- Fix:
+  - added `ui.labelSets.project_source_upload_actions` to
+    `configs/auracall.services.json`
+  - rewired the upload-dialog readiness probe to consume that manifest-owned
+    label set
+  - added focused registry and adapter tests to pin the ownership boundary
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
+  - `pnpm run check`

@@ -283,6 +283,11 @@
             "done",
             "apply"
           ],
+          "project_source_upload_actions": [
+            "upload",
+            "browse",
+            "upload file"
+          ],
           "project_source_upload_markers": [
             "add sources",
             "drag sources here"
