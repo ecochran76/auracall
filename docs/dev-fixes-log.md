@@ -5143,3 +5143,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts tests/cli/browserSetup.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-01 — Attach resolution now explains discarded stale browser-state candidates
+
+- Area: Browser-service registry / attach diagnostics
+- Symptom:
+  - attach failures could still look like "no target found" even when nearby
+    browser-state entries existed but had already been invalidated by stale
+    liveness or profile mismatch
+- Root cause:
+  - the attach path was only consuming the winning or scanned profile path and
+    did not surface which stale registry candidates had just been rejected
+- Fix:
+  - updated browser-service attach resolution to report discarded stale registry
+    candidates for:
+    - the selected DevTools port
+    - the expected browser profile identity
+  - added focused tests so those diagnostics are pinned without changing the
+    current tab-selection policy
+- Verification:
+  - `pnpm vitest run tests/browser/browserService.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

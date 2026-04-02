@@ -3559,3 +3559,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - tighten attach candidate diagnostics next, so attach paths can explain why
     stale or mismatched entries were discarded before target resolution
+
+
+## 2026-04-01 — Attach resolution now reports discarded stale registry candidates
+
+- Focus: continue the browser-service registry/reattach reliability track with
+  clearer attach-side diagnostics
+- Implemented:
+  - updated `resolveServiceTarget(...)` to collect discarded stale registry
+    candidates tied to the selected DevTools port or the expected browser
+    profile identity
+  - added focused browser-service tests for discarded-candidate reporting
+  - kept behavior bounded to diagnostics only; tab-selection policy itself was
+    not changed in this slice
+- Next:
+  - broaden the same evidence into reattach/session flows so failed session
+    reattachment can distinguish stale target loss from wrong-browser drift

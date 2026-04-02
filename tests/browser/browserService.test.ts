@@ -38,13 +38,21 @@ vi.mock('../../packages/browser-service/src/service/instanceScanner.js', async (
   };
 });
 
+const stateRegistryMocks = vi.hoisted(() => ({
+  listInstances: vi.fn(async () => []),
+  listInstancesWithLiveness: vi.fn(async () => []),
+  updateInstance: vi.fn(async () => {}),
+  registerInstance: vi.fn(async () => {}),
+}));
+
 vi.mock('../../packages/browser-service/src/service/stateRegistry.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../packages/browser-service/src/service/stateRegistry.js')>();
   return {
     ...actual,
-    listInstances: vi.fn(async () => []),
-    updateInstance: vi.fn(async () => {}),
-    registerInstance: vi.fn(async () => {}),
+    listInstances: stateRegistryMocks.listInstances,
+    listInstancesWithLiveness: stateRegistryMocks.listInstancesWithLiveness,
+    updateInstance: stateRegistryMocks.updateInstance,
+    registerInstance: stateRegistryMocks.registerInstance,
   };
 });
 
@@ -74,6 +82,8 @@ describe('BrowserService resolveServiceTarget', () => {
 
   test('matches ChatGPT tabs by domain', async () => {
     loggerMessages.length = 0;
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([]);
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([]);
     instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
       instance: {
         pid: 9999,
@@ -276,6 +286,66 @@ describe('BrowserService resolveServiceTarget', () => {
       undefined,
       {},
     );
+  });
+
+  test('reports discarded stale registry candidates for the selected port and expected profile', async () => {
+    loggerMessages.length = 0;
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+      {
+        instance: {
+          pid: 9999,
+          port: 9222,
+          host: '127.0.0.1',
+          profilePath: '/tmp/profile',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: false,
+        liveness: 'dead-port',
+        actualPid: 9999,
+      },
+      {
+        instance: {
+          pid: 8888,
+          port: 4555,
+          host: '127.0.0.1',
+          profilePath: '/tmp/profile',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: false,
+        liveness: 'profile-mismatch',
+        actualPid: 7777,
+      },
+    ] as any);
+    instanceScannerMocks.scanRegisteredInstance.mockResolvedValueOnce({
+      instance: undefined,
+      tabs: [],
+    } as any);
+    const service = BrowserService.fromConfig(baseConfig);
+    const target = await service.resolveServiceTarget({
+      serviceId: 'chatgpt',
+      configuredUrl: 'https://chatgpt.com/',
+      ensurePort: true,
+      logger: (message) => loggerMessages.push(message),
+    });
+    expect(target.discardedRegistryCandidates).toEqual([
+      expect.objectContaining({
+        reason: 'expected-profile-stale',
+        liveness: 'profile-mismatch',
+        actualPid: 7777,
+      }),
+      expect.objectContaining({
+        reason: 'selected-port-stale',
+        liveness: 'dead-port',
+        actualPid: 9999,
+      }),
+    ]);
+    expect(loggerMessages.some((message) => message.includes('Discarded registry candidates:'))).toBe(true);
   });
 
   test('explicit constructor target overrides configured browser target for managed profile resolution', () => {

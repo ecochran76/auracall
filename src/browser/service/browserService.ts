@@ -20,7 +20,9 @@ import {
 } from '../../../packages/browser-service/src/service/instanceScanner.js';
 import {
   listInstances,
+  listInstancesWithLiveness,
   registerInstance,
+  type BrowserInstanceLiveness,
 } from '../../../packages/browser-service/src/service/stateRegistry.js';
 import { findChromePidUsingUserDataDir } from '../../../packages/browser-service/src/processCheck.js';
 import {
@@ -35,12 +37,24 @@ type ServiceTargetMatchOptions = {
   logger?: (message: string) => void;
 };
 
+export type ServiceTargetDiscardedRegistryCandidate = {
+  key: string;
+  profilePath: string;
+  profileName: string;
+  port: number;
+  host: string;
+  liveness: BrowserInstanceLiveness;
+  actualPid: number | null;
+  reason: 'selected-port-stale' | 'expected-profile-stale';
+};
+
 export type ServiceTargetResolution = {
   host?: string;
   port?: number;
   tab?: TabDescriptor | null;
   tabs?: TabDescriptor[];
   tabSelection?: TabResolutionExplanation;
+  discardedRegistryCandidates?: ServiceTargetDiscardedRegistryCandidate[];
 };
 
 export class BrowserService extends BrowserServiceCore {
@@ -90,17 +104,35 @@ export class BrowserService extends BrowserServiceCore {
     }
 
     const resolved = this.getConfig();
-    const knownInstances = await listInstances({ registryPath: this.registryPath });
-    const matchedByPort = knownInstances.find((instance) =>
-      instance.port === target.port && (target.host ? instance.host === target.host : true),
-    );
+    const classifiedInstances = await listInstancesWithLiveness({ registryPath: this.registryPath });
+    const knownInstances = classifiedInstances.map(({ instance }) => instance);
+    const matchedByPort = classifiedInstances.find(({ instance, alive }) =>
+      alive && instance.port === target.port && (target.host ? instance.host === target.host : true),
+    )?.instance;
     const profileTarget = options.serviceId ?? this.serviceTarget;
-    const profilePath =
-      matchedByPort?.profilePath ??
+    const expectedProfilePath =
       launchProfile.manualLoginProfileDir ??
       resolved.manualLoginProfileDir ??
       resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(profileTarget), profileTarget);
-    const profileName = matchedByPort?.profileName ?? launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
+    const expectedProfileName = launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
+    const profilePath = matchedByPort?.profilePath ?? expectedProfilePath;
+    const profileName = matchedByPort?.profileName ?? expectedProfileName;
+    const discardedRegistryCandidates = collectDiscardedRegistryCandidates({
+      classifiedInstances,
+      targetHost: target.host ?? '127.0.0.1',
+      targetPort: target.port,
+      expectedProfilePath,
+      expectedProfileName,
+    });
+    if (options.logger && discardedRegistryCandidates.length > 0) {
+      options.logger(
+        `[browser-service] Discarded registry candidates: ${discardedRegistryCandidates
+          .map((candidate) =>
+            `${candidate.reason} ${candidate.profilePath}::${candidate.profileName} port=${candidate.port} host=${candidate.host} liveness=${candidate.liveness}${candidate.actualPid ? ` actualPid=${candidate.actualPid}` : ''}`,
+          )
+          .join('; ')}`,
+      );
+    }
     if (!matchedByPort && target.port) {
       const pid = await findChromePidUsingUserDataDir(profilePath);
       if (pid) {
@@ -150,6 +182,7 @@ export class BrowserService extends BrowserServiceCore {
       tab: tabSelection?.tab ?? null,
       tabs: scan?.tabs,
       tabSelection,
+      discardedRegistryCandidates,
     };
   }
 
@@ -244,4 +277,49 @@ function normalizeConfiguredSearch(searchParams: URLSearchParams): string {
     })
     .map(([key, value]) => `${key}=${value}`)
     .join('&');
+}
+
+
+function collectDiscardedRegistryCandidates(input: {
+  classifiedInstances: Awaited<ReturnType<typeof listInstancesWithLiveness>>;
+  targetHost: string;
+  targetPort: number;
+  expectedProfilePath: string;
+  expectedProfileName: string;
+}): ServiceTargetDiscardedRegistryCandidate[] {
+  const normalizedExpectedPath = path.resolve(input.expectedProfilePath);
+  const normalizedExpectedName = input.expectedProfileName.trim().toLowerCase();
+  const candidates = new Map<string, ServiceTargetDiscardedRegistryCandidate>();
+  for (const entry of input.classifiedInstances) {
+    if (entry.alive) continue;
+    const normalizedPath = path.resolve(entry.instance.profilePath);
+    const normalizedName = (entry.instance.profileName ?? 'Default').trim().toLowerCase();
+    const samePort =
+      entry.instance.port === input.targetPort &&
+      (entry.instance.host || '127.0.0.1') === input.targetHost;
+    const sameExpectedProfile =
+      normalizedPath === normalizedExpectedPath && normalizedName === normalizedExpectedName;
+    const reason = samePort
+      ? 'selected-port-stale'
+      : sameExpectedProfile
+        ? 'expected-profile-stale'
+        : null;
+    if (!reason) continue;
+    const key = `${path.normalize(entry.instance.profilePath)}::${normalizedName}::${reason}`;
+    candidates.set(key, {
+      key,
+      profilePath: normalizedPath,
+      profileName: entry.instance.profileName ?? 'Default',
+      port: entry.instance.port,
+      host: entry.instance.host,
+      liveness: entry.liveness,
+      actualPid: entry.actualPid,
+      reason,
+    });
+  }
+  return Array.from(candidates.values()).sort((left, right) => {
+    if (left.reason !== right.reason) return left.reason.localeCompare(right.reason);
+    if (left.liveness !== right.liveness) return left.liveness.localeCompare(right.liveness);
+    return left.profilePath.localeCompare(right.profilePath);
+  });
 }
