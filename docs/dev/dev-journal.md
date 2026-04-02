@@ -3543,3 +3543,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - finish the focused package + doctor regression set
   - then decide whether Slice 2 should add pruning diagnostics immediately or
     stop after the first classification seam lands
+
+
+## 2026-04-01 — Added stale-entry prune diagnostics to browser doctor
+
+- Focus: continue the browser-service registry/reattach reliability track with
+  safer stale-entry pruning diagnostics
+- Implemented:
+  - added package-owned `pruneRegistryDetailed(...)` so browser-service can
+    return exactly which registry entries were pruned and why
+  - updated browser doctor reporting to expose `prunedRegistryEntryReasons`
+    alongside the count
+  - updated setup/doctor contract fixtures and focused tests to pin the new
+    reporting shape
+- Next:
+  - tighten attach candidate diagnostics next, so attach paths can explain why
+    stale or mismatched entries were discarded before target resolution

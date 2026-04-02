@@ -42,6 +42,14 @@ export interface ClassifiedBrowserInstance extends BrowserInstanceStatus {
   instance: BrowserInstance;
 }
 
+export interface PrunedBrowserInstance extends ClassifiedBrowserInstance {
+  key: string;
+}
+
+export interface PruneRegistryResult {
+  pruned: PrunedBrowserInstance[];
+}
+
 export type RegistryOptions = {
   registryPath: string;
 };
@@ -183,19 +191,30 @@ export async function getInstance(
   return registry.instances[key] ?? null;
 }
 
-export async function pruneRegistry(options: RegistryOptions): Promise<void> {
+export async function pruneRegistryDetailed(options: RegistryOptions): Promise<PruneRegistryResult> {
   const registry = await loadRegistry(options);
   let changed = false;
+  const pruned: PrunedBrowserInstance[] = [];
   for (const [key, instance] of Object.entries(registry.instances)) {
     const status = await classifyInstanceLiveness(instance);
     if (!status.alive) {
       delete registry.instances[key];
       changed = true;
+      pruned.push({
+        key,
+        instance,
+        ...status,
+      });
     }
   }
   if (changed) {
     await saveRegistry(options, registry);
   }
+  return { pruned };
+}
+
+export async function pruneRegistry(options: RegistryOptions): Promise<void> {
+  await pruneRegistryDetailed(options);
 }
 
 export async function listInstances(options: RegistryOptions): Promise<BrowserInstance[]> {

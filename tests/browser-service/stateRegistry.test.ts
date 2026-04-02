@@ -101,6 +101,37 @@ describe('stateRegistry (package)', () => {
     });
   });
 
+  test('pruneRegistryDetailed returns stale-entry reasons', async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), 'browser-service-registry-'));
+    const registryPath = path.join(dir, 'browser-state.json');
+    try {
+      await registry.registerInstance(
+        { registryPath },
+        {
+          pid: 9999,
+          port: 9223,
+          host: '127.0.0.1',
+          profilePath: '/tmp/profile',
+          profileName: 'Default',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+      );
+      const processCheck = await import('../../packages/browser-service/src/processCheck.js');
+      vi.mocked(processCheck.findChromePidUsingUserDataDir).mockResolvedValueOnce(9999);
+      vi.mocked(processCheck.isDevToolsResponsive).mockResolvedValueOnce(false);
+      const result = await registry.pruneRegistryDetailed({ registryPath });
+      expect(result.pruned).toHaveLength(1);
+      expect(result.pruned[0]).toMatchObject({
+        liveness: 'dead-port',
+        actualPid: 9999,
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   test('resolveTab prefers matching URL', () => {
     const tabs = [
       { targetId: 'a', url: 'https://example.com', title: 'Example', type: 'page' },

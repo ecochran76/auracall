@@ -215,6 +215,7 @@ describe('profileDoctor', () => {
     );
 
     expect(after.prunedRegistryEntries).toBe(2);
+    expect(after.prunedRegistryEntryReasons).toEqual({ 'dead-process': 2 });
     expect(after.registryEntries).toEqual([]);
     expect(after.staleRegistryEntries).toEqual([]);
   });
@@ -598,6 +599,7 @@ describe('profileDoctor', () => {
             services: ['grok'],
           },
           prunedRegistryEntries: 0,
+          prunedRegistryEntryReasons: {},
           warnings: [],
         },
       },
@@ -645,6 +647,7 @@ describe('profileDoctor', () => {
           legacyRegistryEntries: [],
           managedRegistryEntry: null,
           prunedRegistryEntries: 0,
+          prunedRegistryEntryReasons: {},
           warnings: [],
         },
       },
@@ -708,6 +711,7 @@ describe('profileDoctor', () => {
           legacyRegistryEntries: [],
           managedRegistryEntry: null,
           prunedRegistryEntries: 0,
+          prunedRegistryEntryReasons: {},
           warnings: [],
         },
         identityStatus: {
@@ -788,6 +792,7 @@ describe('profileDoctor', () => {
         legacyRegistryEntries: [],
         managedRegistryEntry: null,
         prunedRegistryEntries: 0,
+        prunedRegistryEntryReasons: {},
         warnings: [],
       },
       identityStatus: {

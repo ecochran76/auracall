@@ -58,6 +58,7 @@ export interface BrowserDoctorReport {
   legacyRegistryEntries: BrowserDoctorRegistryEntry[];
   managedRegistryEntry: BrowserDoctorRegistryEntry | null;
   prunedRegistryEntries: number;
+  prunedRegistryEntryReasons: Record<string, number>;
   warnings: string[];
 }
 
@@ -185,11 +186,21 @@ export async function inspectBrowserDoctorState(
 
   const beforeEntries = await classifyRegistryEntries(registryPath, managedProfileRoot);
   let prunedRegistryEntries = 0;
+  let prunedRegistryEntryReasons: Record<string, number> = {};
   let registryEntries = beforeEntries;
   if (options.pruneDeadRegistryEntries) {
-    await pruneRegistry({ registryPath });
+    const { pruneRegistryDetailed } = await import('../../packages/browser-service/src/service/stateRegistry.js');
+    const pruned = await pruneRegistryDetailed({ registryPath });
     const afterEntries = await classifyRegistryEntries(registryPath, managedProfileRoot);
-    prunedRegistryEntries = beforeEntries.filter((entry) => !entry.alive).length - afterEntries.filter((entry) => !entry.alive).length;
+    prunedRegistryEntries = pruned.pruned.length;
+    prunedRegistryEntryReasons = Object.fromEntries(
+      Array.from(
+        pruned.pruned.reduce((map, entry) => {
+          map.set(entry.liveness, (map.get(entry.liveness) ?? 0) + 1);
+          return map;
+        }, new Map<string, number>()),
+      ).sort(([left], [right]) => left.localeCompare(right)),
+    );
     registryEntries = afterEntries;
   }
 
@@ -237,6 +248,11 @@ export async function inspectBrowserDoctorState(
       `browser-state.json contains ${staleRegistryEntries.length} stale entr${staleRegistryEntries.length === 1 ? 'y' : 'ies'} (${summarizeRegistryLiveness(staleRegistryEntries)}).`,
     );
   }
+  if (prunedRegistryEntries > 0) {
+    warnings.push(
+      `Pruned ${prunedRegistryEntries} stale browser-state entr${prunedRegistryEntries === 1 ? 'y' : 'ies'} (${summarizeReasonCounts(prunedRegistryEntryReasons)}).`,
+    );
+  }
   if (legacyRegistryEntries.length > 0) {
     warnings.push(`browser-state.json still contains ${legacyRegistryEntries.length} legacy entr${legacyRegistryEntries.length === 1 ? 'y' : 'ies'} from older profile paths.`);
   }
@@ -259,6 +275,7 @@ export async function inspectBrowserDoctorState(
     legacyRegistryEntries,
     managedRegistryEntry,
     prunedRegistryEntries,
+    prunedRegistryEntryReasons,
     warnings,
   };
 }
@@ -354,7 +371,12 @@ function summarizeRegistryLiveness(entries: ReadonlyArray<BrowserDoctorRegistryE
   for (const entry of entries) {
     counts.set(entry.liveness, (counts.get(entry.liveness) ?? 0) + 1);
   }
-  return Array.from(counts.entries())
+  return summarizeReasonCounts(Object.fromEntries(counts));
+}
+
+function summarizeReasonCounts(counts: Record<string, number>): string {
+  return Object.entries(counts)
+    .filter(([, count]) => Number.isFinite(count) && count > 0)
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([kind, count]) => `${count} ${kind}`)
     .join(', ');

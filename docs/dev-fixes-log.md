@@ -5124,3 +5124,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - `pnpm run check`
+
+
+## 2026-04-01 — Browser doctor now reports why stale browser-state entries were pruned
+
+- Area: Browser-service registry / reattach reliability
+- Symptom:
+  - doctor could report stale entry kinds currently present, but once stale
+    entries were pruned it only surfaced a flat count of removed entries
+- Root cause:
+  - the shared prune path deleted stale registry entries without returning the
+    per-entry liveness reason to callers
+- Fix:
+  - added package-owned `pruneRegistryDetailed(...)` to return the exact
+    stale-entry liveness reasons being removed
+  - updated browser doctor to include `prunedRegistryEntryReasons` in the
+    local report and warn with the concrete stale reason mix after pruning
+- Verification:
+  - `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts tests/cli/browserSetup.test.ts --maxWorkers 1`
+  - `pnpm run check`
