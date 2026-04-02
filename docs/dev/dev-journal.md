@@ -3481,3 +3481,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - keep agent/team behavior out of scope until the broader config-model refactor
     actually starts
+
+## 2026-04-01 — Defined the first agent inheritance/override boundary
+
+- Focus: document the agent layer before any behavior or orchestration work lands
+- Implemented:
+  - added `docs/dev/agent-config-boundary-plan.md`
+  - documented what agents inherit from AuraCall runtime profiles
+  - documented what agents may override directly
+  - documented what remains owned by browser profiles or future teams
+  - linked that boundary from the config-model plan, roadmap, and execution plan
+- Next:
+  - keep agent behavior out of scope until the broader config-model refactor
+    starts for real

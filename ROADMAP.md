@@ -50,6 +50,7 @@ Sequencing rule:
 
 Execution docs:
 - Repo-wide plan: [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+- Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
 
 ### Service Volatility Externalization
 Status: planned

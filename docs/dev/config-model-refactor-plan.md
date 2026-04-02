@@ -61,6 +61,9 @@ Future higher-level object that references an AuraCall runtime profile and adds:
 - persona/role behavior
 - narrower policy or tooling defaults
 
+Boundary reference:
+- [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+
 ### 4. Team
 
 Future grouping/orchestration object that coordinates multiple agents.
@@ -134,3 +137,15 @@ A narrow preparatory step is now acceptable before the full refactor:
 
 That gives the future config model an explicit landing zone without pretending
 that agent/team execution exists yet.
+
+
+## Agent boundary note (2026-04-01)
+
+The first agent contract is now documented separately in:
+
+- [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+
+That document is the source of truth for:
+- what agents inherit from AuraCall runtime profiles
+- what agents may override
+- what remains owned by browser profiles or future teams

@@ -75,6 +75,7 @@ Acceptance
 - linked from `ROADMAP.md` and kept consistent with
   `docs/dev/browser-profile-family-refactor-plan.md`
 - reserved schema/docs landing zone exists for top-level `agents` and `teams`
+- agent inheritance/override boundary is documented before behavior work starts
 
 ### 3) Service-volatility workflow boundary (ChatGPT behavior slice)
 
@@ -124,4 +125,4 @@ Acceptance
 
 1. Keep the browser-profile-family work at bounded Phase 2 cleanup, not open-ended runtime churn.
 2. Finish the config-model refactor planning before any agent/team implementation starts.
-3. Continue small reliability and polish slices in parallel where they do not prejudice the future config migration.
+3. Lock the agent inheritance/override boundary before any agent behavior work starts.

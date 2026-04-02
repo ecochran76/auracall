@@ -5039,3 +5039,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - updated configuration and planning docs to reference that reserved seam
 - Verification:
   - config loading tests updated and reviewed locally
+
+
+## 2026-04-01 — Agent inheritance and override boundary is now explicit in planning docs
+
+- Area: Config-model and future agent architecture
+- Symptom:
+  - the roadmap said agents should come after the config-model refactor, but
+    there was still no precise statement of what an agent should inherit versus
+    what it may override
+- Root cause:
+  - the layering model had been named, but the agent boundary itself was still
+    implicit
+- Fix:
+  - added `docs/dev/agent-config-boundary-plan.md`
+  - defined the first explicit contract for:
+    - agent inheritance from AuraCall runtime profiles
+    - allowed agent overrides
+    - non-goals that remain owned by browser profiles or future teams
+  - linked that boundary from the roadmap and config-model planning docs
+- Verification:
+  - planning docs reviewed locally after update
