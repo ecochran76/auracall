@@ -3970,3 +3970,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - confirmed `default/chatgpt` launched separately on `45065`
     - confirmed `http://127.0.0.1:45065/json/list` shows `https://chatgpt.com/`
       while `45011` still shows only Grok
+
+## 2026-04-02 13:15 CDT
+
+- Focus:
+  - live cross-browser-profile reattach validation after the managed-launch
+    isolation fix
+- Progress:
+  - used the stored `reattach-smoke-default` ChatGPT session metadata from the
+    `default` browser profile
+  - left `wsl-chrome-2/chatgpt` live on `45013`
+  - left `default/grok` live on `45011`
+  - terminated the live `default/chatgpt` browser so the session had to go
+    through the real reattach/recovery path
+- Live proof:
+  - direct `resumeBrowserSession(...)` against the stored `default` session
+    logged:
+    - `Existing Chrome reattach failed (wrong-browser-profile: Existing Chrome no longer exposes the expected ChatGPT browser profile. (port=45011)); reopening browser to locate the session.`
+  - it then reopened only the matching managed browser profile:
+    - `/home/ecochran76/.auracall/browser-profiles/default/chatgpt`
+  - and recovered the stored response successfully
+- Conclusion:
+  - the cross-browser-profile boundary is behaving correctly in the real
+    reattach path:
+    - a `default/chatgpt` session no longer drifts onto either
+      `default/grok` or `wsl-chrome-2/chatgpt`

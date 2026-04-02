@@ -128,6 +128,12 @@ Acceptance:
     profile can downgrade the correct entry to `profile-mismatch`; reattach
     now treats selected-port `profile-mismatch` as strong wrong-profile
     evidence too
+  - note: a later live replay of a stored `default/chatgpt` session with
+    `default/grok` and `wsl-chrome-2/chatgpt` both live confirmed the intended
+    cross-browser-profile boundary:
+    reattach first classified `wrong-browser-profile`, then reopened only the
+    matching `default/chatgpt` managed browser profile instead of drifting onto
+    either nearby browser
 
 ## Code seams
 
