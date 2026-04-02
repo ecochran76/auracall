@@ -31,8 +31,12 @@ import {
 type PromptEchoMatcher = { isEcho: (text: string) => boolean };
 import {
   resumeBrowserSessionCore,
+  describeReattachFailure,
+  ReattachFailure,
   type ReattachDeps,
   type ReattachResult,
+  type ReattachFailureDetails,
+  type ReattachFailureKind,
 } from './reattachCore.js';
 
 export async function resumeBrowserSession(
@@ -122,3 +126,6 @@ export const __test__ = {
   extractConversationIdFromUrl,
   buildConversationUrl,
 };
+
+export { ReattachFailure, describeReattachFailure };
+export type { ReattachFailureDetails, ReattachFailureKind };

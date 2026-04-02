@@ -38,6 +38,47 @@ export interface ReattachResult {
   answerMarkdown: string;
 }
 
+export type ReattachFailureKind = 'target-missing' | 'wrong-browser-profile' | 'stale-target';
+
+export type ReattachFailureDetails = {
+  kind: ReattachFailureKind;
+  message: string;
+  expectedOrigin?: string | null;
+  pageTargetCount?: number;
+  matchingOriginTargetCount?: number;
+  chromePort?: number | null;
+  conversationId?: string | null;
+};
+
+export class ReattachFailure extends Error {
+  readonly details: ReattachFailureDetails;
+
+  constructor(details: ReattachFailureDetails) {
+    super(details.message);
+    this.name = 'ReattachFailure';
+    this.details = details;
+  }
+}
+
+export function describeReattachFailure(error: unknown): string | null {
+  if (!(error instanceof ReattachFailure)) {
+    return null;
+  }
+  const { details } = error;
+  const suffixParts: string[] = [];
+  if (typeof details.chromePort === 'number') {
+    suffixParts.push(`port=${details.chromePort}`);
+  }
+  if (typeof details.pageTargetCount === 'number') {
+    suffixParts.push(`pageTargets=${details.pageTargetCount}`);
+  }
+  if (typeof details.matchingOriginTargetCount === 'number') {
+    suffixParts.push(`matchingOriginTargets=${details.matchingOriginTargetCount}`);
+  }
+  const suffix = suffixParts.length > 0 ? ` (${suffixParts.join(', ')})` : '';
+  return `${details.kind}: ${details.message}${suffix}`;
+}
+
 export type ReattachRuntime = BrowserRuntimeMetadata & {
   conversationId?: string;
 };
@@ -173,6 +214,9 @@ export async function resumeBrowserSessionCore(
     });
     const targetList = (await listTargets()) as ReattachTargetInfo[];
     const target = helpers.pickTarget(targetList, runtime);
+    if (!target) {
+      throw classifyMissingReattachTarget(targetList, runtime);
+    }
     const client: ChromeClient = (await connect({
       host,
       port: runtime.chromePort,
@@ -205,7 +249,7 @@ export async function resumeBrowserSessionCore(
         15_000,
       );
       if (!opened) {
-        throw new Error('Unable to locate prior ChatGPT conversation in sidebar.');
+        throw buildMissingConversationFailure(runtime);
       }
       await helpers.waitForLocationChange(Runtime, 15_000);
     };
@@ -249,8 +293,11 @@ export async function resumeBrowserSessionCore(
 
     return { answerText: aligned.answerText, answerMarkdown: aligned.answerMarkdown };
   } catch (error) {
+    const classified = describeReattachFailure(error);
     const message = error instanceof Error ? error.message : String(error);
-    logger(`Existing Chrome reattach failed (${message}); reopening browser to locate the session.`);
+    logger(
+      `Existing Chrome reattach failed (${classified ?? message}); reopening browser to locate the session.`,
+    );
     return recoverSession(runtime, config);
   }
 }
@@ -319,7 +366,7 @@ async function resumeBrowserSessionViaNewChrome(
       15_000,
     );
     if (!opened) {
-      throw new Error('Unable to locate prior ChatGPT conversation in sidebar.');
+      throw buildMissingConversationFailure(runtime);
     }
     await helpers.waitForLocationChange(Runtime, 15_000);
   }
@@ -358,4 +405,53 @@ async function resumeBrowserSessionViaNewChrome(
   }
 
   return { answerText: aligned.answerText, answerMarkdown: aligned.answerMarkdown };
+}
+
+function classifyMissingReattachTarget(
+  targets: ReattachTargetInfo[],
+  runtime: ReattachRuntime,
+): ReattachFailure {
+  const pageTargets = targets.filter((target) => target.type === 'page');
+  const expectedOrigin = extractOrigin(runtime.tabUrl ?? null);
+  const matchingOriginTargetCount = expectedOrigin
+    ? pageTargets.filter((target) => extractOrigin(target.url ?? null) === expectedOrigin).length
+    : 0;
+  const kind: ReattachFailureKind =
+    pageTargets.length > 0 && expectedOrigin && matchingOriginTargetCount === 0
+      ? 'wrong-browser-profile'
+      : 'target-missing';
+  const message =
+    kind === 'wrong-browser-profile'
+      ? 'Existing Chrome no longer exposes the expected ChatGPT browser profile.'
+      : 'Existing Chrome no longer exposes the prior ChatGPT tab or conversation target.';
+  return new ReattachFailure({
+    kind,
+    message,
+    expectedOrigin,
+    pageTargetCount: pageTargets.length,
+    matchingOriginTargetCount,
+    chromePort: runtime.chromePort ?? null,
+    conversationId: runtime.conversationId ?? null,
+  });
+}
+
+function buildMissingConversationFailure(runtime: ReattachRuntime): ReattachFailure {
+  return new ReattachFailure({
+    kind: 'target-missing',
+    message: 'Unable to locate the prior ChatGPT conversation in the expected browser profile.',
+    expectedOrigin: extractOrigin(runtime.tabUrl ?? null),
+    chromePort: runtime.chromePort ?? null,
+    conversationId: runtime.conversationId ?? null,
+  });
+}
+
+function extractOrigin(url: string | null | undefined): string | null {
+  if (!url) {
+    return null;
+  }
+  try {
+    return new URL(url).origin;
+  } catch {
+    return null;
+  }
 }

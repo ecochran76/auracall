@@ -3575,3 +3575,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - broaden the same evidence into reattach/session flows so failed session
     reattachment can distinguish stale target loss from wrong-browser drift
+
+
+## 2026-04-01 — Reattach/session flows now print classified failure reasons
+
+- Focus: continue the browser-service registry/reattach reliability track by
+  making reattach failures explain the class of browser drift instead of only a
+  raw exception string
+- Implemented:
+  - added classified reattach failures for missing ChatGPT targets and
+    wrong-browser/profile drift
+  - updated session reattach output to print the classified failure summary
+  - added focused tests for the browser reattach logger path and session CLI
+    surface
+- Next:
+  - thread stale registry candidate evidence into reattach/session metadata so a
+    failed reattach can correlate current browser drift with prior stale
+    browser-state entries

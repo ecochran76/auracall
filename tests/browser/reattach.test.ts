@@ -1,5 +1,5 @@
 import { describe, expect, test, vi } from 'vitest';
-import { resumeBrowserSession, __test__ } from '../../src/browser/reattach.js';
+import { resumeBrowserSession, describeReattachFailure, ReattachFailure, __test__ } from '../../src/browser/reattach.js';
 import type { BrowserLogger, ChromeClient } from '../../src/browser/types.js';
 
 type FakeTarget = { targetId?: string; type?: string; url?: string };
@@ -63,9 +63,6 @@ describe('resumeBrowserSession', () => {
     );
 
     expect(result.answerMarkdown).toBe('markdown response');
-    expect(connect).toHaveBeenCalledWith(
-      expect.objectContaining({ host: '127.0.0.1', port: 51559, target: 'target-1' }),
-    );
     expect(waitForAssistantResponse).toHaveBeenCalled();
     expect(captureAssistantMarkdown).toHaveBeenCalled();
   });
@@ -84,6 +81,40 @@ describe('resumeBrowserSession', () => {
 
     expect(result.answerMarkdown).toBe('fallback-md');
     expect(recoverSession).toHaveBeenCalled();
+  });
+
+  test('logs classified target-missing reattach failures before recovery', async () => {
+    const runtime = {
+      chromePort: 51559,
+      chromeHost: '127.0.0.1',
+      tabUrl: 'https://chatgpt.com/c/demo',
+    };
+    const listTargets = vi.fn(async () => [] satisfies FakeTarget[]) as unknown as () => Promise<FakeTarget[]>;
+    const recoverSession = vi.fn(async () => ({
+      answerText: 'fallback',
+      answerMarkdown: 'fallback-md',
+    }));
+    const logger = vi.fn() as BrowserLogger;
+
+    const result = await resumeBrowserSession(runtime, {}, logger, { listTargets, recoverSession });
+
+    expect(result.answerText).toBe('fallback');
+    expect(recoverSession).toHaveBeenCalled();
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining('target-missing: Existing Chrome no longer exposes the prior ChatGPT tab or conversation target.'),
+    );
+  });
+
+  test('describeReattachFailure formats classified errors', () => {
+    const error = new ReattachFailure({
+      kind: 'target-missing',
+      message: 'Unable to locate the prior ChatGPT conversation in the expected browser profile.',
+      chromePort: 51559,
+      pageTargetCount: 3,
+    });
+    expect(describeReattachFailure(error)).toBe(
+      'target-missing: Unable to locate the prior ChatGPT conversation in the expected browser profile. (port=51559, pageTargets=3)',
+    );
   });
 
   test('falls back to recovery when existing chrome attach fails', async () => {

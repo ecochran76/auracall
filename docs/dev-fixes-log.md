@@ -5165,3 +5165,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/browserService.test.ts tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+
+## 2026-04-01 — Reattach/session flows now classify target loss versus wrong-browser drift
+
+- Area: Browser-service registry / reattach diagnostics
+- Symptom:
+  - failed session reattach still surfaced as a generic raw error string even
+    after attach resolution learned to explain stale candidate rejection
+- Root cause:
+  - the reattach path did not classify missing prior ChatGPT targets versus
+    wrong-browser/profile drift before falling back or reporting failure
+- Fix:
+  - added classified reattach failures for:
+    - missing prior ChatGPT target/conversation
+    - wrong-browser/profile drift when the prior ChatGPT origin disappears from
+      the current Chrome target list
+  - updated `attachSession(...)` to print the classified reattach reason instead
+    of only the raw exception text
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm run check`

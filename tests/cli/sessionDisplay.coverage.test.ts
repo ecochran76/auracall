@@ -25,6 +25,60 @@ describe('sessionDisplay helpers', () => {
     });
   });
 
+  it('prints classified reattach failures for browser sessions', async () => {
+    vi.resetModules();
+    const mockResumeBrowserSession = vi.fn();
+    vi.doMock('../../src/browser/reattach.js', async (importOriginal) => {
+      const actual = await importOriginal<typeof import('../../src/browser/reattach.js')>();
+      return {
+        ...actual,
+        resumeBrowserSession: mockResumeBrowserSession,
+      };
+    });
+    const { ReattachFailure } = await import('../../src/browser/reattach.js');
+    const createdAt = new Date().toISOString();
+    mockSessionStore.readSession.mockResolvedValue({
+      id: 'sess-browser',
+      createdAt,
+      status: 'error',
+      mode: 'browser',
+      options: {},
+      browser: {
+        config: {},
+        runtime: {
+          chromePort: 51559,
+          chromeHost: '127.0.0.1',
+          chromeTargetId: 't-1',
+          tabUrl: 'https://chatgpt.com/c/demo',
+        },
+      },
+      response: { status: 'running', incompleteReason: 'chrome-disconnected' },
+    });
+    mockSessionStore.readLog.mockResolvedValue('Answer:\nreattach log');
+    mockSessionStore.readRequest.mockResolvedValue({ prompt: 'Prompt here' });
+    mockResumeBrowserSession.mockRejectedValue(
+      new ReattachFailure({
+        kind: 'wrong-browser-profile',
+        message: 'Existing Chrome no longer exposes the expected ChatGPT browser profile.',
+        chromePort: 51559,
+        pageTargetCount: 2,
+        matchingOriginTargetCount: 0,
+      }),
+    );
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const { attachSession } = await import('../../src/cli/sessionDisplay.js');
+    await attachSession('sess-browser', { suppressMetadata: true, renderPrompt: false, renderMarkdown: false });
+
+    expect(log).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'Reattach failed: wrong-browser-profile: Existing Chrome no longer exposes the expected ChatGPT browser profile.',
+      ),
+    );
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('Answer:\nreattach log'));
+  }, 15_000);
+
   it('prints cleanup tip and examples when no sessions are found', async () => {
     mockSessionStore.listSessions.mockResolvedValue([]);
     mockSessionStore.filterSessions.mockReturnValue({ entries: [], truncated: false, total: 0 });

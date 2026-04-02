@@ -11,7 +11,7 @@ import { formatFinishLine } from '../oracle/finishLine.js';
 import { sessionStore, wait } from '../sessionStore.js';
 import { formatTokenCount, formatTokenValue } from '../oracle/runUtils.js';
 import type { BrowserLogger } from '../browser/types.js';
-import { resumeBrowserSession } from '../browser/reattach.js';
+import { resumeBrowserSession, describeReattachFailure } from '../browser/reattach.js';
 import { estimateTokenCount } from '../browser/utils.js';
 import { formatSessionTableHeader, formatSessionTableRow, resolveSessionCost } from './sessionTable.js';
 import { isProcessAlive } from '../browser/processCheck.js';
@@ -180,8 +180,9 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
       console.log(chalk.green('Reattach succeeded; session marked completed.'));
       metadata = (await sessionStore.readSession(sessionId)) ?? metadata;
     } catch (error) {
+      const classified = describeReattachFailure(error);
       const message = error instanceof Error ? error.message : String(error);
-      console.log(chalk.red(`Reattach failed: ${message}`));
+      console.log(chalk.red(`Reattach failed: ${classified ?? message}`));
     }
   }
   if (!options?.suppressMetadata) {
