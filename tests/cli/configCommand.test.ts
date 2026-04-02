@@ -8,6 +8,7 @@ import {
   formatConfigShowReport,
   formatProfileListReport,
   formatRuntimeProfileBridgeSummary,
+  resolveConfigDoctorExitCode,
 } from '../../src/cli/configCommand.js';
 
 describe('config show helpers', () => {
@@ -243,5 +244,31 @@ describe('config show helpers', () => {
     expect(text).toContain('Active browser profile: (none)');
     expect(text).toContain('[warning] AuraCall runtime profile "default" does not explicitly reference a browser profile.');
     expect(text).toContain('[info] Browser profile "orphaned" is defined but no AuraCall runtime profile references it.');
+  });
+
+  it('returns a nonzero exit code only when strict mode is enabled and warnings are present', () => {
+    const okReport = buildConfigDoctorReport({
+      profiles: {
+        default: {
+          browserFamily: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      browserFamilies: {
+        default: {},
+      },
+    });
+    const warningReport = buildConfigDoctorReport({
+      profiles: {
+        default: {
+          defaultService: 'chatgpt',
+        },
+      },
+    });
+
+    expect(resolveConfigDoctorExitCode(okReport, { strict: false })).toBe(0);
+    expect(resolveConfigDoctorExitCode(okReport, { strict: true })).toBe(0);
+    expect(resolveConfigDoctorExitCode(warningReport, { strict: false })).toBe(0);
+    expect(resolveConfigDoctorExitCode(warningReport, { strict: true })).toBe(1);
   });
 });

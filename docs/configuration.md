@@ -29,6 +29,7 @@ auracall config show
 auracall config show --json
 auracall config doctor
 auracall config doctor --json
+auracall config doctor --strict
 auracall profile list
 auracall profile list --json
 ```
@@ -48,6 +49,7 @@ Use `auracall config doctor` when you want bridge-health checks instead:
 - runtime profiles that reference missing browser profiles
 - unused browser profiles
 - legacy `auracallProfiles` still present
+- pass `--strict` when warnings should return a nonzero exit code for scripts/CI
 
 ## Terminology
 

@@ -82,6 +82,13 @@ export interface ConfigDoctorReport {
   issues: ConfigDoctorIssue[];
 }
 
+export function resolveConfigDoctorExitCode(
+  report: ConfigDoctorReport,
+  options: { strict?: boolean } = {},
+): number {
+  return options.strict && !report.ok ? 1 : 0;
+}
+
 function asRecord(value: unknown): MutableRecord | null {
   return value && typeof value === 'object' && !Array.isArray(value) ? (value as MutableRecord) : null;
 }

@@ -4449,3 +4449,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     on:
     - `default`
     - `windows-chrome-test`
+
+## 2026-04-02 14:58 CDT
+
+- Focus:
+  - make `config doctor` usable in scripts/CI by giving it an explicit strict
+    exit-code mode instead of leaving it as a human-only warning surface
+- What changed:
+  - expanded
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    with:
+    - `resolveConfigDoctorExitCode(...)`
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so `auracall config doctor --strict` exits nonzero when warnings are
+    present
+  - expanded
+    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    with strict exit-code coverage
+  - updated
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document `--strict`
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - healthy-config smoke:
+    - `pnpm tsx bin/auracall.ts config doctor --strict --json-only --json`
+- Notes:
+  - default `config doctor` remains non-failing and human-friendly
+  - `--strict` is the automation/CI path

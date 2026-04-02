@@ -81,6 +81,7 @@ import {
   formatConfigShowReport,
   formatProfileListReport,
   formatRuntimeProfileBridgeSummary,
+  resolveConfigDoctorExitCode,
 } from '../src/cli/configCommand.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
@@ -6909,6 +6910,7 @@ configCommand
   .description('Check bridge-health for AuraCall runtime profiles and browser profiles.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
+  .option('--strict', 'Exit non-zero when bridge-health warnings are present.', false)
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const loaded = await loadUserConfig(process.cwd());
@@ -6916,6 +6918,7 @@ configCommand
     const report = buildConfigDoctorReport(loaded.config as Record<string, unknown>, {
       explicitProfileName: resolvedConfig.auracallProfile ?? null,
     });
+    process.exitCode = resolveConfigDoctorExitCode(report, { strict: Boolean(commandOptions.strict) });
     if (commandOptions.json) {
       console.log(JSON.stringify(report, null, 2));
       return;
