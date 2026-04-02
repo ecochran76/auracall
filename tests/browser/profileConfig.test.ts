@@ -89,6 +89,62 @@ describe('applyBrowserProfileOverrides', () => {
     });
   });
 
+  test('applies named browser-family defaults before profile-local browser overrides', () => {
+    const merged = {
+      auracallProfile: 'wsl-chrome-2',
+      engine: 'browser',
+      services: {
+        chatgpt: { url: 'https://chatgpt.com/' },
+        gemini: { url: 'https://gemini.google.com/app' },
+        grok: { url: 'https://grok.com/' },
+      },
+      browserFamilies: {
+        'wsl-chrome-2': {
+          chromePath: '/usr/bin/google-chrome',
+          display: ':0.0',
+          profilePath: '/home/test/.config/google-chrome',
+          profileName: 'Default',
+          cookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+          bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+          wslChromePreference: 'wsl',
+          serviceTabLimit: 3,
+          blankTabLimit: 1,
+          collapseDisposableWindows: true,
+        },
+      },
+    };
+    const profile = {
+      browserFamily: 'wsl-chrome-2',
+      defaultService: 'chatgpt',
+      browser: {
+        serviceTabLimit: 5,
+        blankTabLimit: 0,
+      },
+      services: {
+        chatgpt: {
+          manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+        },
+      },
+    };
+    const browser: Record<string, unknown> = {};
+
+    applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
+
+    expect(browser.target).toBe('chatgpt');
+    expect(browser.chromePath).toBe('/usr/bin/google-chrome');
+    expect(browser.display).toBe(':0.0');
+    expect(browser.chromeProfile).toBe('Default');
+    expect(browser.chromeCookiePath).toBe('/home/test/.config/google-chrome/Default/Network/Cookies');
+    expect(browser.bootstrapCookiePath).toBe('/home/test/.config/google-chrome/Default/Network/Cookies');
+    expect(browser.managedProfileRoot).toBe('/home/test/.auracall/browser-profiles');
+    expect(browser.wslChromePreference).toBe('wsl');
+    expect(browser.serviceTabLimit).toBe(5);
+    expect(browser.blankTabLimit).toBe(0);
+    expect(browser.collapseDisposableWindows).toBe(true);
+    expect(browser.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+  });
+
   test('prefers an explicit browser target over the profile default service', () => {
     const merged = {
       auracallProfile: 'default',

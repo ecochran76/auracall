@@ -19,6 +19,7 @@ export interface ResolvedProfileCacheDefaults {
 
 export interface ResolvedProfileFamily {
   profileName: string | null;
+  browserFamilyId: string | null;
   defaultService: ServiceId | null;
   keepBrowser?: boolean;
   cacheDefaults: ResolvedProfileCacheDefaults;
@@ -174,6 +175,16 @@ export function resolveBrowserProfileResolution(input: {
   const { merged, profileName, profile, browser } = input;
   const profileBrowser = isRecord(profile.browser) ? profile.browser : {};
   const mergedBrowser = isRecord(merged.browser) ? merged.browser : {};
+  const browserFamilies = isRecord(merged.browserFamilies) ? merged.browserFamilies : {};
+  const browserFamilyId = asNonEmptyString(profile.browserFamily) ?? null;
+  const selectedBrowserFamily =
+    browserFamilyId && isRecord(browserFamilies[browserFamilyId])
+      ? (browserFamilies[browserFamilyId] as Record<string, unknown>)
+      : {};
+  const effectiveProfileBrowser = {
+    ...selectedBrowserFamily,
+    ...profileBrowser,
+  };
   const services = isRecord(merged.services) ? merged.services : {};
   const profileServices = isRecord(profile.services) ? profile.services : {};
 
@@ -186,22 +197,22 @@ export function resolveBrowserProfileResolution(input: {
       ? defaultServiceRaw
       : null;
 
-  const sourceProfilePath = asNonEmptyString(profileBrowser.profilePath);
+  const sourceProfilePath = asNonEmptyString(effectiveProfileBrowser.profilePath);
   const sourceProfileNameCandidate =
-    asNonEmptyString(profileBrowser.profileName) ?? asNonEmptyString(profileBrowser.chromeProfile);
+    asNonEmptyString(effectiveProfileBrowser.profileName) ?? asNonEmptyString(effectiveProfileBrowser.chromeProfile);
   const currentChromeProfile = asNonEmptyString(browser.chromeProfile);
   const sourceProfileName =
     sourceProfilePath && currentChromeProfile
       ? resolveProfileDirectoryName(sourceProfilePath, currentChromeProfile)
       : currentChromeProfile ?? sourceProfileNameCandidate;
   const sourceCookiePath =
-    asNonEmptyString(profileBrowser.cookiePath) ??
-    asNonEmptyString(profileBrowser.chromeCookiePath) ??
+    asNonEmptyString(effectiveProfileBrowser.cookiePath) ??
+    asNonEmptyString(effectiveProfileBrowser.chromeCookiePath) ??
     (sourceProfilePath
       ? resolveCookiePath(sourceProfilePath, sourceProfileName ?? sourceProfileNameCandidate ?? currentChromeProfile ?? 'Default')
       : undefined);
   const bootstrapCookiePath =
-    asNonEmptyString(profileBrowser.bootstrapCookiePath) ?? sourceCookiePath;
+    asNonEmptyString(effectiveProfileBrowser.bootstrapCookiePath) ?? sourceCookiePath;
 
   const resolveUrl = (service: ServiceId): string | undefined => {
     const profileConfig = isRecord(profileServices[service]) ? profileServices[service] : {};
@@ -231,27 +242,28 @@ export function resolveBrowserProfileResolution(input: {
 
   const profileFamily: ResolvedProfileFamily = {
     profileName,
+    browserFamilyId,
     defaultService,
     keepBrowser: asBoolean(profile.keepBrowser),
     cacheDefaults,
   };
 
   const browserFamily: ResolvedBrowserFamily = {
-    chromePath: asNonEmptyString(profileBrowser.chromePath),
-    display: asNonEmptyString(profileBrowser.display),
-    managedProfileRoot: asNonEmptyString(profileBrowser.managedProfileRoot),
+    chromePath: asNonEmptyString(effectiveProfileBrowser.chromePath),
+    display: asNonEmptyString(effectiveProfileBrowser.display),
+    managedProfileRoot: asNonEmptyString(effectiveProfileBrowser.managedProfileRoot),
     sourceProfilePath,
     sourceProfileName,
     sourceCookiePath,
     bootstrapCookiePath,
-    debugPort: asFiniteNumber(profileBrowser.debugPort),
-    debugPortStrategy: asDebugPortStrategy(profileBrowser.debugPortStrategy),
-    debugPortRange: asDebugPortRange(profileBrowser.debugPortRange),
-    blockingProfileAction: asBlockingProfileAction(profileBrowser.blockingProfileAction),
-    wslChromePreference: asWslPreference(profileBrowser.wslChromePreference),
-    serviceTabLimit: asFiniteNumber(profileBrowser.serviceTabLimit),
-    blankTabLimit: asFiniteNumber(profileBrowser.blankTabLimit),
-    collapseDisposableWindows: asBoolean(profileBrowser.collapseDisposableWindows),
+    debugPort: asFiniteNumber(effectiveProfileBrowser.debugPort),
+    debugPortStrategy: asDebugPortStrategy(effectiveProfileBrowser.debugPortStrategy),
+    debugPortRange: asDebugPortRange(effectiveProfileBrowser.debugPortRange),
+    blockingProfileAction: asBlockingProfileAction(effectiveProfileBrowser.blockingProfileAction),
+    wslChromePreference: asWslPreference(effectiveProfileBrowser.wslChromePreference),
+    serviceTabLimit: asFiniteNumber(effectiveProfileBrowser.serviceTabLimit),
+    blankTabLimit: asFiniteNumber(effectiveProfileBrowser.blankTabLimit),
+    collapseDisposableWindows: asBoolean(effectiveProfileBrowser.collapseDisposableWindows),
   };
 
   const serviceBinding: ResolvedServiceBinding = {

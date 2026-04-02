@@ -35,6 +35,20 @@ node --import tsx bin/auracall.ts config migrate --dry-run
     chromeCookiePath: "/Users/me/Library/Application Support/Google/Chrome/Default/Network/Cookies",
   },
 
+  // Optional named browser families. Profiles can point at one with
+  // profiles.<name>.browserFamily and still override fields locally.
+  browserFamilies: {
+    "wsl-chrome-2": {
+      chromePath: "/usr/bin/google-chrome",
+      chromeProfile: "Default",
+      chromeCookiePath: "/home/me/.config/google-chrome/Default/Network/Cookies",
+      bootstrapCookiePath: "/home/me/.config/google-chrome/Default/Network/Cookies",
+      display: ":0.0",
+      managedProfileRoot: "/home/me/.auracall/browser-profiles",
+      wslChromePreference: "wsl"
+    }
+  },
+
   llmDefaults: {
     model: "gpt-5.2-pro",
   },
@@ -113,15 +127,17 @@ node --import tsx bin/auracall.ts config migrate --dry-run
         },
       },
     },
-    // Secondary browser-profile family for another account, same WSL runtime
+    // Secondary browser family for another account, same WSL runtime
     "wsl-chrome-2": {
       engine: "browser",
+      browserFamily: "wsl-chrome-2",
       defaultService: "chatgpt",
       keepBrowser: false,
       services: {
         chatgpt: {
           identity: { email: "consult@polymerconsultingroup.com" },
-          // Point this profile at the same service family, different managed account.
+          // Optional advanced override. By default Aura-Call derives:
+          // ~/.auracall/browser-profiles/wsl-chrome-2/chatgpt
           manualLoginProfileDir: "/Users/me/.auracall/browser-profiles/wsl-chrome-2/chatgpt",
         },
       },
@@ -171,6 +187,7 @@ Within each file, later CLI flags still override config, and environment variabl
   - Use `--chatgpt-url` or `profiles.<name>.services.chatgpt.projectId` once signed in to pin to a workspace.
 - On WSL, keep the primary WSL Chrome setup on `profiles.default` if you want to reuse the long-lived managed profile at `~/.auracall/browser-profiles/default/<service>`.
 - Use family names like `wsl-chrome-2` for secondary WSL account profiles (for example, `consult@polymerconsultingroup.com`) while keeping `default` as primary.
+- Prefer a named `browserFamilies.<family>` block plus `profiles.<name>.browserFamily` for secondary runtime families instead of teaching raw path wiring as the main pattern.
 - Use separate named profiles for Windows Chrome or other experimental runtimes.
 - `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Aura-Call reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.
@@ -189,6 +206,7 @@ Within each file, later CLI flags still override config, and environment variabl
   - URL pinning is most useful when you want a literal target route (for example, a specific non-project chat folder URL) instead of config-driven project resolution.
 - `services.<service>.interactiveLogin` can set a global login mode default; `profiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
 - `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
+  - Treat this as an advanced override. The default path is derived from `browser.managedProfileRoot + auracallProfile + service`.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - `services.<service>.features` holds provider-specific feature flags. Typical keys:
   - `chatgpt`: `web_search`, `deep_research`, `company_knowledge`, `apps`

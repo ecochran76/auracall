@@ -71,6 +71,7 @@ describe('resolveBrowserProfileResolution', () => {
 
     expect(result.profileFamily).toEqual({
       profileName: 'windows-chrome-test',
+      browserFamilyId: null,
       defaultService: 'grok',
       keepBrowser: true,
       cacheDefaults: {
@@ -156,6 +157,74 @@ describe('resolveBrowserProfileResolution', () => {
       debugPort: 45555,
       debugPortStrategy: 'auto',
       wslChromePreference: 'windows',
+    });
+  });
+
+  test('merges named browser-family defaults before profile-local browser overrides', () => {
+    const result = resolveBrowserProfileResolution({
+      merged: {
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+        },
+        browserFamilies: {
+          'wsl-chrome-2': {
+            chromePath: '/usr/bin/google-chrome',
+            display: ':0.0',
+            profilePath: '/home/test/.config/google-chrome',
+            profileName: 'Default',
+            cookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+            bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+            managedProfileRoot: '/home/test/.auracall/browser-profiles',
+            wslChromePreference: 'wsl',
+            debugPortRange: [45000, 45100],
+            serviceTabLimit: 3,
+            blankTabLimit: 1,
+            collapseDisposableWindows: true,
+          },
+        },
+        browser: {},
+      },
+      profileName: 'wsl-chrome-2',
+      profile: {
+        browserFamily: 'wsl-chrome-2',
+        defaultService: 'chatgpt',
+        browser: {
+          serviceTabLimit: 5,
+          blankTabLimit: 0,
+        },
+      },
+      browser: {
+        target: 'chatgpt',
+      },
+    });
+
+    expect(result.profileFamily.browserFamilyId).toBe('wsl-chrome-2');
+    expect(result.browserFamily).toMatchObject({
+      chromePath: '/usr/bin/google-chrome',
+      display: ':0.0',
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+      sourceProfilePath: '/home/test/.config/google-chrome',
+      sourceProfileName: 'Default',
+      sourceCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+      bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+      wslChromePreference: 'wsl',
+      debugPortRange: [45000, 45100],
+      serviceTabLimit: 5,
+      blankTabLimit: 0,
+      collapseDisposableWindows: true,
+    });
+    expect(result.launchProfile).toMatchObject({
+      target: 'chatgpt',
+      chromePath: '/usr/bin/google-chrome',
+      display: ':0.0',
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+      chromeProfile: 'Default',
+      chromeCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+      bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+      wslChromePreference: 'wsl',
+      serviceTabLimit: 5,
+      blankTabLimit: 0,
+      collapseDisposableWindows: true,
     });
   });
 

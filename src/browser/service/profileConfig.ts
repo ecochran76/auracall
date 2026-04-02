@@ -43,21 +43,23 @@ export function applyBrowserProfileOverrides(
   } else if (browser.debugPortRange === undefined && devRange !== undefined) {
     browser.debugPortRange = devRange;
   }
-  applyBrowserProfileDefaults(browser, profileBrowser, { overrideExisting });
+  applyBrowserProfileDefaults(merged, profile, browser, { overrideExisting });
   applyServiceDefaults(merged, profile, browser, { overrideExisting });
   applyCacheDefaults(browser, resolution.profileFamily.cacheDefaults);
 }
 
 function applyBrowserProfileDefaults(
+  merged: MutableConfig,
+  profile: Record<string, unknown>,
   browser: MutableBrowserConfig,
-  profileBrowser: MutableBrowserConfig,
   options: { overrideExisting?: boolean } = {},
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
+  const profileBrowser = isRecord(profile.browser) ? profile.browser : {};
   const resolution = resolveBrowserProfileResolution({
-    merged: { browser },
-    profileName: null,
-    profile: { browser: profileBrowser },
+    merged,
+    profileName: asNonEmptyString(merged.auracallProfile) ?? null,
+    profile,
     browser,
   });
   const browserFamily = resolution.browserFamily;

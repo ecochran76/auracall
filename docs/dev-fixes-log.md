@@ -4908,3 +4908,33 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - `docs/dev/browser-profile-family-refactor-plan.md`
     - `docs/dev/next-execution-plan.md`
     - `ROADMAP.md`
+
+
+## 2026-04-01 — Secondary WSL browser families no longer require path-first config teaching
+
+- Area: Browser/profile-family refactor Phase 2 cleanup
+- Symptom:
+  - `wsl-chrome-2` had been documented as a named secondary profile, but the
+    config model still forced operators to express it mostly by repeating raw
+    browser fields and `manualLoginProfileDir` wiring inside the profile
+- Root cause:
+  - the schema had no first-class browser-family registry, and the profile
+    normalization bridge would not have preserved a `browserFamily` selector
+    even if one had been added
+- Fix:
+  - added top-level `browserFamilies` plus
+    `profiles.<name>.browserFamily`
+  - updated profile resolution to merge named browser-family defaults before
+    profile-local browser overrides
+  - fixed `normalizeConfigV1toV2(...)` to preserve `profile.browserFamily`
+    when promoting `profiles` into `auracallProfiles`
+  - updated configuration/runbook docs so secondary WSL families are taught via
+    named browser-family config first, with `manualLoginProfileDir` kept as an
+    advanced override
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/browser/browserService.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Follow-ups:
+  - live/manual smoke default WSL and `wsl-chrome-2`
+  - decide whether `auracall wizard` should emit named browser families by
+    default in a later compatibility-conscious slice

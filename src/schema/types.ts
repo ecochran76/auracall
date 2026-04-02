@@ -248,6 +248,7 @@ export const OracleProfileLlmSchema = LlmDefaultsSchema;
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleProfileSchema = z.object({
   engine: z.enum(['api', 'browser']).optional(),
+  browserFamily: z.string().optional(),
   search: z.union([z.enum(['on', 'off']), z.boolean()])
     .transform((val) => {
       if (typeof val === 'boolean') return val ? 'on' : 'off';
@@ -290,6 +291,7 @@ export const ConfigSchema = z.object({
     })
     .optional(),
   browserDefaults: OracleProfileBrowserSchema.optional(),
+  browserFamilies: z.record(z.string(), OracleProfileBrowserSchema).optional(),
   llmDefaults: LlmDefaultsSchema.optional(),
   profiles: z.record(z.string(), OracleProfileSchema).optional(),
   // Core

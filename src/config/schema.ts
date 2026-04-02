@@ -1,6 +1,7 @@
 import {
   BrowserConfigSchema,
   ChatgptServiceConfigSchema,
+  OracleProfileBrowserSchema,
   ConfigSchema,
   GeminiServiceConfigSchema,
   GrokServiceConfigSchema,
@@ -13,6 +14,7 @@ import { z } from 'zod';
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const ComposedConfigSchema = ConfigSchema.extend({
   browserDefaults: BrowserConfigSchema.optional(),
+  browserFamilies: z.record(z.string(), OracleProfileBrowserSchema).optional(),
   llmDefaults: LlmDefaultsSchema.optional(),
   profiles: z.record(z.string(), OracleProfileSchema).optional(),
   services: z

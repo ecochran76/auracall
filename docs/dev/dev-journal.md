@@ -3376,3 +3376,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     configuration, naming clarity, and live/manual smoke
   - then pivot back to the next user-facing reliability/polish target instead
     of extending profile derivation work further
+
+## 2026-04-01 — Browser-family registry added for secondary WSL profile cleanup
+
+- Focus: make `wsl-chrome-2` a first-class browser family instead of teaching it primarily as a raw path recipe
+- Implemented:
+  - added top-level `browserFamilies` config support and
+    `profiles.<name>.browserFamily` selection in the schema
+  - taught `resolveBrowserProfileResolution(...)` to merge named
+    browser-family defaults before profile-local browser overrides
+  - fixed the v1->v2 normalization bridge so `profile.browserFamily` survives
+    promotion into `auracallProfiles`
+  - added focused regression coverage in:
+    - `tests/browser/profileResolution.test.ts`
+    - `tests/browser/profileConfig.test.ts`
+    - `tests/schema/resolver.test.ts`
+  - updated `docs/configuration.md` and `docs/wsl-chatgpt-runbook.md` to
+    show `browserFamilies.wsl-chrome-2` + `profiles.wsl-chrome-2.browserFamily`
+    as the preferred configuration shape
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/browser/browserService.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - run live/manual smokes for the default WSL family and `wsl-chrome-2`
+    once convenient
+  - decide whether wizard/scaffold output should emit named browser families in
+    a follow-up slice or remain compatibility-first for now

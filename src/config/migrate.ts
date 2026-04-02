@@ -149,6 +149,9 @@ export function normalizeConfigV1toV2(
       if (legacyProfile.defaultService === undefined && profileValue.defaultService !== undefined) {
         legacyProfile.defaultService = profileValue.defaultService;
       }
+      if (legacyProfile.browserFamily === undefined && profileValue.browserFamily !== undefined) {
+        legacyProfile.browserFamily = profileValue.browserFamily;
+      }
       if (legacyProfile.keepBrowser === undefined && profileValue.keepBrowser !== undefined) {
         legacyProfile.keepBrowser = profileValue.keepBrowser;
       }

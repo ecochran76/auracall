@@ -188,6 +188,60 @@ describe('Config Resolver', () => {
     expect(result.browser.wslChromePreference).toBe('wsl');
   });
 
+  it('should apply named browser-family defaults for the selected profile', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 2,
+        model: 'gpt-5.2-pro',
+        browser: {},
+        browserDefaults: {
+          chromePath: '/usr/bin/google-chrome-stable',
+        },
+        browserFamilies: {
+          'wsl-chrome-2': {
+            chromePath: '/usr/bin/google-chrome',
+            display: ':0.0',
+            profilePath: '/home/test/.config/google-chrome',
+            profileName: 'Default',
+            cookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+            bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+            managedProfileRoot: '/home/test/.auracall/browser-profiles',
+            wslChromePreference: 'wsl',
+          },
+        },
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        profiles: {
+          'wsl-chrome-2': {
+            defaultService: 'chatgpt',
+            browserFamily: 'wsl-chrome-2',
+            services: {
+              chatgpt: {
+                manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({ profile: 'wsl-chrome-2' });
+
+    expect(result.auracallProfile).toBe('wsl-chrome-2');
+    expect(result.browser.chromePath).toBe('/usr/bin/google-chrome');
+    expect(result.browser.display).toBe(':0.0');
+    expect(result.browser.chromeCookiePath).toBe('/home/test/.config/google-chrome/Default/Network/Cookies');
+    expect(result.browser.bootstrapCookiePath).toBe('/home/test/.config/google-chrome/Default/Network/Cookies');
+    expect(result.browser.managedProfileRoot).toBe('/home/test/.auracall/browser-profiles');
+    expect(result.browser.wslChromePreference).toBe('wsl');
+    expect(result.browser.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+  });
+
   it('should use profile-specific service URLs for browser targets', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {

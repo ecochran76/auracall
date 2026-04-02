@@ -30,6 +30,19 @@ sudo apt-get install -y google-chrome-stable
     chromeProfile: "Default",
     interactiveLogin: true,
     managedProfileRoot: "/home/you/.auracall/browser-profiles"
+  },
+
+  // Optional named secondary WSL browser family
+  browserFamilies: {
+    "wsl-chrome-2": {
+      chromePath: "/usr/bin/google-chrome",
+      chromeProfile: "Default",
+      chromeCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
+      bootstrapCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
+      display: ":0.0",
+      managedProfileRoot: "/home/you/.auracall/browser-profiles",
+      wslChromePreference: "wsl"
+    }
   }
 }
 ```
@@ -41,33 +54,47 @@ AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
 oracle --profile default --target chatgpt login --browser-keep-browser
 ```
 
-4) Optional: configure a profile family for a second account (for example, Pro testing):
+4) Optional: configure a second WSL browser family for another account (for example, Pro testing):
 
 ```json5
 {
   auracallProfile: "default",
+  browserFamilies: {
+    "wsl-chrome-2": {
+      chromePath: "/usr/bin/google-chrome",
+      chromeProfile: "Default",
+      chromeCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
+      bootstrapCookiePath: "/home/you/.config/google-chrome/Default/Cookies",
+      display: ":0.0",
+      managedProfileRoot: "/home/you/.auracall/browser-profiles",
+      wslChromePreference: "wsl"
+    }
+  },
   profiles: {
     default: {
       services: {
         chatgpt: {
-          identity: { email: "ecochran76@gmail.com" },
-          manualLoginProfileDir: "/home/you/.auracall/browser-profiles/default/chatgpt",
-        },
-      },
+          identity: { email: "ecochran76@gmail.com" }
+        }
+      }
     },
     "wsl-chrome-2": {
       engine: "browser",
+      browserFamily: "wsl-chrome-2",
       defaultService: "chatgpt",
       services: {
         chatgpt: {
-          identity: { email: "consult@polymerconsultingroup.com" },
-          manualLoginProfileDir: "/home/you/.auracall/browser-profiles/wsl-chrome-2/chatgpt",
-        },
-      },
-    },
-  },
+          identity: { email: "consult@polymerconsultingroup.com" }
+        }
+      }
+    }
+  }
 }
 ```
+
+Aura-Call derives the managed profile directory automatically as
+`~/.auracall/browser-profiles/<auracallProfile>/<service>` unless you set
+`manualLoginProfileDir` explicitly.
 
 Seed the second account once:
 
