@@ -129,15 +129,15 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
   });
   if (bootstrapResult.cloned) {
     console.log(
-      `[login] Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+      `[login] Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
     );
   } else if (bootstrapResult.reseeded) {
     console.log(
-      `[login] Refreshed managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+      `[login] Refreshed managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
     );
   } else if (bootstrapResult.skippedReason === 'managed-profile-active') {
     console.log(
-      `[login] Managed profile is already active; skipping source-profile refresh and reusing ${manualLoginProfileDir}.`,
+      `[login] Managed browser profile is already active; skipping source-browser-profile refresh and reusing ${manualLoginProfileDir}.`,
     );
   }
   const coreOptions: BrowserLoginCoreOptions = {

@@ -395,7 +395,7 @@ export async function askOracleFlow(version: string, userConfig: Partial<Resolve
     {
       name: 'chromeProfile',
       type: 'input',
-      message: 'Chrome profile to reuse cookies from:',
+      message: 'Source browser profile to reuse cookies from:',
       default: 'Default',
       when: (ans: WizardAnswers & { mode: SessionMode }) => ans.mode === 'browser',
     },

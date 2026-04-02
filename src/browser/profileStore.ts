@@ -296,7 +296,7 @@ export async function bootstrapManagedProfile(options: {
       };
     }
 
-    logger(`Reseeding managed profile from ${sourceUserDataDir} (${sourceProfileName})`);
+    logger(`Reseeding managed browser profile from source browser profile ${sourceUserDataDir} (${sourceProfileName})`);
     await rm(managedProfileDir, { recursive: true, force: true });
     await copySourceProfileTree(
       sourceUserDataDir,
@@ -317,7 +317,7 @@ export async function bootstrapManagedProfile(options: {
     };
   }
 
-  logger(`Bootstrapping managed profile from ${sourceUserDataDir} (${sourceProfileName})`);
+  logger(`Bootstrapping managed browser profile from source browser profile ${sourceUserDataDir} (${sourceProfileName})`);
   await copySourceProfileTree(
     sourceUserDataDir,
     sourceProfileName,
@@ -394,7 +394,7 @@ async function copySourceProfileTree(
   await mkdir(managedProfileDir, { recursive: true });
 
   logger(
-    `Copying ${MANAGED_PROFILE_TOP_LEVEL_BOOTSTRAP_ENTRIES.length + MANAGED_PROFILE_AUTH_STATE_ENTRIES.length} auth/profile entries into managed profile ${managedProfileDir}.`,
+    `Copying ${MANAGED_PROFILE_TOP_LEVEL_BOOTSTRAP_ENTRIES.length + MANAGED_PROFILE_AUTH_STATE_ENTRIES.length} auth/profile entries into managed browser profile ${managedProfileDir}.`,
   );
 
   for (const entry of MANAGED_PROFILE_TOP_LEVEL_BOOTSTRAP_ENTRIES) {

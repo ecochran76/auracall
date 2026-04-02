@@ -120,7 +120,7 @@ describe('runDryRunSummary', () => {
     );
 
     const joined = log.mock.calls.flat().join('\n');
-    expect(joined).toContain('Cookies: copy from Chrome (all from Chrome profile)');
+    expect(joined).toContain('Cookies: copy from source browser profile (all from source browser profile)');
     expect(joined).toContain('No files attached');
   });
 

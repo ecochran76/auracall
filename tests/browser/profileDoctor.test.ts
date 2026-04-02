@@ -66,7 +66,7 @@ describe('profileDoctor', () => {
     });
     expect(report.registryEntries).toEqual([]);
     expect(report.chromeGoogleAccount).toBeNull();
-    expect(report.warnings).toContain('Managed Aura-Call browser profile has not been initialized yet.');
+    expect(report.warnings).toContain('Managed browser profile has not been initialized yet.');
   });
 
   it('prefers bootstrapCookiePath over runtime chromeCookiePath when reporting the source profile', async () => {
@@ -308,7 +308,7 @@ describe('profileDoctor', () => {
     );
 
     expect(report.warnings).toContain(
-      'Source Chrome cookies are newer than the managed grok profile. Rerun "auracall login --target grok" or "auracall setup --target grok" to refresh the managed profile.',
+      'Source browser cookies are newer than the managed browser profile for grok. Rerun "auracall login --target grok" or "auracall setup --target grok" to refresh the managed browser profile.',
     );
   });
 

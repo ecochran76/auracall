@@ -211,10 +211,10 @@ export async function inspectBrowserDoctorState(
 
   const warnings: string[] = [];
   if (!managedProfileExists) {
-    warnings.push('Managed Aura-Call browser profile has not been initialized yet.');
+    warnings.push('Managed browser profile has not been initialized yet.');
   }
   if (!sourceCookiePath && !managedCookiePath) {
-    warnings.push('No source cookie path or managed cookie store was found; first-run browser bootstrap may not carry a signed-in session.');
+    warnings.push('No source browser cookie path or managed browser profile cookie store was found; first-run bootstrap may not carry a signed-in session.');
   }
   const sourceCookieMtimeMs = await readFileMtimeMs(sourceCookiePath);
   const managedCookieMtimeMs = await readFileMtimeMs(managedCookiePath);
@@ -223,7 +223,7 @@ export async function inspectBrowserDoctorState(
     (managedCookieMtimeMs == null || sourceCookieMtimeMs > managedCookieMtimeMs + 1000)
   ) {
     warnings.push(
-      `Source Chrome cookies are newer than the managed ${target} profile. Rerun "auracall login --target ${target}" or "auracall setup --target ${target}" to refresh the managed profile.`,
+      `Source browser cookies are newer than the managed browser profile for ${target}. Rerun "auracall login --target ${target}" or "auracall setup --target ${target}" to refresh the managed browser profile.`,
     );
   }
   if (staleRegistryEntries.length > 0) {

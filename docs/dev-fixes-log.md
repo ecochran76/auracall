@@ -5002,3 +5002,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     browser-profile bridge directly
 - Verification:
   - targeted onboarding/config tests updated and reviewed locally
+
+
+## 2026-04-01 — CLI/runtime terminology now distinguishes source vs managed browser profiles
+
+- Area: Product-surface terminology cleanup
+- Symptom:
+  - docs had the new semantic split, but live CLI/runtime wording still mixed
+    older phrases like `Chrome profile`, `managed profile`, and
+    `browser profile` in ways that blurred source vs managed state
+- Root cause:
+  - the terminology lock-in had not yet been pushed through doctor warnings,
+    login/bootstrap logs, TUI prompts, and dry-run policy descriptions
+- Fix:
+  - updated doctor warnings to say `managed browser profile` and
+    `source browser cookies`
+  - updated login/runtime/bootstrap logs to distinguish managed browser profile
+    from source browser profile
+  - updated the TUI source-profile prompt and cookie-plan dry-run wording
+- Verification:
+  - focused browser/CLI tests updated and reviewed locally

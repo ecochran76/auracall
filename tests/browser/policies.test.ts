@@ -56,6 +56,6 @@ describe('buildCookiePlan', () => {
   test('copy from Chrome default allowlist', () => {
     const plan = buildCookiePlan({});
     expect(plan.type).toBe('copy');
-    expect(plan.description).toContain('all from Chrome profile');
+    expect(plan.description).toContain('all from source browser profile');
   });
 });

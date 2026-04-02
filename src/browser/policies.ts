@@ -70,7 +70,7 @@ export function buildCookiePlan(config?: BrowserSessionConfig): CookiePlan {
   }
   const allowlist = Array.isArray(config?.cookieNames) && config.cookieNames.length > 0
     ? config.cookieNames.join(', ')
-    : 'all from Chrome profile';
-  return { type: 'copy', description: `Cookies: copy from Chrome (${allowlist}).` };
+    : 'all from source browser profile';
+  return { type: 'copy', description: `Cookies: copy from source browser profile (${allowlist}).` };
 }
 

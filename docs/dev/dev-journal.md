@@ -3454,3 +3454,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - then decide whether a later compatibility slice should rename
     `browserFamilies` externally, or keep that decision deferred to the larger
     config-model refactor
+
+## 2026-04-01 — Product terminology now matches browser-profile semantics
+
+- Focus: align user-visible CLI and runtime wording with the documented split
+  between source browser profile, managed browser profile, and AuraCall runtime profile
+- Implemented:
+  - updated doctor warnings to say `managed browser profile` and
+    `source browser cookies`
+  - updated login/runtime/bootstrap logs to distinguish source browser profile
+    from managed browser profile
+  - updated TUI prompt text and dry-run cookie-plan wording away from the old
+    generic `Chrome profile` phrasing
+- Next:
+  - verify the focused CLI/browser tests still pass
+  - then decide whether any machine-readable report aliases are worth adding in
+    a later compatibility-neutral cleanup

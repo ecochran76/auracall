@@ -565,7 +565,7 @@ function createWindowsManagedProfileRetryReset(options: {
       return;
     }
     logger(
-      `Resetting managed profile after failed Windows Chrome launch on ${failedPort} before retry ${attempt + 1} (${nextPort}).`,
+      `Resetting managed browser profile after failed Windows Chrome launch on ${failedPort} before retry ${attempt + 1} (${nextPort}).`,
     );
     await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
     await mkdir(userDataDir, { recursive: true });
@@ -581,7 +581,7 @@ function createWindowsManagedProfileRetryReset(options: {
     });
     if (bootstrapResult.cloned || bootstrapResult.reseeded) {
       logger(
-        `Refreshed managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}) for Windows retry.`,
+        `Refreshed managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}) for Windows retry.`,
       );
     }
   };
@@ -693,7 +693,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   });
   if (bootstrapResult.cloned) {
     logger(
-      `Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+      `Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
     );
   }
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
@@ -838,7 +838,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     if (shouldApplyInlineCookies || shouldSeedManagedProfile) {
       if (shouldSeedManagedProfile) {
         logger(
-          `Bootstrapping managed profile from source cookies at ${bootstrapCookiePath}.`,
+          `Bootstrapping managed browser profile from source browser cookies at ${bootstrapCookiePath}.`,
         );
       } else if (!config.inlineCookies) {
         logger(
@@ -861,16 +861,16 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           ? config.inlineCookies
             ? `Applied ${cookieCount} inline cookies`
             : shouldSeedManagedProfile
-              ? `Seeded ${cookieCount} cookies into managed profile ${chromeProfile}`
-              : `Copied ${cookieCount} cookies from Chrome profile ${chromeProfile}`
+              ? `Seeded ${cookieCount} cookies into managed browser profile ${chromeProfile}`
+              : `Copied ${cookieCount} cookies from source browser profile ${chromeProfile}`
           : config.inlineCookies
             ? 'No inline cookies applied; continuing without session reuse'
             : shouldSeedManagedProfile
-              ? 'No source cookies were applied to the managed profile; continuing without session reuse'
+              ? 'No source browser cookies were applied to the managed browser profile; continuing without session reuse'
               : 'No Chrome cookies found; continuing without session reuse',
       );
     } else if (existingManagedCookieFile) {
-      logger(`Reusing managed profile cookies from ${existingManagedCookieFile}.`);
+      logger(`Reusing managed browser profile cookies from ${existingManagedCookieFile}.`);
     } else {
       logger('No managed-profile cookies found and no bootstrap source available; continuing without session reuse.');
     }
@@ -1438,7 +1438,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         `--browser-manual-login-profile-dir ${JSON.stringify(userDataDir)}`;
       await emitRuntimeHint();
       logger('Cloudflare challenge detected; leaving browser open so you can complete the check.');
-      logger(`Reuse this browser profile with: ${reuseProfileHint}`);
+      logger(`Reuse this managed browser profile with: ${reuseProfileHint}`);
       throw new BrowserAutomationError(
         'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.',
         {
@@ -2498,7 +2498,7 @@ async function runGrokBrowserMode({
   });
   if (bootstrapResult.cloned) {
     logger(
-      `Seeded managed profile from ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+      `Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
     );
   }
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
@@ -2675,7 +2675,7 @@ async function runGrokBrowserMode({
         allowErrors: config.allowCookieErrors ?? false,
       });
     } else if (existingManagedCookieFile) {
-      logger(`Reusing managed profile cookies from ${existingManagedCookieFile}.`);
+      logger(`Reusing managed browser profile cookies from ${existingManagedCookieFile}.`);
     } else {
       logger(`No managed-profile cookies found at ${userDataDir}; Grok may require sign-in.`);
     }
@@ -2788,7 +2788,7 @@ async function runGrokBrowserMode({
         `--browser-manual-login-profile-dir ${JSON.stringify(userDataDir)}`;
       await emitRuntimeHint().catch(() => undefined);
       logger('Cloudflare challenge detected; leaving browser open so you can complete the check.');
-      logger(`Reuse this browser profile with: ${reuseProfileHint}`);
+      logger(`Reuse this managed browser profile with: ${reuseProfileHint}`);
       throw new BrowserAutomationError(
         'Cloudflare challenge detected. Complete the “Just a moment…” check in the open browser, then rerun.',
         {
