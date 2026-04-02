@@ -35,11 +35,13 @@ type BrowserBlockingProfileAction =
 
 export type BrowserSessionConfig = Omit<BaseTypes.BrowserSessionConfig, 'blockingProfileAction'> &
   LlmBrowserFields & {
+    auracallProfileName?: string | null;
     blockingProfileAction?: BrowserBlockingProfileAction;
   };
 
 export type BrowserAutomationConfig = Omit<BaseTypes.BrowserAutomationConfig, 'blockingProfileAction'> &
   LlmBrowserFields & {
+    auracallProfileName?: string | null;
     blockingProfileAction?: BrowserBlockingProfileAction;
   };
 

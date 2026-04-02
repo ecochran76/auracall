@@ -3840,3 +3840,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - proceed with the planned real `wrong-browser-profile` live reattach proof
     using `default` vs `wsl-chrome-2`
+
+
+## 2026-04-02 — top-level browser runs must preserve the selected AuraCall runtime profile too
+
+- Focus: fix the last live path where `auracall --profile wsl-chrome-2 --engine browser`
+  still launched `default/chatgpt`
+- Progress:
+  - confirmed the helper/wrapper path was green but the real browser-run path
+    still drifted during `runBrowserMode(...)`
+  - root cause was the same missing runtime-profile context showing up in two
+    deeper places:
+    - browser session config did not persist `auracallProfileName`
+    - `resolveManagedBrowserLaunchContext(...)` recomputed managed browser
+      profile dirs without the selected AuraCall runtime profile name
+  - fixed that by:
+    - carrying `auracallProfileName` in browser session config
+    - threading it into `runBrowserMode(...)`, reattach config resolution, and
+      the managed launch-context helper
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/cli/browserConfig.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/browserTools.test.ts tests/browser/browserService.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/reattach.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gpt-5.2 --prompt "Reply exactly with: WSL CHROME 2 SESSION OK 3" --verbose --force`
+    - now reuses:
+      - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+      - `Profile 1`
+      - DevTools port `45013`
+    - and returns `WSL CHROME 2 SESSION OK 3`
+- Notes:
+  - current backup of the signed-in managed browser profile:
+    - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt.backup-20260402-113725`

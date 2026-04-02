@@ -84,6 +84,23 @@ describe('browserMode exports', () => {
     );
   });
 
+  test('resolves managed browser launch context within the selected AuraCall runtime profile', () => {
+    const context = resolveManagedBrowserLaunchContextForTest(
+      {
+        target: 'chatgpt',
+        chromeProfile: 'Profile 1',
+        managedProfileRoot: '/home/test/.auracall/browser-profiles',
+        manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      } as any,
+      'chatgpt',
+      'wsl-chrome-2',
+    );
+
+    expect(context.userDataDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+    expect(context.defaultManagedProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+    expect(context.chromeProfile).toBe('Profile 1');
+  });
+
   test('retry affordance send failures stay explicit about no auto-click policy', () => {
     expect(
       formatChatgptBlockingSurfaceErrorForTest({

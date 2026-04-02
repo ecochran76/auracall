@@ -147,6 +147,7 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   });
 
   return {
+    auracallProfileName: options.auracallProfileName ?? null,
     chromeProfile: options.browserChromeProfile ?? undefined,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,

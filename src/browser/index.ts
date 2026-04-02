@@ -106,6 +106,7 @@ export { parseDuration, delay, normalizeChatgptUrl, isTemporaryChatUrl } from '.
 function resolveManagedBrowserLaunchContext(
   config: ReturnType<typeof resolveBrowserConfig>,
   target: 'chatgpt' | 'grok' | 'gemini',
+  auracallProfileName: string | null = null,
 ) {
   const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
     browser: config,
@@ -114,11 +115,13 @@ function resolveManagedBrowserLaunchContext(
   const userDataDir = resolveManagedProfileDir({
     configuredDir: launchProfile.manualLoginProfileDir ?? config.manualLoginProfileDir ?? null,
     managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
+    auracallProfileName,
     target,
   });
   const defaultManagedProfileDir = resolveManagedProfileDir({
     configuredDir: null,
     managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
+    auracallProfileName,
     target,
   });
   const chromeProfile = launchProfile.chromeProfile ?? config.chromeProfile ?? 'Default';
@@ -144,8 +147,9 @@ function resolveManagedBrowserLaunchContext(
 export function resolveManagedBrowserLaunchContextForTest(
   config: ReturnType<typeof resolveBrowserConfig>,
   target: 'chatgpt' | 'grok' | 'gemini',
+  auracallProfileName: string | null = null,
 ) {
-  return resolveManagedBrowserLaunchContext(config, target);
+  return resolveManagedBrowserLaunchContext(config, target, auracallProfileName);
 }
 
 function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
@@ -596,7 +600,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   const attachments: BrowserAttachment[] = options.attachments ?? [];
   const fallbackSubmission = options.fallbackSubmission;
 
-  let config = resolveBrowserConfig(options.config);
+  let config = resolveBrowserConfig(options.config, {
+    auracallProfileName: options.config?.auracallProfileName ?? null,
+  });
   const logger: BrowserLogger = options.log ?? ((_message: string) => {});
   if (logger.verbose === undefined) {
     logger.verbose = Boolean(config.debug);
@@ -648,6 +654,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       config,
       logger,
       runtimeHintCb,
+      auracallProfileName: options.config?.auracallProfileName ?? null,
     });
   }
 
@@ -677,7 +684,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   };
 
   const manualLogin = true;
-  const launchContext = resolveManagedBrowserLaunchContext(config, target);
+  const launchContext = resolveManagedBrowserLaunchContext(
+    config,
+    target,
+    options.config?.auracallProfileName ?? null,
+  );
   const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const allowDestructiveProfileRetryReset =
@@ -2431,12 +2442,14 @@ async function runGrokBrowserMode({
   config,
   logger,
   runtimeHintCb,
+  auracallProfileName,
 }: {
   promptText: string;
   attachments: BrowserAttachment[];
   config: ReturnType<typeof resolveBrowserConfig>;
   logger: BrowserLogger;
   runtimeHintCb?: BrowserRunOptions['runtimeHintCb'];
+  auracallProfileName?: string | null;
 }): Promise<BrowserRunResult> {
   let chrome: LaunchedChrome | null = null;
   let chromeHost = '127.0.0.1';
@@ -2483,7 +2496,11 @@ async function runGrokBrowserMode({
   };
   const manualLogin = true;
   const runtimeTarget = (config.target ?? 'grok') as 'grok';
-  const launchContext = resolveManagedBrowserLaunchContext(config, runtimeTarget);
+  const launchContext = resolveManagedBrowserLaunchContext(
+    config,
+    runtimeTarget,
+    auracallProfileName ?? null,
+  );
   const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
   const allowDestructiveProfileRetryReset =
     path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);

@@ -1731,7 +1731,9 @@ conversationFilesCommand
     const browserModel = requestedModel.toLowerCase().startsWith('grok-')
       ? normalizeModelOption(requestedModel)
       : ('grok-4.1' as ModelName);
-    const resolvedBrowserConfig = resolveBrowserConfig(userConfig.browser);
+    const resolvedBrowserConfig = resolveBrowserConfig(userConfig.browser, {
+      auracallProfileName: userConfig.auracallProfile ?? null,
+    });
     const browserConfig = await buildBrowserConfig({
       ...cliOptions,
       auracallProfileName: userConfig.auracallProfile ?? 'default',

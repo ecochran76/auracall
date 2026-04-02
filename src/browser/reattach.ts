@@ -86,7 +86,9 @@ export async function resumeBrowserSession(
       },
     },
     {
-      resolveBrowserConfig: (candidate) => resolveBrowserConfig(candidate as BrowserSessionConfig),
+      resolveBrowserConfig: (candidate) => resolveBrowserConfig(candidate as BrowserSessionConfig, {
+        auracallProfileName: (candidate as BrowserSessionConfig | undefined)?.auracallProfileName ?? null,
+      }),
       launchChrome: async (config, userDataDir, logger) => {
         const chrome = await launchChrome(config, userDataDir, logger);
         return {

@@ -5437,3 +5437,38 @@ This log captures notable fixes, what broke, why, and how we verified the repair
       - `--profile-directory=Profile 1`
       - `--user-data-dir=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
       - stable DevTools on port `45013`
+
+
+## 2026-04-02 — top-level browser runs must preserve the selected AuraCall runtime profile
+
+- Area: Browser runtime launch resolution / managed browser profile selection
+- Symptom:
+  - top-level browser runs like
+    `auracall --profile wsl-chrome-2 --engine browser ...`
+    could still fall back to `/home/.../browser-profiles/default/chatgpt`
+    even after browser-tools and doctor were fixed
+- Root cause:
+  - the real browser-run path still dropped `auracallProfileName` before
+    resolving launch config and managed browser profile dirs
+  - `resolveManagedBrowserLaunchContext(...)` then recomputed the managed
+    browser profile path without the selected AuraCall runtime profile context
+- Fix:
+  - persisted `auracallProfileName` in browser session config
+  - threaded it into:
+    - `runBrowserMode(...)`
+    - reattach config resolution
+    - the managed browser launch-context helper
+  - added regression coverage for:
+    - browser session config carrying `auracallProfileName`
+    - managed browser launch-context resolution inside a non-default AuraCall
+      runtime profile
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/cli/browserConfig.test.ts tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/browserTools.test.ts tests/browser/browserService.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/reattach.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gpt-5.2 --prompt "Reply exactly with: WSL CHROME 2 SESSION OK 3" --verbose --force`
+    - now reuses:
+      - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+      - `Profile 1`
+      - DevTools port `45013`
+    - and returns the expected reply

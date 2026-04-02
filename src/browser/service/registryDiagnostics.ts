@@ -81,7 +81,7 @@ export async function collectReattachRegistryDiagnostics(input: {
   const resolved = resolveBrowserConfig({
     ...(input.config ?? {}),
     target: input.config?.target ?? 'chatgpt',
-  });
+  }, { auracallProfileName: input.config?.auracallProfileName ?? null });
   const expectedProfilePath =
     resolved.manualLoginProfileDir ??
     resolveManagedProfileDir({

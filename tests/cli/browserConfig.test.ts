@@ -9,6 +9,7 @@ describe('buildBrowserConfig', () => {
   test('uses defaults when optional flags omitted', async () => {
     const config = await buildBrowserConfig({ model: 'gpt-5.2-pro' });
     expect(config).toMatchObject({
+      auracallProfileName: null,
       chromeProfile: undefined,
       chromePath: null,
       chromeCookiePath: null,
@@ -23,6 +24,16 @@ describe('buildBrowserConfig', () => {
       debug: undefined,
       allowCookieErrors: true,
     });
+  });
+
+  test('preserves the selected AuraCall runtime profile name in browser session config', async () => {
+    const config = await buildBrowserConfig({
+      auracallProfileName: 'wsl-chrome-2',
+      model: 'gpt-5.2',
+      browserTarget: 'chatgpt',
+    });
+    expect(config.auracallProfileName).toBe('wsl-chrome-2');
+    expect(config.manualLoginProfileDir).toMatch(/browser-profiles\/wsl-chrome-2\/chatgpt$/);
   });
 
   test('sets model strategy when provided', async () => {
