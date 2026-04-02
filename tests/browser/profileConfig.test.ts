@@ -182,4 +182,52 @@ describe('applyBrowserProfileOverrides', () => {
     expect(browser.grokUrl).toBe('https://grok.com/preview');
     expect(browser.projectId).toBe('chatgpt-project');
   });
+
+  test('selected AuraCall runtime profile service binding overrides stale top-level browser state', () => {
+    const merged = {
+      auracallProfile: 'wsl-chrome-2',
+      engine: 'browser',
+      services: {
+        chatgpt: { url: 'https://chatgpt.com/' },
+        gemini: { url: 'https://gemini.google.com/app' },
+        grok: { url: 'https://grok.com/' },
+      },
+      browserFamilies: {
+        'wsl-chrome-2': {
+          chromePath: '/usr/bin/google-chrome',
+          display: ':0.0',
+          profilePath: '/home/test/.config/google-chrome',
+          profileName: 'Default',
+          cookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+          bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+          debugPort: 45013,
+          wslChromePreference: 'wsl',
+        },
+      },
+      browser: {
+        target: 'chatgpt',
+        manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+      },
+    };
+    const profile = {
+      browserFamily: 'wsl-chrome-2',
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+        },
+      },
+    };
+    const browser: Record<string, unknown> = {
+      target: 'chatgpt',
+      manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+    };
+
+    applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
+
+    expect(browser.target).toBe('chatgpt');
+    expect(browser.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+    expect(browser.debugPort).toBe(45013);
+  });
 });

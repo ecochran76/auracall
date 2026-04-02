@@ -878,8 +878,8 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Launch Chrome with remote debugging enabled.')
     .option('-p, --port <number>', 'Remote debugging port (default: from registry or range)', (value) => Number.parseInt(value, 10))
     .option('--profile', 'Copy your default Chrome profile before launch.', false)
-    .option('--profile-dir <path>', 'Directory for the temporary Chrome profile.', options.defaultProfileDir ?? path.join(os.homedir(), '.cache', 'scraping'))
-    .option('--chrome-path <path>', 'Path to the Chrome binary.', options.defaultChromeBin ?? 'google-chrome')
+    .option('--profile-dir <path>', 'Directory for the temporary Chrome profile.')
+    .option('--chrome-path <path>', 'Path to the Chrome binary.')
     .action(async (commandOptions) => {
       const resolvedPort = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
       console.log(`✓ Chrome listening on http://localhost:${resolvedPort}${commandOptions.profile ? ' (profile copied)' : ''}`);

@@ -6,8 +6,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { runBrowserToolsCli, type BrowserToolsPortResolverOptions } from '../packages/browser-service/src/browserTools.js';
 import { resolveConfig } from '../src/schema/resolver.js';
+import { resolveBrowserConfig } from '../src/browser/config.js';
 import { launchManualLoginSession } from '../src/browser/manualLogin.js';
-import { BrowserService } from '../src/browser/service/browserService.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from '../src/browser/service/profileResolution.js';
+import { resolveBrowserListTarget } from '../src/browser/service/portResolution.js';
+import { isDevToolsResponsive } from '../packages/browser-service/src/processCheck.js';
 import {
   DEFAULT_DEBUG_PORT,
   DEFAULT_DEBUG_PORT_RANGE,
@@ -15,7 +18,9 @@ import {
 } from '../src/browser/portSelection.js';
 
 const DEFAULT_PROFILE_DIR = path.join(os.homedir(), '.cache', 'scraping');
-const DEFAULT_CHROME_BIN = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
+const DEFAULT_CHROME_BIN = process.platform === 'darwin'
+  ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+  : '/usr/bin/google-chrome';
 
 async function copyProfileIfRequested(baseDir: string, copyProfile: boolean): Promise<string | null> {
   if (!copyProfile) return null;
@@ -31,28 +36,44 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
     return options.port;
   }
   const resolvedConfig = await resolveConfig({
-    auracallProfile: options.auracallProfile,
+    profile: options.auracallProfile,
     browserTarget: options.browserTarget,
   });
   const browserTarget = resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt';
-  const browserService = BrowserService.fromConfig(resolvedConfig, browserTarget);
-  const devToolsTarget = await browserService.resolveDevToolsTarget({ ensurePort: false });
-  if (devToolsTarget.port) {
-    return devToolsTarget.port;
+  const resolved = resolveBrowserConfig({
+    ...(resolvedConfig.browser ?? {}),
+    target: browserTarget,
+  }, { auracallProfileName: resolvedConfig.auracallProfile ?? null });
+  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+    auracallProfile: resolvedConfig.auracallProfile ?? null,
+    browser: resolved,
+    target: browserTarget,
+  }).launchProfile;
+  const listTarget = await resolveBrowserListTarget(resolvedConfig, browserTarget);
+  if (listTarget?.port) {
+    const host = listTarget.host ?? '127.0.0.1';
+    const reachable = await isDevToolsResponsive({ host, port: listTarget.port, attempts: 2, timeoutMs: 1000 });
+    if (reachable) {
+      return listTarget.port;
+    }
   }
-  const resolved = browserService.getConfig();
   const baseDir =
     options.profileDir ??
+    launchProfile.manualLoginProfileDir ??
     resolved.manualLoginProfileDir ??
     path.join(os.homedir(), '.auracall', 'browser-profile');
   const copiedDir = await copyProfileIfRequested(baseDir, Boolean(options.copyProfile));
   const userDataDir = copiedDir ?? baseDir;
   const debugPortRange = resolved.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
   const logger = (message: string) => console.log(message);
-  const debugPort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, debugPortRange);
+  const debugPort = await pickAvailableDebugPort(
+    launchProfile.debugPort ?? resolved.debugPort ?? DEFAULT_DEBUG_PORT,
+    logger,
+    debugPortRange,
+  );
   const { chrome } = await launchManualLoginSession({
-    chromePath: options.chromePath ?? resolved.chromePath ?? DEFAULT_CHROME_BIN,
-    profileName: resolved.chromeProfile ?? 'Default',
+    chromePath: options.chromePath ?? launchProfile.chromePath ?? resolved.chromePath ?? DEFAULT_CHROME_BIN,
+    profileName: launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default',
     userDataDir,
     url: resolved.target === 'grok'
       ? resolved.grokUrl ?? 'https://grok.com'

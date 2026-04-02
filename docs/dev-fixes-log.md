@@ -5401,3 +5401,39 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - live local doctor on `wsl-chrome-2/chatgpt` now reports:
     - `chromeProfile: "Profile 1"`
     - signed-in Chrome account `consult@polymerconsultinggroup.com`
+
+
+## 2026-04-02 — browser-tools start must not rewrite explicit managed browser profiles back to `default`
+
+- Area: Browser-service tooling / managed browser profile launch resolution
+- Symptom:
+  - `scripts/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
+    could still reuse or relaunch the `default` managed browser profile even
+    after the wrapper learned AuraCall runtime profile selection
+  - in some runs it also silently fell back to `~/.cache/scraping`
+- Root cause:
+  - the package `browser-tools` CLI always injected a default `--profile-dir`,
+    so unset launch options were not actually unset
+  - `resolveBrowserConfig(...)` did not know the AuraCall runtime profile name,
+    so an explicit managed browser profile like
+    `~/.auracall/browser-profiles/wsl-chrome-2/chatgpt` could be normalized
+    back to `.../default/chatgpt`
+  - stale top-level browser service fields could also contaminate service
+    binding when switching AuraCall runtime profiles
+- Fix:
+  - removed package defaults for `browser-tools start --profile-dir` and
+    `--chrome-path`, so the resolver only sees explicit operator values
+  - fixed profile-service default application so selected-service fields like
+    `manualLoginProfileDir` come from the selected service config rather than
+    stale top-level browser state
+  - added explicit `auracallProfileName` context to `resolveBrowserConfig(...)`
+    and threaded it through userConfig-backed call sites
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileConfig.test.ts tests/browser/profileResolution.test.ts tests/browser/browserTools.test.ts tests/browser/browserService.test.ts tests/browser/profileStore.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
+      now launches:
+      - `--profile-directory=Profile 1`
+      - `--user-data-dir=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+      - stable DevTools on port `45013`

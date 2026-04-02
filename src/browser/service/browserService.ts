@@ -57,7 +57,7 @@ export class BrowserService extends BrowserServiceCore {
     const baseResolvedConfig = resolveBrowserConfig({
       ...(userConfig.browser ?? {}),
       target,
-    });
+    }, { auracallProfileName: userConfig.auracallProfile ?? null });
     const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
       auracallProfile: userConfig.auracallProfile ?? null,
       browser: baseResolvedConfig,
@@ -65,13 +65,25 @@ export class BrowserService extends BrowserServiceCore {
     }).launchProfile;
     const resolvedConfig = resolveBrowserConfig({
       ...baseResolvedConfig,
+      chromePath: launchProfile.chromePath ?? baseResolvedConfig.chromePath ?? undefined,
+      display: launchProfile.display ?? baseResolvedConfig.display ?? undefined,
       chromeProfile: launchProfile.chromeProfile ?? baseResolvedConfig.chromeProfile ?? undefined,
+      debugPort: launchProfile.debugPort ?? baseResolvedConfig.debugPort ?? undefined,
+      debugPortStrategy: launchProfile.debugPortStrategy ?? baseResolvedConfig.debugPortStrategy ?? undefined,
       manualLoginProfileDir:
         launchProfile.manualLoginProfileDir ?? baseResolvedConfig.manualLoginProfileDir ?? undefined,
       managedProfileRoot: launchProfile.managedProfileRoot ?? baseResolvedConfig.managedProfileRoot ?? undefined,
       bootstrapCookiePath: launchProfile.bootstrapCookiePath ?? baseResolvedConfig.bootstrapCookiePath ?? undefined,
       chromeCookiePath: launchProfile.chromeCookiePath ?? baseResolvedConfig.chromeCookiePath ?? undefined,
-    });
+      hideWindow: launchProfile.hideWindow ?? baseResolvedConfig.hideWindow ?? undefined,
+      keepBrowser: launchProfile.keepBrowser ?? baseResolvedConfig.keepBrowser ?? undefined,
+      manualLogin: launchProfile.manualLogin ?? baseResolvedConfig.manualLogin ?? undefined,
+      wslChromePreference: launchProfile.wslChromePreference ?? baseResolvedConfig.wslChromePreference ?? undefined,
+      serviceTabLimit: launchProfile.serviceTabLimit ?? baseResolvedConfig.serviceTabLimit ?? undefined,
+      blankTabLimit: launchProfile.blankTabLimit ?? baseResolvedConfig.blankTabLimit ?? undefined,
+      collapseDisposableWindows:
+        launchProfile.collapseDisposableWindows ?? baseResolvedConfig.collapseDisposableWindows ?? undefined,
+    }, { auracallProfileName: userConfig.auracallProfile ?? null });
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
       resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig, target),

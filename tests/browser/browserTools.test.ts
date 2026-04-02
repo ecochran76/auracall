@@ -383,6 +383,8 @@ describe('selectBrowserToolsPageIndex', () => {
       expect.objectContaining({
         auracallProfile: 'wsl-chrome-2',
         browserTarget: 'chatgpt',
+        profileDir: undefined,
+        chromePath: undefined,
       }),
     );
   });

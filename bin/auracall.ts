@@ -6169,7 +6169,7 @@ function resolveBrowserLoginLaunchOptions(
       commandOptions.browserManualLoginProfileDir ??
       resolveManagedProfileDirForUserConfig(userConfig, target),
     target,
-  });
+  }, { auracallProfileName: userConfig.auracallProfile ?? null });
   const chromePath = resolvedBrowser.chromePath ?? undefined;
   if (!chromePath) {
     throw new Error('Missing browser chromePath. Set browser.chromePath in config or pass --browser-chrome-path.');

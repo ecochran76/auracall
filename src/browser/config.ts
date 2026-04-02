@@ -56,7 +56,10 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   collapseDisposableWindows: true,
 };
 
-export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined): ResolvedBrowserConfig {
+export function resolveBrowserConfig(
+  config: BrowserAutomationConfig | undefined,
+  options: { auracallProfileName?: string | null } = {},
+): ResolvedBrowserConfig {
   const debugPortEnv = parseDebugPort(
     process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT,
   );
@@ -129,6 +132,7 @@ export function resolveBrowserConfig(config: BrowserAutomationConfig | undefined
   const resolvedProfileDir = normalizeManualLoginProfileDir(resolveManagedProfileDir({
     configuredDir: explicitProfileDir,
     managedProfileRoot,
+    auracallProfileName: options.auracallProfileName ?? null,
     target,
   }));
   const resolvedChromeProfile = resolveProfileDirectoryName(

@@ -248,6 +248,19 @@ describe('resolveBrowserConfig', () => {
     );
   });
 
+  test('preserves an explicit managed browser profile inside the selected AuraCall runtime profile', () => {
+    const resolved = resolveBrowserConfig({
+      target: 'chatgpt',
+      manualLogin: true,
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+      manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+    }, {
+      auracallProfileName: 'wsl-chrome-2',
+    });
+
+    expect(resolved.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
+  });
+
   test('rejects temporary chat URLs when desiredModel is Pro', () => {
     expect(() =>
       resolveBrowserConfig({

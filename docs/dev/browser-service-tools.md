@@ -344,6 +344,9 @@ Current active extraction plan:
   - Prefer this over ad hoc launches when you want the same managed browser
     profile Aura-Call itself would use, for example:
     - `pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
+  - `start` no longer injects its own fallback `--profile-dir`; if you do not
+    pass one explicitly, it now preserves the managed browser profile resolved
+    from the selected AuraCall runtime profile.
 
 - `pnpm tsx scripts/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
   - Shows the live tab census for one DevTools browser instance.

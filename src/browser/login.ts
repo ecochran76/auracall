@@ -53,7 +53,7 @@ export function resolveBrowserLoginOptionsFromUserConfig(
   const resolved = resolveBrowserConfig({
     ...(userConfig.browser ?? {}),
     target,
-  });
+  }, { auracallProfileName: userConfig.auracallProfile ?? null });
   const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
     browser: resolved,

@@ -362,6 +362,6 @@ describe('BrowserService resolveServiceTarget', () => {
     );
 
     expect(service.getConfig().target).toBe('grok');
-    expect(service.getConfig().manualLoginProfileDir).toBe('/tmp/managed-root/default/grok');
+    expect(service.getConfig().manualLoginProfileDir).toBe('/tmp/managed-root/mixed/grok');
   });
 });

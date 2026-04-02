@@ -207,38 +207,56 @@ function applyServiceDefaults(
     ? resolution.serviceBinding.urls.grok ?? currentGrokUrl
     : browser.grokUrl;
 
-  if (!resolution.serviceBinding.serviceId) {
+  const serviceId = resolution.serviceBinding.serviceId;
+  if (!serviceId) {
     return;
   }
-  if ((overrideExisting || browser.projectId === undefined) && resolution.serviceBinding.projectId) {
-    browser.projectId = resolution.serviceBinding.projectId;
+  const services = isRecord(merged.services) ? merged.services : {};
+  const profileServices = isRecord(profile.services) ? profile.services : {};
+  const serviceConfig = {
+    ...(isRecord(services[serviceId]) ? services[serviceId] : {}),
+    ...(isRecord(profileServices[serviceId]) ? profileServices[serviceId] : {}),
+  };
+  const projectId = asNonEmptyString(serviceConfig.projectId);
+  const projectName = asNonEmptyString(serviceConfig.projectName);
+  const conversationId = asNonEmptyString(serviceConfig.conversationId);
+  const conversationName = asNonEmptyString(serviceConfig.conversationName);
+  const model = asNonEmptyString(serviceConfig.model);
+  const modelStrategy = asNonEmptyString(serviceConfig.modelStrategy);
+  const thinkingTime = asNonEmptyString(serviceConfig.thinkingTime);
+  const composerTool = asNonEmptyString(serviceConfig.composerTool);
+  const manualLogin = typeof serviceConfig.manualLogin === 'boolean' ? serviceConfig.manualLogin : undefined;
+  const manualLoginProfileDir = asNonEmptyString(serviceConfig.manualLoginProfileDir);
+
+  if ((overrideExisting || browser.projectId === undefined) && projectId) {
+    browser.projectId = projectId;
   }
-  if ((overrideExisting || browser.projectName === undefined) && resolution.serviceBinding.projectName) {
-    browser.projectName = resolution.serviceBinding.projectName;
+  if ((overrideExisting || browser.projectName === undefined) && projectName) {
+    browser.projectName = projectName;
   }
-  if ((overrideExisting || browser.conversationId === undefined) && resolution.serviceBinding.conversationId) {
-    browser.conversationId = resolution.serviceBinding.conversationId;
+  if ((overrideExisting || browser.conversationId === undefined) && conversationId) {
+    browser.conversationId = conversationId;
   }
-  if ((overrideExisting || browser.conversationName === undefined) && resolution.serviceBinding.conversationName) {
-    browser.conversationName = resolution.serviceBinding.conversationName;
+  if ((overrideExisting || browser.conversationName === undefined) && conversationName) {
+    browser.conversationName = conversationName;
   }
-  if ((overrideExisting || !merged.model) && resolution.serviceBinding.model && merged.engine === 'browser') {
-    merged.model = resolution.serviceBinding.model;
+  if ((overrideExisting || !merged.model) && model && merged.engine === 'browser') {
+    merged.model = model;
   }
-  if ((overrideExisting || browser.modelStrategy === undefined) && resolution.serviceBinding.modelStrategy) {
-    browser.modelStrategy = resolution.serviceBinding.modelStrategy;
+  if ((overrideExisting || browser.modelStrategy === undefined) && modelStrategy) {
+    browser.modelStrategy = modelStrategy;
   }
-  if ((overrideExisting || browser.thinkingTime === undefined) && resolution.serviceBinding.thinkingTime) {
-    browser.thinkingTime = resolution.serviceBinding.thinkingTime;
+  if ((overrideExisting || browser.thinkingTime === undefined) && thinkingTime) {
+    browser.thinkingTime = thinkingTime;
   }
-  if ((overrideExisting || browser.composerTool === undefined) && resolution.serviceBinding.composerTool) {
-    browser.composerTool = resolution.serviceBinding.composerTool;
+  if ((overrideExisting || browser.composerTool === undefined) && composerTool) {
+    browser.composerTool = composerTool;
   }
-  if ((overrideExisting || browser.manualLogin === undefined) && resolution.serviceBinding.manualLogin !== undefined) {
-    browser.manualLogin = resolution.serviceBinding.manualLogin;
+  if ((overrideExisting || browser.manualLogin === undefined) && manualLogin !== undefined) {
+    browser.manualLogin = manualLogin;
   }
-  if ((overrideExisting || browser.manualLoginProfileDir === undefined) && resolution.serviceBinding.manualLoginProfileDir) {
-    browser.manualLoginProfileDir = resolution.serviceBinding.manualLoginProfileDir;
+  if ((overrideExisting || browser.manualLoginProfileDir === undefined) && manualLoginProfileDir) {
+    browser.manualLoginProfileDir = manualLoginProfileDir;
   }
 }
 
