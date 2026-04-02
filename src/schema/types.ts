@@ -246,9 +246,13 @@ export const OracleProfileCacheSchema = z.object({
 export const OracleProfileLlmSchema = LlmDefaultsSchema;
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
-export const OracleProfileSchema = z.object({
-  engine: z.enum(['api', 'browser']).optional(),
+export const RuntimeProfileBrowserReferenceSchema = z.object({
   browserFamily: z.string().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const OracleProfileSchema = RuntimeProfileBrowserReferenceSchema.extend({
+  engine: z.enum(['api', 'browser']).optional(),
   search: z.union([z.enum(['on', 'off']), z.boolean()])
     .transform((val) => {
       if (typeof val === 'boolean') return val ? 'on' : 'off';
@@ -275,6 +279,12 @@ export const OracleServicesSchema = z.object({
   gemini: GeminiServiceConfigSchema.optional(),
   grok: GrokServiceConfigSchema.optional(),
 });
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const BrowserProfilesConfigSchema = z.record(z.string(), OracleProfileBrowserSchema);
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const RuntimeProfilesConfigSchema = z.record(z.string(), OracleProfileSchema);
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const AgentConfigSchema = z.object({
@@ -307,9 +317,9 @@ export const ConfigSchema = z.object({
     })
     .optional(),
   browserDefaults: OracleProfileBrowserSchema.optional(),
-  browserFamilies: z.record(z.string(), OracleProfileBrowserSchema).optional(),
+  browserFamilies: BrowserProfilesConfigSchema.optional(),
   llmDefaults: LlmDefaultsSchema.optional(),
-  profiles: z.record(z.string(), OracleProfileSchema).optional(),
+  profiles: RuntimeProfilesConfigSchema.optional(),
   // Core
   engine: z.enum(['api', 'browser']).optional(),
   model: z.string().default('gpt-5.2-pro'),
@@ -356,7 +366,7 @@ export const ConfigSchema = z.object({
   
   // Profiles + services
   auracallProfile: z.string().optional(),
-  auracallProfiles: z.record(z.string(), OracleProfileSchema).optional(),
+  auracallProfiles: RuntimeProfilesConfigSchema.optional(),
   services: OracleServicesSchema.optional(),
   agents: z.record(z.string(), AgentConfigSchema).optional(),
   teams: z.record(z.string(), TeamConfigSchema).optional(),

@@ -4095,7 +4095,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       on `38155`
     - `browserToolsError` is now `null`
 
-## 2026-04-02 13:46 CDT
+## 2026-04-02 13:58 CDT
 
 - Focus:
   - pivot the active execution track from browser reliability back to the
@@ -4152,3 +4152,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this slice is intentionally internal-only naming cleanup
   - no public config behavior changed
+
+## 2026-04-02 13:46 CDT
+
+- Focus:
+  - push the same ownership seam outward into schema/types without changing
+    the current public bridge keys
+- What changed:
+  - added schema-level bridge/ownership names in
+    [types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts):
+    - `RuntimeProfileBrowserReferenceSchema`
+    - `BrowserProfilesConfigSchema`
+    - `RuntimeProfilesConfigSchema`
+  - rewired
+    [config/schema.ts](/home/ecochran76/workspace.local/oracle/src/config/schema.ts)
+    to compose through those names instead of repeating the raw record shapes
+  - added a direct schema-level regression in
+    [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    proving the current bridge still parses:
+    - `browserFamilies.<name>`
+    - `profiles.<name>.browserFamily`
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still no public config behavior change
+  - this gives the schema layer the same “runtime profile references browser
+    profile” framing that the typed resolution layer now has

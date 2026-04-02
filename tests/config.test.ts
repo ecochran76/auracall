@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { loadUserConfig } from '../src/config.js';
+import { ComposedConfigSchema } from '../src/config/schema.js';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 
 describe('loadUserConfig', () => {
@@ -109,6 +110,25 @@ describe('loadUserConfig', () => {
     expect(result.config.version).toBe(2);
     expect(result.config.browserFamilies?.default).toBeDefined();
     expect(result.config.profiles?.default?.browserFamily).toBe('default');
+  });
+
+  it('accepts the runtime-profile browserFamily bridge through the composed schema', () => {
+    const parsed = ComposedConfigSchema.parse({
+      browserFamilies: {
+        consulting: {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+      profiles: {
+        consulting: {
+          browserFamily: 'consulting',
+          defaultService: 'chatgpt',
+        },
+      },
+    });
+
+    expect(parsed.browserFamilies?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
+    expect(parsed.profiles?.consulting?.browserFamily).toBe('consulting');
   });
 
   afterAll(() => {
