@@ -5022,3 +5022,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - updated the TUI source-profile prompt and cookie-plan dry-run wording
 - Verification:
   - focused browser/CLI tests updated and reviewed locally
+
+
+## 2026-04-01 — Reserved config landing zone added for future agents and teams
+
+- Area: Config-model refactor preparation
+- Symptom:
+  - the roadmap and design docs said agents/teams must come after the config-model
+    refactor, but the schema had no explicit landing zone for those future layers
+- Root cause:
+  - the config model had planning language but no reserved shape for future
+    higher-level objects
+- Fix:
+  - added inert top-level `agents` and `teams` schema blocks
+  - documented that they are placeholders only and do not drive runtime behavior
+  - updated configuration and planning docs to reference that reserved seam
+- Verification:
+  - config loading tests updated and reviewed locally

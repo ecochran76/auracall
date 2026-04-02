@@ -74,6 +74,7 @@ Acceptance
 - plan captured in `docs/dev/config-model-refactor-plan.md`
 - linked from `ROADMAP.md` and kept consistent with
   `docs/dev/browser-profile-family-refactor-plan.md`
+- reserved schema/docs landing zone exists for top-level `agents` and `teams`
 
 ### 3) Service-volatility workflow boundary (ChatGPT behavior slice)
 

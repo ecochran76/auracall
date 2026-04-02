@@ -1,4 +1,5 @@
 import {
+  AgentConfigSchema,
   BrowserConfigSchema,
   ChatgptServiceConfigSchema,
   OracleProfileBrowserSchema,
@@ -7,6 +8,7 @@ import {
   GrokServiceConfigSchema,
   LlmDefaultsSchema,
   OracleProfileSchema,
+  TeamConfigSchema,
   type OracleConfig,
 } from '../schema/types.js';
 import { z } from 'zod';
@@ -24,6 +26,8 @@ export const ComposedConfigSchema = ConfigSchema.extend({
       grok: GrokServiceConfigSchema.optional(),
     })
     .optional(),
+  agents: z.record(z.string(), AgentConfigSchema).optional(),
+  teams: z.record(z.string(), TeamConfigSchema).optional(),
 });
 
 export { ConfigSchema };

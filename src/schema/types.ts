@@ -277,6 +277,22 @@ export const OracleServicesSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const AgentConfigSchema = z.object({
+  runtimeProfile: z.string().optional(),
+  description: z.string().optional(),
+  instructions: z.string().optional(),
+  defaults: z.record(z.string(), z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const TeamConfigSchema = z.object({
+  agents: z.array(z.string()).optional(),
+  description: z.string().optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleDevConfigSchema = z.object({
   browserPortRange: z.tuple([z.number(), z.number()]).optional(),
 });
@@ -342,6 +358,8 @@ export const ConfigSchema = z.object({
   auracallProfile: z.string().optional(),
   auracallProfiles: z.record(z.string(), OracleProfileSchema).optional(),
   services: OracleServicesSchema.optional(),
+  agents: z.record(z.string(), AgentConfigSchema).optional(),
+  teams: z.record(z.string(), TeamConfigSchema).optional(),
   dev: OracleDevConfigSchema.optional(),
 
   // Nested

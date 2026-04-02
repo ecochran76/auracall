@@ -72,6 +72,8 @@ What is already true:
 - docs now define the correct semantic split
 - `browserFamilies` and `profiles.<name>.browserFamily` exist as a useful
   bridge toward browser-profile-first config
+- reserved top-level `agents` and `teams` blocks now exist in the schema as
+  inert placeholders for the future refactor
 - live WSL smokes are green for `default` and `wsl-chrome-2`
 
 What is still transitional:
@@ -109,7 +111,7 @@ That means:
 - broad code symbol renames to match the new semantics
 - final public naming decision on whether `browserFamilies` remains the
   external config key or becomes `browserProfiles`
-- agent/team implementation work
+- agent/team implementation work beyond today's reserved config placeholders
 
 ## Acceptance bar for the future refactor
 
@@ -122,3 +124,13 @@ That means:
 - future agent/team config can reference runtime profiles cleanly without
   inheriting ambiguous browser semantics
 
+
+## Reserved schema seam (2026-04-01)
+
+A narrow preparatory step is now acceptable before the full refactor:
+- parse reserved top-level `agents` and `teams` blocks
+- document that they are placeholders only
+- keep them behaviorally inert
+
+That gives the future config model an explicit landing zone without pretending
+that agent/team execution exists yet.

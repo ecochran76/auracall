@@ -54,6 +54,38 @@ describe('loadUserConfig', () => {
     expect(result.config.remote?.token).toBe('abc');
   });
 
+  it('parses reserved agents and teams blocks without affecting current config loading', async () => {
+    const configPath = path.join(tempDir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      `{
+        auracallProfile: "default",
+        profiles: {
+          default: { engine: "browser", defaultService: "chatgpt" }
+        },
+        agents: {
+          researcher: {
+            runtimeProfile: "default",
+            description: "Reserved future agent config"
+          }
+        },
+        teams: {
+          ops: {
+            agents: ["researcher"],
+            description: "Reserved future team config"
+          }
+        }
+      }`,
+      'utf8',
+    );
+
+    const result = await loadUserConfig(tempDir);
+    expect(result.loaded).toBe(true);
+    expect(result.config.agents?.researcher?.runtimeProfile).toBe('default');
+    expect(result.config.teams?.ops?.agents).toEqual(['researcher']);
+    expect(result.config.profiles?.default?.defaultService).toBe('chatgpt');
+  });
+
   it('supports top-level remoteHost/remoteToken aliases', async () => {
     const configPath = path.join(tempDir, 'config.json');
     await fs.writeFile(

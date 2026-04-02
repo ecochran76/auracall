@@ -41,6 +41,12 @@ In short:
 - browser profile = browser/account family
 - AuraCall runtime profile = workflow defaults layered on top of a browser profile
 
+Reserved future layers:
+- `agents`
+  - will reference AuraCall runtime profiles and add instructions/persona/task defaults
+- `teams`
+  - will group agents without redefining browser or runtime-profile state
+
 ## Example (`~/.auracall/config.json`)
 
 ```json5
@@ -168,6 +174,21 @@ In short:
     },
   },
 
+  // Reserved future layers. Parsed today, not executed yet.
+  agents: {
+    researcher: {
+      runtimeProfile: "default",
+      description: "Reserved future agent config",
+      instructions: "Not yet executed by Aura-Call"
+    }
+  },
+  teams: {
+    ops: {
+      agents: ["researcher"],
+      description: "Reserved future team config"
+    }
+  },
+
   // Default target for `auracall serve` remote browser runs
   remote: {
     host: "192.168.64.2:9473",
@@ -243,6 +264,7 @@ Within each file, later CLI flags still override config, and environment variabl
 - `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
 - `profiles.<name>.browser.profilePath` + `profileName` define the source browser profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk Chromium directory (for example `Profile 1`) or the friendly UI label.
 - `profiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
+- `agents` and `teams` are reserved top-level config blocks for the future config-model refactor. Aura-Call parses them today so the shape can be documented and tested, but they do not drive runtime behavior yet.
 - `profiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
 - `profiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.
 - `profiles.<name>.cache.cleanupDays` sets the default retention window for `auracall cache cleanup --days`.

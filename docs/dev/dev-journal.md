@@ -3470,3 +3470,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - verify the focused CLI/browser tests still pass
   - then decide whether any machine-readable report aliases are worth adding in
     a later compatibility-neutral cleanup
+
+## 2026-04-01 — Added reserved schema landing zone for agents and teams
+
+- Focus: create an explicit non-executable seam for the next config-model layer
+- Implemented:
+  - added reserved top-level `agents` and `teams` config schema blocks
+  - documented that they are parsed today but inert at runtime
+  - updated config-model planning docs and config examples accordingly
+- Next:
+  - keep agent/team behavior out of scope until the broader config-model refactor
+    actually starts
