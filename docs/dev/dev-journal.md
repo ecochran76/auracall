@@ -3995,3 +3995,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     reattach path:
     - a `default/chatgpt` session no longer drifts onto either
       `default/grok` or `wsl-chrome-2/chatgpt`
+
+## 2026-04-02 13:18 CDT
+
+- Focus:
+  - fix the remaining `wsl-chrome-2` fresh-launch reattach gap
+- Root cause:
+  - fresh reattach launch resolved the session config correctly:
+    - `chromeProfile = "Profile 1"`
+    - `manualLoginProfileDir = ~/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+  - but `resumeBrowserSessionViaNewChrome(...)` then rebuilt the managed
+    browser profile path with `resolveManagedProfileDir(...)` without passing
+    the AuraCall runtime profile name
+  - that silently fell back to:
+    - `~/.auracall/browser-profiles/default/chatgpt`
+  - so `wsl-chrome-2` recovery could reopen the wrong managed browser profile
+    and show a ChatGPT login CTA even though the real `wsl-chrome-2` managed
+    browser profile was signed in
+- Fix:
+  - `src/browser/reattachCore.ts`
+    - pass `config.auracallProfileName` into `resolveManagedProfileDir(...)`
+      during fresh reattach launch
+  - `tests/browser/reattach.test.ts`
+    - added a regression proving fresh reattach launch keeps the selected
+      AuraCall runtime profile's managed browser directory
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - killed the live `wsl-chrome-2/chatgpt` browser
+    - replayed `reattach-smoke-wsl`
+    - observed:
+      - `Using Chrome profile directory "Profile 1" in /home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt.`
+      - `Login check passed (status=200, domLoginCta=false)`
+      - recovered `WSL REATTACH OK 20260402`

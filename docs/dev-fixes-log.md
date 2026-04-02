@@ -5571,3 +5571,32 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - DevTools tab inventory stays isolated:
       - `45011` => Grok
       - `45065` => ChatGPT
+
+## 2026-04-02 - wsl-chrome-2 fresh reattach launch now keeps the selected AuraCall runtime profile
+
+- Symptom:
+  - `wsl-chrome-2` fresh-launch reattach could reopen a ChatGPT login surface
+    even though the real `wsl-chrome-2` managed browser profile was already
+    signed in
+- Root cause:
+  - `resumeBrowserSessionViaNewChrome(...)` rebuilt the managed browser profile
+    path with `resolveManagedProfileDir(...)` but did not pass the AuraCall
+    runtime profile name
+  - that allowed the fallback managed browser profile path to collapse to
+    `~/.auracall/browser-profiles/default/chatgpt`
+    even when the stored session belonged to `wsl-chrome-2`
+- Fix:
+  - pass `config.auracallProfileName` into `resolveManagedProfileDir(...)`
+    during fresh reattach launch
+  - added a regression test proving fresh reattach launch preserves the
+    selected AuraCall runtime profile's managed browser directory
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - killed the live `wsl-chrome-2/chatgpt` browser
+    - replayed the stored `reattach-smoke-wsl` session
+    - fresh reattach launch reopened:
+      - `~/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+      - `Profile 1`
+    - ChatGPT login check passed and the stored response was recovered

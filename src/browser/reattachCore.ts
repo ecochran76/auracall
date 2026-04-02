@@ -334,6 +334,7 @@ async function resumeBrowserSessionViaNewChrome(
   const userDataDir = resolveManagedProfileDir({
     configuredDir: resolved.manualLoginProfileDir ?? null,
     managedProfileRoot: resolved.managedProfileRoot ?? null,
+    auracallProfileName: config?.auracallProfileName ?? null,
     target: resolved.target ?? 'chatgpt',
   });
   await mkdir(userDataDir, { recursive: true });

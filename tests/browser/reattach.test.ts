@@ -328,6 +328,86 @@ describe('resumeBrowserSession', () => {
       ),
     );
   });
+
+  test('fresh reattach launch keeps the AuraCall runtime profile managed browser directory', async () => {
+    const runtime = {
+      chromePort: 45013,
+      chromeHost: '127.0.0.1',
+      tabUrl: 'https://chatgpt.com/c/demo',
+      conversationId: 'demo',
+    };
+    const logger = vi.fn() as BrowserLogger;
+    const launchChrome = vi.fn(async () => {
+      throw new Error('stop-after-launch');
+    });
+
+    await expect(
+      resumeBrowserSessionCore(
+        runtime,
+        {
+          auracallProfileName: 'wsl-chrome-2',
+          manualLogin: true,
+          manualLoginProfileDir: '/tmp/auracall/browser-profiles/wsl-chrome-2/chatgpt',
+          managedProfileRoot: '/tmp/auracall/browser-profiles',
+          target: 'chatgpt',
+          chromeProfile: 'Profile 1',
+        } as any,
+        logger,
+        {
+          listTargets: async () => [],
+          waitForAssistantResponse: async () => ({ text: 'unused', meta: {} }),
+          captureAssistantMarkdown: async () => 'unused',
+          helpers: {
+            pickTarget: (targets) => targets[0],
+            extractConversationIdFromUrl: () => 'demo',
+            buildConversationUrl: () => runtime.tabUrl,
+            withTimeout: async (promise) => promise,
+            openConversationFromSidebar: async () => true,
+            openConversationFromSidebarWithRetry: async () => true,
+            waitForLocationChange: async () => undefined,
+            readConversationTurnIndex: async () => null,
+            buildPromptEchoMatcher: () => null,
+            recoverPromptEcho: async (_Runtime, answer) => answer as any,
+            alignPromptEchoMarkdown: (text, markdown) => ({ answerText: text, answerMarkdown: markdown }),
+          },
+        },
+        {
+          resolveBrowserConfig: (config: any) => ({
+            ...config,
+            auracallProfileName: 'wsl-chrome-2',
+            chromeProfile: 'Profile 1',
+            manualLoginProfileDir: '/tmp/auracall/browser-profiles/wsl-chrome-2/chatgpt',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+            headless: false,
+            hideWindow: true,
+            keepBrowser: true,
+            inputTimeoutMs: 60000,
+            timeoutMs: 120000,
+            url: 'https://chatgpt.com/',
+            target: 'chatgpt',
+          }),
+          launchChrome: launchChrome as any,
+          connectToChrome: async () => {
+            throw new Error('unreachable');
+          },
+          hideChromeWindow: async () => undefined,
+          syncCookies: async () => 0,
+          cleanupStaleProfileState: async () => undefined,
+          navigateToChatGPT: async () => undefined,
+          ensureNotBlocked: async () => undefined,
+          ensureLoggedIn: async () => undefined,
+          ensurePromptReady: async () => undefined,
+          probeDevToolsResponsive: async () => true,
+        },
+      ),
+    ).rejects.toThrow('stop-after-launch');
+
+    expect(launchChrome).toHaveBeenCalledWith(
+      expect.anything(),
+      '/tmp/auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      logger,
+    );
+  });
 });
 
 describe('reattach helpers', () => {
