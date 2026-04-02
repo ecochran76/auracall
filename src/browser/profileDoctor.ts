@@ -6,6 +6,7 @@ import type { ResolvedUserConfig } from '../config.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { BrowserAutomationClient } from './client.js';
 import { resolveBrowserConfig } from './config.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
 import type { ProviderUserIdentity } from './providers/types.js';
 import {
   findBrowserCookieFile,
@@ -147,18 +148,30 @@ export async function inspectBrowserDoctorState(
     ...(userConfig.browser ?? {}),
     target,
   });
+  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+    auracallProfile: userConfig.auracallProfile ?? null,
+    browser: resolved,
+    target,
+  }).launchProfile;
   const registryPath = options.registryPath ?? path.join(getAuracallHomeDir(), 'browser-state.json');
 
-  const managedProfileRoot = resolveManagedProfileRoot(resolved.managedProfileRoot ?? null);
+  const managedProfileRoot = resolveManagedProfileRoot(
+    launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
+  );
   const managedProfileDir = resolveManagedProfileDir({
-    configuredDir: resolved.manualLoginProfileDir ?? null,
+    configuredDir: launchProfile.manualLoginProfileDir ?? resolved.manualLoginProfileDir ?? null,
     managedProfileRoot,
     auracallProfileName: userConfig.auracallProfile ?? 'default',
     target,
   });
-  const chromeProfile = resolved.chromeProfile ?? 'Default';
+  const chromeProfile = launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
   const sourceCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath: resolved.bootstrapCookiePath ?? resolved.chromeCookiePath ?? null,
+    configuredCookiePath:
+      launchProfile.bootstrapCookiePath ??
+      launchProfile.chromeCookiePath ??
+      resolved.bootstrapCookiePath ??
+      resolved.chromeCookiePath ??
+      null,
     managedProfileDir,
     managedProfileName: chromeProfile,
   });

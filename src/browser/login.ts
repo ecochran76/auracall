@@ -1,9 +1,16 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import type { ResolvedUserConfig } from '../config.js';
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from './constants.js';
 import { resolveBundledServiceCookieOrigins } from '../services/registry.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import { bootstrapManagedProfile, type ManagedProfileSeedPolicy } from './profileStore.js';
+import {
+  bootstrapManagedProfile,
+  resolveManagedProfileDir,
+  type ManagedProfileSeedPolicy,
+} from './profileStore.js';
+import { resolveBrowserConfig } from './config.js';
+import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
 import { registerInstance } from './service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, findWindowsChromePidUsingTasklist } from './processCheck.js';
 import { launchManualLoginSession } from './manualLogin.js';
@@ -32,6 +39,57 @@ export interface BrowserLoginOptions {
   serviceTabLimit?: number | null;
   blankTabLimit?: number | null;
   collapseDisposableWindows?: boolean;
+}
+
+export function resolveBrowserLoginOptionsFromUserConfig(
+  userConfig: Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'>,
+  options: {
+    target?: LoginTarget;
+    exportCookies?: boolean;
+    managedProfileSeedPolicy?: ManagedProfileSeedPolicy;
+  } = {},
+): BrowserLoginOptions {
+  const target = options.target ?? (userConfig.browser?.target as LoginTarget | undefined) ?? 'chatgpt';
+  const resolved = resolveBrowserConfig({
+    ...(userConfig.browser ?? {}),
+    target,
+  });
+  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+    auracallProfile: userConfig.auracallProfile ?? null,
+    browser: resolved,
+    target,
+  }).launchProfile;
+
+  if (!launchProfile.chromePath) {
+    throw new Error(`No browser chromePath resolved for ${target} login.`);
+  }
+  if (!launchProfile.chromeProfile) {
+    throw new Error(`No browser chromeProfile resolved for ${target} login.`);
+  }
+  const manualLoginProfileDir = resolveManagedProfileDir({
+    configuredDir: launchProfile.manualLoginProfileDir ?? resolved.manualLoginProfileDir ?? null,
+    managedProfileRoot: launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
+    auracallProfileName: userConfig.auracallProfile ?? 'default',
+    target,
+  });
+
+  return {
+    target,
+    chromePath: launchProfile.chromePath,
+    chromeProfile: launchProfile.chromeProfile,
+    manualLoginProfileDir,
+    cookiePath: launchProfile.chromeCookiePath,
+    bootstrapCookiePath: launchProfile.bootstrapCookiePath,
+    chatgptUrl: resolved.chatgptUrl,
+    geminiUrl: resolved.geminiUrl,
+    grokUrl: resolved.grokUrl,
+    exportCookies: options.exportCookies,
+    managedProfileSeedPolicy: options.managedProfileSeedPolicy,
+    debugPortStrategy: launchProfile.debugPortStrategy ?? null,
+    serviceTabLimit: launchProfile.serviceTabLimit ?? null,
+    blankTabLimit: launchProfile.blankTabLimit ?? null,
+    collapseDisposableWindows: launchProfile.collapseDisposableWindows,
+  };
 }
 
 export async function runBrowserLogin(options: BrowserLoginOptions): Promise<void> {

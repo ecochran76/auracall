@@ -4848,3 +4848,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-01 — Browser doctor and login prep now share the launch-profile seam
+
+- Area: Browser/profile-family refactor bootstrap slice
+- Symptom:
+  - browser doctor and login prep were still reconstructing managed profile
+    path, profile name, and source-cookie/bootstrap preference locally even
+    after runtime config and browser-service attach paths had moved onto the
+    typed launch profile
+- Fix:
+  - rewired `src/browser/profileDoctor.ts` to derive bootstrap/profile-report
+    state from the resolved launch profile
+  - added `resolveBrowserLoginOptionsFromUserConfig(...)` in
+    `src/browser/login.ts` so setup/login callers can use the same seam for
+    login prep instead of rebuilding launch inputs ad hoc
+  - kept a final `resolveManagedProfileDir(...)` guard in both paths so stale
+    inherited managed profile dirs from another Aura-Call profile are still
+    corrected to the currently selected profile
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`

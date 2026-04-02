@@ -3307,3 +3307,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - either move browser doctor/login bootstrap to the same resolved launch
       profile
     - or cut a checkpoint and reassess the next roadmap slice
+
+## 2026-04-01 — Profile-family bootstrap seam now covers doctor and login prep
+
+- Focus: move the remaining browser-profile bootstrap/readiness prep off local
+  ad hoc reconstruction and onto the same resolved launch/profile boundary
+- Implemented:
+  - rewired `src/browser/profileDoctor.ts` so doctor state now derives:
+    - managed profile root
+    - managed profile dir
+    - chrome profile
+    - preferred bootstrap/source cookie path
+    from the resolved launch profile, while still running the final
+    `resolveManagedProfileDir(...)` guard to ignore stale inherited managed
+    profile dirs from another Aura-Call profile
+  - added `resolveBrowserLoginOptionsFromUserConfig(...)` in
+    `src/browser/login.ts`
+  - the new login-prep helper now derives launch/login inputs from the same
+    resolved launch profile and also applies the same stale-inherited-profile
+    guard before handing back `manualLoginProfileDir`
+  - added focused coverage in `tests/browser/login.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/config.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Next:
+  - the largest remaining local ownership is now the deeper runtime/browser
+    execution path in `src/browser/index.ts` and related setup flows
+  - before pushing further, it may be worth cutting another checkpoint because
+    the main profile-family boundary is now materially cleaner end to end
