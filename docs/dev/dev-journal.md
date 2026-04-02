@@ -4125,3 +4125,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - no runtime behavior changed in this slice
   - the immediate next implementation work should be one small non-breaking
     seam that makes runtime-profile-to-browser-profile ownership more explicit
+
+## 2026-04-02 13:52 CDT
+
+- Focus:
+  - land the first non-breaking config/runtime seam after activating the
+    config-model track
+- What changed:
+  - updated
+    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    so the typed resolved seam now speaks in browser-profile terms internally:
+    - `profileFamily.browserProfileId`
+    - `browserProfile`
+  - kept the current public bridge key unchanged:
+    - `profiles.<name>.browserFamily`
+  - updated
+    [profileConfig.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileConfig.ts)
+    to consume the renamed internal seam
+  - expanded
+    [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    with a regression that proves the public `browserFamily` config key still
+    bridges into the new internal `browserProfileId`
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts tests/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this slice is intentionally internal-only naming cleanup
+  - no public config behavior changed

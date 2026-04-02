@@ -80,7 +80,7 @@ describe('resolveBrowserProfileResolution', () => {
 
     expect(result.profileFamily).toEqual({
       profileName: 'windows-chrome-test',
-      browserFamilyId: null,
+      browserProfileId: null,
       defaultService: 'grok',
       keepBrowser: true,
       cacheDefaults: {
@@ -95,7 +95,7 @@ describe('resolveBrowserProfileResolution', () => {
       },
     });
 
-    expect(result.browserFamily).toMatchObject({
+    expect(result.browserProfile).toMatchObject({
       chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
       managedProfileRoot: '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles',
       sourceProfilePath: '/mnt/c/Users/ecoch/AppData/Local/Google/Chrome/User Data',
@@ -252,8 +252,8 @@ describe('resolveBrowserProfileResolution', () => {
       },
     });
 
-    expect(result.profileFamily.browserFamilyId).toBe('wsl-chrome-2');
-    expect(result.browserFamily).toMatchObject({
+    expect(result.profileFamily.browserProfileId).toBe('wsl-chrome-2');
+    expect(result.browserProfile).toMatchObject({
       chromePath: '/usr/bin/google-chrome',
       display: ':0.0',
       managedProfileRoot: '/home/test/.auracall/browser-profiles',
@@ -293,5 +293,25 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.profileFamily.defaultService).toBeNull();
     expect(result.serviceBinding.serviceUrl).toBeNull();
     expect(result.launchProfile.targetUrl).toBeNull();
+  });
+
+  test('keeps the public browserFamily config key as the bridge into browserProfileId', () => {
+    const result = resolveBrowserProfileResolution({
+      merged: {
+        browserFamilies: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+      },
+      profileName: 'consulting',
+      profile: {
+        browserFamily: 'consulting',
+      },
+      browser: {},
+    });
+
+    expect(result.profileFamily.browserProfileId).toBe('consulting');
+    expect(result.browserProfile.chromePath).toBe('/usr/bin/google-chrome');
   });
 });

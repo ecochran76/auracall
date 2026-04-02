@@ -19,13 +19,13 @@ export interface ResolvedProfileCacheDefaults {
 
 export interface ResolvedProfileFamily {
   profileName: string | null;
-  browserFamilyId: string | null;
+  browserProfileId: string | null;
   defaultService: ServiceId | null;
   keepBrowser?: boolean;
   cacheDefaults: ResolvedProfileCacheDefaults;
 }
 
-export interface ResolvedBrowserFamily {
+export interface ResolvedBrowserProfile {
   chromePath?: string;
   display?: string;
   managedProfileRoot?: string;
@@ -85,7 +85,7 @@ export interface ResolvedBrowserLaunchProfile {
 
 export interface ResolvedBrowserProfileResolution {
   profileFamily: ResolvedProfileFamily;
-  browserFamily: ResolvedBrowserFamily;
+  browserProfile: ResolvedBrowserProfile;
   serviceBinding: ResolvedServiceBinding;
   launchProfile: ResolvedBrowserLaunchProfile;
 }
@@ -175,14 +175,14 @@ export function resolveBrowserProfileResolution(input: {
   const { merged, profileName, profile, browser } = input;
   const profileBrowser = isRecord(profile.browser) ? profile.browser : {};
   const mergedBrowser = isRecord(merged.browser) ? merged.browser : {};
-  const browserFamilies = isRecord(merged.browserFamilies) ? merged.browserFamilies : {};
-  const browserFamilyId = asNonEmptyString(profile.browserFamily) ?? null;
-  const selectedBrowserFamily =
-    browserFamilyId && isRecord(browserFamilies[browserFamilyId])
-      ? (browserFamilies[browserFamilyId] as Record<string, unknown>)
+  const browserProfiles = isRecord(merged.browserFamilies) ? merged.browserFamilies : {};
+  const browserProfileId = asNonEmptyString(profile.browserFamily) ?? null;
+  const selectedBrowserProfile =
+    browserProfileId && isRecord(browserProfiles[browserProfileId])
+      ? (browserProfiles[browserProfileId] as Record<string, unknown>)
       : {};
   const effectiveProfileBrowser = {
-    ...selectedBrowserFamily,
+    ...selectedBrowserProfile,
     ...profileBrowser,
   };
   const services = isRecord(merged.services) ? merged.services : {};
@@ -242,13 +242,13 @@ export function resolveBrowserProfileResolution(input: {
 
   const profileFamily: ResolvedProfileFamily = {
     profileName,
-    browserFamilyId,
+    browserProfileId,
     defaultService,
     keepBrowser: asBoolean(profile.keepBrowser),
     cacheDefaults,
   };
 
-  const browserFamily: ResolvedBrowserFamily = {
+  const browserProfile: ResolvedBrowserProfile = {
     chromePath: asNonEmptyString(effectiveProfileBrowser.chromePath),
     display: asNonEmptyString(effectiveProfileBrowser.display),
     managedProfileRoot: asNonEmptyString(effectiveProfileBrowser.managedProfileRoot),
@@ -287,7 +287,7 @@ export function resolveBrowserProfileResolution(input: {
       asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir),
   };
 
-  const configuredLaunchProfileName = asNonEmptyString(browser.chromeProfile) ?? browserFamily.sourceProfileName;
+  const configuredLaunchProfileName = asNonEmptyString(browser.chromeProfile) ?? browserProfile.sourceProfileName;
   const effectiveLaunchProfileName =
     serviceBinding.manualLoginProfileDir && configuredLaunchProfileName
       ? resolveManagedProfileName(serviceBinding.manualLoginProfileDir, configuredLaunchProfileName)
@@ -296,32 +296,32 @@ export function resolveBrowserProfileResolution(input: {
   const launchProfile: ResolvedBrowserLaunchProfile = {
     target: defaultService,
     targetUrl: serviceUrl,
-    chromePath: asNonEmptyString(browser.chromePath) ?? browserFamily.chromePath,
-    display: asNonEmptyString(browser.display) ?? browserFamily.display,
+    chromePath: asNonEmptyString(browser.chromePath) ?? browserProfile.chromePath,
+    display: asNonEmptyString(browser.display) ?? browserProfile.display,
     chromeProfile: effectiveLaunchProfileName,
-    chromeCookiePath: asNonEmptyString(browser.chromeCookiePath) ?? browserFamily.sourceCookiePath,
-    bootstrapCookiePath: asNonEmptyString(browser.bootstrapCookiePath) ?? browserFamily.bootstrapCookiePath,
+    chromeCookiePath: asNonEmptyString(browser.chromeCookiePath) ?? browserProfile.sourceCookiePath,
+    bootstrapCookiePath: asNonEmptyString(browser.bootstrapCookiePath) ?? browserProfile.bootstrapCookiePath,
     manualLoginProfileDir: serviceBinding.manualLoginProfileDir,
-    managedProfileRoot: asNonEmptyString(browser.managedProfileRoot) ?? browserFamily.managedProfileRoot,
-    debugPort: asFiniteNumber(browser.debugPort) ?? browserFamily.debugPort,
-    debugPortStrategy: asDebugPortStrategy(browser.debugPortStrategy) ?? browserFamily.debugPortStrategy,
+    managedProfileRoot: asNonEmptyString(browser.managedProfileRoot) ?? browserProfile.managedProfileRoot,
+    debugPort: asFiniteNumber(browser.debugPort) ?? browserProfile.debugPort,
+    debugPortStrategy: asDebugPortStrategy(browser.debugPortStrategy) ?? browserProfile.debugPortStrategy,
     blockingProfileAction:
-      asBlockingProfileAction(browser.blockingProfileAction) ?? browserFamily.blockingProfileAction,
+      asBlockingProfileAction(browser.blockingProfileAction) ?? browserProfile.blockingProfileAction,
     remoteChrome: asRemoteChrome(browser.remoteChrome),
     headless: asBoolean(browser.headless),
     hideWindow: asBoolean(browser.hideWindow),
     keepBrowser: asBoolean(browser.keepBrowser) ?? profileFamily.keepBrowser,
     manualLogin: asBoolean(browser.manualLogin) ?? serviceBinding.manualLogin,
-    wslChromePreference: asWslPreference(browser.wslChromePreference) ?? browserFamily.wslChromePreference,
-    serviceTabLimit: asFiniteNumber(browser.serviceTabLimit) ?? browserFamily.serviceTabLimit,
-    blankTabLimit: asFiniteNumber(browser.blankTabLimit) ?? browserFamily.blankTabLimit,
+    wslChromePreference: asWslPreference(browser.wslChromePreference) ?? browserProfile.wslChromePreference,
+    serviceTabLimit: asFiniteNumber(browser.serviceTabLimit) ?? browserProfile.serviceTabLimit,
+    blankTabLimit: asFiniteNumber(browser.blankTabLimit) ?? browserProfile.blankTabLimit,
     collapseDisposableWindows:
-      asBoolean(browser.collapseDisposableWindows) ?? browserFamily.collapseDisposableWindows,
+      asBoolean(browser.collapseDisposableWindows) ?? browserProfile.collapseDisposableWindows,
   };
 
   return {
     profileFamily,
-    browserFamily,
+    browserProfile,
     serviceBinding,
     launchProfile,
   };

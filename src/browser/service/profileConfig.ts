@@ -38,8 +38,8 @@ export function applyBrowserProfileOverrides(
     browser.keepBrowser = resolution.profileFamily.keepBrowser;
   }
   const devRange = isRecord(merged.dev) ? merged.dev.browserPortRange : undefined;
-  if ((overrideExisting || browser.debugPortRange === undefined) && resolution.browserFamily.debugPortRange !== undefined) {
-    browser.debugPortRange = resolution.browserFamily.debugPortRange;
+  if ((overrideExisting || browser.debugPortRange === undefined) && resolution.browserProfile.debugPortRange !== undefined) {
+    browser.debugPortRange = resolution.browserProfile.debugPortRange;
   } else if (browser.debugPortRange === undefined && devRange !== undefined) {
     browser.debugPortRange = devRange;
   }
@@ -62,37 +62,37 @@ function applyBrowserProfileDefaults(
     profile,
     browser,
   });
-  const browserFamily = resolution.browserFamily;
+  const browserProfile = resolution.browserProfile;
 
-  if ((overrideExisting || browser.chromePath === undefined) && browserFamily.chromePath) {
-    browser.chromePath = browserFamily.chromePath;
+  if ((overrideExisting || browser.chromePath === undefined) && browserProfile.chromePath) {
+    browser.chromePath = browserProfile.chromePath;
   }
-  if ((overrideExisting || browser.display === undefined) && browserFamily.display) {
-    browser.display = browserFamily.display;
+  if ((overrideExisting || browser.display === undefined) && browserProfile.display) {
+    browser.display = browserProfile.display;
   }
   if (
     (overrideExisting || browser.managedProfileRoot === undefined) &&
-    browserFamily.managedProfileRoot !== undefined
+    browserProfile.managedProfileRoot !== undefined
   ) {
-    browser.managedProfileRoot = browserFamily.managedProfileRoot;
+    browser.managedProfileRoot = browserProfile.managedProfileRoot;
   }
   if (
     (overrideExisting || browser.blockingProfileAction === undefined) &&
-    browserFamily.blockingProfileAction !== undefined
+    browserProfile.blockingProfileAction !== undefined
   ) {
-    browser.blockingProfileAction = browserFamily.blockingProfileAction;
+    browser.blockingProfileAction = browserProfile.blockingProfileAction;
   }
-  if ((overrideExisting || browser.chromeProfile === undefined) && browserFamily.sourceProfileName) {
-    browser.chromeProfile = browserFamily.sourceProfileName;
+  if ((overrideExisting || browser.chromeProfile === undefined) && browserProfile.sourceProfileName) {
+    browser.chromeProfile = browserProfile.sourceProfileName;
   }
-  if ((overrideExisting || browser.chromeCookiePath === undefined) && browserFamily.sourceCookiePath) {
-    browser.chromeCookiePath = browserFamily.sourceCookiePath;
+  if ((overrideExisting || browser.chromeCookiePath === undefined) && browserProfile.sourceCookiePath) {
+    browser.chromeCookiePath = browserProfile.sourceCookiePath;
   }
   if (
     (overrideExisting || browser.bootstrapCookiePath === undefined) &&
-    browserFamily.bootstrapCookiePath
+    browserProfile.bootstrapCookiePath
   ) {
-    browser.bootstrapCookiePath = browserFamily.bootstrapCookiePath;
+    browser.bootstrapCookiePath = browserProfile.bootstrapCookiePath;
   }
   if ((overrideExisting || browser.manualLogin === undefined) && profileBrowser.manualLogin !== undefined) {
     browser.manualLogin = profileBrowser.manualLogin;
@@ -112,26 +112,26 @@ function applyBrowserProfileDefaults(
   if ((overrideExisting || browser.keepBrowser === undefined) && profileBrowser.keepBrowser !== undefined) {
     browser.keepBrowser = profileBrowser.keepBrowser;
   }
-  if ((overrideExisting || browser.serviceTabLimit === undefined) && browserFamily.serviceTabLimit !== undefined) {
-    browser.serviceTabLimit = browserFamily.serviceTabLimit;
+  if ((overrideExisting || browser.serviceTabLimit === undefined) && browserProfile.serviceTabLimit !== undefined) {
+    browser.serviceTabLimit = browserProfile.serviceTabLimit;
   }
-  if ((overrideExisting || browser.blankTabLimit === undefined) && browserFamily.blankTabLimit !== undefined) {
-    browser.blankTabLimit = browserFamily.blankTabLimit;
+  if ((overrideExisting || browser.blankTabLimit === undefined) && browserProfile.blankTabLimit !== undefined) {
+    browser.blankTabLimit = browserProfile.blankTabLimit;
   }
   if (
     (overrideExisting || browser.collapseDisposableWindows === undefined) &&
-    browserFamily.collapseDisposableWindows !== undefined
+    browserProfile.collapseDisposableWindows !== undefined
   ) {
-    browser.collapseDisposableWindows = browserFamily.collapseDisposableWindows;
+    browser.collapseDisposableWindows = browserProfile.collapseDisposableWindows;
   }
-  if ((overrideExisting || browser.debugPort === undefined) && browserFamily.debugPort !== undefined) {
-    browser.debugPort = browserFamily.debugPort;
+  if ((overrideExisting || browser.debugPort === undefined) && browserProfile.debugPort !== undefined) {
+    browser.debugPort = browserProfile.debugPort;
   }
   if (
     (overrideExisting || browser.debugPortStrategy === undefined) &&
-    browserFamily.debugPortStrategy !== undefined
+    browserProfile.debugPortStrategy !== undefined
   ) {
-    browser.debugPortStrategy = browserFamily.debugPortStrategy;
+    browser.debugPortStrategy = browserProfile.debugPortStrategy;
   }
   if ((overrideExisting || browser.remoteChrome === undefined) && profileBrowser.remoteChrome !== undefined) {
     browser.remoteChrome = profileBrowser.remoteChrome;
@@ -174,9 +174,9 @@ function applyBrowserProfileDefaults(
   }
   if (
     (overrideExisting || browser.wslChromePreference === undefined) &&
-    browserFamily.wslChromePreference !== undefined
+    browserProfile.wslChromePreference !== undefined
   ) {
-    browser.wslChromePreference = browserFamily.wslChromePreference;
+    browser.wslChromePreference = browserProfile.wslChromePreference;
   }
 }
 
