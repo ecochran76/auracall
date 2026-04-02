@@ -4938,3 +4938,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - live/manual smoke default WSL and `wsl-chrome-2`
   - decide whether `auracall wizard` should emit named browser families by
     default in a later compatibility-conscious slice
+
+
+## 2026-04-01 — Browser/profile terminology is now explicit in docs and agent guidance
+
+- Area: Config semantics and documentation clarity
+- Symptom:
+  - the repo still used `profile` to mean several different things:
+    AuraCall config entry, browser/account family, native Chromium profile, and
+    managed automation profile
+  - `AGENTS.md` still carried stale guidance and terminology from an older
+    project shape
+- Fix:
+  - documented the canonical terms in `README.md`,
+    `docs/configuration.md`, `docs/wsl-chatgpt-runbook.md`, and
+    `docs/dev/browser-profile-family-refactor-plan.md`
+  - rewrote `AGENTS.md` as a focused Aura-Call guide with the new semantic
+    split and current browser-work rules
+- Verification:
+  - docs reviewed locally after rewrite
+- Follow-ups:
+  - keep the implementation terminology stable enough for now
+  - only do broad code symbol renames when there is a larger refactor reason

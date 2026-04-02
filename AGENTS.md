@@ -1,34 +1,100 @@
-# AGENTS.MD
+# AGENTS.md
 
-Aura-Call-specific notes:
-- Before digging into a task, review recent git commit logs and scan relevant dev docs (start with `README.md`, `docs/testing.md`, and the newest entries in `docs/dev-fixes-log.md`).
-- Skim `docs/dev/` (current phase plans, `docs/dev/browser-service-tools.md`, `docs/dev/browser-automation-playbook.md`, and `docs/dev/browser-service-upgrade-backlog.md`) before making behavioral changes.
-- Maintain the running journal in `docs/dev/dev-journal.md` with progress, current focus, and problems/solutions.
-- Keep `docs/dev-fixes-log.md` and related dev docs up to date as you fix issues or learn new failure modes.
-- ChatGPT project URLs: steipete@gmail.com -> https://chatgpt.com/g/g-p-691edc9fec088191b553a35093da1ea8-oracle/project; studpete@gmail.com -> https://chatgpt.com/g/g-p-69505ed97e3081918a275477a647a682/project. Prefer studpete URL if steipete project not found.
-- Pro browser runs: allow up to 10 minutes; never click "Answer now"; keep at least 1–2 Pro live tests (reattach must stay Pro); move other tests to faster models where safe.
-- Live smoke tests: OpenAI live tests are opt-in. Run `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts` with a real `OPENAI_API_KEY` when you need the background path; gpt-5-pro can take ~10 minutes.
-- Wait defaults: gpt-5-pro API runs detach by default; use `--wait` to stay attached. gpt-5.1 and browser runs block by default; every run prints `auracall session <id>` for reattach.
-- Session storage: Aura-Call stores session data under `~/.auracall`; delete it if you need a clean slate.
-- CLI output: the first line of any top-level CLI start banner should use the oracle emoji, e.g. `🧿 auracall (<version>) ...`; keep it only for the initial command headline. Exception: the TUI exit message also keeps the emoji.
-- Model access note (2025-11-23): gpt-5.1-pro and grok-4.1 are not yet available on Peter’s keys; live tests that require them will fail until access is granted.
-- Aura-Call CLI on Node 25: if `pnpm dlx auracall --help` fails with a missing `node_sqlite3.node`, rebuild sqlite3 in the pnpm dlx cache using system Python: `PYTHON=/usr/bin/python3 /Users/steipete/Projects/oracle/runner npx node-gyp rebuild` from the sqlite3 package dir printed in the error, then rerun the command.
-- Before a release, skim manual smokes in `docs/manual-tests.md` and rerun any that cover your change surface (especially browser/serve paths).
-- If browser smokes echo the prompt (Instant), rerun with `--browser-keep-browser --verbose` in tmux, then inspect DOM with `pnpm tsx scripts/browser-tools.ts eval ...` to confirm assistant turns exist; we fixed a case by refreshing assistant snapshots post-send.
-- Browser “Pro thinking” gate: never click/auto-click ChatGPT’s “Answer now” button. Treat it as a placeholder and wait 10m–1h for the real assistant response (auto-clicking skips long thinking and changes behavior).
-- Browser smokes should preserve Markdown (lists, fences); if output looks flattened or echoed, inspect the captured assistant turn via `browser-tools.ts eval` before shipping.
-- If a browser/provider repair smells like generic DOM drift, check `docs/dev/browser-service-upgrade-backlog.md` first and extract reusable navigation/row-action/diagnostic logic into browser-service instead of adding another provider-local workaround.
-- Current browser-service plan (2026-03-28): keep provider-local trigger scoring in adapters unless it repeats on another real surface/provider; make structured UI diagnostics wrappers the next package-owned extraction so fragile UI failures already include scoped evidence.
-- Working on Windows? Read and update `docs/windows-work.md` before you start.
-- Sparkle signing key lives at `/Users/steipete/Library/CloudStorage/Dropbox/Backup/Sparkle`; set `SPARKLE_PRIVATE_KEY_FILE` to that path when notarizing the notifier.
-- Browser cookie sync + Node 25: if browser runs fail with “Failed to load keytar… Cannot find module '../build/Release/keytar.node'” and no cookies are applied, rebuild keytar in the pnpm dlx cache: run `PYTHON=/usr/bin/python3 /Users/steipete/Projects/oracle/runner npx node-gyp rebuild` inside the keytar directory printed in the error, then rerun the auracall command.
-- npm publish OTP: prepare/tag/release first, then run `npm publish ...` and stop at `Enter OTP:`; ask user for the OTP and continue (ok to handle OTP in chat).
+## Repo focus
 
-Browser-mode debug notes (ChatGPT URL override)
-- When a ChatGPT folder/workspace URL is set, Cloudflare can block automation even after cookie sync. Use `--browser-keep-browser` to leave Chrome open, solve the interstitial manually, then rerun.
-- If a run stalls/looks finished but CLI didn’t stream output, check the latest session (`auracall status`) and open it (`auracall session <id> --render`) to confirm completion.
-- Active Chrome port/pid live in session metadata (`~/.auracall/sessions/<id>/meta.json`). Connect with `npx tsx scripts/browser-tools.ts eval --port <port> "({ href: window.location.href, ready: document.readyState })"` to inspect the page.
-- To debug with agent-tools, launch Chrome via an Aura-Call browser run (cookies copied) and keep it open (`--browser-keep-browser`). Then use `~/Projects/agent-scripts/bin/browser-tools ... --port <port>` with the port from `~/.auracall/sessions/<id>/meta.json`. Avoid starting a fresh browser-tools Chrome when you need the synced cookies.
-- Double-hop nav is implemented (root then target URL), but Cloudflare may still need manual clearance or inline cookies.
-- After finishing a feature, ask whether it matters to end users; if yes, update the changelog. Read the top ~100 lines first and group related edits into one entry instead of scattering multiple bullets.
-- Beta publishing: when asked to ship a beta to npm, bump the version with a beta suffix (e.g., `0.4.4-beta.1`) before publishing; npm will not let you overwrite an existing beta tag without a new version.
+Aura-Call is a browser/API orchestration CLI. Keep changes aligned with the
+current architecture and docs, and prefer tightening semantics over adding more
+aliases.
+
+## Before you start
+
+- Review recent commits: `git log --oneline -5`
+- Skim the current operational docs:
+  - `README.md`
+  - `docs/testing.md`
+  - newest entries in `docs/dev-fixes-log.md`
+- For browser/config work, also skim:
+  - `docs/dev/browser-profile-family-refactor-plan.md`
+  - `docs/dev/next-execution-plan.md`
+  - `docs/dev/browser-service-upgrade-backlog.md`
+  - `docs/dev/browser-service-tools.md`
+
+## Required doc hygiene
+
+- Keep `docs/dev/dev-journal.md` updated with current focus, progress, and
+  blockers.
+- Add durable fixes/lessons to `docs/dev-fixes-log.md`.
+- If semantics or operator behavior changes, update the user-facing docs in the
+  same slice.
+
+## Terminology
+
+Use these terms consistently:
+
+- `browser profile`
+  - browser-service level runtime/account family config
+  - examples: `default`, `wsl-chrome-2`
+- `source browser profile`
+  - native Chromium profile used for bootstrap/cookie sourcing
+  - examples: `Default`, `Profile 1`, `Profile 2`
+- `managed browser profile`
+  - Aura-Call-owned automation profile directory
+- `AuraCall runtime profile`
+  - top-level Aura-Call config entry selected by `auracallProfile` /
+    `--profile`
+
+Avoid using plain `profile` when the meaning is ambiguous.
+
+## Browser work rules
+
+- Prefer reusable browser-service fixes when a problem smells generic.
+- Keep provider-specific heuristics in adapters unless the same pattern is
+  clearly repeated elsewhere.
+- Never auto-click ChatGPT's `Answer now` button.
+- For browser smokes that look suspicious, rerun with
+  `--browser-keep-browser --verbose` and inspect the live DOM with
+  `pnpm tsx scripts/browser-tools.ts ...`.
+- Browser/account state lives under `~/.auracall`. Managed browser profiles
+  are under `~/.auracall/browser-profiles/<auracallProfile>/<service>`.
+
+## Live test rules
+
+- OpenAI live tests are opt-in:
+  - `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/openai-live.test.ts`
+- Browser runs can take minutes. Keep the scope narrow and validate one surface
+  at a time.
+- On WSL, prefer WSL Chrome first. Treat Windows Chrome from WSL as a separate
+  browser profile, not a default assumption.
+
+## ChatGPT browser notes
+
+- Root and project CRUD are green on the managed WSL Chrome path.
+- Project chat authority is the project `Chats` panel, not the abbreviated
+  sidebar subset.
+- Root rename/delete should use the sidebar row action surface, not header
+  menus.
+- Artifact/context extraction is implemented; keep hostile-state hardening and
+  diagnostics intact when touching read paths.
+
+## Release / ops notes
+
+- Before a release, skim `docs/manual-tests.md` and rerun the relevant manual
+  smokes for the touched surface.
+- npm publish with OTP:
+  - prepare/tag/release first
+  - run `npm publish ...`
+  - stop at `Enter OTP:`
+  - ask the user for the OTP and continue
+- Beta publishes require a fresh beta version suffix.
+
+## Environment notes
+
+- Session data lives under `~/.auracall`.
+- If browser cookie sync fails because `keytar` or `sqlite3` native modules
+  are missing in a pnpm dlx cache, rebuild the module in the printed package
+  directory with system Python and rerun.
+- WSL ChatGPT runbook:
+  - `docs/wsl-chatgpt-runbook.md`
+- Windows-specific work:
+  - `docs/windows-work.md`
+

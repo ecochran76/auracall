@@ -17,26 +17,50 @@ When invoking via `tsx` in dev, prefer Node’s `--import` to avoid `pnpm` swall
 node --import tsx bin/auracall.ts config migrate --dry-run
 ```
 
+## Terminology
+
+Use these terms consistently:
+
+- `browser profile`
+  - a browser-service level runtime/account family config such as `default` or
+    `wsl-chrome-2`
+  - this owns browser execution concerns like executable path, source cookie
+    path, managed profile root, WSL-vs-Windows behavior, and debug-port policy
+- `source browser profile`
+  - the native Chromium profile used for bootstrap/cookie sourcing
+  - examples: `Default`, `Profile 1`, `Profile 2`
+- `managed browser profile`
+  - the Aura-Call-owned automation profile directory derived from the browser
+    profile plus service
+- `AuraCall runtime profile`
+  - the top-level Aura-Call config entry selected by `auracallProfile` /
+    `--profile`
+  - this chooses a browser profile and adds service/model/project/cache defaults
+
+In short:
+- browser profile = browser/account family
+- AuraCall runtime profile = workflow defaults layered on top of a browser profile
+
 ## Example (`~/.auracall/config.json`)
 
 ```json5
 {
   version: 2,
 
-  // Select which profile to use by default
+  // Select which AuraCall runtime profile to use by default
   auracallProfile: "default",
 
   globals: {},
 
-  // Browser defaults shared by profiles (override per profile)
+  // Browser defaults shared by browser profiles (override per runtime profile)
   browserDefaults: {
     chromePath: "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
     chromeProfile: "Default",
     chromeCookiePath: "/Users/me/Library/Application Support/Google/Chrome/Default/Network/Cookies",
   },
 
-  // Optional named browser families. Profiles can point at one with
-  // profiles.<name>.browserFamily and still override fields locally.
+  // Optional named browser profiles. AuraCall runtime profiles can point at
+  // one with profiles.<name>.browserFamily and still override fields locally.
   browserFamilies: {
     "wsl-chrome-2": {
       chromePath: "/usr/bin/google-chrome",
@@ -67,7 +91,7 @@ node --import tsx bin/auracall.ts config migrate --dry-run
 
   profiles: {
     default: {
-      // Profile-scoped defaults
+      // AuraCall runtime-profile defaults
       engine: "browser",     // or "api"
       search: "on",          // "on" | "off"
       defaultService: "chatgpt",
@@ -127,7 +151,7 @@ node --import tsx bin/auracall.ts config migrate --dry-run
         },
       },
     },
-    // Secondary browser family for another account, same WSL runtime
+    // Runtime profile that uses a secondary browser profile for another account
     "wsl-chrome-2": {
       engine: "browser",
       browserFamily: "wsl-chrome-2",
@@ -205,7 +229,7 @@ Within each file, later CLI flags still override config, and environment variabl
   - If you already use `projectId`/`projectName` in profile service blocks, you can keep that path and avoid URL pinning entirely.
   - URL pinning is most useful when you want a literal target route (for example, a specific non-project chat folder URL) instead of config-driven project resolution.
 - `services.<service>.interactiveLogin` can set a global login mode default; `profiles.<name>.services.<service>.interactiveLogin` overrides it per profile (legacy `manualLogin` still works).
-- `services.<service>.manualLoginProfileDir` (and its per-profile override) control the persistent profile dir used for interactive login.
+- `services.<service>.manualLoginProfileDir` (and its per-runtime-profile override) controls the persistent managed browser profile dir used for interactive login.
   - Treat this as an advanced override. The default path is derived from `browser.managedProfileRoot + auracallProfile + service`.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - `services.<service>.features` holds provider-specific feature flags. Typical keys:
@@ -216,7 +240,7 @@ Within each file, later CLI flags still override config, and environment variabl
 - `browser.hideWindow: true` is now the recommended default for headful browser automation. Aura-Call launches Chrome with `--start-minimized`, suppresses `Page.bringToFront()` on reuse paths, and only auto-hides windows it just launched itself. On WSL/X11, treat this as a no-focus-steal guarantee first and a literal minimized-state guarantee second, because Chrome's DevTools window-bounds API can still report `windowState: normal` while `_NET_ACTIVE_WINDOW` stays unchanged.
 - `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `profiles.<name>.browser.thinkingTime` when set).
 - `profiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `profiles.<name>.cache.useDetectedIdentity` is set.
-- `profiles.<name>.browser.profilePath` + `profileName` define the cookie source profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk directory (e.g. `Profile 1`) or the friendly UI name (e.g. `Aura-Call 2`).
+- `profiles.<name>.browser.profilePath` + `profileName` define the source browser profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk Chromium directory (for example `Profile 1`) or the friendly UI label.
 - `profiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
 - `profiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
 - `profiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.

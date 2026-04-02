@@ -2,6 +2,12 @@
 
 Goal: Run ChatGPT browser automation from WSL using a Linux Chrome install, avoiding Windows/WSL interop issues.
 
+Terminology for this runbook:
+- browser profile: a browser/account family such as `default` or `wsl-chrome-2`
+- source browser profile: the native Chromium profile used for bootstrap/cookie sourcing, usually `Default`
+- managed browser profile: Aura-Call's persistent automation profile under `~/.auracall/browser-profiles/<auracallProfile>/<service>`
+- AuraCall runtime profile: the top-level `profiles.<name>` entry selected by `--profile`
+
 ## Key behavior
 - WSL Chrome is the most reliable path; Windows Chrome/Brave from WSL often fails due to DevTools binding and profile locks.
 - Oracle defaults to the Windows host IP for DevTools on WSL; override to localhost for WSL Chrome with `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1`.
@@ -32,7 +38,7 @@ sudo apt-get install -y google-chrome-stable
     managedProfileRoot: "/home/you/.auracall/browser-profiles"
   },
 
-  // Optional named secondary WSL browser family
+  // Optional named secondary WSL browser profile
   browserFamilies: {
     "wsl-chrome-2": {
       chromePath: "/usr/bin/google-chrome",
@@ -54,7 +60,7 @@ AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1 \
 oracle --profile default --target chatgpt login --browser-keep-browser
 ```
 
-4) Optional: configure a second WSL browser family for another account (for example, Pro testing):
+4) Optional: configure a second WSL browser profile for another account (for example, Pro testing):
 
 ```json5
 {
@@ -92,7 +98,7 @@ oracle --profile default --target chatgpt login --browser-keep-browser
 }
 ```
 
-Aura-Call derives the managed profile directory automatically as
+Aura-Call derives the managed browser profile directory automatically as
 `~/.auracall/browser-profiles/<auracallProfile>/<service>` unless you set
 `manualLoginProfileDir` explicitly.
 

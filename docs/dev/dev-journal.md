@@ -3402,3 +3402,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     once convenient
   - decide whether wizard/scaffold output should emit named browser families in
     a follow-up slice or remain compatibility-first for now
+
+## 2026-04-01 — Locked terminology for browser profiles vs runtime profiles
+
+- Focus: stop overloading the word `profile` and align repo docs with the new
+  layering model
+- Implemented:
+  - updated `README.md`, `docs/configuration.md`,
+    `docs/wsl-chatgpt-runbook.md`, and
+    `docs/dev/browser-profile-family-refactor-plan.md` to define and use:
+    - browser profile
+    - source browser profile
+    - managed browser profile
+    - AuraCall runtime profile
+  - rewrote `AGENTS.md` to match current Aura-Call architecture and removed
+    stale inherited guidance from the ancestral project
+- Next:
+  - keep applying the same terminology in future config/schema work
+  - treat remaining code-level names like `browserFamily` as acceptable
+    transitional implementation detail until a larger rename is justified

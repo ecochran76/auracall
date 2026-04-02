@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Refactor Aura-Call's browser/profile configuration model so browser-family
+Refactor Aura-Call's browser/profile configuration model so browser-profile
 selection, service selection, and service-specific runtime overrides are
 resolved deterministically and independently.
 
@@ -16,7 +16,7 @@ The current model still blends multiple concepts into one mutable `browser`
 object:
 
 - Aura-Call runtime profile selection
-- browser-family selection
+- browser-profile selection
 - source browser profile selection
 - managed browser profile path derivation
 - service target selection
@@ -33,7 +33,7 @@ That blending creates recurring confusion and bugs:
 
 ### 1. One mutable `browser` object owns too many responsibilities
 
-`src/browser/service/profileConfig.ts` currently merges browser-family fields,
+`src/browser/service/profileConfig.ts` currently merges browser-profile fields,
 service target defaults, service URLs, per-service runtime options, and cache
 defaults into one mutable structure.
 
@@ -54,7 +54,7 @@ Today it is simultaneously used as:
 - an explicit user override
 - a derived managed profile path
 - a service-specific identity anchor
-- an implicit browser-family selector
+- an implicit browser-profile selector
 
 Those are different concerns and should not share one field in the normal
 configuration path.
@@ -99,7 +99,7 @@ This is the place where a WSL Linux-Chrome family should deterministically own
 
 ### Phase C: Resolve Service Binding
 
-This selects service-scoped defaults, independent of browser-family wiring:
+This selects service-scoped defaults, independent of browser-profile wiring:
 
 - service target (`chatgpt`, `grok`, `gemini`)
 - service URL / project pinning
@@ -126,16 +126,19 @@ The launcher should consume this plan, not derive new behavior opportunistically
 
 The refactor should standardize the following terms:
 
-- `Aura-Call profile`
-  - logical runtime profile selected by `auracallProfile` / `--profile`
-- `browser family`
-  - the browser runtime bundle used by that Aura-Call profile
+- `AuraCall runtime profile`
+  - the logical top-level Aura-Call config entry selected by
+    `auracallProfile` / `--profile`
+- `browser profile`
+  - the browser-service level runtime/account family config referenced by an
+    AuraCall runtime profile
 - `source browser profile`
-  - the Chromium profile used for bootstrap/cookie sourcing
+  - the native Chromium profile used for bootstrap/cookie sourcing
+  - examples: `Default`, `Profile 1`, `Profile 2`
 - `managed browser profile`
   - the Aura-Call-owned user-data dir used for automation
 - `service binding`
-  - service-specific target/model/project/options layered onto the browser family
+  - service-specific target/model/project/options layered onto the browser profile
 
 The implementation should stop using `profile` ambiguously across these levels.
 
@@ -203,11 +206,11 @@ Owns:
 
 ### Introduce / favor
 
-- a browser-family identifier or explicit browser-family block under each
-  Aura-Call profile
+- a browser-profile identifier or explicit browser-profile block under each
+  AuraCall runtime profile
 - derived managed profile dirs from:
   - managed root
-  - Aura-Call profile name
+  - AuraCall runtime profile name
   - service id
 
 ### Escape hatches
@@ -234,7 +237,7 @@ Exit criteria:
 
 ### Slice 2: Browser Family Resolver
 
-- extract browser-family resolution out of `applyBrowserProfileOverrides`
+- extract browser-profile resolution out of `applyBrowserProfileOverrides`
 - make executable, display, bootstrap source, and managed root deterministic
   before service logic runs
 
@@ -251,7 +254,7 @@ Exit criteria:
 
 Exit criteria:
 
-- service-specific defaults no longer overwrite browser-family fields
+- service-specific defaults no longer overwrite browser-profile fields
 
 ### Slice 4: Launch Plan Consumption
 
@@ -266,7 +269,7 @@ Exit criteria:
 ### Slice 5: Config Cleanup and Docs
 
 - introduce clearer config documentation around:
-  - Aura-Call profile
+  - AuraCall runtime profile
   - browser family
   - source profile
   - managed profile
@@ -308,7 +311,7 @@ This refactor is done when:
 - typed resolved objects exist between config parsing and runtime launch
 - `manualLoginProfileDir` is derived by default instead of being the main config
   primitive
-- WSL Linux Chrome launches are determined by resolved browser-family config,
+- WSL Linux Chrome launches are determined by resolved browser-profile config,
   not ambient shell state
 - docs explain the profile model without relying on raw path examples as the
   main teaching path
@@ -316,7 +319,7 @@ This refactor is done when:
 ## Recommended Implementation Order
 
 1. typed resolver scaffolding
-2. browser-family resolver extraction
+2. browser-profile resolver extraction
 3. service-binding resolver extraction
 4. launch-plan wiring
 5. config/docs cleanup
@@ -358,7 +361,7 @@ Recommended next move:
 - do not push deeper into `index.ts` lifecycle policy as part of this same
   slice family unless a concrete bug requires it
 - treat the next work here as Phase 2 cleanup:
-  - explicit first-class browser-family config for secondary WSL Chrome
+  - explicit first-class browser-profile config for secondary WSL Chrome
   - docs/schema clarity around profile family vs source profile vs managed
     profile
   - manual/live smoke for default WSL and `wsl-chrome-2`
