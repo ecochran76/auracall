@@ -218,6 +218,11 @@ const CHATGPT_PROJECT_SOURCE_ADD_BUTTON_LABELS = resolveBundledServiceUiLabelSet
   'project_source_add_buttons',
   ['add sources', 'add'],
 ).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
+const CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS = resolveBundledServiceUiLabelSet(
+  'chatgpt',
+  'project_settings_commit_buttons',
+  ['save', 'save changes', 'done', 'apply'],
+).map((label) => normalizeUiText(label).toLowerCase()).filter(Boolean);
 const CHATGPT_PROJECT_SOURCE_UPLOAD_MARKERS = resolveBundledServiceUiLabelSet(
   'chatgpt',
   'project_source_upload_markers',
@@ -1155,6 +1160,10 @@ export function findChatgptProjectByName<T extends { id: string; name: string; u
 
 export function resolveChatgptProjectMemoryLabel(mode: ProjectMemoryMode): string {
   return mode === 'project' ? CHATGPT_PROJECT_MEMORY_PROJECT_LABEL : CHATGPT_PROJECT_MEMORY_GLOBAL_LABEL;
+}
+
+export function resolveChatgptProjectSettingsCommitLabelsForTest(): string[] {
+  return [...CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS];
 }
 
 export function normalizeChatgptAuthSessionIdentity(
@@ -3950,9 +3959,10 @@ async function commitProjectSettingsDialog(client: ChromeClient, settingsRootSel
         if (!root) {
           return { committed: false, reason: 'dialog-missing' };
         }
+        const commitLabels = ${JSON.stringify(CHATGPT_PROJECT_SETTINGS_COMMIT_BUTTON_LABELS)};
         const commitButton = Array.from(root.querySelectorAll('button,[role="button"]')).find((node) => {
           const label = normalize(node.textContent || node.getAttribute('aria-label') || node.getAttribute('title') || '');
-          return label === 'save' || label === 'save changes' || label === 'done' || label === 'apply' || label.startsWith('save ');
+          return commitLabels.includes(label) || label.startsWith('save ');
         });
         if (commitButton instanceof HTMLElement) {
           if (!commitButton.hasAttribute('disabled') && commitButton.getAttribute('aria-disabled') !== 'true') {

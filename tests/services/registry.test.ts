@@ -263,6 +263,9 @@ describe('service registry manifest helpers', () => {
     expect(resolveBundledServiceUiLabelSet('chatgpt', 'delete_confirmation_buttons', [])).toEqual(
       expect.arrayContaining(['delete', 'cancel']),
     );
+    expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_settings_commit_buttons', [])).toEqual(
+      expect.arrayContaining(['save', 'save changes', 'done', 'apply']),
+    );
     expect(resolveBundledServiceUiLabelSet('chatgpt', 'project_source_upload_markers', [])).toEqual(
       expect.arrayContaining(['add sources', 'drag sources here']),
     );

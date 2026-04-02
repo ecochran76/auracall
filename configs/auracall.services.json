@@ -277,6 +277,12 @@
             "add sources",
             "add"
           ],
+          "project_settings_commit_buttons": [
+            "save",
+            "save changes",
+            "done",
+            "apply"
+          ],
           "project_source_upload_markers": [
             "add sources",
             "drag sources here"

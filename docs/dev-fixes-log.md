@@ -5060,3 +5060,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - linked that boundary from the roadmap and config-model planning docs
 - Verification:
   - planning docs reviewed locally after update
+
+
+## 2026-04-01 — ChatGPT project-settings commit button vocabulary is now manifest-owned
+
+- Area: ChatGPT service-volatility extraction
+- Symptom:
+  - the ChatGPT adapter still had one low-risk hard-coded button vocabulary in
+    the project-settings commit flow (`save`, `save changes`, `done`,
+    `apply`)
+- Root cause:
+  - that declarative UI label set had not yet been moved into the checked-in
+    service manifest even though nearby ChatGPT labels already were
+- Fix:
+  - added `ui.labelSets.project_settings_commit_buttons` to
+    `configs/auracall.services.json`
+  - rewired the project-settings commit matcher to consume the manifest-owned
+    label set
+  - added focused registry and adapter tests to pin the new ownership boundary
+- Verification:
+  - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
+  - `pnpm run check`

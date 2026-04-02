@@ -25,6 +25,7 @@ import {
   resolveChatgptConversationUrl,
   resolveChatgptProjectUrl,
   resolveChatgptProjectMemoryLabel,
+  resolveChatgptProjectSettingsCommitLabelsForTest,
   serializeChatgptGridRowsToCsv,
 } from '../../src/browser/providers/chatgptAdapter.js';
 
@@ -151,6 +152,14 @@ describe('resolveChatgptProjectMemoryLabel', () => {
 
   test('maps project mode to the ChatGPT Project-only label', () => {
     expect(resolveChatgptProjectMemoryLabel('project')).toBe('Project-only');
+  });
+});
+
+describe('resolveChatgptProjectSettingsCommitLabelsForTest', () => {
+  test('uses manifest-owned project settings commit button labels', () => {
+    expect(resolveChatgptProjectSettingsCommitLabelsForTest()).toEqual(
+      expect.arrayContaining(['save', 'save changes', 'done', 'apply']),
+    );
   });
 });
 

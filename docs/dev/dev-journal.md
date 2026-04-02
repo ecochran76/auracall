@@ -3494,3 +3494,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - keep agent behavior out of scope until the broader config-model refactor
     starts for real
+
+
+## 2026-04-01 — Moved ChatGPT project-settings commit labels into the service manifest
+
+- Focus: continue the narrow ChatGPT service-volatility pilot with one remaining
+  low-risk declarative label set in `chatgptAdapter.ts`
+- Implemented:
+  - added `ui.labelSets.project_settings_commit_buttons` to the checked-in
+    ChatGPT service manifest
+  - rewired the project-settings commit button matcher to use the manifest-owned
+    label set instead of hard-coded `save/save changes/done/apply` literals
+  - added focused registry and adapter regression coverage
+- Next:
+  - look for the next similarly low-risk declarative ChatGPT label set or stop
+    the manifest slice again if the remaining adapter strings are too
+    workflow-coupled
