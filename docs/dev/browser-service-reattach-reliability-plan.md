@@ -51,6 +51,7 @@ The shared browser-service layer should distinguish at least:
 - `profile-mismatch`
 - later slices may add:
   - `target-missing`
+- now also classified in reattach flows:
   - `ambiguous`
 
 ## Implementation slices

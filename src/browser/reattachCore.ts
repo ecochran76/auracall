@@ -38,7 +38,7 @@ export interface ReattachResult {
   answerMarkdown: string;
 }
 
-export type ReattachFailureKind = 'target-missing' | 'wrong-browser-profile' | 'stale-target';
+export type ReattachFailureKind = 'target-missing' | 'wrong-browser-profile' | 'stale-target' | 'ambiguous';
 
 export type ReattachFailureDetails = {
   kind: ReattachFailureKind;
@@ -213,6 +213,10 @@ export async function resumeBrowserSessionCore(
       });
     });
     const targetList = (await listTargets()) as ReattachTargetInfo[];
+    const ambiguousFailure = classifyAmbiguousReattachTarget(targetList, runtime);
+    if (ambiguousFailure) {
+      throw ambiguousFailure;
+    }
     const target = helpers.pickTarget(targetList, runtime);
     if (!target) {
       throw classifyMissingReattachTarget(targetList, runtime);
@@ -430,6 +434,45 @@ function classifyMissingReattachTarget(
     expectedOrigin,
     pageTargetCount: pageTargets.length,
     matchingOriginTargetCount,
+    chromePort: runtime.chromePort ?? null,
+    conversationId: runtime.conversationId ?? null,
+  });
+}
+
+function classifyAmbiguousReattachTarget(
+  targets: ReattachTargetInfo[],
+  runtime: ReattachRuntime,
+): ReattachFailure | null {
+  if (!Array.isArray(targets) || targets.length === 0) {
+    return null;
+  }
+  if (runtime.chromeTargetId && targets.some((target) => target.targetId === runtime.chromeTargetId)) {
+    return null;
+  }
+  if (runtime.tabUrl) {
+    const byUrl = targets.find((target) => {
+      const candidateUrl = target.url ?? '';
+      return candidateUrl.startsWith(runtime.tabUrl as string) || (runtime.tabUrl as string).startsWith(candidateUrl);
+    });
+    if (byUrl) {
+      return null;
+    }
+  }
+  const pageTargets = targets.filter((target) => target.type === 'page');
+  const expectedOrigin = extractOrigin(runtime.tabUrl ?? null);
+  if (!expectedOrigin) {
+    return null;
+  }
+  const matchingOriginTargets = pageTargets.filter((target) => extractOrigin(target.url ?? null) === expectedOrigin);
+  if (matchingOriginTargets.length <= 1) {
+    return null;
+  }
+  return new ReattachFailure({
+    kind: 'ambiguous',
+    message: 'Existing Chrome exposes multiple possible ChatGPT pages for the prior browser profile; refusing to guess.',
+    expectedOrigin,
+    pageTargetCount: pageTargets.length,
+    matchingOriginTargetCount: matchingOriginTargets.length,
     chromePort: runtime.chromePort ?? null,
     conversationId: runtime.conversationId ?? null,
   });

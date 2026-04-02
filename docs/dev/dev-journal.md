@@ -3688,3 +3688,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - if other tools start consuming this payload heavily, consider moving these
     JSON contract types into a dedicated shared module instead of leaving them
     next to the CLI command handler
+
+
+## 2026-04-02 — Reattach now classifies ambiguous same-profile browser targets
+
+- Focus: stop silent fallback to an arbitrary page when the prior exact target is
+  gone but multiple same-origin pages remain in the selected browser profile
+- Implemented:
+  - added `ambiguous` as a first-class reattach failure kind
+  - reattach now classifies the case where no exact prior target matches, but
+    multiple same-origin page targets remain visible in the same Chrome session
+  - kept recovery behavior unchanged: classify/log clearly, then fall back to the
+    existing recovery path instead of guessing a page
+- Next:
+  - run a live multi-tab ChatGPT reattach smoke if we want end-to-end proof of
+    the new classification on a real browser session

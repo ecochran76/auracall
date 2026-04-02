@@ -5303,3 +5303,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Reattach now classifies ambiguous same-profile targets
+
+- Area: Browser-service reattach reliability
+- Symptom:
+  - when the exact prior target disappeared but multiple same-origin ChatGPT tabs
+    still existed in the selected browser profile, reattach had no first-class
+    ambiguity classification and could only fall through broader recovery
+- Root cause:
+  - the reattach classifier only distinguished `target-missing` versus
+    `wrong-browser-profile`, even though it already knew how many same-origin
+    page targets remained
+- Fix:
+  - added `ambiguous` as a classified reattach failure kind
+  - classify the case where the exact target is gone, no exact URL/id match
+    remains, and multiple same-origin page targets are still present
+  - keep recovery bounded by logging/classifying ambiguity instead of guessing a
+    target before fallback recovery
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
+  - `pnpm run check`
