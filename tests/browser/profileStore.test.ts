@@ -8,6 +8,7 @@ import {
   inferSourceProfileFromCookiePath,
   resolveManagedProfileDir,
   resolveManagedProfileDirForUserConfig,
+  resolveManagedProfileName,
 } from '../../src/browser/profileStore.js';
 
 describe('profileStore', () => {
@@ -60,6 +61,68 @@ describe('profileStore', () => {
         },
       }),
     ).toBe('/tmp/custom-grok-profile');
+  });
+
+  it('prefers the managed profile last_used subprofile when Default is unsigned', async () => {
+    const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-last-used-'));
+    cleanup.push(managedRoot);
+
+    await fs.mkdir(path.join(managedRoot, 'Default'), { recursive: true });
+    await fs.mkdir(path.join(managedRoot, 'Profile 1'), { recursive: true });
+    await fs.writeFile(
+      path.join(managedRoot, 'Local State'),
+      JSON.stringify({
+        profile: {
+          last_used: 'Profile 1',
+          info_cache: {
+            Default: {
+              name: 'Your Chrome',
+              user_name: '',
+              is_consented_primary_account: false,
+            },
+            'Profile 1': {
+              name: 'Person 1',
+              user_name: 'consult@polymerconsultinggroup.com',
+              is_consented_primary_account: true,
+            },
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    expect(resolveManagedProfileName(managedRoot, 'Default')).toBe('Profile 1');
+  });
+
+  it('keeps the configured managed subprofile when it is already explicit', async () => {
+    const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-managed-explicit-'));
+    cleanup.push(managedRoot);
+
+    await fs.mkdir(path.join(managedRoot, 'Default'), { recursive: true });
+    await fs.mkdir(path.join(managedRoot, 'Profile 1'), { recursive: true });
+    await fs.writeFile(
+      path.join(managedRoot, 'Local State'),
+      JSON.stringify({
+        profile: {
+          last_used: 'Profile 1',
+          info_cache: {
+            Default: {
+              name: 'Your Chrome',
+              user_name: '',
+              is_consented_primary_account: false,
+            },
+            'Profile 1': {
+              name: 'Person 1',
+              user_name: 'consult@polymerconsultinggroup.com',
+              is_consented_primary_account: true,
+            },
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    expect(resolveManagedProfileName(managedRoot, 'Profile 1')).toBe('Profile 1');
   });
 
   it('bootstraps a managed profile from an existing source profile', async () => {

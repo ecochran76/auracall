@@ -54,9 +54,23 @@ export class BrowserService extends BrowserServiceCore {
   private readonly userConfig: ResolvedUserConfig;
   private readonly serviceTarget: BrowserProfileTarget;
   private constructor(userConfig: ResolvedUserConfig, target: BrowserProfileTarget) {
-    const resolvedConfig = resolveBrowserConfig({
+    const baseResolvedConfig = resolveBrowserConfig({
       ...(userConfig.browser ?? {}),
       target,
+    });
+    const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+      auracallProfile: userConfig.auracallProfile ?? null,
+      browser: baseResolvedConfig,
+      target,
+    }).launchProfile;
+    const resolvedConfig = resolveBrowserConfig({
+      ...baseResolvedConfig,
+      chromeProfile: launchProfile.chromeProfile ?? baseResolvedConfig.chromeProfile ?? undefined,
+      manualLoginProfileDir:
+        launchProfile.manualLoginProfileDir ?? baseResolvedConfig.manualLoginProfileDir ?? undefined,
+      managedProfileRoot: launchProfile.managedProfileRoot ?? baseResolvedConfig.managedProfileRoot ?? undefined,
+      bootstrapCookiePath: launchProfile.bootstrapCookiePath ?? baseResolvedConfig.bootstrapCookiePath ?? undefined,
+      chromeCookiePath: launchProfile.chromeCookiePath ?? baseResolvedConfig.chromeCookiePath ?? undefined,
     });
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
@@ -270,4 +284,3 @@ function normalizeConfiguredSearch(searchParams: URLSearchParams): string {
     .map(([key, value]) => `${key}=${value}`)
     .join('&');
 }
-

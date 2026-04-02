@@ -62,6 +62,7 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
     logger,
     debugPort,
     debugPortRange,
+    detach: true,
   });
   if (!chrome.port) {
     throw new Error('Chrome launch did not return a DevTools port.');

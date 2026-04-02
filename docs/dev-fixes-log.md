@@ -5371,3 +5371,33 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+
+## 2026-04-02 — Managed browser profiles must follow the signed-in subprofile, not always `Default`
+
+- Area: Browser profile semantics / managed WSL Chrome account families
+- Symptom:
+  - `wsl-chrome-2` could have a signed-in managed Chrome account under
+    `Profile 1`, while Aura-Call still resolved `chromeProfile: "Default"` for
+    launch, attach, and doctor flows
+- Root cause:
+  - config/browser resolution treated the source browser profile name as if it
+    were always the correct managed browser profile subdirectory too
+  - after Chrome sign-in created a new managed subprofile, Aura-Call had no
+    logic for following `Local State.profile.last_used` or the signed-in profile
+    in `info_cache`
+- Fix:
+  - added `resolveManagedProfileName(...)`
+  - when the configured managed subprofile is `Default`, prefer the managed
+    profile's `last_used` entry if it exists on disk, has a signed-in marker,
+    and `Default` does not
+  - applied that to:
+    - typed launch-profile resolution
+    - the Aura-Call browser-service wrapper
+    - local browser doctor
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser/profileResolution.test.ts tests/browser/browserService.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live local doctor on `wsl-chrome-2/chatgpt` now reports:
+    - `chromeProfile: "Profile 1"`
+    - signed-in Chrome account `consult@polymerconsultinggroup.com`

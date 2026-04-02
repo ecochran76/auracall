@@ -1,10 +1,19 @@
-import { describe, expect, test } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, test } from 'vitest';
 import {
   resolveBrowserProfileResolution,
   resolveBrowserProfileResolutionFromResolvedConfig,
 } from '../../src/browser/service/profileResolution.js';
 
 describe('resolveBrowserProfileResolution', () => {
+  const cleanup: string[] = [];
+
+  afterEach(async () => {
+    await Promise.all(cleanup.splice(0).map((dir) => fs.rm(dir, { recursive: true, force: true })));
+  });
+
   test('builds typed resolved profile/browser/service/launch layers from the current merge shape', () => {
     const merged = {
       model: 'grok-4.1',
@@ -157,6 +166,51 @@ describe('resolveBrowserProfileResolution', () => {
       debugPort: 45555,
       debugPortStrategy: 'auto',
       wslChromePreference: 'windows',
+    });
+  });
+
+  test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
+    const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
+    cleanup.push(managedRoot);
+    const managedProfileDir = path.join(managedRoot, 'wsl-chrome-2', 'chatgpt');
+    await fs.mkdir(path.join(managedProfileDir, 'Default'), { recursive: true });
+    await fs.mkdir(path.join(managedProfileDir, 'Profile 1'), { recursive: true });
+    await fs.writeFile(
+      path.join(managedProfileDir, 'Local State'),
+      JSON.stringify({
+        profile: {
+          last_used: 'Profile 1',
+          info_cache: {
+            Default: {
+              name: 'Your Chrome',
+              user_name: '',
+              is_consented_primary_account: false,
+            },
+            'Profile 1': {
+              name: 'Person 1',
+              user_name: 'consult@polymerconsultinggroup.com',
+              is_consented_primary_account: true,
+            },
+          },
+        },
+      }),
+      'utf8',
+    );
+
+    const result = resolveBrowserProfileResolutionFromResolvedConfig({
+      auracallProfile: 'wsl-chrome-2',
+      browser: {
+        target: 'chatgpt',
+        managedProfileRoot: managedRoot,
+        chromeProfile: 'Default',
+      },
+      target: 'chatgpt',
+    });
+
+    expect(result.launchProfile).toMatchObject({
+      target: 'chatgpt',
+      manualLoginProfileDir: managedProfileDir,
+      chromeProfile: 'Profile 1',
     });
   });
 

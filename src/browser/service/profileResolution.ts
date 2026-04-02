@@ -1,4 +1,4 @@
-import { resolveManagedProfileDir } from '../profileStore.js';
+import { resolveManagedProfileDir, resolveManagedProfileName } from '../profileStore.js';
 import type { DebugPortStrategy, ResolvedBrowserConfig } from '../types.js';
 import { resolveCookiePath, resolveProfileDirectoryName } from './profile.js';
 
@@ -287,12 +287,18 @@ export function resolveBrowserProfileResolution(input: {
       asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir),
   };
 
+  const configuredLaunchProfileName = asNonEmptyString(browser.chromeProfile) ?? browserFamily.sourceProfileName;
+  const effectiveLaunchProfileName =
+    serviceBinding.manualLoginProfileDir && configuredLaunchProfileName
+      ? resolveManagedProfileName(serviceBinding.manualLoginProfileDir, configuredLaunchProfileName)
+      : configuredLaunchProfileName;
+
   const launchProfile: ResolvedBrowserLaunchProfile = {
     target: defaultService,
     targetUrl: serviceUrl,
     chromePath: asNonEmptyString(browser.chromePath) ?? browserFamily.chromePath,
     display: asNonEmptyString(browser.display) ?? browserFamily.display,
-    chromeProfile: asNonEmptyString(browser.chromeProfile) ?? browserFamily.sourceProfileName,
+    chromeProfile: effectiveLaunchProfileName,
     chromeCookiePath: asNonEmptyString(browser.chromeCookiePath) ?? browserFamily.sourceCookiePath,
     bootstrapCookiePath: asNonEmptyString(browser.bootstrapCookiePath) ?? browserFamily.bootstrapCookiePath,
     manualLoginProfileDir: serviceBinding.manualLoginProfileDir,

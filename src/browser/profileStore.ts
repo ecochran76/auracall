@@ -1,5 +1,5 @@
 import { copyFile, mkdir, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
@@ -123,6 +123,53 @@ export function resolveManagedProfileDirForUserConfig(
     auracallProfileName: userConfig.auracallProfile ?? 'default',
     target: target ?? userConfig.browser?.target ?? 'chatgpt',
   });
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function hasSignedInProfileMarker(value: Record<string, unknown> | null | undefined): boolean {
+  if (!value) return false;
+  if (value.is_consented_primary_account === true) return true;
+  return Boolean(asNonEmptyString(value.user_name));
+}
+
+export function resolveManagedProfileName(
+  managedProfileDir: string,
+  configuredProfileName = 'Default',
+): string {
+  const trimmedConfigured = configuredProfileName.trim() || 'Default';
+  const resolvedConfigured = existsSync(path.join(managedProfileDir, trimmedConfigured))
+    ? trimmedConfigured
+    : trimmedConfigured;
+  const localStatePath = path.join(managedProfileDir, 'Local State');
+  try {
+    const parsed = JSON.parse(readFileSync(localStatePath, 'utf8')) as {
+      profile?: {
+        last_used?: string;
+        info_cache?: Record<string, Record<string, unknown>>;
+      };
+    };
+    const lastUsed = asNonEmptyString(parsed.profile?.last_used);
+    if (!lastUsed || !existsSync(path.join(managedProfileDir, lastUsed))) {
+      return resolvedConfigured;
+    }
+    if (resolvedConfigured.toLowerCase() !== 'default') {
+      return resolvedConfigured;
+    }
+    const infoCache = parsed.profile?.info_cache ?? {};
+    const configuredInfo = infoCache[resolvedConfigured];
+    const lastUsedInfo = infoCache[lastUsed];
+    if (hasSignedInProfileMarker(lastUsedInfo) && !hasSignedInProfileMarker(configuredInfo)) {
+      return lastUsed;
+    }
+  } catch {
+    // ignore malformed or missing Local State
+  }
+  return resolvedConfigured;
 }
 
 export function findBrowserCookieFile(profileDir: string, profileName = 'Default'): string | null {

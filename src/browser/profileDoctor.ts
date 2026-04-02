@@ -12,6 +12,7 @@ import {
   findBrowserCookieFile,
   inferSourceProfileFromCookiePath,
   resolveManagedProfileDir,
+  resolveManagedProfileName,
   resolveBootstrapSourceCookiePath,
   resolveManagedProfileRoot,
 } from './profileStore.js';
@@ -171,7 +172,10 @@ export async function inspectBrowserDoctorState(
     auracallProfileName: userConfig.auracallProfile ?? 'default',
     target,
   });
-  const chromeProfile = launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
+  const chromeProfile = resolveManagedProfileName(
+    managedProfileDir,
+    launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default',
+  );
   const sourceCookiePath = resolveBootstrapSourceCookiePath({
     configuredCookiePath:
       launchProfile.bootstrapCookiePath ??

@@ -3766,3 +3766,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - rerun the full repo checks, document the new browser-tools flags, and use
     the fixed wrapper for future `wsl-chrome-2` inspection instead of ad hoc
     launches
+
+
+## 2026-04-02 — Managed browser profiles must honor active signed-in subprofiles
+
+- Focus: stop treating `Default` as the only valid subprofile inside a managed
+  browser profile after Chrome sign-in created `Profile 1`
+- Progress:
+  - confirmed the `wsl-chrome-2/chatgpt` managed browser profile now contains:
+    - `Default`, which is effectively unsigned
+    - `Profile 1`, which holds the signed-in Chrome account
+      `consult@polymerconsultinggroup.com`
+  - added `resolveManagedProfileName(...)` so managed browser profile consumers
+    prefer `Local State.profile.last_used` when it has a signed-in account and
+    the configured `Default` profile does not
+  - wired that into the typed launch-profile seam, Aura-Call browser-service
+    wrapper, and local browser doctor
+  - local doctor now reports `chromeProfile: "Profile 1"` and a signed-in
+    managed Chrome account for `wsl-chrome-2`
+- Verification:
+  - `pnpm vitest run tests/browser/profileStore.test.ts tests/browser/profileResolution.test.ts tests/browser/browserService.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts doctor --profile wsl-chrome-2 --target chatgpt --local-only --json`
+      now reports:
+      - `chromeProfile: "Profile 1"`
+      - `email: "consult@polymerconsultinggroup.com"`
+- Issues:
+  - the detached `browser-tools start` path still is not leaving a stable live
+    DevTools endpoint after the wrapper exits, even though the managed profile
+    and subprofile selection are now correct
+- Next:
+  - debug the remaining detached-launch persistence bug separately from profile
+    selection, since the profile-selection model is now behaving correctly
