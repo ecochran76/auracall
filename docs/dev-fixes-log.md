@@ -5534,3 +5534,40 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `wsl-chrome-2` still has a separate fresh-launch issue:
     when reattach has to launch a new managed browser, ChatGPT shows a login
     CTA even though the already-open managed browser is signed in
+
+## 2026-04-02 - browser-tools managed-browser-profile launch isolation
+
+- Symptom:
+  - `scripts/browser-tools.ts --browser-target chatgpt start` could return the
+    live Grok DevTools port or relaunch onto the Grok port instead of opening a
+    separate `default/chatgpt` managed browser profile
+  - this made it look like the `default/chatgpt` managed browser profile had
+    been wiped when the real problem was launch/attach contamination
+- Root cause:
+  - the live `default` AuraCall runtime profile still had stale top-level
+    browser fields pinned to Grok (`manualLoginProfileDir` and `debugPort`)
+  - `scripts/browser-tools.ts` trusted those fields for both registry reuse and
+    fresh launch
+  - the wrapper also bypassed the new stable preferred-port logic in
+    `packages/browser-service/src/manualLogin.ts`
+- Fix:
+  - `packages/browser-service/src/manualLogin.ts`
+    - derive a stable preferred fixed DevTools port from the managed browser
+      profile identity before probing for availability
+  - `scripts/browser-tools.ts`
+    - resolve the managed browser profile dir from AuraCall runtime profile +
+      target
+    - reuse only a matching registry entry for that exact managed browser
+      profile
+    - ignore config-derived fixed ports unless the operator explicitly passes
+      `--port`
+- Verification:
+  - tests:
+    - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/manualLogin.test.ts tests/browser/profileConfig.test.ts --maxWorkers 1`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - with `default/grok` already open on `45011`, a fresh
+      `default/chatgpt` launch now comes up separately on `45065`
+    - DevTools tab inventory stays isolated:
+      - `45011` => Grok
+      - `45065` => ChatGPT

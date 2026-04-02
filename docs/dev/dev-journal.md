@@ -3932,3 +3932,41 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       already-open managed `wsl-chrome-2` browser is signed in
     - that is no longer a port-race or browser-profile drift problem; it is a
       managed-browser session persistence problem on fresh launch
+
+## 2026-04-02 13:06 CDT
+
+- Focus:
+  - fix `browser-tools start` manual-login launch isolation so separate managed
+    browser profiles do not collapse onto the same DevTools port
+- Findings:
+  - the live `default` AuraCall runtime profile still carried stale top-level
+    browser fields from Grok:
+    - `manualLoginProfileDir = ~/.auracall/browser-profiles/default/grok`
+    - `debugPort = 45011`
+  - `scripts/browser-tools.ts` was trusting those stale fields:
+    - reusing the already-open Grok DevTools target instead of launching
+      `default/chatgpt`
+    - or forcing fresh launches back onto `45011`
+  - the tool was also bypassing the new stable per-managed-browser-profile
+    fixed-port derivation in `packages/browser-service/src/manualLogin.ts`
+- Fix:
+  - `packages/browser-service/src/manualLogin.ts`
+    - derive a stable preferred fixed DevTools port from
+      `userDataDir + profileName` before probing for an available port
+  - `scripts/browser-tools.ts`
+    - resolve the managed browser profile dir directly from the selected
+      AuraCall runtime profile + target
+    - ignore config-derived fixed-port reuse unless the user explicitly passes
+      `--port`
+    - reuse only an existing registry entry for the exact managed browser
+      profile
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/manualLogin.test.ts tests/browser/profileConfig.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - left `default/grok` open on `45011`
+    - launched `default/chatgpt` with
+      `DISPLAY=:0.0 pnpm tsx scripts/browser-tools.ts --browser-target chatgpt start`
+    - confirmed `default/chatgpt` launched separately on `45065`
+    - confirmed `http://127.0.0.1:45065/json/list` shows `https://chatgpt.com/`
+      while `45011` still shows only Grok

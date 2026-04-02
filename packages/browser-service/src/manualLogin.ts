@@ -23,11 +23,16 @@ export async function launchManualLoginSession(options: {
   registryPath?: string;
 }): Promise<{ chrome: Awaited<ReturnType<typeof launchChrome>>; port: number }> {
   const effectiveDebugPortStrategy = options.debugPortStrategy ?? options.baseConfig.debugPortStrategy ?? 'fixed';
+  const effectiveDebugPortRange = options.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
   const port = effectiveDebugPortStrategy === 'fixed'
     ? options.debugPort ?? await pickAvailableDebugPort(
-        DEFAULT_DEBUG_PORT,
+        deriveStablePreferredDebugPort({
+          userDataDir: options.userDataDir,
+          profileName: options.profileName,
+          range: effectiveDebugPortRange,
+        }),
         options.logger,
-        options.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE,
+        effectiveDebugPortRange,
       )
     : null;
   const config: ResolvedBrowserConfig = {
@@ -78,6 +83,26 @@ export async function launchManualLoginSession(options: {
   }
   return { chrome, port: chrome.port };
 }
+
+function deriveStablePreferredDebugPort(input: {
+  userDataDir: string;
+  profileName: string;
+  range: [number, number] | null;
+}): number {
+  const range = input.range ?? DEFAULT_DEBUG_PORT_RANGE;
+  const [start, end] = range;
+  const span = Math.max(1, end - start + 1);
+  const seed = `${input.userDataDir}::${input.profileName.trim().toLowerCase()}`;
+  let hash = 0;
+  for (let index = 0; index < seed.length; index++) {
+    hash = (hash * 33 + seed.charCodeAt(index)) >>> 0;
+  }
+  return start + (hash % span);
+}
+
+export const __test__ = {
+  deriveStablePreferredDebugPort,
+};
 
 export async function openLoginUrl(
   host: string,
