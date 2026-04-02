@@ -63,5 +63,55 @@ describe('collectReattachRegistryDiagnostics', () => {
       expect.objectContaining({ reason: 'expected-profile-stale', liveness: 'profile-mismatch', actualPid: 7777 }),
       expect.objectContaining({ reason: 'selected-port-stale', liveness: 'dead-port', actualPid: 9001 }),
     ]);
+    expect(result?.selectedPortCandidates).toEqual([
+      expect.objectContaining({
+        profilePath: '/tmp/auracall/browser-profiles/default/chatgpt',
+        profileName: 'Default',
+        port: 9222,
+        liveness: 'dead-port',
+        actualPid: 9001,
+      }),
+    ]);
+  });
+
+  test('collects live selected-port owners for cross-profile reattach checks', async () => {
+    stateRegistryMocks.listInstancesWithLiveness.mockResolvedValueOnce([
+      {
+        instance: {
+          pid: 9010,
+          port: 45013,
+          host: '127.0.0.1',
+          profilePath: '/tmp/auracall/browser-profiles/wsl-chrome-2/chatgpt',
+          profileName: 'Profile 1',
+          type: 'chrome',
+          launchedAt: new Date().toISOString(),
+          lastSeenAt: new Date().toISOString(),
+        },
+        alive: true,
+        liveness: 'live',
+        actualPid: 9010,
+      },
+    ] as any);
+
+    const result = await collectReattachRegistryDiagnostics({
+      runtime: { chromePort: 45013, chromeHost: '127.0.0.1' },
+      config: {
+        target: 'chatgpt',
+        manualLogin: true,
+        manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+        chromeProfile: 'Default',
+      },
+      registryPath: '/tmp/browser-state.json',
+    });
+
+    expect(result?.selectedPortCandidates).toEqual([
+      expect.objectContaining({
+        profilePath: '/tmp/auracall/browser-profiles/wsl-chrome-2/chatgpt',
+        profileName: 'Profile 1',
+        port: 45013,
+        liveness: 'live',
+        actualPid: 9010,
+      }),
+    ]);
   });
 });

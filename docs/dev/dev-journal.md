@@ -3871,3 +3871,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - current backup of the signed-in managed browser profile:
     - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt.backup-20260402-113725`
+
+
+## 2026-04-02 — same-origin reattach must use browser-profile identity, not just URL shape
+
+- Focus: finish the live `wrong-browser-profile` proof between the `default`
+  and `wsl-chrome-2` browser profiles
+- Progress:
+  - wired a pre-target reattach classifier so `resumeBrowserSession(...)` can
+    fail fast on browser-profile mismatch before it tries to choose among
+    same-origin page targets
+  - initially keyed that off fully `live` selected-port owners only
+  - the live `default -> 45013` reattach probe exposed the real edge case:
+    the selected `wsl-chrome-2` port was represented in `browser-state.json`
+    only as `profile-mismatch` because Chrome had respawned under the same
+    managed browser profile with a new PID
+  - broadened selected-port evidence to include both:
+    - `live`
+    - `profile-mismatch`
+    when deciding whether the existing DevTools port belongs to the wrong
+    managed browser profile
+- Verification:
+  - `pnpm vitest run tests/browser/registryDiagnostics.test.ts tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live proof:
+    - replayed the stored `default` ChatGPT session metadata from
+      `reply-exactly-with-reattach-ambig`
+    - forced `chromePort = 45013` to point at the live `wsl-chrome-2`
+      browser profile
+    - confirmed the reattach path now classifies that as
+      `wrong-browser-profile` instead of attaching across browser profiles or
+      collapsing into generic ambiguity

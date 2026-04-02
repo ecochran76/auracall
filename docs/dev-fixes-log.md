@@ -5472,3 +5472,36 @@ This log captures notable fixes, what broke, why, and how we verified the repair
       - `Profile 1`
       - DevTools port `45013`
     - and returns the expected reply
+
+
+## 2026-04-02 — same-origin reattach must trust selected-port profile-mismatch evidence
+
+- Area: Browser session reattach / cross-profile safety
+- Symptom:
+  - a real `default` ChatGPT session aimed at the live `wsl-chrome-2`
+    DevTools port could still reattach and read the wrong browser profile's
+    tab because both browsers were on the same origin (`chatgpt.com`)
+- Root cause:
+  - reattach classification only trusted fully `live` selected-port owners
+  - after Chrome respawned under the same managed browser profile with a new
+    PID, the correct `wsl-chrome-2` selected-port entry was downgraded to
+    `profile-mismatch`
+  - that meant the classifier threw away the strongest signal that port `45013`
+    still belonged to the `wsl-chrome-2` managed browser profile
+- Fix:
+  - added selected-port registry candidate collection to reattach diagnostics
+  - reattach now treats selected-port candidates with either:
+    - `live`
+    - `profile-mismatch`
+    as strong browser-profile ownership evidence
+  - if the selected DevTools port belongs to a different managed browser
+    profile than the session expects, reattach now fails as
+    `wrong-browser-profile` before target picking
+- Verification:
+  - `pnpm vitest run tests/browser/registryDiagnostics.test.ts tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - replayed a stored `default` ChatGPT session against live port `45013`
+      from `wsl-chrome-2`
+    - confirmed the reattach path classified the attempt as
+      `wrong-browser-profile`

@@ -134,6 +134,48 @@ describe('resumeBrowserSession', () => {
     );
   });
 
+  test('classifies same-origin live wrong browser profile before target matching', async () => {
+    const runtime = {
+      chromePort: 45013,
+      chromeHost: '127.0.0.1',
+      tabUrl: 'https://chatgpt.com/c/original',
+    };
+    const listTargets = vi.fn(async () =>
+      [
+        { targetId: 'target-1', type: 'page', url: 'https://chatgpt.com/' },
+        { targetId: 'target-2', type: 'page', url: 'https://chatgpt.com/gpts' },
+      ] satisfies FakeTarget[],
+    ) as unknown as () => Promise<FakeTarget[]>;
+    const recoverSession = vi.fn(async () => ({
+      answerText: 'fallback',
+      answerMarkdown: 'fallback-md',
+    }));
+    const logger = vi.fn() as BrowserLogger;
+
+    const result = await resumeBrowserSession(
+      runtime,
+      { target: 'chatgpt', manualLoginProfileDir: '/tmp/default/chatgpt', chromeProfile: 'Default' },
+      logger,
+      {
+        listTargets,
+        recoverSession,
+        classifyBrowserProfileFailure: async () => ({
+          kind: 'wrong-browser-profile',
+          message: 'Existing Chrome no longer exposes the expected ChatGPT browser profile.',
+          chromePort: 45013,
+        }),
+      },
+    );
+
+    expect(result.answerText).toBe('fallback');
+    expect(recoverSession).toHaveBeenCalled();
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'wrong-browser-profile: Existing Chrome no longer exposes the expected ChatGPT browser profile.',
+      ),
+    );
+  });
+
   test('treats generic root tabs as ambiguous instead of suppressing ambiguity', async () => {
     const runtime = {
       chromePort: 51559,

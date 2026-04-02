@@ -17,6 +17,10 @@ export type ReattachTargetInfo = {
 export interface ReattachDeps {
   listTargets?: () => Promise<ReattachTargetInfo[]>;
   connect?: (options?: unknown) => Promise<ChromeClient>;
+  classifyBrowserProfileFailure?: (
+    runtime: ReattachRuntime,
+    config: BrowserSessionConfig | undefined,
+  ) => Promise<ReattachFailureDetails | null>;
   waitForAssistantResponse?: (
     Runtime: ChromeClient['Runtime'],
     timeoutMs: number,
@@ -195,6 +199,10 @@ export async function resumeBrowserSessionCore(
 
   const host = runtime.chromeHost ?? '127.0.0.1';
   try {
+    const browserProfileFailure = await deps.classifyBrowserProfileFailure?.(runtime, config);
+    if (browserProfileFailure) {
+      throw new ReattachFailure(browserProfileFailure);
+    }
     const listTargets =
       deps.listTargets ??
       (async () => {

@@ -2,7 +2,8 @@ import path from 'node:path';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import { resolveBrowserConfig } from '../config.js';
 import { resolveManagedProfileDir } from '../profileStore.js';
-import type { BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
+import type { BrowserAutomationConfig, BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
+import type { BrowserSessionConfig as StoredBrowserSessionConfig } from '../../sessionManager.js';
 import {
   listInstancesWithLiveness,
   type BrowserInstanceLiveness,
@@ -19,12 +20,25 @@ export type DiscardedRegistryCandidate = {
   reason: 'selected-port-stale' | 'expected-profile-stale';
 };
 
+export type SelectedPortRegistryCandidate = {
+  key: string;
+  profilePath: string;
+  profileName: string;
+  port: number;
+  host: string;
+  liveness: BrowserInstanceLiveness;
+  actualPid: number | null;
+};
+
 export type ReattachRegistryDiagnostics = {
   capturedAt: string;
   discardedRegistryCandidates: DiscardedRegistryCandidate[];
   expectedProfilePath: string;
   expectedProfileName: string;
+  selectedPortCandidates?: SelectedPortRegistryCandidate[];
 };
+
+type ReattachRegistryConfig = BrowserSessionConfig | StoredBrowserSessionConfig | undefined;
 
 export function collectDiscardedRegistryCandidates(input: {
   classifiedInstances: Awaited<ReturnType<typeof listInstancesWithLiveness>>;
@@ -70,9 +84,35 @@ export function collectDiscardedRegistryCandidates(input: {
   });
 }
 
+export function collectSelectedPortRegistryCandidates(input: {
+  classifiedInstances: Awaited<ReturnType<typeof listInstancesWithLiveness>>;
+  targetHost: string;
+  targetPort: number;
+}): SelectedPortRegistryCandidate[] {
+  const candidates = new Map<string, SelectedPortRegistryCandidate>();
+  for (const entry of input.classifiedInstances) {
+    const samePort =
+      entry.instance.port === input.targetPort &&
+      (entry.instance.host || '127.0.0.1') === input.targetHost;
+    if (!samePort) continue;
+    const normalizedName = (entry.instance.profileName ?? 'Default').trim().toLowerCase();
+    const key = `${path.normalize(entry.instance.profilePath)}::${normalizedName}`;
+    candidates.set(key, {
+      key,
+      profilePath: path.resolve(entry.instance.profilePath),
+      profileName: entry.instance.profileName ?? 'Default',
+      port: entry.instance.port,
+      host: entry.instance.host,
+      liveness: entry.liveness,
+      actualPid: entry.actualPid,
+    });
+  }
+  return Array.from(candidates.values()).sort((left, right) => left.key.localeCompare(right.key));
+}
+
 export async function collectReattachRegistryDiagnostics(input: {
   runtime: Pick<BrowserRuntimeMetadata, 'chromePort' | 'chromeHost'>;
-  config: BrowserSessionConfig | undefined;
+  config: ReattachRegistryConfig | undefined;
   registryPath?: string;
 }): Promise<ReattachRegistryDiagnostics | null> {
   if (!input.runtime.chromePort) {
@@ -81,7 +121,7 @@ export async function collectReattachRegistryDiagnostics(input: {
   const resolved = resolveBrowserConfig({
     ...(input.config ?? {}),
     target: input.config?.target ?? 'chatgpt',
-  }, { auracallProfileName: input.config?.auracallProfileName ?? null });
+  } as BrowserAutomationConfig, { auracallProfileName: input.config?.auracallProfileName ?? null });
   const expectedProfilePath =
     resolved.manualLoginProfileDir ??
     resolveManagedProfileDir({
@@ -104,5 +144,10 @@ export async function collectReattachRegistryDiagnostics(input: {
     }),
     expectedProfilePath,
     expectedProfileName,
+    selectedPortCandidates: collectSelectedPortRegistryCandidates({
+      classifiedInstances,
+      targetHost: input.runtime.chromeHost ?? '127.0.0.1',
+      targetPort: input.runtime.chromePort,
+    }),
   };
 }

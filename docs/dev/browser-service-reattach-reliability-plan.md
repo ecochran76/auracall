@@ -122,6 +122,12 @@ Acceptance:
     same-target match where `https://chatgpt.com/` was incorrectly treated as a
     match for a prior `/c/<conversation>` tab; ambiguity detection now excludes
     generic root/origin tabs from exact-target suppression
+  - note: a later live `default` vs `wsl-chrome-2` repro exposed another
+    subtlety: selected-port ownership cannot rely on only fully `live`
+    registry entries, because Chrome respawns under the same managed browser
+    profile can downgrade the correct entry to `profile-mismatch`; reattach
+    now treats selected-port `profile-mismatch` as strong wrong-profile
+    evidence too
 
 ## Code seams
 
