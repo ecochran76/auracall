@@ -5654,3 +5654,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - do not treat bridge names as the long-term model
   - land non-breaking schema/runtime seams toward the target shape before
     doing broad renames
+
+## 2026-04-02 - config inspection and bridge-health commands now expose the target model without changing stored bridge keys
+
+- Durable lesson:
+  - once the bridge terminology was clarified, operators still had no easy way
+    to inspect the active AuraCall runtime profile, browser-profile bridge, or
+    bridge-health problems without reading raw JSON
+- Fix:
+  - added read-only config-model inspection/reporting commands:
+    - `auracall config show`
+    - `auracall profile list`
+    - `auracall config doctor`
+  - onboarding and migration writes now print a compact runtime-profile ->
+    browser-profile summary in the target-model terms
+- Result:
+  - operators can now inspect:
+    - the active AuraCall runtime profile
+    - browser-profile bridges across all runtime profiles
+    - missing/dangling browser-profile references
+    - legacy `auracallProfiles` residue
+  - without changing the stored bridge-key layout

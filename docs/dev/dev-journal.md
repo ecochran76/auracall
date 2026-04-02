@@ -4302,3 +4302,150 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - still no public config behavior change
   - this is operator-language cleanup only
+
+## 2026-04-02 14:35 CDT
+
+- Focus:
+  - add a read-only config inspection surface that reports the active
+    AuraCall runtime profile and browser-profile bridge in the target-model
+    terms without changing the stored bridge-key layout
+- What changed:
+  - added
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    with:
+    - `buildConfigShowReport(...)`
+    - `formatConfigShowReport(...)`
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to add:
+    - `auracall config show`
+    - `auracall config show --json`
+  - added focused coverage in
+    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - updated
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document the new read-only inspection command
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts config show`
+  - `pnpm tsx bin/auracall.ts config show --json-only --json`
+- Notes:
+  - this keeps the public stored keys unchanged
+  - the command is inspection-only and intentionally reports in terms of:
+    - AuraCall runtime profile
+    - browser profile
+    - bridge-key presence
+
+## 2026-04-02 14:40 CDT
+
+- Focus:
+  - tighten onboarding/migration operator output so config-writing commands
+    report both the AuraCall runtime profile and browser-profile bridge they
+    just wrote or preserved
+- What changed:
+  - expanded
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    with:
+    - `buildRuntimeProfileBridgeSummary(...)`
+    - `formatRuntimeProfileBridgeSummary(...)`
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so:
+    - `auracall wizard` confirmation/output now mentions the browser profile
+      bridge explicitly
+    - `auracall config migrate` prints the active runtime-profile/browser-profile
+      bridge after writing
+    - `auracall profile scaffold` prints the scaffolded runtime-profile/browser-profile
+      bridge after writing
+  - expanded
+    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    with direct compact-summary coverage
+  - updated
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to note that `config migrate` and `profile scaffold` now print a bridge
+    summary in target-model terms
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - isolated migrate smoke:
+    - `AURACALL_CONFIG_PATH=<tmp>/config.json pnpm tsx bin/auracall.ts config migrate --in-place --force`
+  - isolated scaffold smoke:
+    - `AURACALL_HOME_DIR=<tmp> pnpm tsx bin/auracall.ts profile scaffold --force`
+- Notes:
+  - this is operator-surface cleanup only
+  - stored config keys remain unchanged
+
+## 2026-04-02 14:45 CDT
+
+- Focus:
+  - add a read-only inventory surface for AuraCall runtime profiles and their
+    browser-profile bridges so operators can inspect the whole config model, not
+    just the currently active profile
+- What changed:
+  - expanded
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    with:
+    - `buildProfileListReport(...)`
+    - `formatProfileListReport(...)`
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to add:
+    - `auracall profile list`
+    - `auracall profile list --json`
+  - expanded
+    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    with inventory-report coverage
+  - updated
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document the new inventory command
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts profile list`
+  - `pnpm tsx bin/auracall.ts profile list --json-only --json`
+- Notes:
+  - `config show` remains the active resolved-state view
+  - `profile list` is the broader inventory view
+  - live output also usefully surfaces runtime profiles that still have no
+    explicit browser-profile bridge, instead of inferring one silently
+
+## 2026-04-02 14:50 CDT
+
+- Focus:
+  - add a read-only config doctor so bridge-health problems become explicit
+    diagnostics instead of only being discoverable through manual inspection of
+    `config show` / `profile list`
+- What changed:
+  - expanded
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    with:
+    - `buildConfigDoctorReport(...)`
+    - `formatConfigDoctorReport(...)`
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to add:
+    - `auracall config doctor`
+    - `auracall config doctor --json`
+  - expanded
+    [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    with bridge-health coverage for:
+    - missing browser-profile references
+    - dangling browser-profile references
+    - unused browser profiles
+    - legacy runtime profiles
+  - updated
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document the new doctor command
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm tsx bin/auracall.ts config doctor`
+  - `pnpm tsx bin/auracall.ts config doctor --json-only --json`
+- Notes:
+  - this is still read-only/operator-facing work
+  - it does not rewrite or normalize config automatically
+  - live output now explicitly flags the current missing browser-profile bridges
+    on:
+    - `default`
+    - `windows-chrome-test`

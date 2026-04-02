@@ -17,6 +17,38 @@ When invoking via `tsx` in dev, prefer Node’s `--import` to avoid `pnpm` swall
 node --import tsx bin/auracall.ts config migrate --dry-run
 ```
 
+`auracall config migrate` and `auracall profile scaffold` now also print a
+short bridge summary in the target-model terms so operators can immediately see
+which AuraCall runtime profile and browser profile the written config points at.
+
+Use `auracall config show` to inspect the active resolved model in the new
+terminology without changing the stored bridge-key layout:
+
+```sh
+auracall config show
+auracall config show --json
+auracall config doctor
+auracall config doctor --json
+auracall profile list
+auracall profile list --json
+```
+
+The command reports the active AuraCall runtime profile, its referenced browser
+profile, the resolved browser target, and whether the current bridge keys are
+present in the loaded config.
+
+Use `auracall profile list` when you want the inventory view instead:
+- all AuraCall runtime profiles
+- their browser-profile bridges
+- their default services
+- the available browser profiles in the current config
+
+Use `auracall config doctor` when you want bridge-health checks instead:
+- AuraCall runtime profiles with no explicit browser-profile reference
+- runtime profiles that reference missing browser profiles
+- unused browser profiles
+- legacy `auracallProfiles` still present
+
 ## Terminology
 
 Use these terms consistently:

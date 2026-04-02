@@ -72,6 +72,16 @@ import {
   validateBrowserWizardProfileName,
   type BrowserWizardChoice,
 } from '../src/cli/browserWizard.js';
+import {
+  buildConfigShowReport,
+  buildConfigDoctorReport,
+  buildProfileListReport,
+  buildRuntimeProfileBridgeSummary,
+  formatConfigDoctorReport,
+  formatConfigShowReport,
+  formatProfileListReport,
+  formatRuntimeProfileBridgeSummary,
+} from '../src/cli/configCommand.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -6721,6 +6731,7 @@ program
             `${action} AuraCall runtime profile "${confirmedProfileName}" in ${configPath()}?`,
             `target=${promptAnswers.target}`,
             `browser=${selectedChoice.runtime}/${selectedChoice.family ?? 'browser'}`,
+            `browserProfile=${confirmedProfileName}`,
             `verify=${promptAnswers.verifyNow ? 'yes' : 'no'}`,
             `keepBrowser=${promptAnswers.keepBrowser ? 'yes' : 'no'}`,
           ].join('\n');
@@ -6754,9 +6765,12 @@ program
     const writtenPath = await writeWizardUserConfig(mergedConfig);
 
     console.log('');
+    const wizardBridgeSummary = buildRuntimeProfileBridgeSummary(mergedConfig as Record<string, unknown>, {
+      explicitProfileName: profileName,
+    });
     console.log(
       chalk.dim(
-        `${existingProfile ? 'Updated' : 'Created'} AuraCall runtime profile "${profileName}" in ${writtenPath}.`,
+        `${existingProfile ? 'Updated' : 'Created'} ${formatRuntimeProfileBridgeSummary(wizardBridgeSummary)} in ${writtenPath}.`,
       ),
     );
 
@@ -6867,9 +6881,69 @@ const profileCommand = program
   .command('profile')
   .description('Manage AuraCall runtime profiles.');
 
+profileCommand
+  .command('list')
+  .description('List AuraCall runtime profiles and their browser-profile bridges.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
+  .action(async (commandOptions) => {
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const loaded = await loadUserConfig(process.cwd());
+    const resolvedConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const report = buildProfileListReport(loaded.config as Record<string, unknown>, {
+      explicitProfileName: resolvedConfig.auracallProfile ?? null,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatProfileListReport(report));
+  });
+
 const configCommand = program
   .command('config')
   .description('Manage Aura-Call config files.');
+
+configCommand
+  .command('doctor')
+  .description('Check bridge-health for AuraCall runtime profiles and browser profiles.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
+  .action(async (commandOptions) => {
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const loaded = await loadUserConfig(process.cwd());
+    const resolvedConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const report = buildConfigDoctorReport(loaded.config as Record<string, unknown>, {
+      explicitProfileName: resolvedConfig.auracallProfile ?? null,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatConfigDoctorReport(report));
+  });
+
+configCommand
+  .command('show')
+  .description('Show the active AuraCall runtime profile and browser-profile bridge state.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
+  .action(async (commandOptions) => {
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const loaded = await loadUserConfig(process.cwd());
+    const resolvedConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const report = buildConfigShowReport({
+      rawConfig: loaded.config as Record<string, unknown>,
+      resolvedConfig,
+      configPath: loaded.path,
+      loaded: loaded.loaded,
+    });
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatConfigShowReport(report));
+  });
 
 configCommand
   .command('migrate')
@@ -6922,6 +6996,13 @@ configCommand
     }
     await fs.writeFile(outputPath, `${JSON.stringify(migrated, null, 2)}\n`, 'utf8');
     console.log(`Wrote migrated config to ${outputPath}`);
+    console.log(
+      chalk.dim(
+        `Active bridge: ${formatRuntimeProfileBridgeSummary(
+          buildRuntimeProfileBridgeSummary(migrated as Record<string, unknown>),
+        )}.`,
+      ),
+    );
   });
 
 profileCommand
@@ -6935,6 +7016,13 @@ profileCommand
       return;
     }
     console.log(`Wrote config to ${result.path}`);
+    console.log(
+      chalk.dim(
+        `Scaffolded ${formatRuntimeProfileBridgeSummary(
+          buildRuntimeProfileBridgeSummary(result.config as Record<string, unknown>),
+        )}.`,
+      ),
+    );
   });
 
 program
