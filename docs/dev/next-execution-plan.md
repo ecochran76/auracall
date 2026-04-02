@@ -9,6 +9,13 @@ ChatGPT browser functionality is now materially complete for:
 - artifact extraction for core artifact families,
 - and service-volatility extraction for a substantial ChatGPT pilot slice (`configs/auracall.services.json` + manifest-backed helpers).
 
+The browser-profile-family refactor has also crossed its useful Phase 1 boundary:
+- typed resolved objects are in place,
+- launch-profile consumption now reaches config, browser-service, doctor, login,
+  and runtime bootstrap,
+- and the remaining work in that track is now cleanup and secondary-profile UX,
+  not core derivation ambiguity.
+
 The remaining work is to complete the last high-value reliability/refactor slices without introducing behavioral drift.
 
 ## Execution principle
@@ -25,36 +32,27 @@ The remaining work is to complete the last high-value reliability/refactor slice
 
 ## Slice plan (order: highest confidence first)
 
-### 1) Lock service-volatility extraction completion (low-risk, high leverage)
+### 1) Browser profile family Phase 2 cleanup (secondary-profile clarity)
 
-Goal: move remaining ChatGPT static-config extraction to a typed manifest architecture without changing workflow behavior.
+Goal: finish the high-value cleanup after the Phase 1 refactor seam landed.
 
 Deliverables
-- Manifest shape hardening (`loader + schema + validation`) and compatibility shim for the existing `configs/auracall.services.json` path.
-- Finish any remaining low-risk static extraction points still in code but already declared in `service-volatility-inventory`.
-- Keep behavior/decision code in `chatgptAdapter.ts` and service providers.
+- explicit first-class browser-family config for secondary WSL Chrome / `wsl-chrome-2`
+- docs/schema clarity around:
+  - Aura-Call profile
+  - browser family
+  - source browser profile
+  - managed browser profile
+- confirm default WSL and secondary WSL families no longer depend on raw-path
+  teaching or ambient shell assumptions
 
 Acceptance
-- `pnpm vitest run tests/services/registry.test.ts`
-- `pnpm vitest run tests/browser/chatgptProvider.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptComposerTool.test.ts`
+- `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/config.test.ts tests/browser/browserService.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
 - `pnpm run check`
-- `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --phase project --state-file docs/dev/tmp/chatgpt-acceptance-state.json`
+- smoke run default WSL profile with existing non-Pro account
+- smoke run secondary `wsl-chrome-2` profile with clean startup and no cross-profile bleed
 
-### 2) Browser profile family hardening (deterministic launch + naming clarity)
-
-Goal: make Aura-Call profile, browser family, service binding, and launch plan deterministic and explicit.
-
-Deliverables
-- typed resolve steps (`Aura-Call profile -> browser family -> service binding -> launch plan`) with explicit display/runtime values.
-- default values removed from opportunistic environment branching where possible (`display`, executable, managed/source profile path).
-- explicit first-class profile family for "WSL-Chrome-2" (secondary account profile set).
-
-Acceptance
-- unit coverage for profile-browser-service binding order.
-- smoke run default WSL profile with existing non-Pro account.
-- smoke run secondary `wsl-chrome-2` profile with clean startup (no stale modal/cross-profile bleed).
-
-### 3) Service-volatility workflow boundary (ChatGPT behavior slice)
+### 2) Service-volatility workflow boundary (ChatGPT behavior slice)
 
 Goal: keep the manifest extraction boundary clean and move reusable mechanics out of providers only when they are truly shared.
 
@@ -67,7 +65,7 @@ Acceptance
 - provider flow tests for any touched shared helper.
 - ChatGPT smoke path remains green on the targeted phases.
 
-### 4) Completion of production-facing polish and reliability gates
+### 3) Completion of production-facing polish and reliability gates
 
 Goal: keep MVP criteria for ChatGPT browser delivery stable under constrained live conditions.
 
@@ -100,6 +98,6 @@ Acceptance
 
 ## Immediate next 3 checkpoints
 
-1. Freeze this as the active execution slice board and update `ROADMAP.md`.
-2. Decide and run Slice 1 acceptance gates before touching any new profile-family behavior.
-3. Open a planning handoff in dev-journal with the current branch state and next slice owner.
+1. Mark the browser-profile-family refactor as Phase 1 complete enough and keep this file as the active slice board.
+2. Run the Phase 2 browser-family cleanup acceptance gates before deeper lifecycle refactors.
+3. If those smokes are green, pivot back to the next user-facing reliability/polish target instead of extending profile derivation work.

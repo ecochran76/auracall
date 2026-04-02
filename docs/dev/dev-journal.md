@@ -3358,3 +3358,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     derivation and more about broader execution/lifecycle policy
   - this is a reasonable place either to cut another checkpoint or to step back
     and reassess the next roadmap item
+
+## 2026-04-01 — Browser-profile-family refactor marked Phase 1 complete enough
+
+- Focus: record the current checkpoint and stop treating the refactor as open-ended runtime cleanup
+- Implemented:
+  - confirmed the runtime launch-context checkpoint landed as commit `196aad27`
+  - updated `docs/dev/browser-profile-family-refactor-plan.md` with a status
+    section describing what Phase 1 now covers in practice
+  - updated `docs/dev/next-execution-plan.md` so the next slice is explicit
+    Phase 2 cleanup around secondary WSL browser-family clarity rather than
+    deeper `index.ts` lifecycle work
+  - updated `ROADMAP.md` to mark the browser-profile-family refactor as in
+    progress with the current Phase 1 note
+- Next:
+  - run the Phase 2 cleanup slice for explicit `wsl-chrome-2` browser-family
+    configuration, naming clarity, and live/manual smoke
+  - then pivot back to the next user-facing reliability/polish target instead
+    of extending profile derivation work further

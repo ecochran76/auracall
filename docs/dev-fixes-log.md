@@ -4889,3 +4889,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/config.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/browserService.test.ts tests/schema/resolver.test.ts tests/cli/browserConfig.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-01 — Browser-profile-family refactor now has a defined Phase 1 stop point
+
+- Area: Browser/profile-family planning and execution control
+- Symptom:
+  - the profile-family refactor had already removed most of the dangerous
+    launch/profile ambiguity, but the plans still read as if deeper
+    `index.ts` cleanup was the obvious next step
+- Fix:
+  - marked the refactor as Phase 1 complete enough through commit `196aad27`
+  - updated the refactor plan, execution board, and roadmap so the next work is
+    explicit Phase 2 cleanup around secondary WSL browser-family config and
+    naming clarity instead of uncontrolled runtime-scope expansion
+- Verification:
+  - planning docs updated:
+    - `docs/dev/browser-profile-family-refactor-plan.md`
+    - `docs/dev/next-execution-plan.md`
+    - `ROADMAP.md`

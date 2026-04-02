@@ -324,3 +324,42 @@ This refactor is done when:
 Do not attempt a big-bang rewrite of schema, runtime, and docs in one landing.
 Each slice should preserve current behavior while reducing the amount of mutable
 cross-scope merge logic.
+
+## Status Update (2026-04-01)
+
+Phase 1 is now complete enough to stop treating this as a pure plan document
+and to use it as an active implementation checkpoint record.
+
+Landed through commit `196aad27`:
+
+- typed resolved objects exist in
+  `src/browser/service/profileResolution.ts`
+- browser/profile/service defaults now resolve through the typed seam in
+  `profileConfig.ts`
+- browser-service attach/list-target flows consume the launch profile instead
+  of rebuilding service-target-specific fallback config by hand
+- `resolveBrowserConfig(...)` now projects launch-owned output through the same
+  resolved launch-profile seam
+- doctor/reporting bootstrap view and login prep now consume the resolved
+  launch profile
+- browser runtime managed-profile/bootstrap selection now shares one launch
+  context helper in `src/browser/index.ts`
+
+What this means:
+
+- the main ambiguity around managed profile dir, chrome profile, bootstrap
+  cookie path, and launch defaults is materially reduced
+- the refactor has crossed the useful architectural boundary
+- remaining work in this track is now mostly deeper lifecycle policy and final
+  config cleanup, not repeated profile-derivation repairs
+
+Recommended next move:
+
+- do not push deeper into `index.ts` lifecycle policy as part of this same
+  slice family unless a concrete bug requires it
+- treat the next work here as Phase 2 cleanup:
+  - explicit first-class browser-family config for secondary WSL Chrome
+  - docs/schema clarity around profile family vs source profile vs managed
+    profile
+  - manual/live smoke for default WSL and `wsl-chrome-2`
+- otherwise pivot back to higher-payoff roadmap work between refactor slices

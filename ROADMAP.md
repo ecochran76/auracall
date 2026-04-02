@@ -9,7 +9,7 @@ Status: in progress
 Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for the remaining browser reliability and refactor slices.
 
 ### Browser Profile Family Refactor
-Status: planned
+Status: in progress
 
 Aura-Call's browser/profile model still blends logical runtime profiles,
 browser-family selection, service binding, and managed-profile path derivation
@@ -25,6 +25,9 @@ The next configuration/runtime refactor should separate:
 
 Execution docs:
 - Repo-wide plan: [docs/dev/browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-profile-family-refactor-plan.md)
+
+Current note:
+- Phase 1 is complete enough through commit `196aad27`; next work is Phase 2 cleanup around explicit secondary WSL browser-family config, naming clarity, and live/manual validation.
 
 ### Service Volatility Externalization
 Status: planned
