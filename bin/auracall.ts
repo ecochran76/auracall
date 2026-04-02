@@ -461,7 +461,7 @@ program
   .addOption(
     new Option('--mode <mode>', 'Alias for --engine (api | browser).').choices(['api', 'browser']).hideHelp(),
   )
-  .option('--profile <name>', 'Select which Aura-Call profile to use for this run.')
+  .option('--profile <name>', 'Select which AuraCall runtime profile to use for this run.')
   .addOption(new Option('--auracall-profile <name>', 'Alias for --profile.').hideHelp())
   .addOption(new Option('--oracle-profile <name>', 'Legacy alias for --profile.').hideHelp())
   .option('--files-report', 'Show token usage per attached file (also prints automatically when files exceed the token budget).', false)
@@ -3117,9 +3117,9 @@ cacheContextCommand
 
 program
   .command('doctor')
-  .description('Inspect local browser profile state and verify that the browser UI matches the expected selectors.')
+  .description('Inspect local browser-profile state and verify that the browser UI matches the expected selectors.')
   .option('--target <chatgpt|grok>', 'Choose which provider to inspect (chatgpt or grok).')
-  .option('--local-only', 'Inspect managed profile/bootstrap/browser-state only; do not attach to Chrome.')
+  .option('--local-only', 'Inspect managed browser profile/bootstrap/browser-state only; do not attach to Chrome.')
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
   .option('--json', 'Emit machine-readable JSON output.', false)
@@ -6602,7 +6602,7 @@ program
   .option('--gemini', 'Preselect Gemini in the wizard.')
   .option('--grok', 'Preselect Grok in the wizard.')
   .option('--target <chatgpt|gemini|grok>', 'Preselect which site to bootstrap.')
-  .option('--profile-name <name>', 'Preselect the Aura-Call profile name to create or update.')
+  .option('--profile-name <name>', 'Preselect the AuraCall runtime profile name to create or update.')
   .action(async (commandOptions) => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new Error('The onboarding wizard requires an interactive terminal. Use "auracall setup" with flags instead.');
@@ -6670,7 +6670,7 @@ program
       {
         type: 'input',
         name: 'profileName',
-        message: 'What Aura-Call profile name should this setup use?',
+        message: 'What AuraCall runtime profile name should this setup use?',
         default: (promptAnswers) => {
           if (initialProfileName) {
             return initialProfileName;
@@ -6686,7 +6686,7 @@ program
       {
         type: 'confirm',
         name: 'setAsDefault',
-        message: 'Make this the default Aura-Call profile?',
+        message: 'Make this the default AuraCall runtime profile?',
         default: (() => {
           const currentProfile = userConfig.auracallProfile?.trim();
           if (!currentProfile) {
@@ -6718,7 +6718,7 @@ program
           const confirmedProfileName = promptAnswers.profileName?.trim() || initialProfileName || 'default';
           const action = promptAnswers.setAsDefault ? 'create/update and activate' : 'create/update';
           return [
-            `${action} profile "${confirmedProfileName}" in ${configPath()}?`,
+            `${action} AuraCall runtime profile "${confirmedProfileName}" in ${configPath()}?`,
             `target=${promptAnswers.target}`,
             `browser=${selectedChoice.runtime}/${selectedChoice.family ?? 'browser'}`,
             `verify=${promptAnswers.verifyNow ? 'yes' : 'no'}`,
@@ -6756,7 +6756,7 @@ program
     console.log('');
     console.log(
       chalk.dim(
-        `${existingProfile ? 'Updated' : 'Created'} Aura-Call profile "${profileName}" in ${writtenPath}.`,
+        `${existingProfile ? 'Updated' : 'Created'} AuraCall runtime profile "${profileName}" in ${writtenPath}.`,
       ),
     );
 
@@ -6790,7 +6790,7 @@ program
   .option('--force-reseed-managed-profile', 'Rebuild the managed Aura-Call browser profile from the source Chrome profile before login.')
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
-  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the source browser profile.'))
   .addOption(
     new Option(
       '--browser-bootstrap-cookie-path <path>',
@@ -6812,7 +6812,7 @@ program
 
 program
   .command('login')
-  .description('Launch the configured browser profile for ChatGPT, Gemini, or Grok sign-in.')
+  .description('Launch the configured managed browser profile for ChatGPT, Gemini, or Grok sign-in.')
   .option('--chatgpt', 'Alias for --target chatgpt.')
   .option('--gemini', 'Alias for --target gemini.')
   .option('--grok', 'Alias for --target grok.')
@@ -6824,7 +6824,7 @@ program
   .option('--force-reseed-managed-profile', 'Rebuild the managed Aura-Call browser profile from the source Chrome profile before opening login.')
   .addOption(new Option('--browser-chrome-path <path>', 'Chrome/Chromium executable path.'))
   .addOption(new Option('--browser-chrome-profile <name>', 'Chrome profile name to launch.'))
-  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the browser profile.'))
+  .addOption(new Option('--browser-cookie-path <path>', 'Cookie DB path to infer the source browser profile.'))
   .addOption(
     new Option(
       '--browser-bootstrap-cookie-path <path>',
@@ -6865,7 +6865,7 @@ program
 
 const profileCommand = program
   .command('profile')
-  .description('Manage Aura-Call profiles.');
+  .description('Manage AuraCall runtime profiles.');
 
 const configCommand = program
   .command('config')
@@ -6873,7 +6873,7 @@ const configCommand = program
 
 configCommand
   .command('migrate')
-  .description('Write a v2-style config layout (legacy keys remain unless --strip-legacy).')
+  .description('Write the current v2 bridge-key config layout (legacy keys remain unless --strip-legacy).')
   .option('--path <path>', 'Input config path (defaults to ~/.auracall/config.json).')
   .option('--output <path>', 'Write migrated config to a custom path.')
   .option('--in-place', 'Overwrite the input config file in place.', false)
@@ -6926,7 +6926,7 @@ configCommand
 
 profileCommand
   .command('scaffold')
-  .description('Create a default Aura-Call profile config file from the current browser profile.')
+  .description('Create a default AuraCall runtime-profile config file from the current browser profile.')
   .option('--force', 'Overwrite an existing config file.', false)
   .action(async (commandOptions) => {
     const result = await scaffoldDefaultConfigFile({ force: Boolean(commandOptions.force) });

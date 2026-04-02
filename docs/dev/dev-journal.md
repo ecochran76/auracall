@@ -4274,3 +4274,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - still no public config behavior change
   - this is the first behavior-facing runtime slice that reduces dependence on
     the legacy `auracallProfiles` shape at call sites
+
+## 2026-04-02 14:31 CDT
+
+- Focus:
+  - clean up CLI/operator wording so config-facing commands speak in terms of
+    browser profiles and AuraCall runtime profiles instead of generic
+    ambiguous "profiles"
+- What changed:
+  - updated
+    [auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    command descriptions/options/prompts for:
+    - `--profile`
+    - `doctor`
+    - `wizard`
+    - `setup`
+    - `login`
+    - `profile`
+    - `config migrate`
+    - `profile scaffold`
+  - updated
+    [browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    validation text so it explicitly says `AuraCall runtime profile name`
+- Verification:
+  - `pnpm vitest run tests/cli/browserWizard.test.ts tests/config.test.ts tests/configModel.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still no public config behavior change
+  - this is operator-language cleanup only

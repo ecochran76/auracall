@@ -83,13 +83,13 @@ export function suggestBrowserWizardProfileName(choice: BrowserWizardChoice): st
 export function validateBrowserWizardProfileName(value: string): string | null {
   const trimmed = value.trim();
   if (!trimmed) {
-    return 'Profile name is required.';
+    return 'AuraCall runtime profile name is required.';
   }
   if (trimmed === '.' || trimmed === '..') {
-    return 'Profile name must not be "." or "..".';
+    return 'AuraCall runtime profile name must not be "." or "..".';
   }
   if (/[\\/]/.test(trimmed)) {
-    return 'Profile name must not contain path separators.';
+    return 'AuraCall runtime profile name must not contain path separators.';
   }
   return null;
 }
