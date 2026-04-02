@@ -3622,3 +3622,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - consider surfacing the full stale-candidate detail set in `--json` status
     output if operators need richer machine-readable inspection
+
+
+## 2026-04-02 — Session/status JSON now includes persisted reattach diagnostics
+
+- Focus: expose stored reattach postmortem evidence in machine-readable CLI output
+- Implemented:
+  - added `--json` to `auracall session` and `auracall status`
+  - list JSON now emits `{ entries, truncated, total }` using stored session metadata
+  - single-session JSON now emits the raw stored session metadata, including
+    `browser.runtime.reattachDiagnostics` when present
+  - added focused tests for filtered list JSON and single-session JSON output
+- Next:
+  - consider whether `--json-only` should be added to these session surfaces too,
+    or whether plain `--json` is enough for operator automation

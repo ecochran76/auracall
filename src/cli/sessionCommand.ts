@@ -11,6 +11,7 @@ export interface StatusOptions extends OptionValues {
   hours: number;
   limit: number;
   all: boolean;
+  json?: boolean;
   clear?: boolean;
   clean?: boolean;
   render?: boolean;
@@ -31,6 +32,9 @@ interface SessionCommandDependencies {
   usesDefaultStatusFilters: (cmd: Command) => boolean;
   deleteSessionsOlderThan: (options?: { hours?: number; includeAll?: boolean }) => Promise<{ deleted: number; remaining: number }>;
   getSessionPaths: (sessionId: string) => Promise<{ dir: string; metadata: string; log: string; request: string }>;
+  readSession: (sessionId: string) => Promise<Awaited<ReturnType<typeof sessionStore.readSession>>>;
+  listSessions: () => Promise<Awaited<ReturnType<typeof sessionStore.listSessions>>>;
+  filterSessions: typeof sessionStore.filterSessions;
 }
 
 const defaultDependencies: SessionCommandDependencies = {
@@ -39,6 +43,9 @@ const defaultDependencies: SessionCommandDependencies = {
   usesDefaultStatusFilters,
   deleteSessionsOlderThan: (options) => sessionStore.deleteOlderThan(options),
   getSessionPaths: (sessionId) => sessionStore.getPaths(sessionId),
+  readSession: (sessionId) => sessionStore.readSession(sessionId),
+  listSessions: () => sessionStore.listSessions(),
+  filterSessions: (metas, options) => sessionStore.filterSessions(metas, options),
 };
 
 const SESSION_OPTION_KEYS = new Set([
@@ -72,6 +79,7 @@ export async function handleSessionCommand(
   const renderExplicit = renderSource === 'cli' || renderMarkdownSource === 'cli';
   const autoRender = !renderExplicit && process.stdout.isTTY;
   const pathRequested = Boolean(sessionOptions.path);
+  const jsonRequested = Boolean(sessionOptions.json);
   const clearRequested = Boolean(sessionOptions.clear || sessionOptions.clean);
   const openConversationRequested =
     (command.getOptionValueSource?.('openConversation') === 'cli')
@@ -130,6 +138,38 @@ export async function handleSessionCommand(
       console.error(error instanceof Error ? error.message : String(error));
       process.exitCode = 1;
     }
+    return;
+  }
+  if (jsonRequested) {
+    if (sessionId) {
+      const metadata = await deps.readSession(sessionId);
+      if (!metadata) {
+        console.error(`Session ${sessionId} was not found.`);
+        process.exitCode = 1;
+        return;
+      }
+      console.log(JSON.stringify(metadata, null, 2));
+      return;
+    }
+    const metas = await deps.listSessions();
+    const { entries, truncated, total } = deps.filterSessions(metas, {
+      hours: sessionOptions.all ? Infinity : sessionOptions.hours,
+      includeAll: sessionOptions.all,
+      limit: sessionOptions.limit,
+    });
+    const modelFilter = sessionOptions.model?.trim().toLowerCase();
+    const filteredEntries = modelFilter ? entries.filter((entry) => matchesModel(entry, modelFilter)) : entries;
+    console.log(
+      JSON.stringify(
+        {
+          entries: filteredEntries,
+          truncated,
+          total,
+        },
+        null,
+        2,
+      ),
+    );
     return;
   }
   if (openConversationRequested) {
@@ -293,4 +333,17 @@ function listIgnoredFlags(command: Command): string[] {
     ignored.push(key);
   }
   return ignored;
+}
+
+function matchesModel(
+  entry: {
+    model?: string | null;
+    models?: Array<{ model: string }>;
+  },
+  modelFilter: string,
+): boolean {
+  const availableModels =
+    entry.models?.map((model) => model.model.toLowerCase()) ??
+    (entry.model ? [entry.model.toLowerCase()] : []);
+  return availableModels.includes(modelFilter);
 }

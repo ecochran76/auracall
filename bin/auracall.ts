@@ -6952,6 +6952,7 @@ const sessionCommand = program
   .option('--browser-path <path>', 'Override the browser binary to open the conversation URL.')
   .option('--browser-profile <name>', 'Override the browser profile directory for open-conversation.')
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
+  .option('--json', 'Emit machine-readable JSON output.', false)
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId, _options: StatusOptions, cmd: Command) => {
@@ -6970,6 +6971,7 @@ const statusCommand = program
   .option('--render', 'Render completed session output as markdown (rich TTY only).', false)
   .option('--render-markdown', 'Alias for --render.', false)
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
+  .option('--json', 'Emit machine-readable JSON output.', false)
   .option('--hide-prompt', 'Hide stored prompt when displaying a session.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId: string | undefined, _options: StatusOptions, command: Command) => {
@@ -6991,6 +6993,35 @@ const statusCommand = program
     if (sessionId === 'clear' || sessionId === 'clean') {
       console.error('Session cleanup now uses --clear. Run "auracall status --clear --hours <n>" instead.');
       process.exitCode = 1;
+      return;
+    }
+    if (statusOptions.json) {
+      if (sessionId) {
+        const metadata = await sessionStore.readSession(sessionId);
+        if (!metadata) {
+          console.error(`Session ${sessionId} was not found.`);
+          process.exitCode = 1;
+          return;
+        }
+        console.log(JSON.stringify(metadata, null, 2));
+        return;
+      }
+      const metas = await sessionStore.listSessions();
+      const { entries, truncated, total } = sessionStore.filterSessions(metas, {
+        hours: statusOptions.all ? Infinity : statusOptions.hours,
+        includeAll: statusOptions.all,
+        limit: statusOptions.limit,
+      });
+      const modelFilter = statusOptions.model?.trim().toLowerCase();
+      const filteredEntries = modelFilter
+        ? entries.filter((entry) => {
+            const availableModels =
+              entry.models?.map((model) => model.model.toLowerCase()) ??
+              (entry.model ? [entry.model.toLowerCase()] : []);
+            return availableModels.includes(modelFilter);
+          })
+        : entries;
+      console.log(JSON.stringify({ entries: filteredEntries, truncated, total }, null, 2));
       return;
     }
     if (sessionId) {

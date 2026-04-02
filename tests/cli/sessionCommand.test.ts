@@ -10,6 +10,12 @@ function createCommandWithOptions(options: StatusOptions): Command {
   if (options.path !== undefined) {
     command.setOptionValueWithSource('path', options.path, 'cli');
   }
+  if (options.json !== undefined) {
+    command.setOptionValueWithSource('json', options.json, 'cli');
+  }
+  if (options.model !== undefined) {
+    command.setOptionValueWithSource('model', options.model, 'cli');
+  }
   if (options.clear !== undefined) {
     command.setOptionValueWithSource('clear', options.clear, 'cli');
   }
@@ -34,6 +40,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn().mockReturnValue(true),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(showStatus).toHaveBeenCalledWith({
       hours: 12,
@@ -41,6 +50,46 @@ describe('handleSessionCommand', () => {
       limit: 5,
       showExamples: true,
     });
+  });
+
+  test('prints filtered status JSON when --json is provided without an id', async () => {
+    const command = createCommandWithOptions({ hours: 12, limit: 5, all: false, json: true, model: 'gpt-5.1' } as StatusOptions);
+    const listSessions = vi.fn().mockResolvedValue([
+      { id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {} },
+      { id: 'sess-2', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'grok', options: {} },
+    ]);
+    const filterSessions = vi.fn().mockReturnValue({
+      entries: [
+        { id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {} },
+        { id: 'sess-2', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'grok', options: {} },
+      ],
+      truncated: false,
+      total: 2,
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await handleSessionCommand(undefined, command, {
+      showStatus: vi.fn(),
+      attachSession: vi.fn(),
+      usesDefaultStatusFilters: vi.fn(),
+      deleteSessionsOlderThan: vi.fn(),
+      getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions,
+      filterSessions,
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      JSON.stringify(
+        {
+          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {} }],
+          truncated: false,
+          total: 2,
+        },
+        null,
+        2,
+      ),
+    );
   });
 
   test('attaches when id provided', async () => {
@@ -52,8 +101,64 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(attachSession).toHaveBeenCalledWith('abc', expect.objectContaining({ renderMarkdown: false }));
+  });
+
+  test('prints session JSON with reattach diagnostics when --json is provided with an id', async () => {
+    const command = createCommandWithOptions({ hours: 24, limit: 10, all: false, json: true } as StatusOptions);
+    const readSession = vi.fn().mockResolvedValue({
+      id: 'abc',
+      createdAt: '2025-11-20T00:00:00.000Z',
+      status: 'error',
+      options: {},
+      browser: {
+        runtime: {
+          reattachDiagnostics: {
+            capturedAt: '2026-04-02T03:00:00.000Z',
+            failureKind: 'wrong-browser-profile',
+            failureMessage: 'wrong browser',
+          },
+        },
+      },
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await handleSessionCommand('abc', command, {
+      showStatus: vi.fn(),
+      attachSession: vi.fn(),
+      usesDefaultStatusFilters: vi.fn(),
+      deleteSessionsOlderThan: vi.fn(),
+      getSessionPaths: vi.fn(),
+      readSession,
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      JSON.stringify(
+        {
+          id: 'abc',
+          createdAt: '2025-11-20T00:00:00.000Z',
+          status: 'error',
+          options: {},
+          browser: {
+            runtime: {
+              reattachDiagnostics: {
+                capturedAt: '2026-04-02T03:00:00.000Z',
+                failureKind: 'wrong-browser-profile',
+                failureMessage: 'wrong browser',
+              },
+            },
+          },
+        },
+        null,
+        2,
+      ),
+    );
   });
 
   test('ignores unrelated root-only flags and logs a note when attaching by id', async () => {
@@ -70,6 +175,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
 
     expect(attachSession).toHaveBeenCalledWith(
@@ -97,6 +205,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths,
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
 
     expect(getSessionPaths).toHaveBeenCalledWith('abc');
@@ -117,6 +228,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
 
     expect(errorSpy).toHaveBeenCalledWith('The --path flag requires a session ID.');
@@ -134,6 +248,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths,
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
 
     expect(errorSpy).toHaveBeenCalledWith('Session "abc" is missing: meta.json');
@@ -152,6 +269,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(attachSession).toHaveBeenCalledWith('abc', expect.objectContaining({ renderMarkdown: true }));
     expect(logSpy).not.toHaveBeenCalled();
@@ -166,6 +286,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn().mockReturnValue(false),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(showStatus).toHaveBeenCalledWith({
       hours: Infinity,
@@ -185,6 +308,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan,
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(deleteSessionsOlderThan).toHaveBeenCalledWith({ hours: 6, includeAll: false });
     expect(logSpy).toHaveBeenCalledWith(
@@ -201,6 +327,9 @@ describe('handleSessionCommand', () => {
       usesDefaultStatusFilters: vi.fn(),
       deleteSessionsOlderThan: vi.fn(),
       getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
     });
     expect(errorSpy).toHaveBeenCalledWith(
       'Session cleanup now uses --clear. Run "auracall session --clear --hours <n>" instead.',

@@ -5225,3 +5225,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Session/status JSON now exposes stored reattach diagnostics
+
+- Area: Browser-service registry / reattach diagnostics
+- Symptom:
+  - human session/status output now showed persisted reattach diagnostics, but
+    automation and postmortem tooling still had no machine-readable session CLI
+    surface for the same evidence
+- Root cause:
+  - `auracall session` and `auracall status` did not yet offer JSON output for
+    stored session metadata
+- Fix:
+  - added `--json` to `auracall session` and `auracall status`
+  - list JSON now emits `{ entries, truncated, total }`
+  - single-session JSON now emits the raw stored session metadata, including
+    nested `browser.runtime.reattachDiagnostics`
+- Verification:
+  - `pnpm vitest run tests/cli/sessionCommand.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
+  - `pnpm run check`
