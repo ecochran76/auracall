@@ -396,7 +396,7 @@ export function buildSessionListJsonPayload<T extends { browser?: { runtime?: { 
 }
 export function buildSessionJsonEntry<T extends { browser?: { runtime?: { reattachDiagnostics?: BrowserReattachDiagnosticsMetadata } } }>(
   entry: T,
-): T & { reattachSummary: ReturnType<typeof buildReattachSummary> } {
+): SessionJsonEntry<T> {
   return {
     ...entry,
     reattachSummary: buildReattachSummary(entry.browser?.runtime?.reattachDiagnostics),
