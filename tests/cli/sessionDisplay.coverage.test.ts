@@ -130,6 +130,44 @@ describe('sessionDisplay helpers', () => {
     log.mockRestore();
   }, 15_000);
 
+  it('prints reattach diagnostics under status rows when present', async () => {
+    const entry = {
+      id: 'sess-reattach',
+      status: 'error',
+      createdAt: '2025-11-20T00:00:00.000Z',
+      model: 'gpt-5.1',
+      options: { prompt: 'hi' },
+      browser: {
+        runtime: {
+          reattachDiagnostics: {
+            capturedAt: '2026-04-02T02:30:00.000Z',
+            failureKind: 'wrong-browser-profile',
+            failureMessage: 'wrong browser',
+            discardedRegistryCandidates: [
+              {
+                key: 'k1',
+                profilePath: '/tmp/profile',
+                profileName: 'Default',
+                port: 1,
+                host: '127.0.0.1',
+                liveness: 'dead-port',
+                reason: 'selected-port-stale',
+              },
+            ],
+          },
+        },
+      },
+    };
+    mockSessionStore.listSessions.mockResolvedValue([entry]);
+    mockSessionStore.filterSessions.mockReturnValue({ entries: [entry], truncated: false, total: 1 });
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const { showStatus } = await import('../../src/cli/sessionDisplay.js');
+    await showStatus({ hours: 24, includeAll: false, limit: 5 });
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('reattach: wrong-browser-profile'));
+  }, 15_000);
+
   it('prints a status table with cost info and truncation notice', async () => {
     const entry = {
       id: 'sess-123',
@@ -157,6 +195,7 @@ describe('sessionDisplay helpers', () => {
       formatResponseMetadata,
       formatTransportMetadata,
       formatUserErrorMetadata,
+      formatReattachDiagnostics,
       buildReattachLine,
       trimBeforeFirstAnswer,
       formatCompletionSummary,
@@ -175,8 +214,26 @@ describe('sessionDisplay helpers', () => {
     expect(formatUserErrorMetadata({ category: 'input', message: 'bad', details: { field: 'prompt' } })).toContain(
       'details',
     );
-
     const started = new Date(Date.now() - 1500).toISOString();
+    expect(
+      formatReattachDiagnostics({
+        capturedAt: started,
+        failureKind: 'wrong-browser-profile',
+        failureMessage: 'wrong browser',
+        discardedRegistryCandidates: [
+          {
+            key: 'k1',
+            profilePath: '/tmp/profile',
+            profileName: 'Default',
+            port: 1,
+            host: '127.0.0.1',
+            liveness: 'dead-port',
+            reason: 'selected-port-stale',
+          },
+        ],
+      }),
+    ).toContain('stale=selected-port-stale/dead-port x1');
+
     const reattachMeta: SessionMetadata = {
       id: 's1',
       status: 'running',

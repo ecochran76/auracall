@@ -114,6 +114,7 @@ export type {
   BrowserSessionConfig,
   BrowserContextMetadata,
   BrowserRuntimeMetadata,
+  BrowserReattachDiagnosticsMetadata,
   SessionTransportMetadata,
   SessionUserErrorMetadata,
   SessionStatus,

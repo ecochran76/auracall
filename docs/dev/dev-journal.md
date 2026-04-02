@@ -3608,3 +3608,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - use the persisted `reattachDiagnostics` in session/status output so operators
     can inspect the last stale-candidate set without reopening raw metadata
+
+
+## 2026-04-02 — Session/status output now renders persisted reattach diagnostics
+
+- Focus: expose stored reattach postmortem evidence directly in operator-facing
+  session surfaces
+- Implemented:
+  - added a shared `formatReattachDiagnostics(...)` formatter
+  - `auracall session <id>` now prints `Reattach diagnostics: ...` when present
+  - `auracall status` now prints an indented `reattach: ...` line under affected
+    sessions
+- Next:
+  - consider surfacing the full stale-candidate detail set in `--json` status
+    output if operators need richer machine-readable inspection

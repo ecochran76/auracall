@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import kleur from 'kleur';
 import type {
+  BrowserReattachDiagnosticsMetadata,
   SessionMetadata,
   SessionTransportMetadata,
   SessionUserErrorMetadata,
@@ -54,6 +55,10 @@ export async function showStatus({
   console.log(formatSessionTableHeader(richTty));
   for (const entry of filteredEntries) {
     console.log(formatSessionTableRow(entry, { rich: richTty }));
+    const reattachSummary = formatReattachDiagnostics(entry.browser?.runtime?.reattachDiagnostics);
+    if (reattachSummary) {
+      console.log(dim(`  reattach: ${reattachSummary}`));
+    }
   }
   if (truncated) {
     const sessionsDir = sessionStore.sessionsDir();
@@ -238,6 +243,10 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
     const userErrorSummary = formatUserErrorMetadata(metadata.error);
     if (userErrorSummary) {
       console.log(dim(`User error: ${userErrorSummary}`));
+    }
+    const reattachSummary = formatReattachDiagnostics(metadata.browser?.runtime?.reattachDiagnostics);
+    if (reattachSummary) {
+      console.log(dim(`Reattach diagnostics: ${reattachSummary}`));
     }
   }
 
@@ -438,6 +447,35 @@ export function formatUserErrorMetadata(metadata?: SessionUserErrorMetadata): st
   }
   if (metadata.details && Object.keys(metadata.details).length > 0) {
     parts.push(`details=${JSON.stringify(metadata.details)}`);
+  }
+  return parts.length > 0 ? parts.join(' | ') : null;
+}
+
+export function formatReattachDiagnostics(metadata?: BrowserReattachDiagnosticsMetadata): string | null {
+  if (!metadata) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (metadata.failureKind) {
+    parts.push(metadata.failureKind);
+  }
+  if (metadata.failureMessage) {
+    parts.push(`message=${metadata.failureMessage}`);
+  }
+  const candidates = Array.isArray(metadata.discardedRegistryCandidates)
+    ? metadata.discardedRegistryCandidates
+    : [];
+  if (candidates.length > 0) {
+    const counts = new Map<string, number>();
+    for (const candidate of candidates) {
+      const key = `${candidate.reason}/${candidate.liveness}`;
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+    parts.push(
+      `stale=${Array.from(counts.entries())
+        .map(([key, count]) => `${key} x${count}`)
+        .join(', ')}`,
+    );
   }
   return parts.length > 0 ? parts.join(' | ') : null;
 }

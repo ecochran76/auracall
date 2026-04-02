@@ -5207,3 +5207,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/registryDiagnostics.test.ts tests/browser/reattach.test.ts tests/cli/sessionDisplay.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Session/status output now shows persisted reattach diagnostics
+
+- Area: Browser-service registry / reattach diagnostics
+- Symptom:
+  - failed reattach now persisted stale registry evidence in session metadata,
+    but operators still had to inspect raw metadata files to see it
+- Root cause:
+  - session/status surfaces did not yet render the stored
+    `browser.runtime.reattachDiagnostics` summary
+- Fix:
+  - added a shared reattach-diagnostics formatter in `sessionDisplay`
+  - `auracall session <id>` now prints the stored reattach summary
+  - `auracall status` now prints an indented reattach summary under affected rows
+- Verification:
+  - `pnpm vitest run tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
+  - `pnpm run check`
