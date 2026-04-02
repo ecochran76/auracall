@@ -6,6 +6,7 @@ import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/o
 import { DEFAULT_MODEL } from '../oracle.js';
 import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
+import { getActiveRuntimeProfile, getActiveRuntimeProfileName } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
@@ -156,19 +157,10 @@ function mergeRecursively(target: MutableConfig, source: MutableConfig): Mutable
 }
 
 function applyOracleProfile(merged: MutableConfig): void {
-  const profiles = merged.auracallProfiles ?? merged.profiles ?? null;
-  if (!profiles || typeof profiles !== 'object') {
-    return;
-  }
-  const profileName = resolveActiveProfileName(merged);
-  if (!profileName || !profiles[profileName]) {
-    return;
-  }
+  const profileName = getActiveRuntimeProfileName(merged);
+  const profile = getActiveRuntimeProfile(merged);
+  if (!profileName || !profile) return;
   merged.auracallProfile = profileName;
-  const profile = profiles[profileName];
-  if (!isRecord(profile)) {
-    return;
-  }
 
   if (profile.engine !== undefined) {
     merged.engine = profile.engine as string;
@@ -183,11 +175,5 @@ function applyOracleProfile(merged: MutableConfig): void {
 }
 
 function resolveActiveProfileName(merged: MutableConfig): string | null {
-  const profiles = merged.auracallProfiles ?? merged.profiles ?? null;
-  if (!profiles || typeof profiles !== 'object') return null;
-  const explicit = typeof merged.auracallProfile === 'string' ? merged.auracallProfile.trim() : '';
-  if (explicit && profiles[explicit]) return explicit;
-  if (profiles.default) return 'default';
-  const keys = Object.keys(profiles);
-  return keys.length ? keys[0] : null;
+  return getActiveRuntimeProfileName(merged);
 }

@@ -132,4 +132,39 @@ describe('llmService cache identity resolution', () => {
       detected: { detector: 'chatgpt-feature-probe-v1', web_search: true, apps: ['github'] },
     });
   });
+
+  test('reads active runtime profile features from current profiles bridge when legacy auracallProfiles is absent', async () => {
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+      getFeatureSignature: vi.fn(async () =>
+        JSON.stringify({ detector: 'chatgpt-feature-probe-v1', web_search: true }),
+      ),
+    } satisfies LlmServiceAdapter;
+    const service = new IdentityTestLlmService(
+      ({
+        model: 'gpt-5.2-pro',
+        browser: { cache: {} },
+        auracallProfile: 'consulting',
+        profiles: {
+          consulting: {
+            services: {
+              chatgpt: {
+                features: {
+                  deep_research: true,
+                },
+              },
+            },
+          },
+        },
+      } as unknown) as ResolvedUserConfig,
+      provider,
+    );
+
+    const identity = await service.resolveCacheIdentity({});
+    expect(JSON.parse(identity.featureSignature ?? 'null')).toEqual({
+      configured: { deep_research: true },
+      detected: { detector: 'chatgpt-feature-probe-v1', web_search: true },
+    });
+  });
 });

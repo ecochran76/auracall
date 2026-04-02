@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import {
   ensureBrowserProfiles,
   ensureRuntimeProfiles,
+  getActiveRuntimeProfile,
+  getActiveRuntimeProfileName,
   getBrowserProfiles,
+  getBridgeRuntimeProfiles,
+  getLegacyRuntimeProfiles,
+  getCurrentRuntimeProfiles,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
   setBrowserProfile,
@@ -37,5 +42,29 @@ describe('config model helpers', () => {
     });
     expect(getRuntimeProfileBrowserProfileId(runtimeProfile)).toBe('consulting');
     expect(ensureRuntimeProfiles(config)).toBe(config.profiles);
+  });
+
+  it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {
+    const config = {
+      auracallProfile: 'legacy',
+      profiles: {
+        current: { defaultService: 'chatgpt' },
+      },
+      auracallProfiles: {
+        legacy: { defaultService: 'grok' },
+      },
+    };
+
+    expect(getCurrentRuntimeProfiles(config)).toEqual({
+      current: { defaultService: 'chatgpt' },
+    });
+    expect(getLegacyRuntimeProfiles(config)).toEqual({
+      legacy: { defaultService: 'grok' },
+    });
+    expect(getBridgeRuntimeProfiles(config)).toEqual({
+      legacy: { defaultService: 'grok' },
+    });
+    expect(getActiveRuntimeProfileName(config)).toBe('legacy');
+    expect(getActiveRuntimeProfile(config)).toEqual({ defaultService: 'grok' });
   });
 });

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
+import { getActiveRuntimeProfile, getActiveRuntimeProfileName } from '../../config/model.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import {
   appendChatgptMutationRecord,
@@ -1362,8 +1363,19 @@ export abstract class LlmService {
         source: 'config',
       };
     }
-    const profile = this.userConfig.auracallProfiles?.[profileName];
-    const profileIdentity = profile?.services?.[provider]?.identity;
+    const profile = getActiveRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
+    const profileServices =
+      profile?.services && typeof profile.services === 'object'
+        ? (profile.services as Record<string, unknown>)
+        : null;
+    const profileService =
+      profileServices && provider in profileServices
+        ? (profileServices[provider] as Record<string, unknown> | undefined)
+        : undefined;
+    const profileIdentity =
+      profileService && 'identity' in profileService
+        ? (profileService.identity as typeof globalIdentity | undefined)
+        : undefined;
     const identity = profileIdentity ?? globalIdentity;
     if (!identity) return null;
     return {
@@ -1375,13 +1387,7 @@ export abstract class LlmService {
   }
 
   private resolveActiveProfileName(): string | null {
-    const profiles = this.userConfig.auracallProfiles;
-    if (!profiles) return null;
-    const explicit = typeof this.userConfig.auracallProfile === 'string' ? this.userConfig.auracallProfile.trim() : '';
-    if (explicit && profiles[explicit]) return explicit;
-    if (profiles.default) return 'default';
-    const keys = Object.keys(profiles);
-    return keys.length ? keys[0] : null;
+    return getActiveRuntimeProfileName(this.userConfig);
   }
 
   private resolveConfiguredServiceFeatures(): Record<string, unknown> | null {
@@ -1390,8 +1396,17 @@ export abstract class LlmService {
     if (!profileName) {
       return isRecord(globalFeatures) ? globalFeatures : null;
     }
-    const profile = this.userConfig.auracallProfiles?.[profileName];
-    const profileFeatures = profile?.services?.[this.providerId]?.features;
+    const profile = getActiveRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
+    const profileServices =
+      profile?.services && typeof profile.services === 'object'
+        ? (profile.services as Record<string, unknown>)
+        : null;
+    const profileService =
+      profileServices && this.providerId in profileServices
+        ? (profileServices[this.providerId] as Record<string, unknown> | undefined)
+        : undefined;
+    const profileFeatures =
+      profileService && 'features' in profileService ? profileService.features : undefined;
     const merged: Record<string, unknown> = {};
     if (isRecord(globalFeatures)) {
       Object.assign(merged, globalFeatures);

@@ -4237,3 +4237,40 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - typed resolution
     - config-producing helpers
     - config migration/normalization
+
+## 2026-04-02 14:27 CDT
+
+- Focus:
+  - move resolver/load-path consumers onto the bridge-aware runtime-profile
+    helpers so config resolution stops open-coding `profiles` versus
+    `auracallProfiles`
+- What changed:
+  - expanded
+    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with active/bridge runtime-profile helpers:
+    - `getCurrentRuntimeProfiles(...)`
+    - `getLegacyRuntimeProfiles(...)`
+    - `getBridgeRuntimeProfiles(...)`
+    - `getActiveRuntimeProfileName(...)`
+    - `getActiveRuntimeProfile(...)`
+  - updated
+    [schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    to use those helpers for active runtime-profile selection and application
+  - updated
+    [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    so profile-scoped identity/features now resolve through the same bridge
+    helpers instead of reading only `auracallProfiles`
+  - expanded
+    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    and
+    [llmServiceIdentity.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceIdentity.test.ts)
+    to cover:
+    - active runtime-profile bridge selection
+    - current `profiles` bridge usage when legacy `auracallProfiles` is absent
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/configMigrate.test.ts tests/config.test.ts tests/schema/resolver.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still no public config behavior change
+  - this is the first behavior-facing runtime slice that reduces dependence on
+    the legacy `auracallProfiles` shape at call sites
