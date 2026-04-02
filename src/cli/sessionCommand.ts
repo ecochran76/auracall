@@ -12,6 +12,7 @@ export interface StatusOptions extends OptionValues {
   limit: number;
   all: boolean;
   json?: boolean;
+  jsonOnly?: boolean;
   clear?: boolean;
   clean?: boolean;
   render?: boolean;
@@ -52,6 +53,8 @@ const SESSION_OPTION_KEYS = new Set([
   'hours',
   'limit',
   'all',
+  'json',
+  'jsonOnly',
   'clear',
   'clean',
   'render',

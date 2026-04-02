@@ -5245,3 +5245,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/cli/sessionCommand.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Session/status `--json-only` is now a first-class documented option
+
+- Area: Session CLI / machine-readable output
+- Symptom:
+  - session/status JSON output worked, but `--json-only` was not advertised on
+    those subcommands and could still look like an unrelated ignored flag on
+    attach flows
+- Root cause:
+  - the global intro-banner suppression flag existed, but the session command
+    surfaces had not declared it locally or whitelisted it in ignored-flag
+    reporting
+- Fix:
+  - added explicit `--json-only` options to `auracall session` and
+    `auracall status`
+  - whitelisted `json` and `jsonOnly` in session ignored-flag detection
+- Verification:
+  - `pnpm vitest run tests/cli/sessionCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`

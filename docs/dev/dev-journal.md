@@ -3636,3 +3636,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - consider whether `--json-only` should be added to these session surfaces too,
     or whether plain `--json` is enough for operator automation
+
+
+## 2026-04-02 — Session/status now advertise `--json-only` for machine consumers
+
+- Focus: make the new session/status JSON surface discoverable and non-noisy in
+  attach flows
+- Implemented:
+  - added explicit `--json-only` option definitions to `auracall session` and
+    `auracall status`
+  - whitelisted `json` and `jsonOnly` in ignored-flag detection so attach flows
+    do not emit misleading `Ignoring flags...` messages for machine-readable use
+  - added focused coverage for the attach/ignored-flags case
+- Next:
+  - if we keep expanding machine-readable session tooling, consider extracting a
+    shared session JSON payload helper instead of duplicating the list wrapper in
+    both command entrypoints

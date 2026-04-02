@@ -6953,6 +6953,7 @@ const sessionCommand = program
   .option('--browser-profile <name>', 'Override the browser profile directory for open-conversation.')
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
   .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
   .option('--path', 'Print the stored session paths instead of attaching.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId, _options: StatusOptions, cmd: Command) => {
@@ -6972,6 +6973,7 @@ const statusCommand = program
   .option('--render-markdown', 'Alias for --render.', false)
   .option('--model <name>', 'Filter sessions/output for a specific model.', '')
   .option('--json', 'Emit machine-readable JSON output.', false)
+  .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.', false)
   .option('--hide-prompt', 'Hide stored prompt when displaying a session.', false)
   .addOption(new Option('--clean', 'Deprecated alias for --clear.').default(false).hideHelp())
   .action(async (sessionId: string | undefined, _options: StatusOptions, command: Command) => {

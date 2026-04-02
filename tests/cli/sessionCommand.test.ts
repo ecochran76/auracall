@@ -13,6 +13,9 @@ function createCommandWithOptions(options: StatusOptions): Command {
   if (options.json !== undefined) {
     command.setOptionValueWithSource('json', options.json, 'cli');
   }
+  if (options.jsonOnly !== undefined) {
+    command.setOptionValueWithSource('jsonOnly', options.jsonOnly, 'cli');
+  }
   if (options.model !== undefined) {
     command.setOptionValueWithSource('model', options.model, 'cli');
   }
@@ -159,6 +162,29 @@ describe('handleSessionCommand', () => {
         2,
       ),
     );
+  });
+
+  test('does not report --json-only as an ignored flag on attach', async () => {
+    const command = createCommandWithOptions({ hours: 24, limit: 400, all: false, jsonOnly: true } as StatusOptions);
+
+    const attachSession = vi.fn();
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    await handleSessionCommand('swiftui-menubarextra-on-macos-15', command, {
+      showStatus: vi.fn(),
+      attachSession,
+      usesDefaultStatusFilters: vi.fn(),
+      deleteSessionsOlderThan: vi.fn(),
+      getSessionPaths: vi.fn(),
+      readSession: vi.fn(),
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
+    });
+
+    expect(attachSession).toHaveBeenCalledWith(
+      'swiftui-menubarextra-on-macos-15',
+      expect.objectContaining({ renderMarkdown: false }),
+    );
+    expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining('Ignoring flags on session attach'));
   });
 
   test('ignores unrelated root-only flags and logs a note when attaching by id', async () => {
