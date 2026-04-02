@@ -4179,3 +4179,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - still no public config behavior change
   - this gives the schema layer the same “runtime profile references browser
     profile” framing that the typed resolution layer now has
+
+## 2026-04-02 14:02 CDT
+
+- Focus:
+  - add the first bridge-aware config helper layer so config-producing code can
+    speak in browser-profile versus runtime-profile terms without duplicating
+    raw key knowledge inline
+- What changed:
+  - added
+    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with narrow bridge-aware helpers for:
+    - browser profiles
+    - AuraCall runtime profiles
+    - the runtime-profile -> browser-profile bridge reference
+  - rewired
+    [config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+    default scaffolding through those helpers
+  - rewired
+    [browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    patch generation through those helpers
+  - added direct helper coverage in
+    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still no public config behavior change
+  - the public bridge keys remain:
+    - `browserFamilies`
+    - `profiles`
+    - `profiles.<name>.browserFamily`

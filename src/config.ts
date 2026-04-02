@@ -4,6 +4,7 @@ import JSON5 from 'json5';
 import { getAuracallHomeDir } from './auracallHome.js';
 import type { OracleConfig } from './schema/types.js';
 import type { ResolvedUserConfig } from './config/schema.js';
+import { setBrowserProfile, setRuntimeProfile, setRuntimeProfileBrowserProfile } from './config/model.js';
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 import { DEFAULT_MODEL } from './oracle.js';
@@ -155,9 +156,6 @@ export async function scaffoldDefaultConfigFile(options: {
     version: 2,
     globals: {},
     browserDefaults: {},
-    browserFamilies: {
-      [browserProfileName]: browserProfile,
-    },
     llmDefaults: {
       model: DEFAULT_MODEL,
     },
@@ -169,26 +167,27 @@ export async function scaffoldDefaultConfigFile(options: {
       grok: { url: GROK_URL },
     },
     auracallProfile: 'default',
-    profiles: {
-      default: {
-        engine: 'browser',
-        browserFamily: browserProfileName,
-        defaultService: 'chatgpt',
-        browser: {},
-        llm: {},
-        services: {},
-        cache: {
-          store: 'dual',
-          includeHistory: true,
-          includeProjectOnlyConversations: true,
-          historyLimit: 2000,
-          cleanupDays: 365,
-          refreshHours: 6,
-          useDetectedIdentity: false,
-        },
-      },
+    profiles: {},
+  };
+  setBrowserProfile(scaffolded as Record<string, unknown>, browserProfileName, browserProfile);
+  const defaultRuntimeProfile: Record<string, unknown> = {
+    engine: 'browser',
+    defaultService: 'chatgpt',
+    browser: {},
+    llm: {},
+    services: {},
+    cache: {
+      store: 'dual',
+      includeHistory: true,
+      includeProjectOnlyConversations: true,
+      historyLimit: 2000,
+      cleanupDays: 365,
+      refreshHours: 6,
+      useDetectedIdentity: false,
     },
   };
+  setRuntimeProfileBrowserProfile(defaultRuntimeProfile, browserProfileName);
+  setRuntimeProfile(scaffolded as Record<string, unknown>, 'default', defaultRuntimeProfile);
 
   await fs.mkdir(path.dirname(userPath), { recursive: true });
   await fs.writeFile(userPath, `${JSON.stringify(scaffolded, null, 2)}\n`, 'utf8');

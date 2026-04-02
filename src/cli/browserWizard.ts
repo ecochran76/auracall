@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import type { OracleConfig } from '../config/schema.js';
+import { setBrowserProfile, setRuntimeProfile, setRuntimeProfileBrowserProfile } from '../config/model.js';
 import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
 import {
   discoverDefaultBrowserProfile,
@@ -150,25 +151,24 @@ export function buildBrowserWizardConfigPatch(input: BrowserWizardConfigPatchInp
 
   const patch: BrowserWizardConfigOverlay = {
     version: 2,
-    browserFamilies: {
-      [browserProfileName]: browserProfilePatch,
-    },
-    profiles: {
-      [input.profileName]: {
-        engine: 'browser',
-        browserFamily: browserProfileName,
-        defaultService: input.target,
-        keepBrowser: input.keepBrowser,
-        browser: {},
-        services: {
-          [input.target]: {
-            model: defaultWizardModelForTarget(input.target),
-            manualLogin: true,
-          },
-        },
+    browserFamilies: {},
+    profiles: {},
+  };
+  setBrowserProfile(patch as Record<string, unknown>, browserProfileName, browserProfilePatch);
+  const runtimeProfilePatch: Record<string, unknown> = {
+    engine: 'browser',
+    defaultService: input.target,
+    keepBrowser: input.keepBrowser,
+    browser: {},
+    services: {
+      [input.target]: {
+        model: defaultWizardModelForTarget(input.target),
+        manualLogin: true,
       },
     },
   };
+  setRuntimeProfileBrowserProfile(runtimeProfilePatch, browserProfileName);
+  setRuntimeProfile(patch as Record<string, unknown>, input.profileName, runtimeProfilePatch);
 
   if (input.setAsDefault) {
     patch.auracallProfile = input.profileName;
