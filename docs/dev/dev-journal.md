@@ -3527,3 +3527,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - stop the ChatGPT manifest pilot again unless another equally low-risk
     declarative label set is identified; most remaining adapter strings are now
     entangled with state heuristics or fallback order
+
+
+## 2026-04-01 — Started browser-service registry and reattach reliability planning
+
+- Focus: pivot from narrow ChatGPT manifest extraction back to a shared
+  browser-service reliability target
+- Implemented:
+  - wrote `docs/dev/browser-service-reattach-reliability-plan.md`
+  - updated roadmap/execution docs to make stale registry cleanup and
+    reattach-boundary reliability the next browser-service slice
+  - started Slice 1 by introducing explicit registry liveness classification in
+    browser-service and consuming it in browser doctor reporting
+- Next:
+  - finish the focused package + doctor regression set
+  - then decide whether Slice 2 should add pruning diagnostics immediately or
+    stop after the first classification seam lands

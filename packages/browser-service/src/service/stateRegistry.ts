@@ -1,6 +1,9 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { isChromeAlive } from '../processCheck.js';
+import {
+  findChromePidUsingUserDataDir,
+  isDevToolsResponsive,
+} from '../processCheck.js';
 import { resolveProfileDirectoryName } from './profile.js';
 
 export interface BrowserInstance {
@@ -21,6 +24,22 @@ export interface BrowserInstance {
 export interface BrowserStateRegistry {
   instances: Record<string, BrowserInstance>;
   version?: number;
+}
+
+export type BrowserInstanceLiveness =
+  | 'live'
+  | 'dead-process'
+  | 'dead-port'
+  | 'profile-mismatch';
+
+export interface BrowserInstanceStatus {
+  alive: boolean;
+  liveness: BrowserInstanceLiveness;
+  actualPid: number | null;
+}
+
+export interface ClassifiedBrowserInstance extends BrowserInstanceStatus {
+  instance: BrowserInstance;
 }
 
 export type RegistryOptions = {
@@ -72,6 +91,56 @@ export async function unregisterInstance(
   }
 }
 
+export async function classifyInstanceLiveness(instance: BrowserInstance): Promise<BrowserInstanceStatus> {
+  const actualPid = await findChromePidUsingUserDataDir(instance.profilePath);
+  if (!actualPid) {
+    return {
+      alive: false,
+      liveness: 'dead-process',
+      actualPid: null,
+    };
+  }
+  if (instance.pid !== actualPid) {
+    return {
+      alive: false,
+      liveness: 'profile-mismatch',
+      actualPid,
+    };
+  }
+  if (instance.port) {
+    const responsive = await isDevToolsResponsive({
+      port: instance.port,
+      host: instance.host || '127.0.0.1',
+      attempts: 2,
+      timeoutMs: 1000,
+    });
+    if (!responsive) {
+      return {
+        alive: false,
+        liveness: 'dead-port',
+        actualPid,
+      };
+    }
+  }
+  return {
+    alive: true,
+    liveness: 'live',
+    actualPid,
+  };
+}
+
+export async function listInstancesWithLiveness(options: RegistryOptions): Promise<ClassifiedBrowserInstance[]> {
+  const registry = await loadRegistry(options);
+  const results: ClassifiedBrowserInstance[] = [];
+  for (const instance of Object.values(registry.instances ?? {})) {
+    results.push({
+      instance,
+      ...(await classifyInstanceLiveness(instance)),
+    });
+  }
+  return results;
+}
+
 export async function findActiveInstance(
   options: RegistryOptions,
   profilePath: string,
@@ -94,8 +163,8 @@ export async function findActiveInstance(
   }
   if (!instance) return null;
 
-  const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port, undefined, instance.host);
-  if (alive) {
+  const status = await classifyInstanceLiveness(instance);
+  if (status.alive) {
     return instance;
   }
 
@@ -118,8 +187,8 @@ export async function pruneRegistry(options: RegistryOptions): Promise<void> {
   const registry = await loadRegistry(options);
   let changed = false;
   for (const [key, instance] of Object.entries(registry.instances)) {
-    const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port, undefined, instance.host);
-    if (!alive) {
+    const status = await classifyInstanceLiveness(instance);
+    if (!status.alive) {
       delete registry.instances[key];
       changed = true;
     }

@@ -77,7 +77,27 @@ Acceptance
 - reserved schema/docs landing zone exists for top-level `agents` and `teams`
 - agent inheritance/override boundary is documented before behavior work starts
 
-### 3) Service-volatility workflow boundary (ChatGPT behavior slice)
+### 3) Browser-service registry + reattach reliability
+
+Goal: make stale browser-state cleanup and session reattach deterministic inside
+the selected browser profile boundary.
+
+Deliverables
+- package-owned registry liveness classification:
+  - `live`
+  - `dead-process`
+  - `dead-port`
+  - `profile-mismatch`
+- doctor/reporting that surfaces stale-entry reasons instead of a generic stale count
+- tighter attach/reattach diagnostics before any broader reattach behavior changes
+
+Acceptance
+- `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+- `pnpm run check`
+- plan tracked in
+  `docs/dev/browser-service-reattach-reliability-plan.md`
+
+### 4) Service-volatility workflow boundary (ChatGPT behavior slice)
 
 Goal: keep the manifest extraction boundary clean and move reusable mechanics out of providers only when they are truly shared.
 

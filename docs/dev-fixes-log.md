@@ -5102,3 +5102,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/services/registry.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/chatgptProvider.test.ts tests/browser/chatgptComposerTool.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-01 — Browser-service stale browser-state is now classified, not just "alive" or "dead"
+
+- Area: Browser-service registry / reattach reliability
+- Symptom:
+  - stale browser-state and attach failures were being treated as a generic
+    boolean "not alive" condition, which made doctor output noisy and limited
+    safe pruning/reattach decisions
+- Root cause:
+  - the shared state registry had no explicit liveness model for dead process,
+    dead DevTools port, or profile ownership mismatch
+- Fix:
+  - added a first explicit browser-service liveness classifier for registry
+    entries
+  - started surfacing that liveness reason through browser doctor reporting
+  - documented the follow-on implementation plan in
+    `docs/dev/browser-service-reattach-reliability-plan.md`
+- Verification:
+  - `pnpm vitest run tests/browser-service/stateRegistry.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run check`

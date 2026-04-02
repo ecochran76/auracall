@@ -80,5 +80,8 @@ Release discipline:
 ### Browser Service Hardening
 See [docs/dev/browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-refactor-roadmap.md).
 
+Current focused reliability slice:
+- [docs/dev/browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-reattach-reliability-plan.md)
+
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

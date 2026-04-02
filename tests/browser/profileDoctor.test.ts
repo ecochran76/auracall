@@ -591,6 +591,8 @@ describe('profileDoctor', () => {
             port: 45000,
             host: '127.0.0.1',
             alive: true,
+            liveness: 'live',
+            actualPid: 1234,
             managed: true,
             legacy: false,
             services: ['grok'],

@@ -13,7 +13,8 @@ vi.mock('../../packages/browser-service/src/processCheck.js', async (importOrigi
   const actual = await importOriginal<typeof import('../../packages/browser-service/src/processCheck.js')>();
   return {
     ...actual,
-    isChromeAlive: vi.fn(async () => true),
+    findChromePidUsingUserDataDir: vi.fn(async () => 1234),
+    isDevToolsResponsive: vi.fn(async () => true),
   };
 });
 
@@ -37,6 +38,9 @@ describe('stateRegistry (package)', () => {
           services: ['grok'],
         },
       );
+      const processCheck = await import('../../packages/browser-service/src/processCheck.js');
+      vi.mocked(processCheck.findChromePidUsingUserDataDir).mockResolvedValueOnce(1234);
+      vi.mocked(processCheck.isDevToolsResponsive).mockResolvedValueOnce(true);
       const instance = await registry.findActiveInstance({ registryPath }, '/tmp/profile', 'Default');
       expect(instance?.port).toBe(9222);
       expect(instance?.profileName).toBe('Default');
@@ -64,7 +68,8 @@ describe('stateRegistry (package)', () => {
         },
       );
       const processCheck = await import('../../packages/browser-service/src/processCheck.js');
-      vi.mocked(processCheck.isChromeAlive).mockResolvedValueOnce(false);
+      vi.mocked(processCheck.findChromePidUsingUserDataDir).mockResolvedValueOnce(9999);
+      vi.mocked(processCheck.isDevToolsResponsive).mockResolvedValueOnce(false);
       await registry.pruneRegistry({ registryPath });
 
       const raw = await readFile(registryPath, 'utf8');
@@ -74,6 +79,26 @@ describe('stateRegistry (package)', () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  test('classifies profile mismatch when another pid owns the same profile path', async () => {
+    const processCheck = await import('../../packages/browser-service/src/processCheck.js');
+    vi.mocked(processCheck.findChromePidUsingUserDataDir).mockResolvedValueOnce(4321);
+    const status = await registry.classifyInstanceLiveness({
+      pid: 1234,
+      port: 9222,
+      host: '127.0.0.1',
+      profilePath: '/tmp/profile',
+      profileName: 'Default',
+      type: 'chrome',
+      launchedAt: new Date().toISOString(),
+      lastSeenAt: new Date().toISOString(),
+    });
+    expect(status).toEqual({
+      alive: false,
+      liveness: 'profile-mismatch',
+      actualPid: 4321,
+    });
   });
 
   test('resolveTab prefers matching URL', () => {

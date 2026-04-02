@@ -15,8 +15,12 @@ import {
   resolveBootstrapSourceCookiePath,
   resolveManagedProfileRoot,
 } from './profileStore.js';
-import { listInstances, pruneRegistry, type BrowserInstance } from '../../packages/browser-service/src/service/stateRegistry.js';
-import { isChromeAlive } from '../../packages/browser-service/src/processCheck.js';
+import {
+  listInstancesWithLiveness,
+  pruneRegistry,
+  type BrowserInstance,
+  type BrowserInstanceLiveness,
+} from '../../packages/browser-service/src/service/stateRegistry.js';
 import type { BrowserToolsDoctorContract } from '../../packages/browser-service/src/browserTools.js';
 
 export type BrowserDoctorTarget = 'chatgpt' | 'grok' | 'gemini';
@@ -29,6 +33,8 @@ export interface BrowserDoctorRegistryEntry {
   port: number;
   host: string;
   alive: boolean;
+  liveness: BrowserInstanceLiveness;
+  actualPid: number | null;
   managed: boolean;
   legacy: boolean;
   services: string[];
@@ -227,7 +233,9 @@ export async function inspectBrowserDoctorState(
     );
   }
   if (staleRegistryEntries.length > 0) {
-    warnings.push(`browser-state.json contains ${staleRegistryEntries.length} stale entr${staleRegistryEntries.length === 1 ? 'y' : 'ies'}.`);
+    warnings.push(
+      `browser-state.json contains ${staleRegistryEntries.length} stale entr${staleRegistryEntries.length === 1 ? 'y' : 'ies'} (${summarizeRegistryLiveness(staleRegistryEntries)}).`,
+    );
   }
   if (legacyRegistryEntries.length > 0) {
     warnings.push(`browser-state.json still contains ${legacyRegistryEntries.length} legacy entr${legacyRegistryEntries.length === 1 ? 'y' : 'ies'} from older profile paths.`);
@@ -313,10 +321,9 @@ async function classifyRegistryEntries(
   registryPath: string,
   managedProfileRoot: string,
 ): Promise<BrowserDoctorRegistryEntry[]> {
-  const instances = await listInstances({ registryPath });
+  const instances = await listInstancesWithLiveness({ registryPath });
   const entries: BrowserDoctorRegistryEntry[] = [];
-  for (const instance of instances) {
-    const alive = await isChromeAlive(instance.pid, instance.profilePath, instance.port, undefined, instance.host);
+  for (const { instance, alive, liveness, actualPid } of instances) {
     const profileName = (instance.profileName ?? 'Default').trim() || 'Default';
     const normalizedPath = path.resolve(instance.profilePath);
     entries.push({
@@ -327,6 +334,8 @@ async function classifyRegistryEntries(
       port: instance.port,
       host: instance.host,
       alive,
+      liveness,
+      actualPid,
       managed: normalizedPath.startsWith(path.resolve(managedProfileRoot)),
       legacy: isLegacyBrowserProfilePath(normalizedPath),
       services: instance.services ?? [],
@@ -335,8 +344,20 @@ async function classifyRegistryEntries(
   return entries.sort((a, b) => {
     if (a.managed !== b.managed) return a.managed ? -1 : 1;
     if (a.alive !== b.alive) return a.alive ? -1 : 1;
+    if (a.liveness !== b.liveness) return a.liveness.localeCompare(b.liveness);
     return a.profilePath.localeCompare(b.profilePath);
   });
+}
+
+function summarizeRegistryLiveness(entries: ReadonlyArray<BrowserDoctorRegistryEntry>): string {
+  const counts = new Map<string, number>();
+  for (const entry of entries) {
+    counts.set(entry.liveness, (counts.get(entry.liveness) ?? 0) + 1);
+  }
+  return Array.from(counts.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([kind, count]) => `${count} ${kind}`)
+    .join(', ');
 }
 
 function isLegacyBrowserProfilePath(profilePath: string): boolean {
