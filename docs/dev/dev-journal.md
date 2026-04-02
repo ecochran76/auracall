@@ -4029,3 +4029,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       - `Using Chrome profile directory "Profile 1" in /home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt.`
       - `Login check passed (status=200, domLoginCta=false)`
       - recovered `WSL REATTACH OK 20260402`
+
+## 2026-04-02 13:21 CDT
+
+- Focus:
+  - short end-to-end reattach/doctor smoke across both browser profiles after
+    the fresh-launch runtime-profile fix
+- Results:
+  - local-only doctor:
+    - `default/chatgpt` signed in as `ecochran76@gmail.com`
+    - `wsl-chrome-2/chatgpt` signed in as
+      `consult@polymerconsultinggroup.com`
+    - `default/grok` still live and healthy
+  - pruned one stale registry `profile-mismatch` entry for the old
+    `default/chatgpt::default` process
+  - direct reattach replay:
+    - `reattach-smoke-default` green
+      - rejected live `45011` as `wrong-browser-profile`
+      - reopened `default/chatgpt`
+      - recovered `DEFAULT REATTACH OK 20260402`
+    - `reattach-smoke-wsl` green
+      - reused/reopened `wsl-chrome-2/chatgpt`
+      - kept `Profile 1`
+      - passed ChatGPT login check
+      - recovered `WSL REATTACH OK 20260402`
+- Follow-up:
+  - `doctor --target chatgpt --prune-browser-state --json` still let its
+    runtime probe attach to the live Grok page on `45011`
+  - that is a separate browser-tools/doctor target-selection bug, not a
+    reattach or managed-browser-profile bug
