@@ -134,6 +134,35 @@ describe('resumeBrowserSession', () => {
     );
   });
 
+  test('treats generic root tabs as ambiguous instead of suppressing ambiguity', async () => {
+    const runtime = {
+      chromePort: 51559,
+      chromeHost: '127.0.0.1',
+      tabUrl: 'https://chatgpt.com/c/original',
+    };
+    const listTargets = vi.fn(async () =>
+      [
+        { targetId: 'target-1', type: 'page', url: 'https://chatgpt.com/' },
+        { targetId: 'target-2', type: 'page', url: 'https://chatgpt.com/gpts' },
+      ] satisfies FakeTarget[],
+    ) as unknown as () => Promise<FakeTarget[]>;
+    const recoverSession = vi.fn(async () => ({
+      answerText: 'fallback',
+      answerMarkdown: 'fallback-md',
+    }));
+    const logger = vi.fn() as BrowserLogger;
+
+    const result = await resumeBrowserSession(runtime, {}, logger, { listTargets, recoverSession });
+
+    expect(result.answerText).toBe('fallback');
+    expect(recoverSession).toHaveBeenCalled();
+    expect(logger).toHaveBeenCalledWith(
+      expect.stringContaining(
+        'ambiguous: Existing Chrome exposes multiple possible ChatGPT pages for the prior browser profile; refusing to guess.',
+      ),
+    );
+  });
+
   test('describeReattachFailure formats classified errors', () => {
     const error = new ReattachFailure({
       kind: 'target-missing',

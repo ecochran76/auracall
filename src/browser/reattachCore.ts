@@ -452,7 +452,7 @@ function classifyAmbiguousReattachTarget(
   if (runtime.tabUrl) {
     const byUrl = targets.find((target) => {
       const candidateUrl = target.url ?? '';
-      return candidateUrl.startsWith(runtime.tabUrl as string) || (runtime.tabUrl as string).startsWith(candidateUrl);
+      return urlsRepresentSameReattachTarget(candidateUrl, runtime.tabUrl as string);
     });
     if (byUrl) {
       return null;
@@ -476,6 +476,41 @@ function classifyAmbiguousReattachTarget(
     chromePort: runtime.chromePort ?? null,
     conversationId: runtime.conversationId ?? null,
   });
+}
+
+function urlsRepresentSameReattachTarget(candidateUrl: string, expectedUrl: string): boolean {
+  if (!candidateUrl || !expectedUrl) {
+    return false;
+  }
+  let candidate: URL;
+  let expected: URL;
+  try {
+    candidate = new URL(candidateUrl);
+    expected = new URL(expectedUrl);
+  } catch {
+    return false;
+  }
+  if (candidate.origin !== expected.origin) {
+    return false;
+  }
+  const candidatePath = normalizeComparablePath(candidate.pathname);
+  const expectedPath = normalizeComparablePath(expected.pathname);
+  if (candidatePath === expectedPath) {
+    return true;
+  }
+  if (!isSpecificComparablePath(candidatePath) || !isSpecificComparablePath(expectedPath)) {
+    return false;
+  }
+  return candidatePath.startsWith(expectedPath) || expectedPath.startsWith(candidatePath);
+}
+
+function normalizeComparablePath(pathname: string): string {
+  const normalized = pathname.endsWith('/') && pathname !== '/' ? pathname.slice(0, -1) : pathname;
+  return normalized || '/';
+}
+
+function isSpecificComparablePath(pathname: string): boolean {
+  return pathname !== '/' && pathname.length > 1;
 }
 
 function buildMissingConversationFailure(runtime: ReattachRuntime): ReattachFailure {

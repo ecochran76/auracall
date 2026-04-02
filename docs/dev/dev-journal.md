@@ -3703,3 +3703,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
   - run a live multi-tab ChatGPT reattach smoke if we want end-to-end proof of
     the new classification on a real browser session
+
+
+## 2026-04-02 — Live ambiguous reattach smoke exposed and fixed a root-URL false match
+
+- Focus: prove the new `ambiguous` reattach classification on a real ChatGPT
+  browser session and tighten it where the live DOM disagreed with the test-only
+  assumptions
+- Implemented:
+  - reproduced a real same-profile multi-tab ChatGPT state on port `45011`
+    using the managed browser profile for
+    `reply-exactly-with-reattach-ambig`
+  - found that `classifyAmbiguousReattachTarget(...)` incorrectly treated
+    `https://chatgpt.com/` as an exact-enough URL match for a prior
+    `/c/<conversation>` page because of a broad prefix comparison
+  - tightened the URL comparison so only genuinely specific prior-page matches
+    suppress ambiguity; generic root/origin tabs no longer do
+  - added a focused regression proving that root-plus-other same-origin tabs now
+    classify as `ambiguous`
+- Verification:
+  - focused:
+    - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - direct `resumeBrowserSessionCore(...)` probe against the real browser on
+      port `45011` now logs:
+      - `ambiguous: Existing Chrome exposes multiple possible ChatGPT pages for the prior browser profile; refusing to guess.`
+- Next:
+  - decide whether to add a first-class live vitest for this exact ambiguous
+    multi-tab scenario, or leave it as a manual/live operator smoke because it
+    depends on deliberately staging conflicting ChatGPT pages

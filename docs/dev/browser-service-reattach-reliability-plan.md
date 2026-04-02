@@ -118,6 +118,10 @@ Deliverables:
 Acceptance:
 - reattach tests cover target gone vs wrong-profile vs successful rediscovery
 - live reattach smoke green
+  - note: a real ChatGPT live smoke exposed one subtle false-positive
+    same-target match where `https://chatgpt.com/` was incorrectly treated as a
+    match for a prior `/c/<conversation>` tab; ambiguity detection now excludes
+    generic root/origin tabs from exact-target suppression
 
 ## Code seams
 

@@ -5325,3 +5325,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Verification:
   - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+
+## 2026-04-02 — Generic ChatGPT root tabs must not suppress ambiguous reattach
+
+- Area: Browser-service reattach reliability
+- Symptom:
+  - a live multi-tab ChatGPT reattach scenario still classified as
+    `target-missing` instead of `ambiguous` even though two same-origin pages
+    remained in the selected browser profile and the original conversation tab
+    was gone
+- Root cause:
+  - the ambiguity guard treated a generic root tab like
+    `https://chatgpt.com/` as an exact-enough match for a prior conversation URL
+    because of a broad `startsWith(...)` URL comparison
+- Fix:
+  - replaced the broad prefix comparison with a more specific target-URL check
+  - generic root/origin pages no longer count as exact prior-target matches
+  - only genuinely specific same-target URLs suppress ambiguity
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionDisplay.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live direct `resumeBrowserSessionCore(...)` repro on a real browser now logs
+    `ambiguous` for the staged root-plus-Explore-GPTs conflict
