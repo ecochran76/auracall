@@ -4960,3 +4960,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Follow-ups:
   - keep the implementation terminology stable enough for now
   - only do broad code symbol renames when there is a larger refactor reason
+
+
+## 2026-04-01 — Config-model refactor is now explicitly sequenced before agents/teams
+
+- Area: Roadmap and architecture sequencing
+- Symptom:
+  - the repo had clearer browser/runtime-profile semantics, but the roadmap did
+    not yet state clearly when the larger config-shape refactor should happen
+    relative to future agent/team work
+- Fix:
+  - added `docs/dev/config-model-refactor-plan.md`
+  - updated `ROADMAP.md` and `docs/dev/next-execution-plan.md` so the
+    config-model refactor is a named architecture track that should happen
+    before agent/team implementation
+  - clarified in the browser-profile-family plan that broad code renames and
+    final public config-shape decisions are deferred to that larger refactor
+- Verification:
+  - planning docs reviewed locally after update

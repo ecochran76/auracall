@@ -366,3 +366,21 @@ Recommended next move:
     profile
   - manual/live smoke for default WSL and `wsl-chrome-2`
 - otherwise pivot back to higher-payoff roadmap work between refactor slices
+
+## Relationship To Config-Model Refactor
+
+This plan is now a bounded precursor to the broader config-model refactor.
+
+Scope to keep here:
+- browser-profile resolution
+- service-binding resolution
+- launch-plan consumption
+- cleanup needed to make browser-profile behavior deterministic
+
+Scope to defer to the broader config-model refactor:
+- final public config shape for browser profiles vs AuraCall runtime profiles
+- broad code symbol renames
+- any agent/team-facing config design
+
+See:
+- [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)

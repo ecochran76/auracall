@@ -3421,3 +3421,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - keep applying the same terminology in future config/schema work
   - treat remaining code-level names like `browserFamily` as acceptable
     transitional implementation detail until a larger rename is justified
+
+## 2026-04-01 — Sequenced config-model refactor ahead of agents and teams
+
+- Focus: place the next bigger semantic/config refactor correctly in the roadmap
+- Implemented:
+  - added `docs/dev/config-model-refactor-plan.md`
+  - updated `ROADMAP.md` and `docs/dev/next-execution-plan.md` so the
+    config-model refactor is explicitly sequenced before future agent/team work
+  - updated `docs/dev/browser-profile-family-refactor-plan.md` to mark it as
+    a bounded precursor rather than the whole future config story
+- Next:
+  - commit this planning pass
+  - then return to the next bounded execution slice instead of expanding the
+    planning work indefinitely

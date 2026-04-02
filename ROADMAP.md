@@ -27,7 +27,29 @@ Execution docs:
 - Repo-wide plan: [docs/dev/browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-profile-family-refactor-plan.md)
 
 Current note:
-- Phase 1 is complete enough through commit `196aad27`; next work is Phase 2 cleanup around explicit secondary WSL browser-family config, naming clarity, and live/manual validation.
+- Phase 1 is complete enough through commit `196aad27`; next work is Phase 2 cleanup around explicit secondary WSL browser-profile config, naming clarity, and live/manual validation.
+
+### Config Model Refactor
+Status: planned
+
+Aura-Call now has clearer semantics in docs, but the config shape is still
+transitional. Browser concerns, AuraCall runtime concerns, and future higher
+layers like agents and teams should not continue to share overloaded profile
+concepts.
+
+This refactor should establish the long-term layering:
+
+- browser profiles
+- AuraCall runtime profiles
+- agents
+- teams
+
+Sequencing rule:
+- do the config-model refactor before implementing agents
+- do not burn time on broad code symbol renames before that refactor
+
+Execution docs:
+- Repo-wide plan: [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
 
 ### Service Volatility Externalization
 Status: planned

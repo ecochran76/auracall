@@ -18,6 +18,11 @@ The browser-profile-family refactor has also crossed its useful Phase 1 boundary
 
 The remaining work is to complete the last high-value reliability/refactor slices without introducing behavioral drift.
 
+A new planning constraint now applies:
+- the larger config-model refactor should be designed before agents/teams are
+  implemented
+- but it does not block small reliability or hardening slices in the meantime
+
 ## Execution principle
 
 - Work in small, bounded slices.
@@ -52,7 +57,25 @@ Acceptance
 - smoke run default WSL profile with existing non-Pro account
 - smoke run secondary `wsl-chrome-2` profile with clean startup and no cross-profile bleed
 
-### 2) Service-volatility workflow boundary (ChatGPT behavior slice)
+### 2) Config-model refactor planning
+
+Goal: define the next stable config shape before agent/team work starts.
+
+Deliverables
+- explicit plan for:
+  - browser profiles
+  - AuraCall runtime profiles
+  - agents
+  - teams
+- sequencing guidance for compatibility shims and deferred code renames
+- acceptance criteria for the future config migration
+
+Acceptance
+- plan captured in `docs/dev/config-model-refactor-plan.md`
+- linked from `ROADMAP.md` and kept consistent with
+  `docs/dev/browser-profile-family-refactor-plan.md`
+
+### 3) Service-volatility workflow boundary (ChatGPT behavior slice)
 
 Goal: keep the manifest extraction boundary clean and move reusable mechanics out of providers only when they are truly shared.
 
@@ -65,7 +88,7 @@ Acceptance
 - provider flow tests for any touched shared helper.
 - ChatGPT smoke path remains green on the targeted phases.
 
-### 3) Completion of production-facing polish and reliability gates
+### 4) Completion of production-facing polish and reliability gates
 
 Goal: keep MVP criteria for ChatGPT browser delivery stable under constrained live conditions.
 
@@ -98,6 +121,6 @@ Acceptance
 
 ## Immediate next 3 checkpoints
 
-1. Mark the browser-profile-family refactor as Phase 1 complete enough and keep this file as the active slice board.
-2. Run the Phase 2 browser-family cleanup acceptance gates before deeper lifecycle refactors.
-3. If those smokes are green, pivot back to the next user-facing reliability/polish target instead of extending profile derivation work.
+1. Keep the browser-profile-family work at bounded Phase 2 cleanup, not open-ended runtime churn.
+2. Finish the config-model refactor planning before any agent/team implementation starts.
+3. Continue small reliability and polish slices in parallel where they do not prejudice the future config migration.
