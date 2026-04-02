@@ -6,11 +6,12 @@ import { resolveBundledServiceCookieOrigins } from '../services/registry.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   bootstrapManagedProfile,
-  resolveManagedProfileDir,
   type ManagedProfileSeedPolicy,
 } from './profileStore.js';
-import { resolveBrowserConfig } from './config.js';
-import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
+import {
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  resolveUserBrowserLaunchContext,
+} from './service/profileResolution.js';
 import { registerInstance } from './service/stateRegistry.js';
 import { findChromePidUsingUserDataDir, findWindowsChromePidUsingTasklist } from './processCheck.js';
 import { launchManualLoginSession } from './manualLogin.js';
@@ -50,36 +51,24 @@ export function resolveBrowserLoginOptionsFromUserConfig(
   } = {},
 ): BrowserLoginOptions {
   const target = options.target ?? (userConfig.browser?.target as LoginTarget | undefined) ?? 'chatgpt';
-  const resolved = resolveBrowserConfig({
-    ...(userConfig.browser ?? {}),
-    target,
-  }, { auracallProfileName: userConfig.auracallProfile ?? null });
-  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+  const { resolvedConfig: resolved, launchProfile } = resolveUserBrowserLaunchContext(userConfig, target);
+  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
     browser: resolved,
     target,
-  }).launchProfile;
+  });
 
   if (!launchProfile.chromePath) {
     throw new Error(`No browser chromePath resolved for ${target} login.`);
   }
-  if (!launchProfile.chromeProfile) {
-    throw new Error(`No browser chromeProfile resolved for ${target} login.`);
-  }
-  const manualLoginProfileDir = resolveManagedProfileDir({
-    configuredDir: launchProfile.manualLoginProfileDir ?? resolved.manualLoginProfileDir ?? null,
-    managedProfileRoot: launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
-    auracallProfileName: userConfig.auracallProfile ?? 'default',
-    target,
-  });
 
   return {
     target,
     chromePath: launchProfile.chromePath,
-    chromeProfile: launchProfile.chromeProfile,
-    manualLoginProfileDir,
+    chromeProfile: managedLaunchContext.configuredChromeProfile,
+    manualLoginProfileDir: managedLaunchContext.managedProfileDir,
     cookiePath: launchProfile.chromeCookiePath,
-    bootstrapCookiePath: launchProfile.bootstrapCookiePath,
+    bootstrapCookiePath: managedLaunchContext.bootstrapCookiePath ?? undefined,
     chatgptUrl: resolved.chatgptUrl,
     geminiUrl: resolved.geminiUrl,
     grokUrl: resolved.grokUrl,

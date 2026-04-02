@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import { resolveBrowserConfig } from '../config.js';
-import { resolveManagedProfileDir } from '../profileStore.js';
+import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './profileResolution.js';
 import type { BrowserAutomationConfig, BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
 import type { BrowserSessionConfig as StoredBrowserSessionConfig } from '../../sessionManager.js';
 import {
@@ -122,15 +122,13 @@ export async function collectReattachRegistryDiagnostics(input: {
     ...(input.config ?? {}),
     target: input.config?.target ?? 'chatgpt',
   } as BrowserAutomationConfig, { auracallProfileName: input.config?.auracallProfileName ?? null });
-  const expectedProfilePath =
-    resolved.manualLoginProfileDir ??
-    resolveManagedProfileDir({
-      configuredDir: resolved.manualLoginProfileDir ?? null,
-      managedProfileRoot: resolved.managedProfileRoot ?? null,
-      auracallProfileName: input.config?.auracallProfileName ?? null,
-      target: resolved.target ?? 'chatgpt',
-    });
-  const expectedProfileName = resolved.chromeProfile ?? 'Default';
+  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: input.config?.auracallProfileName ?? null,
+    browser: resolved,
+    target: resolved.target ?? 'chatgpt',
+  });
+  const expectedProfilePath = launchContext.managedProfileDir;
+  const expectedProfileName = launchContext.managedChromeProfile;
   const classifiedInstances = await listInstancesWithLiveness({
     registryPath: input.registryPath ?? path.join(getAuracallHomeDir(), 'browser-state.json'),
   });

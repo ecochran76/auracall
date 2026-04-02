@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  getBrowserProfile,
   ensureBrowserProfiles,
   ensureRuntimeProfiles,
   getActiveRuntimeProfile,
@@ -8,6 +9,9 @@ import {
   getBridgeRuntimeProfiles,
   getLegacyRuntimeProfiles,
   getCurrentRuntimeProfiles,
+  getPreferredRuntimeProfile,
+  getPreferredRuntimeProfileName,
+  getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
   setBrowserProfile,
@@ -23,11 +27,15 @@ describe('config model helpers', () => {
     expect(getBrowserProfiles(config)).toEqual({
       consulting: { chromePath: '/usr/bin/google-chrome' },
     });
+    expect(getBrowserProfile(config, 'consulting')).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+    });
     expect(ensureBrowserProfiles(config)).toBe(config.browserFamilies);
   });
 
   it('treats profiles as the current runtime-profile bridge and reads browserFamily as the bridge reference', () => {
     const config: Record<string, unknown> = {};
+    setBrowserProfile(config, 'consulting', { chromePath: '/usr/bin/google-chrome' });
     const runtimeProfile: Record<string, unknown> = {
       defaultService: 'chatgpt',
     };
@@ -41,6 +49,9 @@ describe('config model helpers', () => {
       },
     });
     expect(getRuntimeProfileBrowserProfileId(runtimeProfile)).toBe('consulting');
+    expect(getRuntimeProfileBrowserProfile(config, runtimeProfile)).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+    });
     expect(ensureRuntimeProfiles(config)).toBe(config.profiles);
   });
 
@@ -66,5 +77,23 @@ describe('config model helpers', () => {
     });
     expect(getActiveRuntimeProfileName(config)).toBe('legacy');
     expect(getActiveRuntimeProfile(config)).toEqual({ defaultService: 'grok' });
+  });
+
+  it('prefers the explicit current runtime profile over legacy when both shapes exist', () => {
+    const config = {
+      auracallProfile: 'legacy',
+      profiles: {
+        work: { defaultService: 'chatgpt' },
+      },
+      auracallProfiles: {
+        legacy: { defaultService: 'grok' },
+        work: { defaultService: 'gemini' },
+      },
+    };
+
+    expect(getPreferredRuntimeProfileName(config, { explicitProfileName: 'work' })).toBe('work');
+    expect(getPreferredRuntimeProfile(config, { explicitProfileName: 'work' })).toEqual({
+      defaultService: 'chatgpt',
+    });
   });
 });

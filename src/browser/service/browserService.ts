@@ -1,12 +1,11 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
-import { resolveBrowserConfig } from '../config.js';
-import { resolveBrowserProfileResolutionFromResolvedConfig } from './profileResolution.js';
-import type { ResolvedBrowserConfig } from '../types.js';
 import {
-  resolveManagedProfileDirForUserConfig,
-  type BrowserProfileTarget,
-} from '../profileStore.js';
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  resolveUserBrowserLaunchContext,
+} from './profileResolution.js';
+import type { ResolvedBrowserConfig } from '../types.js';
+import type { BrowserProfileTarget } from '../profileStore.js';
 import { matchesServiceUrl } from '../urlFamilies.js';
 import { resolveBrowserListTarget, pruneRegistry } from './session.js';
 import { launchManualLoginSession } from '../manualLogin.js';
@@ -54,36 +53,7 @@ export class BrowserService extends BrowserServiceCore {
   private readonly userConfig: ResolvedUserConfig;
   private readonly serviceTarget: BrowserProfileTarget;
   private constructor(userConfig: ResolvedUserConfig, target: BrowserProfileTarget) {
-    const baseResolvedConfig = resolveBrowserConfig({
-      ...(userConfig.browser ?? {}),
-      target,
-    }, { auracallProfileName: userConfig.auracallProfile ?? null });
-    const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
-      auracallProfile: userConfig.auracallProfile ?? null,
-      browser: baseResolvedConfig,
-      target,
-    }).launchProfile;
-    const resolvedConfig = resolveBrowserConfig({
-      ...baseResolvedConfig,
-      chromePath: launchProfile.chromePath ?? baseResolvedConfig.chromePath ?? undefined,
-      display: launchProfile.display ?? baseResolvedConfig.display ?? undefined,
-      chromeProfile: launchProfile.chromeProfile ?? baseResolvedConfig.chromeProfile ?? undefined,
-      debugPort: launchProfile.debugPort ?? baseResolvedConfig.debugPort ?? undefined,
-      debugPortStrategy: launchProfile.debugPortStrategy ?? baseResolvedConfig.debugPortStrategy ?? undefined,
-      manualLoginProfileDir:
-        launchProfile.manualLoginProfileDir ?? baseResolvedConfig.manualLoginProfileDir ?? undefined,
-      managedProfileRoot: launchProfile.managedProfileRoot ?? baseResolvedConfig.managedProfileRoot ?? undefined,
-      bootstrapCookiePath: launchProfile.bootstrapCookiePath ?? baseResolvedConfig.bootstrapCookiePath ?? undefined,
-      chromeCookiePath: launchProfile.chromeCookiePath ?? baseResolvedConfig.chromeCookiePath ?? undefined,
-      hideWindow: launchProfile.hideWindow ?? baseResolvedConfig.hideWindow ?? undefined,
-      keepBrowser: launchProfile.keepBrowser ?? baseResolvedConfig.keepBrowser ?? undefined,
-      manualLogin: launchProfile.manualLogin ?? baseResolvedConfig.manualLogin ?? undefined,
-      wslChromePreference: launchProfile.wslChromePreference ?? baseResolvedConfig.wslChromePreference ?? undefined,
-      serviceTabLimit: launchProfile.serviceTabLimit ?? baseResolvedConfig.serviceTabLimit ?? undefined,
-      blankTabLimit: launchProfile.blankTabLimit ?? baseResolvedConfig.blankTabLimit ?? undefined,
-      collapseDisposableWindows:
-        launchProfile.collapseDisposableWindows ?? baseResolvedConfig.collapseDisposableWindows ?? undefined,
-    }, { auracallProfileName: userConfig.auracallProfile ?? null });
+    const { resolvedConfig } = resolveUserBrowserLaunchContext(userConfig, target);
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
     const deps: BrowserServiceDependencies = {
       resolveBrowserListTarget: () => resolveBrowserListTarget(userConfig, target),
@@ -110,7 +80,8 @@ export class BrowserService extends BrowserServiceCore {
   async resolveServiceTarget(
     options: ServiceTargetMatchOptions,
   ): Promise<ServiceTargetResolution> {
-    const launchProfile = this.resolveLaunchProfile(options.serviceId);
+    const launchContext = this.resolveLaunchContext(options.serviceId);
+    const launchProfile = launchContext.launchProfile;
     const target = await this.resolveDevToolsTarget({
       host: undefined,
       port: undefined,
@@ -127,12 +98,8 @@ export class BrowserService extends BrowserServiceCore {
     const matchedByPort = classifiedInstances.find(({ instance, alive }) =>
       alive && instance.port === target.port && (target.host ? instance.host === target.host : true),
     )?.instance;
-    const profileTarget = options.serviceId ?? this.serviceTarget;
-    const expectedProfilePath =
-      launchProfile.manualLoginProfileDir ??
-      resolved.manualLoginProfileDir ??
-      resolveManagedProfileDirForUserConfig(this.userConfigForProfilePath(profileTarget), profileTarget);
-    const expectedProfileName = launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default';
+    const expectedProfilePath = launchContext.managedProfileDir;
+    const expectedProfileName = launchContext.managedChromeProfile;
     const profilePath = matchedByPort?.profilePath ?? expectedProfilePath;
     const profileName = matchedByPort?.profileName ?? expectedProfileName;
     const discardedRegistryCandidates = collectDiscardedRegistryCandidates({
@@ -211,34 +178,20 @@ export class BrowserService extends BrowserServiceCore {
     launchUrl?: string;
     defaultProfileDir?: string;
   } = {}) {
-    const launchProfile = this.resolveLaunchProfile(this.serviceTarget);
-    const fallbackDir =
-      launchProfile.manualLoginProfileDir ??
-      resolveManagedProfileDirForUserConfig(
-        this.userConfigForProfilePath(this.serviceTarget),
-        this.serviceTarget,
-      );
+    const launchContext = this.resolveLaunchContext(this.serviceTarget);
+    const fallbackDir = launchContext.managedProfileDir;
     return super.resolveDevToolsTarget({
       ...options,
       defaultProfileDir: options.defaultProfileDir ?? fallbackDir,
     });
   }
 
-  private resolveLaunchProfile(target: BrowserProfileTarget) {
-    return resolveBrowserProfileResolutionFromResolvedConfig({
+  private resolveLaunchContext(target: BrowserProfileTarget) {
+    return resolveManagedBrowserLaunchContextFromResolvedConfig({
       auracallProfile: this.userConfig.auracallProfile ?? null,
-      browser: this.userConfig.browser ?? {},
+      browser: this.getConfig(),
       target,
-    }).launchProfile;
-  }
-
-  private userConfigForProfilePath(
-    target: BrowserProfileTarget,
-  ): Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'> {
-    return {
-      auracallProfile: this.userConfig.auracallProfile,
-      browser: this.userConfig.browser ? { ...this.userConfig.browser, target } : { target },
-    };
+    });
   }
 }
 

@@ -4478,3 +4478,93 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - default `config doctor` remains non-failing and human-friendly
   - `--strict` is the automation/CI path
+
+## 2026-04-02 17:03 CDT
+
+- Focus:
+  - start the first post-inspection behavior-facing config-model seam by making
+    runtime profile resolution consume bridge-aware browser-profile helpers
+    instead of reading raw bridge-key fields directly
+- What changed:
+  - expanded
+    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with:
+    - `getBrowserProfile(...)`
+    - `getRuntimeProfileBrowserProfile(...)`
+  - updated
+    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    so browser-profile selection now uses the config-model helper seam instead
+    of directly reading:
+    - `merged.browserFamilies`
+    - `profile.browserFamily`
+  - expanded
+    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    with direct browser-profile lookup coverage
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - public config behavior is unchanged
+  - this is the first runtime consumer in the browser-resolution path that now
+    follows the bridge-aware helper seam for browser-profile lookup
+
+## 2026-04-02 17:07 CDT
+
+- Focus:
+  - move the "prefer explicit current runtime profile before legacy
+    `auracallProfiles`" rule into the shared config-model helper layer instead
+    of re-implementing that preference ad hoc in CLI-only code
+- What changed:
+  - expanded
+    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with:
+    - `getPreferredRuntimeProfileName(...)`
+    - `getPreferredRuntimeProfile(...)`
+  - updated runtime consumers to use that shared precedence rule:
+    - [schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    - [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    - [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+  - expanded
+    [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    with explicit current-vs-legacy precedence coverage
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is a real behavior-facing change:
+    - when an explicit runtime profile name exists in the current `profiles`
+      bridge, runtime consumers now use that current entry instead of letting a
+      legacy `auracallProfiles` map win by mere presence
+
+## 2026-04-02 18:56 CDT
+
+- Focus:
+  - consolidate managed browser profile identity derivation for already-resolved
+    browser config so runtime flows stop rebuilding:
+    - managed browser profile dir
+    - managed/default profile fallback dirs
+    - effective source browser profile name
+    - bootstrap cookie source path
+- What changed:
+  - expanded
+    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    with:
+    - `resolveManagedBrowserLaunchContextFromResolvedConfig(...)`
+  - rewired runtime consumers to use that shared seam:
+    - [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    - [login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+    - [profileDoctor.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileDoctor.ts)
+    - [browserService.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/browserService.ts)
+    - [portResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/portResolution.ts)
+    - [registryDiagnostics.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/registryDiagnostics.ts)
+    - [reattachCore.ts](/home/ecochran76/workspace.local/oracle/src/browser/reattachCore.ts)
+  - expanded tests:
+    - [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    - [browserModeExports.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/browserModeExports.test.ts)
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/browser/login.test.ts tests/browser/profileDoctor.test.ts tests/browser/portResolution.test.ts tests/browser/browserService.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/browserModeExports.test.ts tests/cli/sessionDisplay.coverage.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - the first attempt exposed a residual browser-service call site still
+    referencing the older local resolver; fixing that restored the regression
+    set and confirmed the consolidated seam was sound

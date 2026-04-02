@@ -5,15 +5,14 @@ import type { DiagnosisReport } from '../inspector/doctor.js';
 import type { ResolvedUserConfig } from '../config.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { BrowserAutomationClient } from './client.js';
-import { resolveBrowserConfig } from './config.js';
-import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
+import {
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  resolveUserBrowserLaunchContext,
+} from './service/profileResolution.js';
 import type { ProviderUserIdentity } from './providers/types.js';
 import {
   findBrowserCookieFile,
   inferSourceProfileFromCookiePath,
-  resolveManagedProfileDir,
-  resolveManagedProfileName,
-  resolveBootstrapSourceCookiePath,
   resolveManagedProfileRoot,
 } from './profileStore.js';
 import {
@@ -152,40 +151,20 @@ export async function inspectBrowserDoctorState(
   } = {},
 ): Promise<BrowserDoctorReport> {
   const target = options.target ?? (userConfig.browser?.target as BrowserDoctorTarget | undefined) ?? 'chatgpt';
-  const resolved = resolveBrowserConfig({
-    ...(userConfig.browser ?? {}),
-    target,
-  }, { auracallProfileName: userConfig.auracallProfile ?? null });
-  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
+  const { resolvedConfig: resolved, launchProfile } = resolveUserBrowserLaunchContext(userConfig, target);
+  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
     browser: resolved,
     target,
-  }).launchProfile;
+  });
   const registryPath = options.registryPath ?? path.join(getAuracallHomeDir(), 'browser-state.json');
 
   const managedProfileRoot = resolveManagedProfileRoot(
     launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
   );
-  const managedProfileDir = resolveManagedProfileDir({
-    configuredDir: launchProfile.manualLoginProfileDir ?? resolved.manualLoginProfileDir ?? null,
-    managedProfileRoot,
-    auracallProfileName: userConfig.auracallProfile ?? 'default',
-    target,
-  });
-  const chromeProfile = resolveManagedProfileName(
-    managedProfileDir,
-    launchProfile.chromeProfile ?? resolved.chromeProfile ?? 'Default',
-  );
-  const sourceCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath:
-      launchProfile.bootstrapCookiePath ??
-      launchProfile.chromeCookiePath ??
-      resolved.bootstrapCookiePath ??
-      resolved.chromeCookiePath ??
-      null,
-    managedProfileDir,
-    managedProfileName: chromeProfile,
-  });
+  const managedProfileDir = managedLaunchContext.managedProfileDir;
+  const chromeProfile = managedLaunchContext.managedChromeProfile;
+  const sourceCookiePath = managedLaunchContext.bootstrapCookiePath ?? null;
   const sourceProfile = inferSourceProfileFromCookiePath(sourceCookiePath);
 
   const beforeEntries = await classifyRegistryEntries(registryPath, managedProfileRoot);

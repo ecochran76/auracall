@@ -1,10 +1,10 @@
 import type { ResolvedUserConfig } from '../config.js';
 import {
-  getActiveRuntimeProfile,
-  getActiveRuntimeProfileName,
   getBrowserProfiles,
   getCurrentRuntimeProfiles,
   getLegacyRuntimeProfiles,
+  getPreferredRuntimeProfile,
+  getPreferredRuntimeProfileName,
   getRuntimeProfileBrowserProfileId,
 } from '../config/model.js';
 
@@ -97,30 +97,6 @@ function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
   return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
 }
 
-function resolvePreferredRuntimeProfileName(
-  rawConfig: MutableRecord,
-  explicitProfileName: string | null | undefined,
-): string | null {
-  const explicit =
-    typeof explicitProfileName === 'string' && explicitProfileName.trim().length > 0
-      ? explicitProfileName.trim()
-      : null;
-  if (!explicit) {
-    return getActiveRuntimeProfileName(rawConfig);
-  }
-  const currentRuntimeProfiles = getCurrentRuntimeProfiles(rawConfig);
-  if (currentRuntimeProfiles[explicit]) {
-    return explicit;
-  }
-  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(rawConfig);
-  if (legacyRuntimeProfiles[explicit]) {
-    return explicit;
-  }
-  return getActiveRuntimeProfileName(rawConfig, {
-    explicitProfileName: explicit,
-  });
-}
-
 export function buildConfigShowReport(input: {
   rawConfig: MutableRecord;
   resolvedConfig: ResolvedUserConfig;
@@ -130,7 +106,7 @@ export function buildConfigShowReport(input: {
   const browserProfiles = getBrowserProfiles(input.rawConfig);
   const currentRuntimeProfiles = getCurrentRuntimeProfiles(input.rawConfig);
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(input.rawConfig);
-  const activeRuntimeProfile = getActiveRuntimeProfile(input.rawConfig, {
+  const activeRuntimeProfile = getPreferredRuntimeProfile(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
   });
   const activeRuntimeProfileRecord = asRecord(activeRuntimeProfile);
@@ -166,8 +142,10 @@ export function buildRuntimeProfileBridgeSummary(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): RuntimeProfileBridgeSummary {
-  const auracallRuntimeProfile = resolvePreferredRuntimeProfileName(rawConfig, options.explicitProfileName);
-  const activeRuntimeProfile = getActiveRuntimeProfile(rawConfig, {
+  const auracallRuntimeProfile = getPreferredRuntimeProfileName(rawConfig, {
+    explicitProfileName: options.explicitProfileName ?? null,
+  });
+  const activeRuntimeProfile = getPreferredRuntimeProfile(rawConfig, {
     explicitProfileName: auracallRuntimeProfile,
   });
   const activeRuntimeProfileRecord = asRecord(activeRuntimeProfile);
@@ -182,7 +160,9 @@ export function buildProfileListReport(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): ProfileListReport {
-  const activeAuracallRuntimeProfile = resolvePreferredRuntimeProfileName(rawConfig, options.explicitProfileName);
+  const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(rawConfig, {
+    explicitProfileName: options.explicitProfileName ?? null,
+  });
   const browserProfiles = Object.keys(getBrowserProfiles(rawConfig)).sort();
   const runtimeProfiles = getCurrentRuntimeProfiles(rawConfig);
   const auracallRuntimeProfiles = Object.keys(runtimeProfiles)
@@ -212,7 +192,9 @@ export function buildConfigDoctorReport(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): ConfigDoctorReport {
-  const activeAuracallRuntimeProfile = resolvePreferredRuntimeProfileName(rawConfig, options.explicitProfileName);
+  const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(rawConfig, {
+    explicitProfileName: options.explicitProfileName ?? null,
+  });
   const browserProfiles = getBrowserProfiles(rawConfig);
   const browserProfileNames = new Set(Object.keys(browserProfiles));
   const runtimeProfiles = getCurrentRuntimeProfiles(rawConfig);

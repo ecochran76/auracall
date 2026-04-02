@@ -6,7 +6,7 @@ import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/o
 import { DEFAULT_MODEL } from '../oracle.js';
 import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
-import { getActiveRuntimeProfile, getActiveRuntimeProfileName } from '../config/model.js';
+import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
@@ -157,8 +157,8 @@ function mergeRecursively(target: MutableConfig, source: MutableConfig): Mutable
 }
 
 function applyOracleProfile(merged: MutableConfig): void {
-  const profileName = getActiveRuntimeProfileName(merged);
-  const profile = getActiveRuntimeProfile(merged);
+  const profileName = getPreferredRuntimeProfileName(merged);
+  const profile = getPreferredRuntimeProfile(merged);
   if (!profileName || !profile) return;
   merged.auracallProfile = profileName;
 
@@ -175,5 +175,5 @@ function applyOracleProfile(merged: MutableConfig): void {
 }
 
 function resolveActiveProfileName(merged: MutableConfig): string | null {
-  return getActiveRuntimeProfileName(merged);
+  return getPreferredRuntimeProfileName(merged);
 }

@@ -5675,3 +5675,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - missing/dangling browser-profile references
     - legacy `auracallProfiles` residue
   - without changing the stored bridge-key layout
+
+## 2026-04-02 - resolved browser config still needs one shared managed-browser identity seam
+
+- Symptom:
+  - even after the runtime-profile/browser-profile bridge helpers were in
+    place, multiple runtime flows were still rebuilding managed browser profile
+    identity independently from already-resolved browser config
+  - the duplicated logic covered:
+    - managed browser profile dir
+    - default managed browser profile dir
+    - effective Chrome profile name
+    - bootstrap cookie source path
+- Fix:
+  - added
+    `resolveManagedBrowserLaunchContextFromResolvedConfig(...)` in
+    `src/browser/service/profileResolution.ts`
+  - moved browser runtime/bootstrap, login, doctor, browser-service attach,
+    browser list targeting, registry diagnostics, and fresh reattach launch onto
+    that shared seam
+- Durable lesson:
+  - centralizing only the user-config -> resolved-config transition is not
+    enough
+  - the next boundary also matters:
+    - resolved browser config -> managed browser profile identity
+  - if that second seam stays duplicated, profile/path drift can reappear even
+    when higher-level config semantics are already correct

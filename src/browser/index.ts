@@ -5,8 +5,6 @@ import { resolveBrowserConfig } from './config.js';
 import {
   bootstrapManagedProfile,
   findBrowserCookieFile,
-  resolveBootstrapSourceCookiePath,
-  resolveManagedProfileDir,
 } from './profileStore.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger, ChromeClient, BrowserAttachment } from './types.js';
 import {
@@ -75,7 +73,7 @@ import {
   pickAvailableDebugPort,
 } from './portSelection.js';
 import { dismissOpenMenus } from './service/ui.js';
-import { resolveBrowserProfileResolutionFromResolvedConfig } from './service/profileResolution.js';
+import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './service/profileResolution.js';
 import {
   appendChatgptMutationRecord,
   CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
@@ -103,53 +101,16 @@ export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } fro
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
 export { parseDuration, delay, normalizeChatgptUrl, isTemporaryChatUrl } from './utils.js';
 
-function resolveManagedBrowserLaunchContext(
-  config: ReturnType<typeof resolveBrowserConfig>,
-  target: 'chatgpt' | 'grok' | 'gemini',
-  auracallProfileName: string | null = null,
-) {
-  const launchProfile = resolveBrowserProfileResolutionFromResolvedConfig({
-    browser: config,
-    target,
-  }).launchProfile;
-  const userDataDir = resolveManagedProfileDir({
-    configuredDir: launchProfile.manualLoginProfileDir ?? config.manualLoginProfileDir ?? null,
-    managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
-    auracallProfileName,
-    target,
-  });
-  const defaultManagedProfileDir = resolveManagedProfileDir({
-    configuredDir: null,
-    managedProfileRoot: launchProfile.managedProfileRoot ?? config.managedProfileRoot ?? null,
-    auracallProfileName,
-    target,
-  });
-  const chromeProfile = launchProfile.chromeProfile ?? config.chromeProfile ?? 'Default';
-  const bootstrapCookiePath = resolveBootstrapSourceCookiePath({
-    configuredCookiePath:
-      launchProfile.bootstrapCookiePath ??
-      launchProfile.chromeCookiePath ??
-      config.bootstrapCookiePath ??
-      config.chromeCookiePath ??
-      null,
-    managedProfileDir: userDataDir,
-    managedProfileName: chromeProfile,
-  });
-  return {
-    launchProfile,
-    userDataDir,
-    defaultManagedProfileDir,
-    chromeProfile,
-    bootstrapCookiePath,
-  };
-}
-
 export function resolveManagedBrowserLaunchContextForTest(
   config: ReturnType<typeof resolveBrowserConfig>,
   target: 'chatgpt' | 'grok' | 'gemini',
   auracallProfileName: string | null = null,
 ) {
-  return resolveManagedBrowserLaunchContext(config, target, auracallProfileName);
+  return resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: auracallProfileName,
+    browser: config,
+    target,
+  });
 }
 
 function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
@@ -684,12 +645,17 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   };
 
   const manualLogin = true;
-  const launchContext = resolveManagedBrowserLaunchContext(
-    config,
+  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: options.config?.auracallProfileName ?? null,
+    browser: config,
     target,
-    options.config?.auracallProfileName ?? null,
-  );
-  const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
+  });
+  const {
+    managedProfileDir: userDataDir,
+    defaultManagedProfileDir,
+    configuredChromeProfile: chromeProfile,
+    bootstrapCookiePath,
+  } = launchContext;
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const allowDestructiveProfileRetryReset =
     path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
@@ -2496,12 +2462,17 @@ async function runGrokBrowserMode({
   };
   const manualLogin = true;
   const runtimeTarget = (config.target ?? 'grok') as 'grok';
-  const launchContext = resolveManagedBrowserLaunchContext(
-    config,
-    runtimeTarget,
-    auracallProfileName ?? null,
-  );
-  const { userDataDir, defaultManagedProfileDir, chromeProfile, bootstrapCookiePath } = launchContext;
+  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: auracallProfileName ?? null,
+    browser: config,
+    target: runtimeTarget,
+  });
+  const {
+    managedProfileDir: userDataDir,
+    defaultManagedProfileDir,
+    configuredChromeProfile: chromeProfile,
+    bootstrapCookiePath,
+  } = launchContext;
   const allowDestructiveProfileRetryReset =
     path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
   await mkdir(userDataDir, { recursive: true });

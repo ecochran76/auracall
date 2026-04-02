@@ -12,6 +12,19 @@ export function getBrowserProfiles(config: OracleConfig | MutableRecord): Record
   return isRecord(config.browserFamilies) ? (config.browserFamilies as Record<string, MutableBrowserProfile>) : {};
 }
 
+export function getBrowserProfile(
+  config: OracleConfig | MutableRecord,
+  browserProfileName: string | null | undefined,
+): MutableBrowserProfile | null {
+  const name =
+    typeof browserProfileName === 'string' && browserProfileName.trim().length > 0
+      ? browserProfileName.trim()
+      : null;
+  if (!name) return null;
+  const browserProfiles = getBrowserProfiles(config);
+  return isRecord(browserProfiles[name]) ? browserProfiles[name] : null;
+}
+
 export function getRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
   return isRecord(config.profiles) ? (config.profiles as Record<string, MutableRuntimeProfile>) : {};
 }
@@ -53,6 +66,13 @@ export function getRuntimeProfileBrowserProfileId(
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
+export function getRuntimeProfileBrowserProfile(
+  config: OracleConfig | MutableRecord,
+  runtimeProfile: MutableRuntimeProfile | null | undefined,
+): MutableBrowserProfile | null {
+  return getBrowserProfile(config, getRuntimeProfileBrowserProfileId(runtimeProfile));
+}
+
 export function getActiveRuntimeProfileName(
   config: OracleConfig | MutableRecord,
   options: { explicitProfileName?: string | null } = {},
@@ -70,6 +90,30 @@ export function getActiveRuntimeProfileName(
   return keys.length > 0 ? keys[0] ?? null : null;
 }
 
+export function getPreferredRuntimeProfileName(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null } = {},
+): string | null {
+  const explicit =
+    typeof options.explicitProfileName === 'string' && options.explicitProfileName.trim().length > 0
+      ? options.explicitProfileName.trim()
+      : null;
+  if (!explicit) {
+    return getActiveRuntimeProfileName(config);
+  }
+  const currentRuntimeProfiles = getCurrentRuntimeProfiles(config);
+  if (currentRuntimeProfiles[explicit]) {
+    return explicit;
+  }
+  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
+  if (legacyRuntimeProfiles[explicit]) {
+    return explicit;
+  }
+  return getActiveRuntimeProfileName(config, {
+    explicitProfileName: explicit,
+  });
+}
+
 export function getActiveRuntimeProfile(
   config: OracleConfig | MutableRecord,
   options: { explicitProfileName?: string | null } = {},
@@ -78,6 +122,20 @@ export function getActiveRuntimeProfile(
   if (!profileName) return null;
   const runtimeProfiles = getBridgeRuntimeProfiles(config);
   return isRecord(runtimeProfiles[profileName]) ? runtimeProfiles[profileName] : null;
+}
+
+export function getPreferredRuntimeProfile(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null } = {},
+): MutableRuntimeProfile | null {
+  const profileName = getPreferredRuntimeProfileName(config, options);
+  if (!profileName) return null;
+  const currentRuntimeProfiles = getCurrentRuntimeProfiles(config);
+  if (isRecord(currentRuntimeProfiles[profileName])) {
+    return currentRuntimeProfiles[profileName];
+  }
+  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
+  return isRecord(legacyRuntimeProfiles[profileName]) ? legacyRuntimeProfiles[profileName] : null;
 }
 
 export function setBrowserProfile(

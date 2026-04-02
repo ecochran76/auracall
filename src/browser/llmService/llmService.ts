@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
-import { getActiveRuntimeProfile, getActiveRuntimeProfileName } from '../../config/model.js';
+import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../../config/model.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import {
   appendChatgptMutationRecord,
@@ -1363,7 +1363,7 @@ export abstract class LlmService {
         source: 'config',
       };
     }
-    const profile = getActiveRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
+    const profile = getPreferredRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
     const profileServices =
       profile?.services && typeof profile.services === 'object'
         ? (profile.services as Record<string, unknown>)
@@ -1387,7 +1387,7 @@ export abstract class LlmService {
   }
 
   private resolveActiveProfileName(): string | null {
-    return getActiveRuntimeProfileName(this.userConfig);
+    return getPreferredRuntimeProfileName(this.userConfig);
   }
 
   private resolveConfiguredServiceFeatures(): Record<string, unknown> | null {
@@ -1396,7 +1396,7 @@ export abstract class LlmService {
     if (!profileName) {
       return isRecord(globalFeatures) ? globalFeatures : null;
     }
-    const profile = getActiveRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
+    const profile = getPreferredRuntimeProfile(this.userConfig, { explicitProfileName: profileName });
     const profileServices =
       profile?.services && typeof profile.services === 'object'
         ? (profile.services as Record<string, unknown>)

@@ -1,8 +1,8 @@
 import { mkdir } from 'node:fs/promises';
 import type { BrowserRuntimeMetadata, BrowserSessionConfig, ResolvedBrowserConfig } from './types.js';
 import type { BrowserLogger, ChromeClient } from './types.js';
-import { resolveManagedProfileDir } from './profileStore.js';
 import { isDevToolsResponsive } from './processCheck.js';
+import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './service/profileResolution.js';
 import {
   connectToChromeTarget as connectToChromeTargetCore,
   listChromeTargets as listChromeTargetsCore,
@@ -331,12 +331,12 @@ async function resumeBrowserSessionViaNewChrome(
   }
   const resolved = runtimeDeps.resolveBrowserConfig(config ?? {});
   const manualLogin = true;
-  const userDataDir = resolveManagedProfileDir({
-    configuredDir: resolved.manualLoginProfileDir ?? null,
-    managedProfileRoot: resolved.managedProfileRoot ?? null,
-    auracallProfileName: config?.auracallProfileName ?? null,
+  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: config?.auracallProfileName ?? null,
+    browser: resolved,
     target: resolved.target ?? 'chatgpt',
   });
+  const userDataDir = launchContext.managedProfileDir;
   await mkdir(userDataDir, { recursive: true });
   const chrome = await runtimeDeps.launchChrome(resolved, userDataDir, logger);
   const chromeHost = (chrome as unknown as { host?: string }).host ?? '127.0.0.1';
