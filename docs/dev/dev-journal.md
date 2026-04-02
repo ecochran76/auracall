@@ -4058,3 +4058,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runtime probe attach to the live Grok page on `45011`
   - that is a separate browser-tools/doctor target-selection bug, not a
     reattach or managed-browser-profile bug
+
+## 2026-04-02 13:28 CDT
+
+- Focus:
+  - fix the remaining browser-tools / doctor target-selection contamination
+- Root cause:
+  - the shared attach-resolution helper still trusted config-derived fixed
+    ports during doctor/client attach discovery
+  - with the live config still carrying stale top-level browser fields from
+    Grok, `doctor --target chatgpt` could route:
+    - runtime probe
+    - selector diagnosis
+    into the live Grok page on `45011`
+  - the package-owned browser-tools page probe also still had a separate
+    serialization bug:
+    - page-side evaluation could throw `ReferenceError: __name is not defined`
+- Fix:
+  - `src/browser/service/portResolution.ts`
+    - stop reusing config-derived fixed ports during attach discovery
+    - keep discovery on:
+      - explicit env override, or
+      - exact managed browser profile registry match
+  - `src/browser/service/registryDiagnostics.ts`
+    - keep expected-profile diagnostics anchored to the AuraCall runtime
+      profile when rebuilding managed browser profile paths
+  - `packages/browser-service/src/browserTools.ts`
+    - rewrote the page probe to use a raw expression string, avoiding
+      transpiler helper leakage into the browser context
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/portResolution.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserService.test.ts tests/browser/registryDiagnostics.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts doctor --target chatgpt --prune-browser-state --json`
+    - runtime doctor now attaches to the real ChatGPT managed browser profile
+      on `38155`
+    - `browserToolsError` is now `null`

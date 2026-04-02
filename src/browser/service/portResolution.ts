@@ -1,6 +1,7 @@
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
 import { getAuracallHomeDir } from '../../auracallHome.js';
+import { resolveBrowserConfig } from '../config.js';
 import {
   resolveManagedProfileDirForUserConfig,
   type BrowserProfileTarget,
@@ -27,13 +28,15 @@ export async function resolveBrowserListTarget(
 ): Promise<BrowserListTarget | undefined> {
   const envPort = process.env.AURACALL_BROWSER_PORT ?? process.env.AURACALL_BROWSER_DEBUG_PORT ?? null;
   const target = serviceTarget ?? userConfig.browser?.target ?? 'chatgpt';
+  const resolved = resolveBrowserConfig({
+    ...(userConfig.browser ?? {}),
+    target,
+  }, { auracallProfileName: userConfig.auracallProfile ?? null });
   const resolution = resolveBrowserProfileResolutionFromResolvedConfig({
     auracallProfile: userConfig.auracallProfile ?? null,
-    browser: userConfig.browser ?? {},
+    browser: resolved,
     target,
   });
-  const configuredPort = resolution.launchProfile.debugPort ?? null;
-  const configuredPortStrategy = resolution.launchProfile.debugPortStrategy ?? null;
   const profilePath =
     process.env.AURACALL_BROWSER_PROFILE_DIR ??
     resolution.launchProfile.manualLoginProfileDir ??
@@ -45,8 +48,8 @@ export async function resolveBrowserListTarget(
   const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
   return resolveBrowserListTargetCore({
     envPort,
-    configuredPort,
-    configuredPortStrategy,
+    configuredPort: null,
+    configuredPortStrategy: null,
     profilePath,
     profileName,
     registryPath,

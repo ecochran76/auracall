@@ -530,131 +530,7 @@ export async function collectBrowserToolsPageProbe(
   const pageUrl = page.url();
   const pageTitle = await page.title().catch(() => null);
   const pageCookies = await page.cookies().catch(() => []);
-  const result = await page.evaluate((probeOptions) => {
-    const normalizeText = (value: string | null | undefined) => String(value || '').replace(/\s+/g, ' ').trim();
-    const normalizeMatch = (value: string | null | undefined) => {
-      const text = String(value || '');
-      return probeOptions.caseSensitive ? text : text.toLowerCase();
-    };
-    const isVisible = (el: Element) => {
-      if (!(el instanceof HTMLElement)) {
-        return false;
-      }
-      const rect = el.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    };
-
-    const visibleCounts = {
-      buttons: Array.from(document.querySelectorAll('button,[role="button"]')).filter(isVisible).length,
-      links: Array.from(document.querySelectorAll('a,[role="link"]')).filter(isVisible).length,
-      inputs: Array.from(document.querySelectorAll('input')).filter(isVisible).length,
-      textareas: Array.from(document.querySelectorAll('textarea')).filter(isVisible).length,
-      contenteditables: Array.from(document.querySelectorAll('[contenteditable]:not([contenteditable="false"])')).filter(isVisible).length,
-    };
-
-    const selectorReports = probeOptions.selectors.map((selector) => {
-      const nodes = Array.from(document.querySelectorAll(selector));
-      const visibleNodes = nodes.filter(isVisible);
-      const firstVisible = visibleNodes[0] ?? null;
-      return {
-        selector,
-        matched: nodes.length,
-        visible: visibleNodes.length,
-        firstVisibleTag: firstVisible?.tagName?.toLowerCase?.() ?? null,
-        firstVisibleText: normalizeText(firstVisible?.textContent).slice(0, 160) || null,
-      };
-    });
-
-    const localStorageKeys = (() => {
-      try {
-        return Object.keys(localStorage);
-      } catch {
-        return [];
-      }
-    })();
-    const sessionStorageKeys = (() => {
-      try {
-        return Object.keys(sessionStorage);
-      } catch {
-        return [];
-      }
-    })();
-    const storageKeys = [...localStorageKeys, ...sessionStorageKeys];
-    const normalizedStorageKeys = storageKeys.map((entry) => normalizeMatch(entry));
-    const normalizedStorageAny = probeOptions.storageAny.map((token) => normalizeMatch(token));
-    const normalizedStorageAll = probeOptions.storageAll.map((token) => normalizeMatch(token));
-    const storageEnabled = normalizedStorageAny.length > 0 || normalizedStorageAll.length > 0;
-    const matchedStorageAny = normalizedStorageAny.filter((token) => normalizedStorageKeys.includes(token));
-    const missingStorageAll = normalizedStorageAll.filter((token) => !normalizedStorageKeys.includes(token));
-
-    const scriptNodes = Array.from(document.querySelectorAll(probeOptions.scriptSelector));
-    const scriptTexts = scriptNodes
-      .map((node) => String(node.textContent || ''))
-      .filter((entry) => entry.length > 0);
-    const normalizedScriptTexts = scriptTexts.map((entry) => normalizeMatch(entry));
-    const normalizedAny = probeOptions.scriptAny.map((token) => normalizeMatch(token));
-    const normalizedAll = probeOptions.scriptAll.map((token) => normalizeMatch(token));
-    const enabled = normalizedAny.length > 0 || normalizedAll.length > 0;
-    const matchedAny = normalizedAny.filter((token) =>
-      normalizedScriptTexts.some((text) => text.includes(token)),
-    );
-    const missingAll = normalizedAll.filter((token) =>
-      !normalizedScriptTexts.some((text) => text.includes(token)),
-    );
-    let preview: string | null = null;
-    let matched = false;
-    if (enabled) {
-      for (let index = 0; index < normalizedScriptTexts.length; index += 1) {
-        const text = normalizedScriptTexts[index];
-        const allOk = normalizedAll.length === 0 || normalizedAll.every((token) => text.includes(token));
-        const anyOk = normalizedAny.length === 0 || normalizedAny.some((token) => text.includes(token));
-        if (allOk && anyOk) {
-          matched = true;
-          preview = normalizeText(scriptTexts[index]).slice(0, 200) || null;
-          break;
-        }
-      }
-    }
-
-    return {
-      document: {
-        readyState: document.readyState ?? null,
-        visibilityState: document.visibilityState ?? null,
-        focused: document.hasFocus(),
-        scriptCount: scriptNodes.length,
-        bodyTextLength: normalizeText(document.body?.innerText || document.body?.textContent || '').length,
-        visibleCounts,
-      },
-      selectors: selectorReports,
-      storage: {
-        localStorageCount: localStorageKeys.length,
-        sessionStorageCount: sessionStorageKeys.length,
-        sampleLocalStorageKeys: localStorageKeys.slice(0, 12),
-        sampleSessionStorageKeys: sessionStorageKeys.slice(0, 12),
-        matchedAny: probeOptions.storageAny.filter((token) =>
-          matchedStorageAny.includes(normalizeMatch(token)),
-        ),
-        missingAll: probeOptions.storageAll.filter((token) =>
-          missingStorageAll.includes(normalizeMatch(token)),
-        ),
-      },
-      scriptText: enabled
-        ? {
-            enabled,
-            scriptSelector: probeOptions.scriptSelector,
-            scriptCount: scriptNodes.length,
-            matched,
-            matchedAny: probeOptions.scriptAny.filter((token) =>
-              matchedAny.includes(normalizeMatch(token)),
-            ),
-            missingAll: probeOptions.scriptAll.filter((token) =>
-              missingAll.includes(normalizeMatch(token)),
-            ),
-            preview,
-          }
-        : null,
-    };
-  }, {
+  const probeOptionsJson = JSON.stringify({
     selectors,
     scriptAny,
     scriptAll,
@@ -663,6 +539,138 @@ export async function collectBrowserToolsPageProbe(
     storageAll,
     caseSensitive,
   });
+  const result = await page.evaluate(`
+    (() => {
+      const probeOptions = ${probeOptionsJson};
+      const normalizeText = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const normalizeMatch = (value) => {
+        const text = String(value || '');
+        return probeOptions.caseSensitive ? text : text.toLowerCase();
+      };
+      const isVisible = (el) => {
+        if (!(el instanceof HTMLElement)) {
+          return false;
+        }
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+
+      const visibleCounts = {
+        buttons: Array.from(document.querySelectorAll('button,[role="button"]')).filter(isVisible).length,
+        links: Array.from(document.querySelectorAll('a,[role="link"]')).filter(isVisible).length,
+        inputs: Array.from(document.querySelectorAll('input')).filter(isVisible).length,
+        textareas: Array.from(document.querySelectorAll('textarea')).filter(isVisible).length,
+        contenteditables: Array.from(document.querySelectorAll('[contenteditable]:not([contenteditable="false"])')).filter(isVisible).length,
+      };
+
+      const selectorReports = probeOptions.selectors.map((selector) => {
+        const nodes = Array.from(document.querySelectorAll(selector));
+        const visibleNodes = nodes.filter(isVisible);
+        const firstVisible = visibleNodes[0] ?? null;
+        return {
+          selector,
+          matched: nodes.length,
+          visible: visibleNodes.length,
+          firstVisibleTag: firstVisible && typeof firstVisible.tagName === 'string' ? firstVisible.tagName.toLowerCase() : null,
+          firstVisibleText: normalizeText(firstVisible ? firstVisible.textContent : '').slice(0, 160) || null,
+        };
+      });
+
+      const localStorageKeys = (() => {
+        try {
+          return Object.keys(localStorage);
+        } catch {
+          return [];
+        }
+      })();
+      const sessionStorageKeys = (() => {
+        try {
+          return Object.keys(sessionStorage);
+        } catch {
+          return [];
+        }
+      })();
+      const storageKeys = [...localStorageKeys, ...sessionStorageKeys];
+      const normalizedStorageKeys = storageKeys.map((entry) => normalizeMatch(entry));
+      const normalizedStorageAny = probeOptions.storageAny.map((token) => normalizeMatch(token));
+      const normalizedStorageAll = probeOptions.storageAll.map((token) => normalizeMatch(token));
+      const matchedStorageAny = normalizedStorageAny.filter((token) => normalizedStorageKeys.includes(token));
+      const missingStorageAll = normalizedStorageAll.filter((token) => !normalizedStorageKeys.includes(token));
+
+      const scriptNodes = Array.from(document.querySelectorAll(probeOptions.scriptSelector));
+      const scriptTexts = scriptNodes
+        .map((node) => String(node.textContent || ''))
+        .filter((entry) => entry.length > 0);
+      const normalizedScriptTexts = scriptTexts.map((entry) => normalizeMatch(entry));
+      const normalizedAny = probeOptions.scriptAny.map((token) => normalizeMatch(token));
+      const normalizedAll = probeOptions.scriptAll.map((token) => normalizeMatch(token));
+      const enabled = normalizedAny.length > 0 || normalizedAll.length > 0;
+      const matchedAny = normalizedAny.filter((token) =>
+        normalizedScriptTexts.some((text) => text.includes(token)),
+      );
+      const missingAll = normalizedAll.filter((token) =>
+        !normalizedScriptTexts.some((text) => text.includes(token)),
+      );
+      let preview = null;
+      let matched = false;
+      if (enabled) {
+        for (let index = 0; index < normalizedScriptTexts.length; index += 1) {
+          const text = normalizedScriptTexts[index];
+          const allOk = normalizedAll.length === 0 || normalizedAll.every((token) => text.includes(token));
+          const anyOk = normalizedAny.length === 0 || normalizedAny.some((token) => text.includes(token));
+          if (allOk && anyOk) {
+            matched = true;
+            preview = normalizeText(scriptTexts[index]).slice(0, 200) || null;
+            break;
+          }
+        }
+      }
+
+      return {
+        document: {
+          readyState: document.readyState ?? null,
+          visibilityState: document.visibilityState ?? null,
+          focused: document.hasFocus(),
+          scriptCount: scriptNodes.length,
+          bodyTextLength: normalizeText(document.body?.innerText || document.body?.textContent || '').length,
+          visibleCounts,
+        },
+        selectors: selectorReports,
+        storage: {
+          localStorageCount: localStorageKeys.length,
+          sessionStorageCount: sessionStorageKeys.length,
+          sampleLocalStorageKeys: localStorageKeys.slice(0, 12),
+          sampleSessionStorageKeys: sessionStorageKeys.slice(0, 12),
+          matchedAny: probeOptions.storageAny.filter((token) =>
+            matchedStorageAny.includes(normalizeMatch(token)),
+          ),
+          missingAll: probeOptions.storageAll.filter((token) =>
+            missingStorageAll.includes(normalizeMatch(token)),
+          ),
+        },
+        scriptText: enabled
+          ? {
+              enabled,
+              scriptSelector: probeOptions.scriptSelector,
+              scriptCount: scriptNodes.length,
+              matched,
+              matchedAny: probeOptions.scriptAny.filter((token) =>
+                matchedAny.includes(normalizeMatch(token)),
+              ),
+              missingAll: probeOptions.scriptAll.filter((token) =>
+                missingAll.includes(normalizeMatch(token)),
+              ),
+              preview,
+            }
+          : null,
+      };
+    })()
+  `) as {
+    document: BrowserToolsPageProbeResult['document'];
+    selectors: BrowserToolsPageProbeResult['selectors'];
+    scriptText: BrowserToolsPageProbeResult['scriptText'];
+    storage: BrowserToolsPageProbeResult['storage'];
+  };
 
   const cookieNames = pageCookies.map((cookie) => cookie.name);
   const cookieDomains = Array.from(new Set(pageCookies.map((cookie) => cookie.domain).filter(Boolean))).slice(0, 12);

@@ -127,6 +127,7 @@ export async function collectReattachRegistryDiagnostics(input: {
     resolveManagedProfileDir({
       configuredDir: resolved.manualLoginProfileDir ?? null,
       managedProfileRoot: resolved.managedProfileRoot ?? null,
+      auracallProfileName: input.config?.auracallProfileName ?? null,
       target: resolved.target ?? 'chatgpt',
     });
   const expectedProfileName = resolved.chromeProfile ?? 'Default';
