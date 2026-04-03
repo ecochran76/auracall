@@ -48,7 +48,7 @@ This refactor should establish the long-term layering:
 Current config-model checkpoint:
 - target-shape is now the primary documented model
 - dual-read loading is live for target and bridge shapes
-- explicit target-shape writes exist for:
+- target-shape is now the default write mode for:
   - `config migrate`
   - `profile scaffold`
   - `wizard`

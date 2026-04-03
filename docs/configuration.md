@@ -24,9 +24,10 @@ Use `auracall config migrate` to write a v2-style layout from an existing config
 auracall config migrate --dry-run
 auracall config migrate --output ~/.auracall/config.v2.json
 auracall config migrate --in-place --strip-legacy
-auracall config migrate --output ~/.auracall/config.target.json --target-shape --strip-legacy
-auracall profile scaffold --target-shape --force
-auracall wizard --target-shape
+auracall config migrate --output ~/.auracall/config.v3.json --strip-legacy
+auracall profile scaffold --force
+auracall wizard
+auracall config migrate --bridge-shape --output ~/.auracall/config.bridge.json --strip-legacy
 ```
 
 When invoking via `tsx` in dev, prefer Node’s `--import` to avoid `pnpm` swallowing `--dry-run`:
@@ -128,15 +129,16 @@ Target-model note:
 - precedence for dual-read is:
   - target keys win over bridge keys
   - mixed/conflicting configs are surfaced by `auracall config doctor`
-- target-shape writes are available explicitly from:
+- target-shape is now the default write mode for:
   - `config migrate`
   - `profile scaffold`
   - `wizard`
-- each of those can opt into target-shape output with:
-  - `--target-shape`
+- `--target-shape` is still accepted explicitly, but is now mostly useful for
+  scripts that want to state the intended write mode directly
 - bridge keys remain the compatibility form:
   - `browserFamilies` as the browser-profile bridge
   - `profiles` as the AuraCall runtime-profile bridge
+- use `--bridge-shape` when you intentionally want compatibility bridge output
 
 ## Primary Example (`~/.auracall/config.json`)
 
@@ -328,7 +330,8 @@ Within each file, later CLI flags still override config, and environment variabl
 - Compatibility bridge equivalents are:
   - `browserFamilies.<name>`
   - `profiles.<name>.browserFamily`
-- `auracall wizard --target-shape` now emits the primary target shape directly for new profile setup.
+- `auracall wizard` now emits the primary target shape by default for new profile setup.
+- use `--bridge-shape` on `wizard`, `profile scaffold`, or `config migrate` only when you intentionally need compatibility bridge output.
 - Use separate named profiles for Windows Chrome or other experimental runtimes.
 - `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Aura-Call reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.

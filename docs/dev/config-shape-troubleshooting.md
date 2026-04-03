@@ -177,25 +177,31 @@ Action:
 
 ## Write commands and what they emit
 
-### Bridge-key default writes
+### Default target-shape writes
 
-These still emit bridge-shape by default:
+These now emit target-shape by default:
 
 - `auracall wizard`
 - `auracall profile scaffold`
 - `auracall config migrate`
 
-### Explicit target-shape writes
+### Explicit compatibility bridge writes
 
-Use these when you want the output file itself to switch shapes:
+Use these when you intentionally want compatibility bridge output:
 
 ```sh
-auracall config migrate --target-shape --output ~/.auracall/config.target.json
-auracall profile scaffold --target-shape --force
-auracall wizard --target-shape
+auracall config migrate --bridge-shape --output ~/.auracall/config.bridge.json
+auracall profile scaffold --bridge-shape --force
+auracall wizard --bridge-shape
 ```
 
 Those emit:
+
+- `browserFamilies`
+- `profiles`
+- `profiles.<name>.browserFamily`
+
+The default target-shape writes emit:
 
 - `browserProfiles`
 - `runtimeProfiles`
@@ -209,10 +215,10 @@ Those emit:
    - bridge-shape
    - target-shape
    - or temporarily mixed during cleanup
-4. If you want a target-shaped file, use:
-   - `config migrate --target-shape`
-   - `profile scaffold --target-shape`
-   - or `wizard --target-shape`
+4. If you want a compatibility bridge file, use:
+   - `config migrate --bridge-shape`
+   - `profile scaffold --bridge-shape`
+   - or `wizard --bridge-shape`
 5. Re-run `config doctor` and confirm:
    - expected target/bridge presence
    - expected precedence

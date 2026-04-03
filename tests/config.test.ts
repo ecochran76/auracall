@@ -107,9 +107,10 @@ describe('loadUserConfig', () => {
   it('scaffolds a default config when file is missing', async () => {
     const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
-    expect(result.config.version).toBe(2);
-    expect(result.config.browserFamilies?.default).toBeDefined();
-    expect(result.config.profiles?.default?.browserFamily).toBe('default');
+    expect(result.config.browserProfiles?.default).toBeDefined();
+    expect(result.config.runtimeProfiles?.default?.browserProfile).toBe('default');
+    expect(result.config.browserFamilies).toBeUndefined();
+    expect(result.config.profiles).toBeUndefined();
   });
 
   it('accepts the runtime-profile browserFamily bridge through the composed schema', () => {
@@ -150,18 +151,31 @@ describe('loadUserConfig', () => {
     expect(parsed.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
   });
 
-  it('can scaffold explicit target-shape config output when requested', async () => {
+  it('scaffolds target-shape config output by default', async () => {
     const configPath = path.join(tempDir, 'target-config.json');
     const result = await scaffoldDefaultConfigFile({
       path: configPath,
       force: true,
-      targetShape: true,
     });
 
     expect(result?.config.browserProfiles?.default).toBeDefined();
     expect(result?.config.runtimeProfiles?.default?.browserProfile).toBe('default');
     expect(result?.config.browserFamilies).toBeUndefined();
     expect(result?.config.profiles).toBeUndefined();
+  });
+
+  it('can still scaffold compatibility bridge output when requested', async () => {
+    const configPath = path.join(tempDir, 'bridge-config.json');
+    const result = await scaffoldDefaultConfigFile({
+      path: configPath,
+      force: true,
+      targetShape: false,
+    });
+
+    expect(result?.config.browserFamilies?.default).toBeDefined();
+    expect(result?.config.profiles?.default?.browserFamily).toBe('default');
+    expect(result?.config.browserProfiles).toBeUndefined();
+    expect(result?.config.runtimeProfiles).toBeUndefined();
   });
 
   afterAll(() => {

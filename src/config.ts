@@ -192,7 +192,7 @@ export async function scaffoldDefaultConfigFile(options: {
   setRuntimeProfile(scaffolded as Record<string, unknown>, 'default', defaultRuntimeProfile);
 
   const writtenConfig = materializeConfigV2(scaffolded, {
-    targetShape: Boolean(options.targetShape),
+    targetShape: options.targetShape ?? true,
   }) as UserConfig;
 
   await fs.mkdir(path.dirname(userPath), { recursive: true });

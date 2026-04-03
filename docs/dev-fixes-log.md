@@ -5982,3 +5982,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once the runtime can read a new public shape and the major write paths can
     emit it explicitly, the main docs should switch to that shape instead of
     continuing to center the compatibility bridge
+
+## 2026-04-02 - once target-shape becomes primary, write defaults should flip together
+
+- Symptom:
+  - after target-shape became the primary documented model, write behavior was
+    still inconsistent:
+    - reads accepted target-shape
+    - docs centered target-shape
+    - but `wizard`, `profile scaffold`, and `config migrate` still defaulted to
+      compatibility bridge output
+- Fix:
+  - made target-shape the default write mode for:
+    - `wizard`
+    - `profile scaffold`
+    - `config migrate`
+  - added explicit `--bridge-shape` compatibility mode instead of keeping
+    bridge-shape as the default
+- Durable lesson:
+  - once a new public config shape is primary in both semantics and docs, the
+    major write paths should flip together in one bounded slice
+  - leave the old shape behind an explicit compatibility flag rather than
+    letting defaults and docs disagree

@@ -32,11 +32,11 @@ Config-model state now:
   - `browserProfiles`
   - `runtimeProfiles`
 - Aura-Call dual-reads both target and bridge shapes
-- explicit target-shape writes exist for:
+- target-shape is the default write mode for:
   - `config migrate`
   - `profile scaffold`
   - `wizard`
-- bridge keys remain the compatibility/troubleshooting path
+- bridge keys remain the explicit compatibility/troubleshooting path
 
 ## Execution principle
 
@@ -117,12 +117,12 @@ Acceptance
 - phase-1 dual-read may land only through:
   - schema/model/resolver loading
   - read-only diagnostics
-  - bridge-key writes remaining unchanged
+  - bridge-key writes remaining a compatibility path
 - phase-2 target-write may land only as:
-  - explicit opt-in `config migrate --target-shape`
-  - explicit opt-in `profile scaffold --target-shape`
-  - explicit opt-in `wizard --target-shape`
-  - with default writes still remaining bridge-key-first
+  - default `config migrate`
+  - default `profile scaffold`
+  - default `wizard`
+  - with bridge-key writes moving behind explicit compatibility flags
 
 ### 3) Browser reliability maintenance
 

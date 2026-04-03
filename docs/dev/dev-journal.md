@@ -4971,3 +4971,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - docs only
   - bridge keys remain supported for compatibility and troubleshooting
+
+## 2026-04-02 21:39 CDT
+
+- Focus:
+  - make target-shape the default write output across config-writing commands
+- What changed:
+  - updated [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+    so default scaffolding now writes target-shape unless compatibility bridge
+    output is explicitly requested
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so:
+    - `wizard`
+    - `config migrate`
+    - `profile scaffold`
+    now default to target-shape output
+  - added explicit `--bridge-shape` compatibility mode for those commands
+  - kept `--target-shape` accepted explicitly so scripts can still state the
+    intended write mode directly
+  - expanded [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    so default scaffold output is target-shaped and compatibility bridge output
+    is still covered explicitly
+  - updated docs/plans in:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - bridge-shape is now an explicit compatibility mode, not the default write path

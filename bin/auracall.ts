@@ -6260,7 +6260,7 @@ async function loadWritableUserConfigForWizard(): Promise<UserConfig> {
   } catch (error) {
     const code = (error as { code?: string }).code;
     if (code === 'ENOENT') {
-      const scaffolded = await scaffoldDefaultConfigFile({ path: userPath, force: false });
+      const scaffolded = await scaffoldDefaultConfigFile({ path: userPath, force: false, targetShape: true });
       if (scaffolded) {
         return materializeConfigV2(normalizeConfigV1toV2(scaffolded.config));
       }
@@ -6270,9 +6270,9 @@ async function loadWritableUserConfigForWizard(): Promise<UserConfig> {
   }
 }
 
-async function writeWizardUserConfig(config: UserConfig): Promise<string> {
+async function writeWizardUserConfig(config: UserConfig, options: { targetShape?: boolean } = {}): Promise<string> {
   const userPath = configPath();
-  const materialized = materializeConfigV2(config);
+  const materialized = materializeConfigV2(config, { targetShape: options.targetShape ?? true });
   await fs.mkdir(path.dirname(userPath), { recursive: true });
   await fs.writeFile(userPath, `${JSON.stringify(materialized, null, 2)}\n`, 'utf8');
   return userPath;
@@ -6614,12 +6614,18 @@ program
   .option('--grok', 'Preselect Grok in the wizard.')
   .option('--target <chatgpt|gemini|grok>', 'Preselect which site to bootstrap.')
   .option('--profile-name <name>', 'Preselect the AuraCall runtime profile name to create or update.')
-  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`). This is the default.', false)
+  .option('--bridge-shape', 'Write compatibility bridge keys (`browserFamilies` / `profiles`) instead of the primary target shape.', false)
   .action(async (commandOptions) => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new Error('The onboarding wizard requires an interactive terminal. Use "auracall setup" with flags instead.');
     }
 
+    if (commandOptions.targetShape && commandOptions.bridgeShape) {
+      throw new Error('Do not combine --target-shape with --bridge-shape.');
+    }
+
+    const targetShape = commandOptions.bridgeShape ? false : true;
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const discoveredChoices = discoverBrowserWizardChoices();
@@ -6763,15 +6769,15 @@ program
           choice: selectedChoice,
         }),
       ),
-      { targetShape: Boolean(commandOptions.targetShape) },
+      { targetShape },
     );
-    const writtenPath = await writeWizardUserConfig(mergedConfig);
+    const writtenPath = await writeWizardUserConfig(mergedConfig, { targetShape });
 
     console.log('');
-    if (commandOptions.targetShape) {
+    if (targetShape) {
       console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
     } else {
-      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+      console.log(chalk.dim('Write mode: compatibility bridge (`browserFamilies` / `profiles`).'));
     }
     const wizardBridgeSummary = buildRuntimeProfileBridgeSummary(mergedConfig as Record<string, unknown>, {
       explicitProfileName: profileName,
@@ -6957,26 +6963,31 @@ configCommand
 
 configCommand
   .command('migrate')
-  .description('Write the current v2 bridge-key config layout (legacy keys remain unless --strip-legacy).')
+  .description('Write the current v2 config layout (target-shape by default; legacy keys remain unless --strip-legacy).')
   .option('--path <path>', 'Input config path (defaults to ~/.auracall/config.json).')
   .option('--output <path>', 'Write migrated config to a custom path.')
   .option('--in-place', 'Overwrite the input config file in place.', false)
   .option('--dry-run', 'Print the migrated config instead of writing it.', false)
   .option('--strip-legacy', 'Drop legacy browser/auracallProfiles keys from output.', false)
-  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`). This is the default.', false)
+  .option('--bridge-shape', 'Write compatibility bridge keys (`browserFamilies` / `profiles`) instead of the primary target shape.', false)
   .option('--force', 'Overwrite an existing output file.', false)
   .action(async (commandOptions, command) => {
     const cmd = command?.opts ? command : (commandOptions as unknown as Command);
     const opts = cmd?.opts?.() ?? commandOptions;
+    if (opts.targetShape && opts.bridgeShape) {
+      throw new Error('Do not combine --target-shape with --bridge-shape.');
+    }
     if (opts.output && opts.inPlace) {
       throw new Error('Do not combine --output with --in-place.');
     }
     const inputPath = opts.path ?? configPath();
     const raw = await fs.readFile(inputPath, 'utf8');
     const parsed = JSON5.parse(raw) as UserConfig;
+    const targetShape = opts.bridgeShape ? false : true;
     const migrated = materializeConfigV2(parsed, {
       stripLegacy: Boolean(opts.stripLegacy),
-      targetShape: Boolean(opts.targetShape),
+      targetShape,
     });
     const envDryRun =
       process.env.npm_config_dry_run === 'true' || process.env.npm_config_dry_run === '1';
@@ -7010,10 +7021,10 @@ configCommand
     }
     await fs.writeFile(outputPath, `${JSON.stringify(migrated, null, 2)}\n`, 'utf8');
     console.log(`Wrote migrated config to ${outputPath}`);
-    if (opts.targetShape) {
+    if (targetShape) {
       console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
     } else {
-      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+      console.log(chalk.dim('Write mode: compatibility bridge (`browserFamilies` / `profiles`).'));
     }
     console.log(
       chalk.dim(
@@ -7028,21 +7039,26 @@ profileCommand
   .command('scaffold')
   .description('Create a default AuraCall runtime-profile config file from the current browser profile.')
   .option('--force', 'Overwrite an existing config file.', false)
-  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`). This is the default.', false)
+  .option('--bridge-shape', 'Write compatibility bridge keys (`browserFamilies` / `profiles`) instead of the primary target shape.', false)
   .action(async (commandOptions) => {
+    if (commandOptions.targetShape && commandOptions.bridgeShape) {
+      throw new Error('Do not combine --target-shape with --bridge-shape.');
+    }
+    const targetShape = commandOptions.bridgeShape ? false : true;
     const result = await scaffoldDefaultConfigFile({
       force: Boolean(commandOptions.force),
-      targetShape: Boolean(commandOptions.targetShape),
+      targetShape,
     });
     if (!result) {
       console.log('Config file already exists; use --force to overwrite.');
       return;
     }
     console.log(`Wrote config to ${result.path}`);
-    if (commandOptions.targetShape) {
+    if (targetShape) {
       console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
     } else {
-      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+      console.log(chalk.dim('Write mode: compatibility bridge (`browserFamilies` / `profiles`).'));
     }
     console.log(
       chalk.dim(

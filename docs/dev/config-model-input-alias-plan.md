@@ -7,9 +7,8 @@ shape as input without creating an ambiguous compatibility surface.
 
 This document is intentionally policy-first. Aura-Call now accepts these
 target-shape keys for config loading in a bounded dual-read phase. The target
-shape is the primary documented model, while bridge-key writes remain the
-compatibility mode unless a command is explicitly told to emit target-shape
-output.
+shape is the primary documented model and the default write mode. Bridge-key
+writes are now the explicit compatibility mode.
 
 Operational troubleshooting reference:
 
@@ -36,8 +35,8 @@ The repo now exposes the target model read-only through inspection JSON via
 - `runtimeProfiles`
 - `runtimeProfiles.<name>.browserProfile`
 
-Default write paths still remain bridge-key-first unless an explicit
-`--target-shape` mode is selected.
+Default write paths now emit target-shape unless an explicit
+`--bridge-shape` mode is selected.
 
 ## Recommendation
 
@@ -78,29 +77,23 @@ Current slice boundaries:
 - read-only diagnostics now report mixed/conflicting bridge vs target state
 - write commands still emit bridge keys only
 
-### Phase 2: target-write option
+### Phase 2: target-write defaults
 
-Status: partially implemented
-
-Add an explicit opt-in mode for writing the target shape, likely only to:
-
-- `config migrate`
-- maybe future scaffold flags
+Status: implemented
 
 Current implementation:
 
-- `auracall config migrate --target-shape`
+- `auracall config migrate`
   writes:
   - `browserProfiles`
   - `runtimeProfiles`
   - `runtimeProfiles.<name>.browserProfile`
-- `auracall profile scaffold --target-shape`
+- `auracall profile scaffold`
   writes the same target-shape keys for freshly scaffolded config
-- `auracall wizard --target-shape`
+- `auracall wizard`
   writes the same target-shape keys for guided browser-profile onboarding
-- default write paths still remain bridge-key-first
-
-Do not silently flip defaults until the target input shape has proven stable.
+- `--target-shape` remains accepted as an explicit form of the same write mode
+- `--bridge-shape` now selects compatibility bridge output explicitly
 
 ### Phase 3: target-first defaults
 
