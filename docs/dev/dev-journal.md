@@ -6135,3 +6135,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this slice is also code-level verified only
   - there is still no narrow existing live smoke for isolated download-button
     artifact materialization without reopening a broader acceptance surface
+
+## 2026-04-03 17:46 CDT
+
+- Focus:
+  - take the remaining artifact-local canvas enrichment consistency slice
+- What changed:
+  - added a shared canvas content resolver in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    so canvas materialization now reads through the same enrichment path as the
+    broader payload+probe merge logic
+  - rewired canvas artifact materialization to use that resolver instead of
+    partially reimplementing the metadata-vs-probe fallback locally
+  - added focused coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+    for:
+    - existing content winning over probes
+    - title-only fallback when no textdoc id is present
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this slice is also code-level verified only
+  - there is still no narrow existing live smoke for isolated canvas artifact
+    materialization without reopening a broader acceptance surface

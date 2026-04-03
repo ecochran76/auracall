@@ -26,6 +26,7 @@ import {
   normalizeChatgptConversationLinkProbes,
   normalizeChatgptProjectSourceProbes,
   normalizeChatgptProjectId,
+  resolveChatgptCanvasArtifactContentText,
   isRetryableChatgptTransientMessage,
   resolveChatgptConversationUrl,
   resolveChatgptProjectUrl,
@@ -1125,6 +1126,50 @@ describe('mergeChatgptCanvasArtifactContent', () => {
         },
       },
     ]);
+  });
+});
+
+describe('resolveChatgptCanvasArtifactContentText', () => {
+  test('returns existing canvas content before consulting visible probes', () => {
+    expect(
+      resolveChatgptCanvasArtifactContentText(
+        {
+          id: 'canvas:existing',
+          title: 'Existing Canvas',
+          kind: 'canvas',
+          metadata: {
+            textdocId: 'existing',
+            contentText: 'Existing content',
+          },
+        },
+        [
+          {
+            textdocId: 'existing',
+            title: 'Existing Canvas',
+            contentText: 'Visible probe content',
+          },
+        ],
+      ),
+    ).toBe('Existing content');
+  });
+
+  test('falls back to title match when textdoc id is unavailable', () => {
+    expect(
+      resolveChatgptCanvasArtifactContentText(
+        {
+          id: 'canvas:title-only',
+          title: 'Title Only Canvas',
+          kind: 'canvas',
+          metadata: {},
+        },
+        [
+          {
+            title: 'Title Only Canvas',
+            contentText: 'Visible title-matched content',
+          },
+        ],
+      ),
+    ).toBe('Visible title-matched content');
   });
 });
 

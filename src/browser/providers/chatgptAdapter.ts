@@ -1694,13 +1694,12 @@ export function mergeChatgptCanvasArtifactContent(
     if (textdocId) byTextdocId.set(textdocId, probe);
     if (title) byTitle.set(title.toLowerCase(), probe);
   }
-  return artifacts.map((artifact) => {
-    if (artifact.kind !== 'canvas') return artifact;
+  const resolveContentText = (artifact: ConversationArtifact): string => {
     const existingContent =
       artifact.metadata && typeof artifact.metadata.contentText === 'string'
         ? artifact.metadata.contentText.trim()
         : '';
-    if (existingContent) return artifact;
+    if (existingContent) return existingContent;
     const textdocId =
       artifact.metadata && typeof artifact.metadata.textdocId === 'string'
         ? artifact.metadata.textdocId.trim()
@@ -1709,7 +1708,11 @@ export function mergeChatgptCanvasArtifactContent(
       (textdocId ? byTextdocId.get(textdocId) : null) ??
       byTitle.get(normalizeUiText(artifact.title).toLowerCase()) ??
       null;
-    const contentText = typeof match?.contentText === 'string' ? match.contentText.trim() : '';
+    return typeof match?.contentText === 'string' ? match.contentText.trim() : '';
+  };
+  return artifacts.map((artifact) => {
+    if (artifact.kind !== 'canvas') return artifact;
+    const contentText = resolveContentText(artifact);
     if (!contentText) return artifact;
     return {
       ...artifact,
@@ -1719,6 +1722,16 @@ export function mergeChatgptCanvasArtifactContent(
       },
     };
   });
+}
+
+export function resolveChatgptCanvasArtifactContentText(
+  artifact: ConversationArtifact,
+  probes: ReadonlyArray<ChatgptConversationCanvasProbe>,
+): string {
+  const enriched = mergeChatgptCanvasArtifactContent([artifact], probes)[0];
+  return enriched?.metadata && typeof enriched.metadata.contentText === 'string'
+    ? enriched.metadata.contentText.trim()
+    : '';
 }
 
 export function mergeChatgptConversationArtifacts(
@@ -6366,18 +6379,10 @@ async function materializeChatgptConversationArtifactWithClient(
     async () => {
       await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId);
       if (artifact.kind === 'canvas') {
-        let contentText =
-          artifact.metadata && typeof artifact.metadata.contentText === 'string'
-            ? artifact.metadata.contentText
-            : '';
-        if (!contentText.trim()) {
-          const canvasArtifacts = mergeChatgptCanvasArtifactContent([artifact], await readVisibleChatgptCanvasProbesWithClient(client));
-          const enriched = canvasArtifacts[0];
-          contentText =
-            enriched?.metadata && typeof enriched.metadata.contentText === 'string'
-              ? enriched.metadata.contentText
-              : '';
-        }
+        const contentText = resolveChatgptCanvasArtifactContentText(
+          artifact,
+          await readVisibleChatgptCanvasProbesWithClient(client),
+        );
         if (!contentText.trim()) {
           return null;
         }

@@ -6664,3 +6664,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     identity contract even if the DOM widgets differ
   - keep DOM-specific candidate discovery separate if needed, but unify the
     identity match and selection rules
+
+## 2026-04-03 - ChatGPT canvas materialization should reuse the same enrichment resolver as artifact merging
+
+- Symptom:
+  - canvas artifact merging already had one enrichment path for filling missing
+    `contentText` from visible textdoc probes, but canvas materialization still
+    partially rebuilt that fallback locally
+  - that left the canvas path with two nearby answers to the same question:
+    “what is the authoritative content text for this canvas?”
+- Fix:
+  - added one shared canvas content resolver
+  - rewired canvas materialization to use that resolver instead of mixing raw
+    metadata checks with a one-off merge call
+- Durable lesson:
+  - when an artifact type already has a merge/enrichment contract, downstream
+    materialization should reuse it rather than partially reenacting it
+  - artifact-local hardening gets more reliable when the merge path and the
+    materialization path consume the same resolved content source
