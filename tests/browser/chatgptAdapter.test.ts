@@ -9,6 +9,7 @@ import {
   extractChatgptProjectSourceName,
   extractChatgptConversationSourcesFromPayload,
   findChatgptProjectByName,
+  findChatgptProjectSourceName,
   mergeChatgptCanvasArtifactContent,
   mergeChatgptConversationArtifacts,
   matchesChatgptConversationTitleProbe,
@@ -1014,6 +1015,31 @@ describe('normalizeChatgptProjectSourceProbes', () => {
         },
       },
     ]);
+  });
+});
+
+describe('findChatgptProjectSourceName', () => {
+  test('returns the canonical matched source name from normalized file refs', () => {
+    expect(
+      findChatgptProjectSourceName(
+        [
+          { name: 'Spec.md' },
+          { name: 'notes.txt' },
+        ],
+        'spec.md',
+      ),
+    ).toBe('Spec.md');
+  });
+
+  test('returns null when the normalized source name is absent', () => {
+    expect(
+      findChatgptProjectSourceName(
+        [
+          { name: 'notes.txt' },
+        ],
+        'spec.md',
+      ),
+    ).toBeNull();
   });
 });
 

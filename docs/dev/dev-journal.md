@@ -5886,3 +5886,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - confirmation readiness is now canonicalized
     - persisted-deletion post-condition stays on the existing list/route
       absence proof
+
+## 2026-04-03 15:06 CDT
+
+- Focus:
+  - harden ChatGPT project-source persistence verification so add/remove share
+    one canonical post-reload source-name truth
+- What changed:
+  - added `findChatgptProjectSourceName(...)` in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    as the normalized project-source matcher
+  - rewired project-source persistence checks to use the normalized source list
+    after a sources-tab reload instead of separate ad hoc persisted-present and
+    persisted-removed DOM expression loops
+  - kept the immediate in-surface preview/disappear checks unchanged:
+    - upload still must show the source preview before persistence polling
+    - remove still must disappear from the live source list before persistence
+      polling
+  - added focused matcher coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+  - live-smoked the changed surface on `wsl-chrome-2` with the disposable
+    project acceptance phase:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase project --state-file docs/dev/tmp/chatgpt-project-sources-smoke-state-wsl-chrome-2.json`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live runner result:
+    - `PASS (project)` on `wsl-chrome-2`
+  - persisted state file:
+    [chatgpt-project-sources-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-project-sources-smoke-state-wsl-chrome-2.json)
+- Notes:
+  - the important live proof here is that the phase moved cleanly through:
+    - project create/rename
+    - project source add
+    - project source remove
+    - instructions set/get

@@ -6529,3 +6529,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     second confirmation definition in page JavaScript
   - canonical confirmation semantics reduce drift in exactly the
     post-trigger phase where UI volatility tends to accumulate
+
+## 2026-04-03 - ChatGPT project-source persistence should share one normalized post-reload matcher
+
+- Symptom:
+  - project-source add and remove each had their own persisted-after-reload
+    verification loop
+  - both loops were really answering the same question after a sources-tab
+    refresh:
+    - does the normalized source list contain this file name or not?
+  - that duplicated persistence semantics across the two sides of the same
+    surface
+- Fix:
+  - added a shared normalized matcher for project-source names
+  - rewired both add-persistence and remove-persistence verification to use the
+    normalized source list after reload
+  - left immediate preview/disappear checks in place so post-action UI feedback
+    and post-reload persistence remain separate phases
+- Durable lesson:
+  - for list-backed mutation surfaces, immediate UI response and persisted state
+    should be treated as separate contracts
+  - once the persisted-state contract is “normalized list after refresh,” both
+    add and remove should share the same matcher instead of maintaining inverse
+    bespoke loops

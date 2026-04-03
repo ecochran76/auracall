@@ -3007,19 +3007,26 @@ function isChatgptProjectSourceFileMatch(fileName: string, candidateName: string
   return expected.length > 0 && candidate.length > 0 && expected === candidate;
 }
 
+export function findChatgptProjectSourceName(
+  files: readonly Pick<FileRef, 'name'>[],
+  fileName: string,
+): string | null {
+  return files.find((file) => isChatgptProjectSourceFileMatch(fileName, file.name))?.name ?? null;
+}
+
 async function assertProjectSourceStillPresent(
   client: ChromeClient,
   projectId: string,
   fileName: string,
 ): Promise<string | null> {
   let files = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 5_000, pollMs: 500 });
-  const matched = files.find((file) => isChatgptProjectSourceFileMatch(fileName, file.name));
+  const matched = findChatgptProjectSourceName(files, fileName);
   if (matched) {
-    return matched.name;
+    return matched;
   }
   await reloadProjectSourcesTab(client, projectId);
   files = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 5_000, pollMs: 500 });
-  return files.find((file) => isChatgptProjectSourceFileMatch(fileName, file.name))?.name ?? null;
+  return findChatgptProjectSourceName(files, fileName);
 }
 
 async function reloadProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
@@ -3036,52 +3043,33 @@ async function reloadProjectSourcesTab(client: ChromeClient, projectId: string):
   await openProjectSourcesTab(client, projectId);
 }
 
-async function waitForProjectSourceNamesPersisted(
-  client: ChromeClient,
-  projectId: string,
-  expectedNames: readonly string[],
-): Promise<void> {
-  const deadline = Date.now() + 30_000;
-  await sleep(4_000);
-  while (Date.now() < deadline) {
-    await reloadProjectSourcesTab(client, projectId);
-    const persisted = await waitForPredicate(
-      client.Runtime,
-      buildProjectSourceNamesPresentExpression(expectedNames),
-      {
-        timeoutMs: 8_000,
-        description: `ChatGPT project source list persisted for ${projectId}`,
-      },
-    );
-    if (persisted.ok) {
-      return;
-    }
-    await sleep(2_000);
-  }
-  throw new Error(`ChatGPT project source upload did not persist for ${projectId}`);
-}
-
-async function waitForProjectSourceRemovedPersisted(
+async function waitForProjectSourcePersistence(
   client: ChromeClient,
   projectId: string,
   fileName: string,
+  options: {
+    shouldExist: boolean;
+    timeoutMs?: number;
+    initialDelayMs?: number;
+    pollDelayMs?: number;
+  },
 ): Promise<void> {
-  const deadline = Date.now() + 20_000;
-  await sleep(1_500);
+  const timeoutMs = options.timeoutMs ?? 30_000;
+  const initialDelayMs = options.initialDelayMs ?? 1_500;
+  const pollDelayMs = options.pollDelayMs ?? 1_500;
+  const deadline = Date.now() + timeoutMs;
+  await sleep(initialDelayMs);
   while (Date.now() < deadline) {
     await reloadProjectSourcesTab(client, projectId);
-    const removed = await waitForPredicate(
-      client.Runtime,
-      buildProjectSourceRemovedExpression(fileName),
-      {
-        timeoutMs: 6_000,
-        description: `ChatGPT project source removed after reload: ${fileName}`,
-      },
-    );
-    if (removed.ok) {
+    const files = await readChatgptProjectSourceFilesSettled(client, { timeoutMs: 8_000, pollMs: 500 });
+    const matched = findChatgptProjectSourceName(files, fileName);
+    if ((options.shouldExist && matched) || (!options.shouldExist && !matched)) {
       return;
     }
-    await sleep(1_500);
+    await sleep(pollDelayMs);
+  }
+  if (options.shouldExist) {
+    throw new Error(`ChatGPT project source upload did not persist for ${projectId}`);
   }
   throw new Error(`ChatGPT project source "${fileName}" still appeared after reload`);
 }
@@ -3298,7 +3286,14 @@ async function uploadChatgptProjectSourceFilesWithClient(
   if (!previewVerified.ok) {
     throw new Error(`ChatGPT project source upload preview did not appear for ${projectId}`);
   }
-  await waitForProjectSourceNamesPersisted(client, projectId, expectedNames);
+  for (const expectedName of expectedNames) {
+    await waitForProjectSourcePersistence(client, projectId, expectedName, {
+      shouldExist: true,
+      timeoutMs: 30_000,
+      initialDelayMs: 4_000,
+      pollDelayMs: 2_000,
+    });
+  }
 }
 
 async function tagChatgptProjectSourceAction(client: ChromeClient, fileName: string): Promise<string> {
@@ -6945,9 +6940,7 @@ export function createChatgptAdapter(): Pick<
       try {
         await openProjectSourcesTab(client, projectId);
         const listedFiles = await readChatgptProjectSourceFilesSettled(client);
-        const matchedFileName = listedFiles.find((file) =>
-          isChatgptProjectSourceFileMatch(fileName, file.name),
-        )?.name;
+        const matchedFileName = findChatgptProjectSourceName(listedFiles, fileName);
         let targetFileName = fileName;
         if (!matchedFileName) {
           const refreshedMatch = await assertProjectSourceStillPresent(client, projectId, fileName);
@@ -7010,7 +7003,12 @@ export function createChatgptAdapter(): Pick<
         if (!removal.ok) {
           throw new Error(`ChatGPT project source "${targetFileName}" did not disappear after removal`);
         }
-        await waitForProjectSourceRemovedPersisted(client, projectId, targetFileName);
+        await waitForProjectSourcePersistence(client, projectId, targetFileName, {
+          shouldExist: false,
+          timeoutMs: 20_000,
+          initialDelayMs: 1_500,
+          pollDelayMs: 1_500,
+        });
       } finally {
         await client.close().catch(() => undefined);
       }
