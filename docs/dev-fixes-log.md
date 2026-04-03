@@ -6020,3 +6020,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a config-shape transition is real, the version field should become an
     explicit write-time signal for the active shape instead of lagging behind
     the actual read/write policy
+
+## 2026-04-02 - help text and default output names must follow the new version policy
+
+- Symptom:
+  - after target-shape became the default write mode and `version: 3` became
+    the target-shape file version, `config migrate` still talked about “v2”
+    output and still defaulted to a `.v2` output suffix
+- Fix:
+  - updated `config migrate` help text to describe version-3 target-shape
+    output as the default
+  - changed the default migrated output suffix from `.v2` to `.v3`
+- Durable lesson:
+  - once version policy changes, command descriptions and default output names
+    need to change in the same slice or operators will keep getting mixed signals

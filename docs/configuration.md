@@ -24,7 +24,6 @@ Use `auracall config migrate` to write a v2-style layout from an existing config
 
 ```sh
 auracall config migrate --dry-run
-auracall config migrate --output ~/.auracall/config.v2.json
 auracall config migrate --in-place --strip-legacy
 auracall config migrate --output ~/.auracall/config.v3.json --strip-legacy
 auracall profile scaffold --force

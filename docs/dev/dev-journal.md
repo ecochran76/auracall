@@ -5033,3 +5033,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - config loading remains permissive during the transition
   - `version` is now a write-time signal for target-shape vs compatibility bridge output
+
+## 2026-04-02 21:58 CDT
+
+- Focus:
+  - remove leftover `v2` wording from operator surfaces now that target-shape
+    and `version: 3` are the primary write policy
+- What changed:
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so `config migrate` now:
+    - describes itself as the current config layout with version-3 target-shape
+      default output
+    - defaults its output suffix to `.v3` instead of `.v2`
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    examples to match the new default output suffix
+- Verification:
+  - `pnpm run check`
+- Notes:
+  - bounded operator/help cleanup only

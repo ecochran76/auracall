@@ -6963,7 +6963,7 @@ configCommand
 
 configCommand
   .command('migrate')
-  .description('Write the current v2 config layout (target-shape by default; legacy keys remain unless --strip-legacy).')
+  .description('Write the current config layout (version 3 target-shape by default; legacy keys remain unless --strip-legacy).')
   .option('--path <path>', 'Input config path (defaults to ~/.auracall/config.json).')
   .option('--output <path>', 'Write migrated config to a custom path.')
   .option('--in-place', 'Overwrite the input config file in place.', false)
@@ -7007,7 +7007,7 @@ configCommand
     }
     const outputPath = opts.inPlace
       ? inputPath
-      : opts.output ?? `${inputPath}.v2`;
+      : opts.output ?? `${inputPath}.v3`;
     if (!opts.force && outputPath !== inputPath) {
       try {
         await fs.access(outputPath);
