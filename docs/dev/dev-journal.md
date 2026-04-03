@@ -4648,3 +4648,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps the real runtime boundary explicit without broadening the seam
     into provider execution or browser-service package code
+
+## 2026-04-02 19:32 CDT
+
+- Focus:
+  - add a read-only target-shape projection layer so config inspection JSON can
+    expose:
+    - browser profiles
+    - AuraCall runtime profiles
+    - active runtime/browser selections
+    without accepting new public input keys yet
+- What changed:
+  - expanded
+    [config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with:
+    - `projectConfigModel(...)`
+    - projected browser/runtime profile types
+  - updated JSON-oriented config inspection reports in
+    [configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts):
+    - `buildConfigShowReport(...)`
+    - `buildProfileListReport(...)`
+    to include a read-only `projectedModel`
+  - expanded tests:
+    - [configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+  - documented the new inspection-only projection in
+    [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is intentionally read-only
+  - the bridge keys remain the only accepted public input shape for now

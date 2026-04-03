@@ -5,7 +5,9 @@ import {
   getLegacyRuntimeProfiles,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
+  projectConfigModel,
   getRuntimeProfileBrowserProfileId,
+  type ProjectedConfigModel,
 } from '../config/model.js';
 
 type MutableRecord = Record<string, unknown>;
@@ -34,6 +36,7 @@ export interface ConfigShowReport {
     auracallRuntimeProfilesPresent: boolean;
     legacyRuntimeProfilesPresent: boolean;
   };
+  projectedModel: ProjectedConfigModel;
 }
 
 export interface RuntimeProfileBridgeSummary {
@@ -58,6 +61,7 @@ export interface ProfileListReport {
     auracallRuntimeProfiles: 'profiles';
     runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily';
   };
+  projectedModel: ProjectedConfigModel;
 }
 
 export interface ConfigDoctorIssue {
@@ -135,6 +139,9 @@ export function buildConfigShowReport(input: {
       auracallRuntimeProfilesPresent: Object.keys(currentRuntimeProfiles).length > 0,
       legacyRuntimeProfilesPresent: Object.keys(legacyRuntimeProfiles).length > 0,
     },
+    projectedModel: projectConfigModel(input.rawConfig, {
+      explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
+    }),
   };
 }
 
@@ -185,6 +192,9 @@ export function buildProfileListReport(
       auracallRuntimeProfiles: 'profiles',
       runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
     },
+    projectedModel: projectConfigModel(rawConfig, {
+      explicitProfileName: options.explicitProfileName ?? null,
+    }),
   };
 }
 

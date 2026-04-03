@@ -5759,3 +5759,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - managed browser profile launch preparation
   - separating those explicitly is cleaner than one large refactor and gives a
     better base for future provider/runtime cleanup
+
+## 2026-04-02 - config inspection JSON should expose the target model directly, but read-only
+
+- Symptom:
+  - the new inspection commands spoke the right terms, but machine-readable
+    output still mirrored the bridge model too closely
+  - tooling could see:
+    - `browserFamilies`
+    - `profiles`
+    - bridge summaries
+  - but not one explicit projected target model
+- Fix:
+  - added `projectConfigModel(...)` and exposed its result as `projectedModel`
+    in `config show --json` and `profile list --json`
+- Durable lesson:
+  - inspection/output can move ahead of input compatibility safely
+  - that is the right order here:
+    - first expose the target model read-only
+    - only later decide whether to accept target-shape aliases like
+      `browserProfiles` / `runtimeProfiles`

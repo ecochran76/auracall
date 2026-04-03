@@ -4,8 +4,29 @@ type MutableRecord = Record<string, unknown>;
 type MutableBrowserProfile = Record<string, unknown>;
 type MutableRuntimeProfile = Record<string, unknown>;
 
+export interface ProjectedBrowserProfile {
+  id: string;
+}
+
+export interface ProjectedRuntimeProfile {
+  id: string;
+  browserProfileId: string | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+}
+
+export interface ProjectedConfigModel {
+  activeRuntimeProfileId: string | null;
+  activeBrowserProfileId: string | null;
+  browserProfiles: ProjectedBrowserProfile[];
+  runtimeProfiles: ProjectedRuntimeProfile[];
+}
+
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
+  return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
 }
 
 export function getBrowserProfiles(config: OracleConfig | MutableRecord): Record<string, MutableBrowserProfile> {
@@ -136,6 +157,32 @@ export function getPreferredRuntimeProfile(
   }
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   return isRecord(legacyRuntimeProfiles[profileName]) ? legacyRuntimeProfiles[profileName] : null;
+}
+
+export function projectConfigModel(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null } = {},
+): ProjectedConfigModel {
+  const activeRuntimeProfileId = getPreferredRuntimeProfileName(config, options);
+  const activeRuntimeProfile = getPreferredRuntimeProfile(config, {
+    explicitProfileName: activeRuntimeProfileId,
+  });
+  const browserProfiles = Object.keys(getBrowserProfiles(config))
+    .sort()
+    .map((id) => ({ id }));
+  const runtimeProfiles = Object.entries(getCurrentRuntimeProfiles(config))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, runtimeProfile]) => ({
+      id,
+      browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
+      defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+    }));
+  return {
+    activeRuntimeProfileId,
+    activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
+    browserProfiles,
+    runtimeProfiles,
+  };
 }
 
 export function setBrowserProfile(

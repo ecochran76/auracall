@@ -11,6 +11,7 @@ import {
   getCurrentRuntimeProfiles,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
+  projectConfigModel,
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
@@ -94,6 +95,30 @@ describe('config model helpers', () => {
     expect(getPreferredRuntimeProfileName(config, { explicitProfileName: 'work' })).toBe('work');
     expect(getPreferredRuntimeProfile(config, { explicitProfileName: 'work' })).toEqual({
       defaultService: 'chatgpt',
+    });
+  });
+
+  it('projects the target config model from bridge-key config', () => {
+    const config = {
+      auracallProfile: 'work',
+      browserFamilies: {
+        default: { chromePath: '/usr/bin/google-chrome' },
+        'wsl-chrome-2': { chromePath: '/usr/bin/google-chrome' },
+      },
+      profiles: {
+        default: { browserFamily: 'default', defaultService: 'chatgpt' },
+        work: { browserFamily: 'wsl-chrome-2', defaultService: 'grok' },
+      },
+    };
+
+    expect(projectConfigModel(config)).toEqual({
+      activeRuntimeProfileId: 'work',
+      activeBrowserProfileId: 'wsl-chrome-2',
+      browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
+      runtimeProfiles: [
+        { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+        { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
+      ],
     });
   });
 });

@@ -62,6 +62,15 @@ describe('config show helpers', () => {
         auracallRuntimeProfilesPresent: true,
         legacyRuntimeProfilesPresent: false,
       },
+      projectedModel: {
+        activeRuntimeProfileId: 'work',
+        activeBrowserProfileId: 'wsl-chrome-2',
+        browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
+        runtimeProfiles: [
+          { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+          { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
+        ],
+      },
     });
   });
 
@@ -89,6 +98,12 @@ describe('config show helpers', () => {
         browserProfilesPresent: true,
         auracallRuntimeProfilesPresent: true,
         legacyRuntimeProfilesPresent: false,
+      },
+      projectedModel: {
+        activeRuntimeProfileId: 'default',
+        activeBrowserProfileId: 'default',
+        browserProfiles: [{ id: 'default' }],
+        runtimeProfiles: [{ id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' }],
       },
     });
 
@@ -169,6 +184,23 @@ describe('config show helpers', () => {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
         runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
+      },
+      projectedModel: {
+        activeRuntimeProfileId: 'work',
+        activeBrowserProfileId: 'wsl-chrome-2',
+        browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
+        runtimeProfiles: [
+          {
+            id: 'default',
+            browserProfileId: 'default',
+            defaultService: 'chatgpt',
+          },
+          {
+            id: 'work',
+            browserProfileId: 'wsl-chrome-2',
+            defaultService: 'grok',
+          },
+        ],
       },
     });
 

@@ -38,6 +38,16 @@ The command reports the active AuraCall runtime profile, its referenced browser
 profile, the resolved browser target, and whether the current bridge keys are
 present in the loaded config.
 
+The JSON forms now also include a read-only `projectedModel` block that exposes
+the target conceptual shape directly:
+- `browserProfiles[]`
+- `runtimeProfiles[]`
+- `activeRuntimeProfileId`
+- `activeBrowserProfileId`
+
+This projection is for inspection only. It does not mean Aura-Call accepts
+`browserProfiles` or `runtimeProfiles` as input keys yet.
+
 Use `auracall profile list` when you want the inventory view instead:
 - all AuraCall runtime profiles
 - their browser-profile bridges
