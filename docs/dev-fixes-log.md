@@ -6589,3 +6589,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     fully sufficient on the live surface
   - architectural cleanup is good, but not at the cost of regressing an
     already-live-green acceptance path
+
+## 2026-04-03 - ChatGPT conversation read paths should share one surface-readiness fallback order
+
+- Symptom:
+  - conversation context reads, artifact materialization, and conversation file
+    listing all depended on the same conversation surface, but each call path
+    carried its own local route/readiness assumptions
+  - that left the read side more likely to drift than the already-hardened
+    mutation paths
+- Fix:
+  - added one shared conversation read-surface helper for ChatGPT
+  - standardized the fallback order to:
+    - navigate to the conversation route
+    - wait for the conversation surface
+    - reload once if needed
+    - reopen the conversation route once if needed
+  - rewired context reads, artifact materialization, and file listing to use
+    that helper
+- Durable lesson:
+  - if multiple provider read paths depend on the same conversation-scoped UI
+    surface, they should share one readiness contract instead of carrying
+    separate route/reload assumptions
+  - once mutation hardening is stable, the next safest read-side step is to
+    unify surface readiness before changing deeper payload or artifact logic

@@ -5281,6 +5281,44 @@ async function waitForChatgptConversationDeleted(
   }
 }
 
+async function ensureChatgptConversationSurfaceReadyForRead(
+  client: ChromeClient,
+  conversationId: string,
+  projectId?: string | null,
+): Promise<void> {
+  const waitForReady = async (description: string) => {
+    return await waitForPredicate(
+      client.Runtime,
+      buildConversationSurfaceReadyExpression(conversationId, projectId),
+      {
+        timeoutMs: 10_000,
+        description,
+      },
+    );
+  };
+  await navigateToChatgptConversation(client, conversationId, projectId);
+  let ready = await waitForReady(`ChatGPT conversation ${conversationId} surface ready`);
+  if (ready.ok) {
+    return;
+  }
+  await client.Page.reload({ ignoreCache: true }).catch(async () => {
+    await client.Runtime.evaluate({
+      expression: 'location.reload()',
+      returnByValue: true,
+    }).catch(() => undefined);
+  });
+  ready = await waitForReady(`ChatGPT conversation ${conversationId} surface ready after reload`);
+  if (ready.ok) {
+    return;
+  }
+  await navigateToChatgptConversation(client, conversationId, projectId);
+  ready = await waitForReady(`ChatGPT conversation ${conversationId} surface ready after reopen`);
+  if (ready.ok) {
+    return;
+  }
+  throw new Error(`ChatGPT conversation ${conversationId} content not found`);
+}
+
 async function readChatgptConversationContextWithClient(
   client: ChromeClient,
   conversationId: string,
@@ -5288,18 +5326,7 @@ async function readChatgptConversationContextWithClient(
   debugContext?: ChatgptRecoveryDebugContext,
 ): Promise<ConversationContext> {
   return withChatgptBlockingSurfaceRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
-    await navigateToChatgptConversation(client, conversationId, projectId);
-    const ready = await waitForPredicate(
-      client.Runtime,
-      buildConversationSurfaceReadyExpression(conversationId, projectId),
-      {
-        timeoutMs: 10_000,
-        description: `ChatGPT conversation ${conversationId} surface ready`,
-      },
-    );
-    if (!ready.ok) {
-      throw new Error(`ChatGPT conversation ${conversationId} content not found`);
-    }
+    await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId);
     let payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId).catch(() => null);
     await waitForPredicate(
       client.Runtime,
@@ -5373,15 +5400,7 @@ async function readChatgptConversationContextWithClient(
       }
     }
     if (messages.length === 0) {
-      await client.Page.reload({ ignoreCache: true });
-      await waitForPredicate(
-        client.Runtime,
-        buildConversationSurfaceReadyExpression(conversationId, projectId),
-        {
-          timeoutMs: 10_000,
-          description: `ChatGPT conversation ${conversationId} surface ready after reload`,
-        },
-      );
+      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId);
       messages = await readMessages();
     }
     if (messages.length === 0) {
@@ -6308,18 +6327,7 @@ async function materializeChatgptConversationArtifactWithClient(
     client,
     `materializeChatgptConversationArtifact:${conversationId}:${artifact.id}`,
     async () => {
-      await navigateToChatgptConversation(client, conversationId, normalizedProjectId);
-      const ready = await waitForPredicate(
-        client.Runtime,
-        buildConversationSurfaceReadyExpression(conversationId, normalizedProjectId),
-        {
-          timeoutMs: 10_000,
-          description: `ChatGPT conversation ${conversationId} surface ready`,
-        },
-      );
-      if (!ready.ok) {
-        throw new Error(`ChatGPT conversation ${conversationId} content not found`);
-      }
+      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId);
       if (artifact.kind === 'canvas') {
         let contentText =
           artifact.metadata && typeof artifact.metadata.contentText === 'string'
@@ -6674,18 +6682,7 @@ export function createChatgptAdapter(): Pick<
           client,
           `listChatgptConversationFiles:${conversationId}`,
           async () => {
-            await navigateToChatgptConversation(client, conversationId, normalizedProjectId);
-            const ready = await waitForPredicate(
-              client.Runtime,
-              buildConversationSurfaceReadyExpression(conversationId, normalizedProjectId),
-              {
-                timeoutMs: 10_000,
-                description: `ChatGPT conversation ${conversationId} surface ready`,
-              },
-            );
-            if (!ready.ok) {
-              throw new Error(`ChatGPT conversation ${conversationId} content not found`);
-            }
+            await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId);
             return await readVisibleChatgptConversationFilesWithClient(client, conversationId);
           },
           {

@@ -6029,3 +6029,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - recommendation now shifts from mutation hardening to read-side recovery
     consistency before any broader hostile-state smoke campaign
+
+## 2026-04-03 17:10 CDT
+
+- Focus:
+  - land the first bounded ChatGPT read-side recovery consistency slice
+- What changed:
+  - added a shared read-surface helper in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    for conversation-scoped read paths
+  - the helper now owns the common fallback order:
+    - navigate to the conversation route
+    - wait for the conversation surface
+    - reload once if needed
+    - reopen the conversation route once if needed
+  - rewired the shared helper into:
+    - `readChatgptConversationContextWithClient(...)`
+    - `materializeChatgptConversationArtifactWithClient(...)`
+    - `listConversationFiles(...)`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live smoke on `wsl-chrome-2`:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase root-base --state-file docs/dev/tmp/chatgpt-read-surface-smoke-state-wsl-chrome-2.json`
+    - result: `PASS (root-base)`
+  - persisted state file:
+    [chatgpt-read-surface-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-read-surface-smoke-state-wsl-chrome-2.json)
+- Notes:
+  - this live proof covered the exact read-side surface touched by the slice:
+    `conversations context get` on the `wsl-chrome-2` managed browser profile
