@@ -169,6 +169,30 @@ describe('sessionDisplay helpers', () => {
     expect(log).toHaveBeenCalledWith(expect.stringContaining('reattach: wrong-browser-profile'));
   }, 15_000);
 
+  it('prints runtime-selected agent when it adds information beyond stored options', async () => {
+    const entry = {
+      id: 'sess-runtime-agent',
+      status: 'running',
+      createdAt: '2025-11-20T00:00:00.000Z',
+      model: 'gpt-5.1',
+      options: { prompt: 'hi', selectedAgentId: 'analyst' },
+      browser: {
+        runtime: {
+          selectedAgentId: 'runtime-analyst',
+        },
+      },
+    };
+    mockSessionStore.listSessions.mockResolvedValue([entry]);
+    mockSessionStore.filterSessions.mockReturnValue({ entries: [entry], truncated: false, total: 1 });
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    const { showStatus } = await import('../../src/cli/sessionDisplay.js');
+    await showStatus({ hours: 24, includeAll: false, limit: 5 });
+
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('agent: analyst'));
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('runtime agent: runtime-analyst'));
+  });
+
   it('prints selected agent in attach metadata when present', async () => {
     const createdAt = new Date().toISOString();
     mockSessionStore.readSession.mockResolvedValue({
@@ -189,6 +213,35 @@ describe('sessionDisplay helpers', () => {
     await attachSession('sess-agent', { suppressMetadata: false, renderPrompt: false, renderMarkdown: false });
 
     expect(log).toHaveBeenCalledWith('Selected agent: analyst');
+    expect(write).toHaveBeenCalledWith(expect.stringContaining('Answer:\nhello'));
+  });
+
+  it('prints runtime-selected agent in attach metadata when it differs from stored options', async () => {
+    const createdAt = new Date().toISOString();
+    mockSessionStore.readSession.mockResolvedValue({
+      id: 'sess-runtime-agent',
+      createdAt,
+      status: 'completed',
+      mode: 'browser',
+      model: 'gpt-5.1',
+      options: { selectedAgentId: 'analyst', prompt: 'Prompt here' },
+      browser: {
+        runtime: {
+          selectedAgentId: 'runtime-analyst',
+        },
+      },
+      usage: { inputTokens: 1, outputTokens: 2, reasoningTokens: 0, totalTokens: 3 },
+    });
+    mockSessionStore.readLog.mockResolvedValue('Answer:\nhello');
+    mockSessionStore.readRequest.mockResolvedValue({ prompt: 'Prompt here' });
+    const log = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const write = vi.spyOn(process.stdout, 'write').mockImplementation(() => true);
+
+    const { attachSession } = await import('../../src/cli/sessionDisplay.js');
+    await attachSession('sess-runtime-agent', { suppressMetadata: false, renderPrompt: false, renderMarkdown: false });
+
+    expect(log).toHaveBeenCalledWith('Selected agent: analyst');
+    expect(log).toHaveBeenCalledWith('Runtime-selected agent: runtime-analyst');
     expect(write).toHaveBeenCalledWith(expect.stringContaining('Answer:\nhello'));
   });
 

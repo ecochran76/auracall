@@ -55,8 +55,20 @@ export async function showStatus({
   console.log(formatSessionTableHeader(richTty));
   for (const entry of filteredEntries) {
     console.log(formatSessionTableRow(entry, { rich: richTty }));
-    if (typeof entry.options?.selectedAgentId === 'string' && entry.options.selectedAgentId.trim().length > 0) {
-      console.log(dim(`  agent: ${entry.options.selectedAgentId.trim()}`));
+    const selectedAgentId =
+      typeof entry.options?.selectedAgentId === 'string' && entry.options.selectedAgentId.trim().length > 0
+        ? entry.options.selectedAgentId.trim()
+        : null;
+    const runtimeSelectedAgentId =
+      typeof entry.browser?.runtime?.selectedAgentId === 'string' &&
+      entry.browser.runtime.selectedAgentId.trim().length > 0
+        ? entry.browser.runtime.selectedAgentId.trim()
+        : null;
+    if (selectedAgentId) {
+      console.log(dim(`  agent: ${selectedAgentId}`));
+    }
+    if (runtimeSelectedAgentId && runtimeSelectedAgentId !== selectedAgentId) {
+      console.log(dim(`  runtime agent: ${runtimeSelectedAgentId}`));
     }
     const reattachSummary = formatReattachDiagnostics(entry.browser?.runtime?.reattachDiagnostics);
     if (reattachSummary) {
@@ -224,8 +236,20 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
     }
     console.log(`Created: ${metadata.createdAt}`);
     console.log(`Status: ${metadata.status}`);
-    if (typeof metadata.options?.selectedAgentId === 'string' && metadata.options.selectedAgentId.trim().length > 0) {
-      console.log(`Selected agent: ${metadata.options.selectedAgentId.trim()}`);
+    const selectedAgentId =
+      typeof metadata.options?.selectedAgentId === 'string' && metadata.options.selectedAgentId.trim().length > 0
+        ? metadata.options.selectedAgentId.trim()
+        : null;
+    const runtimeSelectedAgentId =
+      typeof metadata.browser?.runtime?.selectedAgentId === 'string' &&
+      metadata.browser.runtime.selectedAgentId.trim().length > 0
+        ? metadata.browser.runtime.selectedAgentId.trim()
+        : null;
+    if (selectedAgentId) {
+      console.log(`Selected agent: ${selectedAgentId}`);
+    }
+    if (runtimeSelectedAgentId && runtimeSelectedAgentId !== selectedAgentId) {
+      console.log(`Runtime-selected agent: ${runtimeSelectedAgentId}`);
     }
     if (metadata.models && metadata.models.length > 0) {
       console.log('Models:');

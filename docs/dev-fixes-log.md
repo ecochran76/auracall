@@ -6363,3 +6363,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - if runtime diagnostics can start from browser-local metadata, they should
     not be forced to reach outward just to recover higher-layer selection
     context
+
+## 2026-04-03 - once runtime provenance exists, session/status surfaces should prefer it when it adds information
+
+- Symptom:
+  - browser-local runtime metadata now preserved `selectedAgentId`, but the
+    main status/postmortem surfaces still only showed the request-time
+    `options.selectedAgentId`
+  - that left the new browser-local provenance invisible unless operators
+    inspected raw stored metadata
+- Fix:
+  - added normalized `runtimeSelectedAgentId` to session/status JSON
+  - updated human-readable session/status output to show browser-local
+    selected-agent provenance only when it differs from the original request
+- Durable lesson:
+  - when a new runtime-local provenance field exists, expose it in the main
+    status/postmortem surfaces with de-duplication rules
+  - operators should see richer runtime truth without being spammed by
+    identical request-time and runtime-time copies of the same value

@@ -50,6 +50,7 @@ export interface SessionReattachSummary {
 
 export type SessionJsonEntry<T> = T & {
   selectedAgentId: string | null;
+  runtimeSelectedAgentId: string | null;
   reattachSummary: SessionReattachSummary | null;
 };
 
@@ -396,13 +397,18 @@ export function buildSessionListJsonPayload<T extends { browser?: { runtime?: { 
   };
 }
 export function buildSessionJsonEntry<T extends { browser?: { runtime?: { reattachDiagnostics?: BrowserReattachDiagnosticsMetadata } } }>(
-  entry: T & { options?: { selectedAgentId?: string | null } },
+  entry: T & { options?: { selectedAgentId?: string | null }; browser?: { runtime?: { selectedAgentId?: string | null; reattachDiagnostics?: BrowserReattachDiagnosticsMetadata } } },
 ): SessionJsonEntry<T> {
   return {
     ...entry,
     selectedAgentId:
       typeof entry.options?.selectedAgentId === 'string' && entry.options.selectedAgentId.trim().length > 0
         ? entry.options.selectedAgentId.trim()
+        : null,
+    runtimeSelectedAgentId:
+      typeof entry.browser?.runtime?.selectedAgentId === 'string' &&
+      entry.browser.runtime.selectedAgentId.trim().length > 0
+        ? entry.browser.runtime.selectedAgentId.trim()
         : null,
     reattachSummary: buildReattachSummary(entry.browser?.runtime?.reattachDiagnostics),
   };

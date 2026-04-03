@@ -5589,3 +5589,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this keeps the agent-aware runtime seam local to browser execution
     diagnostics
   - it still does not introduce separate agent execution behavior
+
+## 2026-04-03 10:50 CDT
+
+- Focus:
+  - surface browser-local selected-agent provenance in session/status
+    troubleshooting output
+- What changed:
+  - added normalized `runtimeSelectedAgentId` to session/status JSON in
+    [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionCommand.ts)
+  - updated
+    [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionDisplay.ts)
+    so human-readable output now prints browser-local selected-agent
+    provenance only when it adds information beyond the original request
+    options:
+    - `runtime agent: ...` in status rows
+    - `Runtime-selected agent: ...` in attached session metadata
+  - expanded:
+    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionDisplay.coverage.test.ts)
+    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionCommand.test.ts)
+    to pin both the conditional text output and the normalized JSON field
+- Verification:
+  - `pnpm vitest run tests/cli/sessionDisplay.coverage.test.ts tests/cli/sessionCommand.test.ts tests/browser/sessionRunner.test.ts tests/cli/sessionRunner.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps postmortem output aligned with the new browser-local runtime
+    provenance seam
+  - it avoids duplicating the same agent line when runtime metadata does not
+    add new information

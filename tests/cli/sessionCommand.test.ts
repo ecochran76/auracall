@@ -85,7 +85,7 @@ describe('handleSessionCommand', () => {
     expect(logSpy).toHaveBeenCalledWith(
       JSON.stringify(
         {
-          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {}, selectedAgentId: null, reattachSummary: null }],
+          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {}, selectedAgentId: null, runtimeSelectedAgentId: null, reattachSummary: null }],
           truncated: false,
           total: 2,
         },
@@ -158,6 +158,7 @@ describe('handleSessionCommand', () => {
             },
           },
           selectedAgentId: 'analyst',
+          runtimeSelectedAgentId: null,
           reattachSummary: {
             capturedAt: '2026-04-02T03:00:00.000Z',
             failureKind: 'wrong-browser-profile',
@@ -269,6 +270,7 @@ describe('handleSessionCommand', () => {
                 },
               },
               selectedAgentId: 'analyst',
+              runtimeSelectedAgentId: null,
               reattachSummary: {
                 capturedAt: '2026-04-02T03:00:00.000Z',
                 failureKind: 'wrong-browser-profile',
@@ -283,6 +285,54 @@ describe('handleSessionCommand', () => {
           ],
           truncated: false,
           total: 1,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
+  test('adds normalized runtime-selected agent ids to session JSON entries', async () => {
+    const command = createCommandWithOptions({ hours: 24, limit: 10, all: false, json: true } as StatusOptions);
+    const readSession = vi.fn().mockResolvedValue({
+      id: 'abc',
+      createdAt: '2025-11-20T00:00:00.000Z',
+      status: 'running',
+      options: { selectedAgentId: 'analyst' },
+      browser: {
+        runtime: {
+          selectedAgentId: 'runtime-analyst',
+        },
+      },
+    });
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await handleSessionCommand('abc', command, {
+      showStatus: vi.fn(),
+      attachSession: vi.fn(),
+      usesDefaultStatusFilters: vi.fn(),
+      deleteSessionsOlderThan: vi.fn(),
+      getSessionPaths: vi.fn(),
+      readSession,
+      listSessions: vi.fn(),
+      filterSessions: vi.fn(),
+    });
+
+    expect(logSpy).toHaveBeenCalledWith(
+      JSON.stringify(
+        {
+          id: 'abc',
+          createdAt: '2025-11-20T00:00:00.000Z',
+          status: 'running',
+          options: { selectedAgentId: 'analyst' },
+          browser: {
+            runtime: {
+              selectedAgentId: 'runtime-analyst',
+            },
+          },
+          selectedAgentId: 'analyst',
+          runtimeSelectedAgentId: 'runtime-analyst',
+          reattachSummary: null,
         },
         null,
         2,
