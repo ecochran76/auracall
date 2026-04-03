@@ -150,6 +150,7 @@ interface CliOptions extends OptionValues {
   message?: string;
   profile?: string;
   agent?: string;
+  team?: string;
   auracallProfile?: string;
   oracleProfile?: string;
   file?: string[];
@@ -477,6 +478,10 @@ program
   .option(
     '--agent <name>',
     'Resolve this run through a reserved agent reference, inheriting its AuraCall runtime profile without enabling agent execution.',
+  )
+  .option(
+    '--team <name>',
+    'Resolve this command through a reserved team reference for inspection and planning only; this does not enable team execution.',
   )
   .addOption(new Option('--auracall-profile <name>', 'Alias for --profile.').hideHelp())
   .addOption(new Option('--oracle-profile <name>', 'Legacy alias for --profile.').hideHelp())
@@ -6943,6 +6948,7 @@ configCommand
     const report = buildConfigDoctorReport(loaded.config as Record<string, unknown>, {
       explicitProfileName: resolvedConfig.auracallProfile ?? null,
       explicitAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent : null,
+      explicitTeamId: typeof cliOptions.team === 'string' ? cliOptions.team : null,
     });
     process.exitCode = resolveConfigDoctorExitCode(report, { strict: Boolean(commandOptions.strict) });
     if (commandOptions.json) {
@@ -6967,6 +6973,7 @@ configCommand
       configPath: loaded.path,
       loaded: loaded.loaded,
       explicitAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent : null,
+      explicitTeamId: typeof cliOptions.team === 'string' ? cliOptions.team : null,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(report, null, 2));

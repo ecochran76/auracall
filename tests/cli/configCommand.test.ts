@@ -63,6 +63,7 @@ describe('config show helpers', () => {
       },
       resolvedAgents: [],
       resolvedTeams: [],
+      selectedTeam: null,
       bridgeKeys: {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
@@ -122,6 +123,7 @@ describe('config show helpers', () => {
       },
       resolvedAgents: [],
       resolvedTeams: [],
+      selectedTeam: null,
       bridgeKeys: {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
@@ -153,6 +155,7 @@ describe('config show helpers', () => {
 
     expect(text).toContain('AuraCall runtime profile: default');
     expect(text).toContain('Selected agent: (none)');
+    expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Browser profile: default');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
@@ -160,6 +163,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Available teams: (none)');
     expect(text).toContain('Resolved agents: (none)');
     expect(text).toContain('Resolved teams: (none)');
+    expect(text).toContain('Selected team runtime plan: (none)');
     expect(text).toContain('browser profiles -> browserProfiles (missing)');
     expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
@@ -244,6 +248,7 @@ describe('config show helpers', () => {
       },
     ]);
     expect(report.resolvedTeams).toEqual([]);
+    expect(report.selectedTeam).toBeNull();
 
     const text = formatConfigShowReport(report);
     expect(text).toContain('Selected agent: analyst -> resolved');
@@ -251,6 +256,8 @@ describe('config show helpers', () => {
     expect(text).toContain('- analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
     expect(text).toContain('- researcher -> resolved -> runtime profile default -> browser profile default -> default service chatgpt');
     expect(text).toContain('Resolved teams: (none)');
+    expect(text).toContain('Selected team: (none)');
+    expect(text).toContain('Selected team runtime plan: (none)');
   });
 
   it('surfaces resolved teams directly in config show output', () => {
@@ -311,6 +318,7 @@ describe('config show helpers', () => {
         exists: true,
       },
     ]);
+    expect(report.selectedTeam).toBeNull();
 
     const text = formatConfigShowReport(report);
     expect(text).toContain('Resolved teams:');
@@ -318,6 +326,98 @@ describe('config show helpers', () => {
     expect(text).toContain('member researcher -> resolved -> runtime profile default -> browser profile default -> default service chatgpt');
     expect(text).toContain('member missing-agent -> missing -> runtime profile (none) -> browser profile (none) -> default service (none)');
     expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
+    expect(text).toContain('Selected team: (none)');
+    expect(text).toContain('Selected team runtime plan: (none)');
+  });
+
+  it('surfaces selected team planning without changing the active runtime selection', () => {
+    const report = buildConfigShowReport({
+      rawConfig: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+          analyst: { runtimeProfile: 'work' },
+        },
+        teams: {
+          ops: { agents: ['researcher', 'missing-agent', 'analyst'] },
+        },
+      },
+      resolvedConfig: {
+        auracallProfile: 'default',
+        browser: { target: 'chatgpt' },
+      } as never,
+      configPath: '/tmp/config.json',
+      loaded: true,
+      explicitTeamId: 'ops',
+    });
+
+    expect(report.active.auracallRuntimeProfile).toBe('default');
+    expect(report.active.browserProfile).toBe('default');
+    expect(report.selectedTeam).toEqual({
+      teamId: 'ops',
+      agentIds: ['researcher', 'missing-agent', 'analyst'],
+      members: [
+        {
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          defaultService: 'chatgpt',
+          exists: true,
+        },
+        {
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          defaultService: null,
+          exists: false,
+        },
+        {
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          defaultService: 'grok',
+          exists: true,
+        },
+      ],
+      runtimeMembers: [
+        {
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          defaultService: 'chatgpt',
+          exists: true,
+        },
+        {
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          defaultService: null,
+          exists: false,
+        },
+        {
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          defaultService: 'grok',
+          exists: true,
+        },
+      ],
+      exists: true,
+    });
+
+    const text = formatConfigShowReport(report);
+    expect(text).toContain('Selected team: ops -> resolved');
+    expect(text).toContain('Selected team runtime plan:');
+    expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
+    expect(text).toContain('member missing-agent -> missing -> runtime profile (none) -> browser profile (none) -> default service (none)');
   });
 
   it('builds and formats a runtime-profile inventory report', () => {
@@ -553,6 +653,7 @@ describe('config show helpers', () => {
       compatibilityPresent: true,
     });
     expect(report.selectedAgent).toBeNull();
+    expect(report.selectedTeam).toBeNull();
     expect(report.targetState).toEqual({
       browserProfilesPresent: false,
       runtimeProfilesPresent: false,
@@ -591,6 +692,7 @@ describe('config show helpers', () => {
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: warnings');
     expect(text).toContain('Selected agent: (none)');
+    expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (present)');
     expect(text).toContain('Active AuraCall runtime profile: default');
@@ -634,6 +736,7 @@ describe('config show helpers', () => {
       defaultService: null,
       exists: true,
     });
+    expect(report.selectedTeam).toBeNull();
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -655,9 +758,99 @@ describe('config show helpers', () => {
 
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Selected agent: researcher -> resolved');
+    expect(text).toContain('Selected team: (none)');
     expect(text).toContain('[warning] Agent "researcher" does not explicitly reference an AuraCall runtime profile.');
     expect(text).toContain('[warning] Agent "analyst" references missing AuraCall runtime profile "missing-runtime".');
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
+  });
+
+  it('surfaces selected team planning in config doctor without enabling team execution semantics', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          work: {
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+          },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+          analyst: { runtimeProfile: 'work' },
+        },
+        teams: {
+          ops: { agents: ['researcher', 'missing-agent', 'analyst'] },
+        },
+      },
+      { explicitProfileName: 'default', explicitTeamId: 'ops' },
+    );
+
+    expect(report.selectedAgent).toBeNull();
+    expect(report.selectedTeam).toEqual({
+      teamId: 'ops',
+      agentIds: ['researcher', 'missing-agent', 'analyst'],
+      members: [
+        {
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          defaultService: 'chatgpt',
+          exists: true,
+        },
+        {
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          defaultService: null,
+          exists: false,
+        },
+        {
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          defaultService: 'grok',
+          exists: true,
+        },
+      ],
+      runtimeMembers: [
+        {
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          defaultService: 'chatgpt',
+          exists: true,
+        },
+        {
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          defaultService: null,
+          exists: false,
+        },
+        {
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          defaultService: 'grok',
+          exists: true,
+        },
+      ],
+      exists: true,
+    });
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Selected team: ops -> resolved');
+    expect(text).toContain('Selected team runtime plan:');
+    expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
+    expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
   });
 
   it('surfaces target-key presence and target precedence when target-shape keys are active', () => {

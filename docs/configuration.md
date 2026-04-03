@@ -72,6 +72,16 @@ When `--agent <name>` is passed, `config show` and `config doctor` also surface
 the selected-agent resolution chain directly, including the selected agent,
 resolved AuraCall runtime profile, and resolved browser profile.
 
+When `--team <name>` is passed, `config show` and `config doctor` surface a
+read-only team planning view directly:
+- selected team resolution
+- member agents
+- each member's resolved AuraCall runtime profile
+- each member's resolved browser profile
+
+This does not enable team execution or parallelism. It is an inspection and
+runtime-planning surface only.
+
 Stored session metadata now also preserves that selected-agent provenance as
 `options.selectedAgentId`, so detached runs and postmortems can distinguish an
 agent-selected run from one started directly with `--profile`.

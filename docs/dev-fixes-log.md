@@ -6451,3 +6451,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     execution boundary before adding invocation semantics
   - especially for future parallelism/service work, avoid letting simple
     membership config harden into accidental scheduler policy
+
+## 2026-04-03 - the first public `--team` seam must stay planning-only
+
+- Symptom:
+  - once the team boundary was documented, the next useful step was a public
+    `--team` selector
+  - without a narrow scope, that could have drifted immediately into implicit
+    member choice or pseudo-execution semantics
+- Fix:
+  - added `--team <name>` only to `config show` and `config doctor`
+  - surfaced resolved team planning data there, but left active runtime
+    selection untouched
+- Durable lesson:
+  - the first public surface for a new orchestration layer should often be a
+    planning/debug seam, not an execution seam
+  - if a selector cannot yet run safely, let it explain future resolution
+    clearly before letting it control behavior

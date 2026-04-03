@@ -5,6 +5,7 @@ import {
   getPreferredRuntimeProfileName,
   resolveAgentSelection,
   resolveTeamSelection,
+  resolveTeamRuntimeSelections,
   resolveRuntimeSelection,
   type ConfigModelBridgeKeys,
   type ConfigModelInspection,
@@ -64,6 +65,25 @@ export interface ConfigShowReport {
     }>;
     exists: boolean;
   }>;
+  selectedTeam: {
+    teamId: string | null;
+    agentIds: string[];
+    members: Array<{
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    }>;
+    runtimeMembers: Array<{
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    }>;
+    exists: boolean;
+  } | null;
   bridgeKeys: ConfigModelBridgeKeys;
   targetKeys: {
     browserProfiles: 'browserProfiles';
@@ -134,6 +154,25 @@ export type ConfigDoctorReport = ConfigModelDoctorReport & {
     defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
     exists: boolean;
   } | null;
+  selectedTeam: {
+    teamId: string | null;
+    agentIds: string[];
+    members: Array<{
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    }>;
+    runtimeMembers: Array<{
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    }>;
+    exists: boolean;
+  } | null;
 };
 
 export function resolveConfigDoctorExitCode(
@@ -166,6 +205,7 @@ export function buildConfigShowReport(input: {
   configPath: string;
   loaded: boolean;
   explicitAgentId?: string | null;
+  explicitTeamId?: string | null;
 }): ConfigShowReport {
   const inspection = inspectConfigModel(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
@@ -174,6 +214,26 @@ export function buildConfigShowReport(input: {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
     explicitAgentId: input.explicitAgentId ?? null,
   });
+  const selectedTeam =
+    typeof input.explicitTeamId === 'string' && input.explicitTeamId.trim().length > 0
+      ? (() => {
+          const team = resolveTeamSelection(input.rawConfig, input.explicitTeamId);
+          const teamRuntime = resolveTeamRuntimeSelections(input.rawConfig, input.explicitTeamId);
+          return {
+            teamId: team.teamId,
+            agentIds: team.agentIds,
+            members: team.members,
+            runtimeMembers: teamRuntime.members.map((member) => ({
+              agentId: member.agentId,
+              runtimeProfileId: member.runtimeProfileId,
+              browserProfileId: member.browserProfileId,
+              defaultService: member.defaultService,
+              exists: member.exists,
+            })),
+            exists: team.exists,
+          };
+        })()
+      : null;
 
   return {
     configPath: input.configPath,
@@ -195,6 +255,7 @@ export function buildConfigShowReport(input: {
     },
     resolvedAgents: inspection.agentIds.map((agentId) => resolveAgentSelection(input.rawConfig, agentId)),
     resolvedTeams: inspection.teamIds.map((teamId) => resolveTeamSelection(input.rawConfig, teamId)),
+    selectedTeam,
     bridgeKeys: inspection.bridgeKeys,
     targetKeys: {
       browserProfiles: 'browserProfiles',
@@ -267,13 +328,34 @@ export function buildProfileListReport(
 
 export function buildConfigDoctorReport(
   rawConfig: MutableRecord,
-  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null; explicitTeamId?: string | null } = {},
 ): ConfigDoctorReport {
   const selection = resolveRuntimeSelection(rawConfig, options);
+  const selectedTeam =
+    typeof options.explicitTeamId === 'string' && options.explicitTeamId.trim().length > 0
+      ? (() => {
+          const team = resolveTeamSelection(rawConfig, options.explicitTeamId);
+          const teamRuntime = resolveTeamRuntimeSelections(rawConfig, options.explicitTeamId);
+          return {
+            teamId: team.teamId,
+            agentIds: team.agentIds,
+            members: team.members,
+            runtimeMembers: teamRuntime.members.map((member) => ({
+              agentId: member.agentId,
+              runtimeProfileId: member.runtimeProfileId,
+              browserProfileId: member.browserProfileId,
+              defaultService: member.defaultService,
+              exists: member.exists,
+            })),
+            exists: team.exists,
+          };
+        })()
+      : null;
   return {
     ...analyzeConfigModelBridgeHealth(rawConfig, options),
     selectorKeys: buildSelectorKeysReport(rawConfig),
     selectedAgent: selection.agent,
+    selectedTeam,
   };
 }
 
@@ -286,6 +368,11 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `Selected agent: ${
       report.active.agent
         ? `${report.active.agent.agentId ?? '(none)'} -> ${report.active.agent.exists ? 'resolved' : 'missing'}`
+        : '(none)'
+    }`,
+    `Selected team: ${
+      report.selectedTeam
+        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'}`
         : '(none)'
     }`,
     `AuraCall runtime profile: ${report.active.auracallRuntimeProfile ?? '(none)'}`,
@@ -330,6 +417,19 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
           `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
         );
       }
+    }
+  }
+  if (!report.selectedTeam) {
+    lines.push('Selected team runtime plan: (none)');
+  } else {
+    lines.push('Selected team runtime plan:');
+    lines.push(
+      `  - ${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'} -> agents ${formatList(report.selectedTeam.agentIds)}`,
+    );
+    for (const member of report.selectedTeam.runtimeMembers) {
+      lines.push(
+        `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+      );
     }
   }
   return lines.join('\n');
@@ -389,6 +489,11 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
         ? `${report.selectedAgent.agentId ?? '(none)'} -> ${report.selectedAgent.exists ? 'resolved' : 'missing'}`
         : '(none)'
     }`,
+    `Selected team: ${
+      report.selectedTeam
+        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'}`
+        : '(none)'
+    }`,
     `Active AuraCall runtime profile: ${report.activeAuracallRuntimeProfile ?? '(none)'}`,
     `Active browser profile: ${report.activeBrowserProfile ?? '(none)'}`,
     `Status: ${report.ok ? 'ok' : 'warnings'}`,
@@ -397,8 +502,30 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
     `Precedence: browser profiles=${report.precedence.browserProfiles}, runtime profiles=${report.precedence.runtimeProfiles}, runtime->browser reference=${report.precedence.runtimeProfileBrowserProfileReference}`,
   ];
   if (report.issues.length === 0) {
+    if (report.selectedTeam) {
+      lines.push('Selected team runtime plan:');
+      lines.push(
+        `  - ${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'} -> agents ${formatList(report.selectedTeam.agentIds)}`,
+      );
+      for (const member of report.selectedTeam.runtimeMembers) {
+        lines.push(
+          `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+        );
+      }
+    }
     lines.push('Issues: (none)');
     return lines.join('\n');
+  }
+  if (report.selectedTeam) {
+    lines.push('Selected team runtime plan:');
+    lines.push(
+      `  - ${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'} -> agents ${formatList(report.selectedTeam.agentIds)}`,
+    );
+    for (const member of report.selectedTeam.runtimeMembers) {
+      lines.push(
+        `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+      );
+    }
   }
   lines.push('Issues:');
   for (const issue of report.issues) {

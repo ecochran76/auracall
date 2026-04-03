@@ -5748,3 +5748,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this also incorporates the future service-mode note:
     runners and parallelism belong to a later orchestration layer, not today's
     team config semantics
+
+## 2026-04-03 12:59 CDT
+
+- Focus:
+  - add the first bounded `--team` path, but keep it strictly in
+    inspection/runtime-planning surfaces
+- What changed:
+  - added `--team <name>` as a read-only planning selector in
+    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    for:
+    - `config show`
+    - `config doctor`
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so both report builders now expose:
+    - `selectedTeam`
+    - per-member runtime planning state from
+      `resolveTeamRuntimeSelections(...)`
+  - kept active runtime selection unchanged:
+    - `--team` does not choose a member
+    - `--team` does not override `--profile`
+    - `--team` does not override `--agent`
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin the planning-only semantics
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document `--team` as an inspection/planning surface only
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is the first public `--team` seam, but it is intentionally not a team
+    execution feature
