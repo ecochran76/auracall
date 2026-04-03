@@ -4,6 +4,7 @@ import {
   inspectConfigModel,
   getPreferredRuntimeProfileName,
   resolveAgentSelection,
+  resolveTeamSelection,
   resolveRuntimeSelection,
   type ConfigModelBridgeKeys,
   type ConfigModelInspection,
@@ -226,17 +227,20 @@ export function buildProfileListReport(
     browserProfile: agent.browserProfileId,
     defaultService: agent.defaultService,
   }));
-  const teams = inspection.projectedModel.teams.map((team) => ({
-    name: team.id,
-    agents: team.agentIds,
-    members: team.members.map((member) => ({
-      agent: member.agentId,
-      exists: member.exists,
-      runtimeProfile: member.runtimeProfileId,
-      browserProfile: member.browserProfileId,
-      defaultService: member.defaultService,
-    })),
-  }));
+  const teams = inspection.projectedModel.teams.map((team) => {
+    const resolvedTeam = resolveTeamSelection(rawConfig, team.id);
+    return {
+      name: team.id,
+      agents: resolvedTeam.agentIds,
+      members: resolvedTeam.members.map((member) => ({
+        agent: member.agentId ?? '(none)',
+        exists: member.exists,
+        runtimeProfile: member.runtimeProfileId,
+        browserProfile: member.browserProfileId,
+        defaultService: member.defaultService,
+      })),
+    };
+  });
   return {
     activeAuracallRuntimeProfile: inspection.activeRuntimeProfileId,
     browserProfiles: inspection.browserProfileIds,

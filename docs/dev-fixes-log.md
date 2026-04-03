@@ -6381,3 +6381,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     status/postmortem surfaces with de-duplication rules
   - operators should see richer runtime truth without being spammed by
     identical request-time and runtime-time copies of the same value
+
+## 2026-04-03 - team inspection should resolve through a canonical team selection helper, not projected-array internals
+
+- Symptom:
+  - team reporting already showed inherited agent/runtime/browser state, but it
+    was rebuilding that view from `projectedModel.teams`
+  - that made the first team-side readiness seam depend on an inspection
+    projection detail instead of a reusable selection contract
+- Fix:
+  - added shared `getTeam(...)` and `resolveTeamSelection(...)` helpers in the
+    config model layer
+  - updated `profile list` reporting to consume that helper directly
+- Durable lesson:
+  - once a new config layer becomes execution-adjacent, give it one canonical
+    resolver before spreading the same mapping across report surfaces
+  - projected inspection arrays are useful outputs, but they should not become
+    the hidden source of truth for later selection logic

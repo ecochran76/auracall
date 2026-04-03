@@ -5644,3 +5644,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps the execution board aligned with the code now that agent-aware
     runtime/browser plumbing is established enough
+
+## 2026-04-03 11:09 CDT
+
+- Focus:
+  - take the first bounded team-side readiness seam now that lower agent-side
+    runtime provenance is in place
+- What changed:
+  - added shared team selection helpers in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts):
+    - `getTeam(...)`
+    - `resolveTeamSelection(...)`
+  - `resolveTeamSelection(...)` now gives one canonical read-only bundle for:
+    - `teamId`
+    - `agentIds`
+    - per-member resolution through
+      `agent -> AuraCall runtime profile -> browser profile`
+    - `exists`
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `profile list` consumes that helper instead of rebuilding team-member
+    resolution from projected arrays
+  - added direct coverage in
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps the first team-side seam read-only and selection-oriented
+  - it also makes the CLI/report layer depend on one canonical team resolver
+    instead of the internal layout of `projectedModel.teams`

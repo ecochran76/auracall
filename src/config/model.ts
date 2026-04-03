@@ -45,6 +45,15 @@ export interface ResolvedAgentSelection {
   exists: boolean;
 }
 
+export interface ResolvedTeamMemberSelection extends ResolvedAgentSelection {}
+
+export interface ResolvedTeamSelection {
+  teamId: string | null;
+  agentIds: string[];
+  members: ResolvedTeamMemberSelection[];
+  exists: boolean;
+}
+
 export interface ResolvedRuntimeSelection {
   agent: ResolvedAgentSelection | null;
   runtimeProfileId: string | null;
@@ -230,6 +239,16 @@ export function getAgent(
   return isRecord(agents[name]) ? agents[name] : null;
 }
 
+export function getTeam(
+  config: OracleConfig | MutableRecord,
+  teamId: string | null | undefined,
+): MutableTeam | null {
+  const name = typeof teamId === 'string' && teamId.trim().length > 0 ? teamId.trim() : null;
+  if (!name) return null;
+  const teams = getTeams(config);
+  return isRecord(teams[name]) ? teams[name] : null;
+}
+
 export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
   return isRecord(config.auracallProfiles)
     ? (config.auracallProfiles as Record<string, MutableRuntimeProfile>)
@@ -301,6 +320,24 @@ export function resolveAgentSelection(
     browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
     defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
     exists: agent !== null,
+  };
+}
+
+export function resolveTeamSelection(
+  config: OracleConfig | MutableRecord,
+  teamId: string | null | undefined,
+): ResolvedTeamSelection {
+  const name = typeof teamId === 'string' && teamId.trim().length > 0 ? teamId.trim() : null;
+  const team = getTeam(config, name);
+  const agentIds =
+    isRecord(team) && Array.isArray(team.agents)
+      ? team.agents.filter((agentId): agentId is string => typeof agentId === 'string')
+      : [];
+  return {
+    teamId: name,
+    agentIds,
+    members: agentIds.map((agentId) => resolveAgentSelection(config, agentId)),
+    exists: team !== null,
   };
 }
 
@@ -450,22 +487,19 @@ export function projectConfigModel(
   const projectedAgentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const teams = Object.entries(getTeams(config))
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([id, team]) => {
-      const agentIds =
-        isRecord(team) && Array.isArray(team.agents)
-          ? team.agents.filter((agentId): agentId is string => typeof agentId === 'string')
-          : [];
+    .map(([id]) => {
+      const resolvedTeam = resolveTeamSelection(config, id);
       return {
         id,
-        agentIds,
-        members: agentIds.map((agentId) => {
-          const projectedAgent = projectedAgentMap.get(agentId) ?? null;
+        agentIds: resolvedTeam.agentIds,
+        members: resolvedTeam.members.map((member) => {
+          const projectedAgent = projectedAgentMap.get(member.agentId ?? '') ?? null;
           return {
-            agentId,
+            agentId: member.agentId ?? '',
             exists: projectedAgent !== null,
-            runtimeProfileId: projectedAgent?.runtimeProfileId ?? null,
-            browserProfileId: projectedAgent?.browserProfileId ?? null,
-            defaultService: projectedAgent?.defaultService ?? null,
+            runtimeProfileId: member.runtimeProfileId,
+            browserProfileId: member.browserProfileId,
+            defaultService: member.defaultService,
           };
         }),
       };
