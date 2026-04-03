@@ -6614,6 +6614,7 @@ program
   .option('--grok', 'Preselect Grok in the wizard.')
   .option('--target <chatgpt|gemini|grok>', 'Preselect which site to bootstrap.')
   .option('--profile-name <name>', 'Preselect the AuraCall runtime profile name to create or update.')
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
   .action(async (commandOptions) => {
     if (!process.stdin.isTTY || !process.stdout.isTTY) {
       throw new Error('The onboarding wizard requires an interactive terminal. Use "auracall setup" with flags instead.');
@@ -6762,10 +6763,16 @@ program
           choice: selectedChoice,
         }),
       ),
+      { targetShape: Boolean(commandOptions.targetShape) },
     );
     const writtenPath = await writeWizardUserConfig(mergedConfig);
 
     console.log('');
+    if (commandOptions.targetShape) {
+      console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
+    } else {
+      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+    }
     const wizardBridgeSummary = buildRuntimeProfileBridgeSummary(mergedConfig as Record<string, unknown>, {
       explicitProfileName: profileName,
     });

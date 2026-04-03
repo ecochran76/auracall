@@ -4920,3 +4920,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - docs only
   - intended for future troubleshooting, not end-user onboarding
+
+## 2026-04-02 21:12 CDT
+
+- Focus:
+  - extend explicit target-shape writes to the guided `wizard` path without
+    flipping the default bridge-key onboarding output
+- What changed:
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so `auracall wizard` now accepts:
+    - `--target-shape`
+    - explicit write-mode reporting after the config write
+  - kept
+    [src/cli/browserWizard.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserWizard.ts)
+    bridge-oriented so the command still materializes target-shape output at
+    the write boundary instead of changing patch semantics
+  - expanded
+    [tests/cli/browserWizard.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserWizard.test.ts)
+    with direct wizard merge/materialize coverage for target-shape output
+  - updated docs/plans in:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - default wizard output remains bridge-key-first
+  - all three write surfaces can now opt into target-shape output explicitly:
+    - `config migrate`
+    - `profile scaffold`
+    - `wizard`

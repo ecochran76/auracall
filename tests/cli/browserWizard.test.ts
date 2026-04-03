@@ -8,6 +8,7 @@ import {
   type BrowserWizardChoice,
   type BrowserWizardConfigOverlay,
 } from '../../src/cli/browserWizard.js';
+import { materializeConfigV2 } from '../../src/config/migrate.js';
 
 function createChoice(overrides: Partial<BrowserWizardChoice> = {}): BrowserWizardChoice {
   return {
@@ -278,5 +279,53 @@ describe('mergeWizardConfig', () => {
         },
       },
     });
+  });
+
+  test('can materialize wizard output in target-shape mode', () => {
+    const merged = mergeWizardConfig(
+      {
+        version: 2,
+        model: 'gpt-5.2',
+        browser: {},
+        auracallProfile: 'default',
+        profiles: {},
+      },
+      buildBrowserWizardConfigPatch({
+        target: 'chatgpt',
+        profileName: 'wsl-chrome-2',
+        setAsDefault: true,
+        keepBrowser: true,
+        choice: createChoice({
+          runtime: 'wsl',
+          family: 'chrome',
+          discovery: {
+            userDataDir: '/home/test/.config/google-chrome',
+            profileName: 'Profile 1',
+            cookiePath: '/home/test/.config/google-chrome/Profile 1/Cookies',
+            chromePath: '/usr/bin/google-chrome',
+            source: 'wsl',
+          },
+        }),
+      }),
+    );
+
+    const materialized = materializeConfigV2(merged, { targetShape: true }) as Record<string, unknown>;
+    const runtimeProfiles = materialized.runtimeProfiles as Record<string, unknown> | undefined;
+    const browserProfiles = materialized.browserProfiles as Record<string, unknown> | undefined;
+    const runtimeProfile = runtimeProfiles?.['wsl-chrome-2'] as Record<string, unknown> | undefined;
+
+    expect(browserProfiles?.['wsl-chrome-2']).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+      chromeProfile: 'Profile 1',
+      chromeCookiePath: '/home/test/.config/google-chrome/Profile 1/Cookies',
+      bootstrapCookiePath: '/home/test/.config/google-chrome/Profile 1/Cookies',
+      managedProfileRoot: '/home/test/.auracall/browser-profiles',
+      manualLogin: true,
+      keepBrowser: true,
+      wslChromePreference: 'wsl',
+    });
+    expect(runtimeProfile?.browserProfile).toBe('wsl-chrome-2');
+    expect(materialized.browserFamilies).toBeUndefined();
+    expect(materialized.profiles).toBeUndefined();
   });
 });

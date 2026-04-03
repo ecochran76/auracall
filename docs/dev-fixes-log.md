@@ -5942,3 +5942,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once config support spans multiple shapes, future debugging is faster when
     shape diagnosis lives in one operational doc instead of being reconstructed
     from roadmap and policy fragments
+
+## 2026-04-02 - explicit target-shape writes should cover the guided wizard path too
+
+- Symptom:
+  - after `config migrate --target-shape` and `profile scaffold --target-shape`
+    landed, the guided `wizard` path was the remaining write surface that could
+    only emit bridge keys
+  - that left the target-shape path incomplete for intentional guided config
+    creation
+- Fix:
+  - added explicit `auracall wizard --target-shape`
+  - kept the underlying wizard patch builder bridge-oriented and materialized
+    target-shape output only at the write boundary
+- Durable lesson:
+  - when a compatibility transition adds an explicit target-shape write mode,
+    the guided onboarding path should gain the same opt-in before anyone
+    considers flipping defaults
+  - keep bridge-vs-target conversion at the write boundary when the internal
+    patch/merge helpers are still bridge-native
