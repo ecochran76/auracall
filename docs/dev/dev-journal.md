@@ -6058,3 +6058,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this live proof covered the exact read-side surface touched by the slice:
     `conversations context get` on the `wsl-chrome-2` managed browser profile
+
+## 2026-04-03 17:18 CDT
+
+- Focus:
+  - re-audit the remaining ChatGPT read-side hardening line after the shared
+    conversation-surface readiness slice
+- What changed:
+  - reviewed the remaining read-path hotspots in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    after `refactor: share chatgpt read-surface readiness`
+  - updated
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    to reflect the narrower remaining gap
+- Audit result:
+  - route/surface recovery is now centralized for:
+    - context reads
+    - file listing
+    - artifact materialization entry
+  - the strongest remaining read-side drift is now artifact-specific, not
+    conversation-route readiness
+  - next bounded slice should focus on:
+    - image artifact readiness/src resolution
+    - spreadsheet/download button tagging/readiness
+    - canvas enrichment fallback consistency
+- Verification:
+  - docs/audit only
+- Notes:
+  - recommendation is to keep the next slice inside artifact materialization
+    semantics and avoid reopening route-level recovery unless a new live
+    failure proves the shared read-surface seam insufficient

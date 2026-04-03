@@ -206,6 +206,15 @@ Current progress:
   - root rename persistence (`matchesChatgptConversationTitleProbe(...)`)
   - root delete confirmation (`matchesChatgptDeleteConfirmationProbe(...)`)
   - project-source persisted presence/absence after sources-tab reload
+- read-side conversation surface readiness now has one shared seam for:
+  - `conversations context get`
+  - `conversations files list`
+  - artifact materialization entry
+  - with one bounded fallback order:
+    - navigate to the conversation route
+    - wait for the conversation surface
+    - reload once if needed
+    - reopen the conversation route once if needed
 
 ## Recommended implementation order
 
@@ -218,6 +227,15 @@ Current progress:
 Current next slices:
 6. Keep the persisted post-mortem payload work as maintenance, not the active
    mutation slice
+7. Next bounded read-side hardening slice:
+   - artifact-specific readiness and materialization verification inside the
+     already-open conversation surface
+   - especially:
+     - image artifact readiness/src resolution
+     - spreadsheet/download button tagging/readiness
+     - canvas probe enrichment fallback consistency
+   - avoid reopening broader route/surface recovery work unless a new live
+     regression proves the shared seam is insufficient
    Status:
    - now includes current action/outcome for the implemented ChatGPT recovery
      paths (`reload-page`, `dismiss-overlay`, `close-dialog`)

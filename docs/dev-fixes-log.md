@@ -6613,3 +6613,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     separate route/reload assumptions
   - once mutation hardening is stable, the next safest read-side step is to
     unify surface readiness before changing deeper payload or artifact logic
+
+## 2026-04-03 - after shared read-surface recovery lands, keep the next ChatGPT slice artifact-local
+
+- Symptom:
+  - once route/surface readiness was centralized for context reads, file
+    listing, and artifact entry, the remaining read-side variability moved down
+    into artifact-specific logic rather than conversation-route recovery
+- Fix:
+  - re-ranked the next hardening slice around artifact-local readiness and
+    materialization checks instead of reopening broader route logic
+- Durable lesson:
+  - after a shared route/surface seam is live-green, the next bounded
+    hardening slice should stay at the next lower unstable layer
+  - do not reopen a freshly stabilized recovery seam just because another read
+    path still feels flaky; first isolate whether the remaining drift is
+    artifact-local instead
