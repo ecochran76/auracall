@@ -6145,3 +6145,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     any execution semantics
   - that keeps layering mistakes visible early without pretending the behavior
     already exists
+
+## 2026-04-03 - projected team inspection should show member resolution state, not just raw ids
+
+- Symptom:
+  - after teams gained read-only projection and doctor warnings for missing
+    agents, the inventory surface still only showed raw team member ids
+- Fix:
+  - extended projected teams and `profile list` reporting to surface each team
+    member as:
+    - resolved or missing
+    - inherited runtime profile
+    - inherited browser profile
+    - inherited default service
+- Durable lesson:
+  - when a future-layer projection includes references to lower-layer objects,
+    inspection should expose reference resolution status directly instead of
+    forcing operators to cross-check separate warnings or raw ids by hand

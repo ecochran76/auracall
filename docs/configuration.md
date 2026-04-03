@@ -77,7 +77,8 @@ Use `auracall profile list` when you want the inventory view instead:
 - their browser-profile bridges
 - their default services
 - projected agents and their inherited runtime/browser context
-- projected teams and their current agent membership
+- projected teams and their current agent membership, including unresolved
+  members
 - the available browser profiles in the current config
 
 Use `auracall config doctor` when you want bridge-health checks instead:

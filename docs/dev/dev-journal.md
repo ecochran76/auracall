@@ -5221,3 +5221,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - still read-only and non-executing
   - this is the first real validation seam above AuraCall runtime profiles
+
+## 2026-04-03 08:25 CDT
+
+- Focus:
+  - expose resolved versus missing team members directly in the projected model
+    and inventory report
+- What changed:
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    so projected teams now carry per-member resolution status plus inherited:
+    - runtime profile
+    - browser profile
+    - default service
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `profile list` prints resolved versus missing team members explicitly
+  - expanded:
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - resolved team-member projection
+    - unresolved team-member projection
+    - inventory text for both cases
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to note unresolved team-member visibility in the inventory surface
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this stays read-only
+  - it makes the team projection symmetric with the earlier agent projection and
+    team-side doctor warnings

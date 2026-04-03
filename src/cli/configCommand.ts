@@ -78,6 +78,13 @@ export interface AgentListEntry {
 export interface TeamListEntry {
   name: string;
   agents: string[];
+  members: Array<{
+    agent: string;
+    exists: boolean;
+    runtimeProfile: string | null;
+    browserProfile: string | null;
+    defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  }>;
 }
 
 export interface ProfileListReport {
@@ -202,6 +209,13 @@ export function buildProfileListReport(
   const teams = inspection.projectedModel.teams.map((team) => ({
     name: team.id,
     agents: team.agentIds,
+    members: team.members.map((member) => ({
+      agent: member.agentId,
+      exists: member.exists,
+      runtimeProfile: member.runtimeProfileId,
+      browserProfile: member.browserProfileId,
+      defaultService: member.defaultService,
+    })),
   }));
   return {
     activeAuracallRuntimeProfile: inspection.activeRuntimeProfileId,
@@ -288,6 +302,11 @@ export function formatProfileListReport(report: ProfileListReport): string {
   lines.push(`Teams: ${report.teams.length > 0 ? '' : '(none)'}`.trimEnd());
   for (const team of report.teams) {
     lines.push(`  - ${team.name} -> agents ${formatList(team.agents)}`);
+    for (const member of team.members) {
+      lines.push(
+        `    member ${member.agent} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfile ?? '(none)'} -> browser profile ${member.browserProfile ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+      );
+    }
   }
   return lines.join('\n');
 }

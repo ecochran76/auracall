@@ -302,6 +302,22 @@ describe('config show helpers', () => {
       {
         name: 'ops',
         agents: ['researcher', 'analyst'],
+        members: [
+          {
+            agent: 'researcher',
+            exists: true,
+            runtimeProfile: 'default',
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          {
+            agent: 'analyst',
+            exists: true,
+            runtimeProfile: 'work',
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+          },
+        ],
       },
     ]);
 
@@ -311,6 +327,55 @@ describe('config show helpers', () => {
     expect(text).toContain('- researcher -> runtime profile default -> browser profile default -> default service chatgpt');
     expect(text).toContain('Teams:');
     expect(text).toContain('- ops -> agents researcher, analyst');
+    expect(text).toContain('member researcher -> resolved -> runtime profile default -> browser profile default -> default service chatgpt');
+    expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
+  });
+
+  it('shows unresolved team members explicitly in the inventory report', () => {
+    const report = buildProfileListReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: { agents: ['researcher', 'missing-agent'] },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.teams).toEqual([
+      {
+        name: 'ops',
+        agents: ['researcher', 'missing-agent'],
+        members: [
+          {
+            agent: 'researcher',
+            exists: true,
+            runtimeProfile: 'default',
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          {
+            agent: 'missing-agent',
+            exists: false,
+            runtimeProfile: null,
+            browserProfile: null,
+            defaultService: null,
+          },
+        ],
+      },
+    ]);
+
+    const text = formatProfileListReport(report);
+    expect(text).toContain('member missing-agent -> missing -> runtime profile (none) -> browser profile (none) -> default service (none)');
   });
 
   it('builds a bridge-health doctor report for missing and dangling browser-profile references', () => {

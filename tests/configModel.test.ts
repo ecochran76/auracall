@@ -126,8 +126,69 @@ describe('config model helpers', () => {
         { id: 'analyst', runtimeProfileId: 'work', browserProfileId: 'consulting', defaultService: 'grok' },
         { id: 'researcher', runtimeProfileId: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
       ],
-      teams: [{ id: 'ops', agentIds: ['researcher', 'analyst'] }],
+      teams: [
+        {
+          id: 'ops',
+          agentIds: ['researcher', 'analyst'],
+          members: [
+            {
+              agentId: 'researcher',
+              exists: true,
+              runtimeProfileId: 'default',
+              browserProfileId: 'default',
+              defaultService: 'chatgpt',
+            },
+            {
+              agentId: 'analyst',
+              exists: true,
+              runtimeProfileId: 'work',
+              browserProfileId: 'consulting',
+              defaultService: 'grok',
+            },
+          ],
+        },
+      ],
     });
+  });
+
+  it('projects unresolved team members explicitly in the shared target model', () => {
+    const config = {
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      agents: {
+        researcher: { runtimeProfile: 'default' },
+      },
+      teams: {
+        ops: { agents: ['researcher', 'missing-agent'] },
+      },
+    };
+
+    expect(projectConfigModel(config).teams).toEqual([
+      {
+        id: 'ops',
+        agentIds: ['researcher', 'missing-agent'],
+        members: [
+          {
+            agentId: 'researcher',
+            exists: true,
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            defaultService: 'chatgpt',
+          },
+          {
+            agentId: 'missing-agent',
+            exists: false,
+            runtimeProfileId: null,
+            browserProfileId: null,
+            defaultService: null,
+          },
+        ],
+      },
+    ]);
   });
 
   it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {

@@ -23,9 +23,18 @@ export interface ProjectedAgent {
   defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
 }
 
+export interface ProjectedTeamMember {
+  agentId: string;
+  exists: boolean;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+}
+
 export interface ProjectedTeam {
   id: string;
   agentIds: string[];
+  members: ProjectedTeamMember[];
 }
 
 export interface ProjectedConfigModel {
@@ -354,15 +363,29 @@ export function projectConfigModel(
         defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
       };
     });
+  const projectedAgentMap = new Map(agents.map((agent) => [agent.id, agent]));
   const teams = Object.entries(getTeams(config))
     .sort(([left], [right]) => left.localeCompare(right))
-    .map(([id, team]) => ({
-      id,
-      agentIds:
+    .map(([id, team]) => {
+      const agentIds =
         isRecord(team) && Array.isArray(team.agents)
           ? team.agents.filter((agentId): agentId is string => typeof agentId === 'string')
-          : [],
-    }));
+          : [];
+      return {
+        id,
+        agentIds,
+        members: agentIds.map((agentId) => {
+          const projectedAgent = projectedAgentMap.get(agentId) ?? null;
+          return {
+            agentId,
+            exists: projectedAgent !== null,
+            runtimeProfileId: projectedAgent?.runtimeProfileId ?? null,
+            browserProfileId: projectedAgent?.browserProfileId ?? null,
+            defaultService: projectedAgent?.defaultService ?? null,
+          };
+        }),
+      };
+    });
   return {
     activeRuntimeProfileId,
     activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
