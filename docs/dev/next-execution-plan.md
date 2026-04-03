@@ -59,13 +59,22 @@ Agent-ready execution-adjacent state now:
 - stored session metadata now preserves:
   - `options.selectedAgentId`
 - session/status text and JSON now expose selected-agent provenance directly
+- one shared runtime helper now exists for:
+  - selected agent
+  - resolved AuraCall runtime profile
+  - resolved browser profile
+  - inherited default service
+- one browser-facing helper now exists for:
+  - shared runtime selection
+  - browser-profile resolution
+  - explicit runtime-profile override support
+- browser config, browser runtime metadata, and session/postmortem surfaces now
+  preserve selected-agent provenance locally
 
 That means the agent-selection/provenance seam is complete enough for a
-checkpoint. The next useful step is no longer more provenance reporting.
-It is to decide whether the next bounded slice should be:
-
-- team-side selection/readiness seams, or
-- the first agent-aware runtime helper beyond selection/provenance
+checkpoint. The next useful step is no longer more provenance reporting or
+lower-layer agent selection plumbing. It is to move upward to the first
+team-side readiness seam.
 
 ## Execution principle
 
@@ -182,8 +191,9 @@ Acceptance
    `agents` / `teams`.
 3. Start one small seam that prepares future `agent -> runtimeProfile`
    composition without adding agent execution behavior.
-4. Thread one optional read-only agent selection into a real execution-adjacent
-   resolution path without changing runtime behavior.
+4. Carry that seam through one real browser/runtime path and one postmortem
+   surface so provenance is local to execution diagnostics.
+5. Move upward to the first team-side readiness seam.
 
 ## Completed recent checkpoints
 
@@ -197,23 +207,26 @@ Acceptance
    - `auracall status`
    - `auracall session <id>`
    - session/status JSON
+5. Added a shared runtime selection helper and a browser-facing runtime
+   selection helper.
+6. Preserved selected-agent provenance in:
+   - browser config
+   - browser runtime metadata
+   - session/status postmortem output
 
 ## Recommended next choice
 
-Choose deliberately between:
+Recommended next choice:
 
-1. Team-side readiness seams
+1. Team-side readiness seam
    - keep the work read-only / selection-oriented
    - add one shared `team -> agent -> runtimeProfile -> browserProfile`
      resolution helper and inspection surface
 
-2. First agent-aware runtime helper
-   - still no separate agent execution mode
-   - add one shared runtime helper that accepts an explicit selected agent and
-     returns the same resolved runtime/browser/service bundle that current
-     call sites reconstruct from lower-level pieces
+2. Only return to agent-side runtime plumbing if a real consumer exposes a gap
+   - not because this area is warm
 
 Recommendation:
-- take the first agent-aware runtime helper next
-- reason: the agent layer already has better real-run seams than the team layer,
-  and team work would otherwise jump ahead of the first non-reporting helper
+- take the first team-side readiness seam next
+- reason: the lower agent-aware runtime/browser path is now established enough
+  that more provenance polishing would be diminishing returns

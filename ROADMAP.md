@@ -85,6 +85,13 @@ Current note:
       - session/status JSON
     - stored session metadata now preserves:
       - `options.selectedAgentId`
+  - current runtime/browser checkpoint:
+    - one shared runtime selection helper now exists for:
+      - `selected agent -> runtimeProfile -> browserProfile`
+    - one browser-facing helper now exists for:
+      - runtime selection + browser profile resolution
+    - browser config, browser runtime metadata, and session/status postmortems
+      now all preserve selected-agent provenance locally
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
@@ -100,9 +107,9 @@ Execution docs:
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
 
 Next recommendation:
-- pause provenance/reporting work here
-- take the first shared agent-aware runtime helper next, before moving upward
-  to team-side selection seams
+- pause agent-selection polishing here
+- move upward to the first team-side readiness seam next, now that the lower
+  agent-aware runtime/browser provenance path is in place
 
 ### Service Volatility Externalization
 Status: planned

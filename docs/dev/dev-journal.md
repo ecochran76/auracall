@@ -5617,3 +5617,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     provenance seam
   - it avoids duplicating the same agent line when runtime metadata does not
     add new information
+
+## 2026-04-03 10:52 CDT
+
+- Focus:
+  - pause to audit the current agent-selection/runtime work against the roadmap
+    before opening another seam by inertia
+- What changed:
+  - updated planning docs to record that the agent-selection/provenance track
+    is now complete enough through the lower execution layers:
+    - shared runtime selection helper
+    - browser-facing runtime selection helper
+    - browser config provenance
+    - browser runtime metadata provenance
+    - session/status postmortem visibility
+  - updated:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    to recommend the next bounded architecture slice:
+    - first team-side readiness seam
+    instead of
+    - more agent-side provenance polishing
+- Verification:
+  - docs/planning only
+- Notes:
+  - this keeps the execution board aligned with the code now that agent-aware
+    runtime/browser plumbing is established enough

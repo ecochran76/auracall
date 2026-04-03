@@ -106,12 +106,17 @@ Recent execution-adjacent checkpoint:
     `--profile` and `--agent` are present
   - selected-agent provenance is now preserved in session metadata and surfaced
     through the main inspection/session/status commands
+  - shared runtime/browser execution seams now also exist:
+    - `resolveRuntimeSelection(...)`
+    - `resolveSelectedBrowserProfileResolution(...)`
+  - selected-agent provenance is now preserved locally through:
+    - browser config
+    - browser runtime metadata
+    - session/status postmortem surfaces
 
 This means the next architectural question is not whether agent selection can
-compose cleanly. It is which next shared helper should consume that selection:
-
-- a team-side selection/readiness seam, or
-- the first shared agent-aware runtime helper beyond provenance/reporting
+compose cleanly. It is how the first team-side readiness seam should consume
+that established lower-layer selection path.
 
 ## Current active checkpoint
 
