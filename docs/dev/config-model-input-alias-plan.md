@@ -85,15 +85,19 @@ Current implementation:
 
 - `auracall config migrate`
   writes:
+  - `version: 3`
   - `browserProfiles`
   - `runtimeProfiles`
   - `runtimeProfiles.<name>.browserProfile`
 - `auracall profile scaffold`
+  writes `version: 3` and
   writes the same target-shape keys for freshly scaffolded config
 - `auracall wizard`
+  writes `version: 3` and
   writes the same target-shape keys for guided browser-profile onboarding
 - `--target-shape` remains accepted as an explicit form of the same write mode
 - `--bridge-shape` now selects compatibility bridge output explicitly
+  - compatibility bridge output writes `version: 2`
 
 ### Phase 3: target-first defaults
 

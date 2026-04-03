@@ -5003,3 +5003,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
 - Notes:
   - bridge-shape is now an explicit compatibility mode, not the default write path
+
+## 2026-04-02 21:49 CDT
+
+- Focus:
+  - define `version: 3` as the target-shape config era and make write-version semantics explicit
+- What changed:
+  - updated [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    so materialized target-shape output now writes:
+    - `version: 3`
+    and compatibility bridge output writes:
+    - `version: 2`
+  - expanded:
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    to pin:
+    - target-shape default scaffold => `version: 3`
+    - bridge-shape scaffold => `version: 2`
+    - target-shape migrate output => `version: 3`
+    - compatibility bridge materialization => `version: 2`
+  - updated version-policy docs in:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - config loading remains permissive during the transition
+  - `version` is now a write-time signal for target-shape vs compatibility bridge output

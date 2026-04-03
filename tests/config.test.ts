@@ -107,6 +107,7 @@ describe('loadUserConfig', () => {
   it('scaffolds a default config when file is missing', async () => {
     const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
+    expect(result.config.version).toBe(3);
     expect(result.config.browserProfiles?.default).toBeDefined();
     expect(result.config.runtimeProfiles?.default?.browserProfile).toBe('default');
     expect(result.config.browserFamilies).toBeUndefined();
@@ -158,6 +159,7 @@ describe('loadUserConfig', () => {
       force: true,
     });
 
+    expect(result?.config.version).toBe(3);
     expect(result?.config.browserProfiles?.default).toBeDefined();
     expect(result?.config.runtimeProfiles?.default?.browserProfile).toBe('default');
     expect(result?.config.browserFamilies).toBeUndefined();
@@ -172,6 +174,7 @@ describe('loadUserConfig', () => {
       targetShape: false,
     });
 
+    expect(result?.config.version).toBe(2);
     expect(result?.config.browserFamilies?.default).toBeDefined();
     expect(result?.config.profiles?.default?.browserFamily).toBe('default');
     expect(result?.config.browserProfiles).toBeUndefined();

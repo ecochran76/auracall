@@ -49,6 +49,7 @@ describe('config migrate bridge helpers', () => {
       },
     } as any);
 
+    expect(result.version).toBe(2);
     expect(result.profiles?.consulting?.browserFamily).toBe('wsl-chrome-2');
     expect(result.profiles?.consulting?.defaultService).toBe('chatgpt');
   });
@@ -73,10 +74,34 @@ describe('config migrate bridge helpers', () => {
       { targetShape: true },
     );
 
+    expect(result.version).toBe(3);
     expect(result.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
     expect(result.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
     expect(result.runtimeProfiles?.consulting?.browserFamily).toBeUndefined();
     expect(result.browserFamilies).toBeUndefined();
     expect(result.profiles).toBeUndefined();
+  });
+
+  it('downgrades target-shaped input to version 2 when compatibility bridge output is requested', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.version).toBe(2);
   });
 });

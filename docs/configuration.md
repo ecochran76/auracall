@@ -9,11 +9,13 @@ The primary documented shape is now:
 - `browserProfiles`
 - `runtimeProfiles`
 - `runtimeProfiles.<name>.browserProfile`
+- `version: 3`
 
 The compatibility bridge shape still exists and still loads:
 - `browserFamilies`
 - `profiles`
 - `profiles.<name>.browserFamily`
+- typically `version: 2`
 
 You can regenerate a file with `auracall profile scaffold`, use
 `auracall wizard` for guided setup, or rewrite an existing file with
@@ -120,6 +122,7 @@ Target-model note:
 - the preferred public shape is documented in
   [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
   and uses:
+  - `version: 3`
   - `browserProfiles`
   - `runtimeProfiles`
 - Aura-Call now accepts the target-shape aliases for config loading:
@@ -136,9 +139,15 @@ Target-model note:
 - `--target-shape` is still accepted explicitly, but is now mostly useful for
   scripts that want to state the intended write mode directly
 - bridge keys remain the compatibility form:
+  - usually `version: 2`
   - `browserFamilies` as the browser-profile bridge
   - `profiles` as the AuraCall runtime-profile bridge
 - use `--bridge-shape` when you intentionally want compatibility bridge output
+
+Version policy:
+- `version: 3` means the file is written in the primary target shape
+- `version: 2` means the file is written in the compatibility bridge shape
+- Aura-Call still loads either version permissively during the transition
 
 ## Primary Example (`~/.auracall/config.json`)
 

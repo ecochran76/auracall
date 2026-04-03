@@ -181,6 +181,12 @@ Today the repo still uses bridge names and bridge seams:
 Those bridge names are acceptable for now, but the target model above should be
 the design authority for future refactor work.
 
+Version note:
+
+- `version: 3` is the target-shape file version
+- compatibility bridge output remains `version: 2`
+- Aura-Call still loads both during the transition
+
 ## Migration stance
 
 Current recommendation:

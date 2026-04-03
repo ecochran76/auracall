@@ -264,8 +264,11 @@ export function materializeConfigV2(
 ): OracleConfig {
   if (!isRecord(config)) return config;
   const result: MutableConfig = { ...config };
+  const targetShape = options.targetShape ?? false;
 
-  if (result.version === undefined) {
+  if (targetShape) {
+    result.version = 3;
+  } else if (typeof result.version !== 'number' || result.version >= 3) {
     result.version = 2;
   }
   if (!isRecord(result.globals)) {
@@ -301,7 +304,7 @@ export function materializeConfigV2(
     }
   }
 
-  if (options.targetShape) {
+  if (targetShape) {
     const sourceBrowserProfiles = isRecord(result.browserProfiles)
       ? (result.browserProfiles as Record<string, unknown>)
       : isRecord(result.browserFamilies)

@@ -29,6 +29,7 @@ config-model refactor, not more opportunistic browser cleanup.
 Config-model state now:
 
 - target-shape is the primary documented model:
+  - `version: 3`
   - `browserProfiles`
   - `runtimeProfiles`
 - Aura-Call dual-reads both target and bridge shapes
@@ -37,6 +38,7 @@ Config-model state now:
   - `profile scaffold`
   - `wizard`
 - bridge keys remain the explicit compatibility/troubleshooting path
+  - usually `version: 2`
 
 ## Execution principle
 

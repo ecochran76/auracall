@@ -6004,3 +6004,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     major write paths should flip together in one bounded slice
   - leave the old shape behind an explicit compatibility flag rather than
     letting defaults and docs disagree
+
+## 2026-04-02 - config version should signal target-shape vs compatibility bridge output
+
+- Symptom:
+  - after target-shape became the default documented and write shape, the file
+    `version` field still did not clearly tell operators whether a written
+    config was target-shaped or bridge-shaped
+- Fix:
+  - defined:
+    - `version: 3` for target-shape output
+    - `version: 2` for compatibility bridge output
+  - kept config loading permissive so older files still load during the transition
+- Durable lesson:
+  - once a config-shape transition is real, the version field should become an
+    explicit write-time signal for the active shape instead of lagging behind
+    the actual read/write policy
