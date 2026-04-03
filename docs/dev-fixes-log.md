@@ -6162,3 +6162,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a future-layer projection includes references to lower-layer objects,
     inspection should expose reference resolution status directly instead of
     forcing operators to cross-check separate warnings or raw ids by hand
+
+## 2026-04-03 - once CLI inspection proves a future-layer seam, extract one shared resolver before adding behavior
+
+- Symptom:
+  - after the projected agent/team inspection surfaces were in place, future
+    agent-aware code would still have needed to reconstruct:
+    - selected agent
+    - referenced runtime profile
+    - inherited browser profile
+    - inherited default service
+    from lower-level helpers
+- Fix:
+  - added one shared config-model resolver for:
+    - `agent -> runtimeProfile -> browserProfile`
+  - kept it read-only and behaviorless
+- Durable lesson:
+  - once a future-layer seam is visible in inspection/reporting, extract one
+    shared resolver for non-CLI consumers before any execution semantics land

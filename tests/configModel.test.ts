@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   CONFIG_MODEL_BRIDGE_KEYS,
   analyzeConfigModelBridgeHealth,
+  getAgent,
   getAgentRuntimeProfile,
   getAgentRuntimeProfileId,
   getBrowserProfile,
@@ -18,6 +19,7 @@ import {
   getPreferredRuntimeProfileName,
   inspectConfigModel,
   projectConfigModel,
+  resolveAgentSelection,
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
@@ -189,6 +191,39 @@ describe('config model helpers', () => {
         ],
       },
     ]);
+  });
+
+  it('resolves an agent selection through runtime and browser profile context', () => {
+    const config = {
+      browserProfiles: {
+        default: {},
+        consulting: {},
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        researcher: { runtimeProfile: 'default' },
+        analyst: { runtimeProfile: 'work' },
+      },
+    };
+
+    expect(getAgent(config, 'analyst')).toEqual({ runtimeProfile: 'work' });
+    expect(resolveAgentSelection(config, 'analyst')).toEqual({
+      agentId: 'analyst',
+      runtimeProfileId: 'work',
+      browserProfileId: 'consulting',
+      defaultService: 'grok',
+      exists: true,
+    });
+    expect(resolveAgentSelection(config, 'missing-agent')).toEqual({
+      agentId: 'missing-agent',
+      runtimeProfileId: null,
+      browserProfileId: null,
+      defaultService: null,
+      exists: false,
+    });
   });
 
   it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {

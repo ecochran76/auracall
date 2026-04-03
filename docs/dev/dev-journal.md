@@ -5251,3 +5251,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this stays read-only
   - it makes the team projection symmetric with the earlier agent projection and
     team-side doctor warnings
+
+## 2026-04-03 08:35 CDT
+
+- Focus:
+  - add the first shared agent-selection resolver for future non-CLI consumers
+- What changed:
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    to add:
+    - `getAgent(...)`
+    - `resolveAgentSelection(...)`
+  - the new shared resolver returns:
+    - `agentId`
+    - `runtimeProfileId`
+    - `browserProfileId`
+    - `defaultService`
+    - `exists`
+  - expanded [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    to pin:
+    - resolved agent selection
+    - missing agent selection
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this remains read-only and behaviorless
+  - it is intended as the future seam for `agent -> runtimeProfile ->
+    browserProfile` composition outside the CLI/report layer

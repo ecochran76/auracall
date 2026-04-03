@@ -37,6 +37,14 @@ export interface ProjectedTeam {
   members: ProjectedTeamMember[];
 }
 
+export interface ResolvedAgentSelection {
+  agentId: string | null;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  exists: boolean;
+}
+
 export interface ProjectedConfigModel {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
@@ -203,6 +211,16 @@ export function getTeams(config: OracleConfig | MutableRecord): Record<string, M
     : {};
 }
 
+export function getAgent(
+  config: OracleConfig | MutableRecord,
+  agentId: string | null | undefined,
+): MutableAgent | null {
+  const name = typeof agentId === 'string' && agentId.trim().length > 0 ? agentId.trim() : null;
+  if (!name) return null;
+  const agents = getAgents(config);
+  return isRecord(agents[name]) ? agents[name] : null;
+}
+
 export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
   return isRecord(config.auracallProfiles)
     ? (config.auracallProfiles as Record<string, MutableRuntimeProfile>)
@@ -259,6 +277,22 @@ export function getAgentRuntimeProfile(
   if (!runtimeProfileId) return null;
   const runtimeProfiles = getCurrentRuntimeProfiles(config);
   return isRecord(runtimeProfiles[runtimeProfileId]) ? runtimeProfiles[runtimeProfileId] : null;
+}
+
+export function resolveAgentSelection(
+  config: OracleConfig | MutableRecord,
+  agentId: string | null | undefined,
+): ResolvedAgentSelection {
+  const name = typeof agentId === 'string' && agentId.trim().length > 0 ? agentId.trim() : null;
+  const agent = getAgent(config, name);
+  const runtimeProfile = getAgentRuntimeProfile(config, agent);
+  return {
+    agentId: name,
+    runtimeProfileId: getAgentRuntimeProfileId(agent),
+    browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
+    defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+    exists: agent !== null,
+  };
 }
 
 export function getActiveRuntimeProfileName(
