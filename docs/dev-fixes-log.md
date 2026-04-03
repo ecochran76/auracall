@@ -6433,3 +6433,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     valid-looking default selection unless fallback is an explicit product rule
   - preserve unresolved state until a higher layer deliberately decides how to
     handle it
+
+## 2026-04-03 - team config must not accidentally imply future runner topology
+
+- Symptom:
+  - once team selection and team runtime-selection helpers existed, the next
+    easy step would have been to add `--team` runtime behavior immediately
+  - without an explicit boundary, that risks smuggling future service-mode
+    runners/parallelism assumptions into today's CLI-era team semantics
+- Fix:
+  - documented a dedicated team boundary note
+  - made the roadmap/execution docs explicitly separate:
+    - team coordination config
+    - future service/runners orchestration
+- Durable lesson:
+  - when a compositional config layer becomes execution-adjacent, define the
+    execution boundary before adding invocation semantics
+  - especially for future parallelism/service work, avoid letting simple
+    membership config harden into accidental scheduler policy

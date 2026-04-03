@@ -85,13 +85,26 @@ Current note:
       - session/status JSON
     - stored session metadata now preserves:
       - `options.selectedAgentId`
-  - current runtime/browser checkpoint:
+- current runtime/browser checkpoint:
     - one shared runtime selection helper now exists for:
       - `selected agent -> runtimeProfile -> browserProfile`
     - one browser-facing helper now exists for:
       - runtime selection + browser profile resolution
     - browser config, browser runtime metadata, and session/status postmortems
       now all preserve selected-agent provenance locally
+  - current team-ready checkpoint:
+    - one shared read-only resolver now exists for:
+      - `team -> agent -> runtimeProfile -> browserProfile`
+    - one shared read-only helper now exists for:
+      - team member runtime/browser activation contexts
+    - resolved team inspection is now visible in:
+      - `config show`
+      - `profile list`
+  - current semantic checkpoint:
+    - the next design question is team execution boundary, not more selection
+      plumbing
+    - future service-mode runners and parallelism should remain a higher layer,
+      not be implied by current team config alone
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
@@ -105,11 +118,12 @@ Execution docs:
 - Input alias policy: [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
 - Troubleshooting: [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+- Team boundary: [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
 
 Next recommendation:
-- pause agent-selection polishing here
-- move upward to the first team-side readiness seam next, now that the lower
-  agent-aware runtime/browser provenance path is in place
+- pause team helper growth here
+- define the future team execution boundary next
+- then add only a bounded read-only `--team` resolution path
 
 ### Service Volatility Externalization
 Status: planned

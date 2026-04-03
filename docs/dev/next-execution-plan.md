@@ -76,6 +76,19 @@ checkpoint. The next useful step is no longer more provenance reporting or
 lower-layer agent selection plumbing. It is to move upward to the first
 team-side readiness seam.
 
+Team-ready read-only state now:
+
+- shared selection now supports:
+  - `team -> agent -> runtimeProfile -> browserProfile`
+- shared model-layer helper now exists for:
+  - team member runtime/browser activation contexts
+- `config show` and `profile list` now expose resolved teams directly
+
+That means the first team-side readiness seam is also complete enough for a
+checkpoint. The next useful step is not more read-only team plumbing. It is to
+define the future team selection/execution boundary before any `--team` runtime
+semantics land.
+
 ## Execution principle
 
 - Work in small, bounded slices.
@@ -105,16 +118,21 @@ Deliverables
   - reserved teams
 - one rule set describing what runtime-level state may still be specialized by
   agents and what must remain owned below them
+- one rule set describing what teams may coordinate directly and what must
+  remain deferred to the future service/runners layer
 
 Acceptance
 - boundary docs aligned in:
   - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
   - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
   - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+  - [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
   - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
 - no new browser/account-bearing state introduced at the agent layer
 - one shared read-only resolver exists for:
   - `agent -> runtimeProfile -> browserProfile`
+- one shared read-only resolver exists for:
+  - `team -> agent -> runtimeProfile -> browserProfile`
 - reserved agent/team config is visible and validated in inspection/doctor
   surfaces before any execution semantics land
 
@@ -194,6 +212,8 @@ Acceptance
 4. Carry that seam through one real browser/runtime path and one postmortem
    surface so provenance is local to execution diagnostics.
 5. Move upward to the first team-side readiness seam.
+6. Define the team/service boundary before adding any `--team` runtime
+   semantics.
 
 ## Completed recent checkpoints
 
@@ -213,20 +233,27 @@ Acceptance
    - browser config
    - browser runtime metadata
    - session/status postmortem output
+7. Added the first team-side readiness seams:
+   - shared team selection
+   - shared team runtime selection
+   - resolved team inspection in:
+     - `config show`
+     - `profile list`
 
 ## Recommended next choice
 
 Recommended next choice:
 
-1. Team-side readiness seam
-   - keep the work read-only / selection-oriented
-   - add one shared `team -> agent -> runtimeProfile -> browserProfile`
-     resolution helper and inspection surface
+1. Team execution boundary checkpoint
+   - define what a future `--team` means
+   - keep current team work read-only / selection-oriented
+   - explicitly separate team config from future service/runners parallelism
 
-2. Only return to agent-side runtime plumbing if a real consumer exposes a gap
-   - not because this area is warm
+2. Only after that, add a bounded `--team` resolution path
+   - inspection and runtime planning only
+   - no team execution yet
 
 Recommendation:
-- take the first team-side readiness seam next
-- reason: the lower agent-aware runtime/browser path is now established enough
-  that more provenance polishing would be diminishing returns
+- take the team execution boundary checkpoint next
+- reason: the lower team-ready composition path is now established enough that
+  the next risk is semantic drift, not missing plumbing

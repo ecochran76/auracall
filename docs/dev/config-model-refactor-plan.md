@@ -68,6 +68,9 @@ Boundary reference:
 
 Future grouping/orchestration object that coordinates multiple agents.
 
+Boundary reference:
+- [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+
 ## Current state
 
 What is already true:
@@ -117,6 +120,20 @@ Recent execution-adjacent checkpoint:
 This means the next architectural question is not whether agent selection can
 compose cleanly. It is how the first team-side readiness seam should consume
 that established lower-layer selection path.
+
+Current team-ready checkpoint:
+
+- one shared read-only resolver now exists for:
+  - `team -> agent -> runtimeProfile -> browserProfile`
+- one shared read-only helper now exists for:
+  - team member runtime/browser activation contexts
+- team inspection is now visible in:
+  - `config show`
+  - `profile list`
+
+This means the next team-layer question is no longer basic composition. It is
+how to define future team selection/execution semantics without collapsing them
+into the later service/runners layer too early.
 
 ## Current active checkpoint
 
@@ -224,3 +241,15 @@ That document is the source of truth for:
 - what agents inherit from AuraCall runtime profiles
 - what agents may override
 - what remains owned by browser profiles or future teams
+
+## Team boundary note (2026-04-03)
+
+The first team contract is now documented separately in:
+
+- [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+
+That document is the source of truth for:
+- what teams own
+- what teams inherit through agents/runtime profiles
+- what remains owned below the team layer
+- what should remain deferred to the future service/runners layer

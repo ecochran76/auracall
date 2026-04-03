@@ -5720,3 +5720,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is still a pure model-layer seam; no CLI or runtime execution behavior
     changed in this slice
+
+## 2026-04-03 11:49 CDT
+
+- Focus:
+  - audit the team-ready work against the roadmap and lock the next step before
+    adding any `--team` runtime semantics
+- What changed:
+  - added
+    [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+    as the source of truth for:
+    - what teams own
+    - what teams inherit through agents/runtime profiles
+    - what must remain owned below the team layer
+    - what must remain deferred to the future service/runners layer
+  - updated:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    to mark the first team-side readiness seam complete enough and to make the
+    next recommendation explicit:
+    - define team execution boundary first
+    - only then add a bounded read-only `--team` resolution path
+- Verification:
+  - docs/planning only
+- Notes:
+  - this also incorporates the future service-mode note:
+    runners and parallelism belong to a later orchestration layer, not today's
+    team config semantics
