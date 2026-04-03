@@ -6,8 +6,10 @@ Define the transition policy for eventually accepting the target public config
 shape as input without creating an ambiguous compatibility surface.
 
 This document is intentionally policy-first. Aura-Call now accepts these
-target-shape keys for config loading in a bounded dual-read phase, but write
-paths still remain bridge-key-first.
+target-shape keys for config loading in a bounded dual-read phase. The target
+shape is the primary documented model, while bridge-key writes remain the
+compatibility mode unless a command is explicitly told to emit target-shape
+output.
 
 Operational troubleshooting reference:
 
@@ -34,7 +36,8 @@ The repo now exposes the target model read-only through inspection JSON via
 - `runtimeProfiles`
 - `runtimeProfiles.<name>.browserProfile`
 
-Write paths still remain bridge-key-first.
+Default write paths still remain bridge-key-first unless an explicit
+`--target-shape` mode is selected.
 
 ## Recommendation
 

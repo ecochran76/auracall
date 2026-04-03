@@ -45,6 +45,14 @@ This refactor should establish the long-term layering:
 - agents
 - teams
 
+Current config-model checkpoint:
+- target-shape is now the primary documented model
+- dual-read loading is live for target and bridge shapes
+- explicit target-shape writes exist for:
+  - `config migrate`
+  - `profile scaffold`
+  - `wizard`
+
 Sequencing rule:
 - do the config-model refactor before implementing agents
 - do not burn time on broad code symbol renames before that refactor

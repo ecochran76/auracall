@@ -5961,3 +5961,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     considers flipping defaults
   - keep bridge-vs-target conversion at the write boundary when the internal
     patch/merge helpers are still bridge-native
+
+## 2026-04-02 - once target-shape reads and writes are real, docs should treat it as primary
+
+- Symptom:
+  - after dual-read loading plus explicit target-shape writes landed for:
+    - `config migrate`
+    - `profile scaffold`
+    - `wizard`
+  - the main docs still taught bridge keys first
+  - that kept the repo speaking as if the target model were still only future design
+- Fix:
+  - made target-shape the primary documented config model
+  - moved bridge-key language into compatibility/troubleshooting framing
+  - updated the main config example to use:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `runtimeProfiles.<name>.browserProfile`
+- Durable lesson:
+  - once the runtime can read a new public shape and the major write paths can
+    emit it explicitly, the main docs should switch to that shape instead of
+    continuing to center the compatibility bridge

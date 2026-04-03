@@ -73,6 +73,9 @@ Future grouping/orchestration object that coordinates multiple agents.
 What is already true:
 
 - docs now define the correct semantic split
+- target-shape is now the primary documented public model:
+  - `browserProfiles`
+  - `runtimeProfiles`
 - `browserFamilies` and `profiles.<name>.browserFamily` exist as a useful
   bridge toward browser-profile-first config
 - reserved top-level `agents` and `teams` blocks now exist in the schema as
@@ -109,7 +112,7 @@ See:
 
 ### Near term
 
-- keep the current config shape stable enough for normal use
+- keep the dual-read config shape stable enough for normal use
 - continue small reliability and browser hardening work in maintenance mode
 - avoid broad symbol renames in code
 
@@ -146,8 +149,8 @@ The policy is now:
 2. document precedence and write-back rules before dual-read begins
 3. when dual-read eventually begins, target-shape keys must be authoritative if
    both target and bridge keys are present
-4. keep normal write paths on bridge keys until target-write is an explicit
-   deliberate phase
+4. keep bridge-key writes as a compatibility mode, not the primary documented
+   path
 
 Source of truth:
 

@@ -192,6 +192,7 @@ Use these when you want the output file itself to switch shapes:
 ```sh
 auracall config migrate --target-shape --output ~/.auracall/config.target.json
 auracall profile scaffold --target-shape --force
+auracall wizard --target-shape
 ```
 
 Those emit:
@@ -210,7 +211,8 @@ Those emit:
    - or temporarily mixed during cleanup
 4. If you want a target-shaped file, use:
    - `config migrate --target-shape`
-   - or `profile scaffold --target-shape`
+   - `profile scaffold --target-shape`
+   - or `wizard --target-shape`
 5. Re-run `config doctor` and confirm:
    - expected target/bridge presence
    - expected precedence

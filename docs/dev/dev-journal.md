@@ -4951,3 +4951,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `config migrate`
     - `profile scaffold`
     - `wizard`
+
+## 2026-04-02 21:24 CDT
+
+- Focus:
+  - make the target-shape config model the primary documented public shape
+- What changed:
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    so:
+    - `browserProfiles` / `runtimeProfiles` are the primary documented keys
+    - the main config example is target-shaped
+    - bridge keys are framed as compatibility/troubleshooting keys
+  - updated planning/troubleshooting docs in:
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+- Notes:
+  - docs only
+  - bridge keys remain supported for compatibility and troubleshooting

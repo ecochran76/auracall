@@ -26,6 +26,18 @@ The profile-family refactor has also crossed its useful first boundary:
 That means the next active architecture track should be the larger
 config-model refactor, not more opportunistic browser cleanup.
 
+Config-model state now:
+
+- target-shape is the primary documented model:
+  - `browserProfiles`
+  - `runtimeProfiles`
+- Aura-Call dual-reads both target and bridge shapes
+- explicit target-shape writes exist for:
+  - `config migrate`
+  - `profile scaffold`
+  - `wizard`
+- bridge keys remain the compatibility/troubleshooting path
+
 ## Execution principle
 
 - Work in small, bounded slices.
