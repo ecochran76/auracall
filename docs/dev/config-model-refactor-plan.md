@@ -97,6 +97,22 @@ What is still transitional:
 - `manualLoginProfileDir` remains an escape hatch with too much conceptual
   weight
 
+Recent execution-adjacent checkpoint:
+
+- the first non-reporting agent seam is now live enough to prove layering:
+  - `--agent <name>` resolves through:
+    - `agent -> runtimeProfile -> browserProfile`
+  - explicit AuraCall runtime profile selection still wins when both
+    `--profile` and `--agent` are present
+  - selected-agent provenance is now preserved in session metadata and surfaced
+    through the main inspection/session/status commands
+
+This means the next architectural question is not whether agent selection can
+compose cleanly. It is which next shared helper should consume that selection:
+
+- a team-side selection/readiness seam, or
+- the first shared agent-aware runtime helper beyond provenance/reporting
+
 ## Current active checkpoint
 
 This is now the active architecture track.

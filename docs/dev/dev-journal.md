@@ -5437,3 +5437,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this remains provenance/reporting only
   - it does not change session replay or agent execution semantics
+
+## 2026-04-03 09:18 CDT
+
+- Focus:
+  - pause to audit the current agent-selection work against the roadmap before
+    opening another seam by inertia
+- What changed:
+  - updated planning docs to record that the current agent-selection/provenance
+    checkpoint is complete enough:
+    - real config/runtime resolution now accepts `--agent`
+    - explicit `--profile` still wins
+    - config/session/status surfaces now expose the selected-agent chain
+    - session metadata now preserves `selectedAgentId`
+  - updated:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    to recommend the next methodical choice:
+    - first shared agent-aware runtime helper
+    before
+    - team-side selection/readiness seams
+- Verification:
+  - docs/planning only
+- Notes:
+  - this keeps the execution board aligned with the code before starting the
+    next helper slice

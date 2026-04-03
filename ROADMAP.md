@@ -76,6 +76,15 @@ Current note:
     - validated for missing references
   - one shared read-only resolver now exists for:
     - `agent -> runtimeProfile -> browserProfile`
+  - current execution-adjacent checkpoint:
+    - `--agent <name>` now resolves through the real config/runtime path
+    - explicit `--profile` still wins over `--agent`
+    - selected-agent resolution is visible in:
+      - config inspection/doctor
+      - session/status text
+      - session/status JSON
+    - stored session metadata now preserves:
+      - `options.selectedAgentId`
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
@@ -89,6 +98,11 @@ Execution docs:
 - Input alias policy: [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
 - Troubleshooting: [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+
+Next recommendation:
+- pause provenance/reporting work here
+- take the first shared agent-aware runtime helper next, before moving upward
+  to team-side selection seams
 
 ### Service Volatility Externalization
 Status: planned

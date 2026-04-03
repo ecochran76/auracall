@@ -49,6 +49,24 @@ That makes the public config transition complete enough for a checkpoint. The
 next useful work is the layer that composes on top of browser profiles and
 AuraCall runtime profiles, not more config-shape migration polish.
 
+Agent-ready execution-adjacent state now:
+
+- shared selection now supports:
+  - `agent -> runtimeProfile -> browserProfile`
+- `--agent <name>` now resolves through the real config/runtime path
+- explicit `--profile` still wins over `--agent`
+- config inspection/doctor now surface selected-agent resolution directly
+- stored session metadata now preserves:
+  - `options.selectedAgentId`
+- session/status text and JSON now expose selected-agent provenance directly
+
+That means the agent-selection/provenance seam is complete enough for a
+checkpoint. The next useful step is no longer more provenance reporting.
+It is to decide whether the next bounded slice should be:
+
+- team-side selection/readiness seams, or
+- the first agent-aware runtime helper beyond selection/provenance
+
 ## Execution principle
 
 - Work in small, bounded slices.
@@ -166,3 +184,36 @@ Acceptance
    composition without adding agent execution behavior.
 4. Thread one optional read-only agent selection into a real execution-adjacent
    resolution path without changing runtime behavior.
+
+## Completed recent checkpoints
+
+1. Threaded optional `--agent` selection into the real config/runtime
+   resolution path without adding agent execution behavior.
+2. Surfaced selected-agent resolution in:
+   - `config show`
+   - `config doctor`
+3. Preserved selected-agent provenance in stored session metadata.
+4. Surfaced selected-agent provenance in:
+   - `auracall status`
+   - `auracall session <id>`
+   - session/status JSON
+
+## Recommended next choice
+
+Choose deliberately between:
+
+1. Team-side readiness seams
+   - keep the work read-only / selection-oriented
+   - add one shared `team -> agent -> runtimeProfile -> browserProfile`
+     resolution helper and inspection surface
+
+2. First agent-aware runtime helper
+   - still no separate agent execution mode
+   - add one shared runtime helper that accepts an explicit selected agent and
+     returns the same resolved runtime/browser/service bundle that current
+     call sites reconstruct from lower-level pieces
+
+Recommendation:
+- take the first agent-aware runtime helper next
+- reason: the agent layer already has better real-run seams than the team layer,
+  and team work would otherwise jump ahead of the first non-reporting helper
