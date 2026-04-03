@@ -85,6 +85,8 @@ describe('config show helpers', () => {
           { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
           { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
         ],
+        agents: [],
+        teams: [],
       },
     });
   });
@@ -134,6 +136,8 @@ describe('config show helpers', () => {
         activeBrowserProfileId: 'default',
         browserProfiles: [{ id: 'default' }],
         runtimeProfiles: [{ id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' }],
+        agents: [],
+        teams: [],
       },
     });
 
@@ -235,6 +239,8 @@ describe('config show helpers', () => {
             defaultService: 'grok',
           },
         ],
+        agents: [],
+        teams: [],
       },
     });
 

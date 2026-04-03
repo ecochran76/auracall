@@ -5144,3 +5144,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the canonical target-shaped example already includes reserved `agents` and
     `teams`, so the next meaningful work is layering semantics, not more key
     migration
+
+## 2026-04-03 06:34 CDT
+
+- Focus:
+  - add the first shared read-only `agent -> runtimeProfile -> browserProfile`
+    projection seam
+- What changed:
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    to project reserved future layers through the shared target model:
+    - `agents[]`
+    - `teams[]`
+    - agent inheritance of runtime-profile browser/default-service context
+  - expanded:
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - agent projection through runtime profiles
+    - empty projected agent/team arrays in existing inspection/report paths
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    so the documented `projectedModel` JSON contract now includes:
+    - `agents[]`
+    - `teams[]`
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this remains read-only and behaviorally inert
+  - it prepares future agent work to inherit runtime/browser semantics from the
+    shared config-model seam instead of reopening raw key logic

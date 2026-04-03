@@ -3,6 +3,8 @@ import type { OracleConfig } from './schema.js';
 type MutableRecord = Record<string, unknown>;
 type MutableBrowserProfile = Record<string, unknown>;
 type MutableRuntimeProfile = Record<string, unknown>;
+type MutableAgent = Record<string, unknown>;
+type MutableTeam = Record<string, unknown>;
 
 export interface ProjectedBrowserProfile {
   id: string;
@@ -14,11 +16,25 @@ export interface ProjectedRuntimeProfile {
   defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
 }
 
+export interface ProjectedAgent {
+  id: string;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+}
+
+export interface ProjectedTeam {
+  id: string;
+  agentIds: string[];
+}
+
 export interface ProjectedConfigModel {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
   browserProfiles: ProjectedBrowserProfile[];
   runtimeProfiles: ProjectedRuntimeProfile[];
+  agents: ProjectedAgent[];
+  teams: ProjectedTeam[];
 }
 
 export interface ConfigModelBridgeKeys {
@@ -33,6 +49,8 @@ export interface ConfigModelInspection {
   activeDefaultService: 'chatgpt' | 'gemini' | 'grok' | null;
   browserProfileIds: string[];
   runtimeProfiles: ProjectedRuntimeProfile[];
+  agentIds: string[];
+  teamIds: string[];
   legacyRuntimeProfileIds: string[];
   targetState: {
     browserProfilesPresent: boolean;
@@ -159,6 +177,18 @@ export function getCurrentRuntimeProfiles(config: OracleConfig | MutableRecord):
   return Object.keys(targetProfiles).length > 0 ? targetProfiles : getRuntimeProfiles(config);
 }
 
+export function getAgents(config: OracleConfig | MutableRecord): Record<string, MutableAgent> {
+  return isRecord((config as MutableRecord).agents)
+    ? ((config as MutableRecord).agents as Record<string, MutableAgent>)
+    : {};
+}
+
+export function getTeams(config: OracleConfig | MutableRecord): Record<string, MutableTeam> {
+  return isRecord((config as MutableRecord).teams)
+    ? ((config as MutableRecord).teams as Record<string, MutableTeam>)
+    : {};
+}
+
 export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
   return isRecord(config.auracallProfiles)
     ? (config.auracallProfiles as Record<string, MutableRuntimeProfile>)
@@ -200,6 +230,21 @@ export function getRuntimeProfileBrowserProfile(
   runtimeProfile: MutableRuntimeProfile | null | undefined,
 ): MutableBrowserProfile | null {
   return getBrowserProfile(config, getRuntimeProfileBrowserProfileId(runtimeProfile));
+}
+
+export function getAgentRuntimeProfileId(agent: MutableAgent | null | undefined): string | null {
+  if (!isRecord(agent)) return null;
+  return typeof agent.runtimeProfile === 'string' && agent.runtimeProfile.trim().length > 0 ? agent.runtimeProfile.trim() : null;
+}
+
+export function getAgentRuntimeProfile(
+  config: OracleConfig | MutableRecord,
+  agent: MutableAgent | null | undefined,
+): MutableRuntimeProfile | null {
+  const runtimeProfileId = getAgentRuntimeProfileId(agent);
+  if (!runtimeProfileId) return null;
+  const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  return isRecord(runtimeProfiles[runtimeProfileId]) ? runtimeProfiles[runtimeProfileId] : null;
 }
 
 export function getActiveRuntimeProfileName(
@@ -292,11 +337,34 @@ export function projectConfigModel(
       browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
       defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
     }));
+  const agents = Object.entries(getAgents(config))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, agent]) => {
+      const runtimeProfileId = getAgentRuntimeProfileId(agent);
+      const runtimeProfile = getAgentRuntimeProfile(config, agent);
+      return {
+        id,
+        runtimeProfileId,
+        browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
+        defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+      };
+    });
+  const teams = Object.entries(getTeams(config))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, team]) => ({
+      id,
+      agentIds:
+        isRecord(team) && Array.isArray(team.agents)
+          ? team.agents.filter((agentId): agentId is string => typeof agentId === 'string')
+          : [],
+    }));
   return {
     activeRuntimeProfileId,
     activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
     browserProfiles,
     runtimeProfiles,
+    agents,
+    teams,
   };
 }
 
@@ -318,6 +386,9 @@ export function inspectConfigModel(
       browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
       defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
     }));
+  const agentIds = Object.keys(getAgents(config)).sort();
+  const teamIds = Object.keys(getTeams(config)).sort();
+  const projectedModel = projectConfigModel(config, options);
   const legacyRuntimeProfileIds = Object.keys(getLegacyRuntimeProfiles(config)).sort();
   return {
     activeRuntimeProfileId,
@@ -325,6 +396,8 @@ export function inspectConfigModel(
     activeDefaultService: asServiceId(isRecord(activeRuntimeProfile) ? activeRuntimeProfile.defaultService : undefined),
     browserProfileIds,
     runtimeProfiles,
+    agentIds,
+    teamIds,
     legacyRuntimeProfileIds,
     targetState: {
       browserProfilesPresent: Object.keys(targetBrowserProfiles).length > 0,
@@ -336,12 +409,7 @@ export function inspectConfigModel(
       legacyRuntimeProfilesPresent: legacyRuntimeProfileIds.length > 0,
     },
     bridgeKeys: CONFIG_MODEL_BRIDGE_KEYS,
-    projectedModel: {
-      activeRuntimeProfileId,
-      activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
-      browserProfiles: browserProfileIds.map((id) => ({ id })),
-      runtimeProfiles,
-    },
+    projectedModel,
   };
 }
 

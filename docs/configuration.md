@@ -64,6 +64,8 @@ The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
 - `browserProfiles[]`
 - `runtimeProfiles[]`
+- `agents[]`
+- `teams[]`
 - `activeRuntimeProfileId`
 - `activeBrowserProfileId`
 

@@ -6090,3 +6090,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once reads, writes, docs, and diagnostics all agree on the primary public
     shape, stop polishing migration mechanics by inertia and move the active
     architecture track up to the next compositional layer
+
+## 2026-04-03 - future agent layering should inherit from the shared runtime-profile seam, not reopen config-shape logic
+
+- Symptom:
+  - once the public config transition was stable, the next likely failure mode
+    was future agent work re-deriving runtime-profile and browser-profile
+    relationships ad hoc from raw config
+- Fix:
+  - extended the shared projected config model with read-only:
+    - `agents[]`
+    - `teams[]`
+  - projected each agent through its referenced AuraCall runtime profile so the
+    model seam already carries:
+    - `runtimeProfileId`
+    - inherited `browserProfileId`
+    - inherited `defaultService`
+- Durable lesson:
+  - new upper-layer config concepts should compose through the shared
+    runtime-profile/browser-profile model seam first
+  - do not let future agent/team work reopen raw target-vs-bridge key logic at
+    call sites

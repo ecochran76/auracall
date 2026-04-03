@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   CONFIG_MODEL_BRIDGE_KEYS,
   analyzeConfigModelBridgeHealth,
+  getAgentRuntimeProfile,
+  getAgentRuntimeProfileId,
   getBrowserProfile,
   ensureBrowserProfiles,
   ensureRuntimeProfiles,
@@ -88,6 +90,46 @@ describe('config model helpers', () => {
     expect(ensureRuntimeProfiles(config)).toBe(config.profiles);
   });
 
+  it('projects agent inheritance through runtime profiles without reopening browser-profile lookup', () => {
+    const config = {
+      browserProfiles: {
+        default: {},
+        consulting: {},
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        researcher: { runtimeProfile: 'default' },
+        analyst: { runtimeProfile: 'work' },
+      },
+      teams: {
+        ops: { agents: ['researcher', 'analyst'] },
+      },
+    };
+
+    expect(getAgentRuntimeProfileId(config.agents.researcher)).toBe('default');
+    expect(getAgentRuntimeProfile(config, config.agents.analyst)).toEqual({
+      browserProfile: 'consulting',
+      defaultService: 'grok',
+    });
+    expect(projectConfigModel(config)).toEqual({
+      activeRuntimeProfileId: 'default',
+      activeBrowserProfileId: 'default',
+      browserProfiles: [{ id: 'consulting' }, { id: 'default' }],
+      runtimeProfiles: [
+        { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+        { id: 'work', browserProfileId: 'consulting', defaultService: 'grok' },
+      ],
+      agents: [
+        { id: 'analyst', runtimeProfileId: 'work', browserProfileId: 'consulting', defaultService: 'grok' },
+        { id: 'researcher', runtimeProfileId: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+      ],
+      teams: [{ id: 'ops', agentIds: ['researcher', 'analyst'] }],
+    });
+  });
+
   it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {
     const config = {
       auracallProfile: 'legacy',
@@ -166,6 +208,8 @@ describe('config model helpers', () => {
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
         { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
       ],
+      agents: [],
+      teams: [],
     });
   });
 
@@ -191,6 +235,8 @@ describe('config model helpers', () => {
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
         { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
       ],
+      agentIds: [],
+      teamIds: [],
       legacyRuntimeProfileIds: [],
       targetState: {
         browserProfilesPresent: false,
@@ -210,6 +256,8 @@ describe('config model helpers', () => {
           { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
           { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
         ],
+        agents: [],
+        teams: [],
       },
     });
   });
