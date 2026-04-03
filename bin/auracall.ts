@@ -6428,6 +6428,8 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
       {
         prompt: verifyPrompt,
         model: verifyModel,
+        selectedAgentId:
+          typeof (cliOptions as CliOptions).agent === 'string' ? (cliOptions as CliOptions).agent?.trim() || null : null,
         mode: 'browser',
         browserConfig,
         file: [],
@@ -7750,6 +7752,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
   let sessionMeta = await sessionStore.createSession(
     {
       ...resolvedOptions,
+      selectedAgentId: typeof options.agent === 'string' ? options.agent.trim() || null : null,
       mode: engine as SessionMode,
       browserConfig,
     },

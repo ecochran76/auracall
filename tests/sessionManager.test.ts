@@ -91,6 +91,21 @@ describe('session lifecycle', () => {
 	    expect(logContent).toBe('');
 	  });
 
+  test('initializeSession persists selected agent provenance in stored options', async () => {
+    const metadata = await sessionModule.initializeSession(
+      {
+        prompt: 'Inspect via agent',
+        model: 'gpt-5.2-pro',
+        selectedAgentId: 'analyst',
+      },
+      '/tmp/cwd',
+    );
+    const baseDir = path.join(sessionModule.getSessionsDir(), metadata.id);
+    const storedMeta = JSON.parse(await readFile(path.join(baseDir, 'meta.json'), 'utf8'));
+
+    expect(storedMeta.options.selectedAgentId).toBe('analyst');
+  });
+
   test('readSessionMetadata returns null for missing sessions and updateSessionMetadata persists changes', async () => {
 	    expect(await sessionModule.readSessionMetadata('missing')).toBeNull();
 	    const meta = await sessionModule.initializeSession(

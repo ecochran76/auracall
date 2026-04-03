@@ -68,6 +68,10 @@ When `--agent <name>` is passed, `config show` and `config doctor` also surface
 the selected-agent resolution chain directly, including the selected agent,
 resolved AuraCall runtime profile, and resolved browser profile.
 
+Stored session metadata now also preserves that selected-agent provenance as
+`options.selectedAgentId`, so detached runs and postmortems can distinguish an
+agent-selected run from one started directly with `--profile`.
+
 The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
 - `browserProfiles[]`

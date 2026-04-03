@@ -5384,3 +5384,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this remains selection/reporting only
   - it does not add separate agent runtime behavior
+
+## 2026-04-03 09:24 CDT
+
+- Focus:
+  - preserve selected-agent provenance in stored session metadata
+- What changed:
+  - updated [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+    so stored run options now persist:
+    - `selectedAgentId`
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so both:
+    - normal session creation
+    - managed browser verification session creation
+    pass through the optional selected agent id
+  - expanded [tests/sessionManager.test.ts](/home/ecochran76/workspace.local/oracle/tests/sessionManager.test.ts)
+    to pin stored metadata persistence for selected-agent provenance
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to note that detached runs and postmortems now preserve the agent
+    selection source
+- Verification:
+  - `pnpm vitest run tests/sessionManager.test.ts tests/cli/configCommand.test.ts tests/schema/resolver.test.ts tests/configModel.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this still does not add agent execution behavior
+  - it closes the provenance gap between runtime selection and stored session
+    metadata

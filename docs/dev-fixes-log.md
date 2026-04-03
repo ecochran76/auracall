@@ -6247,3 +6247,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a new selection seam is added above an existing runtime layer, make
     the selection chain visible in the main inspection/report path immediately
     so troubleshooting does not require reconstructing hidden inputs by hand
+
+## 2026-04-03 - once a new selection seam affects real runs, persist its provenance in session metadata
+
+- Symptom:
+  - after `--agent` could affect real runtime-profile selection, stored session
+    metadata still only preserved the flattened resolved runtime/browser state
+    and lost whether the run was selected through an agent
+- Fix:
+  - added `options.selectedAgentId` to stored session metadata
+  - threaded the optional selected agent through both:
+    - normal run session creation
+    - managed browser verification session creation
+- Durable lesson:
+  - if a new selection seam influences real execution, preserve the original
+    selection provenance in session metadata immediately
+  - flattened resolved state is not enough for later troubleshooting,
+    detached-session reasoning, or future higher-layer composition

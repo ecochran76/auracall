@@ -127,6 +127,7 @@ export interface StoredRunOptions {
   file?: string[];
   model?: string;
   models?: ModelName[];
+  selectedAgentId?: string | null;
   maxInput?: number;
   system?: string;
   maxOutput?: number;
@@ -425,6 +426,7 @@ export async function initializeSession(
       file: options.file ?? [],
       model: options.model,
       models: modelList,
+      selectedAgentId: options.selectedAgentId ?? null,
       effectiveModelId: options.effectiveModelId,
       maxInput: options.maxInput,
       system: options.system,
