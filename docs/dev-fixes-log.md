@@ -6645,3 +6645,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     is the one?”, those questions should share the same identity contract
   - artifact-local hardening should prefer canonical matchers before broader
     recovery changes
+
+## 2026-04-03 - ChatGPT download-button tagging should share one identity contract across regular and spreadsheet paths
+
+- Symptom:
+  - regular download artifacts and spreadsheet-card downloads both needed to
+    tag the right button, but they rebuilt similar assistant-turn scoping and
+    message/turn identity assumptions in separate local paths
+  - that made the button-tagging surface more likely to drift than the higher
+    level artifact materialization flow
+- Fix:
+  - added one canonical download-button matcher
+  - rewired both button-tagging paths through one shared assistant-turn
+    scoping and candidate-selection flow
+- Durable lesson:
+  - when two artifact subpaths ultimately answer “which button in this
+    assistant turn represents the artifact?”, they should share the same
+    identity contract even if the DOM widgets differ
+  - keep DOM-specific candidate discovery separate if needed, but unify the
+    identity match and selection rules

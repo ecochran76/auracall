@@ -1192,6 +1192,53 @@ export function matchesChatgptImageArtifactProbe(
   return Boolean(expectedTitle) && alt.includes(expectedTitle);
 }
 
+export function matchesChatgptDownloadButtonProbe(
+  probe: ChatgptConversationDownloadButtonProbe | null | undefined,
+  artifact: Pick<ConversationArtifact, 'title' | 'messageId' | 'messageIndex' | 'metadata'>,
+): boolean {
+  if (!probe) {
+    return false;
+  }
+  const expectedTitle = normalizeUiText(artifact.title).toLowerCase();
+  const probeTitle = normalizeUiText(probe.title).toLowerCase();
+  if (!probeTitle) {
+    return false;
+  }
+  if (expectedTitle && probeTitle !== expectedTitle) {
+    return false;
+  }
+  const expectedTurnId =
+    artifact.metadata && typeof artifact.metadata.turnId === 'string'
+      ? normalizeUiText(artifact.metadata.turnId)
+      : '';
+  const expectedMessageId = normalizeUiText(artifact.messageId);
+  const expectedMessageIndex =
+    typeof artifact.messageIndex === 'number' && Number.isFinite(artifact.messageIndex)
+      ? artifact.messageIndex
+      : null;
+  const expectedButtonIndex =
+    artifact.metadata &&
+    typeof artifact.metadata.buttonIndex === 'number' &&
+    Number.isFinite(artifact.metadata.buttonIndex)
+      ? artifact.metadata.buttonIndex
+      : null;
+  const probeTurnId = normalizeUiText(probe.turnId);
+  const probeMessageId = normalizeUiText(probe.messageId);
+  if (expectedTurnId && probeTurnId !== expectedTurnId) {
+    return false;
+  }
+  if (!expectedTurnId && expectedMessageId && probeMessageId !== expectedMessageId && probeTurnId !== expectedMessageId) {
+    return false;
+  }
+  if (!expectedTurnId && !expectedMessageId && expectedMessageIndex !== null && probe.messageIndex !== expectedMessageIndex) {
+    return false;
+  }
+  if (expectedButtonIndex !== null && probe.buttonIndex !== expectedButtonIndex) {
+    return false;
+  }
+  return true;
+}
+
 function isRetryableConnectionError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
@@ -6135,18 +6182,19 @@ async function configureChatgptDownloadBehaviorWithClient(
   }
 }
 
-async function tagChatgptDownloadButtonWithClient(
+async function tagChatgptArtifactButtonWithClient(
   client: ChromeClient,
   artifact: ConversationArtifact,
+  options?: {
+    spreadsheetCard?: boolean;
+  },
 ): Promise<boolean> {
-  const turnId =
-    artifact.metadata && typeof artifact.metadata.turnId === 'string'
-      ? artifact.metadata.turnId.trim()
-      : null;
+  const turnId = artifact.metadata && typeof artifact.metadata.turnId === 'string' ? artifact.metadata.turnId.trim() : null;
   const buttonIndex =
     artifact.metadata && typeof artifact.metadata.buttonIndex === 'number' && Number.isFinite(artifact.metadata.buttonIndex)
       ? artifact.metadata.buttonIndex
       : null;
+  const spreadsheetCard = Boolean(options?.spreadsheetCard);
   const deadline = Date.now() + 10_000;
   while (Date.now() < deadline) {
     const result = await client.Runtime.evaluate({
@@ -6166,79 +6214,7 @@ async function tagChatgptDownloadButtonWithClient(
           typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
         )};
         const expectedButtonIndex = ${JSON.stringify(buttonIndex)};
-        const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
-          .map((section, messageIndex) => {
-            const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
-            return {
-              section,
-              messageIndex,
-              role: normalize(roleNode?.getAttribute('data-message-author-role') || ''),
-              messageId: normalize(roleNode?.getAttribute('data-message-id') || ''),
-              turnId: normalize(section.getAttribute('data-turn-id') || ''),
-            };
-          })
-          .filter((entry) => entry.role === 'assistant');
-        const resolveButtons = (root) =>
-          Array.from(root.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
-            .filter((button) => isVisible(button) && !button.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
-            .map((button, index) => ({
-              button,
-              index,
-              title: normalize(button.textContent || button.getAttribute('aria-label') || '').toLowerCase(),
-            }))
-            .filter((entry) => entry.title && entry.title === expectedTitle);
-        const scopedRoot =
-          (expectedTurnId && roots.find((root) => root.turnId === expectedTurnId)) ||
-          (expectedMessageId && roots.find((root) => root.messageId === expectedMessageId || root.turnId === expectedMessageId)) ||
-          (typeof expectedMessageIndex === 'number' ? roots.find((root) => root.messageIndex === expectedMessageIndex) : null) ||
-          null;
-        const candidates = scopedRoot ? resolveButtons(scopedRoot) : roots.flatMap(resolveButtons);
-        const chosen =
-          (typeof expectedButtonIndex === 'number' ? candidates.find((candidate) => candidate.index === expectedButtonIndex) : null) ||
-          candidates[0] ||
-          null;
-        if (!chosen?.button) {
-          return { ok: false };
-        }
-        chosen.button.setAttribute(attr, 'true');
-        return { ok: true };
-      })()`,
-      returnByValue: true,
-    });
-    if (isRecord(result.result?.value) && result.result.value.ok === true) {
-      return true;
-    }
-    await sleep(250);
-  }
-  return false;
-}
-
-async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
-  client: ChromeClient,
-  artifact: ConversationArtifact,
-): Promise<boolean> {
-  const turnId =
-    artifact.metadata && typeof artifact.metadata.turnId === 'string'
-      ? artifact.metadata.turnId.trim()
-      : null;
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const result = await client.Runtime.evaluate({
-      expression: `(() => {
-        const attr = ${JSON.stringify(CHATGPT_DOWNLOAD_BUTTON_ATTR)};
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const isVisible = (node) => {
-          if (!(node instanceof Element)) return false;
-          const rect = node.getBoundingClientRect();
-          return rect.width > 0 && rect.height > 0;
-        };
-        document.querySelectorAll('[' + attr + ']').forEach((node) => node.removeAttribute(attr));
-        const expectedTitle = normalize(${JSON.stringify(artifact.title)}).toLowerCase();
-        const expectedMessageId = normalize(${JSON.stringify(artifact.messageId ?? null)});
-        const expectedTurnId = normalize(${JSON.stringify(turnId)});
-        const expectedMessageIndex = ${JSON.stringify(
-          typeof artifact.messageIndex === 'number' ? artifact.messageIndex : null,
-        )};
+        const spreadsheetCard = ${JSON.stringify(spreadsheetCard)};
         const roots = Array.from(document.querySelectorAll(${JSON.stringify(CHATGPT_CONVERSATION_TURN_SECTION_SELECTOR)}))
           .map((section, messageIndex) => {
             const roleNode = section.querySelector(${JSON.stringify(CHATGPT_MESSAGE_AUTHOR_ROLE_SELECTOR)});
@@ -6252,6 +6228,18 @@ async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
           })
           .filter((entry) => entry.role === 'assistant');
         const resolveButtons = (root) => {
+          if (!spreadsheetCard) {
+            return Array.from(root.section.querySelectorAll(${JSON.stringify(CHATGPT_ASSISTANT_ARTIFACT_BUTTON_SELECTOR)}))
+              .filter((button) => isVisible(button) && !button.closest(${JSON.stringify(CHATGPT_TEXTDOC_MESSAGE_SELECTOR)}))
+              .map((button, index) => ({
+                button,
+                turnId: root.turnId,
+                messageId: root.messageId,
+                messageIndex: root.messageIndex,
+                buttonIndex: index,
+                title: normalize(button.textContent || button.getAttribute('aria-label') || '').toLowerCase(),
+              }));
+          }
           const cards = Array.from(root.section.querySelectorAll('div.group.my-4'))
             .map((card) => ({
               card,
@@ -6269,7 +6257,29 @@ async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
           return Array.from(card.querySelectorAll('button'))
             .filter((button) => isVisible(button))
             .slice(0, 2)
-            .map((button) => ({ button }));
+            .map((button, index) => ({
+              button,
+              turnId: root.turnId,
+              messageId: root.messageId,
+              messageIndex: root.messageIndex,
+              buttonIndex: index,
+              title: expectedTitle,
+            }));
+        };
+        const matches = (candidate) => {
+          if (!candidate || !candidate.title) return false;
+          if (expectedTitle && candidate.title !== expectedTitle) return false;
+          if (expectedTurnId && candidate.turnId !== expectedTurnId) return false;
+          if (!expectedTurnId && expectedMessageId && candidate.messageId !== expectedMessageId && candidate.turnId !== expectedMessageId) {
+            return false;
+          }
+          if (!expectedTurnId && !expectedMessageId && typeof expectedMessageIndex === 'number' && candidate.messageIndex !== expectedMessageIndex) {
+            return false;
+          }
+          if (typeof expectedButtonIndex === 'number' && candidate.buttonIndex !== expectedButtonIndex) {
+            return false;
+          }
+          return true;
         };
         const scopedRoot =
           (expectedTurnId && roots.find((root) => root.turnId === expectedTurnId)) ||
@@ -6277,7 +6287,7 @@ async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
           (typeof expectedMessageIndex === 'number' ? roots.find((root) => root.messageIndex === expectedMessageIndex) : null) ||
           null;
         const candidates = scopedRoot ? resolveButtons(scopedRoot) : roots.flatMap(resolveButtons);
-        const chosen = candidates[0] || null;
+        const chosen = candidates.find((candidate) => matches(candidate)) || null;
         if (!chosen?.button) {
           return { ok: false };
         }
@@ -6292,6 +6302,20 @@ async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
     await sleep(250);
   }
   return false;
+}
+
+async function tagChatgptDownloadButtonWithClient(
+  client: ChromeClient,
+  artifact: ConversationArtifact,
+): Promise<boolean> {
+  return await tagChatgptArtifactButtonWithClient(client, artifact);
+}
+
+async function tagChatgptSpreadsheetCardDownloadButtonWithClient(
+  client: ChromeClient,
+  artifact: ConversationArtifact,
+): Promise<boolean> {
+  return await tagChatgptArtifactButtonWithClient(client, artifact, { spreadsheetCard: true });
 }
 
 async function waitForChatgptDownloadedFile(

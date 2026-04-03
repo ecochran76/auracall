@@ -14,6 +14,7 @@ import {
   mergeChatgptConversationArtifacts,
   matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
+  matchesChatgptDownloadButtonProbe,
   matchesChatgptImageArtifactProbe,
   matchesChatgptProjectDeleteConfirmationProbe,
   matchesChatgptProjectSettingsSnapshot,
@@ -366,6 +367,94 @@ describe('matchesChatgptImageArtifactProbe', () => {
         {
           title: 'AuraCall Architecture Diagram',
           uri: 'chatgpt://file/file-xyz789',
+        },
+      ),
+    ).toBe(false);
+  });
+});
+
+describe('matchesChatgptDownloadButtonProbe', () => {
+  test('matches assistant artifact buttons by title and turn identity', () => {
+    expect(
+      matchesChatgptDownloadButtonProbe(
+        {
+          title: 'auracall-export.csv',
+          turnId: 'turn-1',
+          messageId: 'message-1',
+          messageIndex: 4,
+          buttonIndex: 0,
+        },
+        {
+          title: 'auracall-export.csv',
+          messageId: 'message-1',
+          messageIndex: 4,
+          metadata: {
+            turnId: 'turn-1',
+            buttonIndex: 0,
+          },
+        },
+      ),
+    ).toBe(true);
+  });
+
+  test('falls back to message identity when turn id is unavailable', () => {
+    expect(
+      matchesChatgptDownloadButtonProbe(
+        {
+          title: 'auracall-export.csv',
+          turnId: 'other-turn',
+          messageId: 'message-2',
+          messageIndex: 7,
+          buttonIndex: 1,
+        },
+        {
+          title: 'auracall-export.csv',
+          messageId: 'message-2',
+          messageIndex: 7,
+          metadata: {},
+        },
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects probes that do not match download button identity', () => {
+    expect(
+      matchesChatgptDownloadButtonProbe(
+        {
+          title: 'wrong.csv',
+          turnId: 'turn-1',
+          messageId: 'message-1',
+          messageIndex: 4,
+          buttonIndex: 0,
+        },
+        {
+          title: 'auracall-export.csv',
+          messageId: 'message-1',
+          messageIndex: 4,
+          metadata: {
+            turnId: 'turn-1',
+            buttonIndex: 0,
+          },
+        },
+      ),
+    ).toBe(false);
+    expect(
+      matchesChatgptDownloadButtonProbe(
+        {
+          title: 'auracall-export.csv',
+          turnId: 'turn-1',
+          messageId: 'message-1',
+          messageIndex: 4,
+          buttonIndex: 2,
+        },
+        {
+          title: 'auracall-export.csv',
+          messageId: 'message-1',
+          messageIndex: 4,
+          metadata: {
+            turnId: 'turn-1',
+            buttonIndex: 0,
+          },
         },
       ),
     ).toBe(false);

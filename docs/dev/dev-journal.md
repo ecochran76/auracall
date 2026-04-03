@@ -6112,3 +6112,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this slice is code-level verified only
   - there is not yet a narrow existing live smoke that reliably exercises image
     artifact materialization without reopening a broader acceptance surface
+
+## 2026-04-03 17:40 CDT
+
+- Focus:
+  - take the adjacent artifact-local download/spreadsheet button identity slice
+- What changed:
+  - added a canonical download-button matcher in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    for assistant artifact buttons
+  - rewired the regular download-button tagger and the spreadsheet-card tagger
+    through one shared button-tagging path so they now share:
+    - assistant-turn scoping
+    - message/turn identity matching
+    - optional button-index matching
+  - added focused coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this slice is also code-level verified only
+  - there is still no narrow existing live smoke for isolated download-button
+    artifact materialization without reopening a broader acceptance surface
