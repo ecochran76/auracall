@@ -17,6 +17,26 @@ describe('config migrate bridge helpers', () => {
     expect(result.auracallProfiles?.consulting?.defaultService).toBe('chatgpt');
   });
 
+  it('accepts target runtimeProfiles during normalization while still materializing legacy auracallProfiles', () => {
+    const result = normalizeConfigV1toV2({
+      runtimeProfiles: {
+        consulting: {
+          engine: 'browser',
+          browserProfile: 'wsl-chrome-2',
+          browser: {
+            interactiveLogin: true,
+          },
+          defaultService: 'chatgpt',
+        },
+      },
+    } as any);
+
+    expect(result.runtimeProfiles?.consulting?.browserProfile).toBe('wsl-chrome-2');
+    expect(result.runtimeProfiles?.consulting?.browser?.manualLogin).toBe(true);
+    expect(result.auracallProfiles?.consulting?.browserFamily).toBe('wsl-chrome-2');
+    expect(result.auracallProfiles?.consulting?.defaultService).toBe('chatgpt');
+  });
+
   it('materializes legacy auracallProfiles back into profiles without losing browserFamily', () => {
     const result = materializeConfigV2({
       version: 2,

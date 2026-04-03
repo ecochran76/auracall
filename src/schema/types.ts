@@ -248,6 +248,7 @@ export const OracleProfileLlmSchema = LlmDefaultsSchema;
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const RuntimeProfileBrowserReferenceSchema = z.object({
   browserFamily: z.string().optional(),
+  browserProfile: z.string().optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -318,8 +319,10 @@ export const ConfigSchema = z.object({
     .optional(),
   browserDefaults: OracleProfileBrowserSchema.optional(),
   browserFamilies: BrowserProfilesConfigSchema.optional(),
+  browserProfiles: BrowserProfilesConfigSchema.optional(),
   llmDefaults: LlmDefaultsSchema.optional(),
   profiles: RuntimeProfilesConfigSchema.optional(),
+  runtimeProfiles: RuntimeProfilesConfigSchema.optional(),
   // Core
   engine: z.enum(['api', 'browser']).optional(),
   model: z.string().default('gpt-5.2-pro'),

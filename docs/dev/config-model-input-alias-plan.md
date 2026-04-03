@@ -5,8 +5,9 @@
 Define the transition policy for eventually accepting the target public config
 shape as input without creating an ambiguous compatibility surface.
 
-This document is intentionally about policy, not implementation. Aura-Call does
-not accept these target-shape keys yet.
+This document is intentionally policy-first. Aura-Call now accepts these
+target-shape keys for config loading in a bounded dual-read phase, but write
+paths still remain bridge-key-first.
 
 ## Current state
 
@@ -23,7 +24,13 @@ The target model is:
 - `runtimeProfiles.<name>.browserProfile`
 
 The repo now exposes the target model read-only through inspection JSON via
-`projectedModel`, but input parsing is still bridge-key-only.
+`projectedModel`, and config loading now supports bounded dual-read input for:
+
+- `browserProfiles`
+- `runtimeProfiles`
+- `runtimeProfiles.<name>.browserProfile`
+
+Write paths still remain bridge-key-first.
 
 ## Recommendation
 
@@ -44,24 +51,25 @@ Status: implemented
 
 ### Phase 1: dual-read, bridge-write
 
-Status: planned
+Status: implemented
 
-Allow config loading to read both:
+Config loading now reads both:
 
 - `browserFamilies` and `browserProfiles`
 - `profiles` and `runtimeProfiles`
 - `profiles.<name>.browserFamily` and
   `runtimeProfiles.<name>.browserProfile`
 
-But still write only bridge keys from:
+It still writes only bridge keys from:
 
 - `wizard`
 - `profile scaffold`
 - `config migrate`
 
-Why:
-- this keeps write behavior stable while allowing carefully chosen early adopters
-  to author the target shape
+Current slice boundaries:
+- dual-read is implemented in schema/model/resolver loading paths
+- read-only diagnostics now report mixed/conflicting bridge vs target state
+- write commands still emit bridge keys only
 
 ### Phase 2: target-write option
 

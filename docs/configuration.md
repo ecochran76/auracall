@@ -100,7 +100,18 @@ Target-model note:
   and will likely evolve toward:
   - `browserProfiles`
   - `runtimeProfiles`
-- until that refactor lands, prefer treating:
+- Aura-Call now accepts the target-shape aliases for config loading:
+  - `browserProfiles`
+  - `runtimeProfiles`
+  - `runtimeProfiles.<name>.browserProfile`
+- precedence for dual-read is:
+  - target keys win over bridge keys
+  - mixed/conflicting configs are surfaced by `auracall config doctor`
+- write paths still stay on bridge keys for now:
+  - `wizard`
+  - `profile scaffold`
+  - `config migrate`
+- until the target-write phase lands, prefer treating:
   - `browserFamilies` as the browser-profile bridge
   - `profiles` as the AuraCall runtime-profile bridge
 

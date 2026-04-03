@@ -47,6 +47,11 @@ export interface ConfigModelDoctorIssue {
   code:
     | 'no-runtime-profiles'
     | 'legacy-runtime-profiles-present'
+    | 'mixed-browser-profile-keys'
+    | 'mixed-runtime-profile-keys'
+    | 'conflicting-browser-profile-definitions'
+    | 'conflicting-runtime-profile-definitions'
+    | 'mixed-runtime-profile-browser-reference'
     | 'runtime-profile-missing-browser-profile'
     | 'runtime-profile-browser-profile-missing'
     | 'unused-browser-profile'
@@ -79,8 +84,38 @@ function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
   return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
 }
 
+function sortJsonValue(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => sortJsonValue(entry));
+  }
+  if (!isRecord(value)) {
+    return value;
+  }
+  return Object.keys(value)
+    .sort()
+    .reduce<Record<string, unknown>>((acc, key) => {
+      acc[key] = sortJsonValue(value[key]);
+      return acc;
+    }, {});
+}
+
+function areEquivalentRecords(left: unknown, right: unknown): boolean {
+  return JSON.stringify(sortJsonValue(left)) === JSON.stringify(sortJsonValue(right));
+}
+
+function getTargetBrowserProfiles(config: OracleConfig | MutableRecord): Record<string, MutableBrowserProfile> {
+  return isRecord((config as MutableRecord).browserProfiles)
+    ? ((config as MutableRecord).browserProfiles as Record<string, MutableBrowserProfile>)
+    : {};
+}
+
 export function getBrowserProfiles(config: OracleConfig | MutableRecord): Record<string, MutableBrowserProfile> {
-  return isRecord(config.browserFamilies) ? (config.browserFamilies as Record<string, MutableBrowserProfile>) : {};
+  const targetProfiles = getTargetBrowserProfiles(config);
+  return Object.keys(targetProfiles).length > 0
+    ? targetProfiles
+    : isRecord(config.browserFamilies)
+      ? (config.browserFamilies as Record<string, MutableBrowserProfile>)
+      : {};
 }
 
 export function getBrowserProfile(
@@ -100,8 +135,15 @@ export function getRuntimeProfiles(config: OracleConfig | MutableRecord): Record
   return isRecord(config.profiles) ? (config.profiles as Record<string, MutableRuntimeProfile>) : {};
 }
 
+export function getTargetRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
+  return isRecord((config as MutableRecord).runtimeProfiles)
+    ? ((config as MutableRecord).runtimeProfiles as Record<string, MutableRuntimeProfile>)
+    : {};
+}
+
 export function getCurrentRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
-  return getRuntimeProfiles(config);
+  const targetProfiles = getTargetRuntimeProfiles(config);
+  return Object.keys(targetProfiles).length > 0 ? targetProfiles : getRuntimeProfiles(config);
 }
 
 export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
@@ -133,7 +175,10 @@ export function getRuntimeProfileBrowserProfileId(
   runtimeProfile: MutableRuntimeProfile | null | undefined,
 ): string | null {
   if (!isRecord(runtimeProfile)) return null;
-  const value = runtimeProfile.browserFamily;
+  const value =
+    typeof runtimeProfile.browserProfile === 'string' && runtimeProfile.browserProfile.trim().length > 0
+      ? runtimeProfile.browserProfile
+      : runtimeProfile.browserFamily;
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
 }
 
@@ -281,12 +326,54 @@ export function analyzeConfigModelBridgeHealth(
   const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(config, {
     explicitProfileName: options.explicitProfileName ?? null,
   });
+  const targetBrowserProfiles = getTargetBrowserProfiles(config);
+  const bridgeBrowserProfiles = isRecord(config.browserFamilies)
+    ? (config.browserFamilies as Record<string, MutableBrowserProfile>)
+    : {};
   const browserProfiles = getBrowserProfiles(config);
   const browserProfileNames = new Set(Object.keys(browserProfiles));
   const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  const targetRuntimeProfiles = getTargetRuntimeProfiles(config);
+  const bridgeRuntimeProfiles = getRuntimeProfiles(config);
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   const issues: ConfigModelDoctorIssue[] = [];
   const referencedBrowserProfiles = new Set<string>();
+
+  if (Object.keys(targetBrowserProfiles).length > 0 && Object.keys(bridgeBrowserProfiles).length > 0) {
+    issues.push({
+      code: 'mixed-browser-profile-keys',
+      severity: 'info',
+      message: 'Both `browserProfiles` and `browserFamilies` are present; target browser-profile keys are authoritative.',
+    });
+    for (const name of Object.keys(targetBrowserProfiles)) {
+      if (bridgeBrowserProfiles[name] && !areEquivalentRecords(targetBrowserProfiles[name], bridgeBrowserProfiles[name])) {
+        issues.push({
+          code: 'conflicting-browser-profile-definitions',
+          severity: 'warning',
+          message: `Browser profile "${name}" differs between \`browserProfiles\` and \`browserFamilies\`.`,
+          browserProfile: name,
+        });
+      }
+    }
+  }
+
+  if (Object.keys(targetRuntimeProfiles).length > 0 && Object.keys(bridgeRuntimeProfiles).length > 0) {
+    issues.push({
+      code: 'mixed-runtime-profile-keys',
+      severity: 'info',
+      message: 'Both `runtimeProfiles` and `profiles` are present; target runtime-profile keys are authoritative.',
+    });
+    for (const name of Object.keys(targetRuntimeProfiles)) {
+      if (bridgeRuntimeProfiles[name] && !areEquivalentRecords(targetRuntimeProfiles[name], bridgeRuntimeProfiles[name])) {
+        issues.push({
+          code: 'conflicting-runtime-profile-definitions',
+          severity: 'warning',
+          message: `AuraCall runtime profile "${name}" differs between \`runtimeProfiles\` and \`profiles\`.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+    }
+  }
 
   if (Object.keys(runtimeProfiles).length === 0) {
     issues.push({
@@ -305,6 +392,22 @@ export function analyzeConfigModelBridgeHealth(
   }
 
   for (const [name, runtimeProfile] of Object.entries(runtimeProfiles)) {
+    if (
+      isRecord(runtimeProfile) &&
+      typeof runtimeProfile.browserProfile === 'string' &&
+      runtimeProfile.browserProfile.trim().length > 0 &&
+      typeof runtimeProfile.browserFamily === 'string' &&
+      runtimeProfile.browserFamily.trim().length > 0 &&
+      runtimeProfile.browserProfile.trim() !== runtimeProfile.browserFamily.trim()
+    ) {
+      issues.push({
+        code: 'mixed-runtime-profile-browser-reference',
+        severity: 'warning',
+        message: `AuraCall runtime profile "${name}" defines conflicting browser-profile references in \`browserProfile\` and \`browserFamily\`.`,
+        auracallRuntimeProfile: name,
+        browserProfile: runtimeProfile.browserProfile.trim(),
+      });
+    }
     const browserProfile = getRuntimeProfileBrowserProfileId(runtimeProfile);
     if (!browserProfile) {
       issues.push({

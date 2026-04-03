@@ -131,6 +131,25 @@ describe('loadUserConfig', () => {
     expect(parsed.profiles?.consulting?.browserFamily).toBe('consulting');
   });
 
+  it('accepts target-shape browserProfiles/runtimeProfiles input through the composed schema', () => {
+    const parsed = ComposedConfigSchema.parse({
+      browserProfiles: {
+        consulting: {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+      runtimeProfiles: {
+        consulting: {
+          browserProfile: 'consulting',
+          defaultService: 'chatgpt',
+        },
+      },
+    });
+
+    expect(parsed.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
+    expect(parsed.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
+  });
+
   afterAll(() => {
     setAuracallHomeDirOverrideForTest(null);
   });

@@ -101,7 +101,10 @@ Deliverables
 Acceptance
 - policy documented in:
   - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-- no input alias implementation lands before this policy is the source of truth
+- phase-1 dual-read may land only through:
+  - schema/model/resolver loading
+  - read-only diagnostics
+  - bridge-key writes remaining unchanged
 
 ### 3) Browser reliability maintenance
 

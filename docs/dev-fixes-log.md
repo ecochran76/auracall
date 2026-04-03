@@ -5852,3 +5852,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     explicit and centralized too
   - otherwise read-only surfaces and later dual-read logic will drift on the
     very names they are supposed to diagnose
+
+## 2026-04-02 - first target-shape alias support should be dual-read only, with target precedence and diagnostics
+
+- Symptom:
+  - after the policy doc was in place, the next real gap was that
+    `browserProfiles` / `runtimeProfiles` still could not be loaded at all
+  - delaying all support longer would keep the target model purely notional
+- Fix:
+  - added bounded phase-1 dual-read support in schema/model/resolver loading
+  - target keys now win over bridge keys during reads
+  - doctor/model diagnostics now report mixed/conflicting bridge vs target
+    definitions instead of silently merging them
+  - write paths remain bridge-key-first
+- Durable lesson:
+  - the safe first step is:
+    - dual-read
+    - target precedence
+    - diagnostics
+    - no write-path change
+  - do not start by teaching writes or silently normalizing everything into the
+    target shape

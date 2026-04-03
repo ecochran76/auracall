@@ -11,6 +11,7 @@ import {
   getBridgeRuntimeProfiles,
   getLegacyRuntimeProfiles,
   getCurrentRuntimeProfiles,
+  getTargetRuntimeProfiles,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
   inspectConfigModel,
@@ -35,6 +36,34 @@ describe('config model helpers', () => {
       chromePath: '/usr/bin/google-chrome',
     });
     expect(ensureBrowserProfiles(config)).toBe(config.browserFamilies);
+  });
+
+  it('prefers target-shape browser and runtime profiles over bridge keys when both exist', () => {
+    const config = {
+      browserFamilies: {
+        default: { chromePath: '/bridge/chrome' },
+      },
+      browserProfiles: {
+        default: { chromePath: '/target/chrome' },
+      },
+      profiles: {
+        default: { browserFamily: 'bridge-default', defaultService: 'chatgpt' },
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'target-default', defaultService: 'grok' },
+      },
+    };
+
+    expect(getBrowserProfiles(config)).toEqual({
+      default: { chromePath: '/target/chrome' },
+    });
+    expect(getCurrentRuntimeProfiles(config)).toEqual({
+      default: { browserProfile: 'target-default', defaultService: 'grok' },
+    });
+    expect(getTargetRuntimeProfiles(config)).toEqual({
+      default: { browserProfile: 'target-default', defaultService: 'grok' },
+    });
+    expect(getRuntimeProfileBrowserProfileId(getCurrentRuntimeProfiles(config).default)).toBe('target-default');
   });
 
   it('treats profiles as the current runtime-profile bridge and reads browserFamily as the bridge reference', () => {
@@ -219,6 +248,75 @@ describe('config model helpers', () => {
         expect.objectContaining({
           code: 'active-runtime-profile-missing-browser-profile',
           auracallRuntimeProfile: 'default',
+        }),
+      ]),
+    });
+  });
+
+  it('reports mixed-key and conflicting dual-read diagnostics when target and bridge definitions disagree', () => {
+    const config = {
+      auracallProfile: 'default',
+      browserFamilies: {
+        default: { chromePath: '/bridge/chrome' },
+      },
+      browserProfiles: {
+        default: { chromePath: '/target/chrome' },
+      },
+      profiles: {
+        default: {
+          browserFamily: 'bridge-default',
+          defaultService: 'chatgpt',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'target-default',
+          browserFamily: 'bridge-default',
+          defaultService: 'grok',
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'target-default',
+      issueCount: 7,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'mixed-browser-profile-keys',
+          severity: 'info',
+        }),
+        expect.objectContaining({
+          code: 'conflicting-browser-profile-definitions',
+          severity: 'warning',
+          browserProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'mixed-runtime-profile-keys',
+          severity: 'info',
+        }),
+        expect.objectContaining({
+          code: 'conflicting-runtime-profile-definitions',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'mixed-runtime-profile-browser-reference',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+          browserProfile: 'target-default',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-browser-profile-missing',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+          browserProfile: 'target-default',
+        }),
+        expect.objectContaining({
+          code: 'unused-browser-profile',
+          severity: 'info',
+          browserProfile: 'default',
         }),
       ]),
     });

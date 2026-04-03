@@ -4780,3 +4780,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps the bridge contract explicit and centralized without starting
     dual-read or target-shape input support
+
+## 2026-04-02 20:18 CDT
+
+- Focus:
+  - land the first bounded target-shape dual-read slice without changing write
+    behavior
+- What changed:
+  - schema/config loading now accepts:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `runtimeProfiles.<name>.browserProfile`
+  - shared model helpers in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    now give target keys precedence over bridge keys
+  - shared doctor analysis now reports mixed/conflicting bridge vs target
+    config state, including conflicting nested browser-profile references
+  - normalization in
+    [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    now applies current alias/compatibility handling to `runtimeProfiles.*`
+    paths too
+  - updated user-facing docs in
+    [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to say dual-read is supported while writes remain bridge-key-first
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/configMigrate.test.ts tests/config.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is phase-1 dual-read only
+  - scaffolding/migration/wizard still emit bridge keys

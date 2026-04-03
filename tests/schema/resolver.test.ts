@@ -323,4 +323,60 @@ describe('Config Resolver', () => {
     expect(result.browser.grokUrl).toBe('https://grok.com/preview');
     expect(result.browser.manualLoginProfileDir).toBe('/tmp/mixed/grok');
   });
+
+  it('should resolve target-shape runtimeProfiles/browserProfiles with target precedence over bridge keys', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 2,
+        model: 'gpt-5.2-pro',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        browserFamilies: {
+          work: {
+            chromePath: '/bridge/chrome',
+          },
+        },
+        browserProfiles: {
+          work: {
+            chromePath: '/target/chrome',
+          },
+        },
+        profiles: {
+          work: {
+            browserFamily: 'bridge-work',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                url: 'https://chatgpt.com/g/p-bridge',
+              },
+            },
+          },
+        },
+        runtimeProfiles: {
+          work: {
+            browserProfile: 'work',
+            defaultService: 'grok',
+            services: {
+              grok: {
+                url: 'https://grok.com/target',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({ profile: 'work', engine: 'browser' });
+
+    expect(result.auracallProfile).toBe('work');
+    expect(result.browser.target).toBe('grok');
+    expect(result.browser.chromePath).toBe('/target/chrome');
+    expect(result.browser.grokUrl).toBe('https://grok.com/target');
+  });
 });

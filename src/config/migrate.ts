@@ -1,5 +1,6 @@
 import type { OracleConfig } from './schema.js';
 import {
+  getCurrentRuntimeProfiles,
   ensureRuntimeProfiles,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
@@ -27,11 +28,14 @@ const DEFAULT_ALIAS_RULES: ConfigAliasRule[] = [
   { path: 'browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
   { path: 'browserDefaults', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
   { path: 'profiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
+  { path: 'runtimeProfiles.*.browser', from: 'profileConflictAction', to: 'blockingProfileAction', map: mapProfileConflictAction },
   { path: 'browser', from: 'interactiveLogin', to: 'manualLogin' },
   { path: 'browserDefaults', from: 'interactiveLogin', to: 'manualLogin' },
   { path: 'profiles.*.browser', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'runtimeProfiles.*.browser', from: 'interactiveLogin', to: 'manualLogin' },
   { path: 'services.*', from: 'interactiveLogin', to: 'manualLogin' },
   { path: 'profiles.*.services.*', from: 'interactiveLogin', to: 'manualLogin' },
+  { path: 'runtimeProfiles.*.services.*', from: 'interactiveLogin', to: 'manualLogin' },
 ];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -139,8 +143,8 @@ export function normalizeConfigV1toV2(
     normalized.services = services;
   }
 
-  const profiles = isRecord(normalized.profiles) ? normalized.profiles : null;
-  if (profiles) {
+  const profiles = getCurrentRuntimeProfiles(normalized);
+  if (Object.keys(profiles).length > 0) {
     const auracallProfiles = getRuntimeProfiles(
       isRecord(normalized.auracallProfiles) ? { profiles: normalized.auracallProfiles } : {},
     );
@@ -157,10 +161,11 @@ export function normalizeConfigV1toV2(
       if (legacyProfile.defaultService === undefined && profileValue.defaultService !== undefined) {
         legacyProfile.defaultService = profileValue.defaultService;
       }
-      if (getRuntimeProfileBrowserProfileId(legacyProfile) === null && profileValue.browserFamily !== undefined) {
+      const runtimeProfileBrowserProfileId = getRuntimeProfileBrowserProfileId(profileValue);
+      if (getRuntimeProfileBrowserProfileId(legacyProfile) === null && runtimeProfileBrowserProfileId !== null) {
         setRuntimeProfileBrowserProfile(
           legacyProfile,
-          String(profileValue.browserFamily),
+          runtimeProfileBrowserProfileId,
         );
       }
       if (legacyProfile.keepBrowser === undefined && profileValue.keepBrowser !== undefined) {

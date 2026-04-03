@@ -17,8 +17,10 @@ import { z } from 'zod';
 export const ComposedConfigSchema = ConfigSchema.extend({
   browserDefaults: BrowserConfigSchema.optional(),
   browserFamilies: BrowserProfilesConfigSchema.optional(),
+  browserProfiles: BrowserProfilesConfigSchema.optional(),
   llmDefaults: LlmDefaultsSchema.optional(),
   profiles: RuntimeProfilesConfigSchema.optional(),
+  runtimeProfiles: RuntimeProfilesConfigSchema.optional(),
   services: z
     .object({
       chatgpt: ChatgptServiceConfigSchema.optional(),
