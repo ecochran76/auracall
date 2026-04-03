@@ -2,10 +2,9 @@ import type { ResolvedUserConfig } from '../config.js';
 import {
   analyzeConfigModelBridgeHealth,
   inspectConfigModel,
-  getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
   resolveAgentSelection,
-  getRuntimeProfileBrowserProfileId,
+  resolveRuntimeSelection,
   type ConfigModelBridgeKeys,
   type ConfigModelInspection,
   type ConfigModelDoctorIssue,
@@ -158,24 +157,20 @@ export function buildConfigShowReport(input: {
   const inspection = inspectConfigModel(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
   });
-  const activeRuntimeProfile = getPreferredRuntimeProfile(input.rawConfig, {
+  const selection = resolveRuntimeSelection(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
+    explicitAgentId: input.explicitAgentId ?? null,
   });
-  const activeRuntimeProfileRecord = asRecord(activeRuntimeProfile);
-  const selectedAgent =
-    typeof input.explicitAgentId === 'string' && input.explicitAgentId.trim().length > 0
-      ? resolveAgentSelection(input.rawConfig, input.explicitAgentId)
-      : null;
 
   return {
     configPath: input.configPath,
     loaded: input.loaded,
     selectorKeys: buildSelectorKeysReport(input.rawConfig),
     active: {
-      agent: selectedAgent,
-      auracallRuntimeProfile: input.resolvedConfig.auracallProfile ?? null,
-      browserProfile: getRuntimeProfileBrowserProfileId(activeRuntimeProfileRecord),
-      defaultService: asServiceId(activeRuntimeProfileRecord?.defaultService),
+      agent: selection.agent,
+      auracallRuntimeProfile: selection.runtimeProfileId ?? input.resolvedConfig.auracallProfile ?? null,
+      browserProfile: selection.browserProfileId,
+      defaultService: selection.defaultService,
       resolvedBrowserTarget: asServiceId(input.resolvedConfig.browser?.target),
     },
     available: {
@@ -202,17 +197,13 @@ export function buildRuntimeProfileBridgeSummary(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): RuntimeProfileBridgeSummary {
-  const auracallRuntimeProfile = getPreferredRuntimeProfileName(rawConfig, {
+  const selection = resolveRuntimeSelection(rawConfig, {
     explicitProfileName: options.explicitProfileName ?? null,
   });
-  const activeRuntimeProfile = getPreferredRuntimeProfile(rawConfig, {
-    explicitProfileName: auracallRuntimeProfile,
-  });
-  const activeRuntimeProfileRecord = asRecord(activeRuntimeProfile);
   return {
-    auracallRuntimeProfile,
-    browserProfile: getRuntimeProfileBrowserProfileId(activeRuntimeProfileRecord),
-    defaultService: asServiceId(activeRuntimeProfileRecord?.defaultService),
+    auracallRuntimeProfile: selection.runtimeProfileId,
+    browserProfile: selection.browserProfileId,
+    defaultService: selection.defaultService,
   };
 }
 
@@ -261,13 +252,11 @@ export function buildConfigDoctorReport(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): ConfigDoctorReport {
+  const selection = resolveRuntimeSelection(rawConfig, options);
   return {
     ...analyzeConfigModelBridgeHealth(rawConfig, options),
     selectorKeys: buildSelectorKeysReport(rawConfig),
-    selectedAgent:
-      typeof options.explicitAgentId === 'string' && options.explicitAgentId.trim().length > 0
-        ? resolveAgentSelection(rawConfig, options.explicitAgentId)
-        : null,
+    selectedAgent: selection.agent,
   };
 }
 

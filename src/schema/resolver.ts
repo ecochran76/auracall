@@ -6,7 +6,7 @@ import { resolveApiModel, inferModelFromLabel, normalizeBaseUrl } from '../cli/o
 import { DEFAULT_MODEL } from '../oracle.js';
 import { resolveEngine, type EngineMode } from '../cli/engine.js';
 import { normalizeConfigV1toV2 } from '../config/migrate.js';
-import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../config/model.js';
+import { resolveRuntimeSelection } from '../config/model.js';
 import { applyBrowserProfileOverrides } from '../browser/service/profileConfig.js';
 
 type MutableBrowserConfig = Record<string, unknown>;
@@ -167,14 +167,12 @@ function applyOracleProfile(
   merged: MutableConfig,
   options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): void {
-  const profileName = getPreferredRuntimeProfileName(merged, {
+  const selection = resolveRuntimeSelection(merged, {
     explicitProfileName: options.explicitProfileName ?? null,
     explicitAgentId: options.explicitAgentId ?? null,
   });
-  const profile = getPreferredRuntimeProfile(merged, {
-    explicitProfileName: profileName,
-    explicitAgentId: options.explicitAgentId ?? null,
-  });
+  const profileName = selection.runtimeProfileId;
+  const profile = selection.runtimeProfile;
   if (!profileName || !profile) return;
   merged.defaultRuntimeProfile = profileName;
   merged.auracallProfile = profileName;
@@ -195,8 +193,8 @@ function resolveActiveProfileName(
   merged: MutableConfig,
   options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): string | null {
-  return getPreferredRuntimeProfileName(merged, {
+  return resolveRuntimeSelection(merged, {
     explicitProfileName: options.explicitProfileName ?? null,
     explicitAgentId: options.explicitAgentId ?? null,
-  });
+  }).runtimeProfileId;
 }

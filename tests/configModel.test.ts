@@ -20,6 +20,7 @@ import {
   inspectConfigModel,
   projectConfigModel,
   resolveAgentSelection,
+  resolveRuntimeSelection,
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
   getRuntimeProfiles,
@@ -223,6 +224,60 @@ describe('config model helpers', () => {
       browserProfileId: null,
       defaultService: null,
       exists: false,
+    });
+  });
+
+  it('resolves one shared runtime selection bundle for explicit agent-aware runtime use', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/chrome/default' },
+        consulting: { chromePath: '/chrome/consulting' },
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        analyst: { runtimeProfile: 'work' },
+      },
+    };
+
+    expect(resolveRuntimeSelection(config, { explicitAgentId: 'analyst' })).toEqual({
+      agent: {
+        agentId: 'analyst',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        defaultService: 'grok',
+        exists: true,
+      },
+      runtimeProfileId: 'work',
+      runtimeProfile: {
+        browserProfile: 'consulting',
+        defaultService: 'grok',
+      },
+      browserProfileId: 'consulting',
+      browserProfile: {
+        chromePath: '/chrome/consulting',
+      },
+      defaultService: 'grok',
+    });
+    expect(
+      resolveRuntimeSelection(config, {
+        explicitProfileName: 'default',
+        explicitAgentId: 'analyst',
+      }),
+    ).toMatchObject({
+      agent: {
+        agentId: 'analyst',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        defaultService: 'grok',
+        exists: true,
+      },
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      defaultService: 'chatgpt',
     });
   });
 

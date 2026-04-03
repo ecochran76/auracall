@@ -45,6 +45,15 @@ export interface ResolvedAgentSelection {
   exists: boolean;
 }
 
+export interface ResolvedRuntimeSelection {
+  agent: ResolvedAgentSelection | null;
+  runtimeProfileId: string | null;
+  runtimeProfile: MutableRuntimeProfile | null;
+  browserProfileId: string | null;
+  browserProfile: MutableBrowserProfile | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+}
+
 export interface ProjectedConfigModel {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
@@ -292,6 +301,35 @@ export function resolveAgentSelection(
     browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
     defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
     exists: agent !== null,
+  };
+}
+
+export function resolveRuntimeSelection(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
+): ResolvedRuntimeSelection {
+  const explicitAgentId =
+    typeof options.explicitAgentId === 'string' && options.explicitAgentId.trim().length > 0
+      ? options.explicitAgentId.trim()
+      : null;
+  const agent = explicitAgentId ? resolveAgentSelection(config, explicitAgentId) : null;
+  const runtimeProfileId = getPreferredRuntimeProfileName(config, {
+    explicitProfileName: options.explicitProfileName ?? null,
+    explicitAgentId,
+  });
+  const runtimeProfile = getPreferredRuntimeProfile(config, {
+    explicitProfileName: runtimeProfileId,
+    explicitAgentId,
+  });
+  const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfile);
+  const browserProfile = getBrowserProfile(config, browserProfileId);
+  return {
+    agent,
+    runtimeProfileId,
+    runtimeProfile,
+    browserProfileId,
+    browserProfile,
+    defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
   };
 }
 

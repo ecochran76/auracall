@@ -5463,3 +5463,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps the execution board aligned with the code before starting the
     next helper slice
+
+## 2026-04-03 10:07 CDT
+
+- Focus:
+  - land the first shared agent-aware runtime helper without introducing agent
+    execution behavior
+- What changed:
+  - added `resolveRuntimeSelection(...)` in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    as the first shared bundle for:
+    - selected agent
+    - resolved AuraCall runtime profile
+    - resolved browser profile
+    - inherited default service
+  - rewired real config/runtime resolution in
+    [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    so `applyOracleProfile(...)` now consumes that shared selection bundle
+    instead of reconstructing runtime-profile selection ad hoc
+  - rewired config inspection/report assembly in
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `config show`, `config doctor`, and bridge summaries consume the same
+    runtime-selection helper
+  - expanded
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    with direct coverage for:
+    - explicit `--agent`
+    - explicit `--profile` winning over `--agent`
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts tests/cli/configCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is still selection/runtime plumbing only
+  - it does not add agent execution mode

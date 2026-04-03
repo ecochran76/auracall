@@ -6281,3 +6281,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     important enough to surface in the main status and postmortem commands
   - do not force routine troubleshooting through raw metadata files when a
     stable CLI/report contract can expose the same fact directly
+
+## 2026-04-03 - the first higher-layer selection seam needs one shared runtime bundle, not parallel ad hoc lookups
+
+- Symptom:
+  - after `--agent` started affecting real config/runtime resolution, the code
+    still had separate helper chains for:
+    - preferred AuraCall runtime profile selection
+    - selected-agent inspection
+    - browser-profile inheritance
+  - that left runtime/config call sites to reconstruct overlapping pieces of
+    the same selection state
+- Fix:
+  - added `resolveRuntimeSelection(...)` in `src/config/model.ts`
+  - rewired:
+    - `applyOracleProfile(...)`
+    - config inspection/doctor report assembly
+    to consume that single resolved selection bundle
+- Durable lesson:
+  - once a new selection seam becomes execution-adjacent, stop exposing only
+    leaf helpers and add one canonical resolved bundle for runtime consumers
+  - this reduces drift between inspection/reporting and the real resolution
+    path before full execution semantics arrive
