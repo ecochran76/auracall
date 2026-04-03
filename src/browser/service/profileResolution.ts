@@ -4,6 +4,7 @@ import {
   resolveManagedProfileName,
 } from '../profileStore.js';
 import type { DebugPortStrategy, ResolvedBrowserConfig } from '../types.js';
+import type { BrowserSessionConfig } from '../types.js';
 import { getRuntimeProfileBrowserProfile, getRuntimeProfileBrowserProfileId } from '../../config/model.js';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
@@ -113,6 +114,11 @@ export interface ResolvedManagedBrowserLaunchContext {
   chromeProfile: string;
   managedChromeProfile: string;
   bootstrapCookiePath: string | null;
+}
+
+export interface ResolvedSessionBrowserLaunchContext {
+  resolvedConfig: ResolvedBrowserConfig;
+  managedLaunchContext: ResolvedManagedBrowserLaunchContext;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -262,6 +268,23 @@ export function resolveManagedBrowserLaunchContextFromResolvedConfig(input: {
     chromeProfile: configuredChromeProfile,
     managedChromeProfile,
     bootstrapCookiePath,
+  };
+}
+
+export function resolveSessionBrowserLaunchContext(
+  sessionConfig: BrowserSessionConfig | undefined,
+): ResolvedSessionBrowserLaunchContext {
+  const resolvedConfig = resolveBrowserConfig(sessionConfig ?? {}, {
+    auracallProfileName: sessionConfig?.auracallProfileName ?? null,
+  });
+  const managedLaunchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: sessionConfig?.auracallProfileName ?? null,
+    browser: resolvedConfig,
+    target: resolvedConfig.target ?? 'chatgpt',
+  });
+  return {
+    resolvedConfig,
+    managedLaunchContext,
   };
 }
 

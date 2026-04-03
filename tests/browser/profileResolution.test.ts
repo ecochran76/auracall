@@ -6,6 +6,7 @@ import {
   resolveManagedBrowserLaunchContextFromResolvedConfig,
   resolveBrowserProfileResolution,
   resolveBrowserProfileResolutionFromResolvedConfig,
+  resolveSessionBrowserLaunchContext,
   resolveUserBrowserLaunchContext,
 } from '../../src/browser/service/profileResolution.js';
 
@@ -371,5 +372,29 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.configuredChromeProfile).toBe('Default');
     expect(result.managedChromeProfile).toBe('Default');
     expect(result.bootstrapCookiePath).toBe(sourceCookiePath);
+  });
+
+  test('builds a reusable launch context from session config', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-session-launch-'));
+    const sourceCookiePath = path.join(tempRoot, 'source', 'Default', 'Network', 'Cookies');
+    await fs.mkdir(path.dirname(sourceCookiePath), { recursive: true });
+    await fs.writeFile(sourceCookiePath, '');
+    const result = resolveSessionBrowserLaunchContext({
+      auracallProfileName: 'wsl-chrome-2',
+      target: 'chatgpt',
+      chromePath: '/usr/bin/google-chrome',
+      chromeProfile: 'Profile 1',
+      chromeCookiePath: sourceCookiePath,
+      bootstrapCookiePath: sourceCookiePath,
+      managedProfileRoot: path.join(tempRoot, 'managed-root'),
+      manualLoginProfileDir: path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'),
+    });
+
+    expect(result.resolvedConfig.target).toBe('chatgpt');
+    expect(result.managedLaunchContext.managedProfileDir).toBe(
+      path.join(tempRoot, 'managed-root', 'wsl-chrome-2', 'chatgpt'),
+    );
+    expect(result.managedLaunchContext.configuredChromeProfile).toBe('Profile 1');
+    expect(result.managedLaunchContext.bootstrapCookiePath).toBe(sourceCookiePath);
   });
 });

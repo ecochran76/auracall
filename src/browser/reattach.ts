@@ -9,10 +9,10 @@ import {
 } from './pageActions.js';
 import type { BrowserLogger, BrowserSessionConfig, ChromeClient, CookieParam } from './types.js';
 import { launchChrome, connectToChrome, hideChromeWindow, wasChromeLaunchedByAuracall } from './chromeLifecycle.js';
-import { resolveBrowserConfig } from './config.js';
 import { syncCookies } from './cookies.js';
 import { cleanupStaleProfileState } from './profileState.js';
 import { collectReattachRegistryDiagnostics } from './service/registryDiagnostics.js';
+import { resolveSessionBrowserLaunchContext } from './service/profileResolution.js';
 import {
   pickTarget,
   extractConversationIdFromUrl,
@@ -46,6 +46,7 @@ export async function resumeBrowserSession(
   logger: BrowserLogger,
   deps: ReattachDeps = {},
 ): Promise<ReattachResult> {
+  const resolvedSession = resolveSessionBrowserLaunchContext(config);
   return resumeBrowserSessionCore(
     runtime,
     config,
@@ -54,7 +55,8 @@ export async function resumeBrowserSession(
       ...deps,
       classifyBrowserProfileFailure:
         deps.classifyBrowserProfileFailure ??
-        (async (runtimeMeta, configMeta) => classifyRuntimeBrowserProfileFailure(runtimeMeta, configMeta)),
+        (async (runtimeMeta, configMeta) =>
+          classifyRuntimeBrowserProfileFailure(runtimeMeta, configMeta, resolvedSession)),
       waitForAssistantResponse: deps.waitForAssistantResponse ?? waitForAssistantResponse,
       captureAssistantMarkdown:
         deps.captureAssistantMarkdown ??
@@ -90,9 +92,8 @@ export async function resumeBrowserSession(
       },
     },
     {
-      resolveBrowserConfig: (candidate) => resolveBrowserConfig(candidate as BrowserSessionConfig, {
-        auracallProfileName: (candidate as BrowserSessionConfig | undefined)?.auracallProfileName ?? null,
-      }),
+      resolveBrowserConfig: (candidate) =>
+        candidate === config ? resolvedSession.resolvedConfig : resolveSessionBrowserLaunchContext(candidate).resolvedConfig,
       launchChrome: async (config, userDataDir, logger) => {
         const chrome = await launchChrome(config, userDataDir, logger);
         return {
@@ -139,11 +140,12 @@ export type { ReattachFailureDetails, ReattachFailureKind };
 async function classifyRuntimeBrowserProfileFailure(
   runtime: BrowserRuntimeMetadata,
   config: BrowserSessionConfig | undefined,
+  resolvedSession: ReturnType<typeof resolveSessionBrowserLaunchContext>,
 ): Promise<ReattachFailureDetails | null> {
   if (!runtime.chromePort) {
     return null;
   }
-  const diagnostics = await collectReattachRegistryDiagnostics({ runtime, config });
+  const diagnostics = await collectReattachRegistryDiagnostics({ runtime, config, resolvedSession });
   const expectedProfilePath = diagnostics?.expectedProfilePath
     ? normalizePath(diagnostics.expectedProfilePath)
     : null;

@@ -5701,3 +5701,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - resolved browser config -> managed browser profile identity
   - if that second seam stays duplicated, profile/path drift can reappear even
     when higher-level config semantics are already correct
+
+## 2026-04-02 - reattach should reuse one resolved session launch context
+
+- Symptom:
+  - reattach had already moved fresh relaunch onto the shared managed-browser
+    seam, but `reattach.ts` still rebuilt browser config separately for
+    wrong-browser-profile classification and for the relaunch dependency hook
+- Fix:
+  - added `resolveSessionBrowserLaunchContext(...)`
+  - reattach now resolves session browser config once and reuses it across:
+    - fresh relaunch
+    - registry diagnostics
+    - wrong-browser-profile classification
+- Durable lesson:
+  - after introducing a shared seam, the next cleanup should target the callers
+    that still rebuild the same resolved object twice in one flow
+  - that is where hidden drift tends to survive longest even when the shared
+    helper already exists

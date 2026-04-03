@@ -1,7 +1,10 @@
 import path from 'node:path';
 import { getAuracallHomeDir } from '../../auracallHome.js';
 import { resolveBrowserConfig } from '../config.js';
-import { resolveManagedBrowserLaunchContextFromResolvedConfig } from './profileResolution.js';
+import {
+  resolveManagedBrowserLaunchContextFromResolvedConfig,
+  type ResolvedSessionBrowserLaunchContext,
+} from './profileResolution.js';
 import type { BrowserAutomationConfig, BrowserRuntimeMetadata, BrowserSessionConfig } from '../types.js';
 import type { BrowserSessionConfig as StoredBrowserSessionConfig } from '../../sessionManager.js';
 import {
@@ -113,20 +116,25 @@ export function collectSelectedPortRegistryCandidates(input: {
 export async function collectReattachRegistryDiagnostics(input: {
   runtime: Pick<BrowserRuntimeMetadata, 'chromePort' | 'chromeHost'>;
   config: ReattachRegistryConfig | undefined;
+  resolvedSession?: ResolvedSessionBrowserLaunchContext;
   registryPath?: string;
 }): Promise<ReattachRegistryDiagnostics | null> {
   if (!input.runtime.chromePort) {
     return null;
   }
-  const resolved = resolveBrowserConfig({
-    ...(input.config ?? {}),
-    target: input.config?.target ?? 'chatgpt',
-  } as BrowserAutomationConfig, { auracallProfileName: input.config?.auracallProfileName ?? null });
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: input.config?.auracallProfileName ?? null,
-    browser: resolved,
-    target: resolved.target ?? 'chatgpt',
-  });
+  const resolved =
+    input.resolvedSession?.resolvedConfig ??
+    resolveBrowserConfig({
+      ...(input.config ?? {}),
+      target: input.config?.target ?? 'chatgpt',
+    } as BrowserAutomationConfig, { auracallProfileName: input.config?.auracallProfileName ?? null });
+  const launchContext =
+    input.resolvedSession?.managedLaunchContext ??
+    resolveManagedBrowserLaunchContextFromResolvedConfig({
+      auracallProfile: input.config?.auracallProfileName ?? null,
+      browser: resolved,
+      target: resolved.target ?? 'chatgpt',
+    });
   const expectedProfilePath = launchContext.managedProfileDir;
   const expectedProfileName = launchContext.managedChromeProfile;
   const classifiedInstances = await listInstancesWithLiveness({

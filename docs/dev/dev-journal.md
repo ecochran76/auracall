@@ -4568,3 +4568,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the first attempt exposed a residual browser-service call site still
     referencing the older local resolver; fixing that restored the regression
     set and confirmed the consolidated seam was sound
+
+## 2026-04-02 19:04 CDT
+
+- Focus:
+  - collapse the remaining reattach-side browser-config reconstruction so
+    session replay stops resolving browser config twice for:
+    - fresh relaunch
+    - registry diagnostics / wrong-browser-profile classification
+- What changed:
+  - expanded
+    [profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    with:
+    - `resolveSessionBrowserLaunchContext(...)`
+  - updated
+    [reattach.ts](/home/ecochran76/workspace.local/oracle/src/browser/reattach.ts)
+    to resolve session browser config once and reuse it for:
+    - `runtimeDeps.resolveBrowserConfig(...)`
+    - `classifyRuntimeBrowserProfileFailure(...)`
+  - updated
+    [registryDiagnostics.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/registryDiagnostics.ts)
+    so reattach diagnostics can accept a pre-resolved session launch context
+    instead of always rebuilding one internally
+  - expanded
+    [profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    with direct session-launch-context coverage
+- Verification:
+  - `pnpm vitest run tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/browser/browserModeExports.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps reattach at the same behavior boundary while reducing the number
+    of places that know how to rebuild session-scoped browser launch state
