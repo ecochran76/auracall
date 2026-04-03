@@ -177,6 +177,10 @@ describe('config model helpers', () => {
         { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
       ],
       legacyRuntimeProfileIds: [],
+      targetState: {
+        browserProfilesPresent: false,
+        runtimeProfilesPresent: false,
+      },
       bridgeState: {
         browserProfilesPresent: true,
         auracallRuntimeProfilesPresent: true,
@@ -226,6 +230,15 @@ describe('config model helpers', () => {
       ok: false,
       activeAuracallRuntimeProfile: 'default',
       activeBrowserProfile: null,
+      targetState: {
+        browserProfilesPresent: false,
+        runtimeProfilesPresent: false,
+      },
+      precedence: {
+        browserProfiles: 'bridge',
+        runtimeProfiles: 'bridge',
+        runtimeProfileBrowserProfileReference: 'bridge',
+      },
       issueCount: 5,
       issues: expect.arrayContaining([
         expect.objectContaining({
@@ -281,6 +294,15 @@ describe('config model helpers', () => {
       ok: false,
       activeAuracallRuntimeProfile: 'default',
       activeBrowserProfile: 'target-default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
       issueCount: 7,
       issues: expect.arrayContaining([
         expect.objectContaining({

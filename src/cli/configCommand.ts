@@ -29,6 +29,15 @@ export interface ConfigShowReport {
     legacyRuntimeProfiles: string[];
   };
   bridgeKeys: ConfigModelBridgeKeys;
+  targetKeys: {
+    browserProfiles: 'browserProfiles';
+    auracallRuntimeProfiles: 'runtimeProfiles';
+    runtimeProfileBrowserProfile: 'runtimeProfiles.<name>.browserProfile';
+  };
+  targetState: {
+    browserProfilesPresent: boolean;
+    runtimeProfilesPresent: boolean;
+  };
   bridgeState: {
     browserProfilesPresent: boolean;
     auracallRuntimeProfilesPresent: boolean;
@@ -105,6 +114,12 @@ export function buildConfigShowReport(input: {
       legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
     bridgeKeys: inspection.bridgeKeys,
+    targetKeys: {
+      browserProfiles: 'browserProfiles',
+      auracallRuntimeProfiles: 'runtimeProfiles',
+      runtimeProfileBrowserProfile: 'runtimeProfiles.<name>.browserProfile',
+    },
+    targetState: inspection.targetState,
     bridgeState: inspection.bridgeState,
     projectedModel: inspection.projectedModel,
   };
@@ -168,6 +183,10 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `Available browser profiles: ${formatList(report.available.browserProfiles)}`,
     `Available AuraCall runtime profiles: ${formatList(report.available.auracallRuntimeProfiles)}`,
     `Legacy runtime profiles: ${formatList(report.available.legacyRuntimeProfiles)}`,
+    'Target keys:',
+    `  browser profiles -> ${report.targetKeys.browserProfiles} (${report.targetState.browserProfilesPresent ? 'present' : 'missing'})`,
+    `  AuraCall runtime profiles -> ${report.targetKeys.auracallRuntimeProfiles} (${report.targetState.runtimeProfilesPresent ? 'present' : 'missing'})`,
+    `  runtime -> browser profile -> ${report.targetKeys.runtimeProfileBrowserProfile}`,
     'Bridge keys:',
     `  browser profiles -> ${report.bridgeKeys.browserProfiles} (${report.bridgeState.browserProfilesPresent ? 'present' : 'missing'})`,
     `  AuraCall runtime profiles -> ${report.bridgeKeys.auracallRuntimeProfiles} (${report.bridgeState.auracallRuntimeProfilesPresent ? 'present' : 'missing'})`,
@@ -212,6 +231,9 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
     `Active AuraCall runtime profile: ${report.activeAuracallRuntimeProfile ?? '(none)'}`,
     `Active browser profile: ${report.activeBrowserProfile ?? '(none)'}`,
     `Status: ${report.ok ? 'ok' : 'warnings'}`,
+    `Target browserProfiles present: ${report.targetState.browserProfilesPresent ? 'yes' : 'no'}`,
+    `Target runtimeProfiles present: ${report.targetState.runtimeProfilesPresent ? 'yes' : 'no'}`,
+    `Precedence: browser profiles=${report.precedence.browserProfiles}, runtime profiles=${report.precedence.runtimeProfiles}, runtime->browser reference=${report.precedence.runtimeProfileBrowserProfileReference}`,
   ];
   if (report.issues.length === 0) {
     lines.push('Issues: (none)');

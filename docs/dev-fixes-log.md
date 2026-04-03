@@ -5873,3 +5873,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - no write-path change
   - do not start by teaching writes or silently normalizing everything into the
     target shape
+
+## 2026-04-02 - once dual-read exists, operator surfaces must report target-key presence and precedence explicitly
+
+- Symptom:
+  - after dual-read loading landed, `config show` and `config doctor` still
+    mostly spoke in bridge-key terms
+  - that left operators unable to tell quickly whether target keys were active
+    or which side was winning the read path
+- Fix:
+  - extended shared inspection/doctor data to include:
+    - target-key presence
+    - read precedence summaries
+  - made the CLI inspection surfaces print those facts directly
+- Durable lesson:
+  - once config reads become dual-shape, “what keys are present?” and “which
+    side is authoritative?” are first-class operator concerns, not hidden model
+    details

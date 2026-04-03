@@ -57,6 +57,15 @@ describe('config show helpers', () => {
         auracallRuntimeProfiles: 'profiles',
         runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
       },
+      targetKeys: {
+        browserProfiles: 'browserProfiles',
+        auracallRuntimeProfiles: 'runtimeProfiles',
+        runtimeProfileBrowserProfile: 'runtimeProfiles.<name>.browserProfile',
+      },
+      targetState: {
+        browserProfilesPresent: false,
+        runtimeProfilesPresent: false,
+      },
       bridgeState: {
         browserProfilesPresent: true,
         auracallRuntimeProfilesPresent: true,
@@ -94,6 +103,15 @@ describe('config show helpers', () => {
         auracallRuntimeProfiles: 'profiles',
         runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
       },
+      targetKeys: {
+        browserProfiles: 'browserProfiles',
+        auracallRuntimeProfiles: 'runtimeProfiles',
+        runtimeProfileBrowserProfile: 'runtimeProfiles.<name>.browserProfile',
+      },
+      targetState: {
+        browserProfilesPresent: false,
+        runtimeProfilesPresent: false,
+      },
       bridgeState: {
         browserProfilesPresent: true,
         auracallRuntimeProfilesPresent: true,
@@ -109,6 +127,8 @@ describe('config show helpers', () => {
 
     expect(text).toContain('AuraCall runtime profile: default');
     expect(text).toContain('Browser profile: default');
+    expect(text).toContain('browser profiles -> browserProfiles (missing)');
+    expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
     expect(text).toContain('AuraCall runtime profiles -> profiles (present)');
   });
@@ -244,6 +264,15 @@ describe('config show helpers', () => {
     expect(report.ok).toBe(false);
     expect(report.activeAuracallRuntimeProfile).toBe('default');
     expect(report.activeBrowserProfile).toBeNull();
+    expect(report.targetState).toEqual({
+      browserProfilesPresent: false,
+      runtimeProfilesPresent: false,
+    });
+    expect(report.precedence).toEqual({
+      browserProfiles: 'bridge',
+      runtimeProfiles: 'bridge',
+      runtimeProfileBrowserProfileReference: 'bridge',
+    });
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -274,8 +303,67 @@ describe('config show helpers', () => {
     expect(text).toContain('Status: warnings');
     expect(text).toContain('Active AuraCall runtime profile: default');
     expect(text).toContain('Active browser profile: (none)');
+    expect(text).toContain('Target browserProfiles present: no');
+    expect(text).toContain('Target runtimeProfiles present: no');
+    expect(text).toContain('Precedence: browser profiles=bridge, runtime profiles=bridge, runtime->browser reference=bridge');
     expect(text).toContain('[warning] AuraCall runtime profile "default" does not explicitly reference a browser profile.');
     expect(text).toContain('[info] Browser profile "orphaned" is defined but no AuraCall runtime profile references it.');
+  });
+
+  it('surfaces target-key presence and target precedence when target-shape keys are active', () => {
+    const showReport = buildConfigShowReport({
+      rawConfig: {
+        browserProfiles: {
+          work: {},
+        },
+        runtimeProfiles: {
+          work: {
+            browserProfile: 'work',
+            defaultService: 'grok',
+          },
+        },
+      },
+      resolvedConfig: {
+        auracallProfile: 'work',
+        browser: { target: 'grok' },
+      } as never,
+      configPath: '/tmp/config.json',
+      loaded: true,
+    });
+
+    expect(showReport.targetState).toEqual({
+      browserProfilesPresent: true,
+      runtimeProfilesPresent: true,
+    });
+    expect(formatConfigShowReport(showReport)).toContain('browser profiles -> browserProfiles (present)');
+
+    const doctorReport = buildConfigDoctorReport(
+      {
+        browserProfiles: {
+          work: {},
+        },
+        runtimeProfiles: {
+          work: {
+            browserProfile: 'work',
+            defaultService: 'grok',
+          },
+        },
+      },
+      { explicitProfileName: 'work' },
+    );
+
+    expect(doctorReport.targetState).toEqual({
+      browserProfilesPresent: true,
+      runtimeProfilesPresent: true,
+    });
+    expect(doctorReport.precedence).toEqual({
+      browserProfiles: 'target',
+      runtimeProfiles: 'target',
+      runtimeProfileBrowserProfileReference: 'target',
+    });
+    expect(formatConfigDoctorReport(doctorReport)).toContain(
+      'Precedence: browser profiles=target, runtime profiles=target, runtime->browser reference=target',
+    );
   });
 
   it('returns a nonzero exit code only when strict mode is enabled and warnings are present', () => {

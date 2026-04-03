@@ -34,6 +34,10 @@ export interface ConfigModelInspection {
   browserProfileIds: string[];
   runtimeProfiles: ProjectedRuntimeProfile[];
   legacyRuntimeProfileIds: string[];
+  targetState: {
+    browserProfilesPresent: boolean;
+    runtimeProfilesPresent: boolean;
+  };
   bridgeState: {
     browserProfilesPresent: boolean;
     auracallRuntimeProfilesPresent: boolean;
@@ -66,6 +70,15 @@ export interface ConfigModelDoctorReport {
   ok: boolean;
   activeAuracallRuntimeProfile: string | null;
   activeBrowserProfile: string | null;
+  targetState: {
+    browserProfilesPresent: boolean;
+    runtimeProfilesPresent: boolean;
+  };
+  precedence: {
+    browserProfiles: 'target' | 'bridge';
+    runtimeProfiles: 'target' | 'bridge';
+    runtimeProfileBrowserProfileReference: 'target' | 'bridge';
+  };
   issueCount: number;
   issues: ConfigModelDoctorIssue[];
 }
@@ -288,6 +301,8 @@ export function inspectConfigModel(
   const activeRuntimeProfile = getPreferredRuntimeProfile(config, {
     explicitProfileName: activeRuntimeProfileId,
   });
+  const targetBrowserProfiles = getTargetBrowserProfiles(config);
+  const targetRuntimeProfiles = getTargetRuntimeProfiles(config);
   const browserProfileIds = Object.keys(getBrowserProfiles(config)).sort();
   const runtimeProfiles = Object.entries(getCurrentRuntimeProfiles(config))
     .sort(([left], [right]) => left.localeCompare(right))
@@ -304,6 +319,10 @@ export function inspectConfigModel(
     browserProfileIds,
     runtimeProfiles,
     legacyRuntimeProfileIds,
+    targetState: {
+      browserProfilesPresent: Object.keys(targetBrowserProfiles).length > 0,
+      runtimeProfilesPresent: Object.keys(targetRuntimeProfiles).length > 0,
+    },
     bridgeState: {
       browserProfilesPresent: browserProfileIds.length > 0,
       auracallRuntimeProfilesPresent: runtimeProfiles.length > 0,
@@ -323,6 +342,7 @@ export function analyzeConfigModelBridgeHealth(
   config: OracleConfig | MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): ConfigModelDoctorReport {
+  const inspection = inspectConfigModel(config, options);
   const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(config, {
     explicitProfileName: options.explicitProfileName ?? null,
   });
@@ -458,6 +478,13 @@ export function analyzeConfigModelBridgeHealth(
     ok: !issues.some((issue) => issue.severity === 'warning'),
     activeAuracallRuntimeProfile,
     activeBrowserProfile,
+    targetState: inspection.targetState,
+    precedence: {
+      browserProfiles: inspection.targetState.browserProfilesPresent ? 'target' : 'bridge',
+      runtimeProfiles: inspection.targetState.runtimeProfilesPresent ? 'target' : 'bridge',
+      runtimeProfileBrowserProfileReference:
+        inspection.targetState.runtimeProfilesPresent ? 'target' : 'bridge',
+    },
     issueCount: issues.length,
     issues,
   };

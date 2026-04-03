@@ -4809,3 +4809,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is phase-1 dual-read only
   - scaffolding/migration/wizard still emit bridge keys
+
+## 2026-04-02 20:31 CDT
+
+- Focus:
+  - make operator/config inspection surfaces expose target-key presence and
+    precedence explicitly now that dual-read is live
+- What changed:
+  - extended shared doctor/inspection data in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    with:
+    - target-key presence
+    - read precedence summaries
+  - updated
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so:
+    - `config show` reports target-key presence alongside bridge-key presence
+    - `config doctor` reports whether target keys are present and which side
+      currently wins for browser-profile/runtime-profile reads
+  - expanded
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    and
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    to pin the new JSON and text output
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/configMigrate.test.ts tests/schema/resolver.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is still read/reporting work only
+  - no write-path behavior changed
