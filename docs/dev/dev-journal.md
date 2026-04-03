@@ -5300,3 +5300,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is the first non-CLI consumer of the shared agent-selection resolver
   - still no agent execution behavior
+
+## 2026-04-03 08:52 CDT
+
+- Focus:
+  - checkpoint the roadmap state before the first execution-adjacent
+    agent-selection seam
+- What changed:
+  - updated:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    to record that reserved `agents` / `teams` are now:
+    - parsed
+    - projected
+    - inspected
+    - validated
+    and that one shared read-only:
+    - `agent -> runtimeProfile -> browserProfile`
+    resolver now exists
+- Verification:
+  - docs/planning only
+- Notes:
+  - next recommended slice is the first execution-adjacent agent-selection
+    plumbing without behavior changes

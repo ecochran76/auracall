@@ -80,6 +80,12 @@ What is already true:
   bridge toward browser-profile-first config
 - reserved top-level `agents` and `teams` blocks now exist in the schema as
   inert placeholders for the future refactor
+- reserved `agents` / `teams` are now also:
+  - projected
+  - inspected
+  - validated for missing references
+- one shared read-only resolver now exists for:
+  - `agent -> runtimeProfile -> browserProfile`
 - live WSL smokes are green for `default` and `wsl-chrome-2`
 
 What is still transitional:

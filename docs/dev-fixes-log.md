@@ -6193,3 +6193,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - after extracting a shared resolver for a future layer, put it into one real
     read-only surface immediately so the contract is exercised before behavior
     semantics arrive
+
+## 2026-04-03 - checkpoint the track once reserved future layers are parsed, projected, inspected, and validated
+
+- Symptom:
+  - after several good agent/team-ready seams landed, the roadmap still risked
+    treating them as disconnected config-polish work instead of a completed
+    pre-execution checkpoint
+- Fix:
+  - updated planning docs to record the checkpoint explicitly:
+    - reserved future layers are now parsed, projected, inspected, and
+      validated
+    - one shared read-only agent-selection resolver exists
+- Durable lesson:
+  - once a future layer has enough parsing, projection, inspection, validation,
+    and one shared resolver, checkpoint it explicitly before starting the first
+    execution-adjacent seam

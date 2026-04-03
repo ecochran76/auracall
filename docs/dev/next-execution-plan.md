@@ -86,6 +86,10 @@ Acceptance
   - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
   - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
 - no new browser/account-bearing state introduced at the agent layer
+- one shared read-only resolver exists for:
+  - `agent -> runtimeProfile -> browserProfile`
+- reserved agent/team config is visible and validated in inspection/doctor
+  surfaces before any execution semantics land
 
 ### 2) Non-breaking schema/runtime seam
 
@@ -99,6 +103,7 @@ Deliverables
   consume:
   - active runtime profile
   - referenced browser profile
+  - selected agent resolution
   without reopening bridge-key logic at call sites
 
 Acceptance
@@ -159,3 +164,5 @@ Acceptance
    `agents` / `teams`.
 3. Start one small seam that prepares future `agent -> runtimeProfile`
    composition without adding agent execution behavior.
+4. Thread one optional read-only agent selection into a real execution-adjacent
+   resolution path without changing runtime behavior.

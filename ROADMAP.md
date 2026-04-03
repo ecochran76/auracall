@@ -68,6 +68,14 @@ Current note:
   layering that composes on top of:
   - browser profiles
   - AuraCall runtime profiles
+- current checkpoint:
+  - reserved `agents` / `teams` are now:
+    - parsed
+    - projected
+    - inspected
+    - validated for missing references
+  - one shared read-only resolver now exists for:
+    - `agent -> runtimeProfile -> browserProfile`
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
