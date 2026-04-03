@@ -60,6 +60,10 @@ profile, the resolved browser target, whether `defaultRuntimeProfile` or the
 compatibility selector `auracallProfile` is present, and whether the current
 bridge keys are present in the loaded config.
 
+`config show` now also includes a read-only resolved-agent view so future
+agent-aware tooling can inspect `agent -> runtimeProfile -> browserProfile`
+resolution without rebuilding that chain from raw arrays.
+
 The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
 - `browserProfiles[]`

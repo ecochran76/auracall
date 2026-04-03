@@ -6180,3 +6180,16 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - once a future-layer seam is visible in inspection/reporting, extract one
     shared resolver for non-CLI consumers before any execution semantics land
+
+## 2026-04-03 - once a shared future-layer resolver exists, use it in one real read-only consumer immediately
+
+- Symptom:
+  - after `resolveAgentSelection(...)` existed, it was still only a model-layer
+    utility without any real consumer demonstrating its contract
+- Fix:
+  - wired `config show` to expose `resolvedAgents[]` using the shared resolver
+    directly
+- Durable lesson:
+  - after extracting a shared resolver for a future layer, put it into one real
+    read-only surface immediately so the contract is exercised before behavior
+    semantics arrive

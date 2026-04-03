@@ -4,6 +4,7 @@ import {
   inspectConfigModel,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
+  resolveAgentSelection,
   getRuntimeProfileBrowserProfileId,
   type ConfigModelBridgeKeys,
   type ConfigModelInspection,
@@ -37,6 +38,13 @@ export interface ConfigShowReport {
     teams: string[];
     legacyRuntimeProfiles: string[];
   };
+  resolvedAgents: Array<{
+    agentId: string | null;
+    runtimeProfileId: string | null;
+    browserProfileId: string | null;
+    defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+    exists: boolean;
+  }>;
   bridgeKeys: ConfigModelBridgeKeys;
   targetKeys: {
     browserProfiles: 'browserProfiles';
@@ -157,6 +165,7 @@ export function buildConfigShowReport(input: {
       teams: inspection.teamIds,
       legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
+    resolvedAgents: inspection.agentIds.map((agentId) => resolveAgentSelection(input.rawConfig, agentId)),
     bridgeKeys: inspection.bridgeKeys,
     targetKeys: {
       browserProfiles: 'browserProfiles',
@@ -263,6 +272,16 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `  runtime -> browser profile -> ${report.bridgeKeys.runtimeProfileBrowserProfile}`,
     `  legacy runtime profiles present: ${report.bridgeState.legacyRuntimeProfilesPresent ? 'yes' : 'no'}`,
   ];
+  if (report.resolvedAgents.length === 0) {
+    lines.push('Resolved agents: (none)');
+  } else {
+    lines.push('Resolved agents:');
+    for (const agent of report.resolvedAgents) {
+      lines.push(
+        `  - ${agent.agentId ?? '(none)'} -> ${agent.exists ? 'resolved' : 'missing'} -> runtime profile ${agent.runtimeProfileId ?? '(none)'} -> browser profile ${agent.browserProfileId ?? '(none)'} -> default service ${agent.defaultService ?? '(none)'}`,
+      );
+    }
+  }
   return lines.join('\n');
 }
 

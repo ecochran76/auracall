@@ -60,6 +60,7 @@ describe('config show helpers', () => {
         teams: [],
         legacyRuntimeProfiles: [],
       },
+      resolvedAgents: [],
       bridgeKeys: {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
@@ -116,6 +117,7 @@ describe('config show helpers', () => {
         teams: [],
         legacyRuntimeProfiles: [],
       },
+      resolvedAgents: [],
       bridgeKeys: {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
@@ -151,6 +153,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
     expect(text).toContain('Available agents: (none)');
     expect(text).toContain('Available teams: (none)');
+    expect(text).toContain('Resolved agents: (none)');
     expect(text).toContain('browser profiles -> browserProfiles (missing)');
     expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
@@ -183,6 +186,54 @@ describe('config show helpers', () => {
     expect(formatRuntimeProfileBridgeSummary(summary)).toBe(
       'AuraCall runtime profile "work" -> browser profile "wsl-chrome-2" -> default service grok',
     );
+  });
+
+  it('surfaces resolved agents directly in config show output', () => {
+    const report = buildConfigShowReport({
+      rawConfig: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+          analyst: { runtimeProfile: 'work' },
+        },
+      },
+      resolvedConfig: {
+        auracallProfile: 'default',
+        browser: { target: 'chatgpt' },
+      } as never,
+      configPath: '/tmp/config.json',
+      loaded: true,
+    });
+
+    expect(report.resolvedAgents).toEqual([
+      {
+        agentId: 'analyst',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        defaultService: 'grok',
+        exists: true,
+      },
+      {
+        agentId: 'researcher',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        defaultService: 'chatgpt',
+        exists: true,
+      },
+    ]);
+
+    const text = formatConfigShowReport(report);
+    expect(text).toContain('Resolved agents:');
+    expect(text).toContain('- analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
+    expect(text).toContain('- researcher -> resolved -> runtime profile default -> browser profile default -> default service chatgpt');
   });
 
   it('builds and formats a runtime-profile inventory report', () => {

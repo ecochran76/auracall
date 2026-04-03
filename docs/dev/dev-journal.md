@@ -5278,3 +5278,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this remains read-only and behaviorless
   - it is intended as the future seam for `agent -> runtimeProfile ->
     browserProfile` composition outside the CLI/report layer
+
+## 2026-04-03 08:44 CDT
+
+- Focus:
+  - use the shared agent-selection resolver in one real read-only consumer
+- What changed:
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `config show` now exposes `resolvedAgents[]` built from:
+    - `resolveAgentSelection(...)`
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - empty resolved-agent reporting
+    - non-empty resolved-agent reporting
+    - formatted text output for resolved agents
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to describe the new read-only `config show` resolved-agent view
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is the first non-CLI consumer of the shared agent-selection resolver
+  - still no agent execution behavior
