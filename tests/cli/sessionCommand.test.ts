@@ -85,7 +85,7 @@ describe('handleSessionCommand', () => {
     expect(logSpy).toHaveBeenCalledWith(
       JSON.stringify(
         {
-          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {}, reattachSummary: null }],
+          entries: [{ id: 'sess-1', createdAt: '2025-11-20T00:00:00.000Z', status: 'completed', model: 'gpt-5.1', options: {}, selectedAgentId: null, reattachSummary: null }],
           truncated: false,
           total: 2,
         },
@@ -117,7 +117,7 @@ describe('handleSessionCommand', () => {
       id: 'abc',
       createdAt: '2025-11-20T00:00:00.000Z',
       status: 'error',
-      options: {},
+      options: { selectedAgentId: 'analyst' },
       browser: {
         runtime: {
           reattachDiagnostics: {
@@ -147,7 +147,7 @@ describe('handleSessionCommand', () => {
           id: 'abc',
           createdAt: '2025-11-20T00:00:00.000Z',
           status: 'error',
-          options: {},
+          options: { selectedAgentId: 'analyst' },
           browser: {
             runtime: {
               reattachDiagnostics: {
@@ -157,6 +157,7 @@ describe('handleSessionCommand', () => {
               },
             },
           },
+          selectedAgentId: 'analyst',
           reattachSummary: {
             capturedAt: '2026-04-02T03:00:00.000Z',
             failureKind: 'wrong-browser-profile',
@@ -181,7 +182,7 @@ describe('handleSessionCommand', () => {
           id: 'sess-reattach',
           createdAt: '2025-11-20T00:00:00.000Z',
           status: 'error',
-          options: {},
+          options: { selectedAgentId: 'analyst' },
           browser: {
             runtime: {
               reattachDiagnostics: {
@@ -237,7 +238,7 @@ describe('handleSessionCommand', () => {
               id: 'sess-reattach',
               createdAt: '2025-11-20T00:00:00.000Z',
               status: 'error',
-              options: {},
+              options: { selectedAgentId: 'analyst' },
               browser: {
                 runtime: {
                   reattachDiagnostics: {
@@ -267,6 +268,7 @@ describe('handleSessionCommand', () => {
                   },
                 },
               },
+              selectedAgentId: 'analyst',
               reattachSummary: {
                 capturedAt: '2026-04-02T03:00:00.000Z',
                 failureKind: 'wrong-browser-profile',

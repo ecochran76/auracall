@@ -72,6 +72,10 @@ Stored session metadata now also preserves that selected-agent provenance as
 `options.selectedAgentId`, so detached runs and postmortems can distinguish an
 agent-selected run from one started directly with `--profile`.
 
+`auracall status`, `auracall session <id>`, and the corresponding `--json`
+surfaces now expose that stored selected-agent provenance directly, so you do
+not need to open raw session metadata just to confirm how a run was selected.
+
 The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
 - `browserProfiles[]`

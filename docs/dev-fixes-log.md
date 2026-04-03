@@ -6264,3 +6264,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     selection provenance in session metadata immediately
   - flattened resolved state is not enough for later troubleshooting,
     detached-session reasoning, or future higher-layer composition
+
+## 2026-04-03 - once session metadata preserves new provenance, session/status surfaces should expose it directly
+
+- Symptom:
+  - after `selectedAgentId` was persisted in session metadata, operators still
+    had to inspect raw metadata files to confirm that a run came from
+    `--agent`
+- Fix:
+  - surfaced normalized `selectedAgentId` in session/status JSON
+  - surfaced human-readable selected-agent lines in:
+    - `auracall status`
+    - `auracall session <id>`
+- Durable lesson:
+  - when a provenance field is important enough to persist, it is usually
+    important enough to surface in the main status and postmortem commands
+  - do not force routine troubleshooting through raw metadata files when a
+    stable CLI/report contract can expose the same fact directly

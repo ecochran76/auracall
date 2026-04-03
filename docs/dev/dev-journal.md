@@ -5410,3 +5410,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this still does not add agent execution behavior
   - it closes the provenance gap between runtime selection and stored session
     metadata
+
+## 2026-04-03 09:12 CDT
+
+- Focus:
+  - surface stored selected-agent provenance in session/status output
+- What changed:
+  - updated [src/cli/sessionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionCommand.ts)
+    so session/status JSON now includes:
+    - `selectedAgentId`
+    as a normalized top-level field beside the raw stored options
+  - updated [src/cli/sessionDisplay.ts](/home/ecochran76/workspace.local/oracle/src/cli/sessionDisplay.ts)
+    so human-readable:
+    - `auracall status`
+    - `auracall session <id>`
+    now print selected-agent provenance when present
+  - expanded:
+    - [tests/cli/sessionCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionCommand.test.ts)
+    - [tests/cli/sessionDisplay.coverage.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionDisplay.coverage.test.ts)
+    to pin both JSON and human-readable provenance output
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document the new session/status visibility
+- Verification:
+  - `pnpm vitest run tests/cli/sessionCommand.test.ts tests/cli/sessionDisplay.coverage.test.ts tests/sessionManager.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this remains provenance/reporting only
+  - it does not change session replay or agent execution semantics

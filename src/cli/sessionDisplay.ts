@@ -55,6 +55,9 @@ export async function showStatus({
   console.log(formatSessionTableHeader(richTty));
   for (const entry of filteredEntries) {
     console.log(formatSessionTableRow(entry, { rich: richTty }));
+    if (typeof entry.options?.selectedAgentId === 'string' && entry.options.selectedAgentId.trim().length > 0) {
+      console.log(dim(`  agent: ${entry.options.selectedAgentId.trim()}`));
+    }
     const reattachSummary = formatReattachDiagnostics(entry.browser?.runtime?.reattachDiagnostics);
     if (reattachSummary) {
       console.log(dim(`  reattach: ${reattachSummary}`));
@@ -221,6 +224,9 @@ export async function attachSession(sessionId: string, options?: AttachSessionOp
     }
     console.log(`Created: ${metadata.createdAt}`);
     console.log(`Status: ${metadata.status}`);
+    if (typeof metadata.options?.selectedAgentId === 'string' && metadata.options.selectedAgentId.trim().length > 0) {
+      console.log(`Selected agent: ${metadata.options.selectedAgentId.trim()}`);
+    }
     if (metadata.models && metadata.models.length > 0) {
       console.log('Models:');
       for (const run of metadata.models) {
