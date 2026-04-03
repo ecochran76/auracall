@@ -192,6 +192,20 @@ Current progress:
 - live proof now exists for synthetic-on-real `transient-error` recovery on:
   - root conversation list refresh (`reload-page` + `reopen-list`)
   - conversation context read (`reload-page` + `reopen-conversation`)
+- live proof now also exists for bounded mutation/post-condition hardening on
+  the managed WSL Chrome path:
+  - root rename readiness + persistence:
+    - `default`
+    - `wsl-chrome-2`
+  - root delete confirmation:
+    - `wsl-chrome-2`
+  - project source add/remove persistence:
+    - `wsl-chrome-2`
+- mutation post-condition semantics now have canonicalized seams for:
+  - root rename editor readiness (`title-editor` only)
+  - root rename persistence (`matchesChatgptConversationTitleProbe(...)`)
+  - root delete confirmation (`matchesChatgptDeleteConfirmationProbe(...)`)
+  - project-source persisted presence/absence after sources-tab reload
 
 ## Recommended implementation order
 
@@ -201,17 +215,27 @@ Current progress:
 4. Send/mutation bad-state handling
 5. Broader live smoke for hostile-state scenarios
 
-Current next slice:
-6. Expand the persisted post-mortem payload to capture the recovery action
-   itself (`reload`, `dismiss`, `reopen`, outcome), not only the pre/post DOM
-   state, so deterministic clustering can distinguish "same symptom, different
-   recovery path"
+Current next slices:
+6. Keep the persisted post-mortem payload work as maintenance, not the active
+   mutation slice
    Status:
    - now includes current action/outcome for the implemented ChatGPT recovery
      paths (`reload-page`, `dismiss-overlay`, `close-dialog`)
    - now also includes one bounded authoritative re-anchor step for read paths:
      - `reopen-list` for list refresh
      - `reopen-conversation` for context/files/artifact reads
+
+7. Audit and tighten the remaining mixed persistence/recovery surfaces before
+   broadening live hostile-state work
+   Ranked candidates after the latest rename/delete/project-source work:
+   - project settings / instructions persistence and reopen-to-verify flow
+   - read-path recovery consistency for context/artifact reads
+   - broader operator-visible recovery-action diagnostics only if a concrete
+     gap appears during those slices
+   Recommendation:
+   - take project settings / instructions persistence next, because it is still
+     mutation-oriented, bounded, and narrower than reopening the broader
+     context/artifact recovery paths
 
 ## Acceptance bar for hardening
 

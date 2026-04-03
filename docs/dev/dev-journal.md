@@ -5921,3 +5921,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - project source add
     - project source remove
     - instructions set/get
+
+## 2026-04-03 15:10 CDT
+
+- Focus:
+  - pause implementation and audit the remaining ChatGPT hardening hotspots
+    against the actual adapter state
+- What changed:
+  - reviewed the current ChatGPT hardening plan and the remaining high-signal
+    recovery/persistence call sites in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+  - confirmed that the recently landed canonical seams now cover:
+    - root rename editor readiness
+    - root rename persistence
+    - root delete confirmation
+    - project-source persisted presence/absence after sources-tab reload
+  - updated
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    with the current live-proof status and the ranked next candidates
+- Audit result:
+  - strongest remaining bounded mutation candidate:
+    - project settings / instructions persistence and reopen-to-verify flow
+  - broader but riskier follow-on candidate:
+    - context/artifact read recovery consistency
+  - lower-priority maintenance:
+    - richer operator-visible recovery-action diagnostics only if a concrete gap
+      appears while touching the above
+- Verification:
+  - docs/audit only
+- Notes:
+  - recommendation stays methodical:
+    take project settings / instructions persistence next instead of jumping
+    straight back into the broader read/artifact recovery surfaces
