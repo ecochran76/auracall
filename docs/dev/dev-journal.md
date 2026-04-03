@@ -5832,3 +5832,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this proves the stricter `title-editor` gate and canonical title-persistence
     matcher work on the current live ChatGPT root rename surface, not just in
     unit coverage
+
+## 2026-04-03 13:34 CDT
+
+- Focus:
+  - double-check the same ChatGPT root rename hardening on the second managed
+    browser profile/account to confirm multi-window and multi-account handling
+    stayed green
+- What changed:
+  - ran the same narrow root rename smoke on the explicit
+    `wsl-chrome-2` AuraCall runtime profile:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase root-base --state-file docs/dev/tmp/chatgpt-rename-smoke-state-wsl-chrome-2.json`
+  - validated the second managed browser profile/account path against a real
+    disposable root conversation:
+    - created root conversation `69d007dc-7fe0-8332-938f-de36ff253aca`
+    - renamed it to `AC GPT C mxhbbw`
+    - acceptance phase passed cleanly on `wsl-chrome-2`
+- Verification:
+  - runner result: `PASS (root-base)`
+  - persisted state file:
+    [chatgpt-rename-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-rename-smoke-state-wsl-chrome-2.json)
+- Notes:
+  - this is the explicit multi-window/multi-account proof for the rename
+    hardening slice:
+    - `default` root rename still green
+    - `wsl-chrome-2` root rename also green
