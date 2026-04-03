@@ -4623,3 +4623,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     broader browser-service extraction
   - provider execution behavior is unchanged; only the shared launch-prep path
     is less duplicated
+
+## 2026-04-02 19:24 CDT
+
+- Focus:
+  - extract the remaining top-level browser runtime entry seam for:
+    - config resolution
+    - logger normalization
+    - fixed DevTools port assignment when strategy is not `auto`
+- What changed:
+  - added
+    [resolveBrowserRuntimeEntryContext(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    plus a test export wrapper in
+    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+  - updated
+    [runBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    to consume that helper instead of open-coding the same entry logic inline
+  - expanded
+    [browserModeExports.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/browserModeExports.test.ts)
+    with deterministic fixed-port injection coverage
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps the real runtime boundary explicit without broadening the seam
+    into provider execution or browser-service package code

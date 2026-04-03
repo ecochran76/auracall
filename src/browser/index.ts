@@ -113,6 +113,50 @@ export function resolveManagedBrowserLaunchContextForTest(
   });
 }
 
+async function resolveBrowserRuntimeEntryContext(options: {
+  config?: BrowserRunOptions['config'];
+  log?: BrowserLogger;
+  pickDebugPort?: typeof pickAvailableDebugPort;
+}): Promise<{
+  config: ReturnType<typeof resolveBrowserConfig>;
+  target: 'chatgpt' | 'grok' | 'gemini';
+  logger: BrowserLogger;
+}> {
+  let config = resolveBrowserConfig(options.config, {
+    auracallProfileName: options.config?.auracallProfileName ?? null,
+  });
+  const logger: BrowserLogger = options.log ?? ((_message: string) => {});
+  if (logger.verbose === undefined) {
+    logger.verbose = Boolean(config.debug);
+  }
+  if (logger.sessionLog === undefined && options.log?.sessionLog) {
+    logger.sessionLog = options.log.sessionLog;
+  }
+  const target = config.target ?? 'chatgpt';
+  if (!config.remoteChrome && !config.debugPort && config.debugPortStrategy !== 'auto') {
+    const range = config.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
+    const pickPort = options.pickDebugPort ?? pickAvailableDebugPort;
+    const availablePort = await pickPort(DEFAULT_DEBUG_PORT, logger, range);
+    if (availablePort !== DEFAULT_DEBUG_PORT) {
+      logger(`DevTools port ${DEFAULT_DEBUG_PORT} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
+    }
+    config = { ...config, debugPort: availablePort };
+  }
+  return {
+    config,
+    target,
+    logger,
+  };
+}
+
+export async function resolveBrowserRuntimeEntryContextForTest(options: {
+  config?: BrowserRunOptions['config'];
+  log?: BrowserLogger;
+  pickDebugPort?: typeof pickAvailableDebugPort;
+}) {
+  return resolveBrowserRuntimeEntryContext(options);
+}
+
 async function prepareManagedBrowserProfileLaunch(options: {
   config: ReturnType<typeof resolveBrowserConfig>;
   target: 'chatgpt' | 'grok' | 'gemini';
@@ -608,19 +652,8 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
 
   const attachments: BrowserAttachment[] = options.attachments ?? [];
   const fallbackSubmission = options.fallbackSubmission;
-
-  let config = resolveBrowserConfig(options.config, {
-    auracallProfileName: options.config?.auracallProfileName ?? null,
-  });
-  const logger: BrowserLogger = options.log ?? ((_message: string) => {});
-  if (logger.verbose === undefined) {
-    logger.verbose = Boolean(config.debug);
-  }
-  if (logger.sessionLog === undefined && options.log?.sessionLog) {
-    logger.sessionLog = options.log.sessionLog;
-  }
+  const { config, target, logger } = await resolveBrowserRuntimeEntryContext(options);
   const runtimeHintCb = options.runtimeHintCb;
-  const target = config.target ?? 'chatgpt';
   if (config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') {
     logger(
       `[browser-mode] config: ${JSON.stringify({
@@ -628,15 +661,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         promptLength: promptText.length,
       })}`,
     );
-  }
-
-  if (!config.remoteChrome && !config.debugPort && config.debugPortStrategy !== 'auto') {
-    const range = config.debugPortRange ?? DEFAULT_DEBUG_PORT_RANGE;
-    const availablePort = await pickAvailableDebugPort(DEFAULT_DEBUG_PORT, logger, range);
-    if (availablePort !== DEFAULT_DEBUG_PORT) {
-      logger(`DevTools port ${DEFAULT_DEBUG_PORT} busy; using ${availablePort} to avoid attaching to stray Chrome.`);
-    }
-    config = { ...config, debugPort: availablePort };
   }
 
   // Remote Chrome mode - connect to existing browser

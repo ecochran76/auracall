@@ -3,6 +3,7 @@ import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
 import {
   formatChatgptBlockingSurfaceErrorForTest,
   logChatgptUnexpectedStateForTest,
+  resolveBrowserRuntimeEntryContextForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
   resolveManagedBrowserLaunchContextForTest,
@@ -100,6 +101,24 @@ describe('browserMode exports', () => {
     expect(context.userDataDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
     expect(context.defaultManagedProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
     expect(context.chromeProfile).toBe('Profile 1');
+  });
+
+  test('resolves browser runtime entry config and injects a fixed debug port when needed', async () => {
+    const logger = Object.assign(() => {}, { verbose: undefined as boolean | undefined });
+    const pickDebugPort = async () => 45555;
+    const result = await resolveBrowserRuntimeEntryContextForTest({
+      config: {
+        target: 'grok',
+        debug: true,
+        debugPortStrategy: 'fixed',
+      } as any,
+      log: logger,
+      pickDebugPort: pickDebugPort as any,
+    });
+
+    expect(result.target).toBe('grok');
+    expect(result.config.debugPort).toBe(45555);
+    expect(result.logger.verbose).toBe(true);
   });
 
   test('retry affordance send failures stay explicit about no auto-click policy', () => {

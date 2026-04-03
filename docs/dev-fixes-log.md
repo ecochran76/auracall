@@ -5739,3 +5739,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - that layer should still get one local seam before attempting larger package
     extraction, otherwise provider entry paths drift again even while lower
     layers are clean
+
+## 2026-04-02 - browser runtime entry should also centralize pre-launch config normalization
+
+- Symptom:
+  - even after launch-prep was shared, `runBrowserMode(...)` still mixed three
+    separate responsibilities inline before provider branching:
+    - resolve browser config
+    - normalize logger defaults
+    - allocate a fixed DevTools port when the strategy is not `auto`
+- Fix:
+  - extracted `resolveBrowserRuntimeEntryContext(...)` in
+    `src/browser/index.ts`
+  - the top-level browser runtime path now uses one explicit entry helper for
+    pre-launch config preparation
+- Durable lesson:
+  - the browser runtime entry boundary has at least two useful local seams:
+    - pre-launch config preparation
+    - managed browser profile launch preparation
+  - separating those explicitly is cleaner than one large refactor and gives a
+    better base for future provider/runtime cleanup
