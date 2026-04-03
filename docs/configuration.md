@@ -64,6 +64,10 @@ bridge keys are present in the loaded config.
 agent-aware tooling can inspect `agent -> runtimeProfile -> browserProfile`
 resolution without rebuilding that chain from raw arrays.
 
+When `--agent <name>` is passed, `config show` and `config doctor` also surface
+the selected-agent resolution chain directly, including the selected agent,
+resolved AuraCall runtime profile, and resolved browser profile.
+
 The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
 - `browserProfiles[]`

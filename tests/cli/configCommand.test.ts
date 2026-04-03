@@ -48,6 +48,7 @@ describe('config show helpers', () => {
         compatibilityPresent: false,
       },
       active: {
+        agent: null,
         auracallRuntimeProfile: 'work',
         browserProfile: 'wsl-chrome-2',
         defaultService: 'grok',
@@ -105,6 +106,7 @@ describe('config show helpers', () => {
         compatibilityPresent: false,
       },
       active: {
+        agent: null,
         auracallRuntimeProfile: 'default',
         browserProfile: 'default',
         defaultService: 'chatgpt',
@@ -148,6 +150,7 @@ describe('config show helpers', () => {
     });
 
     expect(text).toContain('AuraCall runtime profile: default');
+    expect(text).toContain('Selected agent: (none)');
     expect(text).toContain('Browser profile: default');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
@@ -211,8 +214,16 @@ describe('config show helpers', () => {
       } as never,
       configPath: '/tmp/config.json',
       loaded: true,
+      explicitAgentId: 'analyst',
     });
 
+    expect(report.active.agent).toEqual({
+      agentId: 'analyst',
+      runtimeProfileId: 'work',
+      browserProfileId: 'consulting',
+      defaultService: 'grok',
+      exists: true,
+    });
     expect(report.resolvedAgents).toEqual([
       {
         agentId: 'analyst',
@@ -231,6 +242,7 @@ describe('config show helpers', () => {
     ]);
 
     const text = formatConfigShowReport(report);
+    expect(text).toContain('Selected agent: analyst -> resolved');
     expect(text).toContain('Resolved agents:');
     expect(text).toContain('- analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
     expect(text).toContain('- researcher -> resolved -> runtime profile default -> browser profile default -> default service chatgpt');
@@ -468,6 +480,7 @@ describe('config show helpers', () => {
       targetPresent: false,
       compatibilityPresent: true,
     });
+    expect(report.selectedAgent).toBeNull();
     expect(report.targetState).toEqual({
       browserProfilesPresent: false,
       runtimeProfilesPresent: false,
@@ -505,6 +518,7 @@ describe('config show helpers', () => {
 
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: warnings');
+    expect(text).toContain('Selected agent: (none)');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (present)');
     expect(text).toContain('Active AuraCall runtime profile: default');
@@ -537,10 +551,17 @@ describe('config show helpers', () => {
           ops: { agents: ['researcher', 'missing-agent'] },
         },
       },
-      { explicitProfileName: 'default' },
+      { explicitProfileName: 'default', explicitAgentId: 'researcher' },
     );
 
     expect(report.ok).toBe(false);
+    expect(report.selectedAgent).toEqual({
+      agentId: 'researcher',
+      runtimeProfileId: null,
+      browserProfileId: null,
+      defaultService: null,
+      exists: true,
+    });
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -561,6 +582,7 @@ describe('config show helpers', () => {
     );
 
     const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Selected agent: researcher -> resolved');
     expect(text).toContain('[warning] Agent "researcher" does not explicitly reference an AuraCall runtime profile.');
     expect(text).toContain('[warning] Agent "analyst" references missing AuraCall runtime profile "missing-runtime".');
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');

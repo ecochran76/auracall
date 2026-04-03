@@ -5358,3 +5358,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this is still not agent execution
   - it is the first execution-adjacent consumer of the shared
     `agent -> runtimeProfile -> browserProfile` seam
+
+## 2026-04-03 09:14 CDT
+
+- Focus:
+  - make the new `--agent` selection seam visible in the main troubleshooting
+    reports
+- What changed:
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so:
+    - `config show` now surfaces the currently selected agent resolution
+    - `config doctor` now surfaces the currently selected agent resolution
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to pass the optional CLI `--agent` selection through to those report
+    builders
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - selected-agent text output
+    - selected-agent JSON contract fields
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to describe the new troubleshooting visibility
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this remains selection/reporting only
+  - it does not add separate agent runtime behavior

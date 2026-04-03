@@ -6229,3 +6229,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a higher layer resolves onto an existing lower layer, preserve the
     lower layer's explicit override precedence instead of letting the new layer
     silently outrank it
+
+## 2026-04-03 - once a new selection seam exists, the main troubleshooting reports should expose it directly
+
+- Symptom:
+  - after `--agent` could resolve onto an AuraCall runtime profile, the main
+    inspection surfaces still only showed the final runtime/browser result
+    without making the selected agent visible
+- Fix:
+  - updated `config show` and `config doctor` to report the selected-agent
+    resolution chain directly
+  - kept the contract read-only:
+    - selected agent
+    - resolved runtime profile
+    - resolved browser profile
+- Durable lesson:
+  - when a new selection seam is added above an existing runtime layer, make
+    the selection chain visible in the main inspection/report path immediately
+    so troubleshooting does not require reconstructing hidden inputs by hand

@@ -26,6 +26,13 @@ export interface ConfigShowReport {
   loaded: boolean;
   selectorKeys: SelectorKeysReport;
   active: {
+    agent: {
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    } | null;
     auracallRuntimeProfile: string | null;
     browserProfile: string | null;
     defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
@@ -108,6 +115,13 @@ export interface ProfileListReport {
 export type ConfigDoctorIssue = ConfigModelDoctorIssue;
 export type ConfigDoctorReport = ConfigModelDoctorReport & {
   selectorKeys: SelectorKeysReport;
+  selectedAgent: {
+    agentId: string | null;
+    runtimeProfileId: string | null;
+    browserProfileId: string | null;
+    defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+    exists: boolean;
+  } | null;
 };
 
 export function resolveConfigDoctorExitCode(
@@ -139,6 +153,7 @@ export function buildConfigShowReport(input: {
   resolvedConfig: ResolvedUserConfig;
   configPath: string;
   loaded: boolean;
+  explicitAgentId?: string | null;
 }): ConfigShowReport {
   const inspection = inspectConfigModel(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
@@ -147,12 +162,17 @@ export function buildConfigShowReport(input: {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
   });
   const activeRuntimeProfileRecord = asRecord(activeRuntimeProfile);
+  const selectedAgent =
+    typeof input.explicitAgentId === 'string' && input.explicitAgentId.trim().length > 0
+      ? resolveAgentSelection(input.rawConfig, input.explicitAgentId)
+      : null;
 
   return {
     configPath: input.configPath,
     loaded: input.loaded,
     selectorKeys: buildSelectorKeysReport(input.rawConfig),
     active: {
+      agent: selectedAgent,
       auracallRuntimeProfile: input.resolvedConfig.auracallProfile ?? null,
       browserProfile: getRuntimeProfileBrowserProfileId(activeRuntimeProfileRecord),
       defaultService: asServiceId(activeRuntimeProfileRecord?.defaultService),
@@ -239,11 +259,15 @@ export function buildProfileListReport(
 
 export function buildConfigDoctorReport(
   rawConfig: MutableRecord,
-  options: { explicitProfileName?: string | null } = {},
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): ConfigDoctorReport {
   return {
     ...analyzeConfigModelBridgeHealth(rawConfig, options),
     selectorKeys: buildSelectorKeysReport(rawConfig),
+    selectedAgent:
+      typeof options.explicitAgentId === 'string' && options.explicitAgentId.trim().length > 0
+        ? resolveAgentSelection(rawConfig, options.explicitAgentId)
+        : null,
   };
 }
 
@@ -253,6 +277,11 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `Loaded: ${report.loaded ? 'yes' : 'no'}`,
     `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
     `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
+    `Selected agent: ${
+      report.active.agent
+        ? `${report.active.agent.agentId ?? '(none)'} -> ${report.active.agent.exists ? 'resolved' : 'missing'}`
+        : '(none)'
+    }`,
     `AuraCall runtime profile: ${report.active.auracallRuntimeProfile ?? '(none)'}`,
     `Browser profile: ${report.active.browserProfile ?? '(none)'}`,
     `Default service: ${report.active.defaultService ?? '(none)'}`,
@@ -334,6 +363,11 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
   const lines = [
     `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
     `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
+    `Selected agent: ${
+      report.selectedAgent
+        ? `${report.selectedAgent.agentId ?? '(none)'} -> ${report.selectedAgent.exists ? 'resolved' : 'missing'}`
+        : '(none)'
+    }`,
     `Active AuraCall runtime profile: ${report.activeAuracallRuntimeProfile ?? '(none)'}`,
     `Active browser profile: ${report.activeBrowserProfile ?? '(none)'}`,
     `Status: ${report.ok ? 'ok' : 'warnings'}`,

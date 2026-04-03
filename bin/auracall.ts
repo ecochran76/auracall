@@ -6935,6 +6935,7 @@ configCommand
     const resolvedConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const report = buildConfigDoctorReport(loaded.config as Record<string, unknown>, {
       explicitProfileName: resolvedConfig.auracallProfile ?? null,
+      explicitAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent : null,
     });
     process.exitCode = resolveConfigDoctorExitCode(report, { strict: Boolean(commandOptions.strict) });
     if (commandOptions.json) {
@@ -6958,6 +6959,7 @@ configCommand
       resolvedConfig,
       configPath: loaded.path,
       loaded: loaded.loaded,
+      explicitAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent : null,
     });
     if (commandOptions.json) {
       console.log(JSON.stringify(report, null, 2));
