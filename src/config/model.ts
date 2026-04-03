@@ -63,6 +63,18 @@ export interface ResolvedRuntimeSelection {
   defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
 }
 
+export interface ResolvedTeamRuntimeMemberSelection extends ResolvedRuntimeSelection {
+  agentId: string | null;
+  exists: boolean;
+}
+
+export interface ResolvedTeamRuntimeSelections {
+  teamId: string | null;
+  agentIds: string[];
+  members: ResolvedTeamRuntimeMemberSelection[];
+  exists: boolean;
+}
+
 export interface ProjectedConfigModel {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
@@ -367,6 +379,38 @@ export function resolveRuntimeSelection(
     browserProfileId,
     browserProfile,
     defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+  };
+}
+
+export function resolveTeamRuntimeSelections(
+  config: OracleConfig | MutableRecord,
+  teamId: string | null | undefined,
+): ResolvedTeamRuntimeSelections {
+  const teamSelection = resolveTeamSelection(config, teamId);
+  return {
+    teamId: teamSelection.teamId,
+    agentIds: teamSelection.agentIds,
+    members: teamSelection.members.map((agentSelection) => {
+      const runtimeSelection = agentSelection.runtimeProfileId
+        ? resolveRuntimeSelection(config, {
+            explicitProfileName: agentSelection.runtimeProfileId,
+            explicitAgentId: agentSelection.agentId,
+          })
+        : {
+            agent: agentSelection,
+            runtimeProfileId: null,
+            runtimeProfile: null,
+            browserProfileId: null,
+            browserProfile: null,
+            defaultService: null,
+          };
+      return {
+        ...runtimeSelection,
+        agentId: agentSelection.agentId,
+        exists: agentSelection.exists,
+      };
+    }),
+    exists: teamSelection.exists,
   };
 }
 

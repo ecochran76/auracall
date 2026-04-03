@@ -21,6 +21,7 @@ import {
   projectConfigModel,
   resolveAgentSelection,
   resolveTeamSelection,
+  resolveTeamRuntimeSelections,
   resolveRuntimeSelection,
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
@@ -276,6 +277,99 @@ describe('config model helpers', () => {
       exists: true,
     });
     expect(resolveTeamSelection(config, 'missing-team')).toEqual({
+      teamId: 'missing-team',
+      agentIds: [],
+      members: [],
+      exists: false,
+    });
+  });
+
+  it('resolves the runtime/browser activation contexts for a team in one shared helper', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/chrome/default' },
+        consulting: { chromePath: '/chrome/consulting' },
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        researcher: { runtimeProfile: 'default' },
+        analyst: { runtimeProfile: 'work' },
+      },
+      teams: {
+        ops: { agents: ['researcher', 'missing-agent', 'analyst'] },
+      },
+    };
+
+    expect(resolveTeamRuntimeSelections(config, 'ops')).toEqual({
+      teamId: 'ops',
+      agentIds: ['researcher', 'missing-agent', 'analyst'],
+      members: [
+        {
+          agentId: 'researcher',
+          exists: true,
+          agent: {
+            agentId: 'researcher',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            defaultService: 'chatgpt',
+            exists: true,
+          },
+          runtimeProfileId: 'default',
+          runtimeProfile: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          browserProfileId: 'default',
+          browserProfile: {
+            chromePath: '/chrome/default',
+          },
+          defaultService: 'chatgpt',
+        },
+        {
+          agentId: 'missing-agent',
+          exists: false,
+          agent: {
+            agentId: 'missing-agent',
+            runtimeProfileId: null,
+            browserProfileId: null,
+            defaultService: null,
+            exists: false,
+          },
+          runtimeProfileId: null,
+          runtimeProfile: null,
+          browserProfileId: null,
+          browserProfile: null,
+          defaultService: null,
+        },
+        {
+          agentId: 'analyst',
+          exists: true,
+          agent: {
+            agentId: 'analyst',
+            runtimeProfileId: 'work',
+            browserProfileId: 'consulting',
+            defaultService: 'grok',
+            exists: true,
+          },
+          runtimeProfileId: 'work',
+          runtimeProfile: {
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+          },
+          browserProfileId: 'consulting',
+          browserProfile: {
+            chromePath: '/chrome/consulting',
+          },
+          defaultService: 'grok',
+        },
+      ],
+      exists: true,
+    });
+    expect(resolveTeamRuntimeSelections(config, 'missing-team')).toEqual({
       teamId: 'missing-team',
       agentIds: [],
       members: [],

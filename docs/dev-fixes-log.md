@@ -6415,3 +6415,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     symmetric contract to the primary config-inspection surface too
   - do not force operators to choose between “active config” and “resolved team
     structure” views when both can share the same model-layer helper
+
+## 2026-04-03 - unresolved team members must not silently inherit the active runtime profile in execution-adjacent helpers
+
+- Symptom:
+  - the first draft of `resolveTeamRuntimeSelections(...)` reused
+    `resolveRuntimeSelection(...)` directly for every team member
+  - for a missing agent, that would have fallen back to the active default
+    runtime profile, which is misleading for future team execution/planning
+- Fix:
+  - `resolveTeamRuntimeSelections(...)` now only resolves a runtime selection
+    when the team member actually resolves to an agent runtime profile
+  - missing or incomplete team members now stay unresolved with `null`
+    runtime/browser/default-service fields
+- Durable lesson:
+  - execution-adjacent helpers should never turn missing membership into a
+    valid-looking default selection unless fallback is an explicit product rule
+  - preserve unresolved state until a higher layer deliberately decides how to
+    handle it

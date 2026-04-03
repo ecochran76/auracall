@@ -5696,3 +5696,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this keeps `config show` symmetric with the earlier `resolvedAgents[]`
     surface
   - the change is still inspection-only; no team execution behavior was added
+
+## 2026-04-03 11:42 CDT
+
+- Focus:
+  - add the first non-reporting team helper so future team execution/planning
+    work can ask which runtime/browser contexts a team would activate
+- What changed:
+  - added `resolveTeamRuntimeSelections(...)` in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - the helper now returns one read-only bundle for:
+    - `teamId`
+    - `agentIds`
+    - per-member resolved runtime selection
+    - `exists`
+  - importantly, unresolved team members now stay unresolved in that helper
+    instead of falling back to the active default runtime profile
+  - added direct coverage in
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is still a pure model-layer seam; no CLI or runtime execution behavior
+    changed in this slice
