@@ -227,15 +227,23 @@ Current next slices:
 
 7. Audit and tighten the remaining mixed persistence/recovery surfaces before
    broadening live hostile-state work
-   Ranked candidates after the latest rename/delete/project-source work:
-   - project settings / instructions persistence and reopen-to-verify flow
-   - read-path recovery consistency for context/artifact reads
-   - broader operator-visible recovery-action diagnostics only if a concrete
-     gap appears during those slices
+   Status after the latest mutation slices:
+   - done enough:
+     - project settings / instructions persistence now shares one authoritative
+       reopen-to-verify settings snapshot contract
+   - next highest-value candidate:
+     - read-path recovery consistency for context/artifact reads
+   - lower-priority maintenance:
+     - broader operator-visible recovery-action diagnostics only if a concrete
+       gap appears while touching the read paths
    Recommendation:
-   - take project settings / instructions persistence next, because it is still
-     mutation-oriented, bounded, and narrower than reopening the broader
-     context/artifact recovery paths
+   - take the read-path recovery consistency slice next, specifically around:
+     - `readChatgptConversationContextWithClient(...)`
+     - artifact materialization paths wrapped by
+       `withChatgptBlockingSurfaceRecovery(...)`
+   Goal:
+   - make the read-side re-anchor/reload/retry contract more uniform before
+     attempting broader hostile-state smoke work
 
 ## Acceptance bar for hardening
 

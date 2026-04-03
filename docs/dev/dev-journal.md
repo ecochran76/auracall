@@ -5997,3 +5997,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - project rename
     - project source add/remove
     - instructions set/get
+
+## 2026-04-03 16:28 CDT
+
+- Focus:
+  - re-audit the remaining ChatGPT hardening line after the latest bounded
+    mutation slices
+- What changed:
+  - reviewed the current hardening plan against the current adapter state in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+  - confirmed the mutation-oriented persistence surfaces are now substantially
+    better covered by canonical seams:
+    - root rename readiness + persistence
+    - root delete confirmation
+    - project-source persisted presence/absence after reload
+    - project settings / instructions persisted snapshot verification
+  - updated
+    [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md)
+    to re-rank the remaining work
+- Audit result:
+  - next highest-value slice is now the broader read-path recovery consistency
+    line, especially:
+    - `readChatgptConversationContextWithClient(...)`
+    - artifact materialization paths under
+      `withChatgptBlockingSurfaceRecovery(...)`
+  - lower-priority follow-on remains:
+    - richer operator-visible recovery-action diagnostics only if a concrete
+      gap appears while touching those read paths
+- Verification:
+  - docs/audit only
+- Notes:
+  - recommendation now shifts from mutation hardening to read-side recovery
+    consistency before any broader hostile-state smoke campaign
