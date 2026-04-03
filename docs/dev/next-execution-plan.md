@@ -101,6 +101,7 @@ Deliverables
 Acceptance
 - policy documented in:
   - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+  - [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
 - phase-1 dual-read may land only through:
   - schema/model/resolver loading
   - read-only diagnostics

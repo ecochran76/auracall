@@ -1,0 +1,225 @@
+# Config Shape Troubleshooting
+
+## Purpose
+
+Give future operators and developers one place to debug bridge-shape,
+target-shape, and mixed-shape Aura-Call configs.
+
+This is a troubleshooting doc, not a migration policy doc. For transition
+policy, see
+[config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md).
+
+## Shape terms
+
+- `bridge-shape`
+  - uses:
+    - `browserFamilies`
+    - `profiles`
+    - `profiles.<name>.browserFamily`
+- `target-shape`
+  - uses:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `runtimeProfiles.<name>.browserProfile`
+- `mixed-shape`
+  - the same config contains both bridge and target keys
+
+## Read precedence
+
+Aura-Call dual-reads both shapes now.
+
+When both are present:
+
+- `browserProfiles` wins over `browserFamilies`
+- `runtimeProfiles` wins over `profiles`
+- `runtimeProfiles.<name>.browserProfile` wins over
+  `profiles.<name>.browserFamily`
+
+Aura-Call does not silently treat bridge and target shapes as equivalent if
+their values differ. `config doctor` surfaces conflicts explicitly.
+
+## Fast inspection commands
+
+Use:
+
+```sh
+auracall config show
+auracall config show --json
+auracall config doctor
+auracall config doctor --json
+auracall profile list
+```
+
+What to look for:
+
+- `config show`
+  - whether target keys are present
+  - whether bridge keys are present
+  - active AuraCall runtime profile
+  - active browser profile
+- `config doctor`
+  - whether target keys are present
+  - which side currently wins precedence
+  - mixed/conflicting definitions
+- `profile list`
+  - inventory of current AuraCall runtime profiles and browser-profile bindings
+
+## How to tell what shape a config is
+
+### Bridge-shape
+
+Typical `config show` / `config doctor` signals:
+
+- target keys: missing
+- bridge keys: present
+- precedence:
+  - browser profiles = `bridge`
+  - runtime profiles = `bridge`
+
+### Target-shape
+
+Typical signals:
+
+- target keys: present
+- bridge keys: missing
+- precedence:
+  - browser profiles = `target`
+  - runtime profiles = `target`
+
+### Mixed-shape
+
+Typical signals:
+
+- target keys: present
+- bridge keys: present
+- `config doctor` issues like:
+  - `mixed-browser-profile-keys`
+  - `mixed-runtime-profile-keys`
+  - `conflicting-browser-profile-definitions`
+  - `conflicting-runtime-profile-definitions`
+  - `mixed-runtime-profile-browser-reference`
+
+## Common doctor findings
+
+### `mixed-browser-profile-keys`
+
+Meaning:
+- both `browserProfiles` and `browserFamilies` exist
+
+Action:
+- check whether they are intentionally duplicated
+- if they differ, treat target keys as authoritative and clean up the bridge
+  side when ready
+
+### `mixed-runtime-profile-keys`
+
+Meaning:
+- both `runtimeProfiles` and `profiles` exist
+
+Action:
+- same rule as above: target runtime-profile keys win
+
+### `conflicting-browser-profile-definitions`
+
+Meaning:
+- the same browser profile id exists in both shapes but with different values
+
+Action:
+- decide which definition is the real one
+- keep target-shape if you are intentionally migrating forward
+- otherwise remove the target copy and stay bridge-shaped
+
+### `conflicting-runtime-profile-definitions`
+
+Meaning:
+- the same AuraCall runtime profile id exists in both shapes but differs
+
+Action:
+- same cleanup rule: choose one authoritative definition
+
+### `mixed-runtime-profile-browser-reference`
+
+Meaning:
+- a single runtime profile contains both:
+  - `browserProfile`
+  - `browserFamily`
+- and they disagree
+
+Action:
+- fix the profile to one intended browser profile id
+- in mixed-shape configs, `browserProfile` is the authoritative read path
+
+### `runtime-profile-missing-browser-profile`
+
+Meaning:
+- the AuraCall runtime profile does not explicitly point at any browser profile
+
+Action:
+- add:
+  - `profiles.<name>.browserFamily`
+  - or `runtimeProfiles.<name>.browserProfile`
+
+### `runtime-profile-browser-profile-missing`
+
+Meaning:
+- the runtime profile points at a browser profile id that does not exist
+
+Action:
+- add the missing browser profile definition or fix the reference typo
+
+### `unused-browser-profile`
+
+Meaning:
+- a browser profile exists but no AuraCall runtime profile references it
+
+Action:
+- either remove it or leave it if it is intentionally staged for later use
+
+## Write commands and what they emit
+
+### Bridge-key default writes
+
+These still emit bridge-shape by default:
+
+- `auracall wizard`
+- `auracall profile scaffold`
+- `auracall config migrate`
+
+### Explicit target-shape writes
+
+Use these when you want the output file itself to switch shapes:
+
+```sh
+auracall config migrate --target-shape --output ~/.auracall/config.target.json
+auracall profile scaffold --target-shape --force
+```
+
+Those emit:
+
+- `browserProfiles`
+- `runtimeProfiles`
+- `runtimeProfiles.<name>.browserProfile`
+
+## Recommended troubleshooting workflow
+
+1. Run `auracall config show`.
+2. Run `auracall config doctor --json`.
+3. Decide whether the file should stay:
+   - bridge-shape
+   - target-shape
+   - or temporarily mixed during cleanup
+4. If you want a target-shaped file, use:
+   - `config migrate --target-shape`
+   - or `profile scaffold --target-shape`
+5. Re-run `config doctor` and confirm:
+   - expected target/bridge presence
+   - expected precedence
+   - no unexpected conflicts
+
+## Current recommendation
+
+For future troubleshooting:
+
+- use target-shape when you want the config file to match the long-term model
+- use bridge-shape if you are debugging legacy or compatibility behavior
+- avoid leaving configs mixed-shape longer than necessary

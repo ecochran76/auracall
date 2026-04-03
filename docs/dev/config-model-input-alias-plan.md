@@ -9,6 +9,10 @@ This document is intentionally policy-first. Aura-Call now accepts these
 target-shape keys for config loading in a bounded dual-read phase, but write
 paths still remain bridge-key-first.
 
+Operational troubleshooting reference:
+
+- [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+
 ## Current state
 
 Today the public bridge keys are:

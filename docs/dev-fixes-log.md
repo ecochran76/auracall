@@ -5922,3 +5922,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - target-shape write support can expand one explicit command at a time
   - default scaffolding should remain stable until the target-shape path has
     proven itself across both migrate and scaffold
+
+## 2026-04-02 - dual-shape config support needs one troubleshooting doc, not scattered caveats
+
+- Symptom:
+  - by this point the repo had:
+    - dual-read config loading
+    - precedence diagnostics
+    - explicit target-shape write modes
+  - but the troubleshooting knowledge was scattered across policy docs, command
+    help, and implementation notes
+- Fix:
+  - added one focused troubleshooting doc for:
+    - bridge-shape vs target-shape vs mixed-shape
+    - precedence rules
+    - common `config doctor` findings
+    - explicit target-shape write commands
+- Durable lesson:
+  - once config support spans multiple shapes, future debugging is faster when
+    shape diagnosis lives in one operational doc instead of being reconstructed
+    from roadmap and policy fragments

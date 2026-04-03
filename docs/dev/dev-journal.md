@@ -4899,3 +4899,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - default scaffold output is still bridge-key-first
   - `wizard` remains unchanged
+
+## 2026-04-02 21:00 CDT
+
+- Focus:
+  - add future-troubleshooting docs for the dual-shape config era
+- What changed:
+  - added
+    [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+    covering:
+    - bridge-shape vs target-shape vs mixed-shape
+    - read precedence
+    - common `config doctor` findings
+    - when to use explicit target-shape write commands
+  - linked it from:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+- Notes:
+  - docs only
+  - intended for future troubleshooting, not end-user onboarding

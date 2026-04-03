@@ -63,6 +63,11 @@ Use `auracall config doctor` when you want bridge-health checks instead:
 - legacy `auracallProfiles` still present
 - pass `--strict` when warnings should return a nonzero exit code for scripts/CI
 
+For future troubleshooting of bridge-shape vs target-shape vs mixed-shape
+configs, see:
+
+- [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
+
 ## Terminology
 
 Use these terms consistently:
