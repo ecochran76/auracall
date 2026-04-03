@@ -52,4 +52,31 @@ describe('config migrate bridge helpers', () => {
     expect(result.profiles?.consulting?.browserFamily).toBe('wsl-chrome-2');
     expect(result.profiles?.consulting?.defaultService).toBe('chatgpt');
   });
+
+  it('can materialize explicit target-shape output for config migrate', () => {
+    const result = materializeConfigV2(
+      {
+        version: 2,
+        browserFamilies: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        profiles: {
+          consulting: {
+            engine: 'browser',
+            browserFamily: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: true },
+    );
+
+    expect(result.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
+    expect(result.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
+    expect(result.runtimeProfiles?.consulting?.browserFamily).toBeUndefined();
+    expect(result.browserFamilies).toBeUndefined();
+    expect(result.profiles).toBeUndefined();
+  });
 });

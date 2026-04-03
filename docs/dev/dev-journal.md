@@ -4838,3 +4838,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is still read/reporting work only
   - no write-path behavior changed
+
+## 2026-04-02 20:43 CDT
+
+- Focus:
+  - add the first explicit target-shape write mode without changing default
+    write behavior
+- What changed:
+  - added `targetShape` support to
+    [materializeConfigV2(...)](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    so migrated output can emit:
+    - `browserProfiles`
+    - `runtimeProfiles`
+    - `runtimeProfiles.<name>.browserProfile`
+  - updated
+    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to support:
+    - `auracall config migrate --target-shape`
+    - explicit write-mode messaging after write
+  - expanded
+    [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    to pin target-shape migrated output
+  - updated user/docs planning references in:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/configMigrate.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - default writes are still bridge-key-first
+  - only `config migrate` gained an explicit target-shape write mode

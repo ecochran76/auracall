@@ -260,7 +260,7 @@ export function normalizeConfigV1toV2(
 
 export function materializeConfigV2(
   config: OracleConfig,
-  options: { stripLegacy?: boolean } = {},
+  options: { stripLegacy?: boolean; targetShape?: boolean } = {},
 ): OracleConfig {
   if (!isRecord(config)) return config;
   const result: MutableConfig = { ...config };
@@ -299,6 +299,49 @@ export function materializeConfigV2(
         runtimeProfiles[name] = runtimeProfile;
       }
     }
+  }
+
+  if (options.targetShape) {
+    const sourceBrowserProfiles = isRecord(result.browserProfiles)
+      ? (result.browserProfiles as Record<string, unknown>)
+      : isRecord(result.browserFamilies)
+        ? (result.browserFamilies as Record<string, unknown>)
+        : {};
+    if (Object.keys(sourceBrowserProfiles).length > 0) {
+      result.browserProfiles = Object.fromEntries(
+        Object.entries(sourceBrowserProfiles).map(([name, browserProfile]) => [
+          name,
+          isRecord(browserProfile) ? { ...browserProfile } : browserProfile,
+        ]),
+      );
+    }
+
+    const sourceRuntimeProfiles = isRecord(result.runtimeProfiles)
+      ? (result.runtimeProfiles as Record<string, unknown>)
+      : isRecord(result.profiles)
+        ? (result.profiles as Record<string, unknown>)
+        : isRecord(result.auracallProfiles)
+          ? (result.auracallProfiles as Record<string, unknown>)
+          : {};
+    if (Object.keys(sourceRuntimeProfiles).length > 0) {
+      result.runtimeProfiles = Object.fromEntries(
+        Object.entries(sourceRuntimeProfiles).map(([name, runtimeProfile]) => {
+          if (!isRecord(runtimeProfile)) {
+            return [name, runtimeProfile];
+          }
+          const nextRuntimeProfile: Record<string, unknown> = { ...runtimeProfile };
+          const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfile);
+          if (browserProfileId) {
+            nextRuntimeProfile.browserProfile = browserProfileId;
+          }
+          delete nextRuntimeProfile.browserFamily;
+          return [name, nextRuntimeProfile];
+        }),
+      );
+    }
+
+    delete result.browserFamilies;
+    delete result.profiles;
   }
 
   if (options.stripLegacy) {

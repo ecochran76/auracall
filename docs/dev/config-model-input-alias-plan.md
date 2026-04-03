@@ -73,12 +73,21 @@ Current slice boundaries:
 
 ### Phase 2: target-write option
 
-Status: future
+Status: partially implemented
 
 Add an explicit opt-in mode for writing the target shape, likely only to:
 
 - `config migrate`
 - maybe future scaffold flags
+
+Current implementation:
+
+- `auracall config migrate --target-shape`
+  writes:
+  - `browserProfiles`
+  - `runtimeProfiles`
+  - `runtimeProfiles.<name>.browserProfile`
+- default write paths still remain bridge-key-first
 
 Do not silently flip defaults until the target input shape has proven stable.
 

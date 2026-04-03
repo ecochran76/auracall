@@ -6956,6 +6956,7 @@ configCommand
   .option('--in-place', 'Overwrite the input config file in place.', false)
   .option('--dry-run', 'Print the migrated config instead of writing it.', false)
   .option('--strip-legacy', 'Drop legacy browser/auracallProfiles keys from output.', false)
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
   .option('--force', 'Overwrite an existing output file.', false)
   .action(async (commandOptions, command) => {
     const cmd = command?.opts ? command : (commandOptions as unknown as Command);
@@ -6966,7 +6967,10 @@ configCommand
     const inputPath = opts.path ?? configPath();
     const raw = await fs.readFile(inputPath, 'utf8');
     const parsed = JSON5.parse(raw) as UserConfig;
-    const migrated = materializeConfigV2(parsed, { stripLegacy: Boolean(opts.stripLegacy) });
+    const migrated = materializeConfigV2(parsed, {
+      stripLegacy: Boolean(opts.stripLegacy),
+      targetShape: Boolean(opts.targetShape),
+    });
     const envDryRun =
       process.env.npm_config_dry_run === 'true' || process.env.npm_config_dry_run === '1';
     const flagValue =
@@ -6999,6 +7003,11 @@ configCommand
     }
     await fs.writeFile(outputPath, `${JSON.stringify(migrated, null, 2)}\n`, 'utf8');
     console.log(`Wrote migrated config to ${outputPath}`);
+    if (opts.targetShape) {
+      console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
+    } else {
+      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+    }
     console.log(
       chalk.dim(
         `Active bridge: ${formatRuntimeProfileBridgeSummary(

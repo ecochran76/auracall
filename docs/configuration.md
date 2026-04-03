@@ -9,6 +9,7 @@ Use `auracall config migrate` to write a v2-style layout from an existing config
 auracall config migrate --dry-run
 auracall config migrate --output ~/.auracall/config.v2.json
 auracall config migrate --in-place --strip-legacy
+auracall config migrate --output ~/.auracall/config.target.json --target-shape --strip-legacy
 ```
 
 When invoking via `tsx` in dev, prefer Node’s `--import` to avoid `pnpm` swallowing `--dry-run`:
@@ -110,7 +111,8 @@ Target-model note:
 - write paths still stay on bridge keys for now:
   - `wizard`
   - `profile scaffold`
-  - `config migrate`
+- `config migrate` can opt into target-shape output explicitly with:
+  - `--target-shape`
 - until the target-write phase lands, prefer treating:
   - `browserFamilies` as the browser-profile bridge
   - `profiles` as the AuraCall runtime-profile bridge

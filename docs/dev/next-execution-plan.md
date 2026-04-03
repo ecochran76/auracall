@@ -105,6 +105,9 @@ Acceptance
   - schema/model/resolver loading
   - read-only diagnostics
   - bridge-key writes remaining unchanged
+- phase-2 target-write may land only as:
+  - explicit opt-in `config migrate --target-shape`
+  - with default writes still remaining bridge-key-first
 
 ### 3) Browser reliability maintenance
 

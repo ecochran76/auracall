@@ -5890,3 +5890,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once config reads become dual-shape, “what keys are present?” and “which
     side is authoritative?” are first-class operator concerns, not hidden model
     details
+
+## 2026-04-02 - first target-shape write support should be explicit and isolated to config migrate
+
+- Symptom:
+  - after dual-read and diagnostics landed, the next safe step was target-shape
+    output
+  - but changing all write paths at once would create too much churn
+- Fix:
+  - added explicit `auracall config migrate --target-shape`
+  - kept:
+    - `wizard`
+    - `profile scaffold`
+    - default `config migrate`
+    on bridge-key writes
+- Durable lesson:
+  - the safe phase-2 write step is an opt-in migration path first
+  - do not flip default scaffolding or generalized writes before that path has
+    proven stable
