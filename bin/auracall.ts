@@ -1753,6 +1753,7 @@ conversationFilesCommand
     const browserConfig = await buildBrowserConfig({
       ...cliOptions,
       auracallProfileName: userConfig.auracallProfile ?? 'default',
+      selectedAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent.trim() || null : null,
       managedProfileRoot: resolvedBrowserConfig.managedProfileRoot ?? null,
       model: browserModel,
       browserTarget: 'grok',
@@ -6404,6 +6405,10 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
     const browserConfig = await buildBrowserConfig({
       ...cliOptions,
       auracallProfileName: userConfig.auracallProfile ?? 'default',
+      selectedAgentId:
+        typeof (cliOptions as CliOptions).agent === 'string'
+          ? (cliOptions as CliOptions).agent?.trim() || null
+          : null,
       managedProfileRoot: userConfig.browser.managedProfileRoot ?? null,
       model: verifyModel,
       browserTarget: target,
@@ -7665,6 +7670,7 @@ async function runRootCommand(options: CliOptions): Promise<void> {
       ? await buildBrowserConfig({
           ...options,
           auracallProfileName: userConfig.auracallProfile ?? 'default',
+          selectedAgentId: typeof options.agent === 'string' ? options.agent.trim() || null : null,
           managedProfileRoot: config.browser.managedProfileRoot ?? null,
           model: resolvedModel,
           browserModelLabel: browserModelLabelOverride,

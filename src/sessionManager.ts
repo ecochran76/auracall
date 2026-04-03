@@ -13,6 +13,7 @@ export type SessionMode = 'api' | 'browser';
 
 export interface BrowserSessionConfig {
   auracallProfileName?: string | null;
+  selectedAgentId?: string | null;
   chromeProfile?: string | null;
   chromePath?: string | null;
   chromeCookiePath?: string | null;

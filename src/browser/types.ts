@@ -12,6 +12,7 @@ export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
 export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
 
 type LlmBrowserFields = {
+  selectedAgentId?: string | null;
   target?: 'chatgpt' | 'gemini' | 'grok';
   projectId?: string | null;
   conversationId?: string | null;

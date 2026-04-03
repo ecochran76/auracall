@@ -21,6 +21,7 @@ const DEFAULT_BROWSER_TIMEOUT_MS = 1_200_000;
 const DEFAULT_BROWSER_INPUT_TIMEOUT_MS = 60_000;
 export interface BrowserFlagOptions {
   auracallProfileName?: string;
+  selectedAgentId?: string | null;
   managedProfileRoot?: string | null;
   browserChromeProfile?: string;
   browserChromePath?: string;
@@ -148,6 +149,10 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
 
   return {
     auracallProfileName: options.auracallProfileName ?? null,
+    selectedAgentId:
+      typeof options.selectedAgentId === 'string' && options.selectedAgentId.trim().length > 0
+        ? options.selectedAgentId.trim()
+        : null,
     chromeProfile: options.browserChromeProfile ?? undefined,
     chromePath: options.browserChromePath ?? null,
     chromeCookiePath: options.browserCookiePath ?? null,

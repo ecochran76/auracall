@@ -41,6 +41,7 @@ describe('resolveBrowserConfig', () => {
 
   test('applies overrides', () => {
     const resolved = resolveBrowserConfig({
+      selectedAgentId: 'analyst',
       url: 'https://example.com',
       timeoutMs: 123,
       inputTimeoutMs: 456,
@@ -56,6 +57,7 @@ describe('resolveBrowserConfig', () => {
       collapseDisposableWindows: false,
     });
     expect(resolved.url).toBe('https://example.com/');
+    expect(resolved.selectedAgentId).toBe('analyst');
     expect(resolved.timeoutMs).toBe(123);
     expect(resolved.inputTimeoutMs).toBe(456);
     expect(resolved.cookieSync).toBe(false);

@@ -36,6 +36,16 @@ describe('buildBrowserConfig', () => {
     expect(config.manualLoginProfileDir).toMatch(/browser-profiles\/wsl-chrome-2\/chatgpt$/);
   });
 
+  test('preserves selected agent provenance in browser session config', async () => {
+    const config = await buildBrowserConfig({
+      auracallProfileName: 'wsl-chrome-2',
+      selectedAgentId: 'analyst',
+      model: 'gpt-5.2',
+      browserTarget: 'chatgpt',
+    });
+    expect(config.selectedAgentId).toBe('analyst');
+  });
+
   test('sets model strategy when provided', async () => {
     const config = await buildBrowserConfig({
       model: 'gpt-5.2-pro',

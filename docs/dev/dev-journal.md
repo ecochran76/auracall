@@ -5528,3 +5528,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `profileConfig.ts` already receives
   - the final helper keeps that override while still centralizing agent-aware
     selection identity
+
+## 2026-04-03 10:42 CDT
+
+- Focus:
+  - preserve selected-agent provenance in the browser run/session config seam
+    itself, not only in outer session metadata
+- What changed:
+  - added `selectedAgentId` to the browser config/session types in:
+    - [src/browser/types.ts](/home/ecochran76/workspace.local/oracle/src/browser/types.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+  - updated
+    [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserConfig.ts)
+    so `buildBrowserConfig(...)` carries `selectedAgentId` into the actual
+    browser session config object
+  - updated the real browser-config call sites in
+    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so:
+    - normal browser runs
+    - setup verification runs
+    - Grok conversation/browser helper runs
+    all preserve selected-agent provenance in the browser config object itself
+  - expanded tests in:
+    - [tests/cli/browserConfig.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserConfig.test.ts)
+    - [tests/browser/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/config.test.ts)
+- Verification:
+  - `pnpm vitest run tests/cli/browserConfig.test.ts tests/browser/config.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/sessionManager.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this still does not add agent execution behavior
+  - it makes the browser-runtime config contract agent-aware for future runtime
+    seams without relying only on outer session metadata

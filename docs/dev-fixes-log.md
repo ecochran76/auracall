@@ -6326,3 +6326,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     explicit higher-confidence objects already selected by the caller
   - otherwise refactors silently downgrade rich call-site context into weaker
     lookup-only reconstruction
+
+## 2026-04-03 - once agent selection affects execution, the browser config contract itself should preserve that provenance
+
+- Symptom:
+  - `selectedAgentId` was preserved in outer session metadata, but the actual
+    browser run/session config object still flattened away that provenance
+  - that would force future browser-runtime helpers to reach outside the
+    browser config seam just to understand how the selected AuraCall runtime
+    profile was chosen
+- Fix:
+  - added `selectedAgentId` to the browser config/session types
+  - updated `buildBrowserConfig(...)` and its real call sites to preserve it in
+    the browser config object itself
+- Durable lesson:
+  - when a new higher-layer selector becomes execution-adjacent, preserve its
+    provenance in the nearest execution config contract, not only in outer
+    metadata envelopes
+  - this keeps future runtime helpers local to the seam they actually serve
