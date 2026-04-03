@@ -183,6 +183,48 @@ describe('llmService ChatGPT rate-limit guard', () => {
     }
   });
 
+  test('treats transient ChatGPT conversation read misses as retryable failures', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+    const delays: number[] = [];
+    const setTimeoutSpy = vi
+      .spyOn(globalThis, 'setTimeout')
+      .mockImplementation(((callback: TimerHandler, ms?: number) => {
+        delays.push(typeof ms === 'number' ? ms : 0);
+        if (typeof callback === 'function') {
+          callback();
+        }
+        return 0 as unknown as ReturnType<typeof setTimeout>;
+      }) as unknown as typeof setTimeout);
+
+    let attempts = 0;
+    try {
+      await expect(
+        service.runGuardedWithRetries('readConversationContext', async () => {
+          attempts += 1;
+          if (attempts < 2) {
+            throw new Error('ChatGPT conversation 69d04b50-3c88-8325-8240-0d838d47ee50 messages not found');
+          }
+          return { ok: true };
+        }, 1),
+      ).resolves.toEqual({ ok: true });
+
+      expect(attempts).toBe(2);
+      expect(delays).toHaveLength(1);
+      expect(delays[0]).toBeGreaterThanOrEqual(500);
+      expect(delays[0]).toBeLessThanOrEqual(750);
+    } finally {
+      setTimeoutSpy.mockRestore();
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
   test('spaces ChatGPT mutating operations across separate service instances', async () => {
     const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-chatgpt-guard-'));
     setAuracallHomeDirOverrideForTest(homeDir);

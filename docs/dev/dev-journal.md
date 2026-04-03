@@ -6159,3 +6159,43 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this slice is also code-level verified only
   - there is still no narrow existing live smoke for isolated canvas artifact
     materialization without reopening a broader acceptance surface
+
+## 2026-04-03 18:27 CDT
+
+- Focus:
+  - convert the next ChatGPT hardening step into a live DOCX artifact proof on
+    the `wsl-chrome-2` managed browser profile
+- What changed:
+  - ran a disposable root ChatGPT conversation on `wsl-chrome-2` asking for a
+    short memo surfaced as a downloadable DOCX
+  - live conversation:
+    `69d04b50-3c88-8325-8240-0d838d47ee50`
+  - observed a real transient read-path inconsistency:
+    - first standalone `conversations context get` failed with
+      `messages not found`
+    - `conversations artifacts fetch` on the same conversation succeeded and
+      materialized the DOCX
+    - immediate standalone `context get` retry then succeeded
+  - hardened the ChatGPT retry layer in
+    [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    so transient conversation read misses (`content not found` /
+    `messages not found`) are treated as retryable ChatGPT read failures
+  - added focused retry coverage in
+    [tests/browser/llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceRateLimit.test.ts)
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live artifact proof on `wsl-chrome-2`:
+    - `conversations artifacts fetch 69d04b50-3c88-8325-8240-0d838d47ee50 --target chatgpt`
+    - result: `artifactCount = 2`, `materializedCount = 1`
+    - materialized:
+      `auracall-artifact-smoke-oxmhrl.docx`
+  - follow-up live context proof on the same conversation:
+    - `conversations context get 69d04b50-3c88-8325-8240-0d838d47ee50 --target chatgpt --json-only`
+    - returned the expected `messages[]` plus both download artifacts
+- Notes:
+  - the live run also exposed a separate prompt-commit false negative on a
+    follow-up turn: ChatGPT had already emitted `DOCX READY oxmhrl`, but the
+    prompt commit verifier still rejected the follow-up send
+  - that prompt-commit issue is adjacent but separate from the read-side retry
+    slice landed here

@@ -6682,3 +6682,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     materialization should reuse it rather than partially reenacting it
   - artifact-local hardening gets more reliable when the merge path and the
     materialization path consume the same resolved content source
+
+## 2026-04-03 - transient ChatGPT conversation read misses should be retryable at the llmService layer
+
+- Symptom:
+  - during a live DOCX artifact proof on `wsl-chrome-2`, the first standalone
+    `conversations context get` for the fresh conversation failed with
+    `ChatGPT conversation ... messages not found`
+  - on the same conversation, `conversations artifacts fetch` still succeeded,
+    and an immediate standalone `context get` retry also succeeded
+- Fix:
+  - expanded the ChatGPT retryable-error classifier in
+    `src/browser/llmService/llmService.ts`
+  - transient read misses like `content not found` and `messages not found` now
+    get one bounded llmService retry instead of surfacing immediately
+- Durable lesson:
+  - once provider-local recovery is already in place, transient read-surface
+    misses may still need one higher-layer retry classification so operators do
+    not see a raw failure for a conversation that settles on the next attempt
+  - a live artifact proof can reveal read-path retry gaps that unit-level
+    artifact matcher cleanup alone will not expose
