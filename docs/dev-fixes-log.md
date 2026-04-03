@@ -6468,3 +6468,43 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     planning/debug seam, not an execution seam
   - if a selector cannot yet run safely, let it explain future resolution
     clearly before letting it control behavior
+
+## 2026-04-03 - ChatGPT rename readiness must verify the actual inline editor, not generic text-entry state
+
+- Symptom:
+  - the ChatGPT root rename path waited for a broad "editor ready" condition
+    after clicking `Rename`
+  - that condition treated any active text input or even selected text as good
+    enough, while the actual submit path only works against
+    `input[name="title-editor"]`
+  - in practice that leaves the rename flow thinking the editor is ready when
+    the real inline rename surface never appeared
+- Fix:
+  - tightened the rename-editor readiness probe to only accept the visible
+    `title-editor` input
+  - added focused unit coverage for the stricter probe semantics
+- Durable lesson:
+  - post-trigger readiness checks must align with the exact control the submit
+    step will use
+  - do not let generic DOM activity masquerade as provider-specific editor
+    readiness
+
+## 2026-04-03 - ChatGPT rename persistence should reuse the canonical title probe matcher
+
+- Symptom:
+  - inline rename verification used one exported conversation-title matcher in
+    tests, but the live rename path still performed a separate ad hoc DOM/title
+    check
+  - that duplicated semantics and made it easier for quick checks and
+    authoritative re-anchor checks to drift apart
+- Fix:
+  - added one shared title-probe reader in the ChatGPT adapter
+  - rewired both inline checks and final rename-persistence verification to use
+    `matchesChatgptConversationTitleProbe(...)`
+  - after the list-page refresh, root renames now use the stricter
+    top-row-required root verification path
+- Durable lesson:
+  - when a provider already has a canonical matcher for a persisted state, use
+    it everywhere the workflow verifies that state
+  - authoritative recovery checks should be stricter than fast-path checks, but
+    they should still share the same probe contract

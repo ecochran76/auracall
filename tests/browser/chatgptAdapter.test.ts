@@ -14,6 +14,7 @@ import {
   matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
   matchesChatgptProjectDeleteConfirmationProbe,
+  matchesChatgptRenameEditorProbe,
   normalizeChatgptAuthSessionIdentity,
   normalizeChatgptConversationId,
   normalizeChatgptConversationDownloadArtifactProbes,
@@ -1157,6 +1158,32 @@ describe('matchesChatgptConversationTitleProbe', () => {
         'g-p-69c851be8cc88191afe109bea1b2a28d',
       ),
     ).toBe(false);
+  });
+});
+
+describe('matchesChatgptRenameEditorProbe', () => {
+  test('accepts the visible title editor input', () => {
+    expect(
+      matchesChatgptRenameEditorProbe({
+        inputName: 'title-editor',
+        value: 'AC GPT C tpuivt',
+        active: true,
+      }),
+    ).toBe(true);
+  });
+
+  test('rejects unrelated active text inputs', () => {
+    expect(
+      matchesChatgptRenameEditorProbe({
+        inputName: 'search',
+        value: 'AC GPT C tpuivt',
+        active: true,
+      }),
+    ).toBe(false);
+  });
+
+  test('rejects missing probes', () => {
+    expect(matchesChatgptRenameEditorProbe(null)).toBe(false);
   });
 });
 

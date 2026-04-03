@@ -576,6 +576,12 @@ type ChatgptConversationTitleProbe = {
   topTitle?: string | null;
 };
 
+type ChatgptRenameEditorProbe = {
+  inputName?: string | null;
+  value?: string | null;
+  active?: boolean | null;
+};
+
 type ChatgptConversationPayloadResponse = {
   ok?: boolean | null;
   status?: number | null;
@@ -1122,6 +1128,15 @@ export function matchesChatgptConversationTitleProbe(
     return false;
   }
   return normalizeChatgptDocumentTitle(probe.documentTitle) === expected;
+}
+
+export function matchesChatgptRenameEditorProbe(
+  probe: ChatgptRenameEditorProbe | null | undefined,
+): boolean {
+  if (!probe) {
+    return false;
+  }
+  return normalizeUiText(probe.inputName).toLowerCase() === 'title-editor';
 }
 
 function isRetryableConnectionError(error: unknown): boolean {
@@ -5096,29 +5111,82 @@ function buildChatgptRenameEditorReadyExpression(): string {
     const input = document.querySelector('input[name="title-editor"]');
     if (input instanceof HTMLInputElement && isVisible(input)) {
       return {
-        mode: 'title-editor',
+        inputName: input.getAttribute('name') || null,
         value: input.value,
         active: document.activeElement === input,
       };
     }
-    const active = document.activeElement;
-    if (active instanceof HTMLInputElement && active.type === 'text' && isVisible(active)) {
-      return {
-        mode: 'active-text-input',
-        value: active.value,
-        active: true,
-      };
-    }
-    const selection = window.getSelection();
-    if (selection && !selection.isCollapsed && String(selection).trim().length > 0) {
-      return {
-        mode: 'selected-text',
-        value: String(selection).trim(),
-        active: document.activeElement instanceof Element ? document.activeElement.tagName.toLowerCase() : null,
-      };
-    }
     return null;
   })()`;
+}
+
+function buildChatgptConversationTitleProbeExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const href = String(location.href || '');
+    const routeConversationIdMatch = href.match(/\\/c\\/([a-zA-Z0-9-]+)(?:[/?#]|$)/);
+    const routeProjectIdMatch = href.match(/\\/g\\/([^/]+)\\/(?:project|c\\/)/);
+    const links = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+      .map((anchor) => {
+        const anchorHref = String(anchor.href || '');
+        const conversationMatch = anchorHref.match(/\\/c\\/([a-zA-Z0-9-]+)(?:[/?#]|$)/);
+        const projectMatch = anchorHref.match(/\\/g\\/([^/]+)\\//);
+        return {
+          href: anchorHref,
+          conversationId: conversationMatch ? conversationMatch[1] : null,
+          projectId: projectMatch ? projectMatch[1] : null,
+          text: normalize(anchor.textContent || ''),
+          aria: normalize(anchor.getAttribute('aria-label') || ''),
+        };
+      })
+      .filter((anchor) => anchor.conversationId);
+    const topLink = links.find((anchor) => anchor.text || anchor.aria) || null;
+    return {
+      matchedConversationId: null,
+      matchedProjectId: null,
+      matchedTitle: null,
+      routeConversationId: routeConversationIdMatch ? routeConversationIdMatch[1] : null,
+      routeProjectId: routeProjectIdMatch ? routeProjectIdMatch[1] : null,
+      documentTitle: document.title,
+      topConversationId: topLink ? topLink.conversationId : null,
+      topTitle: topLink ? (topLink.text || topLink.aria || null) : null,
+    };
+  })()`;
+}
+
+async function readChatgptConversationTitleProbe(
+  client: ChromeClient,
+  conversationId: string,
+): Promise<ChatgptConversationTitleProbe | null> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const probe = ${buildChatgptConversationTitleProbeExpression()};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const conversationId = ${JSON.stringify(conversationId)};
+      const links = Array.from(document.querySelectorAll('a[href*="/c/"]'))
+        .map((anchor) => {
+          const href = String(anchor.href || '');
+          const match = href.match(/\\/c\\/([a-zA-Z0-9-]+)(?:[/?#]|$)/);
+          if (!match || match[1] !== conversationId) return null;
+          const projectMatch = href.match(/\\/g\\/([^/]+)\\//);
+          return {
+            matchedConversationId: match[1],
+            matchedProjectId: projectMatch ? projectMatch[1] : null,
+            matchedTitle: normalize(anchor.textContent || '') || normalize(anchor.getAttribute('aria-label') || '') || null,
+          };
+        })
+        .filter(Boolean);
+      if (links.length > 0) {
+        const first = links[0];
+        probe.matchedConversationId = first.matchedConversationId;
+        probe.matchedProjectId = first.matchedProjectId;
+        probe.matchedTitle = first.matchedTitle;
+      }
+      return probe;
+    })()`,
+    returnByValue: true,
+  });
+  return (result?.value as ChatgptConversationTitleProbe | null | undefined) ?? null;
 }
 
 async function waitForChatgptConversationTitleApplied(
@@ -5127,48 +5195,12 @@ async function waitForChatgptConversationTitleApplied(
   expectedTitle: string,
   projectId?: string | null,
 ): Promise<void> {
-  const collectTitleDiagnostics = async () => {
-    const { result } = await client.Runtime.evaluate({
-      expression: `(() => {
-        const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-        const links = Array.from(document.querySelectorAll('a[href*="/c/"]'))
-          .slice(0, 12)
-          .map((anchor) => ({
-            href: anchor.href,
-            text: normalize(anchor.textContent || ''),
-            aria: normalize(anchor.getAttribute('aria-label') || ''),
-          }));
-        return {
-          href: location.href,
-          documentTitle: document.title,
-          links,
-        };
-      })()`,
-      returnByValue: true,
-    });
-    return result?.value ?? null;
-  };
-  const titleApplied = async () => {
-    const snapshot = (await collectTitleDiagnostics()) as
-      | { href?: string; documentTitle?: string; links?: Array<{ href?: string; text?: string; aria?: string }> }
-      | null;
-    const normalize = (value: unknown) => String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
-    const expected = normalize(expectedTitle);
-    const routeOk = normalize(snapshot?.href).includes(normalize(conversationId));
-    const linkMatch = Array.isArray(snapshot?.links)
-      ? snapshot!.links.some((link) => {
-          const href = String(link?.href || '');
-          if (!href.includes(`/c/${conversationId}`)) return false;
-          return normalize(link?.text) === expected || normalize(link?.aria) === expected;
-        })
-      : false;
-    const titleMatch =
-      routeOk &&
-      normalize(snapshot?.documentTitle)
-        .replace(/^chatgpt\s*[-:|]\s*/i, '')
-        .replace(/\s*[-:|]\s*chatgpt$/i, '')
-        .trim() === expected;
-    return { ok: linkMatch || titleMatch, snapshot };
+  const titleApplied = async (options?: { requireTopForRootMatch?: boolean }) => {
+    const probe = await readChatgptConversationTitleProbe(client, conversationId);
+    return {
+      ok: matchesChatgptConversationTitleProbe(probe, conversationId, expectedTitle, projectId, options),
+      probe,
+    };
   };
   const shortPause = async () => {
     const min = 800;
@@ -5183,11 +5215,11 @@ async function waitForChatgptConversationTitleApplied(
     await ensureChatgptSidebarOpen(client).catch(() => undefined);
     await navigateToChatgptUrl(client, resolveChatgptConversationListUrl(projectId));
     await ensureChatgptSidebarOpen(client).catch(() => undefined);
-    renamed = await titleApplied();
+    renamed = await titleApplied({ requireTopForRootMatch: !projectId });
   }
   if (!renamed.ok) {
     throw new Error(
-      `ChatGPT conversation rename did not persist for ${conversationId} (${JSON.stringify(renamed.snapshot ?? (await collectTitleDiagnostics()))})`,
+      `ChatGPT conversation rename did not persist for ${conversationId} (${JSON.stringify(renamed.probe ?? (await readChatgptConversationTitleProbe(client, conversationId)))})`,
     );
   }
 }
@@ -5198,25 +5230,8 @@ async function isChatgptConversationTitleAppliedWithClient(
   expectedTitle: string,
   projectId?: string | null,
 ): Promise<boolean> {
-  const { result } = await client.Runtime.evaluate({
-    expression: `(() => {
-      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-      const expected = normalize(${JSON.stringify(expectedTitle)});
-      const conversationId = ${JSON.stringify(conversationId)};
-      const routeOk = String(location.href || '').includes('/c/' + conversationId);
-      const link = Array.from(document.querySelectorAll('a[href*="/c/"]'))
-        .find((anchor) => String(anchor.href || '').includes('/c/' + conversationId));
-      const linkText = normalize(link?.textContent || '');
-      const linkAria = normalize(link?.getAttribute?.('aria-label') || '');
-      const title = normalize(document.title)
-        .replace(/^chatgpt\\s*[-:|]\\s*/i, '')
-        .replace(/\\s*[-:|]\\s*chatgpt$/i, '')
-        .trim();
-      return Boolean(linkText === expected || linkAria === expected || (routeOk && title === expected));
-    })()`,
-    returnByValue: true,
-  });
-  return Boolean(result?.value);
+  const probe = await readChatgptConversationTitleProbe(client, conversationId);
+  return matchesChatgptConversationTitleProbe(probe, conversationId, expectedTitle, projectId);
 }
 
 async function waitForChatgptConversationDeleted(

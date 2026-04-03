@@ -5779,3 +5779,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is the first public `--team` seam, but it is intentionally not a team
     execution feature
+
+## 2026-04-03 13:15 CDT
+
+- Focus:
+  - harden the remaining ChatGPT root rename hotspot without widening the
+    workflow surface
+- What changed:
+  - tightened the ChatGPT rename-editor readiness gate in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    so it only accepts the real inline rename input:
+    - `input[name="title-editor"]`
+    - removed the prior broad fallbacks that treated any active text input or
+      selected text as rename-editor readiness
+  - added `matchesChatgptRenameEditorProbe(...)` and focused coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+  - replaced the ad hoc rename-persistence probe with the existing canonical
+    `matchesChatgptConversationTitleProbe(...)` semantics by adding one shared
+    title-probe reader and reusing it in:
+    - inline post-submit checks
+    - authoritative rename persistence verification after list re-anchor
+  - strengthened the authoritative root verification path so, after the
+    list-page refresh, root renames require the matching conversation row to
+    reappear at the top instead of trusting route/title fallback alone
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run check`
+- Notes:
+  - this stays provider-local on purpose; the remaining fix is specific to
+    ChatGPT's inline rename surface rather than a proven browser-service
+    abstraction
