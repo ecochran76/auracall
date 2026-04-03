@@ -103,8 +103,10 @@ Use these terms consistently:
   - the Aura-Call-owned automation profile directory derived from the browser
     profile plus service
 - `AuraCall runtime profile`
-  - the top-level Aura-Call config entry selected by `auracallProfile` /
-    `--profile`
+  - the top-level Aura-Call config entry selected by
+    `defaultRuntimeProfile` / `--profile`
+  - compatibility key:
+    - `auracallProfile`
   - this chooses a browser profile and adds service/model/project/cache defaults
 
 In short:
@@ -122,6 +124,7 @@ Target-model note:
   [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
   and uses:
   - `version: 3`
+  - `defaultRuntimeProfile`
   - `browserProfiles`
   - `runtimeProfiles`
 - Aura-Call now accepts the target-shape aliases for config loading:
@@ -139,6 +142,7 @@ Target-model note:
   scripts that want to state the intended write mode directly
 - bridge keys remain the compatibility form:
   - usually `version: 2`
+  - `auracallProfile` as the compatibility runtime-profile selector
   - `browserFamilies` as the browser-profile bridge
   - `profiles` as the AuraCall runtime-profile bridge
 - use `--bridge-shape` when you intentionally want compatibility bridge output

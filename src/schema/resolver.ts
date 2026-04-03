@@ -15,6 +15,7 @@ type MutableConfig = Record<string, unknown> & {
   dev?: { browserPortRange?: [number, number] };
   engine?: string;
   search?: unknown;
+  defaultRuntimeProfile?: string;
   auracallProfile?: string;
   auracallProfiles?: Record<string, unknown>;
   profiles?: Record<string, unknown>;
@@ -160,6 +161,7 @@ function applyOracleProfile(merged: MutableConfig): void {
   const profileName = getPreferredRuntimeProfileName(merged);
   const profile = getPreferredRuntimeProfile(merged);
   if (!profileName || !profile) return;
+  merged.defaultRuntimeProfile = profileName;
   merged.auracallProfile = profileName;
 
   if (profile.engine !== undefined) {

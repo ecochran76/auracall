@@ -206,14 +206,21 @@ export function getActiveRuntimeProfileName(
   config: OracleConfig | MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): string | null {
+  const configRecord = config as MutableRecord;
+  const currentRuntimeProfiles = getCurrentRuntimeProfiles(config);
+  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   const runtimeProfiles = getBridgeRuntimeProfiles(config);
   const explicit =
     typeof options.explicitProfileName === 'string' && options.explicitProfileName.trim().length > 0
       ? options.explicitProfileName.trim()
+      : typeof configRecord.defaultRuntimeProfile === 'string' &&
+          configRecord.defaultRuntimeProfile.trim().length > 0
+        ? configRecord.defaultRuntimeProfile.trim()
       : typeof config.auracallProfile === 'string' && config.auracallProfile.trim().length > 0
         ? config.auracallProfile.trim()
         : null;
-  if (explicit && runtimeProfiles[explicit]) return explicit;
+  if (explicit && currentRuntimeProfiles[explicit]) return explicit;
+  if (explicit && legacyRuntimeProfiles[explicit]) return explicit;
   if (runtimeProfiles.default) return 'default';
   const keys = Object.keys(runtimeProfiles);
   return keys.length > 0 ? keys[0] ?? null : null;

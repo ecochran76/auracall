@@ -5051,3 +5051,39 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
 - Notes:
   - bounded operator/help cleanup only
+
+## 2026-04-03 05:29 CDT
+
+- Focus:
+  - make `defaultRuntimeProfile` the primary top-level selector key for
+    target-shape configs while keeping `auracallProfile` as compatibility input
+- What changed:
+  - updated:
+    - [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    - [src/config/migrate.ts](/home/ecochran76/workspace.local/oracle/src/config/migrate.ts)
+    - [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    so target-shape config reads/writes now center:
+    - `defaultRuntimeProfile`
+    while normalization/resolution still populates:
+    - `auracallProfile`
+    for compatibility consumers in the runtime stack
+  - expanded:
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    - [tests/configMigrate.test.ts](/home/ecochran76/workspace.local/oracle/tests/configMigrate.test.ts)
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/oracle/tests/schema/resolver.test.ts)
+    to pin:
+    - target-shape schema acceptance
+    - target-shape writes emitting `defaultRuntimeProfile`
+    - compatibility bridge writes remapping back to `auracallProfile`
+    - selector precedence preferring `defaultRuntimeProfile`
+  - updated user-facing docs:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this does not rename the internal resolved field yet
+  - runtime/browser code still consumes `auracallProfile` after normalization

@@ -112,6 +112,21 @@ describe('config model helpers', () => {
     expect(getActiveRuntimeProfile(config)).toEqual({ defaultService: 'grok' });
   });
 
+  it('prefers defaultRuntimeProfile over auracallProfile for top-level target-shape selection', () => {
+    const config = {
+      defaultRuntimeProfile: 'work',
+      auracallProfile: 'legacy',
+      runtimeProfiles: {
+        work: { browserProfile: 'default', defaultService: 'chatgpt' },
+      },
+      auracallProfiles: {
+        legacy: { defaultService: 'grok' },
+      },
+    };
+
+    expect(getActiveRuntimeProfileName(config)).toBe('work');
+  });
+
   it('prefers the explicit current runtime profile over legacy when both shapes exist', () => {
     const config = {
       auracallProfile: 'legacy',

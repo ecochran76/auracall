@@ -6034,3 +6034,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - once version policy changes, command descriptions and default output names
     need to change in the same slice or operators will keep getting mixed signals
+
+## 2026-04-03 - top-level selector key should migrate after the shape and version policy are real
+
+- Symptom:
+  - after target-shape became the primary documented and written config model,
+    the top-level selector key still centered the compatibility name:
+    - `auracallProfile`
+  - that left the file speaking in two different eras at once:
+    - `defaultRuntimeProfile` was the intended target-model term
+    - `auracallProfile` still controlled selection
+- Fix:
+  - added `defaultRuntimeProfile` as the primary top-level selector key in the
+    config schema/model layer
+  - target-shape writes now emit `defaultRuntimeProfile`
+  - normalization still aliases `defaultRuntimeProfile` back into
+    `auracallProfile` so the existing runtime/browser stack keeps working
+- Durable lesson:
+  - once a target config shape is real, the top-level selector key needs to
+    move with it
+  - do the public-key migration first, then delay any large internal resolved
+    field renames until they have a separate justification

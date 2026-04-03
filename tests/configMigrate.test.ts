@@ -37,6 +37,23 @@ describe('config migrate bridge helpers', () => {
     expect(result.auracallProfiles?.consulting?.defaultService).toBe('chatgpt');
   });
 
+  it('normalizes defaultRuntimeProfile into auracallProfile for compatibility consumers', () => {
+    const result = normalizeConfigV1toV2({
+      version: 3,
+      defaultRuntimeProfile: 'consulting',
+      runtimeProfiles: {
+        consulting: {
+          engine: 'browser',
+          browserProfile: 'wsl-chrome-2',
+          defaultService: 'chatgpt',
+        },
+      },
+    } as any);
+
+    expect(result.defaultRuntimeProfile).toBe('consulting');
+    expect(result.auracallProfile).toBe('consulting');
+  });
+
   it('materializes legacy auracallProfiles back into profiles without losing browserFamily', () => {
     const result = materializeConfigV2({
       version: 2,
@@ -58,6 +75,7 @@ describe('config migrate bridge helpers', () => {
     const result = materializeConfigV2(
       {
         version: 2,
+        auracallProfile: 'consulting',
         browserFamilies: {
           consulting: {
             chromePath: '/usr/bin/google-chrome',
@@ -75,6 +93,8 @@ describe('config migrate bridge helpers', () => {
     );
 
     expect(result.version).toBe(3);
+    expect(result.defaultRuntimeProfile).toBe('consulting');
+    expect(result.auracallProfile).toBeUndefined();
     expect(result.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
     expect(result.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
     expect(result.runtimeProfiles?.consulting?.browserFamily).toBeUndefined();
@@ -86,6 +106,7 @@ describe('config migrate bridge helpers', () => {
     const result = materializeConfigV2(
       {
         version: 3,
+        defaultRuntimeProfile: 'consulting',
         browserProfiles: {
           consulting: {
             chromePath: '/usr/bin/google-chrome',
@@ -103,5 +124,7 @@ describe('config migrate bridge helpers', () => {
     );
 
     expect(result.version).toBe(2);
+    expect(result.auracallProfile).toBe('consulting');
+    expect(result.defaultRuntimeProfile).toBeUndefined();
   });
 });

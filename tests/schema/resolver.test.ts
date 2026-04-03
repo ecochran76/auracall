@@ -42,6 +42,37 @@ describe('Config Resolver', () => {
     expect(result.browser.headless).toBe(true);
   });
 
+  it('should honor defaultRuntimeProfile as the primary top-level selector key', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'work',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            defaultService: 'chatgpt',
+          },
+          work: {
+            defaultService: 'grok',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({});
+
+    expect(result.defaultRuntimeProfile).toBe('work');
+    expect(result.auracallProfile).toBe('work');
+    expect(result.browser.target).toBe('grok');
+  });
+
   it('should override file config with CLI flags', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: { model: 'gpt-4', browser: { headless: true } },

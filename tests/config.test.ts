@@ -108,6 +108,8 @@ describe('loadUserConfig', () => {
     const result = await loadUserConfig(tempDir);
     expect(result.loaded).toBe(true);
     expect(result.config.version).toBe(3);
+    expect(result.config.defaultRuntimeProfile).toBe('default');
+    expect(result.config.auracallProfile).toBeUndefined();
     expect(result.config.browserProfiles?.default).toBeDefined();
     expect(result.config.runtimeProfiles?.default?.browserProfile).toBe('default');
     expect(result.config.browserFamilies).toBeUndefined();
@@ -135,6 +137,7 @@ describe('loadUserConfig', () => {
 
   it('accepts target-shape browserProfiles/runtimeProfiles input through the composed schema', () => {
     const parsed = ComposedConfigSchema.parse({
+      defaultRuntimeProfile: 'consulting',
       browserProfiles: {
         consulting: {
           chromePath: '/usr/bin/google-chrome',
@@ -148,6 +151,7 @@ describe('loadUserConfig', () => {
       },
     });
 
+    expect(parsed.defaultRuntimeProfile).toBe('consulting');
     expect(parsed.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
     expect(parsed.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
   });
@@ -160,6 +164,8 @@ describe('loadUserConfig', () => {
     });
 
     expect(result?.config.version).toBe(3);
+    expect(result?.config.defaultRuntimeProfile).toBe('default');
+    expect(result?.config.auracallProfile).toBeUndefined();
     expect(result?.config.browserProfiles?.default).toBeDefined();
     expect(result?.config.runtimeProfiles?.default?.browserProfile).toBe('default');
     expect(result?.config.browserFamilies).toBeUndefined();
@@ -175,6 +181,8 @@ describe('loadUserConfig', () => {
     });
 
     expect(result?.config.version).toBe(2);
+    expect(result?.config.auracallProfile).toBe('default');
+    expect(result?.config.defaultRuntimeProfile).toBeUndefined();
     expect(result?.config.browserFamilies?.default).toBeDefined();
     expect(result?.config.profiles?.default?.browserFamily).toBe('default');
     expect(result?.config.browserProfiles).toBeUndefined();

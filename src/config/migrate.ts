@@ -90,6 +90,13 @@ export function normalizeConfigV1toV2(
   if (!isRecord(config)) return config;
 
   const normalized: MutableConfig = { ...config };
+  if (
+    typeof normalized.defaultRuntimeProfile === 'string' &&
+    normalized.defaultRuntimeProfile.trim().length > 0 &&
+    (typeof normalized.auracallProfile !== 'string' || normalized.auracallProfile.trim().length === 0)
+  ) {
+    normalized.auracallProfile = normalized.defaultRuntimeProfile.trim();
+  }
   const browserDefaults = isRecord(normalized.browserDefaults) ? normalized.browserDefaults : null;
 
   if (browserDefaults) {
@@ -305,6 +312,15 @@ export function materializeConfigV2(
   }
 
   if (targetShape) {
+    const defaultRuntimeProfile =
+      typeof result.defaultRuntimeProfile === 'string' && result.defaultRuntimeProfile.trim().length > 0
+        ? result.defaultRuntimeProfile.trim()
+        : typeof result.auracallProfile === 'string' && result.auracallProfile.trim().length > 0
+          ? result.auracallProfile.trim()
+          : null;
+    if (defaultRuntimeProfile) {
+      result.defaultRuntimeProfile = defaultRuntimeProfile;
+    }
     const sourceBrowserProfiles = isRecord(result.browserProfiles)
       ? (result.browserProfiles as Record<string, unknown>)
       : isRecord(result.browserFamilies)
@@ -345,6 +361,16 @@ export function materializeConfigV2(
 
     delete result.browserFamilies;
     delete result.profiles;
+    delete result.auracallProfile;
+  } else {
+    const defaultRuntimeProfile =
+      typeof result.defaultRuntimeProfile === 'string' && result.defaultRuntimeProfile.trim().length > 0
+        ? result.defaultRuntimeProfile.trim()
+        : null;
+    if (defaultRuntimeProfile) {
+      result.auracallProfile = defaultRuntimeProfile;
+    }
+    delete result.defaultRuntimeProfile;
   }
 
   if (options.stripLegacy) {

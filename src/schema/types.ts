@@ -368,6 +368,7 @@ export const ConfigSchema = z.object({
   heartbeatSeconds: z.number().optional(),
   
   // Profiles + services
+  defaultRuntimeProfile: z.string().optional(),
   auracallProfile: z.string().optional(),
   auracallProfiles: RuntimeProfilesConfigSchema.optional(),
   services: OracleServicesSchema.optional(),

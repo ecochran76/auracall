@@ -74,7 +74,7 @@ Terminology note:
 - browser profile = browser/account family config such as `default` or `wsl-chrome-2`
 - source browser profile = Chromium profile used for cookie/bootstrap sourcing, such as `Default`
 - managed browser profile = Aura-Call-owned automation profile directory
-- AuraCall runtime profile = top-level `profiles.<name>` config entry selected by `--profile`
+- AuraCall runtime profile = top-level `runtimeProfiles.<name>` config entry selected by `defaultRuntimeProfile` / `--profile`
 
 ## Integration
 
@@ -176,8 +176,8 @@ For multiple ChatGPT workspaces, keep profile entries in `~/.auracall/config.jso
 
 ```json5
 {
-  auracallProfile: "default",
-  profiles: {
+  defaultRuntimeProfile: "default",
+  runtimeProfiles: {
     default: {
       services: {
         chatgpt: { url: "https://chatgpt.com/" },
