@@ -5087,3 +5087,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this does not rename the internal resolved field yet
   - runtime/browser code still consumes `auracallProfile` after normalization
+
+## 2026-04-03 06:02 CDT
+
+- Focus:
+  - surface `defaultRuntimeProfile` versus compatibility `auracallProfile`
+    presence in config inspection output
+- What changed:
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so:
+    - `config show` reports both selector keys and whether each is present
+    - `config doctor` reports the same selector-key presence alongside its
+      bridge-health analysis
+    - `profile list` stays unchanged for this slice
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - bridge-shape selector reporting
+    - target-shape selector reporting
+    - formatted text output for both `config show` and `config doctor`
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to note that config inspection now surfaces selector-key presence too
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps `auracallProfile` visible as a compatibility selector without
+    making it look primary again

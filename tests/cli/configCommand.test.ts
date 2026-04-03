@@ -41,6 +41,12 @@ describe('config show helpers', () => {
     expect(report).toEqual({
       configPath: '/tmp/config.json',
       loaded: true,
+      selectorKeys: {
+        target: 'defaultRuntimeProfile',
+        compatibility: 'auracallProfile',
+        targetPresent: false,
+        compatibilityPresent: false,
+      },
       active: {
         auracallRuntimeProfile: 'work',
         browserProfile: 'wsl-chrome-2',
@@ -87,6 +93,12 @@ describe('config show helpers', () => {
     const text = formatConfigShowReport({
       configPath: '/tmp/config.json',
       loaded: true,
+      selectorKeys: {
+        target: 'defaultRuntimeProfile',
+        compatibility: 'auracallProfile',
+        targetPresent: false,
+        compatibilityPresent: false,
+      },
       active: {
         auracallRuntimeProfile: 'default',
         browserProfile: 'default',
@@ -127,6 +139,8 @@ describe('config show helpers', () => {
 
     expect(text).toContain('AuraCall runtime profile: default');
     expect(text).toContain('Browser profile: default');
+    expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
+    expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
     expect(text).toContain('browser profiles -> browserProfiles (missing)');
     expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
@@ -264,6 +278,12 @@ describe('config show helpers', () => {
     expect(report.ok).toBe(false);
     expect(report.activeAuracallRuntimeProfile).toBe('default');
     expect(report.activeBrowserProfile).toBeNull();
+    expect(report.selectorKeys).toEqual({
+      target: 'defaultRuntimeProfile',
+      compatibility: 'auracallProfile',
+      targetPresent: false,
+      compatibilityPresent: true,
+    });
     expect(report.targetState).toEqual({
       browserProfilesPresent: false,
       runtimeProfilesPresent: false,
@@ -301,6 +321,8 @@ describe('config show helpers', () => {
 
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: warnings');
+    expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
+    expect(text).toContain('Compatibility selector -> auracallProfile (present)');
     expect(text).toContain('Active AuraCall runtime profile: default');
     expect(text).toContain('Active browser profile: (none)');
     expect(text).toContain('Target browserProfiles present: no');
@@ -313,6 +335,7 @@ describe('config show helpers', () => {
   it('surfaces target-key presence and target precedence when target-shape keys are active', () => {
     const showReport = buildConfigShowReport({
       rawConfig: {
+        defaultRuntimeProfile: 'work',
         browserProfiles: {
           work: {},
         },
@@ -335,10 +358,18 @@ describe('config show helpers', () => {
       browserProfilesPresent: true,
       runtimeProfilesPresent: true,
     });
+    expect(showReport.selectorKeys).toEqual({
+      target: 'defaultRuntimeProfile',
+      compatibility: 'auracallProfile',
+      targetPresent: true,
+      compatibilityPresent: false,
+    });
+    expect(formatConfigShowReport(showReport)).toContain('Runtime profile selector -> defaultRuntimeProfile (present)');
     expect(formatConfigShowReport(showReport)).toContain('browser profiles -> browserProfiles (present)');
 
     const doctorReport = buildConfigDoctorReport(
       {
+        defaultRuntimeProfile: 'work',
         browserProfiles: {
           work: {},
         },
@@ -356,11 +387,20 @@ describe('config show helpers', () => {
       browserProfilesPresent: true,
       runtimeProfilesPresent: true,
     });
+    expect(doctorReport.selectorKeys).toEqual({
+      target: 'defaultRuntimeProfile',
+      compatibility: 'auracallProfile',
+      targetPresent: true,
+      compatibilityPresent: false,
+    });
     expect(doctorReport.precedence).toEqual({
       browserProfiles: 'target',
       runtimeProfiles: 'target',
       runtimeProfileBrowserProfileReference: 'target',
     });
+    expect(formatConfigDoctorReport(doctorReport)).toContain(
+      'Runtime profile selector -> defaultRuntimeProfile (present)',
+    );
     expect(formatConfigDoctorReport(doctorReport)).toContain(
       'Precedence: browser profiles=target, runtime profiles=target, runtime->browser reference=target',
     );

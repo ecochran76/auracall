@@ -6055,3 +6055,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     move with it
   - do the public-key migration first, then delay any large internal resolved
     field renames until they have a separate justification
+
+## 2026-04-03 - inspection output should show both primary and compatibility selector keys during selector migration
+
+- Symptom:
+  - after `defaultRuntimeProfile` became the primary selector key, inspection
+    output still mostly showed the resolved active AuraCall runtime profile
+    without making it clear which selector key was actually present in the file
+- Fix:
+  - updated `config show` and `config doctor` to report:
+    - primary selector key presence: `defaultRuntimeProfile`
+    - compatibility selector key presence: `auracallProfile`
+- Durable lesson:
+  - during a public-key migration, inspection surfaces should show both the new
+    primary key and the still-supported compatibility key until the old key is
+    fully retired

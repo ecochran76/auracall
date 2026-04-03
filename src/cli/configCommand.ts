@@ -13,10 +13,17 @@ import {
 } from '../config/model.js';
 
 type MutableRecord = Record<string, unknown>;
+type SelectorKeysReport = {
+  target: 'defaultRuntimeProfile';
+  compatibility: 'auracallProfile';
+  targetPresent: boolean;
+  compatibilityPresent: boolean;
+};
 
 export interface ConfigShowReport {
   configPath: string;
   loaded: boolean;
+  selectorKeys: SelectorKeysReport;
   active: {
     auracallRuntimeProfile: string | null;
     browserProfile: string | null;
@@ -68,7 +75,9 @@ export interface ProfileListReport {
 }
 
 export type ConfigDoctorIssue = ConfigModelDoctorIssue;
-export type ConfigDoctorReport = ConfigModelDoctorReport;
+export type ConfigDoctorReport = ConfigModelDoctorReport & {
+  selectorKeys: SelectorKeysReport;
+};
 
 export function resolveConfigDoctorExitCode(
   report: ConfigDoctorReport,
@@ -83,6 +92,15 @@ function asRecord(value: unknown): MutableRecord | null {
 
 function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
   return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
+}
+
+function buildSelectorKeysReport(rawConfig: MutableRecord): SelectorKeysReport {
+  return {
+    target: 'defaultRuntimeProfile',
+    compatibility: 'auracallProfile',
+    targetPresent: typeof rawConfig.defaultRuntimeProfile === 'string' && rawConfig.defaultRuntimeProfile.trim().length > 0,
+    compatibilityPresent: typeof rawConfig.auracallProfile === 'string' && rawConfig.auracallProfile.trim().length > 0,
+  };
 }
 
 export function buildConfigShowReport(input: {
@@ -102,6 +120,7 @@ export function buildConfigShowReport(input: {
   return {
     configPath: input.configPath,
     loaded: input.loaded,
+    selectorKeys: buildSelectorKeysReport(input.rawConfig),
     active: {
       auracallRuntimeProfile: input.resolvedConfig.auracallProfile ?? null,
       browserProfile: getRuntimeProfileBrowserProfileId(activeRuntimeProfileRecord),
@@ -169,13 +188,18 @@ export function buildConfigDoctorReport(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): ConfigDoctorReport {
-  return analyzeConfigModelBridgeHealth(rawConfig, options);
+  return {
+    ...analyzeConfigModelBridgeHealth(rawConfig, options),
+    selectorKeys: buildSelectorKeysReport(rawConfig),
+  };
 }
 
 export function formatConfigShowReport(report: ConfigShowReport): string {
   const lines = [
     `Config path: ${report.configPath}`,
     `Loaded: ${report.loaded ? 'yes' : 'no'}`,
+    `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
+    `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
     `AuraCall runtime profile: ${report.active.auracallRuntimeProfile ?? '(none)'}`,
     `Browser profile: ${report.active.browserProfile ?? '(none)'}`,
     `Default service: ${report.active.defaultService ?? '(none)'}`,
@@ -228,6 +252,8 @@ export function formatProfileListReport(report: ProfileListReport): string {
 
 export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
   const lines = [
+    `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
+    `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
     `Active AuraCall runtime profile: ${report.activeAuracallRuntimeProfile ?? '(none)'}`,
     `Active browser profile: ${report.activeBrowserProfile ?? '(none)'}`,
     `Status: ${report.ok ? 'ok' : 'warnings'}`,

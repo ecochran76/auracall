@@ -56,8 +56,9 @@ auracall profile list --json
 ```
 
 The command reports the active AuraCall runtime profile, its referenced browser
-profile, the resolved browser target, and whether the current bridge keys are
-present in the loaded config.
+profile, the resolved browser target, whether `defaultRuntimeProfile` or the
+compatibility selector `auracallProfile` is present, and whether the current
+bridge keys are present in the loaded config.
 
 The JSON forms now also include a `projectedModel` block that exposes
 the target conceptual shape directly:
