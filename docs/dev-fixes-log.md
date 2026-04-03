@@ -6508,3 +6508,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     it everywhere the workflow verifies that state
   - authoritative recovery checks should be stricter than fast-path checks, but
     they should still share the same probe contract
+
+## 2026-04-03 - ChatGPT delete confirmation should use the same matcher in live flows and tests
+
+- Symptom:
+  - the ChatGPT delete flow already had
+    `matchesChatgptDeleteConfirmationProbe(...)`, but the live delete path was
+    still polling a separate in-page confirmation expression
+  - that created two delete-confirmation semantic paths:
+    - test-time matcher logic
+    - live-flow expression logic
+- Fix:
+  - added one shared delete-confirmation probe reader in the adapter
+  - rewired both row-menu and header-fallback delete paths to poll that probe
+    through the canonical matcher
+  - removed the old duplicate confirmation expression
+- Durable lesson:
+  - if a provider already has a tested confirmation matcher, live interaction
+    code should poll a raw probe and reuse that matcher instead of embedding a
+    second confirmation definition in page JavaScript
+  - canonical confirmation semantics reduce drift in exactly the
+    post-trigger phase where UI volatility tends to accumulate

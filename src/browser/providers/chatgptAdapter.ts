@@ -2269,36 +2269,6 @@ function buildConversationRowActionReadyExpression(conversationId: string, proje
   })()`;
 }
 
-function buildConversationDeleteConfirmationExpression(expectedTitle?: string | null): string {
-  return `(() => {
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const isVisible = (node) => {
-      if (!(node instanceof Element)) return false;
-      const rect = node.getBoundingClientRect();
-      return rect.width > 0 && rect.height > 0;
-    };
-    const expected = normalize(${JSON.stringify(expectedTitle ?? null)});
-    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
-    for (const dialog of dialogs) {
-      if (!isVisible(dialog)) continue;
-      const text = normalize(dialog.textContent || '');
-      const labels = Array.from(dialog.querySelectorAll('button'))
-        .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
-        .filter(Boolean);
-      const confirmButton = dialog.querySelector(${JSON.stringify(CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR)});
-      if (!text.includes(${JSON.stringify(CHATGPT_CONVERSATION_DELETE_DIALOG_LABEL)})) continue;
-      if (!${JSON.stringify(CHATGPT_DELETE_CONFIRMATION_BUTTON_LABELS)}.every((label) => labels.includes(label))) continue;
-      if (confirmButton instanceof HTMLButtonElement && isVisible(confirmButton)) {
-        return { ok: true, matchedExpected: !expected || text.includes(expected) };
-      }
-      if (!expected || text.includes(expected)) {
-        return { ok: true, matchedExpected: !expected || text.includes(expected) };
-      }
-    }
-    return null;
-  })()`;
-}
-
 function buildConversationDeletedExpression(conversationId: string, projectId?: string | null): string {
   return `(() => {
     const expectedConversationId = ${JSON.stringify(conversationId)};
@@ -4997,18 +4967,11 @@ async function openChatgptTaggedConversationDeleteConfirmation(
         return deleteOpened;
       }
 
-      const confirmationReady = await waitForPredicate(
-        client.Runtime,
-        buildConversationDeleteConfirmationExpression(expectedTitle),
-        {
-          timeoutMs,
-          description: 'ChatGPT delete confirmation ready',
-        },
-      );
+      const confirmationReady = await waitForChatgptDeleteConfirmationReady(client, expectedTitle, timeoutMs);
       if (!confirmationReady.ok) {
         return {
           ok: false,
-          reason: 'Delete confirmation did not become ready',
+          reason: `Delete confirmation did not become ready (${JSON.stringify(confirmationReady.probe ?? null)})`,
         };
       }
 
@@ -5154,6 +5117,31 @@ function buildChatgptConversationTitleProbeExpression(): string {
   })()`;
 }
 
+function buildChatgptDeleteConfirmationProbeExpression(): string {
+  return `(() => {
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'));
+    for (const dialog of dialogs) {
+      if (!isVisible(dialog)) continue;
+      const buttons = Array.from(dialog.querySelectorAll('button'));
+      const confirmButton = dialog.querySelector(${JSON.stringify(CHATGPT_DELETE_CONVERSATION_CONFIRM_BUTTON_SELECTOR)});
+      return {
+        dialogText: normalize(dialog.textContent || ''),
+        buttonLabels: buttons
+          .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''))
+          .filter(Boolean),
+        hasVisibleConfirmButton: confirmButton instanceof HTMLButtonElement && isVisible(confirmButton),
+      };
+    }
+    return null;
+  })()`;
+}
+
 async function readChatgptConversationTitleProbe(
   client: ChromeClient,
   conversationId: string,
@@ -5187,6 +5175,33 @@ async function readChatgptConversationTitleProbe(
     returnByValue: true,
   });
   return (result?.value as ChatgptConversationTitleProbe | null | undefined) ?? null;
+}
+
+async function readChatgptDeleteConfirmationProbe(
+  client: ChromeClient,
+): Promise<ChatgptDeleteConfirmationProbe | null> {
+  const { result } = await client.Runtime.evaluate({
+    expression: buildChatgptDeleteConfirmationProbeExpression(),
+    returnByValue: true,
+  });
+  return (result?.value as ChatgptDeleteConfirmationProbe | null | undefined) ?? null;
+}
+
+async function waitForChatgptDeleteConfirmationReady(
+  client: ChromeClient,
+  expectedTitle?: string | null,
+  timeoutMs = 5_000,
+): Promise<{ ok: true; probe: ChatgptDeleteConfirmationProbe } | { ok: false; probe: ChatgptDeleteConfirmationProbe | null }> {
+  const deadline = Date.now() + timeoutMs;
+  let lastProbe: ChatgptDeleteConfirmationProbe | null = null;
+  while (Date.now() < deadline) {
+    lastProbe = await readChatgptDeleteConfirmationProbe(client);
+    if (matchesChatgptDeleteConfirmationProbe(lastProbe, expectedTitle)) {
+      return { ok: true, probe: lastProbe! };
+    }
+    await sleep(200);
+  }
+  return { ok: false, probe: lastProbe };
 }
 
 async function waitForChatgptConversationTitleApplied(
@@ -5826,14 +5841,7 @@ async function deleteChatgptConversationWithClient(
           `ChatGPT conversation delete menu did not open for ${conversationId}: ${deleteReady.reason || 'no matching action surface'}`,
         );
       }
-      let confirmationReady = await waitForPredicate(
-        client.Runtime,
-        buildConversationDeleteConfirmationExpression(expectedTitle),
-        {
-          timeoutMs: 5_000,
-          description: `ChatGPT delete confirmation ready for ${conversationId}`,
-        },
-      );
+      let confirmationReady = await waitForChatgptDeleteConfirmationReady(client, expectedTitle, 5_000);
       if (!confirmationReady.ok) {
         const headerRetry = await openAndSelectMenuItemFromTriggers(client.Runtime, {
           triggers: [
@@ -5860,16 +5868,11 @@ async function deleteChatgptConversationWithClient(
             `ChatGPT conversation delete confirmation did not open for ${conversationId}: ${headerRetry.reason || 'header retry failed'}`,
           );
         }
-        confirmationReady = await waitForPredicate(
-          client.Runtime,
-          buildConversationDeleteConfirmationExpression(expectedTitle),
-          {
-            timeoutMs: 5_000,
-            description: `ChatGPT delete confirmation ready for ${conversationId}`,
-          },
-        );
+        confirmationReady = await waitForChatgptDeleteConfirmationReady(client, expectedTitle, 5_000);
         if (!confirmationReady.ok) {
-          throw new Error(`ChatGPT delete confirmation did not open for ${conversationId}`);
+          throw new Error(
+            `ChatGPT delete confirmation did not open for ${conversationId} (${JSON.stringify(confirmationReady.probe ?? null)})`,
+          );
         }
       }
       const pressed = await pressButton(client.Runtime, {

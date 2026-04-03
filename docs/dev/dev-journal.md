@@ -5857,3 +5857,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     hardening slice:
     - `default` root rename still green
     - `wsl-chrome-2` root rename also green
+
+## 2026-04-03 13:43 CDT
+
+- Focus:
+  - harden the adjacent ChatGPT root delete post-trigger path and prove it on
+    the second managed browser profile/account
+- What changed:
+  - rewired ChatGPT root delete confirmation detection in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    to use one shared delete-confirmation probe reader plus the existing
+    `matchesChatgptDeleteConfirmationProbe(...)` matcher
+  - removed the old duplicate in-page delete-confirmation expression so the
+    delete flow no longer has a separate confirmation semantic path from tests
+  - kept the persisted-delete verification surface unchanged:
+    - delete still must disappear from both the active route and the visible
+      conversation list
+  - live-smoked the hardened delete path by reusing the disposable
+    `wsl-chrome-2` root conversation from the earlier rename smoke:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase cleanup --resume docs/dev/tmp/chatgpt-rename-smoke-state-wsl-chrome-2.json`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live runner result:
+    - `PASS (cleanup)` on `wsl-chrome-2`
+- Notes:
+  - this keeps the ChatGPT delete hardening bounded:
+    - confirmation readiness is now canonicalized
+    - persisted-deletion post-condition stays on the existing list/route
+      absence proof
