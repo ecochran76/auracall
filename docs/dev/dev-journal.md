@@ -5953,3 +5953,47 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - recommendation stays methodical:
     take project settings / instructions persistence next instead of jumping
     straight back into the broader read/artifact recovery surfaces
+
+## 2026-04-03 16:24 CDT
+
+- Focus:
+  - harden ChatGPT project settings persistence so project rename and
+    instructions writes share one authoritative reopen-to-verify contract
+- What changed:
+  - added `matchesChatgptProjectSettingsSnapshot(...)` in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    as the canonical persisted-settings matcher
+  - replaced the split field-specific persistence helpers with one shared
+    `waitForProjectSettingsApplied(...)` path built on:
+    - reopen project settings
+    - read one settings snapshot
+    - compare name and/or instructions through the same matcher
+  - rewired:
+    - project rename persistence
+    - project instructions persistence
+    - project creation follow-on instructions persistence
+    to use that shared snapshot verifier
+  - during live validation, the earlier project-source normalization-only
+    persistence check regressed on `wsl-chrome-2`, so the shared
+    project-source persistence helper now uses:
+    - normalized source list as primary truth
+    - the old DOM expression as bounded fallback
+    to preserve the already-green project phase while keeping one shared helper
+  - added focused matcher coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+  - live-smoked the full bounded project phase on `wsl-chrome-2` after the
+    repair:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --profile wsl-chrome-2 --phase project --state-file docs/dev/tmp/chatgpt-project-settings-smoke-state-wsl-chrome-2.json`
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live runner result:
+    - `PASS (project)` on `wsl-chrome-2`
+  - persisted state file:
+    [chatgpt-project-settings-smoke-state-wsl-chrome-2.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-project-settings-smoke-state-wsl-chrome-2.json)
+- Notes:
+  - this live proof covered the exact settings-slice surfaces plus incidental
+    regression coverage for project sources:
+    - project rename
+    - project source add/remove
+    - instructions set/get

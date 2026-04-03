@@ -589,6 +589,12 @@ type ChatgptConversationPayloadResponse = {
   error?: string | null;
 };
 
+type ChatgptProjectSettingsSnapshot = {
+  name: string;
+  text: string;
+  memoryModeLabel?: string | null;
+};
+
 type ChatgptConversationPayload = {
   mapping?: Record<string, ChatgptConversationPayloadNode | null> | null;
 };
@@ -1137,6 +1143,25 @@ export function matchesChatgptRenameEditorProbe(
     return false;
   }
   return normalizeUiText(probe.inputName).toLowerCase() === 'title-editor';
+}
+
+export function matchesChatgptProjectSettingsSnapshot(
+  snapshot: ChatgptProjectSettingsSnapshot | null | undefined,
+  expected: { name?: string; instructions?: string },
+): boolean {
+  if (!snapshot) {
+    return false;
+  }
+  if (typeof expected.name === 'string' && normalizeUiText(snapshot.name) !== normalizeUiText(expected.name)) {
+    return false;
+  }
+  if (
+    typeof expected.instructions === 'string' &&
+    normalizeInstructionComparisonText(snapshot.text) !== normalizeInstructionComparisonText(expected.instructions)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function isRetryableConnectionError(error: unknown): boolean {
@@ -2332,32 +2357,6 @@ function buildProjectRouteChangeExpression(initialProjectId?: string | null): st
   })()`;
 }
 
-function buildProjectNameAppliedExpression(projectId: string, expectedName: string): string {
-  return `(() => {
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const titleEditPrefix = ${JSON.stringify(CHATGPT_PROJECT_TITLE_EDIT_PREFIX)};
-    const expected = normalize(${JSON.stringify(expectedName)});
-    if (!expected) return null;
-    const values = new Set();
-    const title = document.title.replace(/^ChatGPT\\s*-\\s*/i, '');
-    values.add(normalize(title));
-    const titleButton = Array.from(document.querySelectorAll('button,[role="button"]'))
-      .find((node) => normalize(node.getAttribute('aria-label') || '').startsWith(titleEditPrefix));
-    if (titleButton) {
-      values.add(normalize(titleButton.textContent || ''));
-      const aria = normalize(titleButton.getAttribute('aria-label') || '');
-      if (aria.startsWith(titleEditPrefix)) {
-        values.add(aria.slice(titleEditPrefix.length).trim());
-      }
-    }
-    const projectLink = document.querySelector(${JSON.stringify(`a[href*="/g/${projectId}/project"]`)});
-    if (projectLink) {
-      values.add(normalize(projectLink.textContent || ''));
-    }
-    return Array.from(values).some((value) => value === expected) ? { values: Array.from(values) } : null;
-  })()`;
-}
-
 function buildProjectSurfaceReadyExpression(projectId?: string | null): string {
   return `(() => {
     const route = location.pathname.match(/^\\/g\\/([^/]+)\\/project\\/?$/);
@@ -3052,6 +3051,7 @@ async function waitForProjectSourcePersistence(
     timeoutMs?: number;
     initialDelayMs?: number;
     pollDelayMs?: number;
+    fallbackExpression?: string;
   },
 ): Promise<void> {
   const timeoutMs = options.timeoutMs ?? 30_000;
@@ -3065,6 +3065,21 @@ async function waitForProjectSourcePersistence(
     const matched = findChatgptProjectSourceName(files, fileName);
     if ((options.shouldExist && matched) || (!options.shouldExist && !matched)) {
       return;
+    }
+    if (options.fallbackExpression) {
+      const fallback = await waitForPredicate(
+        client.Runtime,
+        options.fallbackExpression,
+        {
+          timeoutMs: 2_000,
+          description: options.shouldExist
+            ? `ChatGPT project source fallback persisted for ${projectId}`
+            : `ChatGPT project source fallback removed for ${projectId}`,
+        },
+      );
+      if (fallback.ok) {
+        return;
+      }
     }
     await sleep(pollDelayMs);
   }
@@ -3292,6 +3307,7 @@ async function uploadChatgptProjectSourceFilesWithClient(
       timeoutMs: 30_000,
       initialDelayMs: 4_000,
       pollDelayMs: 2_000,
+      fallbackExpression: buildProjectSourceNamesPresentExpression([expectedName]),
     });
   }
 }
@@ -4005,7 +4021,7 @@ async function commitProjectSettingsDialog(client: ChromeClient, settingsRootSel
 
 async function readProjectSettingsSnapshot(
   client: ChromeClient,
-): Promise<{ name: string; text: string; memoryModeLabel?: string | null }> {
+): Promise<ChatgptProjectSettingsSnapshot> {
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -4042,48 +4058,40 @@ async function readProjectSettingsSnapshot(
   };
 }
 
-async function waitForProjectInstructionsApplied(
+async function waitForProjectSettingsApplied(
   client: ChromeClient,
   projectId: string,
-  expectedText: string,
+  expected: { name?: string; instructions?: string },
 ): Promise<void> {
-  const expected = normalizeInstructionComparisonText(expectedText);
   const deadline = Date.now() + 15_000;
-  let lastText = '';
+  let lastSnapshot: ChatgptProjectSettingsSnapshot | null = null;
   while (Date.now() < deadline) {
     await openProjectSettingsPanel(client, projectId);
     const snapshot = await readProjectSettingsSnapshot(client);
-    lastText = snapshot.text;
+    lastSnapshot = snapshot;
     await closeDialog(client.Runtime, DEFAULT_DIALOG_SELECTORS);
-    if (normalizeInstructionComparisonText(snapshot.text) === expected) {
+    if (matchesChatgptProjectSettingsSnapshot(snapshot, expected)) {
       return;
     }
     await sleep(1_000);
   }
   throw new Error(
-    `ChatGPT project instructions did not persist (${JSON.stringify({
-      expected,
-      actual: normalizeInstructionComparisonText(lastText),
+    `ChatGPT project settings did not persist (${JSON.stringify({
+      expected: {
+        name: typeof expected.name === 'string' ? normalizeUiText(expected.name) : undefined,
+        instructions:
+          typeof expected.instructions === 'string'
+            ? normalizeInstructionComparisonText(expected.instructions)
+            : undefined,
+      },
+      actual: lastSnapshot
+        ? {
+            name: normalizeUiText(lastSnapshot.name),
+            instructions: normalizeInstructionComparisonText(lastSnapshot.text),
+          }
+        : null,
     })})`,
   );
-}
-
-async function waitForProjectNameApplied(
-  client: ChromeClient,
-  projectId: string,
-  expectedName: string,
-): Promise<void> {
-  const result = await waitForPredicate(
-    client.Runtime,
-    buildProjectNameAppliedExpression(projectId, expectedName),
-    {
-      timeoutMs: 8000,
-      description: `ChatGPT project name ${expectedName} applied`,
-    },
-  );
-  if (!result.ok) {
-    throw new Error('ChatGPT project rename did not apply');
-  }
 }
 
 async function readCurrentProject(client: ChromeClient): Promise<Project | null> {
@@ -6844,9 +6852,9 @@ export function createChatgptAdapter(): Pick<
               },
             );
             try {
-              await waitForProjectNameApplied(client, createdId, input.name);
+              await waitForProjectSettingsApplied(client, createdId, { name: input.name });
             } catch {
-              // Title/sidebar hydration can lag after route change; route change itself is authoritative.
+              // Settings-snapshot verification can lag right after route change; route change itself is still authoritative here.
             }
             const current = await readCurrentProject(client);
             created = {
@@ -6891,7 +6899,7 @@ export function createChatgptAdapter(): Pick<
         }
         if (input.instructions?.trim()) {
           await applyProjectSettings(client, created.id, { instructions: input.instructions });
-          await waitForProjectInstructionsApplied(client, created.id, input.instructions);
+          await waitForProjectSettingsApplied(client, created.id, { instructions: input.instructions });
         }
         if (Array.isArray(input.files) && input.files.length > 0) {
           await uploadChatgptProjectSourceFilesWithClient(client, created.id, input.files);
@@ -7008,6 +7016,7 @@ export function createChatgptAdapter(): Pick<
           timeoutMs: 20_000,
           initialDelayMs: 1_500,
           pollDelayMs: 1_500,
+          fallbackExpression: buildProjectSourceRemovedExpression(targetFileName),
         });
       } finally {
         await client.close().catch(() => undefined);
@@ -7025,7 +7034,7 @@ export function createChatgptAdapter(): Pick<
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await applyProjectSettings(client, projectId, { instructions });
-        await waitForProjectInstructionsApplied(client, projectId, instructions);
+        await waitForProjectSettingsApplied(client, projectId, { instructions });
       } finally {
         await client.close().catch(() => undefined);
       }
@@ -7048,7 +7057,7 @@ export function createChatgptAdapter(): Pick<
       const { client } = await connectToChatgptTab(options, resolveChatgptProjectUrl(projectId));
       try {
         await applyProjectSettings(client, projectId, { name: newTitle });
-        await waitForProjectNameApplied(client, projectId, newTitle);
+        await waitForProjectSettingsApplied(client, projectId, { name: newTitle });
       } finally {
         await client.close().catch(() => undefined);
       }

@@ -15,6 +15,7 @@ import {
   matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
   matchesChatgptProjectDeleteConfirmationProbe,
+  matchesChatgptProjectSettingsSnapshot,
   matchesChatgptRenameEditorProbe,
   normalizeChatgptAuthSessionIdentity,
   normalizeChatgptConversationId,
@@ -1040,6 +1041,47 @@ describe('findChatgptProjectSourceName', () => {
         'spec.md',
       ),
     ).toBeNull();
+  });
+});
+
+describe('matchesChatgptProjectSettingsSnapshot', () => {
+  test('matches by persisted project name only when requested', () => {
+    expect(
+      matchesChatgptProjectSettingsSnapshot(
+        {
+          name: 'AC GPT R test',
+          text: 'instructions',
+        },
+        { name: 'AC GPT R test' },
+      ),
+    ).toBe(true);
+  });
+
+  test('matches by normalized instructions only when requested', () => {
+    expect(
+      matchesChatgptProjectSettingsSnapshot(
+        {
+          name: 'AC GPT R test',
+          text: 'Line 1\n\nLine 2',
+        },
+        { instructions: 'Line 1\n\nLine 2' },
+      ),
+    ).toBe(true);
+  });
+
+  test('requires both name and instructions when both are requested', () => {
+    expect(
+      matchesChatgptProjectSettingsSnapshot(
+        {
+          name: 'AC GPT R test',
+          text: 'Line 1',
+        },
+        {
+          name: 'AC GPT R test',
+          instructions: 'Different line',
+        },
+      ),
+    ).toBe(false);
   });
 });
 

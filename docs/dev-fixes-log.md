@@ -6552,3 +6552,40 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once the persisted-state contract is “normalized list after refresh,” both
     add and remove should share the same matcher instead of maintaining inverse
     bespoke loops
+
+## 2026-04-03 - ChatGPT project settings should use one authoritative persisted snapshot for both name and instructions
+
+- Symptom:
+  - project instructions persistence already reopened the settings panel and
+    read the persisted textarea value
+  - project rename persistence still used a separate route/title-style check
+  - that left the settings surface with split persistence semantics even though
+    both values ultimately live in the same settings dialog
+- Fix:
+  - added a shared project-settings snapshot matcher
+  - rewired project rename and project instructions persistence to use the same
+    reopen-and-read settings snapshot contract
+- Durable lesson:
+  - when multiple mutable fields share one authoritative settings surface,
+    persist verification should share one snapshot contract too
+  - do not keep one field on reopen-to-verify and another on ambient route/title
+    checks if the real persisted truth lives in the settings panel
+
+## 2026-04-03 - shared persistence helpers may still need bounded fallback proofs when normalized list parsing lags live UI
+
+- Symptom:
+  - after moving project-source persistence to the normalized source list, the
+    first live `wsl-chrome-2` project smoke regressed at source upload
+    persistence even though this surface had been acceptance-green before
+  - that showed the normalized list is the right primary contract, but not yet
+    always sufficient as the only live proof during reload timing drift
+- Fix:
+  - kept the shared project-source persistence helper
+  - restored the prior DOM-expression check as a bounded fallback inside that
+    helper while keeping the normalized list as primary truth
+- Durable lesson:
+  - when replacing a previously green live verifier with a cleaner normalized
+    matcher, keep a bounded fallback until the normalized matcher is proven
+    fully sufficient on the live surface
+  - architectural cleanup is good, but not at the cost of regressing an
+    already-live-green acceptance path
