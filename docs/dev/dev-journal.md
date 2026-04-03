@@ -4728,3 +4728,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps target-model projection and bridge-health diagnostics in one
     place without starting input alias support
+
+## 2026-04-02 20:00 CDT
+
+- Focus:
+  - move overlapping read-only config inspection assembly onto one shared
+    model-layer view
+- What changed:
+  - added `inspectConfigModel(...)` in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    to centralize:
+    - active AuraCall runtime profile
+    - active browser profile
+    - active default service
+    - browser-profile inventory
+    - runtime-profile inventory
+    - legacy runtime-profile inventory
+    - bridge-key presence state
+    - projected target model
+  - rewired
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `buildConfigShowReport(...)` and `buildProfileListReport(...)` consume
+    that shared inspection helper instead of rebuilding overlapping state
+  - expanded
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    with direct inspection-view coverage
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is still read-only target-model work
+  - no target-shape input aliases were added

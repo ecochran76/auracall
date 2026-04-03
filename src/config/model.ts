@@ -21,6 +21,21 @@ export interface ProjectedConfigModel {
   runtimeProfiles: ProjectedRuntimeProfile[];
 }
 
+export interface ConfigModelInspection {
+  activeRuntimeProfileId: string | null;
+  activeBrowserProfileId: string | null;
+  activeDefaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+  browserProfileIds: string[];
+  runtimeProfiles: ProjectedRuntimeProfile[];
+  legacyRuntimeProfileIds: string[];
+  bridgeState: {
+    browserProfilesPresent: boolean;
+    auracallRuntimeProfilesPresent: boolean;
+    legacyRuntimeProfilesPresent: boolean;
+  };
+  projectedModel: ProjectedConfigModel;
+}
+
 export interface ConfigModelDoctorIssue {
   code:
     | 'no-runtime-profiles'
@@ -204,6 +219,44 @@ export function projectConfigModel(
     activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
     browserProfiles,
     runtimeProfiles,
+  };
+}
+
+export function inspectConfigModel(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null } = {},
+): ConfigModelInspection {
+  const activeRuntimeProfileId = getPreferredRuntimeProfileName(config, options);
+  const activeRuntimeProfile = getPreferredRuntimeProfile(config, {
+    explicitProfileName: activeRuntimeProfileId,
+  });
+  const browserProfileIds = Object.keys(getBrowserProfiles(config)).sort();
+  const runtimeProfiles = Object.entries(getCurrentRuntimeProfiles(config))
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([id, runtimeProfile]) => ({
+      id,
+      browserProfileId: getRuntimeProfileBrowserProfileId(runtimeProfile),
+      defaultService: asServiceId(isRecord(runtimeProfile) ? runtimeProfile.defaultService : undefined),
+    }));
+  const legacyRuntimeProfileIds = Object.keys(getLegacyRuntimeProfiles(config)).sort();
+  return {
+    activeRuntimeProfileId,
+    activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
+    activeDefaultService: asServiceId(isRecord(activeRuntimeProfile) ? activeRuntimeProfile.defaultService : undefined),
+    browserProfileIds,
+    runtimeProfiles,
+    legacyRuntimeProfileIds,
+    bridgeState: {
+      browserProfilesPresent: browserProfileIds.length > 0,
+      auracallRuntimeProfilesPresent: runtimeProfiles.length > 0,
+      legacyRuntimeProfilesPresent: legacyRuntimeProfileIds.length > 0,
+    },
+    projectedModel: {
+      activeRuntimeProfileId,
+      activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
+      browserProfiles: browserProfileIds.map((id) => ({ id })),
+      runtimeProfiles,
+    },
   };
 }
 

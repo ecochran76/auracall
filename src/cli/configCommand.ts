@@ -1,13 +1,11 @@
 import type { ResolvedUserConfig } from '../config.js';
 import {
   analyzeConfigModelBridgeHealth,
-  getBrowserProfiles,
-  getCurrentRuntimeProfiles,
-  getLegacyRuntimeProfiles,
+  inspectConfigModel,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
-  projectConfigModel,
   getRuntimeProfileBrowserProfileId,
+  type ConfigModelInspection,
   type ConfigModelDoctorIssue,
   type ConfigModelDoctorReport,
   type ProjectedConfigModel,
@@ -91,9 +89,9 @@ export function buildConfigShowReport(input: {
   configPath: string;
   loaded: boolean;
 }): ConfigShowReport {
-  const browserProfiles = getBrowserProfiles(input.rawConfig);
-  const currentRuntimeProfiles = getCurrentRuntimeProfiles(input.rawConfig);
-  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(input.rawConfig);
+  const inspection = inspectConfigModel(input.rawConfig, {
+    explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
+  });
   const activeRuntimeProfile = getPreferredRuntimeProfile(input.rawConfig, {
     explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
   });
@@ -109,23 +107,17 @@ export function buildConfigShowReport(input: {
       resolvedBrowserTarget: asServiceId(input.resolvedConfig.browser?.target),
     },
     available: {
-      browserProfiles: Object.keys(browserProfiles).sort(),
-      auracallRuntimeProfiles: Object.keys(currentRuntimeProfiles).sort(),
-      legacyRuntimeProfiles: Object.keys(legacyRuntimeProfiles).sort(),
+      browserProfiles: inspection.browserProfileIds,
+      auracallRuntimeProfiles: inspection.runtimeProfiles.map((profile) => profile.id),
+      legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
     bridgeKeys: {
       browserProfiles: 'browserFamilies',
       auracallRuntimeProfiles: 'profiles',
       runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
     },
-    bridgeState: {
-      browserProfilesPresent: Object.keys(browserProfiles).length > 0,
-      auracallRuntimeProfilesPresent: Object.keys(currentRuntimeProfiles).length > 0,
-      legacyRuntimeProfilesPresent: Object.keys(legacyRuntimeProfiles).length > 0,
-    },
-    projectedModel: projectConfigModel(input.rawConfig, {
-      explicitProfileName: input.resolvedConfig.auracallProfile ?? null,
-    }),
+    bridgeState: inspection.bridgeState,
+    projectedModel: inspection.projectedModel,
   };
 }
 
@@ -151,34 +143,25 @@ export function buildProfileListReport(
   rawConfig: MutableRecord,
   options: { explicitProfileName?: string | null } = {},
 ): ProfileListReport {
-  const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(rawConfig, {
+  const inspection = inspectConfigModel(rawConfig, {
     explicitProfileName: options.explicitProfileName ?? null,
   });
-  const browserProfiles = Object.keys(getBrowserProfiles(rawConfig)).sort();
-  const runtimeProfiles = getCurrentRuntimeProfiles(rawConfig);
-  const auracallRuntimeProfiles = Object.keys(runtimeProfiles)
-    .sort()
-    .map((name) => {
-      const runtimeProfile = asRecord(runtimeProfiles[name]);
-      return {
-        name,
-        active: name === activeAuracallRuntimeProfile,
-        browserProfile: getRuntimeProfileBrowserProfileId(runtimeProfile),
-        defaultService: asServiceId(runtimeProfile?.defaultService),
-      };
-    });
+  const auracallRuntimeProfiles = inspection.runtimeProfiles.map((runtimeProfile) => ({
+    name: runtimeProfile.id,
+    active: runtimeProfile.id === inspection.activeRuntimeProfileId,
+    browserProfile: runtimeProfile.browserProfileId,
+    defaultService: runtimeProfile.defaultService,
+  }));
   return {
-    activeAuracallRuntimeProfile,
-    browserProfiles,
+    activeAuracallRuntimeProfile: inspection.activeRuntimeProfileId,
+    browserProfiles: inspection.browserProfileIds,
     auracallRuntimeProfiles,
     bridgeKeys: {
       browserProfiles: 'browserFamilies',
       auracallRuntimeProfiles: 'profiles',
       runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
     },
-    projectedModel: projectConfigModel(rawConfig, {
-      explicitProfileName: options.explicitProfileName ?? null,
-    }),
+    projectedModel: inspection.projectedModel,
   };
 }
 

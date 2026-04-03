@@ -5815,3 +5815,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     diagnostics should live there too
   - CLI/operator surfaces should consume that seam rather than re-implement the
     same bridge rules locally
+
+## 2026-04-02 - overlapping read-only config inspection views should share one model-layer inventory helper
+
+- Symptom:
+  - `config show` and `profile list` were both read-only target-model surfaces
+  - but each still rebuilt overlapping state locally:
+    - active AuraCall runtime profile
+    - browser-profile inventory
+    - runtime-profile inventory
+    - bridge-key presence
+- Fix:
+  - added `inspectConfigModel(...)` in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - rewired CLI report builders to consume that shared inspection view
+- Durable lesson:
+  - once multiple operator surfaces are exposing the same conceptual model,
+    inventory/state assembly should move into the model seam before adding more
+    commands or input aliases

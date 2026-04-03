@@ -12,6 +12,7 @@ import {
   getCurrentRuntimeProfiles,
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
+  inspectConfigModel,
   projectConfigModel,
   getRuntimeProfileBrowserProfile,
   getRuntimeProfileBrowserProfileId,
@@ -120,6 +121,46 @@ describe('config model helpers', () => {
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
         { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
       ],
+    });
+  });
+
+  it('builds a shared inspection view for read-only config surfaces', () => {
+    const config = {
+      auracallProfile: 'work',
+      browserFamilies: {
+        default: { chromePath: '/usr/bin/google-chrome' },
+        'wsl-chrome-2': { chromePath: '/usr/bin/google-chrome' },
+      },
+      profiles: {
+        default: { browserFamily: 'default', defaultService: 'chatgpt' },
+        work: { browserFamily: 'wsl-chrome-2', defaultService: 'grok' },
+      },
+    };
+
+    expect(inspectConfigModel(config)).toEqual({
+      activeRuntimeProfileId: 'work',
+      activeBrowserProfileId: 'wsl-chrome-2',
+      activeDefaultService: 'grok',
+      browserProfileIds: ['default', 'wsl-chrome-2'],
+      runtimeProfiles: [
+        { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+        { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
+      ],
+      legacyRuntimeProfileIds: [],
+      bridgeState: {
+        browserProfilesPresent: true,
+        auracallRuntimeProfilesPresent: true,
+        legacyRuntimeProfilesPresent: false,
+      },
+      projectedModel: {
+        activeRuntimeProfileId: 'work',
+        activeBrowserProfileId: 'wsl-chrome-2',
+        browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
+        runtimeProfiles: [
+          { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
+          { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
+        ],
+      },
     });
   });
 
