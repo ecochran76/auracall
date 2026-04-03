@@ -5496,3 +5496,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is still selection/runtime plumbing only
   - it does not add agent execution mode
+
+## 2026-04-03 10:32 CDT
+
+- Focus:
+  - carry the shared runtime-selection seam into the browser-facing
+    profile-resolution layer
+- What changed:
+  - added `resolveSelectedBrowserProfileResolution(...)` in
+    [src/browser/service/profileResolution.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileResolution.ts)
+    as the first browser-facing helper that combines:
+    - shared runtime selection
+    - resolved browser-profile layering
+    - explicit runtime-profile override support for call sites that already
+      hold a selected AuraCall runtime profile object
+  - rewired
+    [src/browser/service/profileConfig.ts](/home/ecochran76/workspace.local/oracle/src/browser/service/profileConfig.ts)
+    to consume that helper instead of rebuilding browser-profile resolution
+    directly
+  - expanded
+    [tests/browser/profileResolution.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileResolution.test.ts)
+    with direct coverage for:
+    - explicit `--agent` browser-profile resolution
+    - explicit `--profile` winning over `--agent` in browser-profile
+      resolution
+- Verification:
+  - `pnpm vitest run tests/browser/profileResolution.test.ts tests/browser/profileConfig.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts tests/cli/configCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - the first draft dropped the explicit runtime-profile object that
+    `profileConfig.ts` already receives
+  - the final helper keeps that override while still centralizing agent-aware
+    selection identity

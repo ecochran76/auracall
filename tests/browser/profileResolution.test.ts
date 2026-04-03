@@ -6,6 +6,7 @@ import {
   resolveManagedBrowserLaunchContextFromResolvedConfig,
   resolveBrowserProfileResolution,
   resolveBrowserProfileResolutionFromResolvedConfig,
+  resolveSelectedBrowserProfileResolution,
   resolveSessionBrowserLaunchContext,
   resolveUserBrowserLaunchContext,
 } from '../../src/browser/service/profileResolution.js';
@@ -316,6 +317,107 @@ describe('resolveBrowserProfileResolution', () => {
 
     expect(result.profileFamily.browserProfileId).toBe('consulting');
     expect(result.browserProfile.chromePath).toBe('/usr/bin/google-chrome');
+  });
+
+  test('can resolve browser profile layers from an explicit agent-aware runtime selection', () => {
+    const result = resolveSelectedBrowserProfileResolution({
+      merged: {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            display: ':0.0',
+          },
+          consulting: {
+            chromePath: '/opt/google/chrome',
+            display: ':1.0',
+          },
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'work' },
+        },
+        browser: {},
+      },
+      browser: {
+        target: 'grok',
+      },
+      explicitAgentId: 'analyst',
+    });
+
+    expect(result.runtimeSelection).toMatchObject({
+      agent: {
+        agentId: 'analyst',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        defaultService: 'grok',
+        exists: true,
+      },
+      runtimeProfileId: 'work',
+      browserProfileId: 'consulting',
+      defaultService: 'grok',
+    });
+    expect(result.resolution.profileFamily).toMatchObject({
+      profileName: 'work',
+      browserProfileId: 'consulting',
+      defaultService: 'grok',
+    });
+    expect(result.resolution.browserProfile).toMatchObject({
+      chromePath: '/opt/google/chrome',
+      display: ':1.0',
+    });
+    expect(result.resolution.launchProfile).toMatchObject({
+      target: 'grok',
+      chromePath: '/opt/google/chrome',
+      display: ':1.0',
+    });
+  });
+
+  test('keeps explicit AuraCall runtime profile selection above explicit agent selection in browser profile resolution', () => {
+    const result = resolveSelectedBrowserProfileResolution({
+      merged: {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+          consulting: {
+            chromePath: '/opt/google/chrome',
+          },
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'work' },
+        },
+        browser: {},
+      },
+      browser: {},
+      explicitProfileName: 'default',
+      explicitAgentId: 'analyst',
+    });
+
+    expect(result.runtimeSelection).toMatchObject({
+      agent: {
+        agentId: 'analyst',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        defaultService: 'grok',
+        exists: true,
+      },
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      defaultService: 'chatgpt',
+    });
+    expect(result.resolution.profileFamily).toMatchObject({
+      profileName: 'default',
+      browserProfileId: 'default',
+      defaultService: 'chatgpt',
+    });
+    expect(result.resolution.browserProfile.chromePath).toBe('/usr/bin/google-chrome');
   });
 
   test('builds a reusable launch context directly from resolved user config', () => {

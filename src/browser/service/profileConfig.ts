@@ -1,4 +1,4 @@
-import { resolveBrowserProfileResolution } from './profileResolution.js';
+import { resolveSelectedBrowserProfileResolution } from './profileResolution.js';
 
 type ServiceId = 'chatgpt' | 'gemini' | 'grok';
 type MutableBrowserConfig = Record<string, unknown>;
@@ -22,10 +22,10 @@ export function applyBrowserProfileOverrides(
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
   const profileBrowser = (profile.browser ?? {}) as Record<string, unknown>;
-  const resolution = resolveBrowserProfileResolution({
+  const { resolution } = resolveSelectedBrowserProfileResolution({
     merged,
-    profileName: asNonEmptyString(merged.auracallProfile) ?? null,
-    profile,
+    explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,
+    runtimeProfile: profile,
     browser,
   });
   if (!browser.target && resolution.profileFamily.defaultService) {
@@ -56,10 +56,10 @@ function applyBrowserProfileDefaults(
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
   const profileBrowser = isRecord(profile.browser) ? profile.browser : {};
-  const resolution = resolveBrowserProfileResolution({
+  const { resolution } = resolveSelectedBrowserProfileResolution({
     merged,
-    profileName: asNonEmptyString(merged.auracallProfile) ?? null,
-    profile,
+    explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,
+    runtimeProfile: profile,
     browser,
   });
   const browserProfile = resolution.browserProfile;
@@ -187,10 +187,10 @@ function applyServiceDefaults(
   options: { overrideExisting?: boolean } = {},
 ): void {
   const overrideExisting = options.overrideExisting ?? false;
-  const resolution = resolveBrowserProfileResolution({
+  const { resolution } = resolveSelectedBrowserProfileResolution({
     merged,
-    profileName: asNonEmptyString(merged.auracallProfile) ?? null,
-    profile,
+    explicitProfileName: asNonEmptyString(merged.auracallProfile) ?? null,
+    runtimeProfile: profile,
     browser,
   });
 

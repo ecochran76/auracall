@@ -6303,3 +6303,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     leaf helpers and add one canonical resolved bundle for runtime consumers
   - this reduces drift between inspection/reporting and the real resolution
     path before full execution semantics arrive
+
+## 2026-04-03 - when centralizing browser-facing selection, preserve explicit runtime-profile overrides at call sites
+
+- Symptom:
+  - after introducing a shared browser-facing selection helper, browser config
+    application lost defaults like:
+    - `target`
+    - service URLs
+    - debug port
+  - because `profileConfig.ts` already receives an explicit selected AuraCall
+    runtime profile object, and the first helper draft ignored that override in
+    favor of lookup-only selection
+- Fix:
+  - updated the shared browser-facing helper to accept an explicit
+    runtime-profile override while still using shared runtime selection for:
+    - agent-aware identity
+    - runtime-profile precedence
+  - rewired `profileConfig.ts` through that final helper
+- Durable lesson:
+  - a central seam should own precedence and identity, but it must still honor
+    explicit higher-confidence objects already selected by the caller
+  - otherwise refactors silently downgrade rich call-site context into weaker
+    lookup-only reconstruction

@@ -5,7 +5,12 @@ import {
 } from '../profileStore.js';
 import type { DebugPortStrategy, ResolvedBrowserConfig } from '../types.js';
 import type { BrowserSessionConfig } from '../types.js';
-import { getRuntimeProfileBrowserProfile, getRuntimeProfileBrowserProfileId } from '../../config/model.js';
+import {
+  getRuntimeProfileBrowserProfile,
+  getRuntimeProfileBrowserProfileId,
+  resolveRuntimeSelection,
+  type ResolvedRuntimeSelection,
+} from '../../config/model.js';
 import type { ResolvedUserConfig } from '../../config.js';
 import { resolveBrowserConfig } from '../config.js';
 import { resolveCookiePath, resolveProfileDirectoryName } from './profile.js';
@@ -119,6 +124,11 @@ export interface ResolvedManagedBrowserLaunchContext {
 export interface ResolvedSessionBrowserLaunchContext {
   resolvedConfig: ResolvedBrowserConfig;
   managedLaunchContext: ResolvedManagedBrowserLaunchContext;
+}
+
+export interface ResolvedSelectedBrowserProfileResolution {
+  runtimeSelection: ResolvedRuntimeSelection;
+  resolution: ResolvedBrowserProfileResolution;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -285,6 +295,31 @@ export function resolveSessionBrowserLaunchContext(
   return {
     resolvedConfig,
     managedLaunchContext,
+  };
+}
+
+export function resolveSelectedBrowserProfileResolution(input: {
+  merged: MutableConfig;
+  browser: MutableBrowserConfig;
+  explicitProfileName?: string | null;
+  explicitAgentId?: string | null;
+  runtimeProfile?: Record<string, unknown> | null;
+}): ResolvedSelectedBrowserProfileResolution {
+  const runtimeSelection = resolveRuntimeSelection(input.merged, {
+    explicitProfileName: input.explicitProfileName ?? null,
+    explicitAgentId: input.explicitAgentId ?? null,
+  });
+  const runtimeProfile =
+    (isRecord(input.runtimeProfile) ? input.runtimeProfile : null) ?? runtimeSelection.runtimeProfile ?? {};
+  const resolution = resolveBrowserProfileResolution({
+    merged: input.merged,
+    profileName: input.explicitProfileName ?? runtimeSelection.runtimeProfileId,
+    profile: runtimeProfile,
+    browser: input.browser,
+  });
+  return {
+    runtimeSelection,
+    resolution,
   };
 }
 
