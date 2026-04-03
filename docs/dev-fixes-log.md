@@ -5908,3 +5908,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - the safe phase-2 write step is an opt-in migration path first
   - do not flip default scaffolding or generalized writes before that path has
     proven stable
+
+## 2026-04-02 - scaffold can support target-shape writes explicitly without changing its default output
+
+- Symptom:
+  - once `config migrate --target-shape` existed, scaffold was the next obvious
+    write-path gap
+  - but flipping scaffold defaults would have created unnecessary churn
+- Fix:
+  - added explicit `auracall profile scaffold --target-shape`
+  - kept default scaffold output on bridge keys
+- Durable lesson:
+  - target-shape write support can expand one explicit command at a time
+  - default scaffolding should remain stable until the target-shape path has
+    proven itself across both migrate and scaffold

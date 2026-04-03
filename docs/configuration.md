@@ -10,6 +10,7 @@ auracall config migrate --dry-run
 auracall config migrate --output ~/.auracall/config.v2.json
 auracall config migrate --in-place --strip-legacy
 auracall config migrate --output ~/.auracall/config.target.json --target-shape --strip-legacy
+auracall profile scaffold --target-shape --force
 ```
 
 When invoking via `tsx` in dev, prefer Node’s `--import` to avoid `pnpm` swallowing `--dry-run`:
@@ -110,8 +111,9 @@ Target-model note:
   - mixed/conflicting configs are surfaced by `auracall config doctor`
 - write paths still stay on bridge keys for now:
   - `wizard`
-  - `profile scaffold`
 - `config migrate` can opt into target-shape output explicitly with:
+  - `--target-shape`
+- `profile scaffold` can also opt into target-shape output explicitly with:
   - `--target-shape`
 - until the target-write phase lands, prefer treating:
   - `browserFamilies` as the browser-profile bridge

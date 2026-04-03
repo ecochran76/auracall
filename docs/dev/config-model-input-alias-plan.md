@@ -87,6 +87,8 @@ Current implementation:
   - `browserProfiles`
   - `runtimeProfiles`
   - `runtimeProfiles.<name>.browserProfile`
+- `auracall profile scaffold --target-shape`
+  writes the same target-shape keys for freshly scaffolded config
 - default write paths still remain bridge-key-first
 
 Do not silently flip defaults until the target input shape has proven stable.

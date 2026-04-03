@@ -4869,3 +4869,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - default writes are still bridge-key-first
   - only `config migrate` gained an explicit target-shape write mode
+
+## 2026-04-02 20:52 CDT
+
+- Focus:
+  - extend the explicit target-shape write mode to `profile scaffold` without
+    changing scaffold defaults
+- What changed:
+  - updated
+    [src/config.ts](/home/ecochran76/workspace.local/oracle/src/config.ts)
+    so `scaffoldDefaultConfigFile(...)` can write either:
+    - bridge-key output by default
+    - target-shape output when `targetShape: true`
+  - updated
+    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to support:
+    - `auracall profile scaffold --target-shape`
+    - explicit write-mode messaging after scaffold
+  - expanded
+    [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    with direct target-shape scaffold coverage
+  - updated docs/plans in:
+    - [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    - [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/configMigrate.test.ts tests/configModel.test.ts tests/schema/resolver.test.ts tests/cli/configCommand.test.ts tests/cli/browserWizard.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - default scaffold output is still bridge-key-first
+  - `wizard` remains unchanged

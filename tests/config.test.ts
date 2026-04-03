@@ -2,7 +2,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { loadUserConfig } from '../src/config.js';
+import { loadUserConfig, scaffoldDefaultConfigFile } from '../src/config.js';
 import { ComposedConfigSchema } from '../src/config/schema.js';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 
@@ -148,6 +148,20 @@ describe('loadUserConfig', () => {
 
     expect(parsed.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
     expect(parsed.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
+  });
+
+  it('can scaffold explicit target-shape config output when requested', async () => {
+    const configPath = path.join(tempDir, 'target-config.json');
+    const result = await scaffoldDefaultConfigFile({
+      path: configPath,
+      force: true,
+      targetShape: true,
+    });
+
+    expect(result?.config.browserProfiles?.default).toBeDefined();
+    expect(result?.config.runtimeProfiles?.default?.browserProfile).toBe('default');
+    expect(result?.config.browserFamilies).toBeUndefined();
+    expect(result?.config.profiles).toBeUndefined();
   });
 
   afterAll(() => {

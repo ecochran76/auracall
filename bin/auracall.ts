@@ -7021,13 +7021,22 @@ profileCommand
   .command('scaffold')
   .description('Create a default AuraCall runtime-profile config file from the current browser profile.')
   .option('--force', 'Overwrite an existing config file.', false)
+  .option('--target-shape', 'Write explicit target-shape keys (`browserProfiles` / `runtimeProfiles`) instead of bridge keys.', false)
   .action(async (commandOptions) => {
-    const result = await scaffoldDefaultConfigFile({ force: Boolean(commandOptions.force) });
+    const result = await scaffoldDefaultConfigFile({
+      force: Boolean(commandOptions.force),
+      targetShape: Boolean(commandOptions.targetShape),
+    });
     if (!result) {
       console.log('Config file already exists; use --force to overwrite.');
       return;
     }
     console.log(`Wrote config to ${result.path}`);
+    if (commandOptions.targetShape) {
+      console.log(chalk.dim('Write mode: target-shape (`browserProfiles` / `runtimeProfiles`).'));
+    } else {
+      console.log(chalk.dim('Write mode: bridge-key (`browserFamilies` / `profiles`).'));
+    }
     console.log(
       chalk.dim(
         `Scaffolded ${formatRuntimeProfileBridgeSummary(

@@ -8,6 +8,7 @@ import { setBrowserProfile, setRuntimeProfile, setRuntimeProfileBrowserProfile }
 import { CHATGPT_URL, GEMINI_URL, GROK_URL } from './browser/constants.js';
 import { discoverDefaultBrowserProfile } from './browser/service/profile.js';
 import { DEFAULT_MODEL } from './oracle.js';
+import { materializeConfigV2 } from './config/migrate.js';
 
 export type UserConfig = OracleConfig;
 export type { ResolvedUserConfig };
@@ -132,6 +133,7 @@ function mergeConfig(base: UserConfig, override: UserConfig): UserConfig {
 export async function scaffoldDefaultConfigFile(options: {
   path?: string;
   force?: boolean;
+  targetShape?: boolean;
 } = {}): Promise<{ path: string; config: UserConfig } | null> {
   const userPath = options.path ?? resolveUserConfigPath();
   const force = Boolean(options.force);
@@ -189,9 +191,13 @@ export async function scaffoldDefaultConfigFile(options: {
   setRuntimeProfileBrowserProfile(defaultRuntimeProfile, browserProfileName);
   setRuntimeProfile(scaffolded as Record<string, unknown>, 'default', defaultRuntimeProfile);
 
+  const writtenConfig = materializeConfigV2(scaffolded, {
+    targetShape: Boolean(options.targetShape),
+  }) as UserConfig;
+
   await fs.mkdir(path.dirname(userPath), { recursive: true });
-  await fs.writeFile(userPath, `${JSON.stringify(scaffolded, null, 2)}\n`, 'utf8');
-  return { path: userPath, config: scaffolded };
+  await fs.writeFile(userPath, `${JSON.stringify(writtenConfig, null, 2)}\n`, 'utf8');
+  return { path: userPath, config: writtenConfig };
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
