@@ -805,6 +805,7 @@ describe('performSessionRun', () => {
     const automationError = new BrowserAutomationError('challenge pending', {
       stage: 'cloudflare-challenge',
       runtime: {
+        selectedAgentId: 'analyst',
         chromePid: 1234,
         chromePort: 9222,
         chromeHost: '127.0.0.1',
@@ -832,6 +833,7 @@ describe('performSessionRun', () => {
       browser: {
         config: expect.any(Object),
         runtime: expect.objectContaining({
+          selectedAgentId: 'analyst',
           chromePid: 1234,
           chromePort: 9222,
           chromeHost: '127.0.0.1',

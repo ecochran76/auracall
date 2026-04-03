@@ -6344,3 +6344,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     provenance in the nearest execution config contract, not only in outer
     metadata envelopes
   - this keeps future runtime helpers local to the seam they actually serve
+
+## 2026-04-03 - browser-local runtime metadata should carry higher-layer selection provenance once execution starts
+
+- Symptom:
+  - even after browser config objects preserved `selectedAgentId`, browser
+    runtime hints and failure metadata still dropped it
+  - that meant browser execution diagnostics would still need outer session
+    metadata to explain which agent selected the resolved AuraCall runtime
+    profile
+- Fix:
+  - added `selectedAgentId` to browser runtime metadata
+  - updated browser runtime hint emitters to carry that field from the browser
+    config into runtime/session metadata
+- Durable lesson:
+  - preserve provenance at every execution-adjacent seam where later debugging
+    may begin
+  - if runtime diagnostics can start from browser-local metadata, they should
+    not be forced to reach outward just to recover higher-layer selection
+    context

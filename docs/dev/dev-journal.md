@@ -5559,3 +5559,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this still does not add agent execution behavior
   - it makes the browser-runtime config contract agent-aware for future runtime
     seams without relying only on outer session metadata
+
+## 2026-04-03 10:45 CDT
+
+- Focus:
+  - expose selected-agent provenance in browser-local runtime metadata so
+    execution diagnostics can consume it without leaving the browser seam
+- What changed:
+  - added `selectedAgentId` to browser runtime metadata in:
+    - [src/browser/types.ts](/home/ecochran76/workspace.local/oracle/src/browser/types.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+  - updated browser runtime hint emission in
+    [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    across:
+    - managed ChatGPT browser runs
+    - remote ChatGPT browser runs
+    - remote Grok browser runs
+    - managed Grok browser runs
+    so runtime hints now include `selectedAgentId` from the browser config
+  - expanded tests in:
+    - [tests/browser/sessionRunner.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/sessionRunner.test.ts)
+    - [tests/cli/sessionRunner.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/sessionRunner.test.ts)
+    to pin both runtime-hint persistence and browser-failure runtime metadata
+    with selected-agent provenance
+- Verification:
+  - `pnpm vitest run tests/browser/sessionRunner.test.ts tests/cli/sessionRunner.test.ts tests/sessionManager.test.ts tests/cli/browserConfig.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps the agent-aware runtime seam local to browser execution
+    diagnostics
+  - it still does not introduce separate agent execution behavior

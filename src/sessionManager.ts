@@ -77,6 +77,7 @@ export interface BrowserReattachDiagnosticsMetadata {
 }
 
 export interface BrowserRuntimeMetadata {
+  selectedAgentId?: string | null;
   chromePid?: number;
   chromePort?: number;
   chromeHost?: string;

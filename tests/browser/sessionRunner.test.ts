@@ -10,7 +10,7 @@ const baseRunOptions: RunOracleOptions = {
   silent: false,
 };
 
-const baseConfig: BrowserSessionConfig = {};
+const baseConfig: BrowserSessionConfig = { selectedAgentId: 'analyst' };
 
 describe('runBrowserSessionExecution', () => {
   test('logs stats and returns usage/runtime', async () => {
@@ -18,6 +18,7 @@ describe('runBrowserSessionExecution', () => {
     const persistRuntimeHint = vi.fn();
     const executeBrowser = vi.fn(async (options) => {
       await options.runtimeHintCb?.({
+        selectedAgentId: 'analyst',
         chromePort: 9999,
         chromeHost: '127.0.0.1',
         chromeTargetId: 't-1',
@@ -57,7 +58,12 @@ describe('runBrowserSessionExecution', () => {
     expect(result.usage).toEqual({ inputTokens: 42, outputTokens: 12, reasoningTokens: 0, totalTokens: 54 });
     expect(result.runtime).toMatchObject({ chromePid: undefined });
     expect(persistRuntimeHint).toHaveBeenCalledWith(
-      expect.objectContaining({ chromePort: 9999, chromeHost: '127.0.0.1', chromeTargetId: 't-1' }),
+      expect.objectContaining({
+        selectedAgentId: 'analyst',
+        chromePort: 9999,
+        chromeHost: '127.0.0.1',
+        chromeTargetId: 't-1',
+      }),
     );
     expect(log).toHaveBeenCalled();
   });

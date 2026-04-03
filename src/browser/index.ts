@@ -699,6 +699,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     const conversationId = lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined;
     const hint = {
+      selectedAgentId: config.selectedAgentId ?? null,
       chromePid: chrome.pid,
       chromePort: chrome.port,
       chromeHost,
@@ -1655,6 +1656,7 @@ async function runRemoteBrowserMode(
     if (!runtimeHintCb) return;
     try {
       await runtimeHintCb({
+        selectedAgentId: config.selectedAgentId ?? null,
         chromePort: connectedPort,
         chromeHost: connectedHost,
         chromeTargetId: remoteTargetId ?? undefined,
@@ -2147,6 +2149,7 @@ async function runRemoteGrokBrowserMode(
     if (!runtimeHintCb) return;
     try {
       await runtimeHintCb({
+        selectedAgentId: config.selectedAgentId ?? null,
         chromePort: connectedPort,
         chromeHost: connectedHost,
         chromeTargetId: remoteTargetId ?? undefined,
@@ -2501,6 +2504,7 @@ async function runGrokBrowserMode({
     }
     const conversationId = lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined;
     const hint = {
+      selectedAgentId: config.selectedAgentId ?? null,
       chromePid: chrome.pid,
       chromePort: chrome.port,
       chromeHost,
