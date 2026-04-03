@@ -5719,3 +5719,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     that still rebuild the same resolved object twice in one flow
   - that is where hidden drift tends to survive longest even when the shared
     helper already exists
+
+## 2026-04-02 - browser runtime entry should share one managed-profile preparation path
+
+- Symptom:
+  - after the managed-browser launch seam was centralized, the two main browser
+    runtime entry paths in `src/browser/index.ts` still repeated the same local
+    launch-preparation work:
+    - managed browser profile dir setup
+    - bootstrap logging
+    - destructive retry eligibility
+- Fix:
+  - extracted `prepareManagedBrowserProfileLaunch(...)` inside
+    `src/browser/index.ts`
+  - both ChatGPT and Grok local browser entry flows now use that helper
+- Durable lesson:
+  - once config/launch semantics are centralized, the next duplication hotspot
+    is usually the runtime entrypoint itself
+  - that layer should still get one local seam before attempting larger package
+    extraction, otherwise provider entry paths drift again even while lower
+    layers are clean

@@ -4599,3 +4599,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps reattach at the same behavior boundary while reducing the number
     of places that know how to rebuild session-scoped browser launch state
+
+## 2026-04-02 19:14 CDT
+
+- Focus:
+  - extract the duplicated managed-browser-profile launch preparation from the
+    browser runtime entry paths so ChatGPT and Grok stop repeating the same:
+    - managed profile dir resolution
+    - bootstrap/logging
+    - destructive-retry eligibility check
+- What changed:
+  - added a local runtime-entry helper in
+    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts):
+    - `prepareManagedBrowserProfileLaunch(...)`
+  - updated both browser entry paths to consume it:
+    - [runBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    - [runGrokBrowserMode(...)](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts tests/browser/registryDiagnostics.test.ts tests/browser/profileResolution.test.ts tests/browser/profileDoctor.test.ts tests/browser/login.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is intentionally a local runtime-entry seam inside `index.ts`, not a
+    broader browser-service extraction
+  - provider execution behavior is unchanged; only the shared launch-prep path
+    is less duplicated

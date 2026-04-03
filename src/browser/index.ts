@@ -113,6 +113,54 @@ export function resolveManagedBrowserLaunchContextForTest(
   });
 }
 
+async function prepareManagedBrowserProfileLaunch(options: {
+  config: ReturnType<typeof resolveBrowserConfig>;
+  target: 'chatgpt' | 'grok' | 'gemini';
+  logger: BrowserLogger;
+  auracallProfileName?: string | null;
+}): Promise<{
+  userDataDir: string;
+  defaultManagedProfileDir: string;
+  chromeProfile: string;
+  bootstrapCookiePath: string | null;
+  allowDestructiveProfileRetryReset: boolean;
+}> {
+  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
+    auracallProfile: options.auracallProfileName ?? null,
+    browser: options.config,
+    target: options.target,
+  });
+  const {
+    managedProfileDir: userDataDir,
+    defaultManagedProfileDir,
+    configuredChromeProfile: chromeProfile,
+    bootstrapCookiePath,
+  } = launchContext;
+  const allowDestructiveProfileRetryReset =
+    path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
+  await mkdir(userDataDir, { recursive: true });
+  options.logger(`Using managed browser profile at ${userDataDir}`);
+  options.logger(`Browser profile selection: ${userDataDir}`);
+  const bootstrapResult = await bootstrapManagedProfile({
+    managedProfileDir: userDataDir,
+    managedProfileName: chromeProfile,
+    sourceCookiePath: bootstrapCookiePath,
+    logger: options.logger,
+  });
+  if (bootstrapResult.cloned) {
+    options.logger(
+      `Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
+    );
+  }
+  return {
+    userDataDir,
+    defaultManagedProfileDir,
+    chromeProfile,
+    bootstrapCookiePath,
+    allowDestructiveProfileRetryReset,
+  };
+}
+
 function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
   if (!(error instanceof BrowserAutomationError)) return false;
   return (error.details as { stage?: string } | undefined)?.stage === 'cloudflare-challenge';
@@ -645,34 +693,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   };
 
   const manualLogin = true;
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: options.config?.auracallProfileName ?? null,
-    browser: config,
-    target,
-  });
   const {
-    managedProfileDir: userDataDir,
+    userDataDir,
     defaultManagedProfileDir,
-    configuredChromeProfile: chromeProfile,
+    chromeProfile,
     bootstrapCookiePath,
-  } = launchContext;
-  await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
-  const allowDestructiveProfileRetryReset =
-    path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
-  await mkdir(userDataDir, { recursive: true });
-  logger(`Using managed browser profile at ${userDataDir}`);
-  logger(`Browser profile selection: ${userDataDir}`);
-  const bootstrapResult = await bootstrapManagedProfile({
-    managedProfileDir: userDataDir,
-    managedProfileName: chromeProfile,
-    sourceCookiePath: bootstrapCookiePath,
+    allowDestructiveProfileRetryReset,
+  } = await prepareManagedBrowserProfileLaunch({
+    config,
+    target,
     logger,
+    auracallProfileName: options.config?.auracallProfileName ?? null,
   });
-  if (bootstrapResult.cloned) {
-    logger(
-      `Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
-    );
-  }
+  await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
     config,
     userDataDir,
@@ -2462,33 +2495,18 @@ async function runGrokBrowserMode({
   };
   const manualLogin = true;
   const runtimeTarget = (config.target ?? 'grok') as 'grok';
-  const launchContext = resolveManagedBrowserLaunchContextFromResolvedConfig({
-    auracallProfile: auracallProfileName ?? null,
-    browser: config,
-    target: runtimeTarget,
-  });
   const {
-    managedProfileDir: userDataDir,
+    userDataDir,
     defaultManagedProfileDir,
-    configuredChromeProfile: chromeProfile,
+    chromeProfile,
     bootstrapCookiePath,
-  } = launchContext;
-  const allowDestructiveProfileRetryReset =
-    path.resolve(userDataDir) === path.resolve(defaultManagedProfileDir);
-  await mkdir(userDataDir, { recursive: true });
-  logger(`Using managed browser profile at ${userDataDir}`);
-  logger(`Browser profile selection: ${userDataDir}`);
-  const bootstrapResult = await bootstrapManagedProfile({
-    managedProfileDir: userDataDir,
-    managedProfileName: chromeProfile,
-    sourceCookiePath: bootstrapCookiePath,
+    allowDestructiveProfileRetryReset,
+  } = await prepareManagedBrowserProfileLaunch({
+    config,
+    target: runtimeTarget,
     logger,
+    auracallProfileName,
   });
-  if (bootstrapResult.cloned) {
-    logger(
-      `Seeded managed browser profile from source browser profile ${bootstrapResult.sourceUserDataDir} (${bootstrapResult.sourceProfileName}).`,
-    );
-  }
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
     config: launchConfig,
     userDataDir,
