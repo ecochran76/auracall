@@ -103,6 +103,7 @@ See:
 
 - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
 - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
+- [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
 
 ## Recommended sequencing
 
@@ -130,7 +131,27 @@ That means:
 - broad code symbol renames to match the new semantics
 - final public naming decision on whether `browserFamilies` remains the
   external config key or becomes `browserProfiles`
+- input acceptance of target-shape aliases until precedence/write-back policy
+  is implemented deliberately
 - agent/team implementation work beyond today's reserved config placeholders
+
+## Input alias policy (2026-04-02)
+
+The next config-model transition should not begin by accepting target-shape
+input keys ad hoc.
+
+The policy is now:
+
+1. keep the target model read-only in inspection output first
+2. document precedence and write-back rules before dual-read begins
+3. when dual-read eventually begins, target-shape keys must be authoritative if
+   both target and bridge keys are present
+4. keep normal write paths on bridge keys until target-write is an explicit
+   deliberate phase
+
+Source of truth:
+
+- [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
 
 ## Acceptance bar for the future refactor
 

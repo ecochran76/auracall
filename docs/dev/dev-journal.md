@@ -4680,3 +4680,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is intentionally read-only
   - the bridge keys remain the only accepted public input shape for now
+
+## 2026-04-02 19:39 CDT
+
+- Focus:
+  - document the target-shape input alias policy before any parser/schema work
+    begins for:
+    - `browserProfiles`
+    - `runtimeProfiles`
+- What changed:
+  - added
+    [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    to define:
+    - dual-read phases
+    - precedence rules
+    - write-back policy
+    - diagnostics expectations
+  - linked that policy from:
+    - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+- Notes:
+  - no behavior changed in this slice
+  - this locks the rule that target-shape input aliases should not be accepted
+    until precedence and write-back policy are explicit

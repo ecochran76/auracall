@@ -5779,3 +5779,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - first expose the target model read-only
     - only later decide whether to accept target-shape aliases like
       `browserProfiles` / `runtimeProfiles`
+
+## 2026-04-02 - target-shape input aliases need an explicit compatibility policy before implementation
+
+- Durable lesson:
+  - once the target model is visible in read-only inspection output, the next
+    temptation is to start accepting `browserProfiles` / `runtimeProfiles`
+    immediately
+  - doing that without a documented policy would create ambiguity around:
+    - precedence
+    - mixed bridge/target configs
+    - write-back behavior
+- Decision:
+  - document the input-alias policy first
+  - keep target-shape aliases unimplemented until that policy is the source of
+    truth
+- Policy document:
+  - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)

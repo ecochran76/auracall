@@ -81,6 +81,28 @@ Acceptance
   - `default`
   - `wsl-chrome-2`
 
+### 2.5) Target-shape input alias policy
+
+Goal: define the future compatibility contract before accepting target-shape
+input keys.
+
+Deliverables
+- documented precedence for:
+  - `browserProfiles` vs `browserFamilies`
+  - `runtimeProfiles` vs `profiles`
+  - `runtimeProfiles.<name>.browserProfile` vs
+    `profiles.<name>.browserFamily`
+- documented write-back policy for:
+  - `wizard`
+  - `profile scaffold`
+  - `config migrate`
+- explicit stance on mixed bridge/target diagnostics before implementation
+
+Acceptance
+- policy documented in:
+  - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+- no input alias implementation lands before this policy is the source of truth
+
 ### 3) Browser reliability maintenance
 
 Goal: keep the current browser path stable while the config-model work becomes
@@ -113,8 +135,9 @@ Acceptance
 
 1. Lock the target config shape in docs.
 2. Land the next non-breaking runtime/schema seam toward that shape.
-3. Keep browser reliability in maintenance mode.
-4. Resume larger implementation only after the target config model is explicit.
+3. Define the target-shape input alias policy.
+4. Keep browser reliability in maintenance mode.
+5. Resume larger implementation only after the target config model is explicit.
 
 ## Not in scope for this slice
 

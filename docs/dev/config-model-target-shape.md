@@ -190,6 +190,12 @@ Current recommendation:
 - design and implement toward the target shape in narrow steps
 - defer broad code and schema renames until the target shape is explicit enough
   to rename once
+- do not accept target-shape input aliases until the documented precedence and
+  write-back policy is implemented deliberately
+
+Alias-transition policy:
+
+- [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
 
 ## Practical guidance for current implementation slices
 
