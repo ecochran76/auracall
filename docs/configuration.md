@@ -83,6 +83,8 @@ Use `auracall profile list` when you want the inventory view instead:
 Use `auracall config doctor` when you want bridge-health checks instead:
 - AuraCall runtime profiles with no explicit browser-profile reference
 - runtime profiles that reference missing browser profiles
+- agents that reference missing AuraCall runtime profiles
+- teams that reference missing agents
 - unused browser profiles
 - legacy `auracallProfiles` still present
 - pass `--strict` when warnings should return a nonzero exit code for scripts/CI

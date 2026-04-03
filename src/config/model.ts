@@ -77,11 +77,16 @@ export interface ConfigModelDoctorIssue {
     | 'runtime-profile-missing-browser-profile'
     | 'runtime-profile-browser-profile-missing'
     | 'unused-browser-profile'
-    | 'active-runtime-profile-missing-browser-profile';
+    | 'active-runtime-profile-missing-browser-profile'
+    | 'agent-missing-runtime-profile'
+    | 'agent-runtime-profile-missing'
+    | 'team-agent-missing';
   severity: 'warning' | 'info';
   message: string;
   auracallRuntimeProfile?: string;
   browserProfile?: string;
+  agent?: string;
+  team?: string;
 }
 
 export interface ConfigModelDoctorReport {
@@ -428,6 +433,9 @@ export function analyzeConfigModelBridgeHealth(
   const browserProfiles = getBrowserProfiles(config);
   const browserProfileNames = new Set(Object.keys(browserProfiles));
   const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  const runtimeProfileNames = new Set(Object.keys(runtimeProfiles));
+  const agents = getAgents(config);
+  const teams = getTeams(config);
   const targetRuntimeProfiles = getTargetRuntimeProfiles(config);
   const bridgeRuntimeProfiles = getRuntimeProfiles(config);
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
@@ -484,6 +492,46 @@ export function analyzeConfigModelBridgeHealth(
       severity: 'info',
       message: 'Legacy runtime profiles are still present under `auracallProfiles`.',
     });
+  }
+
+  for (const [name, agent] of Object.entries(agents)) {
+    const runtimeProfileId = getAgentRuntimeProfileId(agent);
+    if (!runtimeProfileId) {
+      issues.push({
+        code: 'agent-missing-runtime-profile',
+        severity: 'warning',
+        message: `Agent "${name}" does not explicitly reference an AuraCall runtime profile.`,
+        agent: name,
+      });
+      continue;
+    }
+    if (!runtimeProfileNames.has(runtimeProfileId)) {
+      issues.push({
+        code: 'agent-runtime-profile-missing',
+        severity: 'warning',
+        message: `Agent "${name}" references missing AuraCall runtime profile "${runtimeProfileId}".`,
+        agent: name,
+        auracallRuntimeProfile: runtimeProfileId,
+      });
+    }
+  }
+
+  for (const [name, team] of Object.entries(teams)) {
+    const agentIds =
+      isRecord(team) && Array.isArray(team.agents)
+        ? team.agents.filter((agentId): agentId is string => typeof agentId === 'string')
+        : [];
+    for (const agentId of agentIds) {
+      if (!agents[agentId]) {
+        issues.push({
+          code: 'team-agent-missing',
+          severity: 'warning',
+          message: `Team "${name}" references missing agent "${agentId}".`,
+          team: name,
+          agent: agentId,
+        });
+      }
+    }
   }
 
   for (const [name, runtimeProfile] of Object.entries(runtimeProfiles)) {

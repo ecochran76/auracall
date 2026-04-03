@@ -329,6 +329,63 @@ describe('config model helpers', () => {
     });
   });
 
+  it('reports missing reserved agent and team references through the shared doctor seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      agents: {
+        researcher: {},
+        analyst: { runtimeProfile: 'missing-runtime' },
+      },
+      teams: {
+        ops: { agents: ['researcher', 'missing-agent'] },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 3,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-missing-runtime-profile',
+          severity: 'warning',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-runtime-profile-missing',
+          severity: 'warning',
+          agent: 'analyst',
+          auracallRuntimeProfile: 'missing-runtime',
+        }),
+        expect.objectContaining({
+          code: 'team-agent-missing',
+          severity: 'warning',
+          team: 'ops',
+          agent: 'missing-agent',
+        }),
+      ]),
+    });
+  });
+
   it('reports mixed-key and conflicting dual-read diagnostics when target and bridge definitions disagree', () => {
     const config = {
       auracallProfile: 'default',

@@ -6128,3 +6128,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a shared projected seam exists for a future layer, operator-facing
     inspection should surface that seam directly instead of forcing
     troubleshooting through low-level raw JSON only
+
+## 2026-04-03 - reserved future layers should get reference validation before execution behavior
+
+- Symptom:
+  - after `agents` and `teams` became visible in the shared projected model,
+    the config doctor still only validated browser-profile and runtime-profile
+    references
+- Fix:
+  - extended the shared config-model doctor to flag:
+    - agents with no runtime-profile reference
+    - agents that reference missing AuraCall runtime profiles
+    - teams that reference missing agents
+- Durable lesson:
+  - for future config layers, add read-only reference validation before adding
+    any execution semantics
+  - that keeps layering mistakes visible early without pretending the behavior
+    already exists

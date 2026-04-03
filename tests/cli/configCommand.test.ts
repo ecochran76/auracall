@@ -400,6 +400,56 @@ describe('config show helpers', () => {
     expect(text).toContain('[info] Browser profile "orphaned" is defined but no AuraCall runtime profile references it.');
   });
 
+  it('surfaces reserved agent and team reference warnings in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          researcher: {},
+          analyst: { runtimeProfile: 'missing-runtime' },
+        },
+        teams: {
+          ops: { agents: ['researcher', 'missing-agent'] },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-missing-runtime-profile',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-runtime-profile-missing',
+          agent: 'analyst',
+          auracallRuntimeProfile: 'missing-runtime',
+        }),
+        expect.objectContaining({
+          code: 'team-agent-missing',
+          team: 'ops',
+          agent: 'missing-agent',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('[warning] Agent "researcher" does not explicitly reference an AuraCall runtime profile.');
+    expect(text).toContain('[warning] Agent "analyst" references missing AuraCall runtime profile "missing-runtime".');
+    expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
+  });
+
   it('surfaces target-key presence and target precedence when target-shape keys are active', () => {
     const showReport = buildConfigShowReport({
       rawConfig: {

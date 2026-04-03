@@ -5198,3 +5198,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this keeps the slice read-only
   - it makes future troubleshooting of reserved agent/team config possible
     without opening raw projected JSON only
+
+## 2026-04-03 08:17 CDT
+
+- Focus:
+  - add the first reserved-layer doctor warnings for agents and teams
+- What changed:
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    so the shared config-model doctor now flags:
+    - agents with no `runtimeProfile`
+    - agents that reference missing AuraCall runtime profiles
+    - teams that reference missing agents
+  - expanded:
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin the new shared doctor issue codes and surfaced CLI doctor text
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    so config doctor coverage now includes reserved agent/team reference checks
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - still read-only and non-executing
+  - this is the first real validation seam above AuraCall runtime profiles
