@@ -5173,3 +5173,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this remains read-only and behaviorally inert
   - it prepares future agent work to inherit runtime/browser semantics from the
     shared config-model seam instead of reopening raw key logic
+
+## 2026-04-03 08:08 CDT
+
+- Focus:
+  - surface projected agents/teams directly in config inspection reports
+- What changed:
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so:
+    - `config show` now reports available `agents` and `teams`
+    - `profile list` now reports projected:
+      - agents with inherited runtime/browser/default-service context
+      - teams with current agent membership
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - empty agent/team reporting in existing config-show/profile-list flows
+    - non-empty projected agent/team inventory reporting
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to describe the richer inspection surface
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps the slice read-only
+  - it makes future troubleshooting of reserved agent/team config possible
+    without opening raw projected JSON only

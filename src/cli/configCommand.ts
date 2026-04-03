@@ -33,6 +33,8 @@ export interface ConfigShowReport {
   available: {
     browserProfiles: string[];
     auracallRuntimeProfiles: string[];
+    agents: string[];
+    teams: string[];
     legacyRuntimeProfiles: string[];
   };
   bridgeKeys: ConfigModelBridgeKeys;
@@ -66,10 +68,24 @@ export interface ProfileListEntry {
   defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
 }
 
+export interface AgentListEntry {
+  name: string;
+  runtimeProfile: string | null;
+  browserProfile: string | null;
+  defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+}
+
+export interface TeamListEntry {
+  name: string;
+  agents: string[];
+}
+
 export interface ProfileListReport {
   activeAuracallRuntimeProfile: string | null;
   browserProfiles: string[];
   auracallRuntimeProfiles: ProfileListEntry[];
+  agents: AgentListEntry[];
+  teams: TeamListEntry[];
   bridgeKeys: ConfigModelBridgeKeys;
   projectedModel: ProjectedConfigModel;
 }
@@ -130,6 +146,8 @@ export function buildConfigShowReport(input: {
     available: {
       browserProfiles: inspection.browserProfileIds,
       auracallRuntimeProfiles: inspection.runtimeProfiles.map((profile) => profile.id),
+      agents: inspection.agentIds,
+      teams: inspection.teamIds,
       legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
     bridgeKeys: inspection.bridgeKeys,
@@ -175,10 +193,22 @@ export function buildProfileListReport(
     browserProfile: runtimeProfile.browserProfileId,
     defaultService: runtimeProfile.defaultService,
   }));
+  const agents = inspection.projectedModel.agents.map((agent) => ({
+    name: agent.id,
+    runtimeProfile: agent.runtimeProfileId,
+    browserProfile: agent.browserProfileId,
+    defaultService: agent.defaultService,
+  }));
+  const teams = inspection.projectedModel.teams.map((team) => ({
+    name: team.id,
+    agents: team.agentIds,
+  }));
   return {
     activeAuracallRuntimeProfile: inspection.activeRuntimeProfileId,
     browserProfiles: inspection.browserProfileIds,
     auracallRuntimeProfiles,
+    agents,
+    teams,
     bridgeKeys: inspection.bridgeKeys,
     projectedModel: inspection.projectedModel,
   };
@@ -206,6 +236,8 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `Resolved browser target: ${report.active.resolvedBrowserTarget ?? '(none)'}`,
     `Available browser profiles: ${formatList(report.available.browserProfiles)}`,
     `Available AuraCall runtime profiles: ${formatList(report.available.auracallRuntimeProfiles)}`,
+    `Available agents: ${formatList(report.available.agents)}`,
+    `Available teams: ${formatList(report.available.teams)}`,
     `Legacy runtime profiles: ${formatList(report.available.legacyRuntimeProfiles)}`,
     'Target keys:',
     `  browser profiles -> ${report.targetKeys.browserProfiles} (${report.targetState.browserProfilesPresent ? 'present' : 'missing'})`,
@@ -246,6 +278,16 @@ export function formatProfileListReport(report: ProfileListReport): string {
     lines.push(
       `  ${entry.active ? '*' : '-'} ${entry.name} -> browser profile ${entry.browserProfile ?? '(none)'} -> default service ${entry.defaultService ?? '(none)'}`,
     );
+  }
+  lines.push(`Agents: ${report.agents.length > 0 ? '' : '(none)'}`.trimEnd());
+  for (const agent of report.agents) {
+    lines.push(
+      `  - ${agent.name} -> runtime profile ${agent.runtimeProfile ?? '(none)'} -> browser profile ${agent.browserProfile ?? '(none)'} -> default service ${agent.defaultService ?? '(none)'}`,
+    );
+  }
+  lines.push(`Teams: ${report.teams.length > 0 ? '' : '(none)'}`.trimEnd());
+  for (const team of report.teams) {
+    lines.push(`  - ${team.name} -> agents ${formatList(team.agents)}`);
   }
   return lines.join('\n');
 }

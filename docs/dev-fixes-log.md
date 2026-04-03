@@ -6111,3 +6111,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     runtime-profile/browser-profile model seam first
   - do not let future agent/team work reopen raw target-vs-bridge key logic at
     call sites
+
+## 2026-04-03 - once a projected upper-layer seam exists, inspection should surface it directly
+
+- Symptom:
+  - after the projected config model gained read-only `agents[]` and `teams[]`,
+    those layers were still only visible indirectly inside the raw
+    `projectedModel` JSON blob
+- Fix:
+  - updated config inspection/reporting so:
+    - `config show` reports available agents and teams explicitly
+    - `profile list` reports projected agents with inherited
+      runtime/browser/default-service context
+    - `profile list` reports projected teams with agent membership
+- Durable lesson:
+  - once a shared projected seam exists for a future layer, operator-facing
+    inspection should surface that seam directly instead of forcing
+    troubleshooting through low-level raw JSON only

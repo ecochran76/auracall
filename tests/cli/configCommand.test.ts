@@ -56,6 +56,8 @@ describe('config show helpers', () => {
       available: {
         browserProfiles: ['default', 'wsl-chrome-2'],
         auracallRuntimeProfiles: ['default', 'work'],
+        agents: [],
+        teams: [],
         legacyRuntimeProfiles: [],
       },
       bridgeKeys: {
@@ -110,6 +112,8 @@ describe('config show helpers', () => {
       available: {
         browserProfiles: ['default'],
         auracallRuntimeProfiles: ['default'],
+        agents: [],
+        teams: [],
         legacyRuntimeProfiles: [],
       },
       bridgeKeys: {
@@ -145,6 +149,8 @@ describe('config show helpers', () => {
     expect(text).toContain('Browser profile: default');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
+    expect(text).toContain('Available agents: (none)');
+    expect(text).toContain('Available teams: (none)');
     expect(text).toContain('browser profiles -> browserProfiles (missing)');
     expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
@@ -218,6 +224,8 @@ describe('config show helpers', () => {
           defaultService: 'grok',
         },
       ],
+      agents: [],
+      teams: [],
       bridgeKeys: {
         browserProfiles: 'browserFamilies',
         auracallRuntimeProfiles: 'profiles',
@@ -249,6 +257,60 @@ describe('config show helpers', () => {
     expect(text).toContain('Available browser profiles: default, wsl-chrome-2');
     expect(text).toContain('- default -> browser profile default -> default service chatgpt');
     expect(text).toContain('* work -> browser profile wsl-chrome-2 -> default service grok');
+    expect(text).toContain('Agents: (none)');
+    expect(text).toContain('Teams: (none)');
+  });
+
+  it('surfaces projected agents and teams directly in the inventory report', () => {
+    const report = buildProfileListReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+          analyst: { runtimeProfile: 'work' },
+        },
+        teams: {
+          ops: { agents: ['researcher', 'analyst'] },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.agents).toEqual([
+      {
+        name: 'analyst',
+        runtimeProfile: 'work',
+        browserProfile: 'consulting',
+        defaultService: 'grok',
+      },
+      {
+        name: 'researcher',
+        runtimeProfile: 'default',
+        browserProfile: 'default',
+        defaultService: 'chatgpt',
+      },
+    ]);
+    expect(report.teams).toEqual([
+      {
+        name: 'ops',
+        agents: ['researcher', 'analyst'],
+      },
+    ]);
+
+    const text = formatProfileListReport(report);
+    expect(text).toContain('Agents:');
+    expect(text).toContain('- analyst -> runtime profile work -> browser profile consulting -> default service grok');
+    expect(text).toContain('- researcher -> runtime profile default -> browser profile default -> default service chatgpt');
+    expect(text).toContain('Teams:');
+    expect(text).toContain('- ops -> agents researcher, analyst');
   });
 
   it('builds a bridge-health doctor report for missing and dangling browser-profile references', () => {
