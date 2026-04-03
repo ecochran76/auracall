@@ -95,11 +95,13 @@ What is still transitional:
 
 This is now the active architecture track.
 
-The near-term goal is not a big-bang rewrite. It is to:
+The public config transition is now complete enough for a checkpoint. The
+near-term goal is no longer more key-shape migration. It is to:
 
 1. lock the target public shape
-2. keep current bridge keys stable enough for normal use
-3. land small runtime/schema seams that move code toward the target layering
+2. keep bridge-key compatibility loading available without centering it
+3. land small runtime/schema seams that move code toward the next compositional
+   layer
 4. defer broad renames until that target is explicit enough to rename once
 
 See:
@@ -112,9 +114,14 @@ See:
 
 ### Near term
 
-- keep the dual-read config shape stable enough for normal use
+- keep the dual-read config shape stable enough for troubleshooting and
+  compatibility use
 - continue small reliability and browser hardening work in maintenance mode
 - avoid broad symbol renames in code
+- move the active design pressure up to:
+  - `agents`
+  - `teams`
+  as the next layers on top of browser profiles and AuraCall runtime profiles
 
 ### Next architecture track
 
@@ -126,8 +133,9 @@ That means:
 2. make AuraCall runtime profiles explicitly reference a browser profile
 3. move browser-owned defaults/state fully under browser profiles
 4. leave AuraCall runtime profiles with AuraCall-owned concerns only
-5. introduce compatibility shims for existing config
-6. only then design agent and team config on top of the cleaner base
+5. keep compatibility shims for older/bridge config working
+6. design agent and team config on top of the cleaner base
+7. only then consider behavior-facing agent execution work
 
 ### Deferred until that refactor
 

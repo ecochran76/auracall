@@ -5113,3 +5113,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this keeps `auracallProfile` visible as a compatibility selector without
     making it look primary again
+
+## 2026-04-03 06:18 CDT
+
+- Focus:
+  - treat the public config transition as complete enough and move the active
+    architecture track up to agent/team-ready layering
+- What changed:
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    to mark the config-model transition checkpoint as complete enough through:
+    - target-shaped reads
+    - target-shaped default writes
+    - target-vs-bridge inspection/doctor visibility
+    - `defaultRuntimeProfile` as the primary selector
+  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    so the next active slice is now:
+    - agent/team-ready config layering
+    - one small runtime/schema seam for future `agent -> runtimeProfile`
+      composition
+    instead of more config-shape migration polish
+  - updated [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+    to reflect that the bridge/target public-shape transition is now a
+    checkpoint, not the main remaining refactor question
+  - updated [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+    to mark target-first read/write behavior as implemented and alias mechanics
+    as no longer the active pressure
+- Verification:
+  - docs/planning only
+- Notes:
+  - the canonical target-shaped example already includes reserved `agents` and
+    `teams`, so the next meaningful work is layering semantics, not more key
+    migration

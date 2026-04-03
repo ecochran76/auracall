@@ -1,4 +1,4 @@
-# Next Execution Plan (2026-04-02)
+# Next Execution Plan (2026-04-03)
 
 ## Current status
 
@@ -32,13 +32,22 @@ Config-model state now:
   - `version: 3`
   - `browserProfiles`
   - `runtimeProfiles`
+  - `defaultRuntimeProfile`
 - Aura-Call dual-reads both target and bridge shapes
 - target-shape is the default write mode for:
   - `config migrate`
   - `profile scaffold`
   - `wizard`
+- inspection/doctor now expose:
+  - target-vs-bridge precedence
+  - selector-key presence
+  - projected target model
 - bridge keys remain the explicit compatibility/troubleshooting path
   - usually `version: 2`
+
+That makes the public config transition complete enough for a checkpoint. The
+next useful work is the layer that composes on top of browser profiles and
+AuraCall runtime profiles, not more config-shape migration polish.
 
 ## Execution principle
 
@@ -52,79 +61,51 @@ Config-model state now:
 
 ## Active slice plan
 
-### 1) Config-model target shape
+### 1) Agent/team-ready config layering
 
-Goal: define the target public config shape clearly enough that implementation
-can proceed without more semantic drift.
+Goal: define the next behavior-facing layer that composes on top of browser
+profiles and AuraCall runtime profiles without collapsing those boundaries
+again.
 
 Deliverables
-- explicit target objects for:
+- one explicit implementation-oriented seam for:
+  - `agents.<name>.runtimeProfile`
+  - future team membership/reference semantics
+- one canonical target-shaped config example that includes:
   - browser profiles
   - AuraCall runtime profiles
-  - agents
-  - teams
-- one canonical example config using the intended layering
-- migration notes describing which current keys are bridges versus likely final
-  public shape
+  - reserved agents
+  - reserved teams
+- one rule set describing what runtime-level state may still be specialized by
+  agents and what must remain owned below them
 
 Acceptance
-- target shape documented in:
+- boundary docs aligned in:
   - [config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
   - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-- linked consistently from:
-  - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
   - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
   - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+- no new browser/account-bearing state introduced at the agent layer
 
 ### 2) Non-breaking schema/runtime seam
 
-Goal: make the runtime/config code read more like the target model without
-forcing a big-bang migration.
+Goal: make the runtime/config code ready for future `agent -> runtimeProfile`
+composition without starting agent execution yet.
 
 Deliverables
-- introduce narrow compatibility seams where runtime profiles explicitly
-  reference browser profiles
-- reduce new call sites that treat browser-bearing state as if it belongs to
-  AuraCall runtime profiles directly
-- keep current config loading behavior intact while moving the code toward the
-  target layering
+- keep using the shared config-model helpers as the only place that knows the
+  target-vs-bridge public-key contract
+- add any small read-only/runtime seams needed so future agent-aware code can
+  consume:
+  - active runtime profile
+  - referenced browser profile
+  without reopening bridge-key logic at call sites
 
 Acceptance
 - focused schema/profile-resolution/config tests stay green
 - no live browser behavior regresses for:
   - `default`
   - `wsl-chrome-2`
-
-### 2.5) Target-shape input alias policy
-
-Goal: define the future compatibility contract before accepting target-shape
-input keys.
-
-Deliverables
-- documented precedence for:
-  - `browserProfiles` vs `browserFamilies`
-  - `runtimeProfiles` vs `profiles`
-  - `runtimeProfiles.<name>.browserProfile` vs
-    `profiles.<name>.browserFamily`
-- documented write-back policy for:
-  - `wizard`
-  - `profile scaffold`
-  - `config migrate`
-- explicit stance on mixed bridge/target diagnostics before implementation
-
-Acceptance
-- policy documented in:
-  - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
-  - [config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
-- phase-1 dual-read may land only through:
-  - schema/model/resolver loading
-  - read-only diagnostics
-  - bridge-key writes remaining a compatibility path
-- phase-2 target-write may land only as:
-  - default `config migrate`
-  - default `profile scaffold`
-  - default `wizard`
-  - with bridge-key writes moving behind explicit compatibility flags
 
 ### 3) Browser reliability maintenance
 
@@ -156,11 +137,13 @@ Acceptance
 
 ## Near-term order
 
-1. Lock the target config shape in docs.
-2. Land the next non-breaking runtime/schema seam toward that shape.
-3. Define the target-shape input alias policy.
+1. Treat the public config transition as complete enough for now.
+2. Define the next agent/team-ready layering seam on top of browser profiles
+   and AuraCall runtime profiles.
+3. Land only small runtime/schema seams that support that next layer.
 4. Keep browser reliability in maintenance mode.
-5. Resume larger implementation only after the target config model is explicit.
+5. Reopen config-shape mechanics only if a real ambiguity or write-path problem
+   appears.
 
 ## Not in scope for this slice
 
@@ -171,7 +154,8 @@ Acceptance
 
 ## Immediate next checkpoints
 
-1. Make the config-model refactor the active roadmap track.
-2. Publish the target public shape and layering examples.
-3. Start one small implementation seam that follows that target without
-   breaking current config behavior.
+1. Mark the target-shape public transition checkpoint complete enough.
+2. Publish one canonical target-shaped example that includes reserved
+   `agents` / `teams`.
+3. Start one small seam that prepares future `agent -> runtimeProfile`
+   composition without adding agent execution behavior.

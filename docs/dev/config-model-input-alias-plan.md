@@ -66,16 +66,13 @@ Config loading now reads both:
 - `profiles.<name>.browserFamily` and
   `runtimeProfiles.<name>.browserProfile`
 
-It still writes only bridge keys from:
+That earlier bridge-write-only checkpoint is complete and superseded by the
+current target-write-default phase.
 
-- `wizard`
-- `profile scaffold`
-- `config migrate`
-
-Current slice boundaries:
+Current slice boundaries that remain relevant:
 - dual-read is implemented in schema/model/resolver loading paths
-- read-only diagnostics now report mixed/conflicting bridge vs target state
-- write commands still emit bridge keys only
+- read-only diagnostics report mixed/conflicting bridge vs target state
+- compatibility bridge writes remain available explicitly
 
 ### Phase 2: target-write defaults
 
@@ -101,13 +98,26 @@ Current implementation:
 
 ### Phase 3: target-first defaults
 
-Status: deferred
+Status: implemented
 
-Only after the target shape is stable in real use:
+Current implementation:
 
-- default scaffolding may emit target keys
-- docs may switch examples to target keys first
-- bridge keys can become legacy aliases
+- docs now switch examples to target keys first
+- inspection/output now treats bridge keys as compatibility/troubleshooting
+  material instead of the main model
+- bridge keys are now legacy compatibility aliases, not the centered public
+  shape
+
+### Phase 4: post-transition layering work
+
+Status: next
+
+Next useful work is no longer more alias mechanics. It is to use the now-stable
+target shape as the base for:
+
+- `agents`
+- `teams`
+- future behavior-facing layering work above AuraCall runtime profiles
 
 ## Proposed precedence rules
 
@@ -129,12 +139,12 @@ Why this precedence:
 
 ## Proposed write-back rules
 
-Once dual-read exists:
+Current write-back policy:
 
-- normal write paths still emit bridge keys by default
-- target-write must be explicit
+- normal write paths emit target shape by default
+- compatibility bridge output must be explicit
 - no command should rewrite a user-authored target-shape config back to bridge
-  keys unless the user asked for migration/normalization output in that shape
+  keys unless the user asked for `--bridge-shape`
 
 This avoids surprising churn in config files.
 

@@ -6070,3 +6070,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - during a public-key migration, inspection surfaces should show both the new
     primary key and the still-supported compatibility key until the old key is
     fully retired
+
+## 2026-04-03 - stop config-shape churn once reads, writes, and inspection all agree
+
+- Symptom:
+  - after the target shape became primary across:
+    - reads
+    - default writes
+    - docs
+    - inspection/doctor output
+  - the active planning docs still treated config-shape migration itself as the
+    main remaining track
+- Fix:
+  - moved the execution board up one level:
+    - public config transition is now a checkpoint
+    - next active work is agent/team-ready layering on top of browser profiles
+      and AuraCall runtime profiles
+- Durable lesson:
+  - once reads, writes, docs, and diagnostics all agree on the primary public
+    shape, stop polishing migration mechanics by inertia and move the active
+    architecture track up to the next compositional layer

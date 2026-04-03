@@ -46,12 +46,28 @@ This refactor should establish the long-term layering:
 - teams
 
 Current config-model checkpoint:
-- target-shape is now the primary documented model
+- target-shape is now the primary documented and default-written model:
+  - `version: 3`
+  - `browserProfiles`
+  - `runtimeProfiles`
+  - `defaultRuntimeProfile`
 - dual-read loading is live for target and bridge shapes
 - target-shape is now the default write mode for:
   - `config migrate`
   - `profile scaffold`
   - `wizard`
+- inspection surfaces now expose:
+  - target-vs-bridge precedence
+  - selector-key presence
+  - projected target model
+
+Current note:
+- the public config transition is now complete enough for a checkpoint
+- the next architecture question is no longer config-shape mechanics
+- the next active design/implementation track should be the agent/team-ready
+  layering that composes on top of:
+  - browser profiles
+  - AuraCall runtime profiles
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
