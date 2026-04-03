@@ -5810,3 +5810,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this stays provider-local on purpose; the remaining fix is specific to
     ChatGPT's inline rename surface rather than a proven browser-service
     abstraction
+
+## 2026-04-03 13:18 CDT
+
+- Focus:
+  - live-smoke the tightened ChatGPT root rename path on the managed WSL
+    Chrome profile
+- What changed:
+  - ran the narrow phased ChatGPT acceptance root rename smoke:
+    - `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts --phase root-base --state-file docs/dev/tmp/chatgpt-rename-smoke-state.json`
+  - validated the exact hardened path against a disposable real root
+    conversation:
+    - created root conversation `69d00432-989c-8328-9127-a504798cd2bd`
+    - renamed it to `AC GPT C vdaxvw`
+    - acceptance phase passed cleanly
+- Verification:
+  - runner result: `PASS (root-base)`
+  - persisted state file:
+    [chatgpt-rename-smoke-state.json](/home/ecochran76/workspace.local/oracle/docs/dev/tmp/chatgpt-rename-smoke-state.json)
+- Notes:
+  - this proves the stricter `title-editor` gate and canonical title-persistence
+    matcher work on the current live ChatGPT root rename surface, not just in
+    unit coverage
