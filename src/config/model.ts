@@ -321,13 +321,25 @@ export function getActiveRuntimeProfileName(
 
 export function getPreferredRuntimeProfileName(
   config: OracleConfig | MutableRecord,
-  options: { explicitProfileName?: string | null } = {},
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): string | null {
   const explicit =
     typeof options.explicitProfileName === 'string' && options.explicitProfileName.trim().length > 0
       ? options.explicitProfileName.trim()
       : null;
   if (!explicit) {
+    const explicitAgentId =
+      typeof options.explicitAgentId === 'string' && options.explicitAgentId.trim().length > 0
+        ? options.explicitAgentId.trim()
+        : null;
+    if (explicitAgentId) {
+      const agentSelection = resolveAgentSelection(config, explicitAgentId);
+      if (agentSelection.runtimeProfileId) {
+        return getPreferredRuntimeProfileName(config, {
+          explicitProfileName: agentSelection.runtimeProfileId,
+        });
+      }
+    }
     return getActiveRuntimeProfileName(config);
   }
   const currentRuntimeProfiles = getCurrentRuntimeProfiles(config);
@@ -355,7 +367,7 @@ export function getActiveRuntimeProfile(
 
 export function getPreferredRuntimeProfile(
   config: OracleConfig | MutableRecord,
-  options: { explicitProfileName?: string | null } = {},
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
 ): MutableRuntimeProfile | null {
   const profileName = getPreferredRuntimeProfileName(config, options);
   if (!profileName) return null;

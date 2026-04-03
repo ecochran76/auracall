@@ -90,7 +90,13 @@ export async function resolveConfig(
   const normalized = normalizeConfigV1toV2(merged as OracleConfig, {
     aliasRules: options.aliasRules,
   }) as MutableConfig;
-  applyOracleProfile(normalized);
+  applyOracleProfile(normalized, {
+    explicitProfileName:
+      asNonEmptyString((cliOptions as MutableConfig).profile) ??
+      asNonEmptyString((cliOptions as MutableConfig).auracallProfile) ??
+      asNonEmptyString((cliOptions as MutableConfig).oracleProfile),
+    explicitAgentId: asNonEmptyString((cliOptions as MutableConfig).agent),
+  });
   const effective = mergeRecursively(normalized, cliConfig);
 
   // 4. Resolve Model and Engine Business Logic
@@ -157,9 +163,18 @@ function mergeRecursively(target: MutableConfig, source: MutableConfig): Mutable
   return result;
 }
 
-function applyOracleProfile(merged: MutableConfig): void {
-  const profileName = getPreferredRuntimeProfileName(merged);
-  const profile = getPreferredRuntimeProfile(merged);
+function applyOracleProfile(
+  merged: MutableConfig,
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
+): void {
+  const profileName = getPreferredRuntimeProfileName(merged, {
+    explicitProfileName: options.explicitProfileName ?? null,
+    explicitAgentId: options.explicitAgentId ?? null,
+  });
+  const profile = getPreferredRuntimeProfile(merged, {
+    explicitProfileName: profileName,
+    explicitAgentId: options.explicitAgentId ?? null,
+  });
   if (!profileName || !profile) return;
   merged.defaultRuntimeProfile = profileName;
   merged.auracallProfile = profileName;
@@ -176,6 +191,12 @@ function applyOracleProfile(merged: MutableConfig): void {
   applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
 }
 
-function resolveActiveProfileName(merged: MutableConfig): string | null {
-  return getPreferredRuntimeProfileName(merged);
+function resolveActiveProfileName(
+  merged: MutableConfig,
+  options: { explicitProfileName?: string | null; explicitAgentId?: string | null } = {},
+): string | null {
+  return getPreferredRuntimeProfileName(merged, {
+    explicitProfileName: options.explicitProfileName ?? null,
+    explicitAgentId: options.explicitAgentId ?? null,
+  });
 }

@@ -149,6 +149,7 @@ interface CliOptions extends OptionValues {
   prompt?: string;
   message?: string;
   profile?: string;
+  agent?: string;
   auracallProfile?: string;
   oracleProfile?: string;
   file?: string[];
@@ -473,6 +474,10 @@ program
     new Option('--mode <mode>', 'Alias for --engine (api | browser).').choices(['api', 'browser']).hideHelp(),
   )
   .option('--profile <name>', 'Select which AuraCall runtime profile to use for this run.')
+  .option(
+    '--agent <name>',
+    'Resolve this run through a reserved agent reference, inheriting its AuraCall runtime profile without enabling agent execution.',
+  )
   .addOption(new Option('--auracall-profile <name>', 'Alias for --profile.').hideHelp())
   .addOption(new Option('--oracle-profile <name>', 'Legacy alias for --profile.').hideHelp())
   .option('--files-report', 'Show token usage per attached file (also prints automatically when files exceed the token budget).', false)

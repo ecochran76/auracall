@@ -5324,3 +5324,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - next recommended slice is the first execution-adjacent agent-selection
     plumbing without behavior changes
+
+## 2026-04-03 09:02 CDT
+
+- Focus:
+  - thread one optional agent selection into a real execution-adjacent
+    resolution path without adding agent execution behavior
+- What changed:
+  - updated [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+    so shared runtime-profile selection now accepts:
+    - `explicitAgentId`
+    and resolves it through:
+    - `agent -> runtimeProfile -> browserProfile`
+  - updated [src/schema/resolver.ts](/home/ecochran76/workspace.local/oracle/src/schema/resolver.ts)
+    so `resolveConfig(...)` now threads optional CLI agent selection into the
+    shared resolver path before runtime/browser overrides are applied
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    to add:
+    - `--agent <name>`
+    as a selection-only seam
+  - expanded:
+    - [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    - [tests/schema/resolver.test.ts](/home/ecochran76/workspace.local/oracle/tests/schema/resolver.test.ts)
+    to pin:
+    - explicit agent -> runtime profile resolution
+    - explicit `--profile` precedence above `--agent`
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to describe the new selection semantics and their limits
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/schema/resolver.test.ts tests/config.test.ts tests/cli/configCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this is still not agent execution
+  - it is the first execution-adjacent consumer of the shared
+    `agent -> runtimeProfile -> browserProfile` seam

@@ -283,6 +283,44 @@ describe('config model helpers', () => {
     });
   });
 
+  it('can resolve the preferred runtime profile from an explicit agent selection', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        analyst: { runtimeProfile: 'work' },
+      },
+    };
+
+    expect(getPreferredRuntimeProfileName(config, { explicitAgentId: 'analyst' })).toBe('work');
+    expect(getPreferredRuntimeProfile(config, { explicitAgentId: 'analyst' })).toEqual({
+      browserProfile: 'consulting',
+      defaultService: 'grok',
+    });
+  });
+
+  it('keeps explicit runtime profile selection above explicit agent selection', () => {
+    const config = {
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        analyst: { runtimeProfile: 'work' },
+      },
+    };
+
+    expect(
+      getPreferredRuntimeProfileName(config, {
+        explicitProfileName: 'default',
+        explicitAgentId: 'analyst',
+      }),
+    ).toBe('default');
+  });
+
   it('projects the target config model from bridge-key config', () => {
     const config = {
       auracallProfile: 'work',

@@ -343,6 +343,10 @@ Within each file, later CLI flags still override config, and environment variabl
 
 - `engine`/`search` can be set globally or inside a runtime profile; runtime-profile values apply when that profile is selected and no CLI flag overrides them.
 - Use `--profile <name>` to switch AuraCall runtime profiles for a single run (overrides config).
+- Use `--agent <name>` to resolve a run through a reserved agent reference.
+  - Today this only selects the referenced AuraCall runtime profile and its browser-profile inheritance.
+  - It does not enable separate agent execution behavior yet.
+  - If both `--profile` and `--agent` are passed, `--profile` wins.
 - Profile onboarding and login with managed profiles:
   - `auracall --profile <name> setup --chatgpt` runs the managed-profile setup for that profile and opens a login flow if needed.
   - `auracall --profile <name> login --chatgpt` opens only the managed-profile login flow so you can manually authenticate a second account.
@@ -386,7 +390,9 @@ Within each file, later CLI flags still override config, and environment variabl
 - `runtimeProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `runtimeProfiles.<name>.cache.useDetectedIdentity` is set.
 - `runtimeProfiles.<name>.browser.profilePath` + `profileName` define the source browser profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk Chromium directory (for example `Profile 1`) or the friendly UI label.
 - `runtimeProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
-- `agents` and `teams` are reserved top-level config blocks for the future config-model refactor. Aura-Call parses them today so the shape can be documented and tested, but they do not drive runtime behavior yet.
+- `agents` and `teams` are reserved top-level config blocks for the future config-model refactor.
+  - Aura-Call now lets `--agent <name>` resolve through `agents.<name>.runtimeProfile` for selection semantics only.
+  - They still do not introduce separate agent or team execution behavior yet.
 - `runtimeProfiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
 - `runtimeProfiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.
 - `runtimeProfiles.<name>.cache.cleanupDays` sets the default retention window for `auracall cache cleanup --days`.

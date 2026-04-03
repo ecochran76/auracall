@@ -410,4 +410,104 @@ describe('Config Resolver', () => {
     expect(result.browser.chromePath).toBe('/target/chrome');
     expect(result.browser.grokUrl).toBe('https://grok.com/target');
   });
+
+  it('should resolve an explicit agent selection through its AuraCall runtime profile', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome-stable',
+          },
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          work: {
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+            services: {
+              grok: {
+                url: 'https://grok.com/work',
+              },
+            },
+          },
+        },
+        agents: {
+          analyst: {
+            runtimeProfile: 'work',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({ agent: 'analyst', engine: 'browser' });
+
+    expect(result.defaultRuntimeProfile).toBe('work');
+    expect(result.auracallProfile).toBe('work');
+    expect(result.browser.target).toBe('grok');
+    expect(result.browser.chromePath).toBe('/usr/bin/google-chrome');
+    expect(result.browser.grokUrl).toBe('https://grok.com/work');
+  });
+
+  it('should keep explicit runtime profile selection above explicit agent selection', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome-stable',
+          },
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          work: {
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+          },
+        },
+        agents: {
+          analyst: {
+            runtimeProfile: 'work',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({ profile: 'default', agent: 'analyst', engine: 'browser' });
+
+    expect(result.defaultRuntimeProfile).toBe('default');
+    expect(result.auracallProfile).toBe('default');
+    expect(result.browser.target).toBe('chatgpt');
+    expect(result.browser.chromePath).toBe('/usr/bin/google-chrome-stable');
+  });
 });

@@ -6209,3 +6209,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a future layer has enough parsing, projection, inspection, validation,
     and one shared resolver, checkpoint it explicitly before starting the first
     execution-adjacent seam
+
+## 2026-04-03 - the first execution-adjacent agent seam should resolve through runtime-profile selection, not invent agent behavior
+
+- Symptom:
+  - once the shared `agent -> runtimeProfile -> browserProfile` resolver
+    existed, the next likely mistake was to bolt agent-aware behavior directly
+    onto runtime code instead of first proving one narrow selection seam
+- Fix:
+  - taught shared runtime-profile selection to accept an optional explicit
+    agent id and resolve it through:
+    - `agent -> runtimeProfile -> browserProfile`
+  - threaded that seam into `resolveConfig(...)`
+  - added `--agent <name>` as a selection-only CLI path
+  - kept explicit `--profile` selection above `--agent`
+- Durable lesson:
+  - the first execution-adjacent use of a future layer should usually be
+    selection semantics, not a new behavior mode
+  - when a higher layer resolves onto an existing lower layer, preserve the
+    lower layer's explicit override precedence instead of letting the new layer
+    silently outrank it
