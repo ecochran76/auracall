@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  analyzeConfigModelBridgeHealth,
   getBrowserProfile,
   ensureBrowserProfiles,
   ensureRuntimeProfiles,
@@ -119,6 +120,64 @@ describe('config model helpers', () => {
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
         { id: 'work', browserProfileId: 'wsl-chrome-2', defaultService: 'grok' },
       ],
+    });
+  });
+
+  it('analyzes bridge-health from the shared config model seam', () => {
+    const config = {
+      auracallProfile: 'default',
+      browserFamilies: {
+        'wsl-chrome-2': {},
+        orphaned: {},
+      },
+      profiles: {
+        default: {
+          defaultService: 'grok',
+        },
+        work: {
+          browserFamily: 'missing-profile',
+          defaultService: 'chatgpt',
+        },
+        consulting: {
+          browserFamily: 'wsl-chrome-2',
+          defaultService: 'chatgpt',
+        },
+      },
+      auracallProfiles: {
+        legacy: {
+          defaultService: 'chatgpt',
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: null,
+      issueCount: 5,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'legacy-runtime-profiles-present',
+          severity: 'info',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-missing-browser-profile',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-browser-profile-missing',
+          auracallRuntimeProfile: 'work',
+          browserProfile: 'missing-profile',
+        }),
+        expect.objectContaining({
+          code: 'unused-browser-profile',
+          browserProfile: 'orphaned',
+        }),
+        expect.objectContaining({
+          code: 'active-runtime-profile-missing-browser-profile',
+          auracallRuntimeProfile: 'default',
+        }),
+      ]),
     });
   });
 });

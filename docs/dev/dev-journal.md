@@ -4705,3 +4705,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - no behavior changed in this slice
   - this locks the rule that target-shape input aliases should not be accepted
     until precedence and write-back policy are explicit
+
+## 2026-04-02 19:53 CDT
+
+- Focus:
+  - move bridge-health analysis onto the shared config-model seam instead of
+    leaving it as CLI-local logic
+- What changed:
+  - added
+    `analyzeConfigModelBridgeHealth(...)` plus shared doctor issue/report types
+    in [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - rewired
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `buildConfigDoctorReport(...)` now delegates to the shared model-layer
+    analyzer
+  - expanded
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    with direct bridge-health coverage
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps target-model projection and bridge-health diagnostics in one
+    place without starting input alias support

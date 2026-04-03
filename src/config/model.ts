@@ -21,6 +21,28 @@ export interface ProjectedConfigModel {
   runtimeProfiles: ProjectedRuntimeProfile[];
 }
 
+export interface ConfigModelDoctorIssue {
+  code:
+    | 'no-runtime-profiles'
+    | 'legacy-runtime-profiles-present'
+    | 'runtime-profile-missing-browser-profile'
+    | 'runtime-profile-browser-profile-missing'
+    | 'unused-browser-profile'
+    | 'active-runtime-profile-missing-browser-profile';
+  severity: 'warning' | 'info';
+  message: string;
+  auracallRuntimeProfile?: string;
+  browserProfile?: string;
+}
+
+export interface ConfigModelDoctorReport {
+  ok: boolean;
+  activeAuracallRuntimeProfile: string | null;
+  activeBrowserProfile: string | null;
+  issueCount: number;
+  issues: ConfigModelDoctorIssue[];
+}
+
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
@@ -182,6 +204,92 @@ export function projectConfigModel(
     activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
     browserProfiles,
     runtimeProfiles,
+  };
+}
+
+export function analyzeConfigModelBridgeHealth(
+  config: OracleConfig | MutableRecord,
+  options: { explicitProfileName?: string | null } = {},
+): ConfigModelDoctorReport {
+  const activeAuracallRuntimeProfile = getPreferredRuntimeProfileName(config, {
+    explicitProfileName: options.explicitProfileName ?? null,
+  });
+  const browserProfiles = getBrowserProfiles(config);
+  const browserProfileNames = new Set(Object.keys(browserProfiles));
+  const runtimeProfiles = getCurrentRuntimeProfiles(config);
+  const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
+  const issues: ConfigModelDoctorIssue[] = [];
+  const referencedBrowserProfiles = new Set<string>();
+
+  if (Object.keys(runtimeProfiles).length === 0) {
+    issues.push({
+      code: 'no-runtime-profiles',
+      severity: 'warning',
+      message: 'No AuraCall runtime profiles are defined under the current bridge key `profiles`.',
+    });
+  }
+
+  if (Object.keys(legacyRuntimeProfiles).length > 0) {
+    issues.push({
+      code: 'legacy-runtime-profiles-present',
+      severity: 'info',
+      message: 'Legacy runtime profiles are still present under `auracallProfiles`.',
+    });
+  }
+
+  for (const [name, runtimeProfile] of Object.entries(runtimeProfiles)) {
+    const browserProfile = getRuntimeProfileBrowserProfileId(runtimeProfile);
+    if (!browserProfile) {
+      issues.push({
+        code: 'runtime-profile-missing-browser-profile',
+        severity: 'warning',
+        message: `AuraCall runtime profile "${name}" does not explicitly reference a browser profile.`,
+        auracallRuntimeProfile: name,
+      });
+      continue;
+    }
+    referencedBrowserProfiles.add(browserProfile);
+    if (!browserProfileNames.has(browserProfile)) {
+      issues.push({
+        code: 'runtime-profile-browser-profile-missing',
+        severity: 'warning',
+        message: `AuraCall runtime profile "${name}" references missing browser profile "${browserProfile}".`,
+        auracallRuntimeProfile: name,
+        browserProfile,
+      });
+    }
+  }
+
+  for (const browserProfile of browserProfileNames) {
+    if (!referencedBrowserProfiles.has(browserProfile)) {
+      issues.push({
+        code: 'unused-browser-profile',
+        severity: 'info',
+        message: `Browser profile "${browserProfile}" is defined but no AuraCall runtime profile references it.`,
+        browserProfile,
+      });
+    }
+  }
+
+  const activeRuntimeProfile = getPreferredRuntimeProfile(config, {
+    explicitProfileName: activeAuracallRuntimeProfile,
+  });
+  const activeBrowserProfile = getRuntimeProfileBrowserProfileId(activeRuntimeProfile);
+  if (activeAuracallRuntimeProfile && !activeBrowserProfile) {
+    issues.push({
+      code: 'active-runtime-profile-missing-browser-profile',
+      severity: 'warning',
+      message: `Active AuraCall runtime profile "${activeAuracallRuntimeProfile}" does not explicitly reference a browser profile.`,
+      auracallRuntimeProfile: activeAuracallRuntimeProfile,
+    });
+  }
+
+  return {
+    ok: !issues.some((issue) => issue.severity === 'warning'),
+    activeAuracallRuntimeProfile,
+    activeBrowserProfile,
+    issueCount: issues.length,
+    issues,
   };
 }
 

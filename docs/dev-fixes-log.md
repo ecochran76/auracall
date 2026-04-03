@@ -5796,3 +5796,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     truth
 - Policy document:
   - [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+
+## 2026-04-02 - bridge-health diagnostics belong in the config-model seam, not only in CLI formatting
+
+- Symptom:
+  - `config doctor` knew how to reason about missing or dangling
+    runtime-profile -> browser-profile bridges
+  - but that logic lived only inside `configCommand.ts`
+  - other model-aware surfaces already depended on `projectConfigModel(...)`,
+    so diagnostics and projection were drifting apart
+- Fix:
+  - added `analyzeConfigModelBridgeHealth(...)` and shared doctor report types
+    in [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - kept `configCommand.ts` as a presentation layer that formats the shared
+    analysis instead of owning it
+- Durable lesson:
+  - once the target model gets a shared projection seam, its read-only
+    diagnostics should live there too
+  - CLI/operator surfaces should consume that seam rather than re-implement the
+    same bridge rules locally
