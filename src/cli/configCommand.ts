@@ -52,6 +52,18 @@ export interface ConfigShowReport {
     defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
     exists: boolean;
   }>;
+  resolvedTeams: Array<{
+    teamId: string | null;
+    agentIds: string[];
+    members: Array<{
+      agentId: string | null;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      defaultService: 'chatgpt' | 'gemini' | 'grok' | null;
+      exists: boolean;
+    }>;
+    exists: boolean;
+  }>;
   bridgeKeys: ConfigModelBridgeKeys;
   targetKeys: {
     browserProfiles: 'browserProfiles';
@@ -182,6 +194,7 @@ export function buildConfigShowReport(input: {
       legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
     resolvedAgents: inspection.agentIds.map((agentId) => resolveAgentSelection(input.rawConfig, agentId)),
+    resolvedTeams: inspection.teamIds.map((teamId) => resolveTeamSelection(input.rawConfig, teamId)),
     bridgeKeys: inspection.bridgeKeys,
     targetKeys: {
       browserProfiles: 'browserProfiles',
@@ -302,6 +315,21 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
       lines.push(
         `  - ${agent.agentId ?? '(none)'} -> ${agent.exists ? 'resolved' : 'missing'} -> runtime profile ${agent.runtimeProfileId ?? '(none)'} -> browser profile ${agent.browserProfileId ?? '(none)'} -> default service ${agent.defaultService ?? '(none)'}`,
       );
+    }
+  }
+  if (report.resolvedTeams.length === 0) {
+    lines.push('Resolved teams: (none)');
+  } else {
+    lines.push('Resolved teams:');
+    for (const team of report.resolvedTeams) {
+      lines.push(
+        `  - ${team.teamId ?? '(none)'} -> ${team.exists ? 'resolved' : 'missing'} -> agents ${formatList(team.agentIds)}`,
+      );
+      for (const member of team.members) {
+        lines.push(
+          `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+        );
+      }
     }
   }
   return lines.join('\n');

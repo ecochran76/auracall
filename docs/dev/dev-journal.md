@@ -5673,3 +5673,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this keeps the first team-side seam read-only and selection-oriented
   - it also makes the CLI/report layer depend on one canonical team resolver
     instead of the internal layout of `projectedModel.teams`
+
+## 2026-04-03 11:16 CDT
+
+- Focus:
+  - mirror the new team-selection helper into `config show` so troubleshooting
+    has the same normalized team contract that agents already have
+- What changed:
+  - updated [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `buildConfigShowReport(...)` now includes `resolvedTeams[]` from
+    `resolveTeamSelection(...)`
+  - updated the human-readable `config show` formatter to print resolved team
+    membership and per-member inherited runtime/browser/default-service context
+  - expanded [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin both the JSON report shape and text output
+  - updated [docs/configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
+    to document the new read-only resolved-team inspection surface
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/configModel.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps `config show` symmetric with the earlier `resolvedAgents[]`
+    surface
+  - the change is still inspection-only; no team execution behavior was added

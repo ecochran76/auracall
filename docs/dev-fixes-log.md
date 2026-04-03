@@ -6398,3 +6398,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     resolver before spreading the same mapping across report surfaces
   - projected inspection arrays are useful outputs, but they should not become
     the hidden source of truth for later selection logic
+
+## 2026-04-03 - once team selection has a canonical resolver, config show should expose it directly
+
+- Symptom:
+  - `profile list` could now resolve teams canonically, but `config show` still
+    only exposed agents as a normalized resolved surface
+  - that meant team-side troubleshooting still had to reconstruct state from
+    `projectedModel.teams` or switch commands unnecessarily
+- Fix:
+  - added `resolvedTeams[]` to `config show`
+  - updated text output to print each team plus per-member resolution state and
+    inherited runtime/browser/default-service context
+- Durable lesson:
+  - once one inspection surface gets a normalized resolved contract, add the
+    symmetric contract to the primary config-inspection surface too
+  - do not force operators to choose between “active config” and “resolved team
+    structure” views when both can share the same model-layer helper
