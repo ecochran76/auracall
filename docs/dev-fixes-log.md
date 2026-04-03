@@ -5833,3 +5833,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once multiple operator surfaces are exposing the same conceptual model,
     inventory/state assembly should move into the model seam before adding more
     commands or input aliases
+
+## 2026-04-02 - bridge-key names should be centralized before any alias transition starts
+
+- Symptom:
+  - even after inspection/reporting state moved into the config-model seam,
+    CLI report builders still hardcoded the bridge-key names:
+    - `browserFamilies`
+    - `profiles`
+    - `profiles.<name>.browserFamily`
+- Fix:
+  - added shared bridge-key metadata in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - made `inspectConfigModel(...)` return that metadata so read-only operator
+    surfaces consume one bridge contract
+- Durable lesson:
+  - before a future alias transition, the existing bridge contract needs to be
+    explicit and centralized too
+  - otherwise read-only surfaces and later dual-read logic will drift on the
+    very names they are supposed to diagnose

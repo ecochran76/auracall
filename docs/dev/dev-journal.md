@@ -4759,3 +4759,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this is still read-only target-model work
   - no target-shape input aliases were added
+
+## 2026-04-02 20:07 CDT
+
+- Focus:
+  - move bridge-key metadata itself onto the shared config-model seam
+- What changed:
+  - added `ConfigModelBridgeKeys` and `CONFIG_MODEL_BRIDGE_KEYS` in
+    [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - extended `inspectConfigModel(...)` to return shared `bridgeKeys`
+  - rewired
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `config show` / `profile list` no longer hardcode bridge-key names
+  - expanded
+    [tests/configModel.test.ts](/home/ecochran76/workspace.local/oracle/tests/configModel.test.ts)
+    to pin the shared bridge-key contract
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/cli/browserWizard.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this keeps the bridge contract explicit and centralized without starting
+    dual-read or target-shape input support

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  CONFIG_MODEL_BRIDGE_KEYS,
   analyzeConfigModelBridgeHealth,
   getBrowserProfile,
   ensureBrowserProfiles,
@@ -152,6 +153,7 @@ describe('config model helpers', () => {
         auracallRuntimeProfilesPresent: true,
         legacyRuntimeProfilesPresent: false,
       },
+      bridgeKeys: CONFIG_MODEL_BRIDGE_KEYS,
       projectedModel: {
         activeRuntimeProfileId: 'work',
         activeBrowserProfileId: 'wsl-chrome-2',

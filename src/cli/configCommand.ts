@@ -5,6 +5,7 @@ import {
   getPreferredRuntimeProfile,
   getPreferredRuntimeProfileName,
   getRuntimeProfileBrowserProfileId,
+  type ConfigModelBridgeKeys,
   type ConfigModelInspection,
   type ConfigModelDoctorIssue,
   type ConfigModelDoctorReport,
@@ -27,11 +28,7 @@ export interface ConfigShowReport {
     auracallRuntimeProfiles: string[];
     legacyRuntimeProfiles: string[];
   };
-  bridgeKeys: {
-    browserProfiles: 'browserFamilies';
-    auracallRuntimeProfiles: 'profiles';
-    runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily';
-  };
+  bridgeKeys: ConfigModelBridgeKeys;
   bridgeState: {
     browserProfilesPresent: boolean;
     auracallRuntimeProfilesPresent: boolean;
@@ -57,11 +54,7 @@ export interface ProfileListReport {
   activeAuracallRuntimeProfile: string | null;
   browserProfiles: string[];
   auracallRuntimeProfiles: ProfileListEntry[];
-  bridgeKeys: {
-    browserProfiles: 'browserFamilies';
-    auracallRuntimeProfiles: 'profiles';
-    runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily';
-  };
+  bridgeKeys: ConfigModelBridgeKeys;
   projectedModel: ProjectedConfigModel;
 }
 
@@ -111,11 +104,7 @@ export function buildConfigShowReport(input: {
       auracallRuntimeProfiles: inspection.runtimeProfiles.map((profile) => profile.id),
       legacyRuntimeProfiles: inspection.legacyRuntimeProfileIds,
     },
-    bridgeKeys: {
-      browserProfiles: 'browserFamilies',
-      auracallRuntimeProfiles: 'profiles',
-      runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
-    },
+    bridgeKeys: inspection.bridgeKeys,
     bridgeState: inspection.bridgeState,
     projectedModel: inspection.projectedModel,
   };
@@ -156,11 +145,7 @@ export function buildProfileListReport(
     activeAuracallRuntimeProfile: inspection.activeRuntimeProfileId,
     browserProfiles: inspection.browserProfileIds,
     auracallRuntimeProfiles,
-    bridgeKeys: {
-      browserProfiles: 'browserFamilies',
-      auracallRuntimeProfiles: 'profiles',
-      runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
-    },
+    bridgeKeys: inspection.bridgeKeys,
     projectedModel: inspection.projectedModel,
   };
 }

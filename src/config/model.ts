@@ -21,6 +21,12 @@ export interface ProjectedConfigModel {
   runtimeProfiles: ProjectedRuntimeProfile[];
 }
 
+export interface ConfigModelBridgeKeys {
+  browserProfiles: 'browserFamilies';
+  auracallRuntimeProfiles: 'profiles';
+  runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily';
+}
+
 export interface ConfigModelInspection {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
@@ -33,6 +39,7 @@ export interface ConfigModelInspection {
     auracallRuntimeProfilesPresent: boolean;
     legacyRuntimeProfilesPresent: boolean;
   };
+  bridgeKeys: ConfigModelBridgeKeys;
   projectedModel: ProjectedConfigModel;
 }
 
@@ -57,6 +64,12 @@ export interface ConfigModelDoctorReport {
   issueCount: number;
   issues: ConfigModelDoctorIssue[];
 }
+
+export const CONFIG_MODEL_BRIDGE_KEYS: ConfigModelBridgeKeys = {
+  browserProfiles: 'browserFamilies',
+  auracallRuntimeProfiles: 'profiles',
+  runtimeProfileBrowserProfile: 'profiles.<name>.browserFamily',
+};
 
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
@@ -251,6 +264,7 @@ export function inspectConfigModel(
       auracallRuntimeProfilesPresent: runtimeProfiles.length > 0,
       legacyRuntimeProfilesPresent: legacyRuntimeProfileIds.length > 0,
     },
+    bridgeKeys: CONFIG_MODEL_BRIDGE_KEYS,
     projectedModel: {
       activeRuntimeProfileId,
       activeBrowserProfileId: getRuntimeProfileBrowserProfileId(activeRuntimeProfile),
