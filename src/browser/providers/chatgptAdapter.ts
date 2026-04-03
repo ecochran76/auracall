@@ -554,6 +554,11 @@ type ChatgptConversationCanvasProbe = {
   contentText?: string | null;
 };
 
+type ChatgptImageArtifactProbe = {
+  src?: string | null;
+  alt?: string | null;
+};
+
 type ChatgptDeleteConfirmationProbe = {
   dialogText?: string | null;
   buttonLabels?: string[] | null;
@@ -1162,6 +1167,29 @@ export function matchesChatgptProjectSettingsSnapshot(
     return false;
   }
   return true;
+}
+
+export function matchesChatgptImageArtifactProbe(
+  probe: ChatgptImageArtifactProbe | null | undefined,
+  artifact: Pick<ConversationArtifact, 'title' | 'uri'>,
+): boolean {
+  if (!probe) {
+    return false;
+  }
+  const src = normalizeUiText(probe.src);
+  const alt = normalizeUiText(probe.alt).toLowerCase();
+  if (!src) {
+    return false;
+  }
+  const fileId = extractChatgptArtifactFileId(artifact.uri);
+  if (fileId && src.includes(`id=${fileId}`)) {
+    return true;
+  }
+  if (fileId) {
+    return false;
+  }
+  const expectedTitle = normalizeUiText(artifact.title).toLowerCase();
+  return Boolean(expectedTitle) && alt.includes(expectedTitle);
 }
 
 function isRetryableConnectionError(error: unknown): boolean {
@@ -5996,57 +6024,42 @@ async function readChatgptImageArtifactSrcWithClient(
   client: ChromeClient,
   artifact: ConversationArtifact,
 ): Promise<string | null> {
-  const fileId = extractChatgptArtifactFileId(artifact.uri);
   const expression = `(() => {
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const expectedTitle = normalize(${JSON.stringify(artifact.title)});
-    const fileId = ${JSON.stringify(fileId)};
-    const images = Array.from(document.querySelectorAll('img')).map((img) => ({
+    return Array.from(document.querySelectorAll('img')).map((img) => ({
       src: img.getAttribute('src') || '',
       alt: img.getAttribute('alt') || '',
     }));
-    const exact = images.find((image) => fileId && image.src.includes('id=' + fileId));
-    if (exact?.src) return exact.src;
-    if (fileId) return null;
-    const byTitle = images.find((image) => expectedTitle && normalize(image.alt).includes(expectedTitle));
-    return byTitle?.src || null;
   })()`;
   const result = await client.Runtime.evaluate({
     expression,
     returnByValue: true,
   });
-  return typeof result.result?.value === 'string' && result.result.value.trim().length > 0
-    ? result.result.value.trim()
-    : null;
+  const value = result.result?.value;
+  const probes = Array.isArray(value)
+    ? value
+        .filter(isRecord)
+        .map((item) => ({
+          src: readStringField(item, 'src'),
+          alt: readStringField(item, 'alt'),
+        }))
+    : [];
+  const match = probes.find((probe) => matchesChatgptImageArtifactProbe(probe, artifact));
+  return normalizeUiText(match?.src) || null;
 }
 
 async function waitForChatgptImageArtifactWithClient(
   client: ChromeClient,
   artifact: ConversationArtifact,
 ): Promise<boolean> {
-  const fileId = extractChatgptArtifactFileId(artifact.uri);
-  const predicate = `(() => {
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim().toLowerCase();
-    const expectedTitle = normalize(${JSON.stringify(artifact.title)});
-    const fileId = ${JSON.stringify(fileId)};
-    const images = Array.from(document.querySelectorAll('img'));
-    return images.some((img) => {
-      const src = String(img.getAttribute('src') || '');
-      const alt = normalize(img.getAttribute('alt'));
-      if (fileId && src.includes('id=' + fileId)) {
-        return true;
-      }
-      if (fileId) {
-        return false;
-      }
-      return Boolean(expectedTitle) && alt.includes(expectedTitle);
-    });
-  })()`;
-  const ready = await waitForPredicate(client.Runtime, predicate, {
-    timeoutMs: 10_000,
-    description: `ChatGPT image artifact "${artifact.title}" ready`,
-  });
-  return ready.ok;
+  const deadline = Date.now() + 10_000;
+  while (Date.now() < deadline) {
+    const src = await readChatgptImageArtifactSrcWithClient(client, artifact);
+    if (src) {
+      return true;
+    }
+    await sleep(250);
+  }
+  return false;
 }
 
 async function fetchChatgptBinaryWithClient(

@@ -14,6 +14,7 @@ import {
   mergeChatgptConversationArtifacts,
   matchesChatgptConversationTitleProbe,
   matchesChatgptDeleteConfirmationProbe,
+  matchesChatgptImageArtifactProbe,
   matchesChatgptProjectDeleteConfirmationProbe,
   matchesChatgptProjectSettingsSnapshot,
   matchesChatgptRenameEditorProbe,
@@ -309,6 +310,65 @@ describe('extractChatgptProjectSourceName', () => {
         leafTexts: [],
       }),
     ).toBe('Cochran_Faculty_Vita (15).pdf');
+  });
+});
+
+describe('matchesChatgptImageArtifactProbe', () => {
+  test('matches image probes by file id when the artifact uri is concrete', () => {
+    expect(
+      matchesChatgptImageArtifactProbe(
+        {
+          src: 'https://files.oaiusercontent.com/file-abc123?se=1&id=file-xyz789',
+          alt: 'irrelevant preview text',
+        },
+        {
+          title: 'diagram.png',
+          uri: 'chatgpt://file/file-xyz789',
+        },
+      ),
+    ).toBe(true);
+  });
+
+  test('falls back to alt-text title matching when no file id is available', () => {
+    expect(
+      matchesChatgptImageArtifactProbe(
+        {
+          src: 'https://files.oaiusercontent.com/generated-image.png',
+          alt: 'AuraCall Architecture Diagram preview',
+        },
+        {
+          title: 'AuraCall Architecture Diagram',
+          uri: undefined,
+        },
+      ),
+    ).toBe(true);
+  });
+
+  test('rejects probes that do not match the image artifact identity', () => {
+    expect(
+      matchesChatgptImageArtifactProbe(
+        {
+          src: 'https://files.oaiusercontent.com/generated-image.png',
+          alt: 'different artifact',
+        },
+        {
+          title: 'AuraCall Architecture Diagram',
+          uri: undefined,
+        },
+      ),
+    ).toBe(false);
+    expect(
+      matchesChatgptImageArtifactProbe(
+        {
+          src: 'https://files.oaiusercontent.com/file-abc123?se=1&id=file-other',
+          alt: 'AuraCall Architecture Diagram preview',
+        },
+        {
+          title: 'AuraCall Architecture Diagram',
+          uri: 'chatgpt://file/file-xyz789',
+        },
+      ),
+    ).toBe(false);
   });
 });
 

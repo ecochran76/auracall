@@ -6088,3 +6088,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - recommendation is to keep the next slice inside artifact materialization
     semantics and avoid reopening route-level recovery unless a new live
     failure proves the shared read-surface seam insufficient
+
+## 2026-04-03 17:29 CDT
+
+- Focus:
+  - take the first artifact-local ChatGPT hardening slice
+- What changed:
+  - added a canonical image artifact matcher in
+    [src/browser/providers/chatgptAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/chatgptAdapter.ts)
+    so image readiness and image `src` resolution now share the same identity
+    contract
+  - rewired:
+    - `waitForChatgptImageArtifactWithClient(...)`
+    - `readChatgptImageArtifactSrcWithClient(...)`
+    to use the same matcher instead of duplicating separate file-id/title
+    matching logic
+  - added focused coverage in
+    [tests/browser/chatgptAdapter.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/chatgptAdapter.test.ts)
+- Verification:
+  - `pnpm vitest run tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Notes:
+  - this slice is code-level verified only
+  - there is not yet a narrow existing live smoke that reliably exercises image
+    artifact materialization without reopening a broader acceptance surface

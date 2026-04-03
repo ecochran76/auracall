@@ -6629,3 +6629,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - do not reopen a freshly stabilized recovery seam just because another read
     path still feels flaky; first isolate whether the remaining drift is
     artifact-local instead
+
+## 2026-04-03 - ChatGPT image artifact readiness and src resolution should share one identity matcher
+
+- Symptom:
+  - image artifact materialization used one rule set for “is the image ready?”
+    and another nearby rule set for “which image src should we fetch?”
+  - both were trying to match the same artifact identity by file id or title,
+    so any later tweak risked drifting one path without the other
+- Fix:
+  - added one canonical image artifact matcher
+  - rewired image readiness polling and image `src` lookup to use that matcher
+- Durable lesson:
+  - if a provider artifact path asks both “is it present?” and “which node/url
+    is the one?”, those questions should share the same identity contract
+  - artifact-local hardening should prefer canonical matchers before broader
+    recovery changes
