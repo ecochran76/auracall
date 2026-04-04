@@ -158,6 +158,18 @@ export function detectGeminiNativeAttachmentFailure(currentText: string): string
   return null;
 }
 
+export function isGeminiAttachmentBlindAnswer(answerText: string): boolean {
+  const text = normalizeWhitespace(answerText).toLowerCase();
+  if (!text) {
+    return false;
+  }
+  return (
+    /please upload (the )?image/.test(text) ||
+    /image you('| a)?re referring to/.test(text) ||
+    /i('ll| will) (be )?happy to describe it/.test(text)
+  );
+}
+
 export function isGeminiPromptCommitted(options: {
   historyText: string;
   prompt: string;
@@ -178,6 +190,16 @@ type GeminiAttachmentPreviewState = {
   removeLabels: string[];
   previewNames: string[];
   matchedNames: string[];
+};
+
+type GeminiAttachmentSubmitDiagnostics = {
+  promptText: string;
+  historyText: string;
+  historyHasPrompt: boolean;
+  visibleBlobCount: number;
+  removeLabels: string[];
+  previewNames: string[];
+  sendReady: boolean;
 };
 
 async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): Promise<void> {
@@ -319,6 +341,73 @@ async function readGeminiNativeState(page: Page): Promise<{
     promptText: typeof result.promptText === 'string' ? result.promptText : '',
     hasPendingBlob: Boolean(result.hasPendingBlob),
     hasRemoveButton: Boolean(result.hasRemoveButton),
+  };
+}
+
+async function readGeminiAttachmentSubmitDiagnostics(
+  page: Page,
+  promptText: string,
+): Promise<GeminiAttachmentSubmitDiagnostics> {
+  const normalizedPrompt = normalizeWhitespace(promptText);
+  const result = await page.evaluate(
+    (promptSelector: string, historySelector: string, sendSelector: string, expectedPrompt: string) => {
+      const prompt = document.querySelector(promptSelector);
+      const history = document.querySelector(historySelector);
+      const send = document.querySelector(sendSelector);
+      const previews = Array.from(document.querySelectorAll('[data-test-id="file-preview"]'));
+      const previewNames = previews.map((el) => {
+        const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const previewTitle =
+          String(el.getAttribute('title') ?? '') ||
+          String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');
+        return previewTitle || previewText;
+      }).filter(Boolean);
+      const visibleBlobCount = Array.from(document.querySelectorAll('img')).filter((el) => {
+        const src = String(el.getAttribute('src') ?? '');
+        if (!src.startsWith('blob:')) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      }).length;
+      const removeLabels = Array.from(document.querySelectorAll('button,[role="button"]'))
+        .map((el) => String(el.getAttribute('aria-label') ?? ''))
+        .filter((label) => /remove file/i.test(label));
+      const historyText = String(history instanceof HTMLElement ? history.innerText : history?.textContent ?? '');
+      const sendReady = (() => {
+        if (!(send instanceof HTMLElement)) return false;
+        const style = globalThis.getComputedStyle?.(send);
+        if (style && (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none')) {
+          return false;
+        }
+        const rect = send.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const ariaDisabled = String(send.getAttribute('aria-disabled') ?? '').toLowerCase();
+        return ariaDisabled !== 'true' && !send.hasAttribute('disabled');
+      })();
+      return {
+        promptText: String(prompt?.textContent ?? ''),
+        historyText,
+        historyHasPrompt:
+          expectedPrompt.length > 0 &&
+          (historyText.includes(expectedPrompt) || historyText.includes(expectedPrompt.slice(0, 80))),
+        visibleBlobCount,
+        removeLabels,
+        previewNames,
+        sendReady,
+      };
+    },
+    GEMINI_PROMPT_SELECTOR,
+    GEMINI_HISTORY_SELECTOR,
+    GEMINI_SEND_BUTTON_SELECTOR,
+    normalizedPrompt,
+  );
+  return {
+    promptText: typeof result.promptText === 'string' ? result.promptText : '',
+    historyText: typeof result.historyText === 'string' ? result.historyText : '',
+    historyHasPrompt: Boolean(result.historyHasPrompt),
+    visibleBlobCount: Number.isFinite(result.visibleBlobCount) ? result.visibleBlobCount : 0,
+    removeLabels: Array.isArray(result.removeLabels) ? result.removeLabels.map((value) => String(value)) : [],
+    previewNames: Array.isArray(result.previewNames) ? result.previewNames.map((value) => String(value)) : [],
+    sendReady: Boolean(result.sendReady),
   };
 }
 
@@ -808,14 +897,67 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     await page.click(GEMINI_PROMPT_SELECTOR);
     await clearGeminiPromptText(page);
     await page.keyboard.type(options.prompt);
+    const preSubmitDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+    logger?.(
+      `[gemini-native] pre-submit diagnostics: ${JSON.stringify({
+        promptText: normalizeWhitespace(preSubmitDiagnostics.promptText),
+        historyHasPrompt: preSubmitDiagnostics.historyHasPrompt,
+        visibleBlobCount: preSubmitDiagnostics.visibleBlobCount,
+        removeLabels: preSubmitDiagnostics.removeLabels,
+        previewNames: preSubmitDiagnostics.previewNames,
+        sendReady: preSubmitDiagnostics.sendReady,
+      })}`,
+    );
     await submitGeminiPrompt(page, options.prompt, 20_000, {
       preferButtonFirst: attachmentPaths.length > 0,
     });
+    const postSubmitDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+    logger?.(
+      `[gemini-native] post-submit diagnostics: ${JSON.stringify({
+        promptText: normalizeWhitespace(postSubmitDiagnostics.promptText),
+        historyHasPrompt: postSubmitDiagnostics.historyHasPrompt,
+        visibleBlobCount: postSubmitDiagnostics.visibleBlobCount,
+        removeLabels: postSubmitDiagnostics.removeLabels,
+        previewNames: postSubmitDiagnostics.previewNames,
+        sendReady: postSubmitDiagnostics.sendReady,
+      })}`,
+    );
 
     const answerText = await waitForGeminiAnswer(page, {
       prompt: options.prompt,
       timeoutMs: options.timeoutMs,
     });
+    if (attachmentPaths.some(isLikelyImagePath) && isGeminiAttachmentBlindAnswer(answerText)) {
+      const finalDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+      throw new Error(
+        `Gemini returned an attachment-blind answer after image submit. Diagnostics: ${JSON.stringify({
+          preSubmit: {
+            promptText: normalizeWhitespace(preSubmitDiagnostics.promptText),
+            historyHasPrompt: preSubmitDiagnostics.historyHasPrompt,
+            visibleBlobCount: preSubmitDiagnostics.visibleBlobCount,
+            removeLabels: preSubmitDiagnostics.removeLabels,
+            previewNames: preSubmitDiagnostics.previewNames,
+            sendReady: preSubmitDiagnostics.sendReady,
+          },
+          postSubmit: {
+            promptText: normalizeWhitespace(postSubmitDiagnostics.promptText),
+            historyHasPrompt: postSubmitDiagnostics.historyHasPrompt,
+            visibleBlobCount: postSubmitDiagnostics.visibleBlobCount,
+            removeLabels: postSubmitDiagnostics.removeLabels,
+            previewNames: postSubmitDiagnostics.previewNames,
+            sendReady: postSubmitDiagnostics.sendReady,
+          },
+          final: {
+            promptText: normalizeWhitespace(finalDiagnostics.promptText),
+            historyHasPrompt: finalDiagnostics.historyHasPrompt,
+            visibleBlobCount: finalDiagnostics.visibleBlobCount,
+            removeLabels: finalDiagnostics.removeLabels,
+            previewNames: finalDiagnostics.previewNames,
+            sendReady: finalDiagnostics.sendReady,
+          },
+        })}`,
+      );
+    }
     const tookMs = Date.now() - startTime;
     return {
       answerText,

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   detectGeminiNativeAttachmentFailure,
   extractGeminiAnswerText,
+  isGeminiAttachmentBlindAnswer,
   isGeminiPromptCommitted,
 } from '../../src/gemini-web/browserNative.js';
 
@@ -37,6 +38,15 @@ describe('gemini browser native answer extraction', () => {
     expect(
       detectGeminiNativeAttachmentFailure('Conversation with Gemini Describe the uploaded image in one short sentence.'),
     ).toBeNull();
+  });
+
+  it('detects attachment-blind upload prompts as failure-shaped answers', () => {
+    expect(
+      isGeminiAttachmentBlindAnswer(
+        "Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.",
+      ),
+    ).toBe(true);
+    expect(isGeminiAttachmentBlindAnswer('A simple blue square with text inside it.')).toBe(false);
   });
 
   it('treats the prompt as committed only when it appears in history text', () => {

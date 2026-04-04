@@ -186,6 +186,25 @@
         - but the fresh rerun still returned:
           - `Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.`
         - so readiness-threshold tuning alone is not the missing piece
+      - Gemini native image runs now classify that answer as a real failure and
+        preserve the attachment evidence chain:
+        - pre-submit:
+          - prompt still in composer
+          - `visibleBlobCount = 1`
+          - `Remove file gemini-native-upload-proof.png`
+        - immediate post-submit:
+          - prompt committed to history
+          - blob still visible
+          - remove-file affordance gone
+        - final:
+          - prompt stayed in history
+          - blob disappeared entirely
+          - Gemini returned an attachment-blind answer
+      - that narrows the active bug further:
+        - the image survives staging
+        - the prompt commits
+        - but attachment association is being lost during or immediately after
+          submit
     - treat Gemini native image upload as an active browser hardening gap, not
       a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof

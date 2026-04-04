@@ -7761,3 +7761,35 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     attachment into model-visible input
   - once that is proven live, stop tuning staged-ready timing locally and move
     the next slice to the evidence chain preserved through submit
+
+## 2026-04-04 - Gemini image upload now fails with explicit attachment-loss diagnostics
+
+- Context:
+  - Gemini native image runs had reached a misleading intermediate state:
+    - prompt commit succeeded
+    - answer materialized
+    - but the answer was attachment-blind
+- Fix:
+  - classify attachment-blind image answers as real Gemini browser failures
+  - capture attachment evidence at:
+    - pre-submit
+    - immediate post-submit
+    - final answer time
+- Result:
+  - fresh live rerun on `wsl-chrome-2 -> gemini` now fails explicitly with the
+    exact evidence chain:
+    - pre-submit:
+      - `visibleBlobCount = 1`
+      - `Remove file gemini-native-upload-proof.png`
+    - post-submit:
+      - prompt committed to history
+      - blob still visible
+      - remove affordance gone
+    - final:
+      - blob gone
+      - prompt still in history
+      - attachment-blind answer
+- Durable lesson:
+  - this is not a generic submit or readiness failure anymore
+  - the active bug is attachment association loss during or immediately after
+    submit, so the next slice should target that boundary specifically

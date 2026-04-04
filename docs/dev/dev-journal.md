@@ -7471,3 +7471,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - stop adjusting readiness thresholds locally
   - move down one layer and compare Gemini's staged image state against the
     exact attachment evidence ChatGPT/Grok preserve through submit
+
+## 2026-04-04 - Gemini image runs now fail with explicit submit-phase attachment evidence
+
+- Current focus:
+  - classify Gemini attachment-blind image answers as real failures and capture
+    the exact pre/post/final attachment evidence on the owned page
+- What changed:
+  - Gemini native image runs now log submit diagnostics:
+    - pre-submit
+    - post-submit
+    - final
+  - attachment-blind answers like:
+    - `Please upload the image you're referring to...`
+    are now treated as browser-automation failures, not success
+- Outcome from fresh `wsl-chrome-2 -> gemini` live rerun:
+  - pre-submit:
+    - prompt still in composer
+    - `visibleBlobCount = 1`
+    - `Remove file gemini-native-upload-proof.png`
+  - immediate post-submit:
+    - prompt committed to history
+    - blob still visible
+    - remove-file affordance already gone
+  - final:
+    - prompt remained in history
+    - blob disappeared entirely
+    - Gemini produced an attachment-blind answer
+- Next step:
+  - stop treating this as generic attachment readiness
+  - inspect the attachment association path specifically around submit, because
+    the evidence now says the image is being detached during or right after the
+    send transition
