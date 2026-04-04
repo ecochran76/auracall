@@ -296,6 +296,10 @@ Current recommendation:
 - first decide whether the next value is:
   - fixing Gemini upload transport on real attachment mode
   - or a real implementation gap with a concrete operator or runtime failure
+- current concrete handoff for real attachment mode:
+  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+    captures the live upload-menu and preview-chip anchors for the next
+    browser-native protocol comparison
 
 ## Provisional feature matrix
 

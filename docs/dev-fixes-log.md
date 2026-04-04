@@ -7373,3 +7373,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when repeated identical provider requests reproduce the same control-only
     acknowledgement without a body, stop assuming the bug is just eventual
     consistency and move the investigation deeper into the protocol contract
+
+## 2026-04-04 - Gemini native upload UI anchors are worth preserving before protocol comparison
+
+- Symptom:
+  - the next useful Gemini upload step is to compare Aura-Call's raw upload
+    contract against Gemini's own browser-native upload flow
+  - that comparison would be slower and noisier if the current working UI
+    anchors had to be rediscovered later
+- Fix:
+  - recorded the current native Gemini upload-menu and preview-chip selectors in
+    a dedicated investigation note
+- Durable lesson:
+  - when a provider has a working native UI surface but a failing raw-client
+    path, preserve the live DOM anchors before returning to lower-level
+    protocol work

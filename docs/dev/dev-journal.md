@@ -7072,3 +7072,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live:
     - repeated `runGeminiWebOnce(...)` direct image-upload probes against
       `wsl-chrome-2 -> gemini`
+
+## 2026-04-04 - capture Gemini native upload UI anchors for the next protocol comparison
+
+- Current focus:
+  - Gemini native attachment transport investigation
+- What changed:
+  - added [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+    to pin the current live Gemini upload UI anchors supplied during
+    investigation:
+    - upload menu item:
+      - `[data-test-id="local-images-files-uploader-button"]`
+    - preview chip:
+      - `[data-test-id="file-preview"]`
+      - `[data-test-id="file-name"]`
+      - `[data-test-id="cancel-button"]`
+- Outcome:
+  - the next upload-protocol slice can start from the known browser-native UI
+    surface instead of rediscovering selectors
+  - this keeps the next step narrow:
+    - compare native browser upload request flow against Aura-Call's raw client
+    - do not jump straight to a DOM upload rewrite

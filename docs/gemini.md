@@ -128,6 +128,9 @@ Notes:
     - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
   - repeating the same direct attachment request did not turn that control-only
     response into a real body later
+  - the next investigation step is to compare Aura-Call's raw upload path
+    against Gemini's browser-native upload UI using:
+    - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
 
 ## Implementation details
 
