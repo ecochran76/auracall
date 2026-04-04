@@ -7351,3 +7351,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - keep the next Gemini slice bounded to why `waitForAttachmentPreview(...)`
     still misses the staged image/remove-file state during the live wait window
+
+## 2026-04-04 - Gemini image preview wait now preserves last-state diagnostics
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - replaced the opaque image preview `waitForFunction(...)` path with explicit
+    polling that keeps the last observed:
+    - prompt text
+    - visible blob count
+    - remove-file labels
+    - preview names
+    - matched attachment names
+  - fixed two implementation bugs in that new path:
+    - `__name is not defined`
+    - an in-page expression syntax error from leftover TypeScript syntax
+- Outcome:
+  - the new diagnostic path is working and no longer hides the browser state
+    behind a generic timeout
+  - on the latest live rerun, the image path moved past the preview-timeout
+    checkpoint and returned to the more meaningful explicit boundary:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Next step:
+  - keep the next Gemini slice focused on why a genuinely staged image still
+    disappears before prompt commit once preview detection is no longer the
+    main blind spot

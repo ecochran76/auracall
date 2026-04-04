@@ -7656,3 +7656,32 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - recognized but not submitted
     - submitted but unanswered
     before changing the next phase
+
+## 2026-04-04 - Gemini image preview timeouts need last-state diagnostics, not opaque `waitForFunction` failures
+
+- Symptom:
+  - after preserved-page inspection proved the image really staged, the helper
+    was still failing with:
+    - `Waiting failed: 45000ms exceeded`
+  - that left the next fix underspecified because the timeout itself did not
+    say what Gemini actually had on the page at the end of the wait
+- Fix:
+  - replaced the opaque image preview `waitForFunction(...)` path with explicit
+    polling that preserves the last observed:
+    - prompt text
+    - visible blob count
+    - remove-file labels
+    - preview names
+    - matched attachment names
+  - fixed follow-on implementation issues in that new path:
+    - `__name is not defined`
+    - an in-page expression syntax error caused by leftover TypeScript syntax
+- Result:
+  - the preview wait path is now inspectable instead of opaque
+  - on the latest live rerun, the image flow got past that preview-timeout
+    checkpoint and returned to the stronger explicit failure:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Durable lesson:
+  - when a browser wait is the current boundary, preserve the last live state
+    in the error before changing more workflow logic; otherwise the next fix is
+    still guesswork

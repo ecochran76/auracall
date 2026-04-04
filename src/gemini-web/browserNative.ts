@@ -170,6 +170,15 @@ export function isGeminiPromptCommitted(options: {
   return historyText.includes(prompt) || historyText.includes(prompt.slice(0, 80));
 }
 
+type GeminiAttachmentPreviewState = {
+  ready: boolean;
+  textboxText: string;
+  visibleBlobCount: number;
+  removeLabels: string[];
+  previewNames: string[];
+  matchedNames: string[];
+};
+
 async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): Promise<void> {
   const imageOnly = attachmentPaths.length > 0 && attachmentPaths.every(isLikelyImagePath);
   let menuReady = false;
@@ -378,16 +387,22 @@ async function waitForAttachmentPreview(
   attachmentNames: string[],
   timeoutMs: number,
 ): Promise<void> {
-  await page.waitForFunction(
-    (names: string[], imageNames: string[]) => {
+  const deadline = Date.now() + timeoutMs;
+  const imageNames = attachmentNames.filter(isLikelyImagePath);
+  let lastState: GeminiAttachmentPreviewState | null = null;
+
+  while (Date.now() < deadline) {
+    const state = await page.evaluate(`(() => {
+      const names = ${JSON.stringify(attachmentNames)};
+      const imageNamesInner = ${JSON.stringify(imageNames)};
       const prompt = document.querySelector('div[role="textbox"][aria-label="Enter a prompt for Gemini"]');
       const send = document.querySelector('button[aria-label="Send message"]');
       const locateComposerScope = () => {
         if (!(prompt instanceof HTMLElement)) {
           return document.body;
         }
-        let current: HTMLElement | null = prompt;
-        let fallback: HTMLElement = prompt;
+        let current = prompt;
+        let fallback = prompt;
         while (current && current !== document.body) {
           const hasSend = Boolean(send && current.contains(send));
           if (hasSend) {
@@ -423,7 +438,17 @@ async function waitForAttachmentPreview(
         const src = String(el.getAttribute('src') ?? '');
         return src.startsWith('blob:');
       });
-      return names.every((name) => {
+      const removeLabels = buttons
+        .map((el) => String(el.getAttribute('aria-label') ?? ''))
+        .filter((label) => /remove file/i.test(label));
+      const previewNames = scopedPreviews.map((el) => {
+        const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const previewTitle =
+          String(el.getAttribute('title') ?? '') ||
+          String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');
+        return previewTitle || previewText;
+      }).filter(Boolean);
+      const matchedNames = names.filter((name) => {
         const removeLabel = 'Remove file ' + name;
         const hasRemove =
           scopedButtons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel)) ||
@@ -435,15 +460,36 @@ async function waitForAttachmentPreview(
             String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');
           return previewText.includes(name) || previewTitle.includes(name);
         });
-        const isImageName = imageNames.includes(name);
+        const isImageName = imageNamesInner.includes(name);
         const hasImagePreview = isImageName && visibleImages.length > 0;
         return hasRemove || hasPreview || hasImagePreview;
       });
-    },
-    { timeout: timeoutMs },
-    attachmentNames,
-    attachmentNames.filter(isLikelyImagePath),
-  );
+      return {
+        ready: matchedNames.length === names.length,
+        textboxText: String(prompt instanceof HTMLElement ? prompt.textContent ?? '' : ''),
+        visibleBlobCount: visibleImages.length,
+        removeLabels,
+        previewNames,
+        matchedNames,
+      };
+    })()`);
+    lastState = state as GeminiAttachmentPreviewState;
+    if (lastState.ready) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  const detail = lastState
+    ? JSON.stringify({
+      textboxText: normalizeWhitespace(lastState.textboxText),
+      visibleBlobCount: lastState.visibleBlobCount,
+      removeLabels: lastState.removeLabels,
+      previewNames: lastState.previewNames,
+      matchedNames: lastState.matchedNames,
+    })
+    : 'unavailable';
+  throw new Error(`Gemini attachment preview did not stabilize before timeout. Last state: ${detail}`);
 }
 
 async function waitForGeminiSendReady(page: Page, timeoutMs: number): Promise<void> {
