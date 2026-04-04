@@ -208,6 +208,14 @@ Operator rule:
   - a provider capability gap
   - or a shared browser/runtime regression
 
+Current proof progress:
+- 2026-04-03:
+  - `default -> default`
+  - text: green
+  - attachment: green
+  - required exported-cookie fallback on this Linux host because direct
+    keyring-backed Chrome cookie reads returned zero Gemini auth cookies
+
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
 Goal:

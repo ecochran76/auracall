@@ -1,4 +1,4 @@
-import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, GROK_URL } from './constants.js';
+import { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET, GEMINI_URL, GROK_URL } from './constants.js';
 import { normalizeBrowserModelStrategy } from './modelStrategy.js';
 import type { BrowserAutomationConfig, ResolvedBrowserConfig } from './types.js';
 import { resolveManagedProfileDir, resolveManagedProfileRoot } from './profileStore.js';
@@ -24,7 +24,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   target: 'chatgpt',
   projectId: null,
   conversationId: null,
-  geminiUrl: null,
+  geminiUrl: GEMINI_URL,
   grokUrl: null,
   url: CHATGPT_URL,
   chatgptUrl: CHATGPT_URL,
@@ -70,11 +70,15 @@ export function resolveBrowserConfig(
   const rawUrl =
     target === 'grok'
       ? config?.grokUrl ?? config?.url ?? GROK_URL
-      : config?.chatgptUrl ?? config?.url ?? DEFAULT_BROWSER_CONFIG.url;
+      : target === 'gemini'
+        ? config?.geminiUrl ?? config?.url ?? GEMINI_URL
+        : config?.chatgptUrl ?? config?.url ?? DEFAULT_BROWSER_CONFIG.url;
   const normalizedUrl =
     target === 'grok'
       ? (rawUrl ?? GROK_URL)
-      : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
+      : target === 'gemini'
+        ? normalizeGenericBrowserUrl(rawUrl ?? GEMINI_URL, GEMINI_URL)
+        : normalizeChatgptUrl(rawUrl ?? DEFAULT_BROWSER_CONFIG.url, DEFAULT_BROWSER_CONFIG.url);
   const desiredModel = config?.desiredModel ?? DEFAULT_BROWSER_CONFIG.desiredModel ?? DEFAULT_MODEL_TARGET;
   const composerTool = normalizeComposerTool(config?.composerTool ?? DEFAULT_BROWSER_CONFIG.composerTool);
   const modelStrategy =
@@ -211,7 +215,10 @@ export function resolveBrowserConfig(
     managedProfileRoot: launchProfile.managedProfileRoot ?? managedProfileRoot,
     target,
     url: normalizedUrl,
-    chatgptUrl: target === 'grok' ? DEFAULT_BROWSER_CONFIG.chatgptUrl : normalizedUrl,
+    chatgptUrl:
+      target === 'chatgpt'
+        ? normalizedUrl
+        : config?.chatgptUrl ?? DEFAULT_BROWSER_CONFIG.chatgptUrl,
     timeoutMs: config?.timeoutMs ?? DEFAULT_BROWSER_CONFIG.timeoutMs,
     debugPort: launchProfile.debugPort ?? debugPortEnv ?? config?.debugPort ?? DEFAULT_BROWSER_CONFIG.debugPort,
     debugPortStrategy: launchProfile.debugPortStrategy ?? debugPortStrategy,
@@ -233,7 +240,7 @@ export function resolveBrowserConfig(
     chromeCookiePath: launchProfile.chromeCookiePath ?? resolvedCookiePath,
     bootstrapCookiePath: launchProfile.bootstrapCookiePath ?? resolvedBootstrapCookiePath,
     display: launchProfile.display ?? resolvedDisplay,
-    geminiUrl: config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
+    geminiUrl: target === 'gemini' ? normalizedUrl : config?.geminiUrl ?? DEFAULT_BROWSER_CONFIG.geminiUrl,
     grokUrl: config?.grokUrl ?? DEFAULT_BROWSER_CONFIG.grokUrl,
     debug: config?.debug ?? DEFAULT_BROWSER_CONFIG.debug,
     allowCookieErrors: config?.allowCookieErrors ?? envAllowCookieErrors ?? DEFAULT_BROWSER_CONFIG.allowCookieErrors,
@@ -251,6 +258,14 @@ export function resolveBrowserConfig(
       config?.collapseDisposableWindows ??
       DEFAULT_BROWSER_CONFIG.collapseDisposableWindows,
   };
+}
+
+function normalizeGenericBrowserUrl(value: string, fallback: string): string {
+  try {
+    return new URL(value).toString();
+  } catch {
+    return fallback;
+  }
 }
 
 function resolveDebugPortStrategy(options: {

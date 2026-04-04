@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { CHATGPT_URL } from '../../src/browser/constants.js';
+import { CHATGPT_URL, GEMINI_URL } from '../../src/browser/constants.js';
 
 const profileMocks = vi.hoisted(() => ({
   discoverDefaultBrowserProfile: vi.fn(),
@@ -216,6 +216,28 @@ describe('resolveBrowserConfig', () => {
     });
 
     expect(resolved.manualLoginProfileDir).toMatch(/browser-profiles\/default\/grok$/);
+  });
+
+  test('uses Gemini URLs for Gemini browser targets instead of inheriting ChatGPT defaults', () => {
+    const resolved = resolveBrowserConfig({
+      target: 'gemini',
+      chatgptUrl: 'https://chatgpt.com/g/g-p-should-not-win/project',
+      geminiUrl: 'https://gemini.google.com/gem/test-gem',
+    });
+
+    expect(resolved.url).toBe('https://gemini.google.com/gem/test-gem');
+    expect(resolved.geminiUrl).toBe('https://gemini.google.com/gem/test-gem');
+    expect(resolved.chatgptUrl).toBe('https://chatgpt.com/g/g-p-should-not-win/project');
+    expect(resolved.manualLoginProfileDir).toMatch(/browser-profiles\/default\/gemini$/);
+  });
+
+  test('defaults Gemini browser targets to the Gemini app URL', () => {
+    const resolved = resolveBrowserConfig({
+      target: 'gemini',
+    });
+
+    expect(resolved.url).toBe(GEMINI_URL);
+    expect(resolved.geminiUrl).toBe(GEMINI_URL);
   });
 
   test('uses a Windows-backed managed profile root for WSL Windows Chrome by default', () => {

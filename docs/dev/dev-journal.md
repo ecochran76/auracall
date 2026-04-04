@@ -6624,3 +6624,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     refresh instead of more operator alignment cleanup
 - Verification:
   - docs/planning only
+
+## 2026-04-03 - start Gemini live-proof refresh and fix target URL drift
+
+- Current focus:
+  - Gemini live-proof refresh
+- What changed:
+  - fixed [src/browser/config.ts](/home/ecochran76/workspace.local/oracle/src/browser/config.ts)
+    so Gemini browser targets resolve the generic browser `url` field from
+    Gemini inputs instead of inheriting ChatGPT defaults
+  - expanded [tests/browser/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/config.test.ts)
+    to pin:
+    - Gemini target URL resolution
+    - Gemini default managed browser profile derivation
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    with the first fresh Gemini web proof results
+- Live proof:
+  - pairing: `default` AuraCall runtime profile -> `default` browser profile
+  - local Gemini doctor first exposed an uninitialized managed browser profile
+  - pre-fix setup/verify then exposed the config bug by opening `chatgpt.com`
+    for a Gemini run
+  - after the fix:
+    - Gemini text run: green
+    - Gemini attachment run: green
+  - this host required:
+    - `auracall login --target gemini --export-cookies`
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`
+    because direct Linux keyring-backed cookie reads returned zero Gemini auth
+    cookies
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts tests/browser/profileConfig.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live Gemini text proof on `default -> default`
+  - live Gemini attachment proof on `default -> default`

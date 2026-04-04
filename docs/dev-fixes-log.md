@@ -7056,3 +7056,42 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - for inherited providers, close the alignment slice as soon as the concrete
     drift list is empty and move to proof refresh, rather than polishing
     operator semantics indefinitely
+
+## 2026-04-03 - make Gemini browser targets resolve their own base URL
+
+- Symptom:
+  - the first Gemini live-proof attempt on `default -> default` seeded the
+    managed Gemini browser profile correctly, but the real browser run opened
+    `https://chatgpt.com/` instead of `gemini.google.com`
+  - the run then hung on the wrong surface before any Gemini response capture
+- Fix:
+  - updated browser config resolution so `target: 'gemini'` now derives the
+    generic browser `url` field from Gemini inputs/defaults rather than
+    ChatGPT defaults
+  - added regression coverage to keep Gemini target URL resolution and managed
+    Gemini profile derivation pinned
+- Durable lesson:
+  - when a provider still depends on shared browser config fields like `url`,
+    make the target-specific default explicit in the shared resolver or the
+    provider can silently inherit another service's base route
+
+## 2026-04-03 - record the Linux Gemini exported-cookie fallback as proof, not a hidden workaround
+
+- Symptom:
+  - after the Gemini target URL fix, the next live proof still failed on this
+    Linux host because direct keyring-backed Chrome cookie reads returned zero
+    Google auth cookies even though the managed Gemini browser profile was
+    signed in
+- Fix:
+  - used the explicit Gemini operator path:
+    - `auracall login --target gemini --export-cookies`
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`
+  - re-ran live Gemini browser proofs on `default -> default`
+  - confirmed:
+    - text: green
+    - attachment: green
+- Durable lesson:
+  - on Linux Gemini hosts, treat exported cookies as a first-class proof path
+    when `secret-tool`/Chrome cookie decryption cannot surface the required
+    Google auth cookies, and record that fact in testing docs instead of
+    leaving it as local operator lore
