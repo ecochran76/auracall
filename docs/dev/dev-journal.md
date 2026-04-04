@@ -6295,3 +6295,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - record future team orchestration intent
+
+- Current focus:
+  - team/service boundary planning
+- What changed:
+  - updated the team boundary and roadmap docs to make the intended future use
+    of teams explicit:
+    - divide-and-conquer task decomposition
+    - multi-turn automation across agents
+    - explicit data handoff between agents
+  - kept the execution split explicit:
+    - teams express orchestration intent
+    - future service mode, runners, and parallelism execute that intent
+- Verification:
+  - docs only

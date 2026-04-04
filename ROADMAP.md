@@ -105,6 +105,11 @@ Current note:
       plumbing
     - future service-mode runners and parallelism should remain a higher layer,
       not be implied by current team config alone
+    - future teams are expected to become the orchestration layer for:
+      - divide-and-conquer task decomposition
+      - multi-turn automation across agents
+      - explicit inter-agent data handoff
+      while runners/parallelism remain a separate execution layer
 
 Sequencing rule:
 - do the config-model refactor before implementing agents

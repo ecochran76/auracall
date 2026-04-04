@@ -48,6 +48,10 @@ A future team may own concerns like:
 - coordination instructions
 - routing/delegation policy
 - selection policy for which member should handle a task
+- divide-and-conquer decomposition policy for complex work
+- multi-turn automation policy across member agents
+- explicit data handoff contracts between member agents
+- shared intermediate-result routing rules
 - future execution policy hints that describe desired coordination behavior
 
 These are orchestration concerns, not browser/account concerns.
@@ -97,6 +101,11 @@ the CLI feature set is stable.
 When that happens:
 
 - teams may become an input to the service/runners layer
+- teams should describe orchestration intent:
+  - which agents collaborate
+  - how work may be divided
+  - how intermediate results may pass between agents
+  - what kind of multi-turn coordination is desired
 - runner assignment and parallelism policy should be modeled there, not hidden
   inside team membership alone
 - team config may later describe desired coordination policy, but actual
@@ -115,6 +124,20 @@ current team layer:
 - retry/backoff across members
 - background service lifecycle
 - long-lived runner ownership
+
+Examples of concerns that belong to the team layer, but only once the
+service/runners layer exists to execute them safely:
+
+- divide-and-conquer task plans across multiple agents
+- staged multi-turn workflows where one agent's output becomes another's input
+- explicit handoff points between specialist agents
+- orchestration policies for sequential vs parallel collaboration
+
+Important separation:
+
+- team config should express coordination intent
+- the future service/runners layer should decide how to schedule and execute
+  that intent
 
 ## Near-term selection policy
 

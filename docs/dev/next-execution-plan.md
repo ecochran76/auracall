@@ -89,6 +89,16 @@ checkpoint. The next useful step is not more read-only team plumbing. It is to
 define the future team selection/execution boundary before any `--team` runtime
 semantics land.
 
+The intended future direction is now explicit:
+
+- teams are expected to become the orchestration layer for:
+  - divide-and-conquer task decomposition
+  - multi-turn automation across multiple agents
+  - explicit data handoff between agents
+- future service mode, runners, and parallelism remain the execution layer
+  underneath that orchestration intent
+- do not collapse those concerns into today's CLI-only `--team` selection seam
+
 ChatGPT hardening is also in a better checkpoint than before:
 
 - mutation-side persistence/verification is substantially hardened:
@@ -150,6 +160,11 @@ Deliverables
   agents and what must remain owned below them
 - one rule set describing what teams may coordinate directly and what must
   remain deferred to the future service/runners layer
+- one rule set describing how future teams should express:
+  - divide-and-conquer intent
+  - multi-turn agent collaboration
+  - data handoff intent
+  without implying runner topology or parallel execution by themselves
 
 Acceptance
 - boundary docs aligned in:

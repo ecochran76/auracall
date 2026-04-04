@@ -6758,3 +6758,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a selector exists for planning or inspection only, surface that rule
     explicitly in operator reports instead of relying on users to infer it from
     the absence of runtime changes
+
+## 2026-04-03 - keep team orchestration intent separate from runner execution semantics
+
+- Symptom:
+  - the future role of teams was already implicit, but not pinned clearly
+    enough in the durable architecture docs
+  - that made it too easy for future work to blur:
+    - team orchestration intent
+    - runner/service execution semantics
+- Fix:
+  - updated the boundary and roadmap docs so teams are explicitly the future
+    orchestration layer for:
+    - divide-and-conquer task decomposition
+    - multi-turn automation across agents
+    - explicit data handoff between agents
+  - kept runners, parallelism, queueing, and execution topology in the future
+    service layer
+- Durable lesson:
+  - when a higher layer will eventually coordinate lower layers, document the
+    ownership split early so later execution features do not collapse intent
+    and scheduling into one config concept
