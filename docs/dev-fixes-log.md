@@ -6817,3 +6817,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - before implementing orchestration services, define the durable entity model
     first so code, storage, events, and postmortems all share the same core
     vocabulary
+
+## 2026-04-03 - land code-facing team-run entity types before wiring service behavior
+
+- Symptom:
+  - the planning docs now described the team-run model, but there was still no
+    code-facing seam for future implementation to share
+- Fix:
+  - added a read-only TypeScript entity module for:
+    - `TeamRun`
+    - `TeamRunStep`
+    - `TeamRunHandoff`
+    - `TeamRunSharedState`
+  - added one conservative default execution policy constant
+  - kept the seam behavior-free so later service work can adopt it incrementally
+- Durable lesson:
+  - once an orchestration model is stable enough in docs, land the shared types
+    before execution code so later implementation composes around one vocabulary
+    instead of recreating local object shapes

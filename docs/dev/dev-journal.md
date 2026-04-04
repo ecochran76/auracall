@@ -6344,3 +6344,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - linked the new plan from the roadmap and next execution plan
 - Verification:
   - docs only
+
+## 2026-04-03 - land the first code-facing team-run types seam
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a read-only TypeScript module at
+    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    that mirrors the planned future entity vocabulary:
+    - `TeamRun`
+    - `TeamRunStep`
+    - `TeamRunHandoff`
+    - `TeamRunSharedState`
+  - added conservative default execution policy constants without attaching
+    any runner or service behavior
+  - added focused coverage in
+    [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts --maxWorkers 1`
+  - `pnpm run check`
