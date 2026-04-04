@@ -6908,3 +6908,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - live:
     - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 login --target gemini --export-cookies`
+
+## 2026-04-04 - prove Gemini text on wsl-chrome-2 after login recovery
+
+- Current focus:
+  - Gemini second-pairing proof
+- What changed:
+  - ran one narrow Gemini browser text proof on the same pairing using the
+    runtime-profile-scoped cookie export:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`
+  - updated
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to promote this pairing from login-ready to text-green
+- Outcome:
+  - Gemini returned exactly:
+    - `WSL2 GEMINI TEXT GREEN 2`
+  - `wsl-chrome-2 -> gemini` is now a real second text-green browser proof
+    pairing
+- Verification:
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`

@@ -7223,3 +7223,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider has a strong visible signed-out state but the next step is
     also mechanically obvious and low-risk, prefer one bounded recovery action
     before surfacing a hard operator failure
+
+## 2026-04-04 - close the loop on second-pairing readiness with a real browser text proof
+
+- Symptom:
+  - after `wsl-chrome-2 -> gemini` login/export became green, the pairing was
+    still only login-ready on paper because the earlier browser text probe had
+    completed with no text output
+- Fix:
+  - reran one narrow Gemini browser text proof using the pairing-scoped cookie
+    export file
+  - confirmed the run returned the exact expected output:
+    - `WSL2 GEMINI TEXT GREEN 2`
+  - updated Gemini testing/planning docs to promote `wsl-chrome-2 -> gemini`
+    from login-ready to a real second text-green browser proof pairing
+- Durable lesson:
+  - after repairing provider login readiness, close the loop with one narrow
+    end-to-end browser proof before treating the pairing as genuinely green

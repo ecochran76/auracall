@@ -133,11 +133,11 @@
       - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json`
     - the current Gemini login flow can click a visible Gemini `Sign in` CTA
       once and wait through the Google handoff when that is sufficient
-  - browser proof on this pairing is still not complete:
-    - the earlier narrow text probe was not green and completed with
-      `(no text output)`
-  - treat this pairing as login-ready but not freshly browser-proven until a
-    narrow text run returns expected output
+  - browser text proof is now green:
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json auracall --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`
+    - returned exactly:
+      - `WSL2 GEMINI TEXT GREEN 2`
+  - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.

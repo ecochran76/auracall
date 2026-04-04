@@ -254,10 +254,11 @@ Outcome:
   - login/export is now green on that pairing:
     - Gemini can click one visible `Sign in` CTA and complete cookie export
       when that is sufficient for the Google handoff
-  - but the pairing is still not a certified second proof pass:
-    - the earlier narrow text probe completed with `(no text output)`
-  - so `wsl-chrome-2` is now login-ready but still not a green second browser
-    proof pairing yet
+  - browser text proof is now also green:
+    - a narrow Gemini text run on `wsl-chrome-2` returned the expected exact
+      text output
+  - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
+    pairing
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
