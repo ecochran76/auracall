@@ -45,6 +45,29 @@ const GEMINI_SIGNED_OUT_PROBE_EXPRESSION = `(() => {
   });
 })()`;
 
+const GEMINI_SIGNED_OUT_CLICK_EXPRESSION = `(() => {
+  const host = String(globalThis.location?.hostname ?? '').toLowerCase();
+  if (host !== 'gemini.google.com') return false;
+  const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const isVisible = (el) => {
+    if (!(el instanceof HTMLElement)) return false;
+    const style = globalThis.getComputedStyle?.(el);
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  const candidate = Array.from(document.querySelectorAll('a,button,[role="button"]')).find((el) => {
+    if (!isVisible(el)) return false;
+    const label = normalize(\`\${el.getAttribute?.('aria-label') ?? ''} \${el.textContent ?? ''}\`);
+    if (!/(^|\\b)(sign in|log in|login)(\\b|$)/.test(label)) return false;
+    const href = el instanceof HTMLAnchorElement ? normalize(el.getAttribute('href') ?? '') : '';
+    return href.includes('accounts.google.com') || label.includes('sign in');
+  });
+  if (!(candidate instanceof HTMLElement)) return false;
+  candidate.click();
+  return true;
+})()`;
+
 export interface BrowserLoginOptions {
   target: LoginTarget;
   chromePath: string;
@@ -172,6 +195,11 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
             expression: GEMINI_SIGNED_OUT_PROBE_EXPRESSION,
             errorMessage:
               'Gemini login required; the opened Gemini page still shows a visible Sign in state. Finish signing in to gemini.google.com in the opened browser, then retry.',
+          },
+          signedOutRecovery: {
+            expression: GEMINI_SIGNED_OUT_CLICK_EXPRESSION,
+            attemptLimit: 1,
+            graceMs: 20_000,
           },
         }
       : undefined,

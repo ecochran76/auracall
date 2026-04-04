@@ -6878,3 +6878,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - live:
     - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 login --target gemini --export-cookies`
+
+## 2026-04-04 - auto-click Gemini Sign in once on wsl-chrome-2
+
+- Current focus:
+  - Gemini login/export recovery
+- What changed:
+  - updated
+    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/loginHelpers.ts)
+    so signed-out cookie export flows can attempt one bounded recovery action
+    and wait through a short post-click grace window before failing
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+    so Gemini uses that seam to click a visible `Sign in` CTA once on the
+    Gemini surface
+  - updated Gemini docs/testing notes to distinguish:
+    - login/export green
+    - browser proof still pending
+- Outcome:
+  - live rerun on `wsl-chrome-2` succeeded:
+    - `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+  - cookies were exported to:
+    - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json`
+  - this confirms the visible `Sign in` click was sufficient on that managed
+    Gemini browser profile
+  - this still does not promote the pairing to fully browser-proven; a narrow
+    Gemini text run remains the next proof step
+- Verification:
+  - `pnpm vitest run tests/browser-service/loginHelpers.test.ts tests/browser/geminiLogin.test.ts tests/browser/login.test.ts tests/browser/browserLoginCore.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 login --target gemini --export-cookies`

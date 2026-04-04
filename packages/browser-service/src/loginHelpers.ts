@@ -93,6 +93,7 @@ export async function exportCookiesFromCdp({
   urls,
   timeoutMs,
   signedOutProbe,
+  signedOutRecovery,
 }: {
   port: number | null;
   host?: string;
@@ -102,6 +103,11 @@ export async function exportCookiesFromCdp({
   signedOutProbe?: {
     expression: string;
     errorMessage: string;
+  };
+  signedOutRecovery?: {
+    expression: string;
+    attemptLimit?: number;
+    graceMs?: number;
   };
 }): Promise<CookieParam[]> {
   if (!port) {
@@ -113,6 +119,10 @@ export async function exportCookiesFromCdp({
     await client.Network.enable();
     await client.Runtime.enable();
     const start = Date.now();
+    const recoveryAttemptLimit = Math.max(0, signedOutRecovery?.attemptLimit ?? 1);
+    const recoveryGraceMs = Math.max(0, signedOutRecovery?.graceMs ?? 15_000);
+    let signedOutRecoveryAttempts = 0;
+    let signedOutRecoveryGraceUntil = 0;
     while (Date.now() - start < timeoutMs) {
       const { cookies } = await client.Network.getCookies({ urls });
       const hasRequired = requiredNames.every((name) => cookies.some((cookie) => cookie.name === name));
@@ -125,6 +135,22 @@ export async function exportCookiesFromCdp({
           returnByValue: true,
         });
         if (probe.result?.value === true) {
+          if (signedOutRecovery && signedOutRecoveryAttempts < recoveryAttemptLimit) {
+            const recovery = await client.Runtime.evaluate({
+              expression: signedOutRecovery.expression,
+              returnByValue: true,
+            });
+            if (recovery.result?.value === true) {
+              signedOutRecoveryAttempts += 1;
+              signedOutRecoveryGraceUntil = Date.now() + recoveryGraceMs;
+              await delay(2_000);
+              continue;
+            }
+          }
+          if (Date.now() < signedOutRecoveryGraceUntil) {
+            await delay(2_000);
+            continue;
+          }
           throw new Error(signedOutProbe.errorMessage);
         }
       }

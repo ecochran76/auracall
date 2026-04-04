@@ -100,4 +100,48 @@ describe('exportCookiesFromCdp', () => {
       returnByValue: true,
     });
   });
+
+  it('attempts one signed-out recovery action before failing', async () => {
+    const { exportCookiesFromCdp } = await import('../../packages/browser-service/src/loginHelpers.js');
+
+    client.Network.getCookies.mockResolvedValue({
+      cookies: [],
+    });
+    client.Runtime.evaluate
+      .mockResolvedValueOnce({ result: { value: true } })
+      .mockResolvedValueOnce({ result: { value: true } })
+      .mockResolvedValueOnce({ result: { value: true } });
+
+    await expect(
+      exportCookiesFromCdp({
+        port: 45000,
+        host: '127.0.0.1',
+        urls: ['https://gemini.google.com', 'https://accounts.google.com'],
+        requiredNames: ['__Secure-1PSID', '__Secure-1PSIDTS'],
+        timeoutMs: 25_000,
+        signedOutProbe: {
+          expression: '(() => true)()',
+          errorMessage: 'Gemini login required; visible Sign in state detected.',
+        },
+        signedOutRecovery: {
+          expression: '(() => true)()',
+          attemptLimit: 1,
+          graceMs: 0,
+        },
+      }),
+    ).rejects.toThrow('Gemini login required; visible Sign in state detected.');
+
+    expect(client.Runtime.evaluate).toHaveBeenNthCalledWith(1, {
+      expression: '(() => true)()',
+      returnByValue: true,
+    });
+    expect(client.Runtime.evaluate).toHaveBeenNthCalledWith(2, {
+      expression: '(() => true)()',
+      returnByValue: true,
+    });
+    expect(client.Runtime.evaluate).toHaveBeenNthCalledWith(3, {
+      expression: '(() => true)()',
+      returnByValue: true,
+    });
+  });
 });

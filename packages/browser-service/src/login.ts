@@ -24,6 +24,11 @@ export interface BrowserLoginOptions {
       expression: string;
       errorMessage: string;
     };
+    signedOutRecovery?: {
+      expression: string;
+      attemptLimit?: number;
+      graceMs?: number;
+    };
   };
   onRegisterInstance?: (options: {
     userDataDir: string;
@@ -141,6 +146,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       urls: cookieUrls,
       timeoutMs,
       signedOutProbe: cookieExport.signedOutProbe,
+      signedOutRecovery: cookieExport.signedOutRecovery,
     });
     await onCookiesExported?.(cookies);
     return;

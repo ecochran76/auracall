@@ -67,6 +67,11 @@ describe('Gemini browser login', () => {
             errorMessage: expect.stringContaining('visible Sign in state'),
             expression: expect.stringContaining('sign in'),
           }),
+          signedOutRecovery: expect.objectContaining({
+            attemptLimit: 1,
+            graceMs: 20_000,
+            expression: expect.stringContaining('candidate.click'),
+          }),
         }),
       }),
     );

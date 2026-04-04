@@ -7202,3 +7202,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - after adding a new provider login-state detector, run one live validation
     on the ambiguous pairing immediately so setup docs and proof status do not
     keep overstating readiness
+
+## 2026-04-04 - treat Gemini Sign in as a bounded recovery action when the source Chrome profile is already authenticated
+
+- Symptom:
+  - on `wsl-chrome-2 -> gemini`, the visible signed-out `Sign in` state was
+    real, but it also turned out to be recoverable by one click because the
+    underlying Chrome profile already had the needed Google auth context
+  - failing immediately was truthful, but it still left an avoidable manual
+    step in the Gemini login/export flow
+- Fix:
+  - extended the shared cookie-export loop so a signed-out state can attempt
+    one bounded recovery action and wait through a short grace window before
+    failing
+  - wired Gemini to click a visible `Sign in` CTA once before giving up
+  - live-validated on `wsl-chrome-2`:
+    - `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+      now succeeds and writes the pairing-scoped cookie file
+- Durable lesson:
+  - when a provider has a strong visible signed-out state but the next step is
+    also mechanically obvious and low-risk, prefer one bounded recovery action
+    before surfacing a hard operator failure
