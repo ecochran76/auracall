@@ -92,6 +92,7 @@
 - Gemini web (cookie) live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts` (requires a signed-in Chrome profile at `gemini.google.com`).
 - Gemini local browser-profile doctor: `pnpm tsx bin/auracall.ts doctor --target gemini --local-only --json`
 - Full live Gemini selector diagnosis is not implemented under `auracall doctor` yet; use the dedicated Gemini live smokes instead.
+- Gemini login/export now treats a visible Gemini `Sign in` page state as a real login failure instead of waiting indefinitely for cookie export.
 - Gemini web live-proof target surfaces:
   - text
   - attachment

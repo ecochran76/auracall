@@ -6830,3 +6830,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `auracall --profile wsl-chrome-2 doctor --target gemini --local-only --json`
   - live Gemini text probe on `wsl-chrome-2 -> gemini`
+
+## 2026-04-04 - detect visible Gemini sign-in state during cookie export
+
+- Current focus:
+  - Gemini login/export hardening
+- What changed:
+  - updated
+    [packages/browser-service/src/loginHelpers.ts](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/loginHelpers.ts)
+    so the shared cookie-export wait loop can run a signed-out DOM probe and
+    fail early instead of waiting indefinitely for required cookies
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+    so Gemini export-cookies now uses a target-specific visible `Sign in`
+    probe against the opened login page
+  - added focused coverage in:
+    - [tests/browser-service/loginHelpers.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser-service/loginHelpers.test.ts)
+    - [tests/browser/geminiLogin.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/geminiLogin.test.ts)
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+    and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    for the new operator-visible behavior
+- Verification:
+  - `pnpm vitest run tests/browser-service/loginHelpers.test.ts tests/browser/geminiLogin.test.ts tests/browser/login.test.ts tests/browser/browserLoginCore.test.ts --maxWorkers 1`
+  - `pnpm run check`

@@ -25,6 +25,26 @@ import type { DebugPortStrategy } from '../../packages/browser-service/src/types
 
 export type LoginTarget = 'chatgpt' | 'gemini' | 'grok';
 
+const GEMINI_SIGNED_OUT_PROBE_EXPRESSION = `(() => {
+  const host = String(globalThis.location?.hostname ?? '').toLowerCase();
+  if (host === 'accounts.google.com') return true;
+  const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+  const isVisible = (el) => {
+    if (!(el instanceof HTMLElement)) return false;
+    const style = globalThis.getComputedStyle?.(el);
+    if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
+    const rect = el.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  };
+  return Array.from(document.querySelectorAll('a,button,[role="button"]')).some((el) => {
+    if (!isVisible(el)) return false;
+    const label = normalize(\`\${el.getAttribute?.('aria-label') ?? ''} \${el.textContent ?? ''}\`);
+    if (!/(^|\\b)(sign in|log in|login)(\\b|$)/.test(label)) return false;
+    const href = el instanceof HTMLAnchorElement ? normalize(el.getAttribute('href') ?? '') : '';
+    return host === 'gemini.google.com' || href.includes('accounts.google.com');
+  });
+})()`;
+
 export interface BrowserLoginOptions {
   target: LoginTarget;
   chromePath: string;
@@ -148,6 +168,11 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
             'https://www.google.com',
           ]),
           requiredCookies: ['__Secure-1PSID', '__Secure-1PSIDTS'],
+          signedOutProbe: {
+            expression: GEMINI_SIGNED_OUT_PROBE_EXPRESSION,
+            errorMessage:
+              'Gemini login required; the opened Gemini page still shows a visible Sign in state. Finish signing in to gemini.google.com in the opened browser, then retry.',
+          },
         }
       : undefined,
     onRegisterInstance: async ({ userDataDir, profileName, port, host }) => {

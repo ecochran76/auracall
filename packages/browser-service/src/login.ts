@@ -20,6 +20,10 @@ export interface BrowserLoginOptions {
     urls: string[];
     requiredCookies?: string[];
     timeoutMs?: number;
+    signedOutProbe?: {
+      expression: string;
+      errorMessage: string;
+    };
   };
   onRegisterInstance?: (options: {
     userDataDir: string;
@@ -136,6 +140,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       requiredNames: requiredCookies,
       urls: cookieUrls,
       timeoutMs,
+      signedOutProbe: cookieExport.signedOutProbe,
     });
     await onCookiesExported?.(cookies);
     return;

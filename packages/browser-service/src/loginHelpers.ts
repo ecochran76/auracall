@@ -92,12 +92,17 @@ export async function exportCookiesFromCdp({
   requiredNames,
   urls,
   timeoutMs,
+  signedOutProbe,
 }: {
   port: number | null;
   host?: string;
   requiredNames: string[];
   urls: string[];
   timeoutMs: number;
+  signedOutProbe?: {
+    expression: string;
+    errorMessage: string;
+  };
 }): Promise<CookieParam[]> {
   if (!port) {
     throw new Error('Missing Chrome debug port for cookie export.');
@@ -106,12 +111,22 @@ export async function exportCookiesFromCdp({
   const client = await CDP({ port: endpoint.port, host: endpoint.host });
   try {
     await client.Network.enable();
+    await client.Runtime.enable();
     const start = Date.now();
     while (Date.now() - start < timeoutMs) {
       const { cookies } = await client.Network.getCookies({ urls });
       const hasRequired = requiredNames.every((name) => cookies.some((cookie) => cookie.name === name));
       if (hasRequired) {
         return cookies.map(mapCookieToParam);
+      }
+      if (signedOutProbe) {
+        const probe = await client.Runtime.evaluate({
+          expression: signedOutProbe.expression,
+          returnByValue: true,
+        });
+        if (probe.result?.value === true) {
+          throw new Error(signedOutProbe.errorMessage);
+        }
       }
       await delay(2_000);
     }

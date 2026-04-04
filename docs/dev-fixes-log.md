@@ -7164,3 +7164,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     hold:
     - the managed profile is initialized and live
     - a narrow real browser probe on that pairing returns the expected output
+
+## 2026-04-04 - treat Gemini's visible Sign in page as a real login failure
+
+- Symptom:
+  - `auracall login --target gemini --export-cookies` could open the correct
+    Gemini page yet keep waiting for cookies while the page still visibly
+    showed a signed-out `Sign in` state
+  - that left operator output ambiguous and made second-pairing setup look
+    healthier than it really was
+- Fix:
+  - the shared browser-service cookie-export wait loop now supports an
+    optional signed-out DOM probe
+  - Gemini login/export now uses that probe so a visible sign-in state fails
+    fast with an explicit login-required message
+- Durable lesson:
+  - when a provider login/export flow has a strong visible signed-out page
+    state, treat that as a first-class failure condition instead of waiting
+    only on cookie presence
