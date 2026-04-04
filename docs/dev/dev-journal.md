@@ -7419,3 +7419,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - keep the next Gemini slice focused on attachment preservation from staged
     preview through model consumption, not prompt-commit heuristics
+
+## 2026-04-04 - Gemini attachment audit points at workflow drift, not another selector gap
+
+- Current focus:
+  - compare Gemini native attachment handling against the already-proven
+    ChatGPT/Grok browser workflow model
+- What the audit confirmed:
+  - Gemini still uses shared browser-service launch/session ownership and now
+    shared target reuse
+  - but native Gemini attachments are still implemented through a bespoke path:
+    - `src/gemini-web/executor.ts`
+    - `src/gemini-web/browserNative.ts`
+  - ChatGPT/Grok instead sit behind the browser `LlmService` provider layer and
+    the mature browser action helpers
+- Outcome:
+  - the current Gemini image gap should not be treated as another isolated
+    selector issue
+  - the stronger hypothesis is workflow drift:
+    - attachment staged/ready semantics
+    - submit commit semantics
+    - post-submit attachment preservation
+  - the latest live result still supports that narrower diagnosis:
+    - Gemini now commits and answers
+    - but the answer is attachment-blind
+- Next step:
+  - make the next Gemini slice a workflow-convergence slice
+  - reuse ChatGPT/Grok attachment lifecycle patterns and existing browser
+    action helpers where possible before adding more Gemini-local heuristics

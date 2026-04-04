@@ -231,6 +231,43 @@ Current proof progress:
     - active gap:
       - preserve staged image context through submit so Gemini actually consumes
         it as model input
+
+### Current architectural audit
+
+What is shared enough already:
+- Gemini browser runs still use shared browser-service launch/session seams
+- Gemini native browser runs now also use shared target ownership through:
+  - `openOrReuseChromeTarget(...)`
+
+What is still off compared with ChatGPT/Grok:
+- Gemini native attachment execution is still on a bespoke path:
+  - `src/gemini-web/executor.ts`
+  - `src/gemini-web/browserNative.ts`
+- ChatGPT/Grok attachment and browser-provider behavior instead live behind the
+  browser `LlmService` provider model plus the existing browser action helpers
+
+Current working conclusion:
+- the Gemini image bug should no longer be treated as “just one more selector”
+- the likely drift source is that Gemini native attachment staging/commit is
+  not yet following the same mature attachment workflow model used by
+  ChatGPT/Grok
+
+### Next slice
+
+Goal:
+- audit and begin converging Gemini native attachment workflow onto the same
+  phase model already proven in ChatGPT/Grok
+
+Focus areas:
+- attachment staged/ready detection
+- submit commit detection
+- post-submit state transition
+- attachment preservation into model-visible input
+
+Execution rule:
+- prefer reusing existing browser action helpers and browser-service workflow
+  patterns before adding more Gemini-local heuristics
+- keep only truly Gemini-specific selectors/page copy local
   - required exported-cookie fallback on this Linux host because direct
     keyring-backed Chrome cookie reads returned zero Gemini auth cookies
   - current preferred fallback path is the runtime-profile-scoped export:
