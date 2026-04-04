@@ -7685,3 +7685,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a browser wait is the current boundary, preserve the last live state
     in the error before changing more workflow logic; otherwise the next fix is
     still guesswork
+
+## 2026-04-04 - Gemini attachment submits should try the real send control before `Enter`
+
+- Symptom:
+  - after image staging and preview instrumentation improved, Gemini image runs
+    were still failing at the same post-staging boundary:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+  - unlike ChatGPT/Grok, Gemini was still preferring `Enter` before trying the
+    real send control for attachment-backed prompts
+- Fix:
+  - changed Gemini attachment submits to try:
+    - send button / touch target first
+    - `Enter` fallback second
+    - in-page click fallback last
+  - added last-state detail capture for Gemini submit timeouts so submit-phase
+    failures can report composer/attachment state instead of only a generic
+    timeout
+- Result:
+  - native Gemini image upload is still not green
+  - but the more realistic click-first submit order did not create a new blind
+    failure; the live rerun still returned the same explicit boundary:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Durable lesson:
+  - for browser attachment prompts, prefer the real send control first and use
+    `Enter` as fallback, but do not assume that submit-order alignment alone
+    solves provider-specific attachment lifecycle bugs

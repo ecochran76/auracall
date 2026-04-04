@@ -531,6 +531,15 @@ async function clearGeminiPromptText(page: Page): Promise<void> {
 async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: number): Promise<void> {
   const deadline = Date.now() + timeoutMs;
   const normalizedPrompt = normalizeWhitespace(promptText);
+  let lastState: {
+    composerText: string;
+    ariaDisabled: string;
+    disabled: boolean;
+    promptInHistory: boolean;
+    nativeFailure: boolean;
+    hasPendingBlob: boolean;
+    hasRemoveButton: boolean;
+  } | null = null;
   while (Date.now() < deadline) {
     const state = await page.evaluate(
       (promptSelector: string, sendSelector: string, expectedPrompt: string) => {
@@ -572,6 +581,7 @@ async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: nu
       GEMINI_SEND_BUTTON_SELECTOR,
       normalizedPrompt,
     );
+    lastState = state;
 
     if (state.promptInHistory || state.nativeFailure) {
       return;
@@ -584,39 +594,66 @@ async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: nu
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
-  throw new Error('Gemini prompt did not commit to history before timeout.');
+  const detail = lastState
+    ? JSON.stringify({
+      composerText: normalizeWhitespace(lastState.composerText),
+      ariaDisabled: lastState.ariaDisabled,
+      disabled: lastState.disabled,
+      promptInHistory: lastState.promptInHistory,
+      nativeFailure: lastState.nativeFailure,
+      hasPendingBlob: lastState.hasPendingBlob,
+      hasRemoveButton: lastState.hasRemoveButton,
+    })
+    : 'unavailable';
+  throw new Error(`Gemini prompt did not commit to history before timeout. Last state: ${detail}`);
 }
 
-async function submitGeminiPrompt(page: Page, promptText: string, timeoutMs: number): Promise<void> {
+async function submitGeminiPrompt(
+  page: Page,
+  promptText: string,
+  timeoutMs: number,
+  options?: { preferButtonFirst?: boolean },
+): Promise<void> {
   await waitForGeminiSendReady(page, timeoutMs);
-  try {
-    await page.bringToFront();
-    await page.focus(GEMINI_PROMPT_SELECTOR);
-    await page.keyboard.press('Enter');
-    await waitForGeminiSubmit(page, promptText, 10_000);
-    return;
-  } catch {
+  const clickSend = async () => {
     if (await page.$(GEMINI_SEND_TOUCH_TARGET_SELECTOR)) {
       await page.click(GEMINI_SEND_TOUCH_TARGET_SELECTOR);
     } else {
       await page.click(GEMINI_SEND_BUTTON_SELECTOR);
     }
+  };
+  const enterSubmit = async () => {
+    await page.bringToFront();
+    await page.focus(GEMINI_PROMPT_SELECTOR);
+    await page.keyboard.press('Enter');
+  };
+  const evaluateClickSend = async () => {
+    await page.evaluate((touchSelector: string, sendSelector: string) => {
+      const touchTarget = document.querySelector(touchSelector);
+      if (touchTarget instanceof HTMLElement) {
+        touchTarget.click();
+        return;
+      }
+      const send = document.querySelector(sendSelector);
+      if (send instanceof HTMLElement) send.click();
+    }, GEMINI_SEND_TOUCH_TARGET_SELECTOR, GEMINI_SEND_BUTTON_SELECTOR);
+  };
+
+  const attempts: Array<() => Promise<void>> = options?.preferButtonFirst
+    ? [clickSend, enterSubmit, evaluateClickSend]
+    : [enterSubmit, clickSend, evaluateClickSend];
+
+  let lastError: unknown = null;
+  for (const attempt of attempts) {
     try {
+      await attempt();
       await waitForGeminiSubmit(page, promptText, 10_000);
       return;
-    } catch {
-      await page.evaluate((touchSelector: string, sendSelector: string) => {
-        const touchTarget = document.querySelector(touchSelector);
-        if (touchTarget instanceof HTMLElement) {
-          touchTarget.click();
-          return;
-        }
-        const send = document.querySelector(sendSelector);
-        if (send instanceof HTMLElement) send.click();
-      }, GEMINI_SEND_TOUCH_TARGET_SELECTOR, GEMINI_SEND_BUTTON_SELECTOR);
-      await waitForGeminiSubmit(page, promptText, 10_000);
+    } catch (error) {
+      lastError = error;
     }
   }
+  throw lastError instanceof Error ? lastError : new Error('Gemini prompt submit failed.');
 }
 
 export async function runGeminiNativeBrowserAttachmentPrompt(options: {
@@ -706,7 +743,9 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     await page.click(GEMINI_PROMPT_SELECTOR);
     await clearGeminiPromptText(page);
     await page.keyboard.type(options.prompt);
-    await submitGeminiPrompt(page, options.prompt, 20_000);
+    await submitGeminiPrompt(page, options.prompt, 20_000, {
+      preferButtonFirst: attachmentPaths.length > 0,
+    });
 
     const answerText = await waitForGeminiAnswer(page, {
       prompt: options.prompt,

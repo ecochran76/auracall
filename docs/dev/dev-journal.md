@@ -7377,3 +7377,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - keep the next Gemini slice focused on why a genuinely staged image still
     disappears before prompt commit once preview detection is no longer the
     main blind spot
+
+## 2026-04-04 - Gemini attachment runs now try the real send control first
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - changed Gemini attachment submits to follow the more mature ChatGPT/Grok
+    pattern:
+    - real send button / touch target first
+    - `Enter` fallback second
+    - in-page click fallback last
+  - added last-state details to Gemini submit timeouts so submit-phase failures
+    no longer hide their final composer/attachment state
+- Outcome:
+  - the native image path is still not green
+  - but the click-first attachment submit path did not introduce a new blind
+    failure; the live rerun still returns the same explicit boundary:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Next step:
+  - keep the next Gemini slice focused on why Gemini clears the staged image
+    without committing the prompt, even when the real send control is used
