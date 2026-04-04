@@ -6910,3 +6910,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a future execution preview exists, keep inspection and diagnostics on
     the same planned bundle so operators do not have to reconcile multiple
     orchestration previews by hand
+
+## 2026-04-03 - add one service-ready team-run envelope before runners exist
+
+- Symptom:
+  - the team layer could now build and display planned runs, but there was
+    still no canonical service-facing contract for future runners to consume
+  - without that seam, later service code would likely reinvent ad hoc step
+    indexing and dispatch classification
+- Fix:
+  - added `src/teams/service.ts` as the first non-reporting, non-executing
+    bridge above the planning bundle
+  - the new helper classifies planned bundles into:
+    - runnable
+    - waiting
+    - blocked
+    - terminal
+    step sets, and preserves a stable `stepsById` map plus missing-dependency
+    reporting
+- Durable lesson:
+  - once a future orchestration plan exists, land one service-ready envelope
+    before implementing runners so dispatch semantics do not emerge differently
+    in each later service surface

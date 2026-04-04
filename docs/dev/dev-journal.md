@@ -6467,3 +6467,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - add the first service-ready team-run plan seam
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a new read-only service-facing helper module at
+    [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts)
+  - it turns the validated `teamRun + steps + sharedState` bundle into one
+    canonical service-ready plan with:
+    - ordered `steps`
+    - `stepsById`
+    - `runnableStepIds`
+    - `waitingStepIds`
+    - `blockedStepIds`
+    - `terminalStepIds`
+    - `missingDependencyStepIds`
+  - kept the seam non-executing:
+    - no runners
+    - no queueing
+    - no retries
+    - no service mode behavior
+  - added focused coverage in
+    [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts --maxWorkers 1`
+  - `pnpm run check`
