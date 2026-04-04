@@ -13,7 +13,11 @@
   - `bc626d18-8b2e-4121-9c4a-93abb9daed4b` -> `artifactCount = 2`, `materializedCount = 2`
   - `69caa22d-1e2c-8329-904f-808fb33a4a56` -> `artifactCount = 2`, `materializedCount = 2` (`comment_demo.docx` + `Short Document With Comments.txt`)
   - `69ca9d71-1a04-8332-abe1-830d327b2a65` -> `artifactCount = 1`, `materializedCount = 1` (`parabola_trendline_demo.xlsx`)
+  - `69d04b50-3c88-8325-8240-0d838d47ee50` -> `artifactCount = 2`, `materializedCount = 1` (`auracall-artifact-smoke-oxmhrl.docx`)
+  - `69d061ea-5098-8326-a2e4-70e38d845190` -> `artifactCount = 1`, `materializedCount = 1` (`auracall-identity-matrix-qmrqpe.xlsx`)
+  - `69d06243-62f8-832f-8fc7-cba9e0148044` -> `artifactCount = 1`, `materializedCount = 1` (`Kitten enjoying ice skating fun.png`)
   The workbook case matters because ChatGPT exposes it through the embedded spreadsheet card's unlabeled header button rather than a filename-matching behavior button; Aura-Call now uses that fallback for `sandbox:/...xlsx` spreadsheet artifacts. The earlier canvas sample `69c8a0fc-c960-8333-8006-c4d6e6704e6e` no longer reproduces a live canvas artifact on this account, so do not use it as a current smoke. Also, do not run multiple live ChatGPT artifact fetches in parallel against the same managed browser; they share one active signed-in tab and can interfere with each other's navigation/state.
+  One current side finding from the fresh generated-image proof: the direct browser-mode wrapper appeared to linger after the image artifact was already visible and materializable via `conversations context get` / `conversations artifacts fetch`. Record that as a later follow-up, not a current blocker.
 - ChatGPT serialized full-context ingestion has now also been re-proven on a small representative chat set where each conversation was read first and then materialized:
   - `69bc77cf-be28-8326-8f07-88521224abeb` -> context `messages = 4`, `files = 1`, `sources = 0`, `artifacts = 4`; artifact fetch `materializedCount = 4`
   - `69caa22d-1e2c-8329-904f-808fb33a4a56` -> context `messages = 4`, `files = 0`, `sources = 0`, `artifacts = 2`, `canvasArtifacts = 1`; artifact fetch `materializedCount = 2`

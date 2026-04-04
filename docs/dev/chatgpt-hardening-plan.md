@@ -22,6 +22,11 @@ Current baseline:
   - root/project conversation list refresh
 - stale browser-send rejection now distinguishes real rate limits from other
   classified bad states and keeps cooldown persistence rate-limit-only
+- live artifact proof now covers fresh disposable root conversations on
+  `wsl-chrome-2` for:
+  - DOCX/download materialization
+  - spreadsheet (`.xlsx`) materialization
+  - generated image materialization
 
 What is not yet hardened enough:
 - visible transient error toasts/banners, especially red/white error surfaces
@@ -276,3 +281,10 @@ Non-goals for this plan:
 - auto-clicking assistant-turn retry/regenerate by default
 - Pro-specific behavior on this account
 - share-page parity
+
+Current deferred notes:
+- if the image-generation browser-mode wrapper continues to linger after direct
+  `context get` / `artifacts fetch` already prove the image artifact is
+  present, revisit that as a separate operator-flow issue later
+- do not reopen that as the next default slice unless it reproduces as a clear
+  user-facing blocker

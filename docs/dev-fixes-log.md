@@ -6719,3 +6719,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     bug, not necessarily a bad post-submit verifier
   - before weakening commit checks, make sure the composer was actually ready
     to accept a new turn
+
+## 2026-04-03 - expand live artifact proof one class at a time and log side findings without reopening the track
+
+- Symptom:
+  - after the DOCX proof, the remaining gap was proof breadth, not a clear new
+    adapter seam
+  - fresh `.xlsx` and generated-image proofs both worked, but the image
+    browser-mode wrapper appeared to linger even though direct `context get`
+    and `artifacts fetch` had already proven the artifact was present and
+    materializable
+- Fix:
+  - extended live proof one artifact class at a time:
+    - spreadsheet workbook
+    - generated image
+  - recorded the lingering image-wrapper observation as a deferred note rather
+    than opening a new refactor slice immediately
+- Durable lesson:
+  - once the main hardening seams are in place, grow confidence with narrow
+    live proofs across artifact classes
+  - when a side finding appears during proof expansion, record it in the
+    durable docs and keep the next coding slice deliberate instead of reacting
+    immediately

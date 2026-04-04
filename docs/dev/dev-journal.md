@@ -6234,3 +6234,48 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     context rather than following the exact short prompt literally
   - that is a model/conversation-behavior issue, not the prompt-commit failure
     that this slice targeted
+
+## 2026-04-03 19:22 CDT
+
+- Focus:
+  - extend the live ChatGPT artifact proof set without opening a new refactor
+    track
+- What changed:
+  - ran a fresh disposable root conversation on `wsl-chrome-2` for a workbook
+    artifact:
+    - conversation:
+      `69d061ea-5098-8326-a2e4-70e38d845190`
+    - prompt asked for a 5x5 identity matrix surfaced as
+      `auracall-identity-matrix-qmrqpe.xlsx`
+  - verified:
+    - `conversations context get ... --json-only` surfaced one `spreadsheet`
+      artifact
+    - `conversations artifacts fetch ...` materialized the workbook
+  - ran a fresh disposable root conversation on `wsl-chrome-2` for a generated
+    image artifact:
+    - conversation:
+      `69d06243-62f8-832f-8fc7-cba9e0148044`
+    - prompt asked for an image of a kitten ice skating
+  - verified:
+    - `conversations context get ... --json-only` surfaced one `image`
+      artifact with generation metadata
+    - `conversations artifacts fetch ...` materialized
+      `Kitten enjoying ice skating fun.png`
+- Verification:
+  - live only
+  - `.xlsx` proof:
+    - context surfaced:
+      `auracall-identity-matrix-qmrqpe.xlsx`
+    - artifact fetch materialized:
+      [auracall-identity-matrix-qmrqpe.xlsx](/home/ecochran76/.auracall/cache/providers/chatgpt/consult@polymerconsultingroup.com/conversation-attachments/69d061ea-5098-8326-a2e4-70e38d845190/files/3eed3bac-3f0e-459e-8283-2457ede4a6b8-download-sandbox-mnt-data-auracall-identity-matrix-qmrqpe.xlsx/auracall-identity-matrix-qmrqpe.xlsx)
+  - image proof:
+    - context surfaced one `image` artifact
+    - artifact fetch materialized:
+      [Kitten enjoying ice skating fun.png](/home/ecochran76/.auracall/cache/providers/chatgpt/consult@polymerconsultingroup.com/conversation-attachments/69d06243-62f8-832f-8fc7-cba9e0148044/files/9973a59b-03ca-44a8-a84a-da184c10e09d-image-sediment-file_00000000276471fba191c8c244886f77/Kitten%20enjoying%20ice%20skating%20fun.png)
+- Notes:
+  - side finding only:
+    - the original browser-mode wrapper for the image-generation prompt
+      appeared to linger after the image artifact was already visible and
+      fetchable through the direct conversation commands
+    - note this for later operator follow-up, but do not make it the next
+      default slice
