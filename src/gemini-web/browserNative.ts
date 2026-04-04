@@ -73,6 +73,12 @@ async function waitForPuppeteerPageTarget(browser: Browser, targetId: string, ti
   return page;
 }
 
+async function reacquireOwnedGeminiPage(browser: Browser, targetId: string): Promise<Page> {
+  const page = await waitForPuppeteerPageTarget(browser, targetId, 15_000);
+  await page.bringToFront().catch(() => undefined);
+  return page;
+}
+
 async function closeCompetingGeminiPages(browser: Browser, selectedTargetId: string): Promise<void> {
   const pages = await browser.pages();
   await Promise.all(
@@ -93,6 +99,30 @@ async function closeCompetingGeminiPages(browser: Browser, selectedTargetId: str
       await candidate.close().catch(() => undefined);
     }),
   );
+}
+
+async function waitForOwnedGeminiReady(options: {
+  browser: Browser;
+  targetId: string;
+  page: Page;
+  selector: string;
+  timeoutMs: number;
+}): Promise<Page> {
+  let currentPage = options.page;
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      await currentPage.waitForSelector(options.selector, { visible: true, timeout: options.timeoutMs });
+      return currentPage;
+    } catch (error) {
+      lastError = error;
+      if (!isTransientGeminiPageError(error) || attempt > 0) {
+        throw error;
+      }
+      currentPage = await reacquireOwnedGeminiPage(options.browser, options.targetId);
+    }
+  }
+  throw lastError instanceof Error ? lastError : new Error(`Waiting for selector \`${options.selector}\` failed`);
 }
 
 export function extractGeminiAnswerText(options: {
@@ -522,8 +552,20 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       await hideChromeWindow(chrome, logger);
     }
 
-    await page.waitForSelector(GEMINI_PROMPT_SELECTOR, { visible: true, timeout: 45_000 });
-    await page.waitForSelector(GEMINI_UPLOAD_BUTTON_SELECTOR, { visible: true, timeout: 45_000 });
+    page = await waitForOwnedGeminiReady({
+      browser,
+      targetId,
+      page,
+      selector: GEMINI_PROMPT_SELECTOR,
+      timeoutMs: 45_000,
+    });
+    page = await waitForOwnedGeminiReady({
+      browser,
+      targetId,
+      page,
+      selector: GEMINI_UPLOAD_BUTTON_SELECTOR,
+      timeoutMs: 45_000,
+    });
     if (await isGeminiSignedOut(page)) {
       throw new Error(
         'Gemini login required; the opened Gemini page still shows a visible Sign in state. Finish signing in to gemini.google.com in the managed browser profile, then retry.',

@@ -310,6 +310,9 @@ Current recommendation:
   - the current highest boundary is now owned-page readiness itself:
     - prompt textarea readiness can detach on the fresh owned page
     - upload-menu materialization can still fail on that owned page
+  - once those are hardened enough to proceed, the latest explicit live failure
+    is:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
 - the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by

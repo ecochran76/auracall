@@ -7584,6 +7584,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - but the current boundary is narrower and more honest:
     - owned Gemini pages can still fail at prompt/upload-menu readiness with
       frame-detach or timeout behavior
+    - once the owned page stabilizes, the latest live failure can now be
+      reported explicitly as:
+      - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
 - Durable lesson:
   - for Gemini browser-native work, reuse the ChatGPT/Grok page-ownership model
     first; only keep the truly Gemini-specific selectors and copy local

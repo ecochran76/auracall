@@ -7290,12 +7290,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Outcome:
   - still not green
   - current live boundary is now specific:
-    - fresh owned Gemini pages can still detach during prompt/menu readiness, or
-    - the owned page can fail to materialize the upload menu/textbox reliably
+    - fresh owned Gemini pages can still detach during prompt/menu readiness
+    - and after the owned page stabilizes, the latest live failure is now
+      explicit:
+      - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
   - this is a much narrower checkpoint than the earlier generic chooser/send
     uncertainty
 - Next step:
-  - keep Gemini native image work bounded to owned-page readiness around:
+  - keep Gemini native image work bounded to owned-page readiness and commit
+    semantics around:
     - prompt textarea presence
     - upload-menu materialization
     - fresh-frame stability
+    - post-upload attachment retention through prompt commit
