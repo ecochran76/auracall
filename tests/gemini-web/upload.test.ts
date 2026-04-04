@@ -30,6 +30,13 @@ describe('gemini-web upload metadata', () => {
         return new Response('upload-id', { status: 200 });
       }
       if (target.includes('/StreamGenerate')) {
+        const params = new URLSearchParams(String(init?.body ?? ''));
+        const freq = params.get('f.req');
+        expect(freq).toBeTruthy();
+        const outer = JSON.parse(freq!) as [unknown, string];
+        const inner = JSON.parse(outer[1]) as unknown[];
+        const promptPayload = inner[0] as unknown[];
+        expect(promptPayload[3]).toEqual([[['upload-id', 1, null, 'image/png'], 'input.png']]);
         return new Response('[[null,null,"[null,[null],null,null,[[\"ok\"]]]"]]', { status: 200 });
       }
       throw new Error(`Unexpected fetch target: ${target}`);

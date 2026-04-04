@@ -7002,3 +7002,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`
+
+## 2026-04-04 - include Gemini attachment metadata in f.req and recheck forced upload
+
+- Current focus:
+  - Gemini real attachment transport
+- What changed:
+  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+    so uploaded Gemini attachments now carry filename and MIME metadata in the
+    `f.req` payload tuple, not just the upload id
+  - expanded [upload.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/upload.test.ts)
+    to prove the generated `f.req` payload now includes:
+    - `[[fileId, 1, null, mimeType], fileName]`
+- Outcome:
+  - focused Gemini upload tests are green
+  - the request shape now matches the observed upstream payload more closely
+  - live `wsl-chrome-2` forced-upload image proof is still not green
+  - latest result completed with:
+    - `(no text output)`
+  - so request-shape correctness improved again, but the real Gemini upload
+    contract is still not healthy enough to call attachment mode green
+- Verification:
+  - `pnpm vitest run tests/gemini-web/upload.test.ts tests/gemini-web/executor.test.ts tests/gemini-web/parse.test.ts tests/gemini-web/image-download.test.ts tests/gemini-web/save-image-fallback.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`

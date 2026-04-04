@@ -122,7 +122,9 @@ Notes:
 - For `--file` inputs in Gemini browser mode, Aura-Call may satisfy the request by pasting file contents inline instead of using the real Gemini attachment transport. Treat inline-bundled file proofs as valid Aura-Call file-input proofs, but not as native Gemini upload proofs.
 - On `wsl-chrome-2`, forcing real attachment mode with `--browser-attachments always` currently reaches the attachment path but is not yet reliable:
   - uploaded text-file proof returned `[NO CONTENT FOUND]`
-  - uploaded image proof said the image did not come through
+  - uploaded image proof first said the image did not come through
+  - after MIME and attachment-metadata fixes, the latest forced-upload image
+    proof still completed with no usable model text output
 
 ## Implementation details
 

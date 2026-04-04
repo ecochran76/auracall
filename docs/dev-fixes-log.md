@@ -7298,3 +7298,31 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when an upstream low-scope provider fix matches a live symptom, it is
     still worth landing first, but do not assume request-shape correctness is
     the whole failure without rerunning the live proof immediately
+
+## 2026-04-04 - Gemini upload metadata belongs in the request tuple, but that still does not make real uploads green
+
+- Symptom:
+  - the upstream Gemini payload format carries more than the upload id for
+    attachments
+  - local Aura-Call code still built the `f.req` attachment tuple with only:
+    - `[[fileId, 1]]`
+  - that left a clear payload mismatch even after the MIME-typed blob upload
+    fix had landed
+- Fix:
+  - updated the Gemini upload metadata model to preserve `mimeType`
+  - updated the `f.req` attachment tuple to include:
+    - upload id
+    - attachment marker
+    - MIME type
+    - file name
+  - added focused coverage proving the emitted `f.req` payload includes:
+    - `[[fileId, 1, null, mimeType], fileName]`
+- Result:
+  - the request now matches the observed upstream shape more closely
+  - but the live `wsl-chrome-2` forced-upload image proof still is not green
+  - the latest run completed with:
+    - `(no text output)`
+- Durable lesson:
+  - when a provider upload flow still fails after the request shape matches the
+    observed contract more closely, stop assuming the next fix is another small
+    payload tweak and inspect the deeper upload/response path directly
