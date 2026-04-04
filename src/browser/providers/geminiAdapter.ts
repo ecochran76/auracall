@@ -1,14 +1,25 @@
 import CDP from 'chrome-remote-interface';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import {
+  navigateAndSettle,
+  pressButton,
+  setInputValue,
+  waitForPredicate,
+} from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
-import type { Conversation, Project } from './domain.js';
+import type { Conversation, Project, ProjectMemoryMode } from './domain.js';
 import { requireBundledServiceBaseUrl, requireBundledServiceCompatibleHosts, requireBundledServiceRouteTemplate } from '../../services/registry.js';
 
 const GEMINI_BASE_URL = requireBundledServiceBaseUrl('gemini');
 const GEMINI_APP_URL = requireBundledServiceRouteTemplate('gemini', 'app');
 const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('gemini');
 const GEMINI_GEMS_VIEW_URL = new URL('gems/view', GEMINI_BASE_URL).toString();
+const GEMINI_GEM_CREATE_URL = new URL('gems/create', GEMINI_BASE_URL).toString();
+const GEMINI_GEM_NAME_INPUT_SELECTOR = 'input[aria-label="Input for a Gem name"]';
+const GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR = 'textarea[data-test-id="description-input-field"]';
+const GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR = 'div[aria-label="Enter a prompt for Gemini"]';
+const GEMINI_GEM_CREATE_BUTTON_SELECTOR = 'button[data-test-id="create-button"]';
 
 function resolvePortFromEnv(): number | undefined {
   const raw = process.env.AURACALL_BROWSER_PORT;
@@ -36,12 +47,16 @@ export function normalizeGeminiConversationId(value: string | null | undefined):
 }
 
 export function extractGeminiProjectIdFromUrl(url: string): string | null {
-  const match = String(url).match(/\/gem\/([^/?#]+)/i);
-  return match?.[1] ?? null;
+  const match = String(url).match(/\/gem\/([^/?#]+)|\/gems\/edit\/([^/?#]+)/i);
+  return match?.[1] ?? match?.[2] ?? null;
 }
 
 export function resolveGeminiProjectUrl(projectId: string): string {
   return new URL(`gem/${projectId}`, GEMINI_BASE_URL).toString();
+}
+
+export function resolveGeminiCreateProjectUrl(): string {
+  return GEMINI_GEM_CREATE_URL;
 }
 
 export function resolveGeminiConversationUrl(conversationId: string): string {
@@ -211,9 +226,15 @@ async function scrapeGeminiProjects(client: ChromeClient): Promise<Project[]> {
           .map((node) => normalize(node.textContent || ''))
           .find((label) => label.length > 0 && label.length <= 80 && !/^(share|edit gem|new gem|show more)$/i.test(label));
         const textName = normalize(anchor.textContent || '');
-        const slugName = /^[a-z0-9-]+$/i.test(id) && /[a-z]/i.test(id) ? titleCaseSlug(id) : '';
+        const slugName = id.includes('-') && /^[a-z0-9-]+$/i.test(id) && /[a-z]/i.test(id) ? titleCaseSlug(id) : '';
         const preferOptionMatch = !slugName;
-        let name = (preferOptionMatch ? optionMatch?.[1] : '') || startMatch?.[1] || buttonText || slugName || textName;
+        let name =
+          (preferOptionMatch ? optionMatch?.[1] : '') ||
+          startMatch?.[1] ||
+          slugName ||
+          optionMatch?.[1] ||
+          buttonText ||
+          textName;
         name = name.replace(/^start a new conversation with gem:\\s*/i, '').replace(/^[A-Z]\\s+(?=[A-Z])/,'').trim();
         if (!name || !isVisible(anchor)) continue;
         seen.add(id);
@@ -300,9 +321,158 @@ async function scrapeGeminiConversations(
     }));
 }
 
+async function navigateToGeminiCreatePage(client: Pick<ChromeClient, 'Page' | 'Runtime'>): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url: GEMINI_GEM_CREATE_URL,
+    routeExpression: `location.pathname === "/gems/create"`,
+    routeDescription: 'Gemini Gem create route',
+    readyExpression: `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`,
+    readyDescription: 'Gemini Gem create surface',
+    timeoutMs: 20_000,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Gemini Gem create page did not become ready: ${settled.reason ?? settled.phase}`);
+  }
+}
+
+async function navigateToGeminiGemsViewPage(client: Pick<ChromeClient, 'Page' | 'Runtime'>): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url: GEMINI_GEMS_VIEW_URL,
+    routeExpression: `location.pathname === "/gems/view"`,
+    routeDescription: 'Gemini Gem manager route',
+    readyExpression: `Boolean(document.querySelector('button[data-test-id="open-bots-creation-window"]'))`,
+    readyDescription: 'Gemini Gem manager surface',
+    timeoutMs: 20_000,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Gemini Gem manager page did not become ready: ${settled.reason ?? settled.phase}`);
+  }
+}
+
+async function navigateToGeminiConversationSurface(
+  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
+  url: string,
+): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url,
+    routeDescription: 'Gemini conversation route',
+    readyExpression: `Boolean(document.querySelector('[data-test-id="all-conversations"]')) || /\\/app\\/[^/?#]+$/i.test(location.pathname)`,
+    readyDescription: 'Gemini conversation surface',
+    timeoutMs: 20_000,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase}`);
+  }
+}
+
+async function createGeminiProjectWithClient(
+  client: ChromeClient,
+  input: {
+    name: string;
+    instructions?: string;
+    modelLabel?: string;
+    files?: string[];
+    memoryMode?: ProjectMemoryMode;
+  },
+): Promise<Project | null> {
+  if (Array.isArray(input.files) && input.files.length > 0) {
+    throw new Error('Gem knowledge upload during Gemini project creation is not supported yet.');
+  }
+  if (input.modelLabel && input.modelLabel.trim().length > 0) {
+    throw new Error('Gemini Gem creation does not support setting a model label yet.');
+  }
+  if (input.memoryMode) {
+    throw new Error('Gemini Gem creation does not support memory mode selection.');
+  }
+
+  await navigateToGeminiCreatePage(client);
+
+  const setName = await setInputValue(client.Runtime, {
+    selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
+    value: input.name,
+    timeoutMs: 10_000,
+  });
+  if (!setName) {
+    throw new Error('Gemini Gem name input did not become ready.');
+  }
+
+  if (typeof input.instructions === 'string' && input.instructions.trim().length > 0) {
+    const trimmedInstructions = input.instructions.trim();
+    const setDescription = await setInputValue(client.Runtime, {
+      selector: GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR,
+      value: trimmedInstructions,
+      timeoutMs: 5_000,
+    });
+    if (!setDescription) {
+      throw new Error('Gemini Gem description input did not become ready.');
+    }
+    const setInstructions = await setInputValue(client.Runtime, {
+      selector: GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR,
+      value: trimmedInstructions,
+      timeoutMs: 5_000,
+    });
+    if (!setInstructions) {
+      throw new Error('Gemini Gem instructions input did not become ready.');
+    }
+  }
+
+  const beforeHref = String(
+    (
+      await client.Runtime.evaluate({
+        expression: 'location.href',
+        returnByValue: true,
+      })
+    ).result?.value ?? '',
+  );
+  const pressed = await pressButton(client.Runtime, {
+    selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
+    interactionStrategies: ['click', 'pointer'],
+    timeoutMs: 10_000,
+  });
+  if (!pressed.ok) {
+    throw new Error(`Gemini Gem save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
+  }
+
+  const routeChanged = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const href = location.href;
+      if (!href || href === ${JSON.stringify(beforeHref)}) return false;
+      return (/\\/gem\\/([^/?#]+)/i.test(href) || /\\/gems\\/edit\\/([^/?#]+)/i.test(href)) && !/\\/gems\\/create(?:[/?#]|$)/i.test(href);
+    })()`,
+    {
+      timeoutMs: 20_000,
+      description: `Gemini Gem route changed for ${input.name}`,
+    },
+  );
+  if (!routeChanged.ok) {
+    throw new Error(`Gemini Gem creation could not be verified for "${input.name}".`);
+  }
+
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => ({ href: location.href, title: document.title || "" }))()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { href?: string; title?: string };
+  const createdId = normalizeGeminiProjectId(payload.href ?? '');
+  if (!createdId) {
+    throw new Error(`Gemini Gem creation route resolved without a project id for "${input.name}".`);
+  }
+  return {
+    id: createdId,
+    name: input.name,
+    provider: 'gemini',
+    url: payload.href ? String(payload.href) : resolveGeminiProjectUrl(createdId),
+  };
+}
+
 export function createGeminiAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
+  | 'createProject'
   | 'getUserIdentity'
   | 'listProjects'
   | 'listConversations'
@@ -326,6 +496,7 @@ export function createGeminiAdapter(): Pick<
     async listProjects(options?: BrowserProviderListOptions): Promise<Project[]> {
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEMS_VIEW_URL);
       try {
+        await navigateToGeminiGemsViewPage(client);
         return await scrapeGeminiProjects(client);
       } finally {
         await client.close().catch(() => undefined);
@@ -341,7 +512,28 @@ export function createGeminiAdapter(): Pick<
         : (options?.configuredUrl ?? GEMINI_APP_URL);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
       try {
+        await navigateToGeminiConversationSurface(client, targetUrl);
         return await scrapeGeminiConversations(client, normalizedProjectId ?? undefined);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async createProject(
+      input: {
+        name: string;
+        instructions?: string;
+        modelLabel?: string;
+        files?: string[];
+        memoryMode?: ProjectMemoryMode;
+      },
+      options?: BrowserProviderListOptions,
+    ): Promise<Project | null> {
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
+      try {
+        return await createGeminiProjectWithClient(client, input);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

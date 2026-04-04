@@ -7725,3 +7725,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this slice is list-only
   - Gem create/rename/delete and conversation rename/delete are still the next
     Gemini CRUD slices
+
+## 2026-04-04 - First Gemini Gem create path is live
+
+- Current focus:
+  - first real Gemini Gem mutation through the generic `projects create`
+    command
+- What changed:
+  - Gemini now supports `createProject(...)` through the real
+    `https://gemini.google.com/gems/create` route
+  - the Gemini adapter now treats the native Gemini success route correctly:
+    - `/gems/edit/<id>`
+  - Gemini project list scraping now navigates to the Gem manager surface
+    before scraping instead of assuming the currently focused Gemini tab is
+    already on the right route
+  - the shared `projects create` CLI target gate now accepts:
+    - `chatgpt`
+    - `gemini`
+    - `grok`
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
+    - returned:
+      - `Created project "AuraCall Gemini Gem CRUD Proof 2026-04-04 1854".`
+  - `auracall --profile wsl-chrome-2 projects --target gemini`
+    - now returns the new user Gem id:
+      - `8206744c0568`
+- Deferred side finding:
+  - Gemini Gem list name extraction is still not fully faithful for every row
+    shape on the Gem manager page
+  - user Gems can still show abbreviated names like `AuraCall`, and some
+    premade Gems still inherit the first visible row name
+  - record that for the next Gemini Gem list-quality pass, but do not let it
+    block the first create/mutation slice

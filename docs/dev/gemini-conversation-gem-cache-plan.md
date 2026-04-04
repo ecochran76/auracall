@@ -238,6 +238,19 @@ Done enough for the first implementation boundary:
   path for:
   - `projects --target gemini`
   - `conversations --target gemini`
+- first real Gem mutation is now live through:
+  - `projects create --target gemini`
+- live disposable proof on managed `wsl-chrome-2 -> gemini`:
+  - `AuraCall Gemini Gem CRUD Proof 2026-04-04 1854`
+  - created successfully and surfaced on refreshed Gem listing as:
+    - id:
+      - `8206744c0568`
+
+Still open inside Slice 2:
+
+- Gem list name quality is not yet fully faithful across all Gemini Gem
+  manager row shapes
+- rename/delete are still the next Gemini Gem CRUD slices
 - live `wsl-chrome-2 -> gemini` proofs now exist for:
   - Gem-as-project listing
   - conversation listing

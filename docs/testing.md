@@ -181,6 +181,17 @@
       - returns real Gem rows through the generic browser provider path
     - `auracall --profile wsl-chrome-2 conversations --target gemini`
       - returns real `/app/<conversationId>` chat rows through the same path
+  - Gemini Gem create is now also live on this pairing:
+    - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
+    - returned:
+      - `Created project "AuraCall Gemini Gem CRUD Proof 2026-04-04 1854".`
+    - refreshed list then surfaced the new Gem id:
+      - `8206744c0568`
+  - deferred Gemini list-quality note:
+    - some Gem manager rows still resolve abbreviated or repeated display
+      names during list scraping
+    - treat that as a later Gemini list-quality fix, not a blocker on the
+      first create-path proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.

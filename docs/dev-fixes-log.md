@@ -8000,3 +8000,39 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     path early, even if the first slice only supports listing
   - list support plus cache identity is a better first boundary than jumping
     straight to mutation flows
+
+## 2026-04-04 - Gemini Gem create now works through the generic project-create path
+
+- Context:
+  - Gemini list support was live, but the first real Gem mutation still did
+    not exist behind the generic `projects create --target gemini` surface
+- Symptom:
+  - Gemini Gem create initially reached the real create page and saved the Gem,
+    but Aura-Call still failed verification because it only expected a
+    `/gem/<id>` route and did not treat `/gems/edit/<id>` as the native success
+    state
+  - Gemini project listing could also scrape the wrong page if the focused
+    Gemini tab was not already on the Gem manager route
+- Root cause:
+  - Gemini route assumptions were too narrow
+  - Gemini list scraping was still too willing to reuse an arbitrary same-origin
+    tab without forcing the authoritative list surface first
+- Fix:
+  - added Gemini `createProject(...)` against the real `/gems/create` surface
+  - accepted `/gems/edit/<id>` as a native successful Gemini Gem create route
+  - made Gemini project list scraping navigate to `/gems/view` before scraping
+  - widened the shared `projects create` CLI target gate to include Gemini
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 projects --target gemini`
+- Durable lesson:
+  - Gemini browser CRUD should follow Gemini's real route model, not a
+    ChatGPT/Grok-shaped assumption about where success lands
+  - Gemini list/read surfaces should explicitly navigate to their authoritative
+    route before scraping, even when a reusable same-origin Gemini tab already
+    exists
+  - one remaining Gem-list name-quality issue is recorded for a later slice and
+    should not block create-path progress
