@@ -7040,3 +7040,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider inherits older config guidance, align the docs to the
     current runtime-profile/service-binding model before treating the provider
     as architecturally complete
+
+## 2026-04-03 - stop Gemini alignment once concrete drift is gone
+
+- Symptom:
+  - after the doctor/local-only fix and runtime-profile doc alignment, Gemini
+    still looked like an open alignment track by momentum alone
+  - continuing there without another concrete mismatch would risk filler work
+- Fix:
+  - re-audited Gemini-facing login/session/status/config surfaces
+  - marked the operator/runtime alignment slice complete enough
+  - moved the Gemini side track to live-proof refresh instead of more semantic
+    cleanup
+- Durable lesson:
+  - for inherited providers, close the alignment slice as soon as the concrete
+    drift list is empty and move to proof refresh, rather than polishing
+    operator semantics indefinitely

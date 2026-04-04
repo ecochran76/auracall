@@ -160,6 +160,23 @@ Acceptance:
 - focused CLI/config/session tests
 - no broad Gemini-web rewrite
 
+Status:
+- completed enough on 2026-04-03 via:
+  - explicit local-only Gemini doctor semantics
+  - runtime-profile-first Gemini targeting docs
+  - WSL runbook alignment with current `auracall` commands and target-shape
+    config examples
+
+Outcome:
+- no additional concrete Gemini-specific operator/runtime drift remains obvious
+  in:
+  - login
+  - doctor
+  - session/status metadata
+  - current config examples
+- the next Gemini slice should now be live-proof refresh, not more alignment
+  cleanup
+
 ### Slice 3: Validate Gemini web/browser proof status
 
 Goal:
@@ -175,6 +192,21 @@ Preferred proof surfaces:
 Acceptance:
 - update `docs/testing.md`
 - record known green surfaces and known fragile/deferred surfaces
+
+Preferred execution order:
+1. text
+2. attachment
+3. YouTube
+4. generate-image
+5. edit-image
+
+Operator rule:
+- run Gemini live-proof refresh against one explicit AuraCall runtime profile /
+  browser profile pairing at a time
+- if a failure appears, record whether it is:
+  - a proof gap
+  - a provider capability gap
+  - or a shared browser/runtime regression
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 

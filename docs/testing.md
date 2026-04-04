@@ -98,6 +98,14 @@
   - YouTube
   - generate-image
   - edit-image
+- Recommended Gemini live-proof order:
+  - text
+  - attachment
+  - YouTube
+  - generate-image
+  - edit-image
+- Run Gemini live proof against one explicit AuraCall runtime profile / browser
+  profile pairing at a time so failures can be classified cleanly.
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.

@@ -6606,3 +6606,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     override
 - Verification:
   - docs/help text only
+
+## 2026-04-03 - checkpoint Gemini operator/runtime alignment and move to proof refresh
+
+- Current focus:
+  - Gemini completion planning
+- What changed:
+  - updated
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to mark Slice 2 complete enough and make Slice 3 the next active Gemini
+    step
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    to pin the intended Gemini live-proof execution order
+  - updated
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    so the broader execution board reflects that Gemini should move to proof
+    refresh instead of more operator alignment cleanup
+- Verification:
+  - docs/planning only

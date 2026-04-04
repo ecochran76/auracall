@@ -227,6 +227,13 @@ Provider-side note:
 - the next Gemini move should be audit/alignment first:
   - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
 - do not let Gemini become the new primary platform track
+- Gemini operator/runtime alignment is now complete enough for a checkpoint:
+  - local-only doctor semantics are explicit
+  - runtime-profile-first Gemini targeting docs are aligned
+  - no additional concrete Gemini-specific login/session/status drift is
+    currently obvious
+- the next Gemini side-track slice should therefore be live-proof refresh, not
+  more alignment cleanup
 
 ## Active slice plan
 
