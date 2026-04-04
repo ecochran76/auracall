@@ -11,8 +11,15 @@ import type { BrowserRunOptions, BrowserRunResult, BrowserLogger } from '../brow
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
 const GEMINI_UPLOAD_BUTTON_SELECTOR = 'button[aria-label="Open upload file menu"]';
 const GEMINI_UPLOAD_FILES_MENU_SELECTOR = '[data-test-id="local-images-files-uploader-button"]';
+const GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR = '[data-test-id="hidden-local-image-upload-button"]';
+const GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR = '[data-test-id="hidden-local-file-upload-button"]';
 const GEMINI_SEND_BUTTON_SELECTOR = 'button[aria-label="Send message"]';
+const GEMINI_SEND_TOUCH_TARGET_SELECTOR = `${GEMINI_SEND_BUTTON_SELECTOR} .mat-mdc-button-touch-target`;
 const GEMINI_HISTORY_SELECTOR = '[data-test-id="chat-history-container"]';
+
+function isLikelyImagePath(filePath: string): boolean {
+  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(path.extname(filePath).toLowerCase());
+}
 
 const GEMINI_SIGNED_OUT_PROBE_EXPRESSION = `(() => {
   const host = String(globalThis.location?.hostname ?? '').toLowerCase();
@@ -58,6 +65,48 @@ export function extractGeminiAnswerText(options: {
   text = text.replace(/^(?:tools|fast|submit)(?:\s+(?:tools|fast|submit))*\b/i, '').trim();
   text = text.replace(/\b(?:tools|fast|submit)(?:\s+(?:tools|fast|submit))*\s*$/i, '').trim();
   return text;
+}
+
+async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): Promise<void> {
+  const imageOnly = attachmentPaths.length > 0 && attachmentPaths.every(isLikelyImagePath);
+  await page.click(GEMINI_UPLOAD_BUTTON_SELECTOR);
+  await page.waitForSelector(GEMINI_UPLOAD_FILES_MENU_SELECTOR, { visible: true, timeout: 10_000 });
+  const tryChooser = async (
+    selector: string,
+    timeoutMs: number,
+  ): Promise<import('puppeteer-core').FileChooser | null> => {
+    try {
+      return await Promise.all([
+        page.waitForFileChooser({ timeout: timeoutMs }),
+        page.evaluate((targetSelector: string) => {
+          const target = document.querySelector(targetSelector);
+          if (target instanceof HTMLElement) {
+            target.click();
+            return;
+          }
+          throw new Error(`No Gemini upload trigger matched ${targetSelector}`);
+        }, selector),
+      ]).then(([fileChooser]) => fileChooser);
+    } catch {
+      return null;
+    }
+  };
+
+  const selectorOrder = imageOnly
+    ? [GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR]
+    : [GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR];
+
+  let chooser = null;
+  for (const [index, selector] of selectorOrder.entries()) {
+    chooser = await tryChooser(selector, index === 0 ? 2_500 : 10_000);
+    if (chooser) break;
+  }
+
+  if (!chooser) {
+    throw new Error('Waiting for Gemini file chooser failed across all known upload triggers.');
+  }
+
+  await chooser.accept(attachmentPaths);
 }
 
 async function readGeminiHistoryText(page: Page): Promise<string> {
@@ -170,15 +219,24 @@ async function waitForGeminiSubmit(page: Page, timeoutMs: number): Promise<void>
 
 async function submitGeminiPrompt(page: Page, timeoutMs: number): Promise<void> {
   await waitForGeminiSendReady(page, timeoutMs);
-  await page.click(GEMINI_SEND_BUTTON_SELECTOR);
+  if (await page.$(GEMINI_SEND_TOUCH_TARGET_SELECTOR)) {
+    await page.click(GEMINI_SEND_TOUCH_TARGET_SELECTOR);
+  } else {
+    await page.click(GEMINI_SEND_BUTTON_SELECTOR);
+  }
   try {
     await waitForGeminiSubmit(page, 10_000);
     return;
   } catch {
-    await page.evaluate((sendSelector: string) => {
+    await page.evaluate((touchSelector: string, sendSelector: string) => {
+      const touchTarget = document.querySelector(touchSelector);
+      if (touchTarget instanceof HTMLElement) {
+        touchTarget.click();
+        return;
+      }
       const send = document.querySelector(sendSelector);
       if (send instanceof HTMLElement) send.click();
-    }, GEMINI_SEND_BUTTON_SELECTOR);
+    }, GEMINI_SEND_TOUCH_TARGET_SELECTOR, GEMINI_SEND_BUTTON_SELECTOR);
     await waitForGeminiSubmit(page, 10_000);
   }
 }
@@ -237,13 +295,7 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     const attachmentPaths = (options.runOptions.attachments ?? []).map((attachment) => attachment.path);
     const attachmentNames = attachmentPaths.map((filePath) => path.basename(filePath));
 
-    await page.click(GEMINI_UPLOAD_BUTTON_SELECTOR);
-    await page.waitForSelector(GEMINI_UPLOAD_FILES_MENU_SELECTOR, { visible: true, timeout: 10_000 });
-    const chooser = await Promise.all([
-      page.waitForFileChooser({ timeout: 10_000 }),
-      page.click(GEMINI_UPLOAD_FILES_MENU_SELECTOR),
-    ]).then(([fileChooser]) => fileChooser);
-    await chooser.accept(attachmentPaths);
+    await triggerGeminiFileChooser(page, attachmentPaths);
     await waitForAttachmentPreview(page, attachmentNames, 20_000);
 
     await page.click(GEMINI_PROMPT_SELECTOR);

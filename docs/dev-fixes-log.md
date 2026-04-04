@@ -7536,3 +7536,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - browser-native image uploads need their own success criteria; text-upload
     heuristics are not strong enough once the provider page mixes hero text,
     composer state, and attachment UI in the same surface
+
+## 2026-04-04 - Gemini image upload is currently blocked at chooser triggering, not answer parsing
+
+- Symptom:
+  - after tightening Gemini native image success gates, the next question was
+    whether the image was failing at:
+    - chooser open
+    - attachment preview
+    - submit
+    - or answer extraction
+- Fix:
+  - tried the known Gemini image/file upload triggers in order:
+    - image-specific hidden control
+    - visible `Upload files`
+    - file-specific hidden control
+- Result:
+  - the latest image run failed explicitly with:
+    - `Waiting for Gemini file chooser failed across all known upload triggers.`
+  - that means the current hard boundary is chooser triggering on this Gemini
+    surface, not answer parsing
+- Durable lesson:
+  - once a browser-native path has honest failure criteria, prefer recording the
+    exact highest failing boundary instead of continuing to reason from stale
+    false-positive states

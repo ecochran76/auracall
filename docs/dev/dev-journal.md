@@ -7249,3 +7249,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - inspect the live image-specific attachment state on the Gemini page
   - likely around image-specific upload/preview selectors rather than general
     answer extraction
+
+## 2026-04-04 - Gemini image chooser is the current hard boundary
+
+- Current focus:
+  - Gemini browser-native image upload investigation
+- What changed:
+  - tried three increasingly explicit image-upload paths:
+    - generic visible `Upload files`
+    - image-specific hidden upload control
+    - bounded fallback across all known upload triggers
+- Outcome:
+  - image uploads are still not green
+  - the latest run now fails explicitly with:
+    - `Waiting for Gemini file chooser failed across all known upload triggers.`
+  - this is a better checkpoint than the earlier false-positive states because
+    it identifies the current boundary as chooser triggering, not answer
+    extraction or generic send behavior
+- Next step:
+  - inspect how the live Gemini image uploader actually opens its chooser on
+    this surface, likely through a path Puppeteer `waitForFileChooser()` is not
+    currently observing
