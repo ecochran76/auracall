@@ -131,6 +131,9 @@ Notes:
   - the next investigation step is to compare Aura-Call's raw upload path
     against Gemini's browser-native upload UI using:
     - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+  - first live comparison result:
+    - the browser-native Gemini send path uses a much richer `f.req` envelope
+      than Aura-Call's raw client currently sends
 
 ## Implementation details
 

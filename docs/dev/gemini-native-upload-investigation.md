@@ -98,6 +98,45 @@ So the next useful question is not "does Gemini have an upload button?" It is:
    - `StreamGenerate`
 5. Compare that sequence against Aura-Call's current raw client flow.
 
+## 2026-04-04 live comparison result
+
+One direct Puppeteer/CDP capture against the live `wsl-chrome-2 -> gemini`
+page established the following:
+
+- the native Gemini upload trigger path did work through the menu item:
+  - `triggerPath = "menu-item"`
+- after chooser acceptance, the page did not expose the expected
+  `[data-test-id="file-preview"]` root
+- but the later send path still used an attachment-backed `StreamGenerate`
+  request
+
+Most important difference from Aura-Call's raw client:
+
+- the browser-native `StreamGenerate` `f.req` payload is much richer than the
+  current raw client payload
+- the attachment entry was observed in a shape like:
+  - `[[uploadToken, 1, null, "image/png"], "gemini-wsl2-upload-proof.png", null, null, null, null, null, null, [0]]`
+- and that payload sat inside a larger request envelope with additional arrays,
+  locale data, and opaque session/request metadata
+
+Observed raw response body from the browser-native send:
+
+- still control-framed rather than a materialized candidate body:
+  - `wrb.fr`
+  - `di`
+  - `af.httprm`
+  - `e`
+
+Implications:
+
+- Aura-Call's current raw Gemini client is almost certainly under-specifying
+  the request envelope, not just the attachment tuple
+- the next fix should not be another tiny tuple tweak in isolation
+- the next useful protocol step is to diff:
+  - the native browser `f.req` envelope
+  - the raw Aura-Call `f.req` envelope
+  and identify the minimum required missing structure
+
 ## Explicit non-goals
 
 - do not add Gemini DOM upload automation yet

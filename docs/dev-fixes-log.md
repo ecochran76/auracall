@@ -7388,3 +7388,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider has a working native UI surface but a failing raw-client
     path, preserve the live DOM anchors before returning to lower-level
     protocol work
+
+## 2026-04-04 - first Gemini native-upload capture showed envelope drift, not just attachment-field drift
+
+- Symptom:
+  - after the attachment-specific diagnostics were in place, the remaining open
+    question was whether Aura-Call was missing one small upload field or
+    under-specifying the whole Gemini request envelope
+- Fix:
+  - drove the live native Gemini upload UI on `wsl-chrome-2`
+  - captured the browser-native `StreamGenerate` request/response through CDP
+- Result:
+  - the native menu-item upload path is real
+  - the native request still returned control frames only in that capture
+  - but the critical finding was that the browser-native `f.req` envelope is
+    much richer than Aura-Call's raw client payload, including extra outer
+    arrays and extra attachment-trailing fields
+- Durable lesson:
+  - when a provider's native working path shows a substantially richer request
+    envelope than the raw client, stop treating the gap as a single missing
+    field and move the work to minimum viable envelope parity

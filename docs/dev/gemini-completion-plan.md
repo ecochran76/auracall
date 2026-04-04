@@ -300,6 +300,10 @@ Current recommendation:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
     captures the live upload-menu and preview-chip anchors for the next
     browser-native protocol comparison
+  - the first live protocol comparison now shows the browser-native
+    `StreamGenerate` request uses a materially richer `f.req` envelope than the
+    current raw client, so the next implementation slice should target envelope
+    parity, not another small attachment-field tweak
 
 ## Provisional feature matrix
 

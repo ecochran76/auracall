@@ -7093,3 +7093,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this keeps the next step narrow:
     - compare native browser upload request flow against Aura-Call's raw client
     - do not jump straight to a DOM upload rewrite
+
+## 2026-04-04 - first Gemini native-upload protocol comparison shows envelope drift, not just tuple drift
+
+- Current focus:
+  - Gemini native attachment transport investigation
+- What changed:
+  - drove the live Gemini upload UI on `wsl-chrome-2 -> gemini` through the
+    native menu-item path:
+    - `[data-test-id="local-images-files-uploader-button"]`
+  - captured the resulting browser-native `StreamGenerate` request/response via
+    Puppeteer + CDP network listeners
+- Outcome:
+  - the native upload trigger path is real and usable from the page
+  - the browser-native send path still returned control frames only on this
+    capture
+  - but the most important finding is structural:
+    - the native `f.req` envelope is materially richer than Aura-Call's current
+      raw client envelope
+    - the attachment tuple itself also contains trailing fields beyond:
+      - upload token
+      - marker
+      - MIME type
+      - file name
+  - this shifts the next likely fix from:
+    - another tiny attachment tuple tweak
+    to:
+    - minimum viable `f.req` envelope parity work
