@@ -6779,3 +6779,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a higher layer will eventually coordinate lower layers, document the
     ownership split early so later execution features do not collapse intent
     and scheduling into one config concept
+
+## 2026-04-03 - define conservative defaults for future team execution before implementation starts
+
+- Symptom:
+  - team orchestration intent was documented, but the first concrete service
+    execution defaults were still implicit
+  - without that contract, later runner work could drift into parallelism or
+    handoff semantics by inertia
+- Fix:
+  - added a dedicated team service-execution plan with explicit defaults:
+    - sequential first
+    - explicit handoff payloads
+    - one shared run state
+    - fail-fast by default
+    - runner assignment and parallelism owned by the service layer
+- Durable lesson:
+  - when a future orchestration layer will sit above runners, lock the default
+    execution contract before implementation so early service code optimizes for
+    debuggability and replayability rather than speculative throughput

@@ -99,6 +99,16 @@ The intended future direction is now explicit:
   underneath that orchestration intent
 - do not collapse those concerns into today's CLI-only `--team` selection seam
 
+The next planning seam is now also explicit:
+
+- future team execution should start conservative:
+  - sequential first
+  - explicit handoff payloads
+  - shared run state
+  - fail-fast by default
+- parallelism and runner assignment should remain service-layer decisions
+  rather than team-membership side effects
+
 ChatGPT hardening is also in a better checkpoint than before:
 
 - mutation-side persistence/verification is substantially hardened:
@@ -165,6 +175,12 @@ Deliverables
   - multi-turn agent collaboration
   - data handoff intent
   without implying runner topology or parallel execution by themselves
+- one execution-boundary plan describing:
+  - sequential-first team execution
+  - explicit handoff payloads
+  - shared run state
+  - failure/retry ownership
+  - runner assignment boundaries
 
 Acceptance
 - boundary docs aligned in:
@@ -172,6 +188,7 @@ Acceptance
   - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
   - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
   - [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+  - [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
   - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
 - no new browser/account-bearing state introduced at the agent layer
 - one shared read-only resolver exists for:

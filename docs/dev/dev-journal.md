@@ -6311,3 +6311,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - future service mode, runners, and parallelism execute that intent
 - Verification:
   - docs only
+
+## 2026-04-03 - define the first team service-execution contract
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a new planning doc for future team execution under service mode:
+    - sequential-first execution
+    - explicit handoff payloads
+    - shared run state
+    - fail-fast default behavior
+    - runner assignment and parallelism kept in the service layer
+  - linked that plan from the roadmap and next execution plan so future team
+    implementation has a concrete boundary before coding starts
+- Verification:
+  - docs only

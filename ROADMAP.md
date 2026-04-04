@@ -124,11 +124,12 @@ Execution docs:
 - Troubleshooting: [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
 - Team boundary: [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
+- Team service execution: [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
 
 Next recommendation:
 - pause team helper growth here
-- define the future team execution boundary next
-- then add only a bounded read-only `--team` resolution path
+- define the first future team service-execution contract next
+- then avoid implementation until runner/service work is ready
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it
