@@ -6798,3 +6798,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a future orchestration layer will sit above runners, lock the default
     execution contract before implementation so early service code optimizes for
     debuggability and replayability rather than speculative throughput
+
+## 2026-04-03 - define the team-run data model before service code invents one ad hoc
+
+- Symptom:
+  - the service-execution defaults were now explicit, but the concrete entity
+    model for future team runs was still implicit
+  - without named entities and minimum fields, later runner/service work could
+    drift into inconsistent terms for run state, steps, and handoffs
+- Fix:
+  - added a dedicated team-run data model plan with four core entities:
+    - `teamRun`
+    - `step`
+    - `handoff`
+    - `sharedState`
+  - pinned minimum fields, ownership boundaries, and serialization guidance
+- Durable lesson:
+  - before implementing orchestration services, define the durable entity model
+    first so code, storage, events, and postmortems all share the same core
+    vocabulary

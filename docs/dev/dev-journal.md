@@ -6327,3 +6327,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     implementation has a concrete boundary before coding starts
 - Verification:
   - docs only
+
+## 2026-04-03 - define the first team-run data model
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a code-facing planning doc for the first future team-run data model:
+    - `teamRun`
+    - `step`
+    - `handoff`
+    - `sharedState`
+  - pinned minimum fields, ownership boundaries, and serialization guidance so
+    later service implementation can start from stable entity names instead of
+    ad hoc runtime objects
+  - linked the new plan from the roadmap and next execution plan
+- Verification:
+  - docs only

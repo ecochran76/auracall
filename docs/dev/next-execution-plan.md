@@ -108,6 +108,11 @@ The next planning seam is now also explicit:
   - fail-fast by default
 - parallelism and runner assignment should remain service-layer decisions
   rather than team-membership side effects
+- the next code-facing planning seam should define durable shapes for:
+  - `teamRun`
+  - `step`
+  - `handoff`
+  - `sharedState`
 
 ChatGPT hardening is also in a better checkpoint than before:
 
@@ -181,6 +186,12 @@ Deliverables
   - shared run state
   - failure/retry ownership
   - runner assignment boundaries
+- one code-facing data-model plan describing:
+  - `teamRun`
+  - `step`
+  - `handoff`
+  - `sharedState`
+  with explicit ownership and serialization constraints
 
 Acceptance
 - boundary docs aligned in:
@@ -189,6 +200,7 @@ Acceptance
   - [agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
   - [team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
   - [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+  - [team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
   - [configuration.md](/home/ecochran76/workspace.local/oracle/docs/configuration.md)
 - no new browser/account-bearing state introduced at the agent layer
 - one shared read-only resolver exists for:

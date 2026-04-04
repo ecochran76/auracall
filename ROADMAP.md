@@ -125,11 +125,12 @@ Execution docs:
 - Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
 - Team boundary: [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
 - Team service execution: [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+- Team run data model: [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
 
 Next recommendation:
-- pause team helper growth here
-- define the first future team service-execution contract next
-- then avoid implementation until runner/service work is ready
+- keep implementation paused
+- define the first concrete team-run data model next
+- then start code only when the service/runners track is ready
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it
