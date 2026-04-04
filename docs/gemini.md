@@ -14,7 +14,7 @@ implemented from what is merely plausible.
 | --- | --- | --- | --- |
 | Text generation | Supported | Supported | Core happy path on both surfaces. |
 | Streaming text | Supported | N/A | API adapter supports streaming; Gemini web executor returns a completed browser result. |
-| Attachments/files | Not first-class today | Supported | Web path supports uploaded files; API path is not yet documented as a first-class attachment surface here. |
+| Attachments/files | Not first-class today | Supported | Web path supports Aura-Call file input; current live proof includes inline file bundling. Native Gemini upload-UI proof should be tracked separately if that distinction matters. |
 | YouTube input | Not documented | Supported | Web executor has an explicit `--youtube` flow. |
 | Generate image | Not documented | Supported | Web/browser path supports `--generate-image`. |
 | Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
@@ -119,6 +119,7 @@ Notes:
   - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
 - `auracall login --target gemini --export-cookies` now fails fast if the opened Gemini page still shows a visible signed-out `Sign in` state, instead of waiting for cookies indefinitely.
 - On Gemini specifically, Aura-Call will also try one bounded recovery click on a visible `Sign in` CTA before failing, which is enough on some already-authenticated Chrome profiles to complete the Google handoff and export cookies successfully.
+- For `--file` inputs in Gemini browser mode, Aura-Call may satisfy the request by pasting file contents inline instead of driving Gemini's native upload UI. Treat those as valid file-input proofs for Aura-Call, but not as native Gemini upload-UI proofs.
 
 ## Implementation details
 

@@ -137,6 +137,13 @@
     - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json auracall --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`
     - returned exactly:
       - `WSL2 GEMINI TEXT GREEN 2`
+  - browser file-input proof is now also green through Aura-Call's inline file
+    bundling path:
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json auracall --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Read the attached file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
+    - returned exactly:
+      - `WSL2 Gemini attachment proof 2026-04-04`
+    - note:
+      - verbose output reported `Browser will paste file contents inline (no uploads).`
   - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.

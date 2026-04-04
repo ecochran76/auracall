@@ -257,8 +257,13 @@ Outcome:
   - browser text proof is now also green:
     - a narrow Gemini text run on `wsl-chrome-2` returned the expected exact
       text output
+  - browser file-input proof is also green on Aura-Call's current inline file
+    bundling path:
+    - the second-pairing file run returned the exact file contents
+    - verbose output confirmed this path used inline file pasting, not native
+      Gemini upload UI
   - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
-    pairing
+    pairing, with file-input proof through the current Aura-Call bundling path
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
@@ -279,7 +284,7 @@ Acceptance:
 Current recommendation:
 - do not take Slice 4 by momentum alone
 - first decide whether the next value is:
-  - finishing the `wsl-chrome-2` second-pairing proof cleanly
+  - a native Gemini upload-ui proof if that distinction matters
   - or a real implementation gap with a concrete operator or runtime failure
 
 ## Provisional feature matrix

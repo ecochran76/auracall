@@ -7240,3 +7240,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - after repairing provider login readiness, close the loop with one narrow
     end-to-end browser proof before treating the pairing as genuinely green
+
+## 2026-04-04 - distinguish Aura-Call file-input proof from native Gemini upload-UI proof
+
+- Symptom:
+  - after `wsl-chrome-2 -> gemini` became text-green, the next obvious proof
+    was a file-input run
+  - that run succeeded, but verbose output showed:
+    - `Browser will paste file contents inline (no uploads).`
+  - calling that simply an "attachment upload" proof would overstate what was
+    actually exercised
+- Fix:
+  - recorded the second-pairing file proof as green for Aura-Call file input
+  - updated Gemini docs/planning notes to distinguish:
+    - Aura-Call inline file bundling
+    - native Gemini upload UI
+- Durable lesson:
+  - when a provider/file proof succeeds through Aura-Call's own inline bundle
+    path, document that path honestly instead of silently upgrading it into a
+    native provider-upload claim

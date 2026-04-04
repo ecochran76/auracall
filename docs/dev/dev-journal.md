@@ -6930,3 +6930,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Reply exactly with: WSL2 GEMINI TEXT GREEN 2' --wait --verbose --force`
+
+## 2026-04-04 - prove Gemini file input on wsl-chrome-2
+
+- Current focus:
+  - Gemini second-pairing breadth
+- What changed:
+  - created a tiny local proof file:
+    - `/tmp/gemini-wsl2-attachment-proof.txt`
+  - ran a narrow Gemini browser file-input proof on the same pairing:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Read the attached file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
+  - updated Gemini docs to record the important scope boundary:
+    - this proof is green for Aura-Call file input
+    - verbose output showed `Browser will paste file contents inline (no uploads).`
+- Outcome:
+  - Gemini returned exactly:
+    - `WSL2 Gemini attachment proof 2026-04-04`
+  - `wsl-chrome-2 -> gemini` now has:
+    - text-green proof
+    - file-input-green proof through the current Aura-Call inline bundling path
+- Verification:
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Read the attached file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
