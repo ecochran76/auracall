@@ -250,13 +250,14 @@ Outcome:
   - so there is not yet a second Gemini-ready pairing to prove without first
     doing explicit setup/login work
 - follow-up on 2026-04-04:
-  - `wsl-chrome-2 -> gemini` has now been initialized
-  - but the first narrow text probe is not yet green:
-    - run completed with `(no text output)`
-    - inline cookies still came from the global compatibility file rather than
-      a pairing-scoped Gemini export file
-  - so `wsl-chrome-2` is now a real second setup target, but not a certified
-    second proof pass yet
+  - `wsl-chrome-2 -> gemini` has now been seeded with a managed profile
+  - but the pairing is still not a certified second proof pass:
+    - the first narrow text probe completed with `(no text output)`
+    - a fresh `login --target gemini --export-cookies` rerun now fails
+      explicitly because the opened Gemini page still shows a visible
+      signed-out `Sign in` state
+  - so `wsl-chrome-2` is a second setup target with a concrete login blocker,
+    not a green second proof pairing yet
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 

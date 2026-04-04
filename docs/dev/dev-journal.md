@@ -6852,3 +6852,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser-service/loginHelpers.test.ts tests/browser/geminiLogin.test.ts tests/browser/login.test.ts tests/browser/browserLoginCore.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-04 - live-validate Gemini signed-out detection on wsl-chrome-2
+
+- Current focus:
+  - Gemini second-pairing truthfulness
+- What changed:
+  - reran:
+    - `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+  - the new signed-out detection fired live on the opened Gemini page instead
+    of leaving the pairing in an ambiguous "waiting for cookies" state
+  - updated
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to stop describing `wsl-chrome-2 -> gemini` as merely "initialized and
+    live"
+- Outcome:
+  - the live rerun failed explicitly with:
+    - `Gemini login required; the opened Gemini page still shows a visible Sign in state.`
+  - `wsl-chrome-2 -> gemini` should now be treated as:
+    - managed-profile-seeded
+    - but currently signed out on the Gemini surface
+    - not yet a valid second proof pairing
+- Verification:
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 login --target gemini --export-cookies`

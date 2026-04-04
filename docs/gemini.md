@@ -55,7 +55,9 @@ Prereqs:
 - Signed into `gemini.google.com` in the Chrome profile Aura-Call uses (default: `Default` profile).
 - Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or the selected AuraCall runtime profile's `services.gemini.url` in config.
 - If cookies are missing, run `auracall login --target gemini` to open the same profile for sign-in.
-- If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `auracall login --target gemini --export-cookies` to save cookies to `~/.auracall/cookies.json`.
+- If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `auracall login --target gemini --export-cookies` to save cookies to the selected managed Gemini browser profile first:
+  - `~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
+  - Aura-Call still mirrors that export to `~/.auracall/cookies.json` as a compatibility fallback.
 - Local managed browser-profile inspection is available via:
   - `auracall doctor --target gemini --local-only`
 - Full live Gemini UI selector diagnosis is not implemented in `auracall doctor` yet.
@@ -113,6 +115,8 @@ Notes:
 - This path runs fully in Node/TypeScript (no Python/venv dependency).
 - `--browser-model-strategy` only affects ChatGPT automation; Gemini web always uses the explicit Gemini model ID.
 - Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or pass inline cookies with `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json`.
+- Linux: Gemini web mode decrypts Chrome cookies via `secret-tool` (libsecret). If you see `Failed to read Linux keyring via secret-tool`, install `libsecret-tools` or prefer the runtime-profile-scoped export file:
+  - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
 - `auracall login --target gemini --export-cookies` now fails fast if the opened Gemini page still shows a visible signed-out `Sign in` state, instead of waiting for cookies indefinitely.
 
 ## Implementation details

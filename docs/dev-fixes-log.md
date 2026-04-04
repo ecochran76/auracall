@@ -7182,3 +7182,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider login/export flow has a strong visible signed-out page
     state, treat that as a first-class failure condition instead of waiting
     only on cookie presence
+
+## 2026-04-04 - live-validate signed-out Gemini detection before trusting second-pairing readiness
+
+- Symptom:
+  - `wsl-chrome-2 -> gemini` had been recorded as initialized after login/setup
+    work, but the pairing still had not produced a clean proof result
+  - without a live rerun of the new signed-out detection, that pairing could
+    still look healthier on paper than it was in the browser
+- Fix:
+  - reran `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+    after landing the Gemini signed-out probe
+  - confirmed the flow now fails explicitly with:
+    - `Gemini login required; the opened Gemini page still shows a visible Sign in state.`
+  - updated Gemini testing/planning docs to classify `wsl-chrome-2 -> gemini`
+    as managed-profile-seeded but currently signed out, not as a real proof
+    pairing
+- Durable lesson:
+  - after adding a new provider login-state detector, run one live validation
+    on the ambiguous pairing immediately so setup docs and proof status do not
+    keep overstating readiness

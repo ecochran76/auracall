@@ -125,13 +125,16 @@
     because `secret-tool` cookie decryption returned zero Google auth cookies
 - Secondary Gemini pairing check on 2026-04-04:
   - pairing: AuraCall runtime profile `wsl-chrome-2` -> browser profile `wsl-chrome-2`
-  - managed Gemini browser profile: initialized and live after
-    `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
-  - first text probe: not yet green
-    - browser run completed with `(no text output)`
-    - the run still sourced inline cookies from the global compatibility file
-      (`home:cookies.json`), not a pairing-scoped Gemini export file
-  - treat this pairing as setup-complete but not freshly proven yet
+  - managed Gemini browser profile directory exists under:
+    - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini`
+  - the pairing is not yet a real proof target:
+    - the first text probe was not green and completed with `(no text output)`
+    - a fresh `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+      rerun now fails explicitly with:
+      - `Gemini login required; the opened Gemini page still shows a visible Sign in state.`
+  - treat this pairing as managed-profile-seeded but currently signed out on the
+    Gemini surface until a real Gemini sign-in is completed and a narrow probe
+    returns expected output
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.
