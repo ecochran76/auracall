@@ -7120,3 +7120,33 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - another tiny attachment tuple tweak
     to:
     - minimum viable `f.req` envelope parity work
+
+## 2026-04-04 - Gemini native upload uses a broader request sequence than upload plus StreamGenerate
+
+- Current focus:
+  - Gemini native attachment transport investigation
+- What changed:
+  - ran a broader live Puppeteer + CDP capture on `wsl-chrome-2 -> gemini`
+    after native file selection and send
+  - captured the post-send request sequence instead of only the first
+    `StreamGenerate`
+- Outcome:
+  - the native Gemini path does not stop at:
+    - upload
+    - `StreamGenerate`
+  - the observed native sequence was:
+    - `batchexecute?rpcids=ESY5D`
+    - attachment-backed `StreamGenerate`
+    - `batchexecute?rpcids=PCck7e`
+  - the first `StreamGenerate` response still mostly carried control frames and
+    one message-id payload, not a materialized answer body
+  - the follow-up `PCck7e` request also returned only control frames in this
+    capture
+  - a reused live tab also emitted:
+    - `You already uploaded a file named gemini-wsl2-upload-proof.png`
+    so duplicate attachment state is now an explicit investigation footgun to
+    avoid in later native-upload captures
+- Next step:
+  - decode the native `PCck7e` payload and decide whether the real gap is:
+    - broader native request-sequence parity
+    - or a point where Aura-Call should stop using the raw Gemini upload path

@@ -137,6 +137,56 @@ Implications:
   - the raw Aura-Call `f.req` envelope
   and identify the minimum required missing structure
 
+## 2026-04-04 follow-up capture result
+
+A broader live network capture against the same `wsl-chrome-2 -> gemini`
+native upload flow answered the next immediate question: Gemini does not stop
+at one attachment-backed `StreamGenerate` request.
+
+Observed request sequence after native send:
+
+1. pre-send `batchexecute?rpcids=ESY5D`
+2. attachment-backed `StreamGenerate`
+3. follow-up `batchexecute?rpcids=PCck7e`
+
+Observed details:
+
+- the first `batchexecute` returned only control frames with:
+  - `wrb.fr`
+  - `di`
+  - `af.httprm`
+- the attachment-backed `StreamGenerate` returned:
+  - one `wrb.fr` body containing a generated run/message id payload
+  - a second `wrb.fr` body with `[13]`
+  - then the same control-frame terminators
+- Gemini then immediately issued a second `batchexecute` with:
+  - `rpcids=PCck7e`
+  which also returned only control frames in this capture
+
+Additional live signal from that same run:
+
+- Gemini emitted a `jserror` request saying:
+  - `You already uploaded a file named gemini-wsl2-upload-proof.png`
+- so duplicate-file state on the page can also influence later upload
+  experiments if the live tab is reused carelessly
+
+What this changes:
+
+- the protocol gap is no longer just:
+  - `upload` + `StreamGenerate`
+- the native page performs a broader request sequence after send
+- a raw-client fix that only tweaks the `StreamGenerate` attachment tuple or
+  even only its outer `f.req` envelope is still likely incomplete
+
+Next useful investigation:
+
+- capture and decode the native `PCck7e` request payload
+- determine whether it is required for attachment runs to materialize a usable
+  response body
+- only then decide whether Aura-Call should:
+  - emulate more of the native sequence, or
+  - take a different browser-driven upload path
+
 ## Explicit non-goals
 
 - do not add Gemini DOM upload automation yet

@@ -7408,3 +7408,30 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider's native working path shows a substantially richer request
     envelope than the raw client, stop treating the gap as a single missing
     field and move the work to minimum viable envelope parity
+
+## 2026-04-04 - Gemini native upload is a multi-request flow, not just upload plus StreamGenerate
+
+- Symptom:
+  - after the first native upload capture showed a richer `StreamGenerate`
+    envelope, it was still unclear whether the raw-client gap lived entirely in
+    that one request or in a broader native request sequence
+- Fix:
+  - ran a broader live native-upload capture on `wsl-chrome-2 -> gemini`
+  - recorded the full post-send Gemini request sequence instead of only the
+    first attachment-backed `StreamGenerate`
+- Result:
+  - the native page issued:
+    - `batchexecute?rpcids=ESY5D`
+    - attachment-backed `StreamGenerate`
+    - follow-up `batchexecute?rpcids=PCck7e`
+  - the follow-up request means the real native flow is broader than the raw
+    Aura-Call model of:
+    - upload
+    - `StreamGenerate`
+  - the reused live tab also surfaced a duplicate-file warning:
+    - `You already uploaded a file named gemini-wsl2-upload-proof.png`
+- Durable lesson:
+  - when a provider's native UI follows the main generation request with more
+    service calls, do not keep refining only the first request in isolation;
+    first determine whether the later requests are part of the minimum viable
+    success path

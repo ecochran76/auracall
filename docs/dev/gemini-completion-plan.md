@@ -304,6 +304,10 @@ Current recommendation:
     `StreamGenerate` request uses a materially richer `f.req` envelope than the
     current raw client, so the next implementation slice should target envelope
     parity, not another small attachment-field tweak
+  - the follow-up native capture now also shows Gemini issues an additional
+    post-`StreamGenerate` `batchexecute` request (`rpcids=PCck7e`), so the
+    remaining native-upload gap may depend on a broader request sequence rather
+    than `StreamGenerate` parity alone
 
 ## Provisional feature matrix
 
