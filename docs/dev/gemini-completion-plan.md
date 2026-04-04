@@ -249,6 +249,14 @@ Outcome:
   - `windows-chrome-test -> gemini`: managed browser profile not initialized
   - so there is not yet a second Gemini-ready pairing to prove without first
     doing explicit setup/login work
+- follow-up on 2026-04-04:
+  - `wsl-chrome-2 -> gemini` has now been initialized
+  - but the first narrow text probe is not yet green:
+    - run completed with `(no text output)`
+    - inline cookies still came from the global compatibility file rather than
+      a pairing-scoped Gemini export file
+  - so `wsl-chrome-2` is now a real second setup target, but not a certified
+    second proof pass yet
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
@@ -269,7 +277,7 @@ Acceptance:
 Current recommendation:
 - do not take Slice 4 by momentum alone
 - first decide whether the next value is:
-  - setup plus a second-account/pairing proof pass
+  - finishing the `wsl-chrome-2` second-pairing proof cleanly
   - or a real implementation gap with a concrete operator or runtime failure
 
 ## Provisional feature matrix

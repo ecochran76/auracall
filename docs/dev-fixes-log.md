@@ -7147,3 +7147,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     step, verify that the alternate pairing is already initialized locally or
     the plan should explicitly start with setup instead of pretending the proof
     target already exists
+
+## 2026-04-04 - do not treat second-pairing setup as equivalent to second-pairing proof
+
+- Symptom:
+  - after initializing `wsl-chrome-2 -> gemini`, the pairing became locally
+    live in `doctor`, but the first real text probe still was not a clean proof
+    result
+  - the run completed with no text output and still sourced cookies from the
+    global compatibility file instead of a pairing-scoped Gemini export
+- Fix:
+  - recorded the pairing as initialized-but-not-proven in Gemini testing and
+    planning docs
+- Durable lesson:
+  - a second browser pairing is only a real proof target after both conditions
+    hold:
+    - the managed profile is initialized and live
+    - a narrow real browser probe on that pairing returns the expected output

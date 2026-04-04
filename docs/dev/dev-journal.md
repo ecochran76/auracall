@@ -6803,3 +6803,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     second pairing rather than another proof attempt
 - Verification:
   - local Gemini doctor audit only
+
+## 2026-04-04 - initialize wsl-chrome-2 Gemini and record the first second-pairing probe
+
+- Current focus:
+  - Gemini second-pairing readiness
+- What changed:
+  - ran:
+    - `auracall --profile wsl-chrome-2 login --target gemini --export-cookies`
+  - that seeded the managed Gemini browser profile under:
+    - `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini`
+  - local Gemini doctor now reports that pairing as initialized and live
+  - ran one narrow text probe on the same pairing
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to record the result honestly
+- Outcome:
+  - `wsl-chrome-2 -> gemini` is now initialized
+  - the first text probe is not yet green:
+    - the browser run completed with `(no text output)`
+    - the run still used the global compatibility cookie source
+      (`home:cookies.json`)
+    - there is still no pairing-scoped exported cookie file at:
+      `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json`
+- Verification:
+  - `auracall --profile wsl-chrome-2 doctor --target gemini --local-only --json`
+  - live Gemini text probe on `wsl-chrome-2 -> gemini`
