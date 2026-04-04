@@ -7115,3 +7115,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider falls back to exported cookies, keep that fallback on the
     same runtime-profile boundary as the managed browser profile rather than
     collapsing back to one machine-global file
+
+## 2026-04-04 - treat explicit Gemini image-capability denials as proof results first
+
+- Symptom:
+  - on the explicit `default -> default` Gemini proof pairing, both
+    `generate-image` and `edit-image` reached the correct Gemini surface but
+    returned provider text indicating image creation was unavailable
+- Fix:
+  - recorded those cells as non-green proof/capability results in the Gemini
+    testing and planning docs instead of opening a speculative product fix
+- Durable lesson:
+  - when a live provider proof reaches the intended surface and returns an
+    explicit capability or account-availability denial, classify it as a proof
+    result first and only promote it to an implementation track after a second
+    signal shows Aura-Call is actually at fault

@@ -6760,3 +6760,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - or provider availability/location gating on this pairing
 - Verification:
   - live Gemini edit-image proof attempt on `default -> default`
+
+## 2026-04-04 - checkpoint Gemini proof refresh on the default pairing
+
+- Current focus:
+  - Gemini proof/status planning
+- What changed:
+  - updated [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to mark the live-proof refresh complete enough for one explicit pairing
+  - updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    so Gemini now points at a deliberate next decision instead of continued
+    probing on the same account
+- Outcome:
+  - `default -> default` now has a full explicit proof picture:
+    - text: green
+    - attachment: green
+    - YouTube: green
+    - generate-image: not green
+    - edit-image: not green
+  - non-green image cells remain classified as provider/account capability
+    results on this pairing, not shared browser/runtime regressions
+- Verification:
+  - docs/planning only

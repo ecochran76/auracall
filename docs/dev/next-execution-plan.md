@@ -157,6 +157,32 @@ That means the next move should not be more blind team-helper growth. It
 should be a deliberate roadmap expansion around the future service/runtime
 layer that will sit underneath those plans.
 
+Gemini is also at a better checkpoint now:
+
+- one full explicit web proof pass exists for:
+  - AuraCall runtime profile `default`
+  - browser profile `default`
+- green on that pairing:
+  - text
+  - attachment
+  - YouTube
+- not green on that pairing:
+  - generate-image
+  - edit-image
+- those non-green image cells currently look like provider/account capability
+  results on this pairing, not shared browser/runtime regressions
+- the runtime-profile-scoped exported-cookie fallback is now the preferred
+  Linux proof path when keyring-backed Chrome cookie reads return zero Google
+  auth cookies
+
+That means the next Gemini move should not be more blind probing on the same
+account/pairing. It should be either:
+
+- a second explicit pairing/account proof pass
+- or one bounded implementation gap with a concrete failure
+
+not more open-ended Gemini proof churn
+
 ## Execution principle
 
 - Work in small, bounded slices.

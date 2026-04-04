@@ -225,6 +225,26 @@ Current proof progress:
   - current preferred fallback path is the runtime-profile-scoped export:
     - `~/.auracall/browser-profiles/default/gemini/cookies.json`
 
+Status:
+- completed enough for one explicit pairing on 2026-04-04
+
+Outcome:
+- one full explicit Gemini web proof pass now exists for:
+  - AuraCall runtime profile `default`
+  - browser profile `default`
+- current proof picture for that pairing is:
+  - text: green
+  - attachment: green
+  - YouTube: green
+  - generate-image: not green
+  - edit-image: not green
+- the non-green image cells are currently classified as provider/account
+  capability results on this pairing, not shared browser/runtime regressions
+- the next Gemini move should be chosen deliberately:
+  - either prove a second explicit pairing/account
+  - or take one bounded implementation gap exposed by a concrete failure
+  - not more blind probing on the same `default -> default` account
+
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
 Goal:
@@ -240,6 +260,12 @@ Acceptance:
 - one bounded code slice
 - focused tests
 - one targeted live proof if behavior changed materially
+
+Current recommendation:
+- do not take Slice 4 by momentum alone
+- first decide whether the next value is:
+  - a second-account/pairing proof pass
+  - or a real implementation gap with a concrete operator or runtime failure
 
 ## Provisional feature matrix
 
