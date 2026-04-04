@@ -7503,3 +7503,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - inspect the attachment association path specifically around submit, because
     the evidence now says the image is being detached during or right after the
     send transition
+
+## 2026-04-04 - Gemini native image upload recovered by preferring the image uploader path
+
+- Current focus:
+  - fix the remaining Gemini image-association bug on `wsl-chrome-2`
+- What changed:
+  - kept the attachment-loss diagnostics in place
+  - changed Gemini image-only synthetic upload dispatch to prefer:
+    - hidden image uploader first
+    - hidden file uploader second
+  - kept the fallback that no longer requires the visible upload-menu item when
+    the hidden uploader controls are already present
+- Outcome:
+  - fresh live rerun on `wsl-chrome-2 -> gemini` is now green for native image
+    upload again
+  - pre-submit diagnostics still showed the staged image:
+    - `visibleBlobCount = 1`
+    - `Remove file gemini-native-upload-proof.png`
+  - post-submit diagnostics showed prompt commit with the blob still visible
+  - Gemini answered with actual image understanding:
+    - `An empty room features white walls, light wood flooring, and a large window overlooking a lush green landscape.`
+- Lesson:
+  - the image-association bug was in the uploader path, not in submit/commit or
+    staged-ready timing

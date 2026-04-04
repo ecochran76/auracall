@@ -7793,3 +7793,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - this is not a generic submit or readiness failure anymore
   - the active bug is attachment association loss during or immediately after
     submit, so the next slice should target that boundary specifically
+
+## 2026-04-04 - Gemini native image association depended on the image uploader path
+
+- Context:
+  - Gemini image runs had been narrowed to an attachment-association failure:
+    - image staged
+    - prompt committed
+    - answer materialized
+    - but the answer was attachment-blind
+  - diagnostics showed the image surviving staging and briefly surviving
+    immediate post-submit before association was lost
+- Fix:
+  - for image-only synthetic `fileSelected` dispatch, prefer:
+    - hidden image uploader first
+    - hidden file uploader second
+  - also keep the hidden-uploader fallback even when the visible upload-files
+    menu item does not materialize
+- Result:
+  - fresh live rerun on `wsl-chrome-2 -> gemini` returned a real image-aware
+    answer:
+    - `An empty room features white walls, light wood flooring, and a large window overlooking a lush green landscape.`
+- Durable lesson:
+  - Gemini's hidden image uploader and hidden generic file uploader are not
+    interchangeable for model-visible image association
+  - if an image stages but the model answers as if no image exists, check the
+    uploader path before spending more time on submit timing

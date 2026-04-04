@@ -214,13 +214,19 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
       } else {
         await page.click(GEMINI_UPLOAD_BUTTON_SELECTOR);
       }
+      if (imageOnly && (await page.$(GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR) || await page.$(GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR))) {
+        menuReady = true;
+        break;
+      }
       await page.waitForSelector(GEMINI_UPLOAD_FILES_MENU_SELECTOR, { visible: true, timeout: 10_000 });
       menuReady = true;
       break;
     } catch (error) {
       lastMenuError = error;
       if (!isTransientGeminiPageError(error) || attempt > 0) {
-        throw error;
+        if (!imageOnly) {
+          throw error;
+        }
       }
       await new Promise((resolve) => setTimeout(resolve, 750));
     }
@@ -248,8 +254,8 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
     );
     const dispatchedSelector = await page.evaluate(`(() => {
       const selectors = ${JSON.stringify([
-        GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR,
         GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR,
+        GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR,
       ])};
       const payloads = ${JSON.stringify(files)};
       const decode = (b64) => Uint8Array.from(globalThis.atob(b64), (c) => c.charCodeAt(0));
@@ -265,6 +271,9 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
       return null;
     })()`);
     if (typeof dispatchedSelector === 'string' && dispatchedSelector.length > 0) {
+      await page.evaluate((selector: string) => {
+        document.documentElement.setAttribute('data-auracall-gemini-upload-selector', selector);
+      }, dispatchedSelector);
       return;
     }
   }

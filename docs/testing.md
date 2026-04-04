@@ -160,53 +160,21 @@
       - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
   - native Gemini browser image-upload proof is still not freshly re-proven on
     this pairing after the browser-driven pivot
-  - current native Gemini browser image status on this pairing is still not
-    green:
-    - the path is now using explicit owned-page semantics closer to
-      ChatGPT/Grok:
-      - exact target ownership
-      - competing Gemini tab trimming
-      - send-button/touch-target-first submit
-      - explicit provider/page failure copy detection
-      - one-shot resend fallback when Gemini leaves the prompt in the composer
-        after the attachment disappears
-    - the current live boundary is now narrower than the old composer-pending
-      failure:
-      - the latest fresh rerun on `wsl-chrome-2 -> gemini` launched cleanly,
-        committed the prompt, and returned a real model answer
-      - but the answer was:
-        - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
-      - that means the native image path no longer stalls at prompt commit; it
-        now reaches answer materialization, but the image is still being lost
-        before Gemini consumes it as model input
-      - a follow-on attempt to tighten Gemini staged-ready detection toward the
-        shared attachment-helper model also stayed attachment-blind:
-        - staged-ready now waits for stable attachment signals plus send-ready
-          before submit
-        - but the fresh rerun still returned:
-          - `Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.`
-        - so readiness-threshold tuning alone is not the missing piece
-      - Gemini native image runs now classify that answer as a real failure and
-        preserve the attachment evidence chain:
-        - pre-submit:
-          - prompt still in composer
-          - `visibleBlobCount = 1`
-          - `Remove file gemini-native-upload-proof.png`
-        - immediate post-submit:
-          - prompt committed to history
-          - blob still visible
-          - remove-file affordance gone
-        - final:
-          - prompt stayed in history
-          - blob disappeared entirely
-          - Gemini returned an attachment-blind answer
-      - that narrows the active bug further:
-        - the image survives staging
-        - the prompt commits
-        - but attachment association is being lost during or immediately after
-          submit
-    - treat Gemini native image upload as an active browser hardening gap, not
-      a freshly proven surface
+  - native Gemini browser image-upload is now green again on this pairing:
+    - the key fix was to prefer Gemini's hidden image uploader over the generic
+      hidden file uploader for image-only synthetic `fileSelected` dispatch
+    - fresh live rerun:
+      - pre-submit:
+        - prompt still in composer
+        - `visibleBlobCount = 1`
+        - `Remove file gemini-native-upload-proof.png`
+      - post-submit:
+        - prompt committed to history
+        - blob still visible
+      - Gemini answer:
+        - `An empty room features white walls, light wood flooring, and a large window overlooking a lush green landscape.`
+    - that means the active image-association failure was in the uploader path,
+      not in prompt commit or staged-ready timing
   - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
