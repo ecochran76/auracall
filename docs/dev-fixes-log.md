@@ -6850,3 +6850,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when introducing a future execution model, keep its entity validation close
     to its own types first; do not expand the main config schema surface until
     that model actually becomes a config/runtime contract
+
+## 2026-04-03 - add a tiny validated team-run builder layer before service execution exists
+
+- Symptom:
+  - the team-run types and schemas existed, but future implementation would
+    still have had to hand-assemble planned runs, steps, and shared state
+- Fix:
+  - added a small read-only builder layer in `src/teams/model.ts`
+  - the helpers now create validated planned entities from ordered step inputs
+    without introducing runner or execution behavior
+- Durable lesson:
+  - after landing shared types and schemas for a future execution model, add a
+    tiny validated factory seam before real runtime code so later
+    implementation starts from one canonical construction path

@@ -6384,3 +6384,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - add the first team-run model helper seam
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a read-only model helper module at
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    with small validated builders for:
+    - `createTeamRunStep(...)`
+    - `createTeamRunSharedState(...)`
+    - `createTeamRunBundle(...)`
+  - the bundle factory now turns ordered step inputs into a stable planned
+    `teamRun + steps + sharedState` shape using the existing team-run schemas
+  - added focused coverage in
+    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
+  - `pnpm run check`
