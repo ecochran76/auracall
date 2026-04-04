@@ -125,6 +125,25 @@ Next recommendation:
 - define the future team execution boundary next
 - then add only a bounded read-only `--team` resolution path
 
+Browser reliability maintenance note:
+- current ChatGPT hardening/proof checkpoint is substantially better than it
+  was:
+  - mutation-side persistence/verification is hardened across root/project
+    CRUD surfaces
+  - read-side conversation recovery has one shared surface-readiness seam plus
+    bounded retry for transient read misses
+  - artifact-local consistency has been tightened for:
+    - image matching
+    - download/spreadsheet button matching
+    - canvas content resolution
+  - live artifact proof on `wsl-chrome-2` now includes:
+    - DOCX/download
+    - spreadsheet (`.xlsx`)
+    - generated image
+- treat remaining ChatGPT work as maintenance/proof-planning by default
+- record side findings in durable docs and only reopen coding when a concrete
+  blocker is demonstrated
+
 ### Service Volatility Externalization
 Status: planned
 

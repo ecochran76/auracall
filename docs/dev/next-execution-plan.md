@@ -89,6 +89,36 @@ checkpoint. The next useful step is not more read-only team plumbing. It is to
 define the future team selection/execution boundary before any `--team` runtime
 semantics land.
 
+ChatGPT hardening is also in a better checkpoint than before:
+
+- mutation-side persistence/verification is substantially hardened:
+  - root rename
+  - root delete
+  - project source add/remove
+  - project settings/instructions
+- read-side conversation recovery now has:
+  - one shared conversation-surface readiness seam
+  - bounded llmService retry for transient conversation read misses
+- artifact-local consistency now has:
+  - shared image identity
+  - shared download/spreadsheet button identity
+  - shared canvas content resolution
+- live artifact proof on `wsl-chrome-2` now includes:
+  - DOCX/download
+  - spreadsheet (`.xlsx`)
+  - generated image
+- one current deferred note is intentionally recorded, not promoted:
+  - the browser-mode wrapper for the generated-image proof appeared to linger
+    after direct `context get` / `artifacts fetch` already proved the image
+    artifact was present and materializable
+
+That means the ChatGPT line should pause on refactoring and move into
+maintenance/proof-planning mode:
+
+- keep the proof docs current
+- only fix a new live blocker if it is concrete
+- do not let side findings automatically become the next coding slice
+
 ## Execution principle
 
 - Work in small, bounded slices.
@@ -167,6 +197,8 @@ Deliverables
   - reattach regressions
   - doctor/probe routing regressions
   - managed browser profile boundary regressions
+  - concrete ChatGPT hardening regressions proven by live smokes
+  - not adjacent side findings that are already logged for later follow-up
 
 Acceptance
 - relevant focused tests green
