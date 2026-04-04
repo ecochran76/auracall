@@ -6565,3 +6565,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     operator/runtime alignment
 - Verification:
   - docs/planning only
+
+## 2026-04-03 - align Gemini browser doctor with current operator semantics
+
+- Current focus:
+  - Gemini operator/runtime alignment
+- What changed:
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    so `auracall doctor --target gemini` is now explicitly supported only in
+    `--local-only` mode
+  - updated [src/browser/profileDoctor.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileDoctor.ts)
+    so Gemini doctor identity status now carries an explicit reason instead of
+    a bare unsupported flag
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+    and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    to document that boundary directly
+  - expanded
+    [tests/browser/profileDoctor.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/profileDoctor.test.ts)
+    for the new Gemini doctor identity semantics
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts --maxWorkers 1`
+  - `pnpm run check`

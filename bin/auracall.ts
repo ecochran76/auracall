@@ -297,6 +297,7 @@ interface BrowserDoctorIdentityReportLike {
   attempted: boolean;
   identity: ProviderUserIdentity | null;
   error: string | null;
+  reason: string | null;
 }
 
 interface BrowserLoginLaunchOptions {
@@ -3140,7 +3141,7 @@ cacheContextCommand
 program
   .command('doctor')
   .description('Inspect local browser-profile state and verify that the browser UI matches the expected selectors.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to inspect (chatgpt or grok).')
+  .option('--target <chatgpt|grok|gemini>', 'Choose which provider to inspect (chatgpt, grok, or gemini).')
   .option('--local-only', 'Inspect managed browser profile/bootstrap/browser-state only; do not attach to Chrome.')
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--save-snapshot', 'Save a semantic snapshot of the page even if checks pass.')
@@ -3148,9 +3149,14 @@ program
   .action(async (commandOptions) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok' | 'gemini';
+    if (target !== 'chatgpt' && target !== 'grok' && target !== 'gemini') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
+    }
+    if (target === 'gemini' && !commandOptions.localOnly) {
+      throw new Error(
+        'Gemini browser doctor currently supports only --local-only inspection. Live UI selector diagnosis is not implemented.',
+      );
     }
     const {
       inspectBrowserDoctorState,
@@ -3174,7 +3180,7 @@ program
       let selectorDiagnosis = null;
       let selectorDiagnosisError: string | null = null;
 
-      if (!commandOptions.localOnly) {
+      if (!commandOptions.localOnly && target !== 'gemini') {
         const activeInstance = localReport.managedRegistryEntry;
         if (activeInstance?.alive) {
           if (isLoopbackHost(activeInstance.host)) {
@@ -3226,6 +3232,11 @@ program
 
     if (commandOptions.localOnly) {
       return;
+    }
+    if (target === 'gemini') {
+      throw new Error(
+        'Gemini browser doctor currently supports only --local-only inspection. Live UI selector diagnosis is not implemented.',
+      );
     }
 
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
@@ -6075,7 +6086,11 @@ function printLocalBrowserDoctorReport(
   if (options.identityStatus) {
     const { identityStatus } = options;
     if (!identityStatus.supported) {
-      console.log(`- accountIdentity: (not supported for ${identityStatus.target})`);
+      console.log(
+        `- accountIdentity: (${
+          identityStatus.reason?.trim() || `not supported for ${identityStatus.target}`
+        })`,
+      );
     } else if (!identityStatus.attempted) {
       console.log('- accountIdentity: (not checked; no active managed browser instance)');
     } else if (identityStatus.identity) {
@@ -6135,8 +6150,10 @@ function formatChromeGoogleAccount(
   return '(signed-in Google account not detected)';
 }
 
-function resolveBrowserDoctorUrlContains(target: 'chatgpt' | 'grok'): string {
-  return target === 'grok' ? 'grok.com' : 'chatgpt.com';
+function resolveBrowserDoctorUrlContains(target: 'chatgpt' | 'grok' | 'gemini'): string {
+  if (target === 'grok') return 'grok.com';
+  if (target === 'gemini') return 'gemini.google.com';
+  return 'chatgpt.com';
 }
 
 function isLoopbackHost(host: string | null | undefined): boolean {

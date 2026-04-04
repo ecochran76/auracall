@@ -85,6 +85,7 @@ export interface BrowserDoctorIdentityReport {
   attempted: boolean;
   identity: ProviderUserIdentity | null;
   error: string | null;
+  reason: string | null;
 }
 
 export const AURACALL_BROWSER_DOCTOR_CONTRACT_VERSION = 1 as const;
@@ -278,6 +279,8 @@ export async function inspectBrowserDoctorIdentity(
       attempted: false,
       identity: null,
       error: null,
+      reason:
+        'Gemini browser doctor currently supports local browser-profile inspection only; provider account identity probing is not implemented.',
     };
   }
 
@@ -293,6 +296,7 @@ export async function inspectBrowserDoctorIdentity(
       attempted: false,
       identity: null,
       error: null,
+      reason: null,
     };
   }
 
@@ -305,6 +309,7 @@ export async function inspectBrowserDoctorIdentity(
       attempted: true,
       identity,
       error: null,
+      reason: null,
     };
   } catch (error) {
     return {
@@ -313,6 +318,7 @@ export async function inspectBrowserDoctorIdentity(
       attempted: true,
       identity: null,
       error: error instanceof Error ? error.message : String(error),
+      reason: null,
     };
   }
 }

@@ -6999,3 +6999,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - for inherited provider support, publish the feature/proof matrix before
     coding so the next implementation slice is chosen against an explicit
     support baseline instead of memory
+
+## 2026-04-03 - make Gemini browser doctor explicit instead of implying full live parity
+
+- Symptom:
+  - Gemini was already wired into the lower browser-doctor layer, but the
+    public `auracall doctor` CLI still implied ChatGPT/Grok-style live doctor
+    parity
+  - that left Gemini operator semantics ambiguous:
+    - local browser-profile inspection was possible
+    - full live selector diagnosis was not
+- Fix:
+  - `auracall doctor --target gemini` now explicitly requires `--local-only`
+  - Gemini browser doctor identity status now carries a concrete explanatory
+    reason instead of just `supported: false`
+  - user/testing docs now state the same boundary directly
+- Durable lesson:
+  - when inherited provider support only covers part of an operator surface,
+    encode that partial support explicitly in the CLI and diagnostics instead
+    of leaving it to implicit internal capability

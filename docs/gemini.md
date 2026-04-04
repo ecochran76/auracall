@@ -21,6 +21,7 @@ implemented from what is merely plausible.
 | Search/tooling | Partially supported | Not documented | API maps `web_search_preview` to Gemini `googleSearch`; broader Gemini-side search is not yet a committed product surface. |
 | Gem URL targeting | N/A | Supported | Via `--gemini-url` or `browser.geminiUrl`. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
+| Browser doctor | N/A | Local-only supported | Use `auracall doctor --target gemini --local-only`; full live selector diagnosis is not implemented. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
 
 Deliberately not implied by this matrix:
@@ -55,6 +56,9 @@ Prereqs:
 - Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
 - If cookies are missing, run `auracall login --target gemini` to open the same profile for sign-in.
 - If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `auracall login --target gemini --export-cookies` to save cookies to `~/.auracall/cookies.json`.
+- Local managed browser-profile inspection is available via:
+  - `auracall doctor --target gemini --local-only`
+- Full live Gemini UI selector diagnosis is not implemented in `auracall doctor` yet.
 
 Examples:
 ```bash

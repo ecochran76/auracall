@@ -18,6 +18,7 @@
     - edit-image: supported
     - Gem URL targeting: supported
     - cookie/login flow: supported
+    - browser doctor: local-only supported
   - treat unsupported or undocumented cells as non-commitments until the Gemini completion plan advances them.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).
@@ -89,6 +90,8 @@
 - Live API smokes: `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:live` (excludes OpenAI pro), `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:pro` (OpenAI pro live). Expect real usage/cost.
 - Gemini API live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
 - Gemini web (cookie) live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts` (requires a signed-in Chrome profile at `gemini.google.com`).
+- Gemini local browser-profile doctor: `pnpm tsx bin/auracall.ts doctor --target gemini --local-only --json`
+- Full live Gemini selector diagnosis is not implemented under `auracall doctor` yet; use the dedicated Gemini live smokes instead.
 - Gemini web live-proof target surfaces:
   - text
   - attachment

@@ -616,6 +616,7 @@ describe('profileDoctor', () => {
         source: 'next-flight',
       },
       error: null,
+      reason: null,
     });
   });
 
@@ -659,6 +660,7 @@ describe('profileDoctor', () => {
       attempted: false,
       identity: null,
       error: null,
+      reason: null,
     });
     expect(browserAutomationClientMocks.fromConfig).not.toHaveBeenCalled();
   });
@@ -682,6 +684,8 @@ describe('profileDoctor', () => {
       attempted: false,
       identity: null,
       error: null,
+      reason:
+        'Gemini browser doctor currently supports local browser-profile inspection only; provider account identity probing is not implemented.',
     });
     expect(browserAutomationClientMocks.fromConfig).not.toHaveBeenCalled();
   });
@@ -725,6 +729,7 @@ describe('profileDoctor', () => {
             source: 'next-flight',
           },
           error: null,
+          reason: null,
         },
         browserTools: {
           contract: 'browser-tools.doctor-report',
@@ -806,6 +811,7 @@ describe('profileDoctor', () => {
           source: 'next-flight',
         },
         error: null,
+        reason: null,
       },
       runtime: {
         browserTools: {
