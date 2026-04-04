@@ -6702,3 +6702,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     not see a raw failure for a conversation that settles on the next attempt
   - a live artifact proof can reveal read-path retry gaps that unit-level
     artifact matcher cleanup alone will not expose
+
+## 2026-04-03 - hot ChatGPT follow-up sends should wait for the composer/send surface to settle before fallback submit
+
+- Symptom:
+  - during a live follow-up turn on an already-hot conversation, the send path
+    fell through to Enter-key fallback and later failed at prompt-commit
+    verification even though the underlying thread was still settling from the
+    prior turn
+- Fix:
+  - added a pre-submit readiness gate in `promptComposer.ts`
+  - submission now waits for the stop/send surface to settle before attempting
+    the send path
+- Durable lesson:
+  - a prompt-commit failure on a hot conversation can be a pre-submit readiness
+    bug, not necessarily a bad post-submit verifier
+  - before weakening commit checks, make sure the composer was actually ready
+    to accept a new turn

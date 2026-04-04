@@ -6199,3 +6199,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     prompt commit verifier still rejected the follow-up send
   - that prompt-commit issue is adjacent but separate from the read-side retry
     slice landed here
+
+## 2026-04-03 19:06 CDT
+
+- Focus:
+  - harden hot-conversation follow-up sends after the live DOCX proof exposed a
+    prompt-commit failure
+- What changed:
+  - added a pre-submit readiness gate in
+    [src/browser/actions/promptComposer.ts](/home/ecochran76/workspace.local/oracle/src/browser/actions/promptComposer.ts)
+    so prompt submission now waits for the composer/send surface to settle
+    before attempting the send path
+  - this specifically avoids falling through to a premature Enter-key fallback
+    while the previous turn is still hot or the send surface has not fully
+    become ready again
+  - added focused coverage in
+    [tests/browser/promptComposer.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/promptComposer.test.ts)
+    for:
+    - waiting until hot-conversation submit readiness clears
+    - accepting immediate readiness when the conversation is already settled
+- Verification:
+  - `pnpm vitest run tests/browser/promptComposer.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/chatgptAdapter.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live hot-conversation follow-up smoke on `wsl-chrome-2`:
+    - reused conversation:
+      `69d04b50-3c88-8325-8240-0d838d47ee50`
+    - prompt:
+      `Reply exactly with HOT FOLLOWUP <suffix>.`
+    - result:
+      submit path succeeded without the earlier prompt-commit failure and
+      produced a fresh assistant response on the same thread
+- Notes:
+  - the returned assistant text in this smoke reused the thread’s existing DOCX
+    context rather than following the exact short prompt literally
+  - that is a model/conversation-behavior issue, not the prompt-commit failure
+    that this slice targeted

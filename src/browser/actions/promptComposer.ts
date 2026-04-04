@@ -148,6 +148,7 @@ export async function submitPrompt(
     });
   }
 
+  await waitForComposerReadyToSubmit(runtime, Math.max(8_000, deps.inputTimeoutMs ?? 0));
   const clicked = await attemptSendButton(runtime, logger, deps?.attachmentNames);
   if (!clicked) {
     await input.dispatchKeyEvent({
@@ -302,6 +303,51 @@ async function attemptSendButton(
     await delay(100);
   }
   return false;
+}
+
+async function waitForComposerReadyToSubmit(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs = 10_000,
+): Promise<void> {
+  const sendSelectorsLiteral = JSON.stringify(SEND_BUTTON_SELECTORS);
+  const stopSelectorLiteral = JSON.stringify(STOP_BUTTON_SELECTOR);
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { result } = await Runtime.evaluate({
+      expression: `(() => {
+        const selectors = ${sendSelectorsLiteral};
+        const stopVisible = Boolean(document.querySelector(${stopSelectorLiteral}));
+        let button = null;
+        for (const selector of selectors) {
+          button = document.querySelector(selector);
+          if (button) break;
+        }
+        if (!stopVisible && !button) {
+          return { ready: true };
+        }
+        if (!button) {
+          return { ready: false };
+        }
+        const ariaDisabled = button.getAttribute('aria-disabled');
+        const dataDisabled = button.getAttribute('data-disabled');
+        const style = window.getComputedStyle(button);
+        const disabled =
+          button.hasAttribute('disabled') ||
+          ariaDisabled === 'true' ||
+          dataDisabled === 'true' ||
+          style.pointerEvents === 'none' ||
+          style.display === 'none';
+        return {
+          ready: !stopVisible && !disabled,
+        };
+      })()`,
+      returnByValue: true,
+    });
+    if (result?.value?.ready) {
+      return;
+    }
+    await delay(100);
+  }
 }
 
 async function verifyPromptCommitted(
@@ -465,4 +511,5 @@ async function verifyPromptCommitted(
 
 export const __test__ = {
   verifyPromptCommitted,
+  waitForComposerReadyToSubmit,
 };
