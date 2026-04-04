@@ -7914,3 +7914,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - the common reusable layer is the mechanic, not the payload schema
   - keep attachment signal payloads provider-local until a second provider
     proves a stable common model instead of extracting a fake abstraction
+
+## 2026-04-04 - Gemini CRUD/cache planning now has a dedicated track
+
+- Context:
+  - Gemini browser execution is now healthy enough that the next meaningful
+    provider-expansion work is no longer uploads or browser-service mechanics
+  - the next missing provider layer is:
+    - conversation CRUD
+    - Gem-as-project CRUD
+    - cache integration to match ChatGPT/Grok expectations
+- Decision:
+  - create one dedicated planning track instead of scattering Gemini CRUD notes
+    across upload and proof docs
+  - treat Gemini `Gems` as the provider-local UI concept for the generic
+    `Project` domain
+  - reuse the existing generic provider cache datasets instead of inventing
+    Gemini-only cache families
+- Durable lesson:
+  - for provider expansion, normalize the provider concept into the existing
+    domain/cache model first, then implement CRUD from that normalization

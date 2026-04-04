@@ -7636,3 +7636,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - browser-service should stop at the extracted mechanics for now
   - keep attachment signal payloads provider-local until another provider
     proves a genuinely stable common shape
+
+## 2026-04-04 - Planned Gemini conversation, Gem, and cache track
+
+- Current focus:
+  - define the next Gemini provider-expansion track after the browser upload
+    and browser-service extraction line reached a good checkpoint
+- What changed:
+  - added:
+    - [gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-conversation-gem-cache-plan.md)
+  - linked it from:
+    - `gemini-completion-plan.md`
+    - `next-execution-plan.md`
+- Planning decision:
+  - treat Gemini `Gems` as the provider-local equivalent of the generic
+    `Project` domain
+  - reuse the existing generic cache datasets instead of inventing Gemini-only
+    cache families
+  - start with DOM recon only before any CRUD implementation
+- Planned slices:
+  - Gem DOM recon
+  - Gem CRUD
+  - Gem instructions/knowledge if the native UI supports them
+  - conversation CRUD
+  - conversation file/attachment cache mirroring
+  - disposable Gemini acceptance

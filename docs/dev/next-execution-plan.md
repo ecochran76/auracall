@@ -456,6 +456,17 @@ Acceptance
      - `config show`
      - `profile list`
 
+8. Captured the next Gemini CRUD/cache planning seam separately:
+   - [gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-conversation-gem-cache-plan.md)
+   - scope:
+     - conversation CRUD
+     - Gem-as-project CRUD
+     - cache integration
+   - current guardrail:
+     - start with live DOM recon only
+     - do not begin Gemini CRUD implementation until the authoritative Gem and
+       conversation surfaces are named concretely
+
 ## Recommended next choice
 
 Recommended next choice:

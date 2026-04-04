@@ -258,6 +258,26 @@ Goal:
 - audit and begin converging Gemini native attachment workflow onto the same
   phase model already proven in ChatGPT/Grok
 
+## Next deliberate Gemini track
+
+The native attachment/browser workflow line is now in a better checkpoint.
+
+The next Gemini feature-expansion track should be:
+
+- Gemini conversation CRUD
+- Gemini Gem-as-project CRUD
+- Gemini cache integration
+
+That work is planned separately in:
+
+- [gemini-conversation-gem-cache-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-conversation-gem-cache-plan.md)
+
+Guardrail:
+
+- start with DOM recon only
+- do not begin CRUD implementation until the authoritative Gem and
+  conversation surfaces are named concretely
+
 Focus areas:
 - attachment staged/ready detection
 - submit commit detection
