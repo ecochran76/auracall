@@ -7965,3 +7965,38 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - Gemini `Gems` are not a speculative abstraction anymore
   - the next Gemini CRUD slice can start from real named surfaces and should
     map Gems directly onto the generic `Project` domain
+
+## 2026-04-04 - Gemini now participates in the generic browser provider/cache path
+
+- Context:
+  - Gemini had browser execution support, but it still sat outside the real
+    `BrowserProvider -> LlmService -> cache` path used by ChatGPT and Grok for
+    project and conversation listing
+- Symptom:
+  - Gemini CRUD/cache planning existed, but `auracall projects --target gemini`
+    and `auracall conversations --target gemini` did not have a real provider
+    implementation behind them
+- Root cause:
+  - the browser provider id, registry, llmService factory, and browser client
+    all still treated Gemini as execution-only instead of as a first-class
+    browser provider domain
+- Fix:
+  - widened the typed browser provider id and registry to include Gemini
+  - added a Gemini browser provider config plus a minimal Gemini adapter/service
+    for:
+    - Gem-as-project listing
+    - conversation listing
+    - Google-account-label identity detection for cache writes
+  - updated the CLI project/conversation list surfaces so Gemini goes through
+    the same generic browser-provider path
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 projects --target gemini`
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 conversations --target gemini`
+- Durable lesson:
+  - Gemini provider expansion should enter the existing generic provider/cache
+    path early, even if the first slice only supports listing
+  - list support plus cache identity is a better first boundary than jumping
+    straight to mutation flows

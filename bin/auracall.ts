@@ -836,14 +836,14 @@ program
 const projectsCommand = program
   .command('projects')
   .description('List available projects/workspaces for the active browser provider.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--refresh', 'Force refresh of cached project data.')
   .action(async (commandOptions) => {
     const parentOptions = program.opts?.() ?? {};
     const userConfig = await resolveConfig({ ...parentOptions, ...commandOptions }, process.cwd(), process.env);
-    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
@@ -1510,7 +1510,7 @@ filesCommand
 const conversationsCommand = program
   .command('conversations')
   .description('List conversations for the active browser provider.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--project-id <id>', 'Limit conversations to a specific project/workspace (ID or name).')
   .option('--project-name <name>', 'Resolve project ID by name using the cached project list.')
   .option(
@@ -1526,9 +1526,9 @@ const conversationsCommand = program
     const parentOptions = command.parent?.opts?.() ?? {};
     const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
@@ -5863,33 +5863,34 @@ async function pruneEmptyDirs(root: string): Promise<void> {
 async function resolveCacheSearchContext(
   commandOptions: OptionValues,
 ): Promise<{
-  provider: 'chatgpt' | 'grok';
+  provider: import('../src/browser/providers/domain.js').ProviderId;
   cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
 }> {
-  const providers = new Set(['chatgpt', 'grok']);
+  const providers = new Set(['chatgpt', 'gemini', 'grok']);
   const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
   const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
   const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
   if (!providers.has(provider)) {
-    throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    throw new Error(`Invalid provider "${provider}". Use "chatgpt", "gemini", or "grok".`);
   }
-  const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+  const llmService = createLlmService(provider as import('../src/browser/providers/domain.js').ProviderId, userConfig, {
     identityPrompt: promptForCacheIdentity,
   });
   const listOptions = await llmService.buildListOptions({
-    configuredUrl:
-      provider === 'grok'
-        ? userConfig.browser?.grokUrl ?? null
+    configuredUrl: provider === 'grok'
+      ? userConfig.browser?.grokUrl ?? null
+      : provider === 'gemini'
+        ? userConfig.browser?.geminiUrl ?? userConfig.browser?.url ?? null
         : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
   });
   const cacheContext = await llmService.resolveCacheContext(listOptions);
   assertCacheIdentity(cacheContext, provider);
-  return { provider: provider as 'chatgpt' | 'grok', cacheContext };
+  return { provider: provider as import('../src/browser/providers/domain.js').ProviderId, cacheContext };
 }
 
 async function upsertProjectCacheEntry(
   cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>,
-  project: { id: string; name: string; provider: 'chatgpt' | 'grok'; url?: string },
+  project: { id: string; name: string; provider: import('../src/browser/providers/domain.js').ProviderId; url?: string },
 ): Promise<void> {
   const current = await readProjectCache(cacheContext);
   const items = Array.isArray(current.items) ? [...current.items] : [];

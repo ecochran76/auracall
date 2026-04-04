@@ -16,7 +16,7 @@ export interface ProviderSelectorConfig {
 }
 
 export interface BrowserProviderConfig {
-  id: 'chatgpt' | 'grok';
+  id: 'chatgpt' | 'gemini' | 'grok';
   selectors: ProviderSelectorConfig;
   loginUrlHints?: SelectorList;
 }

@@ -11,7 +11,7 @@ import type { LlmService } from './llmService/llmService.js';
 import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
 
 export class BrowserAutomationClient {
-  readonly target: 'chatgpt' | 'grok';
+  readonly target: 'chatgpt' | 'gemini' | 'grok';
   readonly provider: BrowserProvider;
   private readonly browserService: BrowserService;
   private readonly llmService: LlmService;
@@ -19,7 +19,7 @@ export class BrowserAutomationClient {
 
   private constructor(
     readonly userConfig: ResolvedUserConfig,
-    target: 'chatgpt' | 'grok',
+    target: 'chatgpt' | 'gemini' | 'grok',
     browserService: BrowserService,
   ) {
     this.target = target;
@@ -36,11 +36,11 @@ export class BrowserAutomationClient {
 
   static async fromConfig(
     userConfig: ResolvedUserConfig,
-    options?: { target?: 'chatgpt' | 'grok' },
+    options?: { target?: 'chatgpt' | 'gemini' | 'grok' },
   ): Promise<BrowserAutomationClient> {
     const target = options?.target ?? userConfig.browser?.target ?? 'chatgpt';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const browserService = BrowserService.fromConfig(userConfig, target);
     await browserService.pruneRegistry().catch(() => undefined);

@@ -230,6 +230,32 @@ Exit criteria:
 - disposable Gem create/list/rename/delete round-trip
 - cache reflects the refreshed live Gem catalog
 
+### Slice 2 checkpoint — 2026-04-04
+
+Done enough for the first implementation boundary:
+
+- Gemini is now a first-class browser provider in the generic provider/service
+  path for:
+  - `projects --target gemini`
+  - `conversations --target gemini`
+- live `wsl-chrome-2 -> gemini` proofs now exist for:
+  - Gem-as-project listing
+  - conversation listing
+- Gemini cache identity is now detectable from the live Google account label,
+  which unblocks ordinary cache write-through for these list surfaces
+
+Still intentionally pending inside Slice 2:
+
+- Gem create
+- Gem rename
+- Gem delete
+
+Interpretation:
+
+- Slice 2 is started, not complete
+- the next Gemini CRUD slice should add the first real Gem mutation, not more
+  listing polish
+
 ## Slice 3. Gemini Gem instructions and knowledge/file CRUD
 
 Goal:

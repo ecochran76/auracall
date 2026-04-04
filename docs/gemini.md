@@ -20,6 +20,8 @@ implemented from what is merely plausible.
 | Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
 | Search/tooling | Partially supported | Not documented | API maps `web_search_preview` to Gemini `googleSearch`; broader Gemini-side search is not yet a committed product surface. |
 | Gem URL targeting | N/A | Supported | Via `--gemini-url` or the selected AuraCall runtime profile's `services.gemini.url`. |
+| Gem/project listing | N/A | Supported | `auracall projects --target gemini` now lists live Gemini Gem rows through the generic browser provider path. |
+| Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
 | Browser doctor | N/A | Local-only supported | Use `auracall doctor --target gemini --local-only`; full live selector diagnosis is not implemented. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |

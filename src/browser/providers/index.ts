@@ -15,6 +15,15 @@ import {
   resolveGrokProjectUrl,
 } from './grokAdapter.js';
 import type { BrowserProvider } from './types.js';
+import { GEMINI_PROVIDER } from './gemini.js';
+import {
+  createGeminiAdapter,
+  extractGeminiProjectIdFromUrl,
+  normalizeGeminiConversationId,
+  normalizeGeminiProjectId,
+  resolveGeminiConversationUrl,
+  resolveGeminiProjectUrl,
+} from './geminiAdapter.js';
 
 export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
   chatgpt: {
@@ -26,6 +35,16 @@ export const PROVIDERS: Record<BrowserProvider['id'], BrowserProvider> = {
     resolveProjectUrl: (projectId) => resolveChatgptProjectUrl(projectId),
     resolveConversationUrl: (conversationId, projectId) => resolveChatgptConversationUrl(conversationId, projectId),
     ...createChatgptAdapter(),
+  },
+  gemini: {
+    id: 'gemini',
+    config: GEMINI_PROVIDER,
+    normalizeProjectId: normalizeGeminiProjectId,
+    normalizeConversationId: normalizeGeminiConversationId,
+    extractProjectIdFromUrl: extractGeminiProjectIdFromUrl,
+    resolveProjectUrl: (projectId) => resolveGeminiProjectUrl(projectId),
+    resolveConversationUrl: (conversationId) => resolveGeminiConversationUrl(conversationId),
+    ...createGeminiAdapter(),
   },
   grok: {
     id: 'grok',

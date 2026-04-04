@@ -1,4 +1,4 @@
-export type ProviderId = 'chatgpt' | 'grok';
+export type ProviderId = 'chatgpt' | 'gemini' | 'grok';
 export type ProjectMemoryMode = 'global' | 'project';
 
 export function normalizeProjectMemoryMode(value: string | null | undefined): ProjectMemoryMode | null {

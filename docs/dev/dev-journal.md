@@ -7694,3 +7694,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini `Gems` are concrete enough to map onto the generic `Project` domain
   - Gemini conversation/Gem CRUD implementation can now begin from named
     surfaces instead of speculative planning
+
+## 2026-04-04 - First Gemini project/conversation provider slice is live
+
+- Current focus:
+  - first bounded implementation slice from the Gemini Gem/conversation plan
+- What changed:
+  - added a real Gemini browser provider/service path instead of leaving Gemini
+    outside the `BrowserProvider -> LlmService -> cache` stack
+  - Gemini now participates in:
+    - provider id typing
+    - provider registry
+    - llmService factory
+    - browser automation client targeting
+  - added a Gemini adapter/service with live list support for:
+    - Gem-as-project listing
+    - conversation listing
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - `auracall --profile wsl-chrome-2 projects --target gemini`
+    - now returns real Gem rows such as:
+      - `chess-champ`
+      - `storybook`
+      - `brainstormer`
+      - editable user Gem `3bfcda98acf4`
+  - `auracall --profile wsl-chrome-2 conversations --target gemini`
+    - now returns real Gemini chat rows with stable `/app/<conversationId>` ids
+  - Gemini cache identity can now be detected from the live Google account
+    label instead of failing write-through immediately
+- Scope boundary:
+  - this slice is list-only
+  - Gem create/rename/delete and conversation rename/delete are still the next
+    Gemini CRUD slices

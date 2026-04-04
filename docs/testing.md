@@ -176,6 +176,11 @@
     - that means the active image-association failure was in the uploader path,
       not in prompt commit or staged-ready timing
   - this pairing is now a real second text-green Gemini browser proof
+  - Gemini browser provider list surfaces are now also live on this pairing:
+    - `auracall --profile wsl-chrome-2 projects --target gemini`
+      - returns real Gem rows through the generic browser provider path
+    - `auracall --profile wsl-chrome-2 conversations --target gemini`
+      - returns real `/app/<conversationId>` chat rows through the same path
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.
