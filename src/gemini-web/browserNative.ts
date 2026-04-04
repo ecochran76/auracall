@@ -38,28 +38,25 @@ function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
 }
 
-function extractGeminiAnswerText(options: {
-  baselineText: string;
+export function extractGeminiAnswerText(options: {
   currentText: string;
   prompt: string;
 }): string {
   let text = normalizeWhitespace(options.currentText);
-  const baseline = normalizeWhitespace(options.baselineText);
   const prompt = normalizeWhitespace(options.prompt);
 
-  if (baseline && text.startsWith(baseline)) {
-    text = text.slice(baseline.length).trim();
+  if (!prompt) {
+    return '';
   }
 
-  if (prompt) {
-    const promptIndex = text.toLowerCase().indexOf(prompt.toLowerCase());
-    if (promptIndex >= 0) {
-      text = text.slice(promptIndex + prompt.length).trim();
-    }
+  const promptIndex = text.toLowerCase().lastIndexOf(prompt.toLowerCase());
+  if (promptIndex < 0) {
+    return '';
   }
 
-  text = text.replace(/^(tools|fast|submit)\b/i, '').trim();
-  text = text.replace(/\b(tools|fast|submit)\s*$/i, '').trim();
+  text = text.slice(promptIndex + prompt.length).trim();
+  text = text.replace(/^(?:tools|fast|submit)(?:\s+(?:tools|fast|submit))*\b/i, '').trim();
+  text = text.replace(/\b(?:tools|fast|submit)(?:\s+(?:tools|fast|submit))*\s*$/i, '').trim();
   return text;
 }
 
@@ -78,7 +75,6 @@ async function isGeminiSignedOut(page: Page): Promise<boolean> {
 }
 
 async function waitForGeminiAnswer(page: Page, options: {
-  baselineText: string;
   prompt: string;
   timeoutMs: number;
 }): Promise<string> {
@@ -89,7 +85,6 @@ async function waitForGeminiAnswer(page: Page, options: {
   while (Date.now() < deadline) {
     const currentText = await readGeminiHistoryText(page);
     const answer = extractGeminiAnswerText({
-      baselineText: options.baselineText,
       currentText,
       prompt: options.prompt,
     });
@@ -120,12 +115,19 @@ async function waitForAttachmentPreview(
 ): Promise<void> {
   await page.waitForFunction(
     (names: string[]) => {
-      const bodyText = String(document.body?.innerText ?? '');
+      const previews = Array.from(document.querySelectorAll('[data-test-id="file-preview"]'));
       const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
       return names.every((name) => {
         const removeLabel = 'Remove file ' + name;
         const hasRemove = buttons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel));
-        return hasRemove || bodyText.includes(name);
+        const hasPreview = previews.some((el) => {
+          const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
+          const previewTitle =
+            String(el.getAttribute('title') ?? '') ||
+            String(el.querySelector('[data-test-id="file-name"]')?.getAttribute?.('title') ?? '');
+          return previewText.includes(name) || previewTitle.includes(name);
+        });
+        return hasRemove || hasPreview;
       });
     },
     { timeout: timeoutMs },
@@ -232,7 +234,6 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       );
     }
 
-    const baselineText = await readGeminiHistoryText(page);
     const attachmentPaths = (options.runOptions.attachments ?? []).map((attachment) => attachment.path);
     const attachmentNames = attachmentPaths.map((filePath) => path.basename(filePath));
 
@@ -255,7 +256,6 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     await submitGeminiPrompt(page, 20_000);
 
     const answerText = await waitForGeminiAnswer(page, {
-      baselineText,
       prompt: options.prompt,
       timeoutMs: options.timeoutMs,
     });

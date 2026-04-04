@@ -7512,3 +7512,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a browser-native upload path is green for text, re-prove image
     separately; image attachment state and send behavior may still diverge on
     the live provider page
+
+## 2026-04-04 - Gemini native image runs need stricter success gates than text uploads
+
+- Symptom:
+  - after the one-time upload gate was cleared, the next Gemini native image
+    rerun returned landing-page scaffolding such as:
+    - `Hi Eric`
+    - `For you`
+  as if it were a model answer
+  - the live page also showed the prompt still sitting in the composer without
+    a stable attachment preview
+- Fix:
+  - changed Gemini native answer extraction to require the submitted prompt to
+    appear in history before any following text can count as an answer
+  - tightened attachment stabilization to require a real Gemini attachment
+    preview or remove-file affordance, not generic page text
+- Result:
+  - the image path is still not green
+  - but it now fails more honestly instead of false-greening on landing-page
+    chrome or missing preview state
+- Durable lesson:
+  - browser-native image uploads need their own success criteria; text-upload
+    heuristics are not strong enough once the provider page mixes hero text,
+    composer state, and attachment UI in the same surface

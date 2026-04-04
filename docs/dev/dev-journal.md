@@ -7229,3 +7229,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - keep the next Gemini slice bounded to this browser-native image path
   - inspect why image attachment state is not stabilizing on the live page
     before taking any broader Gemini work
+
+## 2026-04-04 - Gemini native image runs now fail more honestly
+
+- Current focus:
+  - Gemini browser-native image upload hardening
+- What changed:
+  - tightened native answer extraction so landing-page scaffolding like:
+    - `Hi Eric`
+    - `For you`
+    can no longer count as a successful model answer
+  - tightened attachment stabilization so the native helper no longer treats
+    generic page text as proof that Gemini accepted the upload
+- Outcome:
+  - the image path is still not green
+  - but the run no longer false-greens on hero text or on a missing attachment
+    preview
+- Next step:
+  - inspect the live image-specific attachment state on the Gemini page
+  - likely around image-specific upload/preview selectors rather than general
+    answer extraction
