@@ -573,7 +573,12 @@ program
       'Handle a blocking Chrome profile (fail, restart, restart-managed).',
     ).choices(['fail', 'restart', 'restart-managed', 'restart-auracall']),
   )
-  .addOption(new Option('--gemini-url <url>', 'Override the Gemini web URL (e.g., https://gemini.google.com/gem/<id>).'))
+  .addOption(
+    new Option(
+      '--gemini-url <url>',
+      'Override the Gemini web URL for this run (e.g., https://gemini.google.com/gem/<id>).',
+    ),
+  )
   .addOption(new Option('--grok-url <url>', `Override the Grok web URL (e.g., ${GROK_URL}project/<id>).`))
   .addOption(new Option('--project-id <id>', 'Override the provider project scope for browser runs.').hideHelp())
   .addOption(new Option('--conversation-id <id>', 'Attach browser runs to a specific conversation.').hideHelp())
@@ -6841,7 +6846,7 @@ program
   .option('--grok', 'Alias for --target grok.')
   .option('--target <chatgpt|gemini|grok>', 'Choose which site to bootstrap and verify.')
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for setup/login.')
-  .option('--gemini-url <url>', 'Override the Gemini URL for setup/login.')
+  .option('--gemini-url <url>', 'Override the Gemini web URL for setup/login.')
   .option('--grok-url <url>', 'Override the Grok URL for setup/login.')
   .option('--prune-browser-state', 'Remove dead entries from ~/.auracall/browser-state.json before reporting.')
   .option('--skip-login', 'Skip opening the login browser and only run the verification step.')
@@ -6880,7 +6885,7 @@ program
   .option('--grok', 'Alias for --target grok.')
   .option('--target <chatgpt|gemini|grok>', 'Choose which site to open (chatgpt, gemini, or grok).')
   .option('--chatgpt-url <url>', 'Override the ChatGPT URL for login.')
-  .option('--gemini-url <url>', 'Override the Gemini URL for login.')
+  .option('--gemini-url <url>', 'Override the Gemini web URL for login.')
   .option('--grok-url <url>', 'Override the Grok URL for login.')
   .option('--export-cookies', 'Export Gemini cookies to ~/.auracall/cookies.json while you sign in.')
   .option('--force-reseed-managed-profile', 'Rebuild the managed Aura-Call browser profile from the source Chrome profile before opening login.')

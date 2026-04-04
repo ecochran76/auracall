@@ -6586,3 +6586,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser/profileDoctor.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - align Gemini docs with runtime-profile semantics
+
+- Current focus:
+  - Gemini operator/runtime alignment
+- What changed:
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+    so Gemini web targeting is documented primarily in terms of:
+    - AuraCall runtime profiles
+    - service-scoped `services.gemini.url`
+    - browser profile selection
+  - updated
+    [docs/wsl-gemini-runbook.md](/home/ecochran76/workspace.local/oracle/docs/wsl-gemini-runbook.md)
+    to replace old `oracle` examples with current `auracall` usage and a
+    target-shape config example
+  - updated [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    help text so `--gemini-url` is described consistently as a Gemini web URL
+    override
+- Verification:
+  - docs/help text only

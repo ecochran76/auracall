@@ -19,7 +19,7 @@ implemented from what is merely plausible.
 | Generate image | Not documented | Supported | Web/browser path supports `--generate-image`. |
 | Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
 | Search/tooling | Partially supported | Not documented | API maps `web_search_preview` to Gemini `googleSearch`; broader Gemini-side search is not yet a committed product surface. |
-| Gem URL targeting | N/A | Supported | Via `--gemini-url` or `browser.geminiUrl`. |
+| Gem URL targeting | N/A | Supported | Via `--gemini-url` or the selected AuraCall runtime profile's `services.gemini.url`. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
 | Browser doctor | N/A | Local-only supported | Use `auracall doctor --target gemini --local-only`; full live selector diagnosis is not implemented. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
@@ -53,12 +53,44 @@ Gemini web mode is a cookie-based client for `gemini.google.com`. It does **not*
 Prereqs:
 - Chrome installed.
 - Signed into `gemini.google.com` in the Chrome profile Aura-Call uses (default: `Default` profile).
-- Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or `browser.geminiUrl` in config.
+- Target a specific Gem with `--gemini-url "https://gemini.google.com/gem/<id>"` or the selected AuraCall runtime profile's `services.gemini.url` in config.
 - If cookies are missing, run `auracall login --target gemini` to open the same profile for sign-in.
 - If Chrome cookies are locked (common on Windows) or Linux keyring decryption fails, run `auracall login --target gemini --export-cookies` to save cookies to `~/.auracall/cookies.json`.
 - Local managed browser-profile inspection is available via:
   - `auracall doctor --target gemini --local-only`
 - Full live Gemini UI selector diagnosis is not implemented in `auracall doctor` yet.
+
+Primary config shape example:
+```json5
+{
+  version: 3,
+  defaultRuntimeProfile: "gemini-default",
+  browserProfiles: {
+    default: {
+      sourceProfileName: "Default",
+      managedProfileRoot: "/home/me/.auracall/browser-profiles",
+    },
+  },
+  runtimeProfiles: {
+    "gemini-default": {
+      browserProfile: "default",
+      engine: "browser",
+      defaultService: "gemini",
+      services: {
+        gemini: {
+          url: "https://gemini.google.com/gem/<id>",
+        },
+      },
+    },
+  },
+}
+```
+
+Compatibility note:
+- Aura-Call still accepts the older `browser.geminiUrl` config key on reads.
+- Prefer `runtimeProfiles.<name>.services.gemini.url` in new configs so Gemini
+  URL targeting stays attached to the selected AuraCall runtime profile instead
+  of a browser-global field.
 
 Examples:
 ```bash

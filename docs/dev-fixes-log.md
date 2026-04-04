@@ -7018,3 +7018,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when inherited provider support only covers part of an operator surface,
     encode that partial support explicitly in the CLI and diagnostics instead
     of leaving it to implicit internal capability
+
+## 2026-04-03 - document Gemini targeting through runtime profiles instead of browser-global drift
+
+- Symptom:
+  - Gemini support had a current feature matrix, but user-facing examples still
+    foregrounded older operator shapes:
+    - `browser.geminiUrl`
+    - legacy `oracle` commands in the WSL runbook
+  - that drifted away from the rest of Aura-Call's target-shape config model,
+    where service URL targeting belongs under the selected AuraCall runtime
+    profile
+- Fix:
+  - updated Gemini docs and the WSL runbook to prefer:
+    - `runtimeProfiles.<name>.services.gemini.url`
+    - explicit AuraCall runtime-profile selection
+    - browser-profile terminology
+  - tightened CLI help text so `--gemini-url` is described consistently as a
+    Gemini web URL override
+- Durable lesson:
+  - when a provider inherits older config guidance, align the docs to the
+    current runtime-profile/service-binding model before treating the provider
+    as architecturally complete
