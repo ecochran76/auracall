@@ -160,10 +160,20 @@
       - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
   - native Gemini browser image-upload proof is still not freshly re-proven on
     this pairing after the browser-driven pivot
-  - first re-proof attempt after the browser-driven pivot is not green yet:
-    - the run stayed unresolved past the earlier text-file window
-    - the live Gemini page showed the image prompt still present without a
-      stable attached-image preview or model answer
+  - current native Gemini browser image status on this pairing is still not
+    green:
+    - the path is now using explicit owned-page semantics closer to
+      ChatGPT/Grok:
+      - exact target ownership
+      - competing Gemini tab trimming
+      - `Enter`-first submit
+      - explicit provider/page failure copy detection
+    - but the latest fresh reruns still fail around owned-page readiness rather
+      than answer materialization:
+      - prompt textarea readiness on a fresh owned page can still detach
+      - upload-menu materialization can still time out on that owned page
+    - treat Gemini native image upload as an active browser hardening gap, not
+      a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.

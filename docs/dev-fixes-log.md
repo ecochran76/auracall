@@ -7560,3 +7560,30 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a browser-native path has honest failure criteria, prefer recording the
     exact highest failing boundary instead of continuing to reason from stale
     false-positive states
+
+## 2026-04-04 - Gemini native image runs should use explicit owned-page semantics
+
+- Symptom:
+  - Gemini native image runs on `wsl-chrome-2` were drifting between:
+    - pending composer state
+    - detached frames
+    - vague timeouts
+  - unlike ChatGPT/Grok, Gemini was not yet using an equally strict owned-page
+    workflow for the native image path
+- Fix:
+  - moved Gemini native upload-mode runs toward the same browser discipline:
+    - exact target ownership
+    - competing Gemini tab trimming
+    - touch-target aware upload/send clicks
+    - `Enter`-first submit
+    - explicit failure messages for:
+      - provider copy like `Image Upload Failed`
+      - attachment disappearing before commit
+- Result:
+  - the image path is still not green
+  - but the current boundary is narrower and more honest:
+    - owned Gemini pages can still fail at prompt/upload-menu readiness with
+      frame-detach or timeout behavior
+- Durable lesson:
+  - for Gemini browser-native work, reuse the ChatGPT/Grok page-ownership model
+    first; only keep the truly Gemini-specific selectors and copy local

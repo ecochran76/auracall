@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { extractGeminiAnswerText } from '../../src/gemini-web/browserNative.js';
+import {
+  detectGeminiNativeAttachmentFailure,
+  extractGeminiAnswerText,
+} from '../../src/gemini-web/browserNative.js';
 
 describe('gemini browser native answer extraction', () => {
   it('ignores landing-page scaffolding when the prompt is not yet in history', () => {
@@ -19,5 +22,19 @@ describe('gemini browser native answer extraction', () => {
     });
 
     expect(answer).toBe('A simple blue square with text inside it.');
+  });
+
+  it('detects explicit native image upload failure copy', () => {
+    expect(
+      detectGeminiNativeAttachmentFailure(
+        'Conversation with Gemini Image Upload Failed Image Not Received, Please Re-upload',
+      ),
+    ).toContain('image');
+  });
+
+  it('returns null when no native attachment failure copy is present', () => {
+    expect(
+      detectGeminiNativeAttachmentFailure('Conversation with Gemini Describe the uploaded image in one short sentence.'),
+    ).toBeNull();
   });
 });

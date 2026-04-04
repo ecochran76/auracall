@@ -301,8 +301,15 @@ Current recommendation:
 - current concrete gap after the pivot:
   - first native image-upload re-proof on `wsl-chrome-2 -> gemini` did not go
     green
-  - the run stayed unresolved and the live Gemini page did not show a stable
-    attached-image preview or model answer
+  - after moving the path closer to ChatGPT/Grok browser semantics:
+    - exact owned target
+    - competing Gemini tab trimming
+    - `Enter`-first submit
+    - explicit Gemini failure-copy detection
+    the native image path is still not green
+  - the current highest boundary is now owned-page readiness itself:
+    - prompt textarea readiness can detach on the fresh owned page
+    - upload-menu materialization can still fail on that owned page
 - the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by

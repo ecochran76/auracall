@@ -7270,3 +7270,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - inspect how the live Gemini image uploader actually opens its chooser on
     this surface, likely through a path Puppeteer `waitForFileChooser()` is not
     currently observing
+
+## 2026-04-04 - Gemini native image runs now have owned-page boundaries
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - moved native Gemini upload-mode runs closer to the ChatGPT/Grok browser
+    model by:
+    - using one exact owned Chrome target instead of a floating page in an
+      adopted multi-tab browser
+    - trimming competing Gemini tabs for the owned run
+    - treating visible `blob:` thumbnails as real staged image state
+    - preferring keyboard `Enter` for Gemini submit
+    - failing explicitly when Gemini reports:
+      - `Image Upload Failed`
+      - `Image Not Received, Please Re-upload`
+      - or when the attachment vanishes before the prompt commits
+- Outcome:
+  - still not green
+  - current live boundary is now specific:
+    - fresh owned Gemini pages can still detach during prompt/menu readiness, or
+    - the owned page can fail to materialize the upload menu/textbox reliably
+  - this is a much narrower checkpoint than the earlier generic chooser/send
+    uncertainty
+- Next step:
+  - keep Gemini native image work bounded to owned-page readiness around:
+    - prompt textarea presence
+    - upload-menu materialization
+    - fresh-frame stability
