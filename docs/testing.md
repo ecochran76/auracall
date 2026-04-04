@@ -110,9 +110,10 @@
   - pairing: AuraCall runtime profile `default` -> browser profile `default`
   - text: green
   - attachment: green
+  - YouTube: green
   - note: this machine required `auracall login --target gemini --export-cookies`
-    plus `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/cookies.json` because
-    `secret-tool` cookie decryption returned zero Google auth cookies
+    plus `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json`
+    because `secret-tool` cookie decryption returned zero Google auth cookies
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.

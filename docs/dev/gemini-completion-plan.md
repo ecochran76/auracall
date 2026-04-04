@@ -213,8 +213,11 @@ Current proof progress:
   - `default -> default`
   - text: green
   - attachment: green
+  - YouTube: green
   - required exported-cookie fallback on this Linux host because direct
     keyring-backed Chrome cookie reads returned zero Gemini auth cookies
+  - current preferred fallback path is the runtime-profile-scoped export:
+    - `~/.auracall/browser-profiles/default/gemini/cookies.json`
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 

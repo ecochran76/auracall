@@ -6680,3 +6680,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     for the scoped Gemini fallback order
 - Verification:
   - focused inline-cookie/browser-config tests
+
+## 2026-04-03 - extend Gemini live-proof refresh through YouTube input
+
+- Current focus:
+  - Gemini live-proof refresh
+- What changed:
+  - re-ran Gemini web proof on the same explicit pairing:
+    - AuraCall runtime profile `default`
+    - browser profile `default`
+  - kept the host on the runtime-profile-scoped exported-cookie fallback:
+    - `/home/ecochran76/.auracall/browser-profiles/default/gemini/cookies.json`
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    with the new proof result
+- Live proof:
+  - Gemini YouTube run: green
+  - prompt:
+    - `Give one short sentence about the video.`
+  - input:
+    - `https://www.youtube.com/watch?v=dQw4w9WgXcQ`
+- Verification:
+  - live Gemini YouTube proof on `default -> default`
