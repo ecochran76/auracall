@@ -269,7 +269,9 @@ Outcome:
       - adding upload MIME types
       - including filename/MIME metadata in the Gemini `f.req` attachment tuple
     - latest image proof now fails explicitly with:
-      - `Gemini returned control frames only and never materialized a response body.`
+      - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
+    - repeating the same request still returned control-only responses, so a
+      naive retry is not the next fix
   - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
     pairing, with file-input proof through the current Aura-Call bundling path
 

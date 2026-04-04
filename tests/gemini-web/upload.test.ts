@@ -63,4 +63,53 @@ describe('gemini-web upload metadata', () => {
       }),
     );
   });
+
+  it('classifies control-only upload responses as attachment failures', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-gemini-upload-'));
+    const filePath = path.join(tempDir, 'input.png');
+    const png = Buffer.from(
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/Pm2zXwAAAABJRU5ErkJggg==',
+      'base64',
+    );
+    await writeFile(filePath, png);
+
+    const fetchMock = vi.fn(async (url: string | URL) => {
+      const target = String(url);
+      if (target === 'https://gemini.google.com/app') {
+        return new Response('<html>"SNlM0e":"token"</html>', { status: 200 });
+      }
+      if (target === 'https://content-push.googleapis.com/upload') {
+        return new Response('/contrib_service/ttl_1d/example-upload-token', { status: 200 });
+      }
+      if (target.includes('/StreamGenerate')) {
+        return new Response(
+          `)]}'\n\n${JSON.stringify([
+            ['wrb.fr', null, null, null, null, [13]],
+            ['di', 95],
+            ['af.httprm', 95, '8263098893679973246', 24],
+          ])}`,
+          { status: 200 },
+        );
+      }
+      throw new Error(`Unexpected fetch target: ${target}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { runGeminiWebOnce } = await import('../../src/gemini-web/client.js');
+    const out = await runGeminiWebOnce({
+      prompt: 'Describe the uploaded image.',
+      files: [filePath],
+      model: 'gemini-3-pro',
+      cookieMap: {
+        '__Secure-1PSID': 'psid',
+        '__Secure-1PSIDTS': 'psidts',
+      },
+    });
+
+    expect(out.text).toBe('');
+    expect(out.errorMessage).toBe(
+      'Gemini accepted the attachment request but returned control frames only and never materialized a response body.',
+    );
+  });
 });

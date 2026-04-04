@@ -7043,7 +7043,7 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Outcome:
   - the underlying Gemini upload gap is still not fixed
   - but the current forced-upload image path now fails explicitly with:
-    - `Gemini returned control frames only and never materialized a response body.`
+    - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
   - that is materially better than returning `(no text output)` and hiding the
     real failure shape
 - Verification:
@@ -7051,3 +7051,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`
+
+## 2026-04-04 - confirm Gemini attachment control-only responses do not self-heal on simple retry
+
+- Current focus:
+  - Gemini real attachment transport diagnostics
+- What changed:
+  - tightened the control-only Gemini error text so attachment-backed runs
+    explicitly report that Gemini accepted the attachment request but never
+    produced a response body
+- Outcome:
+  - direct retry experiments on the same `wsl-chrome-2` image upload did not
+    self-heal:
+    - attempt 1: control-only
+    - attempt 2: control-only
+    - attempt 3: control-only
+  - that means a naive retry loop is not the next fix for this provider gap
+- Verification:
+  - `pnpm vitest run tests/gemini-web/parse.test.ts tests/gemini-web/upload.test.ts tests/gemini-web/executor.test.ts --maxWorkers 1`
+  - live:
+    - repeated `runGeminiWebOnce(...)` direct image-upload probes against
+      `wsl-chrome-2 -> gemini`

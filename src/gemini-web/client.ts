@@ -415,6 +415,11 @@ export async function runGeminiWebOnce(input: GeminiWebRunInput): Promise<Gemini
 
   try {
     const parsed = parseGeminiStreamGenerateResponse(rawResponseText);
+    const controlOnly =
+      !parsed.text &&
+      parsed.images.length === 0 &&
+      parsed.errorCode == null &&
+      isGeminiControlOnlyResponse(rawResponseText);
     return {
       rawResponseText,
       text: parsed.text ?? '',
@@ -422,13 +427,11 @@ export async function runGeminiWebOnce(input: GeminiWebRunInput): Promise<Gemini
       metadata: parsed.metadata,
       images: parsed.images,
       errorCode: parsed.errorCode,
-      errorMessage:
-        !parsed.text &&
-        parsed.images.length === 0 &&
-        parsed.errorCode == null &&
-        isGeminiControlOnlyResponse(rawResponseText)
-          ? 'Gemini returned control frames only and never materialized a response body.'
-          : undefined,
+      errorMessage: controlOnly
+        ? (input.files?.length ?? 0) > 0
+          ? 'Gemini accepted the attachment request but returned control frames only and never materialized a response body.'
+          : 'Gemini returned control frames only and never materialized a response body.'
+        : undefined,
     };
   } catch (error) {
     let responseJson: unknown = null;

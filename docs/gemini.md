@@ -125,7 +125,9 @@ Notes:
   - uploaded image proof first said the image did not come through
   - after MIME and attachment-metadata fixes, the latest forced-upload image
     proof now fails explicitly with:
-    - `Gemini returned control frames only and never materialized a response body.`
+    - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
+  - repeating the same direct attachment request did not turn that control-only
+    response into a real body later
 
 ## Implementation details
 

@@ -7349,8 +7349,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Result:
   - the underlying upload bug still exists
   - but the same live forced-upload image proof now fails explicitly with:
-    - `Gemini returned control frames only and never materialized a response body.`
+    - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
 - Durable lesson:
   - when a provider returns a recognizable control/ack frame without the real
     content body, prefer an explicit classified failure over silently collapsing
     it into empty output
+
+## 2026-04-04 - repeated Gemini attachment retries returned the same control-only response
+
+- Symptom:
+  - once the control-only upload response was classified explicitly, the next
+    question was whether the provider simply needed a short retry window to
+    materialize the real body
+- Fix:
+  - reran the same direct `runGeminiWebOnce(...)` image-upload request three
+    times against `wsl-chrome-2 -> gemini`
+  - tightened the attachment-specific error text to reflect that Gemini had
+    accepted the attachment request before failing to materialize a body
+- Result:
+  - all three attempts returned the same control-only response shape
+  - so a simple client-side retry is not the next useful fix
+- Durable lesson:
+  - when repeated identical provider requests reproduce the same control-only
+    acknowledgement without a body, stop assuming the bug is just eventual
+    consistency and move the investigation deeper into the protocol contract
