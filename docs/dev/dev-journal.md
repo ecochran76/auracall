@@ -7610,3 +7610,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - if browser-service reopens again, the remaining honest question is whether
     a provider-agnostic attachment signal shape should exist at all
+
+## 2026-04-04 - Attachment signal shape comparison says stop at mechanics
+
+- Current focus:
+  - compare ChatGPT/Grok attachment signal payloads against Gemini before
+    extracting any more browser-service attachment abstractions
+- What I checked:
+  - ChatGPT/Grok-style attachment waits in:
+    - `src/browser/actions/attachments.ts`
+  - Gemini attachment preview/submit state in:
+    - `src/gemini-web/browserNative.ts`
+- Result:
+  - there is not yet a strong shared cross-provider attachment signal shape
+  - the real overlap is only mechanical:
+    - poll repeatedly
+    - require stable ready evidence
+    - report last state on timeout
+  - the payload meanings still differ materially:
+    - ChatGPT/Grok lean on `uploading`, `filesAttached`, `attachedNames`,
+      `inputNames`, `fileCount`
+    - Gemini leans on `sendReady`, `visibleBlobCount`, `removeLabels`,
+      `previewNames`, `matchedNames`
+- Outcome:
+  - browser-service should stop at the extracted mechanics for now
+  - keep attachment signal payloads provider-local until another provider
+    proves a genuinely stable common shape

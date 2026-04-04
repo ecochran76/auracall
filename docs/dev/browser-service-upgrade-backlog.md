@@ -315,9 +315,31 @@ Progress:
 - current first adopter:
   - Gemini attachment preview stabilization
 - still remaining:
-  - decide whether a shared provider-agnostic attachment signal shape is clean
-    enough to extract, or whether browser-service should stop at the polling
-    contract and keep signal payloads provider-local
+  - no shared provider-agnostic attachment signal shape is proven yet
+  - current comparison says browser-service should stop at the polling
+    contract and keep signal payloads provider-local until a second provider
+    proves a genuinely stable common shape
+
+Comparison checkpoint:
+- ChatGPT/Grok attachment waits center on:
+  - `uploading`
+  - `filesAttached`
+  - `attachedNames`
+  - `inputNames`
+  - `fileCount`
+  - composer/send-button state
+- Gemini attachment waits center on:
+  - `sendReady`
+  - `visibleBlobCount`
+  - `removeLabels`
+  - `previewNames`
+  - `matchedNames`
+- overlap exists only at a weak level:
+  - attachment evidence exists
+  - send surface is ready
+  - some expected names appear
+- that overlap is not strong enough yet to justify one package-owned signal
+  payload shape
 
 ### C. Ordered upload-surface fallback belongs in package mechanics
 

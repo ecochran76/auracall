@@ -7889,3 +7889,28 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - extract polling/stability mechanics before trying to force one shared
     cross-provider attachment signal schema
+
+## 2026-04-04 - Cross-provider attachment signal schema is not ready for extraction
+
+- Context:
+  - after extracting the reusable mechanics from Gemini, the next question was
+    whether ChatGPT/Grok/Gemini now shared one real attachment signal payload
+    shape
+- Result:
+  - no
+  - ChatGPT/Grok attachment waits still rely on signals like:
+    - `uploading`
+    - `filesAttached`
+    - `attachedNames`
+    - `inputNames`
+    - `fileCount`
+  - Gemini attachment waits still rely on signals like:
+    - `sendReady`
+    - `visibleBlobCount`
+    - `removeLabels`
+    - `previewNames`
+    - `matchedNames`
+- Durable lesson:
+  - the common reusable layer is the mechanic, not the payload schema
+  - keep attachment signal payloads provider-local until a second provider
+    proves a stable common model instead of extracting a fake abstraction
