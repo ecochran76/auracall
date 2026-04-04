@@ -47,6 +47,12 @@ describe('config show helpers', () => {
         targetPresent: false,
         compatibilityPresent: false,
       },
+      selectionPolicy: {
+        runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+        planningOnlySelectors: ['team'],
+        activeRuntimeSelector: 'config',
+        teamSelectionAffectsRuntime: false,
+      },
       active: {
         agent: null,
         auracallRuntimeProfile: 'work',
@@ -107,6 +113,12 @@ describe('config show helpers', () => {
         targetPresent: false,
         compatibilityPresent: false,
       },
+      selectionPolicy: {
+        runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+        planningOnlySelectors: ['team'],
+        activeRuntimeSelector: 'config',
+        teamSelectionAffectsRuntime: false,
+      },
       active: {
         agent: null,
         auracallRuntimeProfile: 'default',
@@ -159,6 +171,8 @@ describe('config show helpers', () => {
     expect(text).toContain('Browser profile: default');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (missing)');
+    expect(text).toContain('Selector precedence: runtime uses profile > agent > config; team is planning-only');
+    expect(text).toContain('Active runtime selector: config');
     expect(text).toContain('Available agents: (none)');
     expect(text).toContain('Available teams: (none)');
     expect(text).toContain('Resolved agents: (none)');
@@ -224,6 +238,12 @@ describe('config show helpers', () => {
       explicitAgentId: 'analyst',
     });
 
+    expect(report.selectionPolicy).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'agent',
+      teamSelectionAffectsRuntime: false,
+    });
     expect(report.active.agent).toEqual({
       agentId: 'analyst',
       runtimeProfileId: 'work',
@@ -251,6 +271,7 @@ describe('config show helpers', () => {
     expect(report.selectedTeam).toBeNull();
 
     const text = formatConfigShowReport(report);
+    expect(text).toContain('Active runtime selector: agent');
     expect(text).toContain('Selected agent: analyst -> resolved');
     expect(text).toContain('Resolved agents:');
     expect(text).toContain('- analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
@@ -361,6 +382,12 @@ describe('config show helpers', () => {
 
     expect(report.active.auracallRuntimeProfile).toBe('default');
     expect(report.active.browserProfile).toBe('default');
+    expect(report.selectionPolicy).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'config',
+      teamSelectionAffectsRuntime: false,
+    });
     expect(report.selectedTeam).toEqual({
       teamId: 'ops',
       agentIds: ['researcher', 'missing-agent', 'analyst'],
@@ -414,7 +441,8 @@ describe('config show helpers', () => {
     });
 
     const text = formatConfigShowReport(report);
-    expect(text).toContain('Selected team: ops -> resolved');
+    expect(text).toContain('Active runtime selector: config');
+    expect(text).toContain('Selected team: ops -> resolved (planning-only)');
     expect(text).toContain('Selected team runtime plan:');
     expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
     expect(text).toContain('member missing-agent -> missing -> runtime profile (none) -> browser profile (none) -> default service (none)');
@@ -652,6 +680,12 @@ describe('config show helpers', () => {
       targetPresent: false,
       compatibilityPresent: true,
     });
+    expect(report.selectionPolicy).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'profile',
+      teamSelectionAffectsRuntime: false,
+    });
     expect(report.selectedAgent).toBeNull();
     expect(report.selectedTeam).toBeNull();
     expect(report.targetState).toEqual({
@@ -695,6 +729,8 @@ describe('config show helpers', () => {
     expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Runtime profile selector -> defaultRuntimeProfile (missing)');
     expect(text).toContain('Compatibility selector -> auracallProfile (present)');
+    expect(text).toContain('Selector precedence: runtime uses profile > agent > config; team is planning-only');
+    expect(text).toContain('Active runtime selector: profile');
     expect(text).toContain('Active AuraCall runtime profile: default');
     expect(text).toContain('Active browser profile: (none)');
     expect(text).toContain('Target browserProfiles present: no');
@@ -737,6 +773,12 @@ describe('config show helpers', () => {
       exists: true,
     });
     expect(report.selectedTeam).toBeNull();
+    expect(report.selectionPolicy).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'profile',
+      teamSelectionAffectsRuntime: false,
+    });
     expect(report.issues).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -759,6 +801,7 @@ describe('config show helpers', () => {
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Selected agent: researcher -> resolved');
     expect(text).toContain('Selected team: (none)');
+    expect(text).toContain('Active runtime selector: profile');
     expect(text).toContain('[warning] Agent "researcher" does not explicitly reference an AuraCall runtime profile.');
     expect(text).toContain('[warning] Agent "analyst" references missing AuraCall runtime profile "missing-runtime".');
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
@@ -794,6 +837,12 @@ describe('config show helpers', () => {
     );
 
     expect(report.selectedAgent).toBeNull();
+    expect(report.selectionPolicy).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'profile',
+      teamSelectionAffectsRuntime: false,
+    });
     expect(report.selectedTeam).toEqual({
       teamId: 'ops',
       agentIds: ['researcher', 'missing-agent', 'analyst'],
@@ -847,7 +896,7 @@ describe('config show helpers', () => {
     });
 
     const text = formatConfigDoctorReport(report);
-    expect(text).toContain('Selected team: ops -> resolved');
+    expect(text).toContain('Selected team: ops -> resolved (planning-only)');
     expect(text).toContain('Selected team runtime plan:');
     expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
     expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');

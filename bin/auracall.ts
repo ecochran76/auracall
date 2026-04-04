@@ -6972,6 +6972,14 @@ configCommand
       resolvedConfig,
       configPath: loaded.path,
       loaded: loaded.loaded,
+      explicitProfileName:
+        typeof cliOptions.profile === 'string'
+          ? cliOptions.profile
+          : typeof cliOptions.auracallProfile === 'string'
+            ? cliOptions.auracallProfile
+            : typeof cliOptions.oracleProfile === 'string'
+              ? cliOptions.oracleProfile
+              : null,
       explicitAgentId: typeof cliOptions.agent === 'string' ? cliOptions.agent : null,
       explicitTeamId: typeof cliOptions.team === 'string' ? cliOptions.team : null,
     });

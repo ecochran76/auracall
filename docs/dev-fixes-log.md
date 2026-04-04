@@ -6741,3 +6741,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a side finding appears during proof expansion, record it in the
     durable docs and keep the next coding slice deliberate instead of reacting
     immediately
+
+## 2026-04-03 - make team selector precedence explicit in inspection surfaces
+
+- Symptom:
+  - `--team` already existed as a planning-only selector, but the current
+    precedence rule lived implicitly across config reporting paths
+  - that made it too easy to read team planning output as if it participated in
+    active runtime selection
+- Fix:
+  - added one shared selector-policy helper in the config-model seam
+  - `config show` and `config doctor` now state:
+    - runtime uses `--profile`, then `--agent`, then config default
+    - `--team` is planning-only
+- Durable lesson:
+  - when a selector exists for planning or inspection only, surface that rule
+    explicitly in operator reports instead of relying on users to infer it from
+    the absence of runtime changes

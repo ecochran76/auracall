@@ -82,6 +82,12 @@ read-only team planning view directly:
 This does not enable team execution or parallelism. It is an inspection and
 runtime-planning surface only.
 
+Selector precedence is now explicit in those reports:
+- runtime selection uses `--profile` first
+- then `--agent`
+- then the config default selector
+- `--team` remains planning-only and never changes the active runtime selection
+
 Stored session metadata now also preserves that selected-agent provenance as
 `options.selectedAgentId`, so detached runs and postmortems can distinguish an
 agent-selected run from one started directly with `--profile`.
@@ -373,6 +379,9 @@ Within each file, later CLI flags still override config, and environment variabl
   - Today this only selects the referenced AuraCall runtime profile and its browser-profile inheritance.
   - It does not enable separate agent execution behavior yet.
   - If both `--profile` and `--agent` are passed, `--profile` wins.
+- Use `--team <name>` only for planning and inspection surfaces today.
+  - It does not change the active runtime selection.
+  - It does not outrank `--profile` or `--agent` because it does not participate in runtime selection yet.
 - Profile onboarding and login with managed profiles:
   - `auracall --profile <name> setup --chatgpt` runs the managed-profile setup for that profile and opens a login flow if needed.
   - `auracall --profile <name> login --chatgpt` opens only the managed-profile login flow so you can manually authenticate a second account.

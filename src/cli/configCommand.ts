@@ -4,6 +4,7 @@ import {
   inspectConfigModel,
   getPreferredRuntimeProfileName,
   resolveAgentSelection,
+  resolveRuntimeSelectionPolicy,
   resolveTeamSelection,
   resolveTeamRuntimeSelections,
   resolveRuntimeSelection,
@@ -12,6 +13,7 @@ import {
   type ConfigModelDoctorIssue,
   type ConfigModelDoctorReport,
   type ProjectedConfigModel,
+  type RuntimeSelectionPolicy,
 } from '../config/model.js';
 
 type MutableRecord = Record<string, unknown>;
@@ -26,6 +28,7 @@ export interface ConfigShowReport {
   configPath: string;
   loaded: boolean;
   selectorKeys: SelectorKeysReport;
+  selectionPolicy: RuntimeSelectionPolicy;
   active: {
     agent: {
       agentId: string | null;
@@ -147,6 +150,7 @@ export interface ProfileListReport {
 export type ConfigDoctorIssue = ConfigModelDoctorIssue;
 export type ConfigDoctorReport = ConfigModelDoctorReport & {
   selectorKeys: SelectorKeysReport;
+  selectionPolicy: RuntimeSelectionPolicy;
   selectedAgent: {
     agentId: string | null;
     runtimeProfileId: string | null;
@@ -204,6 +208,7 @@ export function buildConfigShowReport(input: {
   resolvedConfig: ResolvedUserConfig;
   configPath: string;
   loaded: boolean;
+  explicitProfileName?: string | null;
   explicitAgentId?: string | null;
   explicitTeamId?: string | null;
 }): ConfigShowReport {
@@ -239,6 +244,11 @@ export function buildConfigShowReport(input: {
     configPath: input.configPath,
     loaded: input.loaded,
     selectorKeys: buildSelectorKeysReport(input.rawConfig),
+    selectionPolicy: resolveRuntimeSelectionPolicy({
+      explicitProfileName: input.explicitProfileName ?? null,
+      explicitAgentId: input.explicitAgentId ?? null,
+      explicitTeamId: input.explicitTeamId ?? null,
+    }),
     active: {
       agent: selection.agent,
       auracallRuntimeProfile: selection.runtimeProfileId ?? input.resolvedConfig.auracallProfile ?? null,
@@ -354,6 +364,7 @@ export function buildConfigDoctorReport(
   return {
     ...analyzeConfigModelBridgeHealth(rawConfig, options),
     selectorKeys: buildSelectorKeysReport(rawConfig),
+    selectionPolicy: resolveRuntimeSelectionPolicy(options),
     selectedAgent: selection.agent,
     selectedTeam,
   };
@@ -365,6 +376,8 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     `Loaded: ${report.loaded ? 'yes' : 'no'}`,
     `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
     `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
+    `Selector precedence: runtime uses ${report.selectionPolicy.runtimeSelectorPrecedence.join(' > ')}; ${report.selectionPolicy.planningOnlySelectors.join(', ')} is planning-only`,
+    `Active runtime selector: ${report.selectionPolicy.activeRuntimeSelector}`,
     `Selected agent: ${
       report.active.agent
         ? `${report.active.agent.agentId ?? '(none)'} -> ${report.active.agent.exists ? 'resolved' : 'missing'}`
@@ -372,7 +385,7 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     }`,
     `Selected team: ${
       report.selectedTeam
-        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'}`
+        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'} (planning-only)`
         : '(none)'
     }`,
     `AuraCall runtime profile: ${report.active.auracallRuntimeProfile ?? '(none)'}`,
@@ -484,6 +497,8 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
   const lines = [
     `Runtime profile selector -> ${report.selectorKeys.target} (${report.selectorKeys.targetPresent ? 'present' : 'missing'})`,
     `Compatibility selector -> ${report.selectorKeys.compatibility} (${report.selectorKeys.compatibilityPresent ? 'present' : 'missing'})`,
+    `Selector precedence: runtime uses ${report.selectionPolicy.runtimeSelectorPrecedence.join(' > ')}; ${report.selectionPolicy.planningOnlySelectors.join(', ')} is planning-only`,
+    `Active runtime selector: ${report.selectionPolicy.activeRuntimeSelector}`,
     `Selected agent: ${
       report.selectedAgent
         ? `${report.selectedAgent.agentId ?? '(none)'} -> ${report.selectedAgent.exists ? 'resolved' : 'missing'}`
@@ -491,7 +506,7 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
     }`,
     `Selected team: ${
       report.selectedTeam
-        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'}`
+        ? `${report.selectedTeam.teamId ?? '(none)'} -> ${report.selectedTeam.exists ? 'resolved' : 'missing'} (planning-only)`
         : '(none)'
     }`,
     `Active AuraCall runtime profile: ${report.activeAuracallRuntimeProfile ?? '(none)'}`,

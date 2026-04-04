@@ -6279,3 +6279,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       fetchable through the direct conversation commands
     - note this for later operator follow-up, but do not make it the next
       default slice
+
+## 2026-04-03 - make team selector precedence explicit without changing runtime behavior
+
+- Current focus:
+  - agent/team layering checkpoint
+- What changed:
+  - added a shared config-model selector policy that makes the current rule
+    explicit:
+    - runtime selection uses `--profile`, then `--agent`, then config default
+    - `--team` remains planning-only
+  - wired that policy into `config show` and `config doctor`
+  - updated user docs so operator-facing config behavior matches the report
+    output
+- Verification:
+  - `pnpm vitest run tests/configModel.test.ts tests/cli/configCommand.test.ts tests/config.test.ts tests/schema/resolver.test.ts --maxWorkers 1`
+  - `pnpm run check`

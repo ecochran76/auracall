@@ -20,6 +20,7 @@ import {
   inspectConfigModel,
   projectConfigModel,
   resolveAgentSelection,
+  resolveRuntimeSelectionPolicy,
   resolveTeamSelection,
   resolveTeamRuntimeSelections,
   resolveRuntimeSelection,
@@ -524,6 +525,33 @@ describe('config model helpers', () => {
         explicitAgentId: 'analyst',
       }),
     ).toBe('default');
+  });
+
+  it('makes selector precedence explicit without letting team selection affect runtime resolution', () => {
+    expect(resolveRuntimeSelectionPolicy()).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'config',
+      teamSelectionAffectsRuntime: false,
+    });
+    expect(resolveRuntimeSelectionPolicy({ explicitAgentId: 'analyst', explicitTeamId: 'ops' })).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'agent',
+      teamSelectionAffectsRuntime: false,
+    });
+    expect(
+      resolveRuntimeSelectionPolicy({
+        explicitProfileName: 'default',
+        explicitAgentId: 'analyst',
+        explicitTeamId: 'ops',
+      }),
+    ).toEqual({
+      runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+      planningOnlySelectors: ['team'],
+      activeRuntimeSelector: 'profile',
+      teamSelectionAffectsRuntime: false,
+    });
   });
 
   it('projects the target config model from bridge-key config', () => {

@@ -75,6 +75,13 @@ export interface ResolvedTeamRuntimeSelections {
   exists: boolean;
 }
 
+export interface RuntimeSelectionPolicy {
+  runtimeSelectorPrecedence: ['profile', 'agent', 'config'];
+  planningOnlySelectors: ['team'];
+  activeRuntimeSelector: 'profile' | 'agent' | 'config';
+  teamSelectionAffectsRuntime: false;
+}
+
 export interface ProjectedConfigModel {
   activeRuntimeProfileId: string | null;
   activeBrowserProfileId: string | null;
@@ -411,6 +418,27 @@ export function resolveTeamRuntimeSelections(
       };
     }),
     exists: teamSelection.exists,
+  };
+}
+
+export function resolveRuntimeSelectionPolicy(options: {
+  explicitProfileName?: string | null;
+  explicitAgentId?: string | null;
+  explicitTeamId?: string | null;
+} = {}): RuntimeSelectionPolicy {
+  const explicitProfileName =
+    typeof options.explicitProfileName === 'string' && options.explicitProfileName.trim().length > 0
+      ? options.explicitProfileName.trim()
+      : null;
+  const explicitAgentId =
+    typeof options.explicitAgentId === 'string' && options.explicitAgentId.trim().length > 0
+      ? options.explicitAgentId.trim()
+      : null;
+  return {
+    runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
+    planningOnlySelectors: ['team'],
+    activeRuntimeSelector: explicitProfileName ? 'profile' : explicitAgentId ? 'agent' : 'config',
+    teamSelectionAffectsRuntime: false,
   };
 }
 
