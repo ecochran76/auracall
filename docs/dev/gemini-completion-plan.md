@@ -214,6 +214,9 @@ Current proof progress:
   - text: green
   - attachment: green
   - YouTube: green
+  - generate-image: not green on this pairing
+    - classify as a provider/account capability result first, not a shared
+      browser/runtime regression
   - required exported-cookie fallback on this Linux host because direct
     keyring-backed Chrome cookie reads returned zero Gemini auth cookies
   - current preferred fallback path is the runtime-profile-scoped export:
