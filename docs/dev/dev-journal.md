@@ -7150,3 +7150,34 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - decode the native `PCck7e` payload and decide whether the real gap is:
     - broader native request-sequence parity
     - or a point where Aura-Call should stop using the raw Gemini upload path
+
+## 2026-04-04 - deeper Gemini body capture still only exposed ESY5D
+
+- Current focus:
+  - Gemini native attachment transport investigation
+- What changed:
+  - tried multiple deeper request-body capture paths against the live Gemini
+    page after native upload and send:
+    - Puppeteer page-level request capture
+    - CDP `Network.getRequestPostData`
+    - CDP `Fetch.requestPaused`
+  - repeated those attempts on both:
+    - a reused live Gemini tab
+    - a fresh Gemini tab
+- Outcome:
+  - all body-oriented captures consistently exposed only the early:
+    - `batchexecute?rpcids=ESY5D`
+  - none of them surfaced decodable request bodies for the later native:
+    - attachment-backed `StreamGenerate`
+    - `batchexecute?rpcids=PCck7e`
+  - that means the request-sequence finding is still real, but the later
+    payloads are not reachable through the same page-target body capture
+    techniques that work for `ESY5D`
+- Next step:
+  - stop treating the native-upload gap as another ordinary page-request parity
+    problem
+  - either:
+    - capture the later Gemini requests at a broader browser target/session
+      boundary
+    - or treat this as evidence that native Gemini attachments need a
+      browser-driven path instead of more raw-client emulation

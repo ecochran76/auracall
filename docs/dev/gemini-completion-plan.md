@@ -308,6 +308,10 @@ Current recommendation:
     post-`StreamGenerate` `batchexecute` request (`rpcids=PCck7e`), so the
     remaining native-upload gap may depend on a broader request sequence rather
     than `StreamGenerate` parity alone
+  - deeper request-body capture attempts against the live page only surfaced
+    the early `ESY5D` payload and did not expose decodable bodies for the later
+    native `StreamGenerate` / `PCck7e` requests, so the next step is no longer
+    another small payload tweak by default
 
 ## Provisional feature matrix
 

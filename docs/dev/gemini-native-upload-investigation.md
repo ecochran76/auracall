@@ -187,6 +187,54 @@ Next useful investigation:
   - emulate more of the native sequence, or
   - take a different browser-driven upload path
 
+## 2026-04-04 payload-capture follow-up
+
+Several deeper live capture attempts tried to move from:
+
+- request-sequence observation
+
+to:
+
+- decoding the later request payloads themselves
+
+What was tried against the live `wsl-chrome-2 -> gemini` page:
+
+- Puppeteer page-level `request` capture
+- CDP `Network.getRequestPostData`
+- CDP `Fetch.requestPaused`
+- both on:
+  - a reused live Gemini tab
+  - a fresh Gemini tab
+
+Result:
+
+- all of those body-oriented captures consistently surfaced only the early:
+  - `batchexecute?rpcids=ESY5D`
+- they did not expose decodable request bodies for the later:
+  - attachment-backed `StreamGenerate`
+  - follow-up `batchexecute?rpcids=PCck7e`
+
+What that implies:
+
+- the earlier request-sequence evidence is still real:
+  - the native page does issue `StreamGenerate` and `PCck7e`
+- but those later requests are not currently reachable as ordinary page-target
+  POST bodies through the same capture techniques that were sufficient for
+  `ESY5D`
+- this is now evidence that the remaining protocol gap may involve:
+  - a different CDP target or session boundary
+  - service-worker or internal request mediation
+  - or a browser-native path that is no longer practical to mirror from the
+    current raw-client architecture
+
+Updated next step:
+
+- do not spend another slice on small `f.req` tweaks without broader evidence
+- if native upload parity stays the goal, the next honest investigation is:
+  - browser-wide target/session capture for the later Gemini requests
+- otherwise, treat this as a signal that native Gemini attachments may need a
+  browser-driven execution path rather than more raw-client emulation
+
 ## Explicit non-goals
 
 - do not add Gemini DOM upload automation yet

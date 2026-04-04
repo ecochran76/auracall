@@ -7435,3 +7435,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     service calls, do not keep refining only the first request in isolation;
     first determine whether the later requests are part of the minimum viable
     success path
+
+## 2026-04-04 - Gemini's later native-upload requests were not reachable through normal page-body capture
+
+- Symptom:
+  - once the native upload sequence was known to include:
+    - `ESY5D`
+    - attachment-backed `StreamGenerate`
+    - `PCck7e`
+  the next goal was to decode the later request payloads directly
+- Fix:
+  - tried several deeper live body-capture paths on `wsl-chrome-2 -> gemini`:
+    - Puppeteer page-level request capture
+    - CDP `Network.getRequestPostData`
+    - CDP `Fetch.requestPaused`
+  - repeated them on both a reused live tab and a fresh Gemini tab
+- Result:
+  - all of those body-oriented captures consistently surfaced only the early
+    `ESY5D` POST body
+  - they did not expose decodable request bodies for the later native
+    `StreamGenerate` or `PCck7e` calls
+- Durable lesson:
+  - when a provider's later native requests are visible in sequence capture but
+    not reachable through ordinary page-target body hooks, stop assuming the
+    remaining gap is just another page-level payload tweak; the next honest
+    options are broader browser-target capture or a different implementation
+    path
