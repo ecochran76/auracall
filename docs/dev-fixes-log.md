@@ -7491,3 +7491,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider's raw upload protocol drifts too far from the native live
     UI, pivot ordinary attachment-backed browser runs onto the real page
     instead of continuing low-yield protocol emulation
+
+## 2026-04-04 - Gemini text-upload success does not imply image-upload readiness on the native page
+
+- Symptom:
+  - after the browser-driven Gemini upload pivot went green for a real text
+    file, the next higher-value proof target was a native image upload on the
+    same `wsl-chrome-2 -> gemini` pairing
+- Fix:
+  - ran the image proof narrowly through the same browser-native path:
+    - `--browser-attachments always`
+    - PNG input
+    - one-sentence description prompt
+- Result:
+  - not green yet
+  - the run stayed unresolved beyond the earlier text-file proof window
+  - live Gemini inspection showed the prompt still present without a stable
+    attached-image preview or model answer
+- Durable lesson:
+  - once a browser-native upload path is green for text, re-prove image
+    separately; image attachment state and send behavior may still diverge on
+    the live provider page

@@ -298,6 +298,11 @@ Current recommendation:
 - next value should come from:
   - fresh proof on another native upload class like image, or
   - a concrete Gemini browser failure after the browser-driven pivot
+- current concrete gap after the pivot:
+  - first native image-upload re-proof on `wsl-chrome-2 -> gemini` did not go
+    green
+  - the run stayed unresolved and the live Gemini page did not show a stable
+    attached-image preview or model answer
 - the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by

@@ -7210,3 +7210,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - re-prove one higher-value native upload class, likely image, on the same
     pairing before widening Gemini work again
+
+## 2026-04-04 - first native Gemini image re-proof is still not green
+
+- Current focus:
+  - Gemini browser-native upload proof refresh
+- What changed:
+  - ran the next narrow proof cell on `wsl-chrome-2 -> gemini`:
+    - `--browser-attachments always`
+    - PNG input
+    - prompt: `Describe the uploaded image in one short sentence.`
+- Outcome:
+  - not green yet
+  - the run stayed unresolved well past the earlier text-file proof window
+  - live Gemini inspection showed the prompt still present without a stable
+    attached-image preview or model answer
+- Next step:
+  - keep the next Gemini slice bounded to this browser-native image path
+  - inspect why image attachment state is not stabilizing on the live page
+    before taking any broader Gemini work
