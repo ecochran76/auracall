@@ -178,6 +178,18 @@
         Gemini submit was tightened to require prompt-in-history evidence again;
         the current live boundary is back to the explicit composer/pending
         failure above, not a vague answer wait
+      - a newer kept-browser inspection changed the highest honest boundary
+        again:
+        - `--browser-keep-browser` now preserves the failed Gemini page for
+          inspection
+        - preserved live pages show the image really does stage, with:
+          - a visible `blob:` image
+          - a visible `Remove file gemini-native-upload-proof.png` button
+          - an empty prompt box, meaning submit never started yet
+        - the current failing phase is therefore image-preview readiness
+          timing/detection, not post-submit disappearance
+        - current live failure:
+          - `Waiting failed: 45000ms exceeded`
     - treat Gemini native image upload as an active browser hardening gap, not
       a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof

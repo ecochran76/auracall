@@ -7324,3 +7324,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - keep the next Gemini slice bounded to why image attachment state disappears
     before the prompt is durably committed on the owned page
+
+## 2026-04-04 - Gemini kept-browser inspection moved the boundary back to preview readiness
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - fixed `--browser-keep-browser` for Gemini native runs so the helper no
+    longer closes the only kept page in `finally`
+  - made Gemini prompt clearing attachment-safe instead of using blanket
+    select-all/backspace against the whole composer
+  - tightened image preview detection to avoid weak global blob matches
+  - then preserved a failed live page and inspected it directly with
+    `browser-tools`
+- Outcome:
+  - the image path is still not green
+  - but the preserved failed page showed the true current state:
+    - a visible `blob:` image is staged
+    - `Remove file gemini-native-upload-proof.png` is visible
+    - the Gemini prompt box is still empty
+  - that means the current failing phase is image preview readiness timing /
+    detection, not post-submit disappearance
+  - after raising the image preview budget, the latest explicit live failure is
+    now:
+    - `Waiting failed: 45000ms exceeded`
+- Next step:
+  - keep the next Gemini slice bounded to why `waitForAttachmentPreview(...)`
+    still misses the staged image/remove-file state during the live wait window

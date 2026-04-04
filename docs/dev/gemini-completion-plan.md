@@ -317,6 +317,17 @@ Current recommendation:
     submit was still accepting non-authoritative "committed" hints; that has
     since been tightened so the same image path now exits with the explicit
     composer/pending failure again
+  - the newest kept-browser inspection changed the highest honest boundary:
+    - `--browser-keep-browser` now preserves the failed Gemini page for direct
+      inspection
+    - preserved failure pages show the image actually stages:
+      - visible `blob:` image
+      - visible `Remove file ...` affordance
+      - empty prompt box
+    - that means the current failing phase is still image-preview readiness
+      timing/detection, not submit or answer extraction
+    - current live failure:
+      - `Waiting failed: 45000ms exceeded`
 - the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by

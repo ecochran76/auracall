@@ -380,9 +380,41 @@ async function waitForAttachmentPreview(
 ): Promise<void> {
   await page.waitForFunction(
     (names: string[], imageNames: string[]) => {
+      const prompt = document.querySelector('div[role="textbox"][aria-label="Enter a prompt for Gemini"]');
+      const send = document.querySelector('button[aria-label="Send message"]');
+      const locateComposerScope = () => {
+        if (!(prompt instanceof HTMLElement)) {
+          return document.body;
+        }
+        let current: HTMLElement | null = prompt;
+        let fallback: HTMLElement = prompt;
+        while (current && current !== document.body) {
+          const hasSend = Boolean(send && current.contains(send));
+          if (hasSend) {
+            fallback = current;
+            const hasAttachmentSignals =
+              current.querySelector('[data-test-id="file-preview"]') ||
+              current.querySelector('[aria-label*="Remove file"]') ||
+              Array.from(current.querySelectorAll('img')).some((el) => {
+                const src = String(el.getAttribute('src') ?? '');
+                if (!src.startsWith('blob:')) return false;
+                const rect = el.getBoundingClientRect();
+                return rect.width > 0 && rect.height > 0;
+              });
+            if (hasAttachmentSignals) {
+              return current;
+            }
+          }
+          current = current.parentElement;
+        }
+        return fallback;
+      };
+      const composer = locateComposerScope();
       const previews = Array.from(document.querySelectorAll('[data-test-id="file-preview"]'));
+      const scopedPreviews = previews.filter((el) => composer.contains(el));
       const buttons = Array.from(document.querySelectorAll('button,[role="button"]'));
-      const visibleImages = Array.from(document.querySelectorAll('img')).filter((el) => {
+      const scopedButtons = buttons.filter((el) => composer.contains(el));
+      const visibleImages = Array.from(composer.querySelectorAll('img')).filter((el) => {
         if (!(el instanceof HTMLElement)) return false;
         const style = globalThis.getComputedStyle?.(el);
         if (style && (style.display === 'none' || style.visibility === 'hidden')) return false;
@@ -393,8 +425,10 @@ async function waitForAttachmentPreview(
       });
       return names.every((name) => {
         const removeLabel = 'Remove file ' + name;
-        const hasRemove = buttons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel));
-        const hasPreview = previews.some((el) => {
+        const hasRemove =
+          scopedButtons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel)) ||
+          buttons.some((el) => String(el.getAttribute('aria-label') ?? '').includes(removeLabel));
+        const hasPreview = scopedPreviews.some((el) => {
           const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
           const previewTitle =
             String(el.getAttribute('title') ?? '') ||
@@ -427,6 +461,25 @@ async function waitForGeminiSendReady(page: Page, timeoutMs: number): Promise<vo
     { timeout: timeoutMs },
     GEMINI_SEND_BUTTON_SELECTOR,
   );
+}
+
+async function clearGeminiPromptText(page: Page): Promise<void> {
+  await page.evaluate((promptSelector: string) => {
+    const prompt = document.querySelector(promptSelector);
+    if (!(prompt instanceof HTMLElement)) {
+      return;
+    }
+    prompt.focus();
+    if (prompt instanceof HTMLTextAreaElement || prompt instanceof HTMLInputElement) {
+      prompt.value = '';
+      prompt.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+      prompt.dispatchEvent(new Event('change', { bubbles: true }));
+      return;
+    }
+    prompt.textContent = '';
+    prompt.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+    prompt.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+  }, GEMINI_PROMPT_SELECTOR);
 }
 
 async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: number): Promise<void> {
@@ -598,14 +651,14 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     const attachmentNames = attachmentPaths.map((filePath) => path.basename(filePath));
 
     await triggerGeminiFileChooser(page, attachmentPaths);
-    await waitForAttachmentPreview(page, attachmentNames, 20_000);
+    await waitForAttachmentPreview(
+      page,
+      attachmentNames,
+      attachmentPaths.some(isLikelyImagePath) ? 45_000 : 20_000,
+    );
 
     await page.click(GEMINI_PROMPT_SELECTOR);
-    const modifier = process.platform === 'darwin' ? 'Meta' : 'Control';
-    await page.keyboard.down(modifier);
-    await page.keyboard.press('KeyA');
-    await page.keyboard.up(modifier);
-    await page.keyboard.press('Backspace');
+    await clearGeminiPromptText(page);
     await page.keyboard.type(options.prompt);
     await submitGeminiPrompt(page, options.prompt, 20_000);
 
@@ -626,7 +679,9 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       userDataDir,
     };
   } finally {
-    await page?.close().catch(() => undefined);
+    if (!config.keepBrowser) {
+      await page?.close().catch(() => undefined);
+    }
     browser?.disconnect();
     if (!config.keepBrowser && wasChromeLaunchedByAuracall(chrome)) {
       try {

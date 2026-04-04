@@ -7617,3 +7617,42 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     ChatGPT/Grok in spirit: a prompt is not "committed" until the live page
     shows durable history evidence or a provider-native failure, not just
     transient composer state changes
+
+## 2026-04-04 - Gemini `--browser-keep-browser` must preserve the failed page, and image staging is slower than the old preview budget
+
+- Symptom:
+  - the first Gemini `--browser-keep-browser` reruns were not inspectable
+    because the helper closed the only owned page in `finally`, which could
+    take the kept Chrome instance down with it
+  - once that was fixed, preserved failure pages showed that native Gemini
+    image uploads were actually staging:
+    - visible `blob:` image
+    - visible `Remove file gemini-native-upload-proof.png`
+    - empty prompt box
+  - that proved the newer failure was not post-submit disappearance anymore;
+    the run was still timing out inside image-preview readiness
+- Fix:
+  - do not close the owned page when `keepBrowser` is set
+  - make Gemini prompt clearing attachment-safe instead of blanket select-all
+    across the whole composer
+  - tighten image preview detection so it no longer accepts weak global blob
+    state as proof of staging
+  - widen image preview wait from 20s to 45s after preserved-page inspection
+    showed Gemini can stage the image later than the old budget
+- Result:
+  - native Gemini image upload is still not green
+  - but the honest boundary moved again and the kept-browser path now works:
+    - current live failure:
+      - `Waiting failed: 45000ms exceeded`
+  - preserved failed pages still show the image staged, so the next slice is
+    now specifically about why `waitForAttachmentPreview(...)` misses that
+    state during the live wait window
+- Durable lesson:
+  - for hard browser surfaces, `--browser-keep-browser` must truly preserve the
+    failing page or you lose the only trustworthy evidence
+  - when native uploads look flaky, distinguish:
+    - upload not staged
+    - staged but not recognized
+    - recognized but not submitted
+    - submitted but unanswered
+    before changing the next phase
