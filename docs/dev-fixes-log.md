@@ -6835,3 +6835,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once an orchestration model is stable enough in docs, land the shared types
     before execution code so later implementation composes around one vocabulary
     instead of recreating local object shapes
+
+## 2026-04-03 - land team-run schemas next to the shared types, not inside the config schema stack
+
+- Symptom:
+  - the team-run entity types now existed, but there was still no validation
+    seam for later service code to share
+- Fix:
+  - added a dedicated `src/teams/schema.ts` module with read-only Zod schemas
+    matching the new team-run entity types
+  - kept those schemas local to the team orchestration seam instead of folding
+    them into the main config schema layer prematurely
+- Durable lesson:
+  - when introducing a future execution model, keep its entity validation close
+    to its own types first; do not expand the main config schema surface until
+    that model actually becomes a config/runtime contract

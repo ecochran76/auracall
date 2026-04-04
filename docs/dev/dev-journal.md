@@ -6364,3 +6364,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - land the matching team-run schema seam
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - added a read-only Zod schema module at
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    that mirrors the team-run types seam for:
+    - `TeamRun`
+    - `TeamRunStep`
+    - `TeamRunHandoff`
+    - `TeamRunSharedState`
+  - kept the schema seam local to the team module instead of mixing it into the
+    main config schema surface
+  - added focused coverage in
+    [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+  - `pnpm run check`
