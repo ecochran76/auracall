@@ -6980,3 +6980,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Read the uploaded file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`
+
+## 2026-04-04 - add MIME types to Gemini uploads and recheck live image attach
+
+- Current focus:
+  - Gemini real attachment transport
+- What changed:
+  - updated [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+    so Gemini uploads now send a MIME-typed blob instead of an untyped file
+  - added focused coverage in
+    [upload.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/upload.test.ts)
+    to prove a `.png` upload is posted as `image/png`
+- Outcome:
+  - focused Gemini tests are green
+  - live `wsl-chrome-2` forced-upload image proof still is not green:
+    - `It looks like the image didn't upload properly, so I can't see anything to describe! Please try attaching it again.`
+  - so the upstream MIME fix was worth landing, but it did not fully close the
+    live attachment gap on this pairing
+- Verification:
+  - `pnpm vitest run tests/gemini-web/upload.test.ts tests/gemini-web/executor.test.ts tests/gemini-web/parse.test.ts tests/gemini-web/image-download.test.ts tests/gemini-web/save-image-fallback.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`

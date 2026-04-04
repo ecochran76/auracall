@@ -265,7 +265,8 @@ Outcome:
   - native Gemini upload transport is not yet green on `wsl-chrome-2`:
     - forcing `--browser-attachments always` used the attachment path
     - but the uploaded text-file run returned `[NO CONTENT FOUND]`
-    - and the uploaded image run said the image did not come through
+    - and the uploaded image run stayed non-green even after adding upload MIME
+      types
   - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
     pairing, with file-input proof through the current Aura-Call bundling path
 

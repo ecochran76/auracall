@@ -46,6 +46,29 @@ const GEMINI_STREAM_GENERATE_URL =
 const GEMINI_UPLOAD_URL = 'https://content-push.googleapis.com/upload';
 const GEMINI_UPLOAD_PUSH_ID = 'feeds/mcudyrk2a4khkz';
 
+function guessGeminiUploadMimeType(fileName: string): string {
+  const ext = path.extname(fileName).toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    '.txt': 'text/plain',
+    '.md': 'text/markdown',
+    '.csv': 'text/csv',
+    '.json': 'application/json',
+    '.pdf': 'application/pdf',
+    '.doc': 'application/msword',
+    '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    '.xls': 'application/vnd.ms-excel',
+    '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    '.png': 'image/png',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.gif': 'image/gif',
+    '.svg': 'image/svg+xml',
+    '.webp': 'image/webp',
+  };
+
+  return mimeTypes[ext] || 'application/octet-stream';
+}
+
 function getNestedValue<T>(value: unknown, pathParts: Array<string | number>, fallback: T): T {
   let current: unknown = value;
   for (const part of pathParts) {
@@ -172,8 +195,9 @@ async function uploadGeminiFile(filePath: string, signal?: AbortSignal): Promise
   const absPath = path.resolve(process.cwd(), filePath);
   const data = await readFile(absPath);
   const fileName = path.basename(absPath);
+  const mimeType = guessGeminiUploadMimeType(fileName);
   const form = new FormData();
-  form.append('file', new Blob([data]), fileName);
+  form.append('file', new Blob([data], { type: mimeType }), fileName);
 
   const res = await fetch(GEMINI_UPLOAD_URL, {
     method: 'POST',

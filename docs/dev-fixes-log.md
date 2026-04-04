@@ -7277,3 +7277,24 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a CLI supports both inline file input and real provider attachment
     transport, prove and report those paths separately; green on one does not
     imply green on the other
+
+## 2026-04-04 - upstream Gemini MIME upload fix improved request correctness but did not close the live attachment gap
+
+- Symptom:
+  - the upstream sync notes already called out a low-scope Gemini upload fix:
+    adding MIME types to uploaded files
+  - local Gemini upload code still sent untyped blobs, which was a plausible
+    reason image uploads were not recognized
+- Fix:
+  - updated Gemini upload construction to send a MIME-typed blob based on the
+    file extension
+  - added a focused test proving `.png` uploads are posted as `image/png`
+  - reran the real `wsl-chrome-2` forced-upload image proof
+- Result:
+  - the request shape is now more correct
+  - but the live image upload still returned:
+    - `It looks like the image didn't upload properly, so I can't see anything to describe! Please try attaching it again.`
+- Durable lesson:
+  - when an upstream low-scope provider fix matches a live symptom, it is
+    still worth landing first, but do not assume request-shape correctness is
+    the whole failure without rerunning the live proof immediately
