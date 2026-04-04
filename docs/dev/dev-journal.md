@@ -6427,3 +6427,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - surface planned team runs in config inspection
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - extended
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `config show --team <name>` now exposes a read-only `plannedTeamRun`
+    block built from the new team-run model helpers
+  - the report now shows:
+    - planned run id
+    - ordered steps
+    - per-step resolved runtime/browser/service identity
+    - blocked unresolved members
+  - expanded
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
+  - `pnpm run check`

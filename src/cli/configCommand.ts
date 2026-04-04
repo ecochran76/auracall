@@ -1,4 +1,5 @@
 import type { ResolvedUserConfig } from '../config.js';
+import { createTeamRunBundleFromConfig } from '../teams/model.js';
 import {
   analyzeConfigModelBridgeHealth,
   inspectConfigModel,
@@ -103,6 +104,30 @@ export interface ConfigShowReport {
     legacyRuntimeProfilesPresent: boolean;
   };
   projectedModel: ProjectedConfigModel;
+  plannedTeamRun: {
+    teamRun: {
+      id: string;
+      teamId: string;
+      status: string;
+      trigger: string;
+      stepIds: string[];
+    };
+    steps: Array<{
+      id: string;
+      agentId: string;
+      runtimeProfileId: string | null;
+      browserProfileId: string | null;
+      service: 'chatgpt' | 'gemini' | 'grok' | null;
+      status: string;
+      order: number;
+      dependsOnStepIds: string[];
+    }>;
+    sharedState: {
+      id: string;
+      status: string;
+      historyCount: number;
+    };
+  } | null;
 }
 
 export interface RuntimeProfileBridgeSummary {
@@ -239,6 +264,45 @@ export function buildConfigShowReport(input: {
           };
         })()
       : null;
+  const plannedTeamRun =
+    typeof input.explicitTeamId === 'string' && input.explicitTeamId.trim().length > 0
+      ? (() => {
+          const bundle = createTeamRunBundleFromConfig({
+            config: input.rawConfig,
+            teamId: input.explicitTeamId.trim(),
+            runId: `plan:${input.explicitTeamId.trim()}`,
+            createdAt: '1970-01-01T00:00:00.000Z',
+            trigger: 'internal',
+            initialInputs: {
+              inspectionOnly: true,
+            },
+          });
+          return {
+            teamRun: {
+              id: bundle.teamRun.id,
+              teamId: bundle.teamRun.teamId,
+              status: bundle.teamRun.status,
+              trigger: bundle.teamRun.trigger,
+              stepIds: bundle.teamRun.stepIds,
+            },
+            steps: bundle.steps.map((step) => ({
+              id: step.id,
+              agentId: step.agentId,
+              runtimeProfileId: step.runtimeProfileId,
+              browserProfileId: step.browserProfileId,
+              service: step.service,
+              status: step.status,
+              order: step.order,
+              dependsOnStepIds: step.dependsOnStepIds,
+            })),
+            sharedState: {
+              id: bundle.sharedState.id,
+              status: bundle.sharedState.status,
+              historyCount: bundle.sharedState.history.length,
+            },
+          };
+        })()
+      : null;
 
   return {
     configPath: input.configPath,
@@ -275,6 +339,7 @@ export function buildConfigShowReport(input: {
     targetState: inspection.targetState,
     bridgeState: inspection.bridgeState,
     projectedModel: inspection.projectedModel,
+    plannedTeamRun,
   };
 }
 
@@ -442,6 +507,19 @@ export function formatConfigShowReport(report: ConfigShowReport): string {
     for (const member of report.selectedTeam.runtimeMembers) {
       lines.push(
         `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+      );
+    }
+  }
+  if (!report.plannedTeamRun) {
+    lines.push('Planned team run: (none)');
+  } else {
+    lines.push('Planned team run:');
+    lines.push(
+      `  - ${report.plannedTeamRun.teamRun.id} -> team ${report.plannedTeamRun.teamRun.teamId} -> status ${report.plannedTeamRun.teamRun.status} -> trigger ${report.plannedTeamRun.teamRun.trigger}`,
+    );
+    for (const step of report.plannedTeamRun.steps) {
+      lines.push(
+        `    step ${step.id} -> agent ${step.agentId} -> status ${step.status} -> runtime profile ${step.runtimeProfileId ?? '(none)'} -> browser profile ${step.browserProfileId ?? '(none)'} -> default service ${step.service ?? '(none)'} -> depends on ${formatList(step.dependsOnStepIds)}`,
       );
     }
   }

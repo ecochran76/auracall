@@ -100,6 +100,7 @@ describe('config show helpers', () => {
         agents: [],
         teams: [],
       },
+      plannedTeamRun: null,
     });
   });
 
@@ -163,6 +164,7 @@ describe('config show helpers', () => {
         agents: [],
         teams: [],
       },
+      plannedTeamRun: null,
     });
 
     expect(text).toContain('AuraCall runtime profile: default');
@@ -178,6 +180,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Resolved agents: (none)');
     expect(text).toContain('Resolved teams: (none)');
     expect(text).toContain('Selected team runtime plan: (none)');
+    expect(text).toContain('Planned team run: (none)');
     expect(text).toContain('browser profiles -> browserProfiles (missing)');
     expect(text).toContain('AuraCall runtime profiles -> runtimeProfiles (missing)');
     expect(text).toContain('browser profiles -> browserFamilies (present)');
@@ -269,6 +272,7 @@ describe('config show helpers', () => {
     ]);
     expect(report.resolvedTeams).toEqual([]);
     expect(report.selectedTeam).toBeNull();
+    expect(report.plannedTeamRun).toBeNull();
 
     const text = formatConfigShowReport(report);
     expect(text).toContain('Active runtime selector: agent');
@@ -279,6 +283,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Resolved teams: (none)');
     expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Selected team runtime plan: (none)');
+    expect(text).toContain('Planned team run: (none)');
   });
 
   it('surfaces resolved teams directly in config show output', () => {
@@ -340,6 +345,7 @@ describe('config show helpers', () => {
       },
     ]);
     expect(report.selectedTeam).toBeNull();
+    expect(report.plannedTeamRun).toBeNull();
 
     const text = formatConfigShowReport(report);
     expect(text).toContain('Resolved teams:');
@@ -349,6 +355,7 @@ describe('config show helpers', () => {
     expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
     expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Selected team runtime plan: (none)');
+    expect(text).toContain('Planned team run: (none)');
   });
 
   it('surfaces selected team planning without changing the active runtime selection', () => {
@@ -439,6 +446,52 @@ describe('config show helpers', () => {
       ],
       exists: true,
     });
+    expect(report.plannedTeamRun).toEqual({
+      teamRun: {
+        id: 'plan:ops',
+        teamId: 'ops',
+        status: 'planned',
+        trigger: 'internal',
+        stepIds: ['plan:ops:step:1', 'plan:ops:step:2', 'plan:ops:step:3'],
+      },
+      steps: [
+        {
+          id: 'plan:ops:step:1',
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          status: 'planned',
+          order: 1,
+          dependsOnStepIds: [],
+        },
+        {
+          id: 'plan:ops:step:2',
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          service: null,
+          status: 'blocked',
+          order: 2,
+          dependsOnStepIds: ['plan:ops:step:1'],
+        },
+        {
+          id: 'plan:ops:step:3',
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          service: 'grok',
+          status: 'planned',
+          order: 3,
+          dependsOnStepIds: ['plan:ops:step:2'],
+        },
+      ],
+      sharedState: {
+        id: 'plan:ops:state',
+        status: 'active',
+        historyCount: 0,
+      },
+    });
 
     const text = formatConfigShowReport(report);
     expect(text).toContain('Active runtime selector: config');
@@ -446,6 +499,9 @@ describe('config show helpers', () => {
     expect(text).toContain('Selected team runtime plan:');
     expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
     expect(text).toContain('member missing-agent -> missing -> runtime profile (none) -> browser profile (none) -> default service (none)');
+    expect(text).toContain('Planned team run:');
+    expect(text).toContain('plan:ops -> team ops -> status planned -> trigger internal');
+    expect(text).toContain('step plan:ops:step:2 -> agent missing-agent -> status blocked -> runtime profile (none) -> browser profile (none) -> default service (none) -> depends on plan:ops:step:1');
   });
 
   it('builds and formats a runtime-profile inventory report', () => {

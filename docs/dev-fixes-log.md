@@ -6880,3 +6880,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when bridging inspection/planning data into a future execution model, keep
     unresolved members visible in the planned output so operators can see why a
     team is not fully runnable before any service execution starts
+
+## 2026-04-03 - expose planned team runs in config inspection before service mode exists
+
+- Symptom:
+  - the planner seam could now build planned team runs, but there was still no
+    operator-facing inspection surface showing that bundle directly
+- Fix:
+  - `config show --team <name>` now includes a read-only planned team-run view
+    built from the shared team model helpers
+  - blocked unresolved members remain visible in that plan
+- Durable lesson:
+  - once a future execution model can be planned deterministically, surface that
+    plan in inspection output before adding runtime behavior so operators can
+    verify the intended orchestration shape early
