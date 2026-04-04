@@ -5,6 +5,30 @@ Aura-Call supports Gemini in two distinct ways:
 1. **Gemini API mode** (`--engine api`) via `GEMINI_API_KEY`
 2. **Gemini web (cookie) mode** (`--engine browser`) via your signed-in Chrome cookies at `gemini.google.com` (no API key required)
 
+## Supported feature matrix
+
+This matrix is the current intended support baseline. It separates what is
+implemented from what is merely plausible.
+
+| Capability | Gemini API | Gemini web/browser | Notes |
+| --- | --- | --- | --- |
+| Text generation | Supported | Supported | Core happy path on both surfaces. |
+| Streaming text | Supported | N/A | API adapter supports streaming; Gemini web executor returns a completed browser result. |
+| Attachments/files | Not first-class today | Supported | Web path supports uploaded files; API path is not yet documented as a first-class attachment surface here. |
+| YouTube input | Not documented | Supported | Web executor has an explicit `--youtube` flow. |
+| Generate image | Not documented | Supported | Web/browser path supports `--generate-image`. |
+| Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
+| Search/tooling | Partially supported | Not documented | API maps `web_search_preview` to Gemini `googleSearch`; broader Gemini-side search is not yet a committed product surface. |
+| Gem URL targeting | N/A | Supported | Via `--gemini-url` or `browser.geminiUrl`. |
+| Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
+| Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
+
+Deliberately not implied by this matrix:
+
+- parity between Gemini API and Gemini web on every modality
+- provider-side search beyond the current API tool mapping
+- a broad rewrite onto the newest ChatGPT/Grok browser-service/provider seams
+
 ## Usage (API)
 
 1. **Get an API Key:** Obtain a key from [Google AI Studio](https://aistudio.google.com/).
@@ -76,3 +100,18 @@ Notes:
 - Unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`
 - Live (API): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
 - Live (Gemini web/cookies): `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts`
+
+Current intended live-proof surfaces for Gemini web:
+
+- text
+- attachment
+- YouTube
+- generate-image
+- edit-image
+
+If a Gemini gap is discovered, first decide whether it is:
+
+- a true capability gap
+- a proof/documentation gap
+- or an architecture-alignment gap with shared Aura-Call browser/runtime
+  semantics

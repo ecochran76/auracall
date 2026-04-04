@@ -6976,3 +6976,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider already has partial inherited support, start with an
     explicit completion plan that distinguishes real capability gaps from
     architecture-alignment gaps before choosing code slices
+
+## 2026-04-03 - make Gemini support explicit before picking implementation slices
+
+- Symptom:
+  - Gemini already had meaningful inherited support, but the supported surface
+    area was still partly implicit
+  - without a concrete support/proof matrix, later Gemini slices would risk
+    conflating:
+    - implemented capability
+    - intended support
+    - architecture-alignment gaps
+- Fix:
+  - updated user/dev docs to publish a concrete Gemini matrix across:
+    - API
+    - Gemini web/browser
+  - explicitly marked which surfaces are:
+    - supported
+    - partially supported
+    - not yet committed/documented
+- Durable lesson:
+  - for inherited provider support, publish the feature/proof matrix before
+    coding so the next implementation slice is chosen against an explicit
+    support baseline instead of memory

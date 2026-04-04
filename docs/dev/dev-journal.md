@@ -6538,3 +6538,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
 - Verification:
   - docs/planning only
+
+## 2026-04-03 - make the Gemini support/proof matrix explicit
+
+- Current focus:
+  - Gemini planning / docs
+- What changed:
+  - updated [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+    with a concrete Gemini feature matrix covering:
+    - API vs Gemini web/browser
+    - text
+    - streaming
+    - attachments
+    - YouTube
+    - generate-image
+    - edit-image
+    - search/tooling
+    - Gem URL targeting
+    - cookie/login flow
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    to pin the current Gemini support/proof baseline and the intended live-proof
+    target surfaces
+  - updated
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to mark Slice 1 complete enough and point the next Gemini work at
+    operator/runtime alignment
+- Verification:
+  - docs/planning only

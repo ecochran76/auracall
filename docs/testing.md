@@ -3,6 +3,22 @@
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
 - Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-refactor-plan.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
+- Gemini support matrix checkpoint:
+  - API:
+    - text: supported
+    - streaming: supported
+    - search/tooling: partially supported through `web_search_preview -> googleSearch`
+    - attachments/files: not yet documented as a first-class Gemini API surface
+    - image generation/editing: not yet documented as a first-class Gemini API surface
+  - Gemini web/browser:
+    - text: supported
+    - attachments: supported
+    - YouTube: supported
+    - generate-image: supported
+    - edit-image: supported
+    - Gem URL targeting: supported
+    - cookie/login flow: supported
+  - treat unsupported or undocumented cells as non-commitments until the Gemini completion plan advances them.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).
 - Grok acceptance bar: run `DISPLAY=:0.0 pnpm test:grok-acceptance` on the authenticated WSL Grok profile before calling Grok browser support "fully functional." The script executes the canonical WSL-primary checklist from `docs/dev/smoke-tests.md` and covers project CRUD, instructions/files CRUD, project-knowledge cache freshness, account-wide `/files` CRUD plus `account-files` cache freshness, project conversation CRUD, root/non-project conversation-file parity, append-only `conversations files add`, markdown capture, the medium-file guard, and cleanup. If Grok's root conversation list lags after a browser-file prompt, the runner now logs that and falls back to the fresh browser session `conversationId` so the rest of the CRUD path still gets validated on the real new conversation.
@@ -71,7 +87,15 @@
 - Integrated WSL -> Windows Chrome smoke: `AURACALL_WSL_CHROME=windows AURACALL_BROWSER_PROFILE_DIR='/mnt/c/Users/<you>/AppData/Local/AuraCall/browser-profiles/windows-smoke/grok' pnpm tsx bin/auracall.ts --engine browser --browser-target grok --browser-chrome-path '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe' --browser-cookie-path '/mnt/c/Users/<you>/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies' --browser-bootstrap-cookie-path '/mnt/c/Users/<you>/AppData/Local/Google/Chrome/User Data/Default/Network/Cookies' --model grok --prompt "Reply exactly with: windows chrome just works" --wait --verbose --force`. Aura-Call now lets Windows choose the DevTools port and discovers the real endpoint from `DevToolsActivePort` automatically.
 - On WSL, browser/profile paths can now be supplied as `/mnt/c/...`, `C:\...`, or WSL absolute paths like `/home/<you>/.auracall/...`; Aura-Call normalizes them before resolving managed profile roots and Chrome `--user-data-dir` flags.
 - Live API smokes: `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:live` (excludes OpenAI pro), `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:pro` (OpenAI pro live). Expect real usage/cost.
+- Gemini API live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
 - Gemini web (cookie) live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts` (requires a signed-in Chrome profile at `gemini.google.com`).
+- Gemini web live-proof target surfaces:
+  - text
+  - attachment
+  - YouTube
+  - generate-image
+  - edit-image
+- Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.
   - If `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-<profile>.json` shows a long active cooldown, wait for it to clear before rerunning.

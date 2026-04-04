@@ -132,6 +132,16 @@ Acceptance:
 - docs aligned
 - no code required
 
+Status:
+- completed enough on 2026-04-03 via:
+  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+
+Outcome:
+- the supported Gemini matrix is now explicit
+- the next Gemini slice should be operator/runtime alignment, not another
+  abstract support audit
+
 ### Slice 2: Align Gemini operator/runtime semantics with current Aura-Call terms
 
 Goal:
