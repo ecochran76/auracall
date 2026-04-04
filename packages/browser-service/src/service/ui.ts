@@ -203,6 +203,16 @@ export type BlockingSurfaceMatch = {
   details?: Record<string, unknown> | null;
 };
 
+export type ActionPhaseDiagnosticsEntry<T> = {
+  phase: string;
+  value: T;
+};
+
+export type CaptureActionPhaseDiagnosticsOptions<T> = {
+  phases: readonly string[] | readonly { name: string; pauseMs?: number }[];
+  capture: (phase: string) => Promise<T>;
+};
+
 export type WithBlockingSurfaceRecoveryOptions<TMatch extends BlockingSurfaceMatch = BlockingSurfaceMatch> = {
   inspect: () => Promise<TMatch | null>;
   dismiss?: (match: TMatch) => Promise<void>;
@@ -1221,6 +1231,20 @@ export async function collectUiDiagnostics(
       context: options.context,
     }
   );
+}
+
+export async function captureActionPhaseDiagnostics<T>(
+  options: CaptureActionPhaseDiagnosticsOptions<T>,
+): Promise<Record<string, T>> {
+  const results: Record<string, T> = {};
+  for (const phaseEntry of options.phases) {
+    const phase = typeof phaseEntry === 'string' ? { name: phaseEntry, pauseMs: 0 } : phaseEntry;
+    results[phase.name] = await options.capture(phase.name);
+    if ((phase.pauseMs ?? 0) > 0) {
+      await new Promise((resolve) => setTimeout(resolve, phase.pauseMs));
+    }
+  }
+  return results;
 }
 
 export async function collectAnchoredActionDiagnostics(

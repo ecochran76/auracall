@@ -7,6 +7,7 @@ import { openOrReuseChromeTarget } from '../../packages/browser-service/src/chro
 import { resolveBrowserConfig } from '../browser/config.js';
 import { bootstrapManagedProfile } from '../browser/profileStore.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
+import { captureActionPhaseDiagnostics } from '../browser/service/ui.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger } from '../browser/types.js';
 
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
@@ -906,7 +907,12 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     await page.click(GEMINI_PROMPT_SELECTOR);
     await clearGeminiPromptText(page);
     await page.keyboard.type(options.prompt);
-    const preSubmitDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+    const activePage = page;
+    const phaseDiagnostics = await captureActionPhaseDiagnostics({
+      phases: ['pre-submit'],
+      capture: async () => readGeminiAttachmentSubmitDiagnostics(activePage, options.prompt),
+    });
+    const preSubmitDiagnostics = phaseDiagnostics['pre-submit'];
     logger?.(
       `[gemini-native] pre-submit diagnostics: ${JSON.stringify({
         promptText: normalizeWhitespace(preSubmitDiagnostics.promptText),
@@ -920,7 +926,8 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     await submitGeminiPrompt(page, options.prompt, 20_000, {
       preferButtonFirst: attachmentPaths.length > 0,
     });
-    const postSubmitDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+    phaseDiagnostics['post-submit'] = await readGeminiAttachmentSubmitDiagnostics(activePage, options.prompt);
+    const postSubmitDiagnostics = phaseDiagnostics['post-submit'];
     logger?.(
       `[gemini-native] post-submit diagnostics: ${JSON.stringify({
         promptText: normalizeWhitespace(postSubmitDiagnostics.promptText),
@@ -937,7 +944,8 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       timeoutMs: options.timeoutMs,
     });
     if (attachmentPaths.some(isLikelyImagePath) && isGeminiAttachmentBlindAnswer(answerText)) {
-      const finalDiagnostics = await readGeminiAttachmentSubmitDiagnostics(page, options.prompt);
+      phaseDiagnostics.final = await readGeminiAttachmentSubmitDiagnostics(activePage, options.prompt);
+      const finalDiagnostics = phaseDiagnostics.final;
       throw new Error(
         `Gemini returned an attachment-blind answer after image submit. Diagnostics: ${JSON.stringify({
           preSubmit: {

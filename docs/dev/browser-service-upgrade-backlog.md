@@ -274,6 +274,15 @@ Candidate extraction:
 - `captureActionPhaseDiagnostics(...)`
 - `formatActionPhaseFailure(...)`
 
+Progress:
+- first package extraction is now live:
+  - `captureActionPhaseDiagnostics(...)`
+- current first adopter:
+  - Gemini native attachment submit diagnostics
+- still remaining:
+  - decide whether generic failure-message formatting really belongs in the
+    package or should stay provider-local
+
 ### B. Attachment readiness should be multi-signal, not single-selector
 
 Problem:

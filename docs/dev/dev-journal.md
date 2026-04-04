@@ -7548,3 +7548,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Outcome:
   - the Gemini image slice now contributes concrete browser-service follow-up
     work instead of only a provider-local fix trail
+
+## 2026-04-04 - First Gemini browser-service extraction landed
+
+- Current focus:
+  - extract the smallest proven reusable seam from Gemini native attachment
+    debugging into `packages/browser-service`
+- What changed:
+  - added package-owned:
+    - `captureActionPhaseDiagnostics(...)`
+  - routed Gemini native attachment submit diagnostics through that helper
+    instead of keeping the phase capture shape entirely provider-local
+  - updated the browser-service backlog to mark that extraction as live
+- Why this slice:
+  - phase-aware diagnostics were the first Gemini lesson that was both:
+    - clearly reusable
+    - mechanical enough to extract without prematurely moving provider-specific
+      attachment semantics into browser-service
+- Next step:
+  - keep the next browser-service extraction candidate narrower than full
+    attachment semantics
+  - likely next:
+    - shared attachment-signal polling contract
+    - or ordered upload-surface fallback mechanics

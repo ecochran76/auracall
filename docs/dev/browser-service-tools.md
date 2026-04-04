@@ -196,6 +196,14 @@ Current active extraction plan:
   - Use `context` for intended trigger labels, interaction strategies, or root
     scopes so failure payloads explain what the automation was trying to do.
 
+- `captureActionPhaseDiagnostics({ phases, capture })`
+  - Captures named diagnostic snapshots like `pre-submit`, `post-submit`, and
+    `final` in a stable shared shape.
+  - Use this when a browser action can look successful at one phase and still
+    fail later, especially for attachment-backed submits.
+  - Keep provider-specific selectors, signal readers, and semantic
+    classification outside the package.
+
 - `dismissOverlayRoot(Runtime, rootSelector, options)`
   - Dismisses one specific overlay root by stable selector/handle instead of
     closing the first visible dialog on the page.

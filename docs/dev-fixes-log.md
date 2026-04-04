@@ -7819,3 +7819,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     interchangeable for model-visible image association
   - if an image stages but the model answers as if no image exists, check the
     uploader path before spending more time on submit timing
+
+## 2026-04-04 - Gemini phase-aware submit diagnostics now have a package-owned seam
+
+- Context:
+  - Gemini image debugging produced the first clearly reusable lesson for
+    browser-service:
+    - attachment-backed actions need named pre/post/final diagnostics
+  - keeping that shape provider-local would make the next provider rediscover
+    the same wrapper
+- Fix:
+  - added package-owned:
+    - `captureActionPhaseDiagnostics(...)`
+    in `packages/browser-service/src/service/ui.ts`
+  - Gemini native attachment submit diagnostics now use that helper through the
+    Aura-Call browser-service shim
+- Result:
+  - the first 2026-04-04 Gemini browser-service backlog item is now live code,
+    not just a note
+  - provider-specific selectors and attachment semantics remain local to Gemini
+- Durable lesson:
+  - extract the mechanical phase wrapper first
+  - leave provider-specific signal reading and semantic false-success
+    classification local until a second real provider proves the same shape

@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
   armDownloadCapture,
+  captureActionPhaseDiagnostics,
   collectAnchoredActionDiagnostics,
   readDownloadCapture,
   clickRevealedRowAction,
@@ -51,6 +52,25 @@ function createRuntime(values: unknown[]) {
 }
 
 describe('browser-service ui wait helpers', () => {
+  test('captureActionPhaseDiagnostics captures named phases in order', async () => {
+    const seen: string[] = [];
+
+    const result = await captureActionPhaseDiagnostics({
+      phases: ['pre-submit', 'post-submit', 'final'],
+      capture: async (phase) => {
+        seen.push(phase);
+        return { phase, ok: true };
+      },
+    });
+
+    expect(seen).toEqual(['pre-submit', 'post-submit', 'final']);
+    expect(result).toEqual({
+      'pre-submit': { phase: 'pre-submit', ok: true },
+      'post-submit': { phase: 'post-submit', ok: true },
+      final: { phase: 'final', ok: true },
+    });
+  });
+
   test('waitForPredicate returns attempts, elapsed time, and truthy value', async () => {
     const runtime = createRuntime([null, false, { ready: true }]);
 
