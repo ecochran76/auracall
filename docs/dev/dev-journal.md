@@ -6494,3 +6494,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - fold broader platform ideas into the roadmap before more service code
+
+- Current focus:
+  - roadmap / sequencing
+- What changed:
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    to add explicit future platform tracks for:
+    - service mode and runner orchestration
+    - durable state and account mirroring
+    - external control surfaces (`API`, `MCP`)
+    - retrieval and search
+    - provider expansion
+    - agent orchestration and local actions
+  - updated
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    with:
+    - the new platform-priority rationale
+    - `Now / Soon / Later` buckets
+    - a service/runtime foundation planning slice above further team-service code
+- Verification:
+  - docs/planning only

@@ -144,6 +144,19 @@ maintenance/proof-planning mode:
 - only fix a new live blocker if it is concrete
 - do not let side findings automatically become the next coding slice
 
+The team/service line is now also in a good checkpoint:
+
+- read-only team planning is explicit in docs and code
+- inspection/doctor both show the same planned team-run bundle
+- one service-ready, still non-executing seam now exists for:
+  - `stepsById`
+  - runnable/waiting/blocked classification
+  - missing dependency reporting
+
+That means the next move should not be more blind team-helper growth. It
+should be a deliberate roadmap expansion around the future service/runtime
+layer that will sit underneath those plans.
+
 ## Execution principle
 
 - Work in small, bounded slices.
@@ -153,10 +166,85 @@ maintenance/proof-planning mode:
   - do not keep polishing that area just because it is warm.
 - Do the config-model work before agent or team implementation.
 - Avoid broad code-symbol renames until the target config model is explicit.
+- When broad new ideas appear, capture them as explicit roadmap tracks before
+  implementation starts drifting across multiple layers.
+
+## Broader roadmap inputs now captured
+
+The next platform tracks are now explicit enough to guide sequencing:
+
+1. Service mode and runner orchestration
+2. Durable state and account mirroring
+3. External control surfaces
+   - API
+   - MCP
+4. Agent orchestration and local actions
+5. Retrieval and search
+6. Provider expansion
+
+Short rationale:
+- service mode, runners, heartbeats, and durable state are the substrate for
+  almost every later multi-agent/service feature
+- API and MCP should sit over one execution core rather than invent separate
+  models
+- local actions and agent-to-agent communication need explicit handoff/state
+  semantics underneath them
+- retrieval and provider expansion are important, but they should not outrun
+  the service/runtime foundation
+
+## Now / Soon / Later
+
+### Now
+
+- service mode and runner orchestration
+- durable state and account mirroring
+- small team-service foundation seams that support those layers without yet
+  implementing runners
+
+### Soon
+
+- external control surfaces:
+  - API
+  - MCP
+- agent orchestration and local actions
+
+### Later
+
+- retrieval and search:
+  - provider-side search
+  - local lexical search
+  - local semantic search
+- provider expansion:
+  - full Gemini
+  - Claude
+  - Grok image
 
 ## Active slice plan
 
-### 1) Agent/team-ready config layering
+### 1) Service/runtime foundation planning
+
+Goal: prepare the future service/runtime layer underneath planned team runs
+without starting runner execution yet.
+
+Deliverables
+- one roadmap-aligned prioritization for:
+  - service mode
+  - runners/workers
+  - heartbeats
+  - durable state
+  - account mirroring
+- one explicit rule set describing what remains owned by:
+  - team orchestration
+  - service/runtime
+  - provider/account affinity
+- one bounded non-executing code seam at a time only when it directly supports
+  those later layers
+
+Acceptance
+- roadmap and execution docs point at the same next platform tracks
+- no runner/service behavior lands by accident during planning-only slices
+
+### 2) Agent/team-ready config layering
 
 Goal: define the next behavior-facing layer that composes on top of browser
 profiles and AuraCall runtime profiles without collapsing those boundaries
@@ -210,7 +298,7 @@ Acceptance
 - reserved agent/team config is visible and validated in inspection/doctor
   surfaces before any execution semantics land
 
-### 2) Non-breaking schema/runtime seam
+### 3) Non-breaking schema/runtime seam
 
 Goal: make the runtime/config code ready for future `agent -> runtimeProfile`
 composition without starting agent execution yet.
@@ -231,7 +319,7 @@ Acceptance
   - `default`
   - `wsl-chrome-2`
 
-### 3) Browser reliability maintenance
+### 4) Browser reliability maintenance
 
 Goal: keep the current browser path stable while the config-model work becomes
 the primary track.
@@ -248,7 +336,7 @@ Acceptance
 - relevant focused tests green
 - one targeted live smoke only if the touched fix affects real browser flow
 
-### 4) Service-volatility maintenance
+### 5) Service-volatility maintenance
 
 Goal: keep low-risk manifest work moving only when there is a clear, declarative
 candidate.

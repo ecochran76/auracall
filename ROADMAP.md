@@ -6,7 +6,11 @@
 
 Status: in progress
 
-Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for the active config-model work plus any bounded browser reliability follow-ups.
+Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for:
+
+- the active team/service-foundation work
+- any bounded config-model follow-through
+- any bounded browser reliability maintenance follow-ups
 
 ### Browser Profile Family Refactor
 Status: in progress
@@ -150,6 +154,155 @@ Browser reliability maintenance note:
 - treat remaining ChatGPT work as maintenance/proof-planning by default
 - record side findings in durable docs and only reopen coding when a concrete
   blocker is demonstrated
+
+### Service Mode And Runner Orchestration
+Status: planned
+
+Aura-Call now has enough team planning structure that the next major
+architecture question is not config shape. It is the service/runtime layer
+underneath future team execution.
+
+Primary goals:
+- run Aura-Call as a service
+- add durable runners/workers
+- add heartbeats and runner liveness
+- define queue/lease ownership cleanly
+- keep runner/service execution separate from team orchestration intent
+
+Current checkpoint:
+- read-only team execution planning is in place:
+  - `teamRun`
+  - `step`
+  - `handoff`
+  - `sharedState`
+- one non-executing service-ready seam now exists for:
+  - step indexing
+  - runnable/waiting/blocked classification
+  - missing dependency reporting
+
+Sequencing rule:
+- do not introduce real runner behavior until the durable state and account
+  model are explicit enough to support replay, postmortem, and multi-runner
+  coordination
+
+### Durable State And Account Mirroring
+Status: planned
+
+The future runner/service layer will need storage beyond the current
+single-process/session model. That includes both orchestration state and a
+better mirrored view of provider/browser account identity.
+
+Primary goals:
+- Redis/Postgres upgrade path for workers/runners
+- durable queue/run/step/handoff persistence
+- better DB mirroring of LLM service accounts
+- preserve browser/account affinity constraints explicitly
+- support replay/debug without depending only on live browser/session state
+
+Important note:
+- this is not just a database upgrade
+- it is the ownership model for:
+  - runs
+  - steps
+  - handoffs
+  - service accounts
+  - browser-bearing execution affinity
+
+### External Control Surfaces
+Status: planned
+
+Aura-Call should eventually expose the same orchestration/runtime core through
+multiple control surfaces instead of teaching each interface a different
+execution model.
+
+Primary goals:
+- API surface
+- MCP surface
+- shared execution semantics under both
+- shared auth/audit/replay model under both
+
+Sequencing rule:
+- do not let API or MCP invent a different team/run model from the service
+  layer
+
+### Retrieval And Search
+Status: planned
+
+Aura-Call will need both provider-side and local retrieval capabilities as the
+agent/team layer grows more capable.
+
+Primary goals:
+- add LLM-side/provider-side search support
+- add local lexical search over the cache/database
+- add local semantic search over the cache/database
+- later support routing/fusion between remote and local retrieval
+
+Important split:
+- provider-side search belongs to service/provider capabilities
+- local lexical/semantic search belongs to Aura-Call's own state layer
+
+### Provider Expansion
+Status: planned
+
+Provider coverage should continue to expand, but it should not drive the
+service/runtime architecture by itself.
+
+Primary goals:
+- full Gemini implementation
+- Claude implementation
+- Grok image support
+
+Sequencing rule:
+- prefer building shared runtime/orchestration layers first, then expanding
+  providers onto those layers
+
+### Agent Orchestration And Local Actions
+Status: planned
+
+Teams are expected to become the orchestration layer for multi-agent work, but
+that later track must also cover explicit handoffs, local execution, and
+cross-agent coordination semantics.
+
+Primary goals:
+- agent-to-agent communication
+- explicit handoff/state passing
+- local actions
+  - remote LLM composes local instructions
+  - local machine executes them
+  - Aura-Call packages results back into the run
+
+Safety note:
+- local actions need an explicit later policy for:
+  - allowed execution scope
+  - approval/consent
+  - result packaging
+  - audit trail
+  - environment isolation
+
+## Priority Buckets
+
+### Now
+
+- Service mode and runner orchestration
+- Durable state and account mirroring
+- bounded config/team-service foundation work that supports those layers
+
+### Soon
+
+- External control surfaces:
+  - API
+  - MCP
+- Agent orchestration and local actions
+
+### Later
+
+- Retrieval and search
+  - provider-side search
+  - local lexical/semantic search
+- Provider expansion
+  - full Gemini
+  - Claude
+  - Grok image
 
 ### Service Volatility Externalization
 Status: planned

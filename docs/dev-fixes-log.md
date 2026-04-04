@@ -6932,3 +6932,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a future orchestration plan exists, land one service-ready envelope
     before implementing runners so dispatch semantics do not emerge differently
     in each later service surface
+
+## 2026-04-03 - capture broad platform ideas in the roadmap before they fragment across slices
+
+- Symptom:
+  - several future ideas had become clear at once:
+    - service mode
+    - runners/workers
+    - heartbeats
+    - Redis/Postgres durability
+    - account mirroring
+    - API/MCP
+    - retrieval
+    - provider expansion
+    - local actions
+  - without capturing them centrally, later implementation would risk drifting
+    into whichever adjacent track happened to be warm
+- Fix:
+  - updated roadmap/execution docs to group those ideas into explicit platform
+    tracks with priority buckets:
+    - `Now`
+    - `Soon`
+    - `Later`
+- Durable lesson:
+  - when the architecture reaches a pause point, widen the roadmap explicitly
+    before more code lands so later slices can be chosen against named tracks
+    instead of local momentum
