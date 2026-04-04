@@ -7527,3 +7527,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Lesson:
   - the image-association bug was in the uploader path, not in submit/commit or
     staged-ready timing
+
+## 2026-04-04 - Gemini yielded new browser-service backlog items
+
+- Current focus:
+  - convert the reusable Gemini image-debugging lessons into package-level
+    backlog guidance instead of leaving them provider-local
+- What was recorded:
+  - attachment-backed actions need phase-aware diagnostics:
+    - `staged`
+    - `post-submit`
+    - `final`
+  - attachment readiness should be modeled as multi-signal evidence, not one
+    selector
+  - ordered upload-surface fallback is the same kind of package-owned mechanic
+    as menu/action-surface fallback
+  - post-submit semantic false-success verification needs a first-class hook
+- Where:
+  - `docs/dev/browser-service-upgrade-backlog.md`
+- Outcome:
+  - the Gemini image slice now contributes concrete browser-service follow-up
+    work instead of only a provider-local fix trail

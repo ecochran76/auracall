@@ -236,6 +236,133 @@ Progress:
   - deciding whether anchor-near-trigger scoring repeats enough to move out of
     adapters entirely
 
+## New reusable learnings from Gemini native attachment work (2026-04-04)
+
+The Gemini native image debugging line exposed a different class of reusable
+browser workflow lesson than the earlier menu/dialog work:
+
+- the provider can stage an attachment successfully
+- the prompt can commit successfully
+- a model answer can materialize successfully
+- and the overall action can still be wrong because the attachment was not
+  preserved into model-visible input
+
+That means browser-service needs a slightly stronger model for attachment-backed
+actions than “upload appeared” or “send button clicked”.
+
+### A. Attachment-backed actions need phase-aware diagnostics
+
+Problem:
+- Gemini only became debuggable once the attachment flow was broken into:
+  - pre-submit staged state
+  - immediate post-submit state
+  - final answer-time state
+- without that, the failure looked like random timeout churn
+
+What should move into browser-service:
+- a small generic action-phase diagnostic helper for attachment-backed flows
+- intended shape:
+  - `captureActionPhaseDiagnostics(...)`
+  - phases like:
+    - `staged`
+    - `post-submit`
+    - `final`
+- provider code should still define its own selectors/signals, but the capture,
+  serialization, and failure formatting mechanics should be package-owned
+
+Candidate extraction:
+- `captureActionPhaseDiagnostics(...)`
+- `formatActionPhaseFailure(...)`
+
+### B. Attachment readiness should be multi-signal, not single-selector
+
+Problem:
+- Gemini staged images used:
+  - visible `blob:` thumbnails
+  - `Remove file ...` affordances
+  - send-ready state
+- ChatGPT/Grok already use richer attachment evidence than “one preview node
+  appeared”
+
+What should move into browser-service:
+- a generic attachment-signal poller that can combine:
+  - preview signals
+  - remove-action signals
+  - input/file state
+  - send-ready state
+  - stability across repeated polls
+
+Important boundary:
+- browser-service should own the polling contract and state shape
+- providers should still supply the actual signal readers/selectors
+
+Candidate extraction:
+- `waitForAttachmentPhase(...)`
+- `readAttachmentSignals(...)`
+
+### C. Ordered upload-surface fallback belongs in package mechanics
+
+Problem:
+- Gemini image upload only recovered once the provider used the hidden
+  image-specific uploader before the hidden generic file uploader
+- this is the same general shape as:
+  - row-action fallbacks
+  - menu-surface fallbacks
+  - dialog/page trigger fallbacks
+
+What should move into browser-service:
+- a generic ordered “upload surface” fallback runner:
+  - try surface A
+  - if not ready/compatible, try surface B
+  - preserve which surface actually accepted the action
+
+Important boundary:
+- the exact surfaces/selectors stay provider-local
+- the ordered fallback mechanics and diagnostic history are package-owned
+
+Candidate extraction:
+- `openAndDispatchUploadFromSurfaces(...)`
+- `runOrderedSurfaceFallback(...)`
+
+### D. Post-submit semantic verification should be a first-class hook
+
+Problem:
+- Gemini reached a misleading state where:
+  - prompt committed
+  - answer materialized
+  - but the answer was attachment-blind
+- this was a real browser action failure, not a successful run
+
+What should move into browser-service:
+- a generic post-submit verification hook shape that lets providers classify:
+  - false-success answers
+  - tool-missing answers
+  - attachment-blind answers
+
+Important boundary:
+- browser-service should not encode provider-specific language
+- it should provide the hook point and failure-report structure
+
+Candidate extraction:
+- `verifyPostSubmitOutcome(...)`
+- `classifySemanticFalseSuccess(...)`
+
+### E. Owned-target discipline remains the default starting point
+
+Problem:
+- Gemini attachment debugging wasted time until it used the same owned-target
+  and competing-tab-trim discipline already proven in ChatGPT/Grok
+
+Lesson:
+- new provider browser flows should begin with package-owned target ownership,
+  not rediscover it later
+
+Implication for backlog priority:
+1. attachment phase diagnostics
+2. multi-signal attachment readiness
+3. ordered upload-surface fallback
+4. post-submit semantic verification hooks
+
 ### 6. `navigateAndSettle(...)`
 
 Status: started 2026-03-28
