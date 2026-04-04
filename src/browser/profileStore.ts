@@ -113,6 +113,10 @@ export function resolveManagedProfileDir(options: {
   return expectedManagedProfileDir;
 }
 
+export function resolveManagedProfileCookieExportPath(managedProfileDir: string): string {
+  return path.join(path.resolve(managedProfileDir), 'cookies.json');
+}
+
 export function resolveManagedProfileDirForUserConfig(
   userConfig: Pick<ResolvedUserConfig, 'auracallProfile' | 'browser'>,
   target?: BrowserProfileTarget | null,

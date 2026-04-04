@@ -69,4 +69,30 @@ describe('buildBrowserConfig inline cookies', () => {
     expect(inline[0]?.name).toBe('cf_clearance');
     expect(config.inlineCookiesSource).toBe('home:cookies.json');
   });
+
+  test('prefers runtime-profile-scoped Gemini exported cookies before the legacy home fallback', async () => {
+    const fakeHome = await fs.mkdtemp(path.join(os.tmpdir(), 'oracle-home-'));
+    const oracleDir = path.join(fakeHome, '.auracall');
+    setAuracallHomeDirOverrideForTest(oracleDir);
+    const scopedDir = path.join(oracleDir, 'browser-profiles', 'default', 'gemini');
+    await fs.mkdir(scopedDir, { recursive: true });
+    await fs.writeFile(
+      path.join(scopedDir, 'cookies.json'),
+      JSON.stringify([{ name: '__Secure-1PSID', value: 'scoped', domain: '.google.com' }]),
+    );
+    await fs.writeFile(
+      path.join(oracleDir, 'cookies.json'),
+      JSON.stringify([{ name: '__Secure-1PSID', value: 'legacy', domain: '.google.com' }]),
+    );
+
+    const config = await buildBrowserConfig({
+      model: 'gemini-3-pro',
+      auracallProfileName: 'default',
+      browserManualLoginProfileDir: scopedDir,
+    });
+    const inline = Array.isArray(config.inlineCookies) ? config.inlineCookies : [];
+    expect(inline[0]?.value).toBe('scoped');
+    expect(config.inlineCookiesSource).toBe('scoped:cookies.json');
+    expect(config.manualLoginProfileDir).toMatch(/browser-profiles\/default\/gemini$/);
+  });
 });

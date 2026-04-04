@@ -6659,3 +6659,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - live Gemini text proof on `default -> default`
   - live Gemini attachment proof on `default -> default`
+
+## 2026-04-03 - scope Gemini exported cookies to the managed runtime profile
+
+- Current focus:
+  - Gemini live-proof / cookie-path alignment
+- What changed:
+  - added a managed-profile cookie export helper in
+    [src/browser/profileStore.ts](/home/ecochran76/workspace.local/oracle/src/browser/profileStore.ts)
+  - updated [src/browser/login.ts](/home/ecochran76/workspace.local/oracle/src/browser/login.ts)
+    so `auracall login --target gemini --export-cookies` now writes:
+    - the primary runtime-profile-scoped cookie file under the managed Gemini
+      browser profile
+    - the old `~/.auracall/cookies.json` compatibility file
+  - updated [src/cli/browserConfig.ts](/home/ecochran76/workspace.local/oracle/src/cli/browserConfig.ts)
+    so Gemini browser runs prefer the scoped exported-cookie file before the
+    legacy global fallback
+  - expanded
+    [tests/cli/browserConfig.inlineCookies.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/browserConfig.inlineCookies.test.ts)
+    for the scoped Gemini fallback order
+- Verification:
+  - focused inline-cookie/browser-config tests

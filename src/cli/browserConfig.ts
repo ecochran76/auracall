@@ -8,7 +8,7 @@ import { normalizeBrowserModelStrategy } from '../browser/modelStrategy.js';
 import type { BrowserModelStrategy } from '../browser/types.js';
 import type { CookieParam } from '../browser/types.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
-import { resolveManagedProfileDir } from '../browser/profileStore.js';
+import { resolveManagedProfileCookieExportPath, resolveManagedProfileDir } from '../browser/profileStore.js';
 import { resolveEffectiveManagedProfileRoot } from '../browser/config.js';
 import {
   ensureServicesRegistry,
@@ -98,12 +98,27 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
   const shouldUseOverride = !isChatGptModel && normalizedOverride.length > 0 && normalizedOverride !== baseModel;
   const modelStrategy =
     normalizeBrowserModelStrategy(options.browserModelStrategy) ?? DEFAULT_MODEL_STRATEGY;
+  const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
+  const managedProfileRoot = resolveEffectiveManagedProfileRoot({
+    configuredManagedProfileRoot: options.managedProfileRoot ?? null,
+    explicitProfileDir: options.browserManualLoginProfileDir ?? null,
+    resolvedChromePath: options.browserChromePath ?? null,
+    sourceCookiePath: options.browserBootstrapCookiePath ?? options.browserCookiePath ?? null,
+  });
+  const managedProfileDir = resolveManagedProfileDir({
+    configuredDir: options.browserManualLoginProfileDir ?? undefined,
+    managedProfileRoot,
+    auracallProfileName: options.auracallProfileName ?? 'default',
+    target,
+  });
   const cookieNames = parseCookieNames(options.browserCookieNames ?? process.env.AURACALL_BROWSER_COOKIE_NAMES);
   let inline = await resolveInlineCookies({
     inlineArg: options.browserInlineCookies,
     inlineFileArg: options.browserInlineCookiesFile,
     envPayload: process.env.AURACALL_BROWSER_COOKIES_JSON,
     envFile: process.env.AURACALL_BROWSER_COOKIES_FILE,
+    scopedFallbackFile:
+      isGeminiModel ? resolveManagedProfileCookieExportPath(managedProfileDir) : null,
     cwd: process.cwd(),
   });
   if (inline?.source?.startsWith('home:') && options.browserNoCookieSync !== true && !isGeminiModel) {
@@ -132,20 +147,6 @@ export async function buildBrowserConfig(options: BrowserFlagOptions): Promise<B
         'Remove "temporary-chat=true" from --chatgpt-url (or omit --chatgpt-url), or use a non-Pro model (e.g. --model gpt-5.2-instant).',
     );
   }
-
-  const target = isGrokModel ? 'grok' : isGeminiModel ? 'gemini' : options.browserTarget ?? 'chatgpt';
-  const managedProfileRoot = resolveEffectiveManagedProfileRoot({
-    configuredManagedProfileRoot: options.managedProfileRoot ?? null,
-    explicitProfileDir: options.browserManualLoginProfileDir ?? null,
-    resolvedChromePath: options.browserChromePath ?? null,
-    sourceCookiePath: options.browserBootstrapCookiePath ?? options.browserCookiePath ?? null,
-  });
-  const managedProfileDir = resolveManagedProfileDir({
-    configuredDir: options.browserManualLoginProfileDir ?? undefined,
-    managedProfileRoot,
-    auracallProfileName: options.auracallProfileName ?? 'default',
-    target,
-  });
 
   return {
     auracallProfileName: options.auracallProfileName ?? null,
@@ -328,12 +329,14 @@ async function resolveInlineCookies({
   inlineFileArg,
   envPayload,
   envFile,
+  scopedFallbackFile,
   cwd,
 }: {
   inlineArg?: string | null;
   inlineFileArg?: string | null;
   envPayload?: string | null;
   envFile?: string | null;
+  scopedFallbackFile?: string | null;
   cwd: string;
 }): Promise<{ cookies: CookieParam[]; source: string } | undefined> {
   const tryLoad = async (source: string | undefined | null, allowPathResolution: boolean) => {
@@ -366,6 +369,12 @@ async function resolveInlineCookies({
   for (const { value, allowPath, source } of sources) {
     const parsed = await tryLoad(value, allowPath);
     if (parsed) return { cookies: parsed, source };
+  }
+
+  // fallback: ~/.auracall/cookies.{json,base64}
+  if (scopedFallbackFile) {
+    const parsed = await tryLoad(scopedFallbackFile, true);
+    if (parsed) return { cookies: parsed, source: 'scoped:cookies.json' };
   }
 
   // fallback: ~/.auracall/cookies.{json,base64}

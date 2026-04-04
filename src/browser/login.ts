@@ -6,6 +6,7 @@ import { resolveBundledServiceCookieOrigins } from '../services/registry.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import {
   bootstrapManagedProfile,
+  resolveManagedProfileCookieExportPath,
   type ManagedProfileSeedPolicy,
 } from './profileStore.js';
 import {
@@ -186,10 +187,15 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     collapseDisposableWindows,
     onCookiesExported: async (cookies) => {
       const auracallHome = getAuracallHomeDir();
-      const cookieOutput = path.join(auracallHome, 'cookies.json');
+      const scopedCookieOutput = resolveManagedProfileCookieExportPath(manualLoginProfileDir);
+      const legacyCookieOutput = path.join(auracallHome, 'cookies.json');
+      await fs.mkdir(path.dirname(scopedCookieOutput), { recursive: true });
       await fs.mkdir(auracallHome, { recursive: true });
-      await fs.writeFile(cookieOutput, JSON.stringify(cookies, null, 2), 'utf8');
-      console.log(`Saved Gemini cookies to ${cookieOutput}`);
+      const serialized = JSON.stringify(cookies, null, 2);
+      await fs.writeFile(scopedCookieOutput, serialized, 'utf8');
+      await fs.writeFile(legacyCookieOutput, serialized, 'utf8');
+      console.log(`Saved Gemini cookies to ${scopedCookieOutput}`);
+      console.log(`[login] Updated compatibility cookie export at ${legacyCookieOutput}.`);
     },
   };
   await runBrowserLoginCore(coreOptions);

@@ -7095,3 +7095,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     when `secret-tool`/Chrome cookie decryption cannot surface the required
     Google auth cookies, and record that fact in testing docs instead of
     leaving it as local operator lore
+
+## 2026-04-03 - make Gemini exported-cookie fallback follow the runtime profile first
+
+- Symptom:
+  - managed Gemini browser state was already scoped by AuraCall runtime profile
+    and browser profile, but the exported-cookie fallback still wrote and read
+    one machine-global file:
+    - `~/.auracall/cookies.json`
+  - that meant two Gemini-capable runtime profiles could overwrite each
+    other's fallback cookies
+- Fix:
+  - `auracall login --target gemini --export-cookies` now writes a scoped
+    cookie file under the selected managed Gemini browser profile
+  - Gemini browser config now prefers that scoped cookie file before the
+    legacy global fallback path
+  - the global file is still updated as a compatibility mirror for now
+- Durable lesson:
+  - when a provider falls back to exported cookies, keep that fallback on the
+    same runtime-profile boundary as the managed browser profile rather than
+    collapsing back to one machine-global file
