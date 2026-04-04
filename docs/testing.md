@@ -115,6 +115,10 @@
     - Gemini returned a provider/account capability response instead of an
       image:
       - `I can search for images, but can't seem to create any for you right now.`
+  - edit-image: not green on this pairing
+    - Gemini returned a provider/account capability response instead of an
+      edited image:
+      - `I can try to find an image like that for you, but can't create it right now.`
   - note: this machine required `auracall login --target gemini --export-cookies`
     plus `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json`
     because `secret-tool` cookie decryption returned zero Google auth cookies

@@ -6731,3 +6731,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - or provider availability/location gating on this pairing
 - Verification:
   - live Gemini generate-image proof attempt on `default -> default`
+
+## 2026-04-04 - classify Gemini edit-image as a proof/capability result on default
+
+- Current focus:
+  - Gemini live-proof refresh
+- What changed:
+  - ran the final planned Gemini proof cell on the same explicit pairing:
+    - AuraCall runtime profile `default`
+    - browser profile `default`
+  - used a disposable local PNG input with the same runtime-profile-scoped
+    exported-cookie fallback:
+    - `/home/ecochran76/.auracall/browser-profiles/default/gemini/cookies.json`
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to record the result as a proof/capability outcome rather than a code
+    regression
+- Live proof:
+  - Gemini edit-image: not green on `default -> default`
+  - provider response:
+    - `I can try to find an image like that for you, but can't create it right now. It's possible you're signed out or image creation isn't available in your location.`
+- Classification:
+  - not a shared browser/runtime routing failure
+  - not a cookie-path regression
+  - treat first as:
+    - account capability gap
+    - or provider availability/location gating on this pairing
+- Verification:
+  - live Gemini edit-image proof attempt on `default -> default`
