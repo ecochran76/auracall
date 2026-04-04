@@ -7259,3 +7259,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider/file proof succeeds through Aura-Call's own inline bundle
     path, document that path honestly instead of silently upgrading it into a
     native provider-upload claim
+
+## 2026-04-04 - treat forced Gemini attachment mode as a separate proof surface from inline file input
+
+- Symptom:
+  - after the inline-bundled file proof was green, the next real question was
+    whether Gemini's actual attachment path was also green
+  - forcing `--browser-attachments always` did reach the real attachment path,
+    but the results were not healthy:
+    - uploaded text file returned `[NO CONTENT FOUND]`
+    - uploaded image returned a message saying the image did not come through
+- Fix:
+  - recorded real attachment mode as a concrete Gemini implementation gap in
+    testing and planning docs instead of treating the inline-bundled proof as
+    sufficient
+- Durable lesson:
+  - when a CLI supports both inline file input and real provider attachment
+    transport, prove and report those paths separately; green on one does not
+    imply green on the other

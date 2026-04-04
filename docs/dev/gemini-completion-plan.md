@@ -262,6 +262,10 @@ Outcome:
     - the second-pairing file run returned the exact file contents
     - verbose output confirmed this path used inline file pasting, not native
       Gemini upload UI
+  - native Gemini upload transport is not yet green on `wsl-chrome-2`:
+    - forcing `--browser-attachments always` used the attachment path
+    - but the uploaded text-file run returned `[NO CONTENT FOUND]`
+    - and the uploaded image run said the image did not come through
   - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
     pairing, with file-input proof through the current Aura-Call bundling path
 
@@ -284,7 +288,7 @@ Acceptance:
 Current recommendation:
 - do not take Slice 4 by momentum alone
 - first decide whether the next value is:
-  - a native Gemini upload-ui proof if that distinction matters
+  - fixing Gemini upload transport on real attachment mode
   - or a real implementation gap with a concrete operator or runtime failure
 
 ## Provisional feature matrix

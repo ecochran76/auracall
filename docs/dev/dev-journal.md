@@ -6952,3 +6952,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --prompt 'Read the attached file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
+
+## 2026-04-04 - classify Gemini real attachment mode as the next implementation gap
+
+- Current focus:
+  - Gemini upload transport truthfulness
+- What changed:
+  - inspected the current browser attachment policy and confirmed there is an
+    explicit real-attachment path via:
+    - `--browser-attachments always`
+  - ran two narrow `wsl-chrome-2` proofs on that forced path using the
+    pairing-scoped Gemini cookies:
+    - uploaded text file
+    - uploaded PNG image
+  - updated Gemini docs/planning notes to stop conflating:
+    - inline Aura-Call file input
+    - real Gemini attachment transport
+- Outcome:
+  - the real Gemini attachment path is not yet green on `wsl-chrome-2`
+  - text-file upload returned:
+    - `[NO CONTENT FOUND]`
+  - image upload returned:
+    - `It looks like the image didn't come through on my end. Please try uploading it again, and I will gladly describe it for you!`
+  - this is now the clearest concrete Gemini implementation gap, stronger than
+    doing more generic proof churn
+- Verification:
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Read the uploaded file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-wsl2-attachment-proof.txt --wait --verbose --force`
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`
