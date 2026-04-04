@@ -6894,3 +6894,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - once a future execution model can be planned deterministically, surface that
     plan in inspection output before adding runtime behavior so operators can
     verify the intended orchestration shape early
+
+## 2026-04-03 - keep team planning output identical across inspection and diagnostics
+
+- Symptom:
+  - `config show --team` exposed the planned team-run bundle, but
+    `config doctor --team` still only showed the looser runtime-member preview
+  - that split risked inspection and diagnostics drifting into different
+    planning contracts before any service execution existed
+- Fix:
+  - `config doctor --team <name>` now includes the same read-only planned
+    team-run bundle as `config show --team <name>`
+  - both report builders now share one local inspection-only planner helper
+- Durable lesson:
+  - once a future execution preview exists, keep inspection and diagnostics on
+    the same planned bundle so operators do not have to reconcile multiple
+    orchestration previews by hand

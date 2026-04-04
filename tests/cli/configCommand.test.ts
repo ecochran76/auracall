@@ -744,6 +744,7 @@ describe('config show helpers', () => {
     });
     expect(report.selectedAgent).toBeNull();
     expect(report.selectedTeam).toBeNull();
+    expect(report.plannedTeamRun).toBeNull();
     expect(report.targetState).toEqual({
       browserProfilesPresent: false,
       runtimeProfilesPresent: false,
@@ -792,6 +793,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Target browserProfiles present: no');
     expect(text).toContain('Target runtimeProfiles present: no');
     expect(text).toContain('Precedence: browser profiles=bridge, runtime profiles=bridge, runtime->browser reference=bridge');
+    expect(text).toContain('Planned team run: (none)');
     expect(text).toContain('[warning] AuraCall runtime profile "default" does not explicitly reference a browser profile.');
     expect(text).toContain('[info] Browser profile "orphaned" is defined but no AuraCall runtime profile references it.');
   });
@@ -829,6 +831,7 @@ describe('config show helpers', () => {
       exists: true,
     });
     expect(report.selectedTeam).toBeNull();
+    expect(report.plannedTeamRun).toBeNull();
     expect(report.selectionPolicy).toEqual({
       runtimeSelectorPrecedence: ['profile', 'agent', 'config'],
       planningOnlySelectors: ['team'],
@@ -858,6 +861,7 @@ describe('config show helpers', () => {
     expect(text).toContain('Selected agent: researcher -> resolved');
     expect(text).toContain('Selected team: (none)');
     expect(text).toContain('Active runtime selector: profile');
+    expect(text).toContain('Planned team run: (none)');
     expect(text).toContain('[warning] Agent "researcher" does not explicitly reference an AuraCall runtime profile.');
     expect(text).toContain('[warning] Agent "analyst" references missing AuraCall runtime profile "missing-runtime".');
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
@@ -950,12 +954,61 @@ describe('config show helpers', () => {
       ],
       exists: true,
     });
+    expect(report.plannedTeamRun).toEqual({
+      teamRun: {
+        id: 'plan:ops',
+        teamId: 'ops',
+        status: 'planned',
+        trigger: 'internal',
+        stepIds: ['plan:ops:step:1', 'plan:ops:step:2', 'plan:ops:step:3'],
+      },
+      steps: [
+        {
+          id: 'plan:ops:step:1',
+          agentId: 'researcher',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          status: 'planned',
+          order: 1,
+          dependsOnStepIds: [],
+        },
+        {
+          id: 'plan:ops:step:2',
+          agentId: 'missing-agent',
+          runtimeProfileId: null,
+          browserProfileId: null,
+          service: null,
+          status: 'blocked',
+          order: 2,
+          dependsOnStepIds: ['plan:ops:step:1'],
+        },
+        {
+          id: 'plan:ops:step:3',
+          agentId: 'analyst',
+          runtimeProfileId: 'work',
+          browserProfileId: 'consulting',
+          service: 'grok',
+          status: 'planned',
+          order: 3,
+          dependsOnStepIds: ['plan:ops:step:2'],
+        },
+      ],
+      sharedState: {
+        id: 'plan:ops:state',
+        status: 'active',
+        historyCount: 0,
+      },
+    });
 
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Selected team: ops -> resolved (planning-only)');
     expect(text).toContain('Selected team runtime plan:');
     expect(text).toContain('- ops -> resolved -> agents researcher, missing-agent, analyst');
     expect(text).toContain('member analyst -> resolved -> runtime profile work -> browser profile consulting -> default service grok');
+    expect(text).toContain('Planned team run:');
+    expect(text).toContain('plan:ops -> team ops -> status planned -> trigger internal');
+    expect(text).toContain('step plan:ops:step:2 -> agent missing-agent -> status blocked -> runtime profile (none) -> browser profile (none) -> default service (none) -> depends on plan:ops:step:1');
   });
 
   it('surfaces target-key presence and target precedence when target-shape keys are active', () => {
@@ -1024,12 +1077,14 @@ describe('config show helpers', () => {
       runtimeProfiles: 'target',
       runtimeProfileBrowserProfileReference: 'target',
     });
+    expect(doctorReport.plannedTeamRun).toBeNull();
     expect(formatConfigDoctorReport(doctorReport)).toContain(
       'Runtime profile selector -> defaultRuntimeProfile (present)',
     );
     expect(formatConfigDoctorReport(doctorReport)).toContain(
       'Precedence: browser profiles=target, runtime profiles=target, runtime->browser reference=target',
     );
+    expect(formatConfigDoctorReport(doctorReport)).toContain('Planned team run: (none)');
   });
 
   it('returns a nonzero exit code only when strict mode is enabled and warnings are present', () => {

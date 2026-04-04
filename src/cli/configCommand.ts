@@ -202,6 +202,7 @@ export type ConfigDoctorReport = ConfigModelDoctorReport & {
     }>;
     exists: boolean;
   } | null;
+  plannedTeamRun: ConfigShowReport['plannedTeamRun'];
 };
 
 export function resolveConfigDoctorExitCode(
@@ -225,6 +226,50 @@ function buildSelectorKeysReport(rawConfig: MutableRecord): SelectorKeysReport {
     compatibility: 'auracallProfile',
     targetPresent: typeof rawConfig.defaultRuntimeProfile === 'string' && rawConfig.defaultRuntimeProfile.trim().length > 0,
     compatibilityPresent: typeof rawConfig.auracallProfile === 'string' && rawConfig.auracallProfile.trim().length > 0,
+  };
+}
+
+function buildPlannedTeamRun(
+  rawConfig: MutableRecord,
+  explicitTeamId?: string | null,
+): ConfigShowReport['plannedTeamRun'] {
+  if (typeof explicitTeamId !== 'string' || explicitTeamId.trim().length === 0) {
+    return null;
+  }
+  const teamId = explicitTeamId.trim();
+  const bundle = createTeamRunBundleFromConfig({
+    config: rawConfig,
+    teamId,
+    runId: `plan:${teamId}`,
+    createdAt: '1970-01-01T00:00:00.000Z',
+    trigger: 'internal',
+    initialInputs: {
+      inspectionOnly: true,
+    },
+  });
+  return {
+    teamRun: {
+      id: bundle.teamRun.id,
+      teamId: bundle.teamRun.teamId,
+      status: bundle.teamRun.status,
+      trigger: bundle.teamRun.trigger,
+      stepIds: bundle.teamRun.stepIds,
+    },
+    steps: bundle.steps.map((step) => ({
+      id: step.id,
+      agentId: step.agentId,
+      runtimeProfileId: step.runtimeProfileId,
+      browserProfileId: step.browserProfileId,
+      service: step.service,
+      status: step.status,
+      order: step.order,
+      dependsOnStepIds: step.dependsOnStepIds,
+    })),
+    sharedState: {
+      id: bundle.sharedState.id,
+      status: bundle.sharedState.status,
+      historyCount: bundle.sharedState.history.length,
+    },
   };
 }
 
@@ -264,45 +309,7 @@ export function buildConfigShowReport(input: {
           };
         })()
       : null;
-  const plannedTeamRun =
-    typeof input.explicitTeamId === 'string' && input.explicitTeamId.trim().length > 0
-      ? (() => {
-          const bundle = createTeamRunBundleFromConfig({
-            config: input.rawConfig,
-            teamId: input.explicitTeamId.trim(),
-            runId: `plan:${input.explicitTeamId.trim()}`,
-            createdAt: '1970-01-01T00:00:00.000Z',
-            trigger: 'internal',
-            initialInputs: {
-              inspectionOnly: true,
-            },
-          });
-          return {
-            teamRun: {
-              id: bundle.teamRun.id,
-              teamId: bundle.teamRun.teamId,
-              status: bundle.teamRun.status,
-              trigger: bundle.teamRun.trigger,
-              stepIds: bundle.teamRun.stepIds,
-            },
-            steps: bundle.steps.map((step) => ({
-              id: step.id,
-              agentId: step.agentId,
-              runtimeProfileId: step.runtimeProfileId,
-              browserProfileId: step.browserProfileId,
-              service: step.service,
-              status: step.status,
-              order: step.order,
-              dependsOnStepIds: step.dependsOnStepIds,
-            })),
-            sharedState: {
-              id: bundle.sharedState.id,
-              status: bundle.sharedState.status,
-              historyCount: bundle.sharedState.history.length,
-            },
-          };
-        })()
-      : null;
+  const plannedTeamRun = buildPlannedTeamRun(input.rawConfig, input.explicitTeamId ?? null);
 
   return {
     configPath: input.configPath,
@@ -432,6 +439,7 @@ export function buildConfigDoctorReport(
     selectionPolicy: resolveRuntimeSelectionPolicy(options),
     selectedAgent: selection.agent,
     selectedTeam,
+    plannedTeamRun: buildPlannedTeamRun(rawConfig, options.explicitTeamId ?? null),
   };
 }
 
@@ -606,6 +614,19 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
         );
       }
     }
+    if (!report.plannedTeamRun) {
+      lines.push('Planned team run: (none)');
+    } else {
+      lines.push('Planned team run:');
+      lines.push(
+        `  - ${report.plannedTeamRun.teamRun.id} -> team ${report.plannedTeamRun.teamRun.teamId} -> status ${report.plannedTeamRun.teamRun.status} -> trigger ${report.plannedTeamRun.teamRun.trigger}`,
+      );
+      for (const step of report.plannedTeamRun.steps) {
+        lines.push(
+          `    step ${step.id} -> agent ${step.agentId} -> status ${step.status} -> runtime profile ${step.runtimeProfileId ?? '(none)'} -> browser profile ${step.browserProfileId ?? '(none)'} -> default service ${step.service ?? '(none)'} -> depends on ${formatList(step.dependsOnStepIds)}`,
+        );
+      }
+    }
     lines.push('Issues: (none)');
     return lines.join('\n');
   }
@@ -617,6 +638,19 @@ export function formatConfigDoctorReport(report: ConfigDoctorReport): string {
     for (const member of report.selectedTeam.runtimeMembers) {
       lines.push(
         `    member ${member.agentId ?? '(none)'} -> ${member.exists ? 'resolved' : 'missing'} -> runtime profile ${member.runtimeProfileId ?? '(none)'} -> browser profile ${member.browserProfileId ?? '(none)'} -> default service ${member.defaultService ?? '(none)'}`,
+      );
+    }
+  }
+  if (!report.plannedTeamRun) {
+    lines.push('Planned team run: (none)');
+  } else {
+    lines.push('Planned team run:');
+    lines.push(
+      `  - ${report.plannedTeamRun.teamRun.id} -> team ${report.plannedTeamRun.teamRun.teamId} -> status ${report.plannedTeamRun.teamRun.status} -> trigger ${report.plannedTeamRun.teamRun.trigger}`,
+    );
+    for (const step of report.plannedTeamRun.steps) {
+      lines.push(
+        `    step ${step.id} -> agent ${step.agentId} -> status ${step.status} -> runtime profile ${step.runtimeProfileId ?? '(none)'} -> browser profile ${step.browserProfileId ?? '(none)'} -> default service ${step.service ?? '(none)'} -> depends on ${formatList(step.dependsOnStepIds)}`,
       );
     }
   }

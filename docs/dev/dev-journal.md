@@ -6447,3 +6447,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/cli/configCommand.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - keep config doctor aligned with planned team-run inspection
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - extended
+    [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    so `config doctor --team <name>` now exposes the same read-only
+    `plannedTeamRun` bundle already used by `config show --team <name>`
+  - factored the inspection-only planner construction into one local helper so
+    show/doctor share the same deterministic bundle shape
+  - expanded
+    [tests/cli/configCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/configCommand.test.ts)
+    to pin:
+    - no planned run for non-team doctor reports
+    - full planned run parity for selected-team doctor reports
+- Verification:
+  - `pnpm vitest run tests/cli/configCommand.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
+  - `pnpm run check`
