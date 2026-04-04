@@ -4,6 +4,7 @@ import {
   TeamRunStepSchema,
   DEFAULT_TEAM_RUN_EXECUTION_POLICY_SCHEMA,
 } from './schema.js';
+import { resolveTeamRuntimeSelections, type ResolvedTeamRuntimeSelections } from '../config/model.js';
 import type {
   TeamRun,
   TeamRunSharedState,
@@ -11,6 +12,7 @@ import type {
   TeamRunServiceId,
   TeamRunStepInput,
   TeamRunStepKind,
+  TeamRunStepStatus,
 } from './types.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from './types.js';
 
@@ -21,6 +23,7 @@ export interface CreateTeamRunStepInput {
   browserProfileId?: string | null;
   service?: TeamRunServiceId;
   kind?: TeamRunStepKind;
+  status?: TeamRunStepStatus;
   order: number;
   dependsOnStepIds?: string[];
   input?: Partial<TeamRunStepInput>;
@@ -37,6 +40,17 @@ export interface CreateTeamRunBundleInput {
   entryPrompt?: string | null;
   initialInputs?: Record<string, unknown>;
   steps: CreateTeamRunStepInput[];
+}
+
+export interface CreateTeamRunFromResolvedTeamInput {
+  runId: string;
+  createdAt: string;
+  team: ResolvedTeamRuntimeSelections;
+  updatedAt?: string;
+  trigger?: TeamRun['trigger'];
+  requestedBy?: string | null;
+  entryPrompt?: string | null;
+  initialInputs?: Record<string, unknown>;
 }
 
 function buildStepInput(input: Partial<TeamRunStepInput> = {}): TeamRunStepInput {
@@ -58,7 +72,7 @@ export function createTeamRunStep(teamRunId: string, input: CreateTeamRunStepInp
     browserProfileId: input.browserProfileId ?? null,
     service: input.service ?? null,
     kind: input.kind ?? 'prompt',
-    status: 'planned',
+    status: input.status ?? 'planned',
     order: input.order,
     dependsOnStepIds: input.dependsOnStepIds ?? [],
     input: buildStepInput(input.input),
@@ -66,6 +80,82 @@ export function createTeamRunStep(teamRunId: string, input: CreateTeamRunStepInp
     startedAt: null,
     completedAt: null,
     failure: null,
+  });
+}
+
+export function createTeamRunBundleFromResolvedTeam(
+  input: CreateTeamRunFromResolvedTeamInput,
+): {
+  teamRun: TeamRun;
+  steps: TeamRunStep[];
+  sharedState: TeamRunSharedState;
+} {
+  const steps = input.team.members.map((member, index) => {
+    const stepId = `${input.runId}:step:${index + 1}`;
+    const previousStepId = index > 0 ? `${input.runId}:step:${index}` : null;
+    const hasRuntimeContext = member.exists && member.runtimeProfileId;
+    return {
+      id: stepId,
+      agentId: member.agentId ?? `member-${index + 1}`,
+      runtimeProfileId: member.runtimeProfileId,
+      browserProfileId: member.browserProfileId,
+      service: member.defaultService,
+      kind: 'prompt' as const,
+      status: hasRuntimeContext ? ('planned' as const) : ('blocked' as const),
+      order: index + 1,
+      dependsOnStepIds: previousStepId ? [previousStepId] : [],
+      input: {
+        notes: [
+          hasRuntimeContext
+            ? 'planned from resolved team runtime selection'
+            : 'blocked because the member does not resolve to a runnable runtime profile',
+        ],
+      },
+    };
+  });
+
+  return createTeamRunBundle({
+    runId: input.runId,
+    teamId: input.team.teamId ?? '(none)',
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    trigger: input.trigger,
+    requestedBy: input.requestedBy,
+    entryPrompt: input.entryPrompt,
+    initialInputs: {
+      selectedTeamId: input.team.teamId,
+      teamExists: input.team.exists,
+      ...input.initialInputs,
+    },
+    steps,
+  });
+}
+
+export function createTeamRunBundleFromConfig(input: {
+  config: Record<string, unknown>;
+  teamId: string;
+  runId: string;
+  createdAt: string;
+  updatedAt?: string;
+  trigger?: TeamRun['trigger'];
+  requestedBy?: string | null;
+  entryPrompt?: string | null;
+  initialInputs?: Record<string, unknown>;
+}): {
+  teamRun: TeamRun;
+  steps: TeamRunStep[];
+  sharedState: TeamRunSharedState;
+} {
+  const resolvedTeam = resolveTeamRuntimeSelections(input.config, input.teamId);
+  return createTeamRunBundleFromResolvedTeam({
+    runId: input.runId,
+    createdAt: input.createdAt,
+    updatedAt: input.updatedAt,
+    trigger: input.trigger,
+    requestedBy: input.requestedBy,
+    entryPrompt: input.entryPrompt,
+    initialInputs: input.initialInputs,
+    team: resolvedTeam,
   });
 }
 

@@ -6864,3 +6864,19 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - after landing shared types and schemas for a future execution model, add a
     tiny validated factory seam before real runtime code so later
     implementation starts from one canonical construction path
+
+## 2026-04-03 - preserve unresolved team members in planning output instead of dropping them
+
+- Symptom:
+  - the first team-run builder seam could create planned runs from explicit step
+    inputs, but it did not yet bridge the existing config-model team resolution
+    path into that bundle
+- Fix:
+  - added read-only planners that convert resolved team runtime selections into
+    a validated planned `teamRun + steps + sharedState` bundle
+  - unresolved team members now remain visible as `blocked` planned steps
+    instead of disappearing from the plan
+- Durable lesson:
+  - when bridging inspection/planning data into a future execution model, keep
+    unresolved members visible in the planned output so operators can see why a
+    team is not fully runnable before any service execution starts

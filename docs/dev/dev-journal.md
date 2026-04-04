@@ -6403,3 +6403,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
   - `pnpm run check`
+
+## 2026-04-03 - bridge resolved team selection into planned team runs
+
+- Current focus:
+  - team/service planning
+- What changed:
+  - extended
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    with read-only planners that bridge existing config-model team resolution
+    into the new team-run model:
+    - `createTeamRunBundleFromResolvedTeam(...)`
+    - `createTeamRunBundleFromConfig(...)`
+  - planned steps now preserve:
+    - resolved agent id
+    - AuraCall runtime profile
+    - browser profile
+    - default service
+  - unresolved team members are preserved as `blocked` planned steps instead of
+    being silently dropped
+  - expanded
+    [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts --maxWorkers 1`
+  - `pnpm run check`

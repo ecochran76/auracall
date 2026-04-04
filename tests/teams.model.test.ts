@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_TEAM_RUN_EXECUTION_POLICY,
   createTeamRunBundle,
+  createTeamRunBundleFromConfig,
+  createTeamRunBundleFromResolvedTeam,
   createTeamRunSharedState,
   createTeamRunStep,
 } from '../src/teams/model.js';
@@ -119,5 +121,143 @@ describe('team run model helpers', () => {
     expect(bundle.steps[0]?.kind).toBe('analysis');
     expect(bundle.steps[1]?.dependsOnStepIds).toEqual(['step_1']);
     expect(bundle.sharedState.id).toBe('run_1:state');
+  });
+
+  it('creates a planned team-run bundle from resolved team runtime selections', () => {
+    const bundle = createTeamRunBundleFromResolvedTeam({
+      runId: 'run_2',
+      createdAt: '2026-04-03T00:00:00.000Z',
+      team: {
+        teamId: 'ops',
+        agentIds: ['analyst', 'missing-agent', 'reviewer'],
+        members: [
+          {
+            agentId: 'analyst',
+            exists: true,
+            agent: {
+              agentId: 'analyst',
+              runtimeProfileId: 'default',
+              browserProfileId: 'wsl-chrome-2',
+              defaultService: 'chatgpt',
+              exists: true,
+            },
+            runtimeProfileId: 'default',
+            runtimeProfile: { browserProfile: 'wsl-chrome-2', defaultService: 'chatgpt' },
+            browserProfileId: 'wsl-chrome-2',
+            browserProfile: {},
+            defaultService: 'chatgpt',
+          },
+          {
+            agentId: 'missing-agent',
+            exists: false,
+            agent: {
+              agentId: 'missing-agent',
+              runtimeProfileId: null,
+              browserProfileId: null,
+              defaultService: null,
+              exists: false,
+            },
+            runtimeProfileId: null,
+            runtimeProfile: null,
+            browserProfileId: null,
+            browserProfile: null,
+            defaultService: null,
+          },
+          {
+            agentId: 'reviewer',
+            exists: true,
+            agent: {
+              agentId: 'reviewer',
+              runtimeProfileId: 'work',
+              browserProfileId: 'default',
+              defaultService: 'grok',
+              exists: true,
+            },
+            runtimeProfileId: 'work',
+            runtimeProfile: { browserProfile: 'default', defaultService: 'grok' },
+            browserProfileId: 'default',
+            browserProfile: {},
+            defaultService: 'grok',
+          },
+        ],
+        exists: true,
+      },
+    });
+
+    expect(bundle.teamRun.teamId).toBe('ops');
+    expect(bundle.teamRun.initialInputs).toEqual({
+      selectedTeamId: 'ops',
+      teamExists: true,
+    });
+    expect(bundle.steps.map((step) => ({ id: step.id, status: step.status, dependsOn: step.dependsOnStepIds }))).toEqual([
+      {
+        id: 'run_2:step:1',
+        status: 'planned',
+        dependsOn: [],
+      },
+      {
+        id: 'run_2:step:2',
+        status: 'blocked',
+        dependsOn: ['run_2:step:1'],
+      },
+      {
+        id: 'run_2:step:3',
+        status: 'planned',
+        dependsOn: ['run_2:step:2'],
+      },
+    ]);
+    expect(bundle.steps[1]?.input.notes).toEqual([
+      'blocked because the member does not resolve to a runnable runtime profile',
+    ]);
+  });
+
+  it('creates a planned team-run bundle directly from config team resolution', () => {
+    const bundle = createTeamRunBundleFromConfig({
+      config: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+          consulting: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          work: { browserProfile: 'consulting', defaultService: 'grok' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'default' },
+          reviewer: { runtimeProfile: 'work' },
+        },
+        teams: {
+          ops: { agents: ['analyst', 'reviewer'] },
+        },
+      },
+      teamId: 'ops',
+      runId: 'run_3',
+      createdAt: '2026-04-03T00:00:00.000Z',
+    });
+
+    expect(bundle.teamRun.teamId).toBe('ops');
+    expect(bundle.steps.map((step) => ({
+      agentId: step.agentId,
+      runtimeProfileId: step.runtimeProfileId,
+      browserProfileId: step.browserProfileId,
+      service: step.service,
+      status: step.status,
+    }))).toEqual([
+      {
+        agentId: 'analyst',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        status: 'planned',
+      },
+      {
+        agentId: 'reviewer',
+        runtimeProfileId: 'work',
+        browserProfileId: 'consulting',
+        service: 'grok',
+        status: 'planned',
+      },
+    ]);
   });
 });
