@@ -7934,3 +7934,34 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - for provider expansion, normalize the provider concept into the existing
     domain/cache model first, then implement CRUD from that normalization
+
+## 2026-04-04 - Gemini already exposes real Gem and conversation CRUD anchors
+
+- Context:
+  - the new Gemini CRUD/cache plan started with a DOM recon requirement before
+    any implementation
+- Result:
+  - Gemini root and Gem surfaces are concrete enough to proceed
+  - confirmed live anchors include:
+    - conversations:
+      - `data-test-id="all-conversations"`
+      - `data-test-id="conversation"`
+      - `data-test-id="actions-menu-button"`
+      - stable routes:
+        - `/app/<conversationId>`
+    - Gems:
+      - authoritative route:
+        - `/gems/view`
+      - create:
+        - `data-test-id="open-bots-creation-window"`
+        - `New Gem`
+      - user Gem route:
+        - `/gem/<id>`
+      - user Gem direct actions:
+        - `Share`
+        - `Edit Gem`
+        - `More options for "<name>" Gem`
+- Durable lesson:
+  - Gemini `Gems` are not a speculative abstraction anymore
+  - the next Gemini CRUD slice can start from real named surfaces and should
+    map Gems directly onto the generic `Project` domain

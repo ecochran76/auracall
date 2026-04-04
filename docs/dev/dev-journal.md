@@ -7661,3 +7661,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - conversation CRUD
   - conversation file/attachment cache mirroring
   - disposable Gemini acceptance
+
+## 2026-04-04 - Gemini Gem and conversation DOM recon is strong enough to proceed
+
+- Current focus:
+  - Slice 1 from the Gemini CRUD/cache plan:
+    - live DOM recon only
+- What I confirmed on managed `wsl-chrome-2 -> gemini`:
+  - root conversation list is a real side-nav catalog:
+    - container:
+      - `data-test-id="all-conversations"`
+    - rows:
+      - `data-test-id="conversation"`
+    - row actions:
+      - `data-test-id="actions-menu-button"`
+      - aria:
+        - `More options for <title>`
+    - routes:
+      - `https://gemini.google.com/app/<conversationId>`
+  - Gem catalog is a real first-class route:
+    - `https://gemini.google.com/gems/view`
+  - Gem manager exposes:
+    - `New Gem`
+    - premade Gem rows with `More options for "<name>" Gem`
+    - at least one user Gem row with:
+      - direct `Share`
+      - direct `Edit Gem`
+      - `More options for "Oracle" Gem`
+    - user Gem route:
+      - `https://gemini.google.com/gem/3bfcda98acf4`
+- Outcome:
+  - Gemini `Gems` are concrete enough to map onto the generic `Project` domain
+  - Gemini conversation/Gem CRUD implementation can now begin from named
+    surfaces instead of speculative planning

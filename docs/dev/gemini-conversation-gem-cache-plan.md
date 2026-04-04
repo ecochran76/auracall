@@ -144,6 +144,64 @@ Deliverable:
 Exit criteria:
 - enough live evidence to name the authoritative list/action surfaces
 
+### Live recon checkpoint — 2026-04-04
+
+Observed on managed `wsl-chrome-2 -> gemini` using `browser-tools`:
+
+- root app route:
+  - `https://gemini.google.com/app`
+- authoritative recent-conversation list lives in the left side nav:
+  - container:
+    - `data-test-id="all-conversations"`
+  - rows:
+    - `data-test-id="conversation"`
+  - row actions:
+    - `data-test-id="actions-menu-button"`
+    - aria:
+      - `More options for <title>`
+  - conversation routes are stable:
+    - `https://gemini.google.com/app/<conversationId>`
+- Gem catalog route:
+  - `https://gemini.google.com/gems/view`
+- Gem side-nav entry:
+  - `data-test-id="bot-list-side-nav-entry-button"`
+- Gem manager page exposes:
+  - page heading:
+    - `Gem manager`
+  - create action:
+    - `data-test-id="open-bots-creation-window"`
+    - visible label:
+      - `New Gem`
+  - premade Gem rows:
+    - anchors to:
+      - `https://gemini.google.com/gem/<slug>`
+    - aria:
+      - `Start a new conversation with Gem: <name>`
+    - row actions:
+      - `data-test-id="actions-menu-button"`
+      - aria:
+        - `More options for "<name>" Gem`
+  - user Gem row currently observed:
+    - visible text:
+      - `Oracle process questions from Codex`
+    - anchor:
+      - `https://gemini.google.com/gem/3bfcda98acf4`
+    - direct actions:
+      - `Share`
+      - `Edit Gem`
+      - `More options for "Oracle" Gem`
+
+Current interpretation:
+
+- Gemini `Gems` are a real provider-local equivalent of the generic `Project`
+  domain
+- Gemini conversations are a real separate catalog with stable ids under
+  `/app/<conversationId>`
+- the next CRUD slice can start from:
+  - `gems/view` for Gem list/create surfaces
+  - `/gem/<id-or-slug>` for Gem-specific follow-up recon
+  - side-nav conversation rows for conversation rename/delete recon
+
 ## Slice 2. Gemini Gem CRUD as generic project CRUD
 
 Goal:
