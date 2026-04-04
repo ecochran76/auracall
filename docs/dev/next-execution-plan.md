@@ -178,10 +178,20 @@ Gemini is also at a better checkpoint now:
 That means the next Gemini move should not be more blind probing on the same
 account/pairing. It should be either:
 
-- a second explicit pairing/account proof pass
+- setup plus a second explicit pairing/account proof pass
 - or one bounded implementation gap with a concrete failure
 
 not more open-ended Gemini proof churn
+
+Current local reality:
+
+- `default -> gemini` is the only Gemini-ready browser pairing currently
+  initialized on this host
+- `wsl-chrome-2 -> gemini` is not initialized yet
+- `windows-chrome-test -> gemini` is not initialized yet
+
+So if Gemini moves again soon, the next honest step is second-pairing setup,
+not pretending a second proof target is already available.
 
 ## Execution principle
 

@@ -7130,3 +7130,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     explicit capability or account-availability denial, classify it as a proof
     result first and only promote it to an implementation track after a second
     signal shows Aura-Call is actually at fault
+
+## 2026-04-04 - verify a second provider proof target is actually initialized before planning against it
+
+- Symptom:
+  - after completing one full Gemini proof pass on `default -> default`, the
+    natural next idea was a second pairing proof pass
+  - but local Gemini doctor audits showed the other runtime-profile candidates
+    were not initialized for Gemini at all
+- Fix:
+  - recorded that `wsl-chrome-2 -> gemini` and
+    `windows-chrome-test -> gemini` both require setup/login before they are
+    real proof targets
+- Durable lesson:
+  - before promoting “prove a second pairing/account” as the next provider
+    step, verify that the alternate pairing is already initialized locally or
+    the plan should explicitly start with setup instead of pretending the proof
+    target already exists

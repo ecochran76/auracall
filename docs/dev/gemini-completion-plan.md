@@ -244,6 +244,11 @@ Outcome:
   - either prove a second explicit pairing/account
   - or take one bounded implementation gap exposed by a concrete failure
   - not more blind probing on the same `default -> default` account
+- local second-pairing audit on 2026-04-04 found:
+  - `wsl-chrome-2 -> gemini`: managed browser profile not initialized
+  - `windows-chrome-test -> gemini`: managed browser profile not initialized
+  - so there is not yet a second Gemini-ready pairing to prove without first
+    doing explicit setup/login work
 
 ### Slice 4: Tighten the highest-value Gemini implementation gap
 
@@ -264,7 +269,7 @@ Acceptance:
 Current recommendation:
 - do not take Slice 4 by momentum alone
 - first decide whether the next value is:
-  - a second-account/pairing proof pass
+  - setup plus a second-account/pairing proof pass
   - or a real implementation gap with a concrete operator or runtime failure
 
 ## Provisional feature matrix
