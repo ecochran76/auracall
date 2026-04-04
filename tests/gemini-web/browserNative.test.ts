@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   detectGeminiNativeAttachmentFailure,
   extractGeminiAnswerText,
+  isGeminiPromptCommitted,
 } from '../../src/gemini-web/browserNative.js';
 
 describe('gemini browser native answer extraction', () => {
@@ -36,5 +37,20 @@ describe('gemini browser native answer extraction', () => {
     expect(
       detectGeminiNativeAttachmentFailure('Conversation with Gemini Describe the uploaded image in one short sentence.'),
     ).toBeNull();
+  });
+
+  it('treats the prompt as committed only when it appears in history text', () => {
+    expect(
+      isGeminiPromptCommitted({
+        prompt: 'Describe the uploaded image in one short sentence.',
+        historyText: 'Conversation with Gemini Describe the uploaded image in one short sentence. A blue square.',
+      }),
+    ).toBe(true);
+    expect(
+      isGeminiPromptCommitted({
+        prompt: 'Describe the uploaded image in one short sentence.',
+        historyText: 'Hi Eric For you Create image Create music',
+      }),
+    ).toBe(false);
   });
 });

@@ -174,6 +174,10 @@
       - upload-menu materialization can still time out on that owned page
       - and after those are hardened, the current explicit live failure is:
         - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+      - a later rerun briefly regressed to a generic answer timeout until
+        Gemini submit was tightened to require prompt-in-history evidence again;
+        the current live boundary is back to the explicit composer/pending
+        failure above, not a vague answer wait
     - treat Gemini native image upload as an active browser hardening gap, not
       a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof

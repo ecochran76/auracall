@@ -7303,3 +7303,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - upload-menu materialization
     - fresh-frame stability
     - post-upload attachment retention through prompt commit
+
+## 2026-04-04 - Gemini native image submit now fails at the real pending boundary again
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - tried a narrower image-upload alignment by preferring Gemini's hidden
+    file-style uploader before the image-only hidden uploader when dispatching
+    synthetic `fileSelected`
+  - tightened Gemini submit so it only treats the prompt as committed when the
+    prompt actually appears in Gemini history, not when weaker states like an
+    empty/disabled composer merely suggest progress
+- Outcome:
+  - the native image path is still not green
+  - the hidden-uploader preference did not close the live gap
+  - but the run no longer drifts into a generic answer timeout; the current
+    live result is back to the more honest explicit failure:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Next step:
+  - keep the next Gemini slice bounded to why image attachment state disappears
+    before the prompt is durably committed on the owned page

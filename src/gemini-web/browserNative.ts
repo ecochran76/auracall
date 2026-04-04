@@ -158,6 +158,18 @@ export function detectGeminiNativeAttachmentFailure(currentText: string): string
   return null;
 }
 
+export function isGeminiPromptCommitted(options: {
+  historyText: string;
+  prompt: string;
+}): boolean {
+  const historyText = normalizeWhitespace(options.historyText);
+  const prompt = normalizeWhitespace(options.prompt);
+  if (!historyText || !prompt) {
+    return false;
+  }
+  return historyText.includes(prompt) || historyText.includes(prompt.slice(0, 80));
+}
+
 async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): Promise<void> {
   const imageOnly = attachmentPaths.length > 0 && attachmentPaths.every(isLikelyImagePath);
   let menuReady = false;
@@ -202,17 +214,25 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
         base64: (await readFile(filePath)).toString('base64'),
       })),
     );
-    const dispatched = await page.evaluate(`(() => {
-      const selector = ${JSON.stringify(GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR)};
+    const dispatchedSelector = await page.evaluate(`(() => {
+      const selectors = ${JSON.stringify([
+        GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR,
+        GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR,
+      ])};
       const payloads = ${JSON.stringify(files)};
-      const target = document.querySelector(selector);
-      if (!(target instanceof HTMLElement)) return false;
       const decode = (b64) => Uint8Array.from(globalThis.atob(b64), (c) => c.charCodeAt(0));
-      const event = new Event('fileSelected', { bubbles: false, cancelable: true });
-      event.files = payloads.map((file) => new File([decode(file.base64)], file.name, { type: file.mimeType }));
-      return target.dispatchEvent(event);
+      for (const selector of selectors) {
+        const target = document.querySelector(selector);
+        if (!(target instanceof HTMLElement)) continue;
+        const event = new Event('fileSelected', { bubbles: false, cancelable: true });
+        event.files = payloads.map((file) => new File([decode(file.base64)], file.name, { type: file.mimeType }));
+        if (target.dispatchEvent(event)) {
+          return selector;
+        }
+      }
+      return null;
     })()`);
-    if (dispatched) {
+    if (typeof dispatchedSelector === 'string' && dispatchedSelector.length > 0) {
       return;
     }
   }
@@ -275,7 +295,7 @@ async function readGeminiNativeState(page: Page): Promise<{
         String(el.getAttribute('aria-label') ?? '').toLowerCase().includes('remove file'),
       );
       return {
-        historyText: String(history?.innerText ?? history?.textContent ?? ''),
+        historyText: String(history instanceof HTMLElement ? history.innerText : history?.textContent ?? ''),
         promptText: String(prompt?.textContent ?? ''),
         hasPendingBlob,
         hasRemoveButton,
@@ -421,7 +441,9 @@ async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: nu
         const ariaDisabled = String(send?.getAttribute?.('aria-disabled') ?? '').toLowerCase();
         const disabled = Boolean(send?.hasAttribute?.('disabled'));
         const history = document.querySelector('[data-test-id="chat-history-container"]');
-        const historyText = String(history?.innerText ?? history?.textContent ?? '').replace(/\s+/g, ' ').trim();
+        const historyText = String(history instanceof HTMLElement ? history.innerText : history?.textContent ?? '')
+          .replace(/\s+/g, ' ')
+          .trim();
         const promptInHistory =
           expectedPrompt.length > 0 &&
           (historyText.includes(expectedPrompt) || historyText.includes(expectedPrompt.slice(0, 80)));
@@ -452,7 +474,7 @@ async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: nu
       normalizedPrompt,
     );
 
-    if (state.promptInHistory || state.nativeFailure || state.composerText.length === 0 || state.ariaDisabled === 'true' || state.disabled) {
+    if (state.promptInHistory || state.nativeFailure) {
       return;
     }
 
@@ -463,7 +485,7 @@ async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: nu
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
 
-  throw new Error('Gemini prompt did not commit before timeout.');
+  throw new Error('Gemini prompt did not commit to history before timeout.');
 }
 
 async function submitGeminiPrompt(page: Page, promptText: string, timeoutMs: number): Promise<void> {

@@ -313,6 +313,10 @@ Current recommendation:
   - once those are hardened enough to proceed, the latest explicit live failure
     is:
     - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+  - a later rerun briefly fell back to a generic answer timeout because Gemini
+    submit was still accepting non-authoritative "committed" hints; that has
+    since been tightened so the same image path now exits with the explicit
+    composer/pending failure again
 - the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it should not pull the next slice back into raw-protocol parity work by

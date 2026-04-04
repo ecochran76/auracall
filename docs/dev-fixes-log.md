@@ -7590,3 +7590,30 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Durable lesson:
   - for Gemini browser-native work, reuse the ChatGPT/Grok page-ownership model
     first; only keep the truly Gemini-specific selectors and copy local
+
+## 2026-04-04 - Gemini native image submit must require prompt-in-history evidence
+
+- Symptom:
+  - after the owned-page hardening work, one later native image rerun on
+    `wsl-chrome-2 -> gemini` regressed to:
+    - `Timed out waiting for Gemini browser-native attachment response.`
+  - live inspection still suggested the run had not really committed the image
+    prompt into Gemini history, so the timeout was less honest than the earlier
+    explicit pending/composer failures
+- Fix:
+  - when dispatching synthetic Gemini image uploads, try the hidden file-style
+    uploader before the image-only hidden uploader
+  - tightened Gemini submit so it only treats the prompt as committed when the
+    prompt actually appears in Gemini history or Gemini surfaces explicit
+    native failure copy
+  - stopped accepting weaker hints like an empty or disabled composer as proof
+    of commit on their own
+- Result:
+  - native Gemini image upload is still not green
+  - but the same live path now exits at the more accurate boundary again:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+- Durable lesson:
+  - for Gemini browser-native send/commit, use the same post-condition rule as
+    ChatGPT/Grok in spirit: a prompt is not "committed" until the live page
+    shows durable history evidence or a provider-native failure, not just
+    transient composer state changes
