@@ -7461,3 +7461,33 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     remaining gap is just another page-level payload tweak; the next honest
     options are broader browser-target capture or a different implementation
     path
+
+## 2026-04-04 - Gemini ordinary browser uploads should use the live page, not the raw upload client
+
+- Symptom:
+  - real Gemini upload-mode runs had converged on a dead end:
+    - raw upload requests could be made more correct
+    - but native live captures showed a broader request sequence and richer
+      payloads than the raw client could honestly mirror
+  - the first browser-native helper attempt reached the real upload UI, but the
+    live page still held the file chip and prompt because the send never
+    actually fired
+- Fix:
+  - threaded `attachmentMode` into custom browser executors so Gemini could
+    route upload-mode runs differently from inline/bundled text paths
+  - added a Gemini browser-native upload helper that:
+    - opens the live upload menu
+    - accepts the real file chooser
+    - waits for attachment preview state
+    - waits for a genuinely enabled send button
+    - verifies that submit actually starts before waiting for an answer
+- Result:
+  - `wsl-chrome-2 -> gemini` is now green for a real upload-mode text-file
+    proof through the live page:
+    - `WSL2 NATIVE GEMINI UPLOAD GREEN 2026-04-04`
+  - standard Gemini browser upload-mode prompts no longer depend on the raw
+    upload protocol path
+- Durable lesson:
+  - when a provider's raw upload protocol drifts too far from the native live
+    UI, pivot ordinary attachment-backed browser runs onto the real page
+    instead of continuing low-yield protocol emulation

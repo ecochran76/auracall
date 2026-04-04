@@ -144,17 +144,22 @@
       - `WSL2 Gemini attachment proof 2026-04-04`
     - note:
       - verbose output reported `Browser will paste file contents inline (no uploads).`
-  - native Gemini upload transport is not yet green on this pairing:
-    - forcing upload mode with `--browser-attachments always` did use the real
-      attachment path (`[verbose] Browser attachments: ...`)
-    - but a text-file upload returned:
+  - native Gemini browser upload is now green for a real text-file upload:
+    - `auracall --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Read the uploaded file and reply exactly with its full contents, with no extra words.' --file /tmp/gemini-native-upload-proof.txt --wait --verbose --force`
+    - returned exactly:
+      - `WSL2 NATIVE GEMINI UPLOAD GREEN 2026-04-04`
+    - Aura-Call now takes that path through the live Gemini page itself for
+      upload-mode runs, instead of relying on the earlier raw Gemini upload
+      protocol path for ordinary attachment-backed prompts
+  - the old raw Gemini upload transport investigation remains relevant
+    background, but it is no longer the active path for standard browser upload
+    prompts:
+    - earlier forced-upload text proof returned:
       - `[NO CONTENT FOUND]`
-    - the image upload stayed non-green even after:
-      - adding upload MIME types
-      - including filename/MIME metadata in the Gemini `f.req` attachment tuple
-    - latest forced-upload image proof now fails explicitly with:
+    - earlier forced-upload image proof reached:
       - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
-    - repeating the same direct attachment request did not self-heal on retry
+  - native Gemini browser image-upload proof is still not freshly re-proven on
+    this pairing after the browser-driven pivot
   - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.

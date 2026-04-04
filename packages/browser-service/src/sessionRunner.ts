@@ -44,6 +44,7 @@ export interface BrowserSessionRunnerDeps {
   executeBrowser: (options: {
     prompt: string;
     attachments: BrowserAttachment[];
+    attachmentMode?: BrowserPromptArtifacts['attachmentMode'];
     fallbackSubmission?: { prompt: string; attachments: BrowserAttachment[] };
     config: BrowserSessionConfigLike;
     log: BrowserLogger;
@@ -131,6 +132,7 @@ export async function runBrowserSessionExecutionCore(
     browserResult = await deps.executeBrowser({
       prompt: promptArtifacts.composerText,
       attachments: promptArtifacts.attachments,
+      attachmentMode: promptArtifacts.attachmentMode,
       fallbackSubmission: promptArtifacts.fallback
         ? { prompt: promptArtifacts.fallback.composerText, attachments: promptArtifacts.fallback.attachments }
         : undefined,

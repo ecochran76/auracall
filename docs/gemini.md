@@ -120,20 +120,19 @@ Notes:
 - `auracall login --target gemini --export-cookies` now fails fast if the opened Gemini page still shows a visible signed-out `Sign in` state, instead of waiting for cookies indefinitely.
 - On Gemini specifically, Aura-Call will also try one bounded recovery click on a visible `Sign in` CTA before failing, which is enough on some already-authenticated Chrome profiles to complete the Google handoff and export cookies successfully.
 - For `--file` inputs in Gemini browser mode, Aura-Call may satisfy the request by pasting file contents inline instead of using the real Gemini attachment transport. Treat inline-bundled file proofs as valid Aura-Call file-input proofs, but not as native Gemini upload proofs.
-- On `wsl-chrome-2`, forcing real attachment mode with `--browser-attachments always` currently reaches the attachment path but is not yet reliable:
-  - uploaded text-file proof returned `[NO CONTENT FOUND]`
-  - uploaded image proof first said the image did not come through
-  - after MIME and attachment-metadata fixes, the latest forced-upload image
-    proof now fails explicitly with:
-    - `Gemini accepted the attachment request but returned control frames only and never materialized a response body.`
-  - repeating the same direct attachment request did not turn that control-only
-    response into a real body later
-  - the next investigation step is to compare Aura-Call's raw upload path
-    against Gemini's browser-native upload UI using:
-    - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
-  - first live comparison result:
-    - the browser-native Gemini send path uses a much richer `f.req` envelope
-      than Aura-Call's raw client currently sends
+- On Gemini specifically, `--browser-attachments always` now routes ordinary
+  attachment-backed browser runs through the live Gemini page itself rather
+  than the earlier raw Gemini upload protocol path.
+- Current live proof on `wsl-chrome-2`:
+  - real upload-mode text-file proof is green and returned the exact uploaded
+    contents
+- Current remaining gap:
+  - native Gemini image-upload proof is not yet freshly re-proven after the
+    browser-driven pivot
+- The earlier raw Gemini upload protocol investigation is still preserved in:
+  - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
+  - but it is now background context, not the default path for ordinary Gemini
+    browser uploads
 
 ## Implementation details
 

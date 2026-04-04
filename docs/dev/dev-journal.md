@@ -7181,3 +7181,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
       boundary
     - or treat this as evidence that native Gemini attachments need a
       browser-driven path instead of more raw-client emulation
+
+## 2026-04-04 - Gemini browser uploads now work through the native page path
+
+- Current focus:
+  - Gemini browser-native attachment execution
+- What changed:
+  - threaded `attachmentMode` through the browser-service custom executor seam
+    so Gemini can distinguish:
+    - inline/bundled text paths
+    - real upload-mode attachment paths
+  - added a Gemini-native browser helper that:
+    - opens the live upload menu
+    - accepts files through the real chooser
+    - waits for attachment preview state
+    - submits through the live Gemini page
+  - tightened submit readiness after the first live run showed the file and
+    prompt were present but the send never actually fired
+- Outcome:
+  - `wsl-chrome-2 -> gemini` is now green for a real upload-mode text-file
+    proof:
+    - `WSL2 NATIVE GEMINI UPLOAD GREEN 2026-04-04`
+  - ordinary Gemini browser upload-mode runs no longer depend on the earlier
+    raw Gemini upload protocol path
+  - the older raw-protocol investigation remains useful background, but it is
+    no longer the primary implementation path for standard attachment-backed
+    prompts
+- Next step:
+  - re-prove one higher-value native upload class, likely image, on the same
+    pairing before widening Gemini work again

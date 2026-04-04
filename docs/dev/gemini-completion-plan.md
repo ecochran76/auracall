@@ -292,26 +292,16 @@ Acceptance:
 - one targeted live proof if behavior changed materially
 
 Current recommendation:
-- do not take Slice 4 by momentum alone
-- first decide whether the next value is:
-  - fixing Gemini upload transport on real attachment mode
-  - or a real implementation gap with a concrete operator or runtime failure
-- current concrete handoff for real attachment mode:
+- treat the raw Gemini upload protocol work as background investigation, not as
+  the primary path for ordinary browser attachments
+- standard Gemini browser upload-mode runs now use the live page directly
+- next value should come from:
+  - fresh proof on another native upload class like image, or
+  - a concrete Gemini browser failure after the browser-driven pivot
+- the raw upload investigation note remains useful context:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
-    captures the live upload-menu and preview-chip anchors for the next
-    browser-native protocol comparison
-  - the first live protocol comparison now shows the browser-native
-    `StreamGenerate` request uses a materially richer `f.req` envelope than the
-    current raw client, so the next implementation slice should target envelope
-    parity, not another small attachment-field tweak
-  - the follow-up native capture now also shows Gemini issues an additional
-    post-`StreamGenerate` `batchexecute` request (`rpcids=PCck7e`), so the
-    remaining native-upload gap may depend on a broader request sequence rather
-    than `StreamGenerate` parity alone
-  - deeper request-body capture attempts against the live page only surfaced
-    the early `ESY5D` payload and did not expose decodable bodies for the later
-    native `StreamGenerate` / `PCck7e` requests, so the next step is no longer
-    another small payload tweak by default
+  - but it should not pull the next slice back into raw-protocol parity work by
+    default
 
 ## Provisional feature matrix
 

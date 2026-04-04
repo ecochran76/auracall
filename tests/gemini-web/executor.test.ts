@@ -16,10 +16,20 @@ const saveFirstGeminiImageFromOutput = vi.fn<(...args: unknown[]) => Promise<unk
   saved: true,
   imageCount: 1,
 }));
+const runGeminiNativeBrowserAttachmentPrompt = vi.fn<(...args: unknown[]) => Promise<unknown>>(async () => ({
+  answerText: 'native upload ok',
+  answerMarkdown: 'native upload ok',
+  tookMs: 1234,
+  answerTokens: 4,
+  answerChars: 16,
+}));
 
 vi.mock('../../src/gemini-web/client.js', () => ({
   runGeminiWebWithFallback,
   saveFirstGeminiImageFromOutput,
+}));
+vi.mock('../../src/gemini-web/browserNative.js', () => ({
+  runGeminiNativeBrowserAttachmentPrompt,
 }));
 
 const getCookies = vi.fn(async () => ({
@@ -35,6 +45,7 @@ describe('gemini-web executor', () => {
   beforeEach(() => {
     runGeminiWebWithFallback.mockClear();
     saveFirstGeminiImageFromOutput.mockClear();
+    runGeminiNativeBrowserAttachmentPrompt.mockClear();
     getCookies.mockClear();
   });
 
@@ -168,10 +179,33 @@ describe('gemini-web executor', () => {
     await expect(
       exec({
         prompt: 'Describe the uploaded image.',
-        attachments: [{ path: '/tmp/input.png', displayPath: 'input.png' }],
+        attachments: [{ path: '/tmp/input.txt', displayPath: 'input.txt' }],
+        attachmentMode: 'inline',
         config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default' },
         log: () => {},
       }),
     ).rejects.toThrow('Gemini returned control frames only and never materialized a response body.');
+  });
+
+  it('uses the native browser attachment path for real uploads', async () => {
+    const { createGeminiWebExecutor } = await import('../../src/gemini-web/executor.js');
+    const exec = createGeminiWebExecutor({});
+
+    const result = await exec({
+      prompt: 'Describe the uploaded image.',
+      attachments: [{ path: '/tmp/input.png', displayPath: 'input.png' }],
+      attachmentMode: 'upload',
+      config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default', target: 'gemini' },
+      log: () => {},
+    });
+
+    expect(runGeminiNativeBrowserAttachmentPrompt).toHaveBeenCalledWith(
+      expect.objectContaining({
+        prompt: 'Describe the uploaded image.',
+        geminiUrl: 'https://gemini.google.com/app',
+      }),
+    );
+    expect(runGeminiWebWithFallback).not.toHaveBeenCalled();
+    expect(result.answerText).toBe('native upload ok');
   });
 });

@@ -4,6 +4,7 @@ import { getCookies } from '@steipete/sweet-cookie';
 import { runGeminiWebWithFallback, saveFirstGeminiImageFromOutput } from './client.js';
 import type { GeminiWebModelId } from './client.js';
 import type { GeminiWebOptions, GeminiWebResponse } from './types.js';
+import { runGeminiNativeBrowserAttachmentPrompt } from './browserNative.js';
 
 const GEMINI_COOKIE_NAMES = [
   '__Secure-1PSID',
@@ -53,6 +54,21 @@ function normalizeGeminiUrl(value: string | null | undefined): string {
     const message = error instanceof Error ? error.message : String(error ?? 'Invalid Gemini URL.');
     throw new Error(`Invalid Gemini URL: ${message}`);
   }
+}
+
+function shouldUseGeminiNativeBrowserAttachments(runOptions: BrowserRunOptions): boolean {
+  if ((runOptions.attachments?.length ?? 0) === 0) {
+    return false;
+  }
+
+  if (runOptions.attachmentMode === 'upload' || runOptions.attachmentMode === 'bundle') {
+    return true;
+  }
+
+  return (runOptions.attachments ?? []).some((attachment) => {
+    const ext = path.extname(attachment.path).toLowerCase();
+    return !['.txt', '.md', '.json', '.csv', '.ts', '.tsx', '.js', '.jsx', '.py', '.yaml', '.yml'].includes(ext);
+  });
 }
 
 function resolveGeminiWebModel(
@@ -266,6 +282,16 @@ export function createGeminiWebExecutor(
     let response: GeminiWebResponse;
 
     try {
+      if (!editImagePath && !generateImagePath && shouldUseGeminiNativeBrowserAttachments(runOptions)) {
+        return await runGeminiNativeBrowserAttachmentPrompt({
+          runOptions,
+          prompt,
+          geminiUrl,
+          timeoutMs,
+          logger: log,
+        });
+      }
+
       if (editImagePath) {
         const intro = await runGeminiWebWithFallback({
           prompt: 'Here is an image to edit',
