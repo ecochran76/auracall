@@ -7591,3 +7591,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - if browser-service reopens again soon, the next honest candidate is the
     attachment-signal polling contract, not more upload-trigger loop cleanup
+
+## 2026-04-04 - Third Gemini browser-service extraction landed
+
+- Current focus:
+  - extract the shared polling/stability mechanics from Gemini attachment
+    preview waits without forcing a fake cross-provider signal schema
+- What changed:
+  - added package-owned:
+    - `waitForAttachmentSignals(...)`
+  - routed Gemini attachment preview stabilization through that helper
+  - updated the browser-service backlog/tools docs to mark the polling
+    contract as live
+- Why this slice:
+  - the polling/stability logic was clearly reusable
+  - the actual attachment signal payloads still differ enough that only the
+    polling contract, not the full signal shape, should be package-owned yet
+- Next step:
+  - if browser-service reopens again, the remaining honest question is whether
+    a provider-agnostic attachment signal shape should exist at all

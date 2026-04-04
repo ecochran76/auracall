@@ -7865,3 +7865,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider loop is only “try these real surfaces in order until one
     works,” extract the fallback runner before extracting provider signal
     semantics
+
+## 2026-04-04 - Gemini attachment preview polling now has a package-owned seam
+
+- Context:
+  - Gemini attachment preview waits were also carrying a reusable browser
+    mechanic:
+    - repeated state reads
+    - stable-ready polling
+    - last-state timeout reporting
+  - the polling mechanics were reusable even though the signal payload shape
+    was still Gemini-specific
+- Fix:
+  - added package-owned:
+    - `waitForAttachmentSignals(...)`
+    in `packages/browser-service/src/service/ui.ts`
+  - Gemini attachment preview stabilization now uses that helper through the
+    Aura-Call browser-service shim
+- Result:
+  - the third 2026-04-04 Gemini browser-service backlog item now has a live
+    package seam too
+  - provider-specific signal readers and attachment payload shapes remain local
+- Durable lesson:
+  - extract polling/stability mechanics before trying to force one shared
+    cross-provider attachment signal schema

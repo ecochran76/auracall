@@ -309,6 +309,16 @@ Candidate extraction:
 - `waitForAttachmentPhase(...)`
 - `readAttachmentSignals(...)`
 
+Progress:
+- first package extraction is now live:
+  - `waitForAttachmentSignals(...)`
+- current first adopter:
+  - Gemini attachment preview stabilization
+- still remaining:
+  - decide whether a shared provider-agnostic attachment signal shape is clean
+    enough to extract, or whether browser-service should stop at the polling
+    contract and keep signal payloads provider-local
+
 ### C. Ordered upload-surface fallback belongs in package mechanics
 
 Problem:

@@ -5,6 +5,7 @@ import {
   collectAnchoredActionDiagnostics,
   readDownloadCapture,
   runOrderedSurfaceFallback,
+  waitForAttachmentSignals,
   clickRevealedRowAction,
   collectVisibleOverlayInventory,
   collectVisibleMenuInventory,
@@ -104,6 +105,30 @@ describe('browser-service ui wait helpers', () => {
         { name: 'second', ok: true },
       ],
     });
+  });
+
+  test('waitForAttachmentSignals requires stable ready polls before succeeding', async () => {
+    const seen: number[] = [];
+    const states = [
+      { ready: false, sendReady: false, count: 0 },
+      { ready: true, sendReady: true, count: 1 },
+      { ready: true, sendReady: true, count: 2 },
+    ];
+
+    const result = await waitForAttachmentSignals({
+      read: async () => {
+        const value = states[Math.min(seen.length, states.length - 1)];
+        seen.push(value.count);
+        return value;
+      },
+      isReady: (value) => value.ready && value.sendReady,
+      timeoutMs: 50,
+      pollMs: 1,
+      requiredStablePolls: 2,
+    });
+
+    expect(seen).toEqual([0, 1, 2]);
+    expect(result).toEqual({ ready: true, sendReady: true, count: 2 });
   });
 
   test('waitForPredicate returns attempts, elapsed time, and truthy value', async () => {

@@ -211,6 +211,14 @@ Current active extraction plan:
     instead of hand-rolled provider-local loops.
   - Keep exact surface selectors and provider-specific error wording local.
 
+- `waitForAttachmentSignals({ read, isReady, ... })`
+  - Polls provider-defined attachment state until it is stably ready for the
+    requested number of polls, then returns the winning state.
+  - Use this for attachment staging/preview waits when the provider signal
+    shape differs but the polling/stability mechanics are the same.
+  - Keep signal payload shape and selectors provider-local unless a second
+    provider proves a truly shared contract.
+
 - `dismissOverlayRoot(Runtime, rootSelector, options)`
   - Dismisses one specific overlay root by stable selector/handle instead of
     closing the first visible dialog on the page.

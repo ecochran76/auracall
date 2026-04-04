@@ -145,6 +145,16 @@ export type RunOrderedSurfaceFallbackResult<T> = {
   }>;
 };
 
+export type WaitForAttachmentSignalsOptions<T> = {
+  read: () => Promise<T>;
+  isReady: (value: T) => boolean;
+  timeoutMs: number;
+  pollMs?: number;
+  requiredStablePolls?: number;
+  formatLastState?: (value: T) => string;
+  timeoutMessage?: string;
+};
+
 export type OpenRadixMenuOptions = OpenMenuOptions;
 
 export type SelectMenuItemOptions = {
@@ -1289,6 +1299,34 @@ export async function runOrderedSurfaceFallback<T>(
     ok: false,
     attempts,
   };
+}
+
+export async function waitForAttachmentSignals<T>(
+  options: WaitForAttachmentSignalsOptions<T>,
+): Promise<T> {
+  const deadline = Date.now() + options.timeoutMs;
+  const pollMs = Math.max(1, options.pollMs ?? 250);
+  const requiredStablePolls = Math.max(1, options.requiredStablePolls ?? 1);
+  let lastState: T | null = null;
+  let stableCount = 0;
+
+  while (Date.now() < deadline) {
+    const state = await options.read();
+    lastState = state;
+    if (options.isReady(state)) {
+      stableCount += 1;
+      if (stableCount >= requiredStablePolls) {
+        return state;
+      }
+    } else {
+      stableCount = 0;
+    }
+    await new Promise((resolve) => setTimeout(resolve, pollMs));
+  }
+
+  const detail =
+    lastState && options.formatLastState ? options.formatLastState(lastState) : lastState ? JSON.stringify(lastState) : 'unavailable';
+  throw new Error(`${options.timeoutMessage ?? 'Attachment signals did not stabilize before timeout.'} Last state: ${detail}`);
 }
 
 export async function collectAnchoredActionDiagnostics(

@@ -7,7 +7,7 @@ import { openOrReuseChromeTarget } from '../../packages/browser-service/src/chro
 import { resolveBrowserConfig } from '../browser/config.js';
 import { bootstrapManagedProfile } from '../browser/profileStore.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
-import { captureActionPhaseDiagnostics, runOrderedSurfaceFallback } from '../browser/service/ui.js';
+import { captureActionPhaseDiagnostics, runOrderedSurfaceFallback, waitForAttachmentSignals } from '../browser/service/ui.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger } from '../browser/types.js';
 
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
@@ -498,14 +498,11 @@ async function waitForAttachmentPreview(
   attachmentNames: string[],
   timeoutMs: number,
 ): Promise<void> {
-  const deadline = Date.now() + timeoutMs;
   const imageNames = attachmentNames.filter(isLikelyImagePath);
-  let lastState: GeminiAttachmentPreviewState | null = null;
-  let stableReadyCount = 0;
   const requiredStableReadyCount = imageNames.length > 0 ? 3 : 2;
 
-  while (Date.now() < deadline) {
-    const state = await page.evaluate(`(() => {
+  await waitForAttachmentSignals<GeminiAttachmentPreviewState>({
+    read: async () => page.evaluate(`(() => {
       const names = ${JSON.stringify(attachmentNames)};
       const imageNamesInner = ${JSON.stringify(imageNames)};
       const prompt = document.querySelector('div[role="textbox"][aria-label="Enter a prompt for Gemini"]');
@@ -597,30 +594,22 @@ async function waitForAttachmentPreview(
         previewNames,
         matchedNames,
       };
-    })()`);
-    lastState = state as GeminiAttachmentPreviewState;
-    if (lastState.ready && lastState.sendReady) {
-      stableReadyCount += 1;
-      if (stableReadyCount >= requiredStableReadyCount) {
-        return;
-      }
-    } else {
-      stableReadyCount = 0;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 500));
-  }
-
-  const detail = lastState
-    ? JSON.stringify({
-      sendReady: lastState.sendReady,
-      textboxText: normalizeWhitespace(lastState.textboxText),
-      visibleBlobCount: lastState.visibleBlobCount,
-      removeLabels: lastState.removeLabels,
-      previewNames: lastState.previewNames,
-      matchedNames: lastState.matchedNames,
-    })
-    : 'unavailable';
-  throw new Error(`Gemini attachment preview did not stabilize before timeout. Last state: ${detail}`);
+    })()`) as Promise<GeminiAttachmentPreviewState>,
+    isReady: (state) => state.ready && state.sendReady,
+    timeoutMs,
+    pollMs: 500,
+    requiredStablePolls: requiredStableReadyCount,
+    formatLastState: (state) =>
+      JSON.stringify({
+        sendReady: state.sendReady,
+        textboxText: normalizeWhitespace(state.textboxText),
+        visibleBlobCount: state.visibleBlobCount,
+        removeLabels: state.removeLabels,
+        previewNames: state.previewNames,
+        matchedNames: state.matchedNames,
+      }),
+    timeoutMessage: 'Gemini attachment preview did not stabilize before timeout.',
+  });
 }
 
 async function waitForGeminiSendReady(page: Page, timeoutMs: number): Promise<void> {
