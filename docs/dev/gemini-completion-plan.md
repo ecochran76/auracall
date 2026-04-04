@@ -220,6 +220,17 @@ Current proof progress:
   - edit-image: not green on this pairing
     - classify as a provider/account capability result first, not a shared
       browser/runtime regression
+- 2026-04-04:
+  - `wsl-chrome-2 -> gemini`
+  - native text-file upload: green
+  - native image upload: still not green
+    - latest fresh rerun now commits and returns a real answer instead of
+      stalling at the old composer-pending boundary
+    - but the answer is still attachment-blind:
+      - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
+    - active gap:
+      - preserve staged image context through submit so Gemini actually consumes
+        it as model input
   - required exported-cookie fallback on this Linux host because direct
     keyring-backed Chrome cookie reads returned zero Gemini auth cookies
   - current preferred fallback path is the runtime-profile-scoped export:

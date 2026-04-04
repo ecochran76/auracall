@@ -7711,3 +7711,29 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - for browser attachment prompts, prefer the real send control first and use
     `Enter` as fallback, but do not assume that submit-order alignment alone
     solves provider-specific attachment lifecycle bugs
+
+## 2026-04-04 - Gemini image submit can commit without preserving image context
+
+- Context:
+  - Gemini native image upload on `wsl-chrome-2` had been failing at the
+    explicit boundary:
+    - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
+  - preserved-page live inspection showed that one more real send click on that
+    failed page could commit the prompt and produce an answer
+- Fix:
+  - added one bounded resend fallback when Gemini leaves the prompt in the
+    composer after the attachment disappears and before prompt-in-history
+    evidence appears
+- Result:
+  - the latest fresh rerun no longer stalled at the old composer-pending
+    boundary
+  - Gemini returned a real answer instead:
+    - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
+  - the active bug is now narrower:
+    - prompt commit/answer materialization can succeed
+    - but the staged image is still being lost before Gemini consumes it
+- Durable lesson:
+  - once a provider-specific attachment path starts returning real text without
+    the attachment content, stop treating it as a submit bug; shift the next
+    slice to attachment preservation from staged preview into model-visible
+    input

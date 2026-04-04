@@ -166,30 +166,19 @@
       ChatGPT/Grok:
       - exact target ownership
       - competing Gemini tab trimming
-      - `Enter`-first submit
+      - send-button/touch-target-first submit
       - explicit provider/page failure copy detection
-    - but the latest fresh reruns still fail around owned-page readiness rather
-      than answer materialization:
-      - prompt textarea readiness on a fresh owned page can still detach
-      - upload-menu materialization can still time out on that owned page
-      - and after those are hardened, the current explicit live failure is:
-        - `Gemini prompt remained in the composer after the attachment vanished and no response materialized.`
-      - a later rerun briefly regressed to a generic answer timeout until
-        Gemini submit was tightened to require prompt-in-history evidence again;
-        the current live boundary is back to the explicit composer/pending
-        failure above, not a vague answer wait
-      - a newer kept-browser inspection changed the highest honest boundary
-        again:
-        - `--browser-keep-browser` now preserves the failed Gemini page for
-          inspection
-        - preserved live pages show the image really does stage, with:
-          - a visible `blob:` image
-          - a visible `Remove file gemini-native-upload-proof.png` button
-          - an empty prompt box, meaning submit never started yet
-        - the current failing phase is therefore image-preview readiness
-          timing/detection, not post-submit disappearance
-        - current live failure:
-          - `Waiting failed: 45000ms exceeded`
+      - one-shot resend fallback when Gemini leaves the prompt in the composer
+        after the attachment disappears
+    - the current live boundary is now narrower than the old composer-pending
+      failure:
+      - the latest fresh rerun on `wsl-chrome-2 -> gemini` launched cleanly,
+        committed the prompt, and returned a real model answer
+      - but the answer was:
+        - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
+      - that means the native image path no longer stalls at prompt commit; it
+        now reaches answer materialization, but the image is still being lost
+        before Gemini consumes it as model input
     - treat Gemini native image upload as an active browser hardening gap, not
       a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof

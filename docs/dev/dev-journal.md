@@ -7398,3 +7398,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next step:
   - keep the next Gemini slice focused on why Gemini clears the staged image
     without committing the prompt, even when the real send control is used
+
+## 2026-04-04 - Gemini native image submit now commits once, but image context is still lost
+
+- Current focus:
+  - Gemini browser-native image upload hardening on `wsl-chrome-2`
+- What changed:
+  - added one bounded resend fallback when Gemini leaves the prompt in the
+    composer after the attachment disappears
+  - this follows the live manual recovery we already proved on a preserved page:
+    one more real send click can commit the waiting prompt
+- Outcome:
+  - the latest fresh rerun launched cleanly after clearing the stale managed
+    Gemini browser family
+  - Gemini no longer died at the old composer-pending boundary
+  - instead, it returned a real answer:
+    - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
+  - that means submit/answer materialization improved, but the uploaded image
+    still is not reaching Gemini as model-visible input
+- Next step:
+  - keep the next Gemini slice focused on attachment preservation from staged
+    preview through model consumption, not prompt-commit heuristics

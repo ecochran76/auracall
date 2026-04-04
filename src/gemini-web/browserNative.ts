@@ -334,6 +334,7 @@ async function waitForGeminiAnswer(page: Page, options: {
   let lastAnswer = '';
   let stableCount = 0;
   let lastState: Awaited<ReturnType<typeof readGeminiNativeState>> | null = null;
+  let retriedPendingComposerSend = false;
 
   while (Date.now() < deadline) {
     const state = await readGeminiNativeState(page);
@@ -350,6 +351,14 @@ async function waitForGeminiAnswer(page: Page, options: {
 
     const promptText = normalizeWhitespace(state.promptText);
     if (promptText.length > 0 && !state.hasPendingBlob && !state.hasRemoveButton) {
+      if (!retriedPendingComposerSend) {
+        const retried = await retryGeminiPendingComposerSend(page);
+        if (retried) {
+          retriedPendingComposerSend = true;
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          continue;
+        }
+      }
       throw new Error('Gemini prompt remained in the composer after the attachment vanished and no response materialized.');
     }
 
@@ -526,6 +535,38 @@ async function clearGeminiPromptText(page: Page): Promise<void> {
     prompt.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, data: '', inputType: 'deleteByCut' }));
     prompt.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
   }, GEMINI_PROMPT_SELECTOR);
+}
+
+async function retryGeminiPendingComposerSend(page: Page): Promise<boolean> {
+  const result = await page.evaluate(`(() => {
+    const touchSelector = ${JSON.stringify(GEMINI_SEND_TOUCH_TARGET_SELECTOR)};
+    const sendSelector = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTOR)};
+    const isUsable = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = globalThis.getComputedStyle?.(node);
+      if (style && (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none')) {
+        return false;
+      }
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const send = document.querySelector(sendSelector);
+    if (!isUsable(send)) {
+      return false;
+    }
+    const ariaDisabled = String(send.getAttribute('aria-disabled') ?? '').toLowerCase();
+    if (ariaDisabled === 'true' || send.hasAttribute('disabled')) {
+      return false;
+    }
+    const touchTarget = document.querySelector(touchSelector);
+    if (isUsable(touchTarget)) {
+      touchTarget.click();
+      return true;
+    }
+    send.click();
+    return true;
+  })()`);
+  return Boolean(result);
 }
 
 async function waitForGeminiSubmit(page: Page, promptText: string, timeoutMs: number): Promise<void> {
