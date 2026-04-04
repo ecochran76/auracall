@@ -7027,3 +7027,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run check`
   - live:
     - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`
+
+## 2026-04-04 - fail explicit on Gemini control-only attachment responses
+
+- Current focus:
+  - Gemini real attachment transport diagnostics
+- What changed:
+  - added control-frame-only Gemini response detection in
+    [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+  - updated [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+    so attachment/text runs no longer treat that shape as a clean empty success
+  - added focused coverage in:
+    - [parse.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/parse.test.ts)
+    - [executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
+- Outcome:
+  - the underlying Gemini upload gap is still not fixed
+  - but the current forced-upload image path now fails explicitly with:
+    - `Gemini returned control frames only and never materialized a response body.`
+  - that is materially better than returning `(no text output)` and hiding the
+    real failure shape
+- Verification:
+  - `pnpm vitest run tests/gemini-web/parse.test.ts tests/gemini-web/upload.test.ts tests/gemini-web/executor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/gemini/cookies.json pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gemini-3-pro --browser-attachments always --prompt 'Describe the uploaded image in one short sentence.' --file /tmp/gemini-wsl2-upload-proof.png --wait --verbose --force`

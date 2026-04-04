@@ -151,4 +151,27 @@ describe('gemini-web executor', () => {
     });
     expect(getCookies).not.toHaveBeenCalled();
   });
+
+  it('throws when Gemini returns control-only output with no text or images', async () => {
+    const { createGeminiWebExecutor } = await import('../../src/gemini-web/executor.js');
+    runGeminiWebWithFallback.mockResolvedValueOnce({
+      rawResponseText: `)]}'\n\n[[\"wrb.fr\",null,null,null,null,[13]],[\"di\",138],[\"af.httprm\",137,\"-5781323477802010651\",16]]`,
+      text: '',
+      thoughts: null,
+      metadata: null,
+      images: [],
+      effectiveModel: 'gemini-3-pro',
+      errorMessage: 'Gemini returned control frames only and never materialized a response body.',
+    });
+
+    const exec = createGeminiWebExecutor({});
+    await expect(
+      exec({
+        prompt: 'Describe the uploaded image.',
+        attachments: [{ path: '/tmp/input.png', displayPath: 'input.png' }],
+        config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default' },
+        log: () => {},
+      }),
+    ).rejects.toThrow('Gemini returned control frames only and never materialized a response body.');
+  });
 });

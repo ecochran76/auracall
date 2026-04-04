@@ -332,6 +332,9 @@ export function createGeminiWebExecutor(
           geminiUrl,
           signal: controller.signal,
         });
+        if (!out.text && out.images.length === 0 && out.errorMessage) {
+          throw new Error(out.errorMessage);
+        }
         response = {
           text: out.text ?? null,
           thoughts: geminiOptions.showThoughts ? out.thoughts : null,

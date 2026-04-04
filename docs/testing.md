@@ -152,8 +152,8 @@
     - the image upload stayed non-green even after:
       - adding upload MIME types
       - including filename/MIME metadata in the Gemini `f.req` attachment tuple
-    - latest forced-upload image proof completed with:
-      - `(no text output)`
+    - latest forced-upload image proof now fails explicitly with:
+      - `Gemini returned control frames only and never materialized a response body.`
   - this pairing is now a real second text-green Gemini browser proof
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.

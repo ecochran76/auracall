@@ -126,6 +126,11 @@ function trimGeminiJsonEnvelope(text: string): string {
   return text.slice(start, end + 1);
 }
 
+function extractGeminiEnvelopeParts(rawText: string): unknown[] {
+  const responseJson = JSON.parse(trimGeminiJsonEnvelope(rawText)) as unknown;
+  return Array.isArray(responseJson) ? responseJson : [];
+}
+
 function extractErrorCode(responseJson: unknown): number | undefined {
   const code = getNestedValue<number>(responseJson, [0, 5, 2, 0, 1, 0], -1);
   return typeof code === 'number' && code >= 0 ? code : undefined;
@@ -326,6 +331,37 @@ export function parseGeminiStreamGenerateResponse(rawText: string): {
   return { metadata, text, thoughts, images, errorCode };
 }
 
+export function isGeminiControlOnlyResponse(rawText: string): boolean {
+  try {
+    const parts = extractGeminiEnvelopeParts(rawText);
+    if (parts.length === 0) return false;
+
+    let sawControlFrame = false;
+    for (const part of parts) {
+      const tag = Array.isArray(part) ? part[0] : null;
+      if (tag === 'wrb.fr' || tag === 'di' || tag === 'af.httprm') {
+        sawControlFrame = true;
+      }
+
+      const partBody = getNestedValue<string | null>(part, [2], null);
+      if (!partBody) continue;
+      try {
+        const parsed = JSON.parse(partBody) as unknown;
+        const candidateList = getNestedValue<unknown[]>(parsed, [4], []);
+        if (Array.isArray(candidateList) && candidateList.length > 0) {
+          return false;
+        }
+      } catch {
+        // ignore malformed/opaque control payloads
+      }
+    }
+
+    return sawControlFrame;
+  } catch {
+    return false;
+  }
+}
+
 export function isGeminiModelUnavailable(errorCode: number | undefined): boolean {
   return errorCode === 1052;
 }
@@ -386,6 +422,13 @@ export async function runGeminiWebOnce(input: GeminiWebRunInput): Promise<Gemini
       metadata: parsed.metadata,
       images: parsed.images,
       errorCode: parsed.errorCode,
+      errorMessage:
+        !parsed.text &&
+        parsed.images.length === 0 &&
+        parsed.errorCode == null &&
+        isGeminiControlOnlyResponse(rawResponseText)
+          ? 'Gemini returned control frames only and never materialized a response body.'
+          : undefined,
     };
   } catch (error) {
     let responseJson: unknown = null;

@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseGeminiStreamGenerateResponse,
   isGeminiModelUnavailable,
+  isGeminiControlOnlyResponse,
 } from '../../src/gemini-web/client.js';
 
 function makeRawResponseWithBody(body: unknown): string {
@@ -84,5 +85,14 @@ describe('gemini-web parseGeminiStreamGenerateResponse', () => {
 
     const raw = `)]}'\n\n${JSON.stringify(responseJson)}`;
     expect(isGeminiModelUnavailable(parseGeminiStreamGenerateResponse(raw).errorCode)).toBe(true);
+  });
+
+  it('detects control-only Gemini responses with no candidate body', () => {
+    const raw = `)]}'\n\n${JSON.stringify([
+      ['wrb.fr', null, null, null, null, [13]],
+      ['di', 138],
+      ['af.httprm', 137, '-5781323477802010651', 16],
+    ])}`;
+    expect(isGeminiControlOnlyResponse(raw)).toBe(true);
   });
 });

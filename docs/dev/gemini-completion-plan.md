@@ -268,7 +268,8 @@ Outcome:
     - and the uploaded image run stayed non-green even after:
       - adding upload MIME types
       - including filename/MIME metadata in the Gemini `f.req` attachment tuple
-    - latest image proof completed with no model text output
+    - latest image proof now fails explicitly with:
+      - `Gemini returned control frames only and never materialized a response body.`
   - so `wsl-chrome-2` is now a real second text-green Gemini browser proof
     pairing, with file-input proof through the current Aura-Call bundling path
 

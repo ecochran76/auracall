@@ -124,7 +124,8 @@ Notes:
   - uploaded text-file proof returned `[NO CONTENT FOUND]`
   - uploaded image proof first said the image did not come through
   - after MIME and attachment-metadata fixes, the latest forced-upload image
-    proof still completed with no usable model text output
+    proof now fails explicitly with:
+    - `Gemini returned control frames only and never materialized a response body.`
 
 ## Implementation details
 

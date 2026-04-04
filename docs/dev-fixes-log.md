@@ -7326,3 +7326,31 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when a provider upload flow still fails after the request shape matches the
     observed contract more closely, stop assuming the next fix is another small
     payload tweak and inspect the deeper upload/response path directly
+
+## 2026-04-04 - Gemini control-frame-only upload responses should fail explicitly
+
+- Symptom:
+  - after the MIME and attachment-metadata fixes, the real `wsl-chrome-2`
+    forced-upload image path still was not green
+  - the latest live run no longer returned a human text complaint, but Aura-Call
+    still surfaced it as a misleading `(no text output)` success shape
+  - direct inspection showed the raw Gemini response only contained control
+    frames like:
+    - `wrb.fr`
+    - `di`
+    - `af.httprm`
+    and never included a candidate response body
+- Fix:
+  - added explicit Gemini control-only response detection
+  - updated the Gemini executor to throw when a non-image text run ends with:
+    - no text
+    - no images
+    - a control-only response shape
+- Result:
+  - the underlying upload bug still exists
+  - but the same live forced-upload image proof now fails explicitly with:
+    - `Gemini returned control frames only and never materialized a response body.`
+- Durable lesson:
+  - when a provider returns a recognizable control/ack frame without the real
+    content body, prefer an explicit classified failure over silently collapsing
+    it into empty output
