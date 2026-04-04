@@ -7,7 +7,7 @@ import { openOrReuseChromeTarget } from '../../packages/browser-service/src/chro
 import { resolveBrowserConfig } from '../browser/config.js';
 import { bootstrapManagedProfile } from '../browser/profileStore.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
-import { captureActionPhaseDiagnostics } from '../browser/service/ui.js';
+import { captureActionPhaseDiagnostics, runOrderedSurfaceFallback } from '../browser/service/ui.js';
 import type { BrowserRunOptions, BrowserRunResult, BrowserLogger } from '../browser/types.js';
 
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
@@ -304,17 +304,19 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
     ? [GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR]
     : [GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR];
 
-  let chooser = null;
-  for (const [index, selector] of selectorOrder.entries()) {
-    chooser = await tryChooser(selector, index === 0 ? 2_500 : 10_000);
-    if (chooser) break;
-  }
+  const chooserAttempt = await runOrderedSurfaceFallback({
+    attempts: selectorOrder.map((selector, index) => ({
+      name: selector,
+      run: async () => tryChooser(selector, index === 0 ? 2_500 : 10_000),
+    })),
+    isSuccess: (value) => value !== null,
+  });
 
-  if (!chooser) {
+  if (!chooserAttempt.ok || !chooserAttempt.value) {
     throw new Error('Waiting for Gemini file chooser failed across all known upload triggers.');
   }
 
-  await chooser.accept(attachmentPaths);
+  await chooserAttempt.value.accept(attachmentPaths);
 }
 
 async function readGeminiNativeState(page: Page): Promise<{

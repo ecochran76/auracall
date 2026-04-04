@@ -204,6 +204,13 @@ Current active extraction plan:
   - Keep provider-specific selectors, signal readers, and semantic
     classification outside the package.
 
+- `runOrderedSurfaceFallback({ attempts, isSuccess })`
+  - Runs real browser-action surfaces in bounded priority order and preserves
+    which surface actually succeeded.
+  - Use this for upload triggers or similar “try A, then B, then C” mechanics
+    instead of hand-rolled provider-local loops.
+  - Keep exact surface selectors and provider-specific error wording local.
+
 - `dismissOverlayRoot(Runtime, rootSelector, options)`
   - Dismisses one specific overlay root by stable selector/handle instead of
     closing the first visible dialog on the page.

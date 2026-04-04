@@ -7571,3 +7571,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - likely next:
     - shared attachment-signal polling contract
     - or ordered upload-surface fallback mechanics
+
+## 2026-04-04 - Second Gemini browser-service extraction landed
+
+- Current focus:
+  - extract the next clearly mechanical Gemini browser workflow seam into
+    `packages/browser-service`
+- What changed:
+  - added package-owned:
+    - `runOrderedSurfaceFallback(...)`
+  - routed Gemini native chooser-trigger selection through that helper instead
+    of a local ordered loop
+  - updated the browser-service backlog/tools docs to mark that fallback seam
+    as live
+- Why this slice:
+  - Gemini upload-trigger selection was already a pure ordered fallback shape
+  - it matched the backlog item more directly than the still-provider-shaped
+    attachment-signal readers
+- Next step:
+  - if browser-service reopens again soon, the next honest candidate is the
+    attachment-signal polling contract, not more upload-trigger loop cleanup

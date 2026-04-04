@@ -7842,3 +7842,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - extract the mechanical phase wrapper first
   - leave provider-specific signal reading and semantic false-success
     classification local until a second real provider proves the same shape
+
+## 2026-04-04 - Gemini upload-trigger fallback now has a package-owned seam
+
+- Context:
+  - Gemini native upload recovery also exposed a second clearly reusable
+    browser-service lesson:
+    - ordered upload-trigger fallback is a generic browser mechanic, not a
+      Gemini-only idea
+  - the existing chooser-trigger loop was already purely mechanical
+- Fix:
+  - added package-owned:
+    - `runOrderedSurfaceFallback(...)`
+    in `packages/browser-service/src/service/ui.ts`
+  - Gemini native chooser-trigger selection now uses that helper through the
+    Aura-Call browser-service shim
+- Result:
+  - the second 2026-04-04 Gemini browser-service backlog item now has a live
+    package seam too
+  - provider-specific trigger selectors and upload semantics remain local
+- Durable lesson:
+  - when a provider loop is only “try these real surfaces in order until one
+    works,” extract the fallback runner before extracting provider signal
+    semantics

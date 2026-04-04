@@ -4,6 +4,7 @@ import {
   captureActionPhaseDiagnostics,
   collectAnchoredActionDiagnostics,
   readDownloadCapture,
+  runOrderedSurfaceFallback,
   clickRevealedRowAction,
   collectVisibleOverlayInventory,
   collectVisibleMenuInventory,
@@ -68,6 +69,40 @@ describe('browser-service ui wait helpers', () => {
       'pre-submit': { phase: 'pre-submit', ok: true },
       'post-submit': { phase: 'post-submit', ok: true },
       final: { phase: 'final', ok: true },
+    });
+  });
+
+  test('runOrderedSurfaceFallback returns the first successful attempt', async () => {
+    const seen: string[] = [];
+    const result = await runOrderedSurfaceFallback({
+      attempts: [
+        {
+          name: 'first',
+          run: async () => {
+            seen.push('first');
+            return null;
+          },
+        },
+        {
+          name: 'second',
+          run: async () => {
+            seen.push('second');
+            return { chooser: true };
+          },
+        },
+      ],
+      isSuccess: (value) => value !== null,
+    });
+
+    expect(seen).toEqual(['first', 'second']);
+    expect(result).toEqual({
+      ok: true,
+      attempt: 'second',
+      value: { chooser: true },
+      attempts: [
+        { name: 'first', ok: false },
+        { name: 'second', ok: true },
+      ],
     });
   });
 

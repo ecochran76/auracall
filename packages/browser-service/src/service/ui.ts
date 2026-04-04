@@ -125,6 +125,26 @@ export type OpenSurfaceResult = {
   }>;
 };
 
+export type OrderedSurfaceFallbackAttempt<T> = {
+  name: string;
+  run: () => Promise<T>;
+};
+
+export type RunOrderedSurfaceFallbackOptions<T> = {
+  attempts: readonly OrderedSurfaceFallbackAttempt<T>[];
+  isSuccess?: (value: T) => boolean;
+};
+
+export type RunOrderedSurfaceFallbackResult<T> = {
+  ok: boolean;
+  attempt?: string;
+  value?: T;
+  attempts: Array<{
+    name: string;
+    ok: boolean;
+  }>;
+};
+
 export type OpenRadixMenuOptions = OpenMenuOptions;
 
 export type SelectMenuItemOptions = {
@@ -1245,6 +1265,30 @@ export async function captureActionPhaseDiagnostics<T>(
     }
   }
   return results;
+}
+
+export async function runOrderedSurfaceFallback<T>(
+  options: RunOrderedSurfaceFallbackOptions<T>,
+): Promise<RunOrderedSurfaceFallbackResult<T>> {
+  const attempts: RunOrderedSurfaceFallbackResult<T>['attempts'] = [];
+  const isSuccess = options.isSuccess ?? ((value: T) => Boolean(value));
+  for (const candidate of options.attempts) {
+    const value = await candidate.run();
+    const ok = isSuccess(value);
+    attempts.push({ name: candidate.name, ok });
+    if (ok) {
+      return {
+        ok: true,
+        attempt: candidate.name,
+        value,
+        attempts,
+      };
+    }
+  }
+  return {
+    ok: false,
+    attempts,
+  };
 }
 
 export async function collectAnchoredActionDiagnostics(

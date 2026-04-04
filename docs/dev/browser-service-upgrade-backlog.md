@@ -333,6 +333,15 @@ Candidate extraction:
 - `openAndDispatchUploadFromSurfaces(...)`
 - `runOrderedSurfaceFallback(...)`
 
+Progress:
+- first package extraction is now live:
+  - `runOrderedSurfaceFallback(...)`
+- current first adopter:
+  - Gemini native upload-trigger chooser selection
+- still remaining:
+  - decide whether upload-specific dispatch/result formatting belongs in the
+    package or should stay provider-local
+
 ### D. Post-submit semantic verification should be a first-class hook
 
 Problem:
