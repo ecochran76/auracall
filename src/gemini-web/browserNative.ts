@@ -172,6 +172,7 @@ export function isGeminiPromptCommitted(options: {
 
 type GeminiAttachmentPreviewState = {
   ready: boolean;
+  sendReady: boolean;
   textboxText: string;
   visibleBlobCount: number;
   removeLabels: string[];
@@ -399,6 +400,8 @@ async function waitForAttachmentPreview(
   const deadline = Date.now() + timeoutMs;
   const imageNames = attachmentNames.filter(isLikelyImagePath);
   let lastState: GeminiAttachmentPreviewState | null = null;
+  let stableReadyCount = 0;
+  const requiredStableReadyCount = imageNames.length > 0 ? 3 : 2;
 
   while (Date.now() < deadline) {
     const state = await page.evaluate(`(() => {
@@ -450,6 +453,17 @@ async function waitForAttachmentPreview(
       const removeLabels = buttons
         .map((el) => String(el.getAttribute('aria-label') ?? ''))
         .filter((label) => /remove file/i.test(label));
+      const sendReady = (() => {
+        if (!(send instanceof HTMLElement)) return false;
+        const style = globalThis.getComputedStyle?.(send);
+        if (style && (style.display === 'none' || style.visibility === 'hidden' || style.pointerEvents === 'none')) {
+          return false;
+        }
+        const rect = send.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const ariaDisabled = String(send.getAttribute('aria-disabled') ?? '').toLowerCase();
+        return ariaDisabled !== 'true' && !send.hasAttribute('disabled');
+      })();
       const previewNames = scopedPreviews.map((el) => {
         const previewText = String(el.textContent ?? '').replace(/\s+/g, ' ').trim();
         const previewTitle =
@@ -475,6 +489,7 @@ async function waitForAttachmentPreview(
       });
       return {
         ready: matchedNames.length === names.length,
+        sendReady,
         textboxText: String(prompt instanceof HTMLElement ? prompt.textContent ?? '' : ''),
         visibleBlobCount: visibleImages.length,
         removeLabels,
@@ -483,14 +498,20 @@ async function waitForAttachmentPreview(
       };
     })()`);
     lastState = state as GeminiAttachmentPreviewState;
-    if (lastState.ready) {
-      return;
+    if (lastState.ready && lastState.sendReady) {
+      stableReadyCount += 1;
+      if (stableReadyCount >= requiredStableReadyCount) {
+        return;
+      }
+    } else {
+      stableReadyCount = 0;
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
 
   const detail = lastState
     ? JSON.stringify({
+      sendReady: lastState.sendReady,
       textboxText: normalizeWhitespace(lastState.textboxText),
       visibleBlobCount: lastState.visibleBlobCount,
       removeLabels: lastState.removeLabels,
@@ -780,6 +801,9 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       attachmentNames,
       attachmentPaths.some(isLikelyImagePath) ? 45_000 : 20_000,
     );
+    if (attachmentPaths.some(isLikelyImagePath)) {
+      await new Promise((resolve) => setTimeout(resolve, 1_500));
+    }
 
     await page.click(GEMINI_PROMPT_SELECTOR);
     await clearGeminiPromptText(page);

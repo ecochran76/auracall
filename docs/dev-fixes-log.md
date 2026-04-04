@@ -7737,3 +7737,27 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     the attachment content, stop treating it as a submit bug; shift the next
     slice to attachment preservation from staged preview into model-visible
     input
+
+## 2026-04-04 - Gemini stable staged-ready gating is not sufficient for image preservation
+
+- Context:
+  - after the resend fallback, Gemini native image upload on `wsl-chrome-2`
+    was no longer failing at prompt commit
+  - the active hypothesis became:
+    - Gemini was being submitted too early, before staged image state was
+      stable enough for model consumption
+- Fix:
+  - tightened Gemini attachment readiness to require:
+    - matched attachment signals
+    - send readiness
+    - stable repeated polls before submit
+  - added a short extra settle window for image uploads after staged-ready
+- Result:
+  - focused tests stayed green
+  - fresh live rerun still returned the same attachment-blind answer:
+    - `Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.`
+- Durable lesson:
+  - a provider can show stable staged UI and still fail to preserve the
+    attachment into model-visible input
+  - once that is proven live, stop tuning staged-ready timing locally and move
+    the next slice to the evidence chain preserved through submit

@@ -179,6 +179,13 @@
       - that means the native image path no longer stalls at prompt commit; it
         now reaches answer materialization, but the image is still being lost
         before Gemini consumes it as model input
+      - a follow-on attempt to tighten Gemini staged-ready detection toward the
+        shared attachment-helper model also stayed attachment-blind:
+        - staged-ready now waits for stable attachment signals plus send-ready
+          before submit
+        - but the fresh rerun still returned:
+          - `Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.`
+        - so readiness-threshold tuning alone is not the missing piece
     - treat Gemini native image upload as an active browser hardening gap, not
       a freshly proven surface
   - this pairing is now a real second text-green Gemini browser proof

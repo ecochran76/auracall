@@ -7447,3 +7447,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - make the next Gemini slice a workflow-convergence slice
   - reuse ChatGPT/Grok attachment lifecycle patterns and existing browser
     action helpers where possible before adding more Gemini-local heuristics
+
+## 2026-04-04 - Gemini stable staged-ready gate did not fix image preservation
+
+- Current focus:
+  - converge Gemini image attachment readiness toward the same multi-signal
+    staged/ready model used by the shared browser attachment helpers
+- What changed:
+  - Gemini attachment preview readiness now requires:
+    - matched attachment signals
+    - send readiness
+    - stable repeated polls before submit
+  - image uploads also get a short post-ready settle window before prompt
+    submit
+- Outcome:
+  - focused Gemini tests and typecheck stayed green
+  - fresh live rerun on `wsl-chrome-2 -> gemini` still returned an
+    attachment-blind answer:
+    - `Please upload the image you're referring to, and I'll be happy to describe it for you in a single sentence.`
+  - so tighter staged-ready gating alone is not enough; the image is still
+    being lost between staged UI state and model-visible input
+- Next step:
+  - stop adjusting readiness thresholds locally
+  - move down one layer and compare Gemini's staged image state against the
+    exact attachment evidence ChatGPT/Grok preserve through submit
