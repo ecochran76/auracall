@@ -6516,3 +6516,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - a service/runtime foundation planning slice above further team-service code
 - Verification:
   - docs/planning only
+
+## 2026-04-03 - define Gemini as the first bounded provider side track
+
+- Current focus:
+  - provider expansion planning
+- What changed:
+  - added
+    [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+    to pin a bounded Gemini completion approach
+  - the plan records:
+    - what already exists in Gemini API and Gemini web/browser paths
+    - the likely main risk: architectural drift, not raw missing capability
+    - a recommended slice order:
+      - feature/proof matrix
+      - operator/runtime alignment
+      - live proof refresh
+      - one bounded implementation gap
+  - aligned:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - docs/planning only

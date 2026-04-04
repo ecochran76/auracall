@@ -6958,3 +6958,21 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - when the architecture reaches a pause point, widen the roadmap explicitly
     before more code lands so later slices can be chosen against named tracks
     instead of local momentum
+
+## 2026-04-03 - choose Gemini as the first provider side track, but keep it bounded
+
+- Symptom:
+  - provider expansion was now an explicit roadmap bucket, but there was still
+    no decision on which provider should be the first bounded side track
+  - Gemini already had meaningful inherited support, which made it the obvious
+    near-term candidate, but that also risked turning into a broad cleanup
+    track by inertia
+- Fix:
+  - added a dedicated Gemini completion plan that treats Gemini as:
+    - the first provider-expansion side track
+    - audit/alignment first
+    - not the new primary platform track
+- Durable lesson:
+  - when a provider already has partial inherited support, start with an
+    explicit completion plan that distinguishes real capability gaps from
+    architecture-alignment gaps before choosing code slices

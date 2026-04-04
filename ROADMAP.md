@@ -252,6 +252,13 @@ Primary goals:
 - Claude implementation
 - Grok image support
 
+Current note:
+- Gemini is the first recommended provider-expansion side track because it
+  already has inherited Oracle support across both API and web/browser paths
+- the next Gemini move should be a bounded audit/alignment plan, not a broad
+  rewrite:
+  - [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+
 Sequencing rule:
 - prefer building shared runtime/orchestration layers first, then expanding
   providers onto those layers

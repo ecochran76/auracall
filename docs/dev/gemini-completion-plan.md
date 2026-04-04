@@ -1,0 +1,231 @@
+# Gemini Completion Plan
+
+## Purpose
+
+Define a bounded Gemini side track that can move forward without displacing the
+main service/runtime foundation work.
+
+This plan assumes:
+
+- Gemini already has meaningful inherited support from Oracle
+- Gemini should be the first provider-expansion side track
+- Gemini should not become the new primary architecture track
+
+## Current state
+
+Gemini already exists in two real surfaces:
+
+1. Gemini API mode
+2. Gemini web mode via signed-in browser cookies
+
+Current evidence in-repo:
+
+- docs:
+  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+- API adapter:
+  - [src/oracle/gemini.ts](/home/ecochran76/workspace.local/oracle/src/oracle/gemini.ts)
+- web executor:
+  - [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+- web client:
+  - [src/gemini-web/client.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/client.ts)
+- tests:
+  - [tests/gemini.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini.test.ts)
+  - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
+  - [tests/live/gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/gemini-live.test.ts)
+  - [tests/live/gemini-web-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/gemini-web-live.test.ts)
+
+That means Gemini is not a greenfield implementation. The real question is how
+to finish and align it.
+
+## Working assessment
+
+### What is already strong
+
+- API adapter exists and is tested
+- browser/web path exists and is tested
+- login/profile/doctor/config surfaces already know about `gemini`
+- Gemini browser mode already supports:
+  - text
+  - attachments
+  - YouTube input
+  - generate-image
+  - edit-image
+
+### What looks incomplete or structurally awkward
+
+The Gemini web path is still more self-contained than the newer browser
+service/provider architecture.
+
+Current likely mismatch:
+
+- Gemini web execution lives mostly under `src/gemini-web/*`
+- ChatGPT/Grok browser evolution has moved more behavior into shared
+  browser/config/runtime seams
+- Gemini may therefore be "functional" without yet being fully aligned with:
+  - browser profile ownership
+  - managed browser profile semantics
+  - session/provenance surfaces
+  - provider-service architecture consistency
+
+### What not to do
+
+- do not rewrite Gemini into the latest browser architecture in one pass
+- do not broaden the main service/runtime foundation into provider work
+- do not let Gemini completion become a generic "clean up everything inherited
+  from Oracle" effort
+
+## Completion goals
+
+Gemini completion should mean:
+
+1. operator semantics are clear
+2. API and web/browser capabilities are explicitly documented
+3. runtime/config/profile behavior is consistent with the current Aura-Call
+   architecture
+4. the known supported Gemini surfaces are live-proven enough to trust
+5. remaining out-of-scope gaps are documented instead of silently implied
+
+## Scope split
+
+### Shared/runtime-owned
+
+These belong to shared Aura-Call architecture, not Gemini-specific logic:
+
+- browser profile selection
+- AuraCall runtime profile selection
+- session metadata/provenance
+- config/schema integration
+- login/profile doctor integration
+- future service/runtime orchestration
+
+### Gemini-owned
+
+These stay Gemini-specific unless a second provider needs the same behavior:
+
+- Gemini API request/response mapping
+- Gemini web request format and access-token fetch
+- Gemini-specific model fallback rules
+- Gemini upload/download/image handling
+- Gemini-specific URL / Gem targeting semantics
+
+## Recommended slice order
+
+### Slice 1: Audit and define supported Gemini feature matrix
+
+Goal:
+- make explicit what Gemini supports today across:
+  - API
+  - web/browser
+
+Deliverables:
+- one matrix covering:
+  - text
+  - attachments
+  - YouTube
+  - generate image
+  - edit image
+  - search/tooling
+  - session metadata expectations
+- one list of unsupported or deliberately deferred areas
+
+Acceptance:
+- docs aligned
+- no code required
+
+### Slice 2: Align Gemini operator/runtime semantics with current Aura-Call terms
+
+Goal:
+- make sure Gemini uses the same browser profile / AuraCall runtime profile /
+  managed browser profile vocabulary and reporting surfaces as the newer
+  browser paths
+
+Potential focus areas:
+- `login`
+- `doctor`
+- session metadata
+- status/session display
+- config examples
+
+Acceptance:
+- focused CLI/config/session tests
+- no broad Gemini-web rewrite
+
+### Slice 3: Validate Gemini web/browser proof status
+
+Goal:
+- re-establish a durable live-proof baseline for the Gemini web path
+
+Preferred proof surfaces:
+- text
+- attachment
+- generate-image
+- edit-image
+- YouTube
+
+Acceptance:
+- update `docs/testing.md`
+- record known green surfaces and known fragile/deferred surfaces
+
+### Slice 4: Tighten the highest-value Gemini implementation gap
+
+Goal:
+- choose one real implementation gap exposed by the audit or live proof
+
+Examples:
+- session/provenance/reporting mismatch
+- runtime/profile mismatch
+- unsupported but expected feature gap
+- brittle web fallback or output capture behavior
+
+Acceptance:
+- one bounded code slice
+- focused tests
+- one targeted live proof if behavior changed materially
+
+## Provisional feature matrix
+
+Based on the current repo state:
+
+### Gemini API
+
+- text: supported
+- streaming: supported
+- search/tooling: partially supported via `web_search_preview -> googleSearch`
+- attachments/files: not clearly first-class in the current API adapter
+- image generation/editing: not clearly first-class in the current API adapter
+
+### Gemini web
+
+- text: supported
+- attachments: supported
+- YouTube: supported
+- generate-image: supported
+- edit-image: supported
+- Gem URL targeting: supported
+- cookie/login flow: supported
+
+## Main risk
+
+The biggest Gemini risk is probably not missing raw capability. It is
+architectural drift:
+
+- Gemini works
+- but parts of it may still bypass the newer shared browser/runtime seams
+
+That makes the best next Gemini slice an alignment-and-proof plan, not an
+ambitious feature rewrite.
+
+## Recommendation
+
+Treat Gemini as:
+
+- the first provider-expansion side track
+- a bounded audit + alignment effort first
+- not the new primary platform track
+
+Best next implementation after this doc:
+
+1. land the feature/proof matrix in user/dev docs
+2. choose one Gemini operator/runtime alignment slice
+3. only then take a targeted Gemini code fix if the audit proves a concrete
+   gap

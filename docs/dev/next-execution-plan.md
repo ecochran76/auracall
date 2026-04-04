@@ -219,6 +219,15 @@ Short rationale:
   - Claude
   - Grok image
 
+Provider-side note:
+- Gemini is the first recommended provider-expansion side track because the
+  repo already has meaningful inherited support in:
+  - API mode
+  - Gemini web/browser mode
+- the next Gemini move should be audit/alignment first:
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+- do not let Gemini become the new primary platform track
+
 ## Active slice plan
 
 ### 1) Service/runtime foundation planning
