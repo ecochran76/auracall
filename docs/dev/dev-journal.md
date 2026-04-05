@@ -7900,3 +7900,108 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - preserve working provider-local CRUD flows, but move target/account
     ownership into shared service-layer seams before trusting destructive
     mutations
+
+## 2026-04-05 - Gemini conversation preflight now needs root-list ownership
+
+- Current focus:
+  - continue the Gemini `LlmService` audit without landing the still-unfinished
+    root conversation delete flow prematurely
+- What changed locally:
+  - strengthened Gemini conversation preflight so it no longer trusts only:
+    - exact `/app/<conversationId>` route shape
+  - the local validator now requires:
+    - exact route resolves
+    - then the same conversation id is present in the authoritative Gemini
+      root conversation list on `/app`
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - direct preflight script now returns:
+    - `17ecd216fc87eacf` -> invalid or missing
+    - `f626d2f5da22efee` -> valid
+  - authoritative root list check also matched that split:
+    - `17ecd216fc87eacf` absent
+    - `f626d2f5da22efee` present
+- Why this mattered:
+  - the earlier stronger check was still too permissive because an exact-route
+    Gemini tab could exist without that conversation being present in the
+    current managed browser profile's root list
+  - that was still too weak to trust destructive mutation preflight
+- Verification:
+  - live:
+    - `pnpm tsx /tmp/gemini-preflight-proof.mts`
+    - `pnpm tsx /tmp/gemini-root-list-check.mts`
+  - focused regressions:
+    - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+    - `pnpm run check`
+- Current boundary:
+  - this is the first honest Gemini ownership split for root-chat mutation
+    preflight
+  - Gemini conversation delete itself is still not ready to land as a durable
+    supported feature
+
+## 2026-04-05 - Gemini unusual-traffic interstitial classification
+
+- What happened:
+  - a fresh owned-row delete proof against `f626d2f5da22efee` did not even
+    reach the Gemini delete trace on rerun because Google served the managed
+    browser profile a `google.com/sorry` unusual-traffic interstitial instead
+    of Gemini `/app`
+- What changed:
+  - added provider-local Gemini blocking-page classification so
+    `navigateToGeminiConversationSurface(...)` now throws an explicit
+    unusual-traffic/interstitial error instead of a generic route-settle
+    failure when Gemini is blocked by the Google `sorry` page
+  - added focused unit coverage for the classifier in
+    `tests/browser/geminiAdapter.test.ts`
+- Why this mattered:
+  - the latest live blocker was not delete semantics or route ownership
+  - it was Google anti-bot traffic gating, and the old error made that look
+    like generic Gemini route instability
+- Verification:
+  - focused regressions:
+    - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+    - `pnpm run check`
+- Current boundary:
+  - Gemini root-chat delete is still not commit-ready
+  - current live reruns are additionally constrained by Google unusual-traffic
+    interstitials on the managed browser profile
+
+## 2026-04-05 - Deferred captcha-aware browser roadmap item
+
+- What changed:
+  - recorded captcha / anti-bot awareness as an explicit deferred roadmap TODO
+    instead of letting it hijack the current Gemini refactor/delete slice
+  - updated:
+    - `docs/dev/next-execution-plan.md`
+    - `docs/dev/gemini-completion-plan.md`
+    - `docs/dev/browser-service-upgrade-backlog.md`
+- Scope of the deferred TODO:
+  - explicit detection/classification for `google.com/sorry`, reCAPTCHA, and
+    similar human-verification surfaces
+  - optional bounded real-pointer assist for simple checkbox challenges
+  - otherwise a clean manual-resume operator path
+- Current boundary:
+  - the captcha-aware work is now captured in roadmap docs
+  - it is intentionally not promoted ahead of the active Gemini architecture
+    and root-chat delete work
+
+## 2026-04-05 - Gemini browser mutation guard before more live CRUD
+
+- What changed:
+  - added a shared `LlmService`-level Gemini browser guard so Gemini now gets
+    real per-managed-browser-profile mutation pacing instead of only the
+    generic one-retry `500ms` fallback
+  - the new Gemini guard persists under the provider runtime cache and now:
+    - spaces Gemini mutating actions across service instances
+    - enforces a post-write quiet period before immediate follow-on reads
+    - records a cooldown when Gemini hits anti-bot / captcha-style errors
+  - kept the scope narrow:
+    - no broad generic provider-guard refactor
+    - no new live Gemini delete claims
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceRateLimit.test.ts tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Current boundary:
+  - Gemini browser CRUD now has a real pacing/cooldown seam before more live
+    testing
+  - Gemini root-chat delete itself is still unresolved and remains separate
+    from this guard checkpoint

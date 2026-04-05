@@ -8206,3 +8206,94 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     just in provider adapters
   - preserve provider-local selectors and CRUD semantics, but keep service URL
     and target resolution aligned at the `LlmService` seam first
+
+## 2026-04-05 - Gemini conversation validation must require root-list presence
+
+- Symptom:
+  - a strengthened Gemini conversation preflight still passed
+    `17ecd216fc87eacf` even though the authoritative managed-profile root list
+    did not contain that conversation id
+- Root cause:
+  - validating only the exact `/app/<conversationId>` route plus same-tab DOM
+    evidence is still too permissive for Gemini
+  - an exact-route Gemini tab can exist without that conversation being present
+    in the current root conversation list/account context
+- Fix:
+  - changed Gemini conversation preflight to require both:
+    - exact conversation route success
+    - presence of the same conversation id in the authoritative root list on
+      `/app`
+- Verification:
+  - live:
+    - `pnpm tsx /tmp/gemini-preflight-proof.mts`
+      - `17ecd216fc87eacf` -> invalid or missing
+      - `f626d2f5da22efee` -> valid
+    - `pnpm tsx /tmp/gemini-root-list-check.mts`
+      - `17ecd216fc87eacf` absent
+      - `f626d2f5da22efee` present
+  - focused regressions:
+    - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+    - `pnpm run check`
+- Durable lesson:
+  - for Gemini root-chat mutations, exact-route validity is weaker than
+    root-list ownership
+  - destructive preflight should key off the same authoritative root-list
+    surface the mutation flow depends on
+
+## 2026-04-05 - Gemini unusual-traffic interstitials should not look like route-settle bugs
+
+- Context:
+  - a rerun of the owned Gemini root-chat delete proof hit
+    `https://www.google.com/sorry/index?...continue=https://gemini.google.com/app`
+    instead of Gemini `/app`
+- Fix:
+  - added Gemini-specific blocking-page classification so
+    `navigateToGeminiConversationSurface(...)` throws an explicit
+    unusual-traffic/interstitial error when Google serves the `sorry` page
+    rather than collapsing it into a generic Gemini route-settle failure
+- Verification:
+  - focused regressions:
+    - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+    - `pnpm run check`
+- Durable lesson:
+  - Gemini live-browser failures should classify upstream Google anti-bot
+    interstitials separately from provider DOM/route instability
+
+## 2026-04-05 - Capture captcha-awareness as a roadmap item, not a detour
+
+- Context:
+  - Gemini live work hit both:
+    - Google `google.com/sorry` anti-bot interstitials
+    - visible reCAPTCHA checkbox challenges
+- Action:
+  - added an explicit deferred captcha-aware browser TODO to:
+    - `docs/dev/next-execution-plan.md`
+    - `docs/dev/gemini-completion-plan.md`
+    - `docs/dev/browser-service-upgrade-backlog.md`
+- Durable lesson:
+  - once captcha/anti-bot handling becomes visible work, capture it as a
+    first-class roadmap item quickly so it does not silently hijack the
+    current provider/refactor slice
+
+## 2026-04-05 - Give Gemini browser CRUD a real per-profile mutation guard
+
+- Context:
+  - Gemini browser CRUD was still running with effectively no real pacing:
+    only the shared generic one-retry `500ms` fallback plus a few provider-local
+    sleeps
+  - repeated Gemini root-list reloads and delete verification churn were
+    bot-shaped enough to trigger Google anti-bot pages
+- Fix:
+  - added a Gemini-specific shared `LlmService` guard that persists per managed
+    browser profile and enforces:
+    - post-write quiet period
+    - minimum spacing between mutating Gemini actions
+    - anti-bot cooldown when Gemini hits `google.com/sorry`, captcha, or
+      related blocking errors
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceRateLimit.test.ts tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Durable lesson:
+  - Gemini should not reuse the “no guard except generic retry” path once it
+    starts doing real browser CRUD; even a simpler guard than ChatGPT’s is
+    materially better than ad hoc sleeps

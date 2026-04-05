@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
+import { getAuracallHomeDir } from '../../auracallHome.js';
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../../config/model.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import {
@@ -63,6 +64,10 @@ const CHATGPT_RETRY_BASE_MS = 500;
 const CHATGPT_RETRY_STEP_MS = 500;
 const CHATGPT_RETRY_MAX_MS = 2_500;
 const CHATGPT_RETRY_JITTER_MS = 250;
+const GEMINI_RATE_LIMIT_COOLDOWN_MS = 10 * 60_000;
+const GEMINI_RATE_LIMIT_AUTO_WAIT_MAX_MS = 45_000;
+const GEMINI_POST_COMMIT_QUIET_MS = 12_000;
+const GEMINI_MUTATION_MIN_INTERVAL_MS = 25_000;
 
 type ProviderGuardSettings = {
   cooldownMs: number;
@@ -73,6 +78,19 @@ type ProviderGuardSettings = {
   postCommitAutoWaitMaxMs: number;
   postCommitQuietScale: number;
   postCommitJitterMaxMs: number;
+  simplePostCommitQuietMs?: number;
+  simpleMutationMinIntervalMs?: number;
+};
+
+type SimpleProviderGuardState = {
+  provider: 'gemini';
+  profile: string;
+  updatedAt: number;
+  lastMutationAt?: number;
+  cooldownUntil?: number;
+  cooldownDetectedAt?: number;
+  cooldownReason?: string;
+  cooldownAction?: string;
 };
 
 type ConversationArtifactFetchStatus = 'materialized' | 'skipped' | 'error';
@@ -1680,19 +1698,33 @@ export abstract class LlmService {
   }
 
   protected getProviderGuardSettings(): ProviderGuardSettings | null {
-    if (this.providerId !== 'chatgpt') {
-      return null;
+    if (this.providerId === 'chatgpt') {
+      return {
+        cooldownMs: CHATGPT_RATE_LIMIT_COOLDOWN_MS,
+        autoWaitMaxMs: CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+        mutationWindowMs: CHATGPT_MUTATION_WINDOW_MS,
+        mutationMaxWeight: CHATGPT_MUTATION_MAX_WEIGHT,
+        mutationBudgetAutoWaitMaxMs: CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
+        postCommitAutoWaitMaxMs: CHATGPT_POST_COMMIT_AUTO_WAIT_MAX_MS,
+        postCommitQuietScale: 1,
+        postCommitJitterMaxMs: CHATGPT_POST_COMMIT_JITTER_MAX_MS,
+      };
     }
-    return {
-      cooldownMs: CHATGPT_RATE_LIMIT_COOLDOWN_MS,
-      autoWaitMaxMs: CHATGPT_RATE_LIMIT_AUTO_WAIT_MAX_MS,
-      mutationWindowMs: CHATGPT_MUTATION_WINDOW_MS,
-      mutationMaxWeight: CHATGPT_MUTATION_MAX_WEIGHT,
-      mutationBudgetAutoWaitMaxMs: CHATGPT_MUTATION_BUDGET_AUTO_WAIT_MAX_MS,
-      postCommitAutoWaitMaxMs: CHATGPT_POST_COMMIT_AUTO_WAIT_MAX_MS,
-      postCommitQuietScale: 1,
-      postCommitJitterMaxMs: CHATGPT_POST_COMMIT_JITTER_MAX_MS,
-    };
+    if (this.providerId === 'gemini') {
+      return {
+        cooldownMs: GEMINI_RATE_LIMIT_COOLDOWN_MS,
+        autoWaitMaxMs: GEMINI_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+        mutationWindowMs: 0,
+        mutationMaxWeight: 0,
+        mutationBudgetAutoWaitMaxMs: 0,
+        postCommitAutoWaitMaxMs: GEMINI_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+        postCommitQuietScale: 0,
+        postCommitJitterMaxMs: 0,
+        simplePostCommitQuietMs: GEMINI_POST_COMMIT_QUIET_MS,
+        simpleMutationMinIntervalMs: GEMINI_MUTATION_MIN_INTERVAL_MS,
+      };
+    }
+    return null;
   }
 
   private async enforceProviderGuard(action: string): Promise<void> {
@@ -1700,18 +1732,67 @@ export abstract class LlmService {
     if (!settings) {
       return;
     }
+    if (this.providerId === 'gemini') {
+      const state = await this.readProviderGuardState();
+      if (!state) {
+        return;
+      }
+      const now = Date.now();
+      const cooldownUntil = typeof state.cooldownUntil === 'number' ? state.cooldownUntil : null;
+      if (cooldownUntil && cooldownUntil > now) {
+        const remainingMs = cooldownUntil - now;
+        if (remainingMs <= settings.autoWaitMaxMs) {
+          await this.delay(remainingMs);
+        } else {
+          const summary = state.cooldownReason ? ` ${state.cooldownReason}` : '';
+          throw new Error(
+            `Gemini anti-bot cooldown active until ${new Date(cooldownUntil).toISOString()} (${Math.ceil(
+              remainingMs / 1000,
+            )}s remaining).${summary}`.trim(),
+          );
+        }
+      }
+      const lastMutationAt = typeof state.lastMutationAt === 'number' ? state.lastMutationAt : null;
+      if (!lastMutationAt) {
+        return;
+      }
+      const quietMs = this.isMutatingProviderAction(action)
+        ? settings.simpleMutationMinIntervalMs ?? 0
+        : settings.simplePostCommitQuietMs ?? 0;
+      if (quietMs <= 0) {
+        return;
+      }
+      const remainingMs = lastMutationAt + quietMs - now;
+      if (remainingMs <= 0) {
+        return;
+      }
+      const label = this.isMutatingProviderAction(action) ? 'Gemini write spacing' : 'Gemini post-write quiet period';
+      const autoWaitMaxMs = this.isMutatingProviderAction(action)
+        ? Math.max(settings.autoWaitMaxMs, settings.postCommitAutoWaitMaxMs)
+        : settings.postCommitAutoWaitMaxMs;
+      if (remainingMs <= autoWaitMaxMs) {
+        await this.delay(remainingMs);
+        return;
+      }
+      throw new Error(
+        `${label} active until ${new Date(now + remainingMs).toISOString()} (${Math.ceil(
+          remainingMs / 1000,
+        )}s remaining).`,
+      );
+    }
     const state = await this.readProviderGuardState();
     if (!state) {
       return;
     }
+    const chatgptState = state as ChatgptRateLimitGuardState;
     const now = Date.now();
-    const cooldownUntil = typeof state.cooldownUntil === 'number' ? state.cooldownUntil : null;
+    const cooldownUntil = typeof chatgptState.cooldownUntil === 'number' ? chatgptState.cooldownUntil : null;
     if (cooldownUntil && cooldownUntil > now) {
       const remainingMs = cooldownUntil - now;
       if (remainingMs <= settings.autoWaitMaxMs) {
         await this.delay(remainingMs);
       } else {
-        const summary = state.cooldownReason ? ` ${state.cooldownReason}` : '';
+        const summary = chatgptState.cooldownReason ? ` ${chatgptState.cooldownReason}` : '';
         throw new Error(
           `ChatGPT rate limit cooldown active until ${new Date(cooldownUntil).toISOString()} (${Math.ceil(
             remainingMs / 1000,
@@ -1719,7 +1800,7 @@ export abstract class LlmService {
         );
       }
     }
-    const postCommitWaitMs = getChatgptPostCommitQuietWaitMs(state, now, {
+    const postCommitWaitMs = getChatgptPostCommitQuietWaitMs(chatgptState, now, {
       windowMs: settings.mutationWindowMs,
       quietScale: settings.postCommitQuietScale,
       jitterMaxMs: settings.postCommitJitterMaxMs,
@@ -1738,7 +1819,7 @@ export abstract class LlmService {
     if (!this.isMutatingProviderAction(action)) {
       return;
     }
-    const budgetWaitMs = getChatgptMutationBudgetWaitMs(state, Date.now(), {
+    const budgetWaitMs = getChatgptMutationBudgetWaitMs(chatgptState, Date.now(), {
       windowMs: settings.mutationWindowMs,
       maxWeight: settings.mutationMaxWeight,
     });
@@ -1763,34 +1844,54 @@ export abstract class LlmService {
     }
     const now = Date.now();
     const current = await this.readProviderGuardState();
+    if (this.providerId === 'gemini') {
+      const next: SimpleProviderGuardState = {
+        provider: 'gemini',
+        profile: this.resolveActiveProfileName() ?? 'default',
+        updatedAt: now,
+        lastMutationAt: this.isMutatingProviderAction(action)
+          ? now
+          : (current as SimpleProviderGuardState | null | undefined)?.lastMutationAt,
+      };
+      const cooldownUntil = (current as SimpleProviderGuardState | null | undefined)?.cooldownUntil;
+      if (typeof cooldownUntil === 'number' && cooldownUntil > now) {
+        next.cooldownUntil = cooldownUntil;
+        next.cooldownDetectedAt = (current as SimpleProviderGuardState | null | undefined)?.cooldownDetectedAt;
+        next.cooldownReason = (current as SimpleProviderGuardState | null | undefined)?.cooldownReason;
+        next.cooldownAction = (current as SimpleProviderGuardState | null | undefined)?.cooldownAction;
+      }
+      await this.writeProviderGuardState(next);
+      return;
+    }
+    const currentChatgpt = current as ChatgptRateLimitGuardState | null;
     const next: ChatgptRateLimitGuardState = {
       provider: 'chatgpt',
       profile: this.resolveActiveProfileName() ?? 'default',
       updatedAt: now,
-      lastMutationAt: this.isMutatingProviderAction(action) ? now : current?.lastMutationAt,
+      lastMutationAt: this.isMutatingProviderAction(action) ? now : currentChatgpt?.lastMutationAt,
       recentMutations: this.isMutatingProviderAction(action)
         ? appendChatgptMutationRecord(
-            current?.recentMutations ?? current?.recentMutationAts,
+            currentChatgpt?.recentMutations ?? currentChatgpt?.recentMutationAts,
             action,
             now,
             settings.mutationWindowMs,
           )
-        : current?.recentMutations,
+        : currentChatgpt?.recentMutations,
       recentMutationAts: this.isMutatingProviderAction(action)
         ? appendChatgptMutationRecord(
-            current?.recentMutations ?? current?.recentMutationAts,
+            currentChatgpt?.recentMutations ?? currentChatgpt?.recentMutationAts,
             action,
             now,
             settings.mutationWindowMs,
           ).map((entry) => entry.at)
-        : current?.recentMutationAts,
+        : currentChatgpt?.recentMutationAts,
     };
-    const cooldownUntil = current?.cooldownUntil;
+    const cooldownUntil = currentChatgpt?.cooldownUntil;
     if (typeof cooldownUntil === 'number' && cooldownUntil > now) {
       next.cooldownUntil = cooldownUntil;
-      next.cooldownDetectedAt = current?.cooldownDetectedAt;
-      next.cooldownReason = current?.cooldownReason;
-      next.cooldownAction = current?.cooldownAction;
+      next.cooldownDetectedAt = currentChatgpt?.cooldownDetectedAt;
+      next.cooldownReason = currentChatgpt?.cooldownReason;
+      next.cooldownAction = currentChatgpt?.cooldownAction;
     }
     await this.writeProviderGuardState(next);
   }
@@ -1804,6 +1905,35 @@ export abstract class LlmService {
     const current = await this.readProviderGuardState();
     const cooldownUntil = now + settings.cooldownMs;
     const reason = this.extractProviderRateLimitSummary(error);
+    if (this.providerId === 'gemini') {
+      await this.writeProviderGuardState({
+        provider: 'gemini',
+        profile: this.resolveActiveProfileName() ?? 'default',
+        updatedAt: now,
+        cooldownDetectedAt: now,
+        cooldownUntil,
+        cooldownReason: reason ?? undefined,
+        cooldownAction: action,
+        lastMutationAt: this.isMutatingProviderAction(action) ? now : undefined,
+      } satisfies SimpleProviderGuardState);
+      const detail = reason ? ` ${reason}` : '';
+      const message = `Gemini anti-bot block detected while ${action}; cooling down until ${new Date(
+        cooldownUntil,
+      ).toISOString()}.${detail}`.trim();
+      if (error instanceof Error) {
+        const wrapped = new Error(message, { cause: error }) as Error & {
+          uiDiagnostics?: unknown;
+          originalError?: unknown;
+        };
+        if ('uiDiagnostics' in error) {
+          wrapped.uiDiagnostics = (error as Error & { uiDiagnostics?: unknown }).uiDiagnostics;
+        }
+        wrapped.originalError = error;
+        return wrapped;
+      }
+      return new Error(message, { cause: error as never });
+    }
+    const currentChatgpt = current as ChatgptRateLimitGuardState | null;
     await this.writeProviderGuardState({
       provider: 'chatgpt',
       profile: this.resolveActiveProfileName() ?? 'default',
@@ -1815,20 +1945,20 @@ export abstract class LlmService {
       lastMutationAt: this.isMutatingProviderAction(action) ? now : undefined,
       recentMutations: this.isMutatingProviderAction(action)
         ? appendChatgptMutationRecord(
-            current?.recentMutations ?? current?.recentMutationAts,
+            currentChatgpt?.recentMutations ?? currentChatgpt?.recentMutationAts,
             action,
             now,
             settings.mutationWindowMs,
           )
-        : current?.recentMutations,
+        : currentChatgpt?.recentMutations,
       recentMutationAts: this.isMutatingProviderAction(action)
         ? appendChatgptMutationRecord(
-            current?.recentMutations ?? current?.recentMutationAts,
+            currentChatgpt?.recentMutations ?? currentChatgpt?.recentMutationAts,
             action,
             now,
             settings.mutationWindowMs,
           ).map((entry) => entry.at)
-        : current?.recentMutationAts,
+        : currentChatgpt?.recentMutationAts,
     });
     const detail = reason ? ` ${reason}` : '';
     const message = `ChatGPT rate limit detected while ${action}; cooling down until ${new Date(
@@ -1849,7 +1979,7 @@ export abstract class LlmService {
   }
 
   private isMutatingProviderAction(action: string): boolean {
-    if (this.providerId !== 'chatgpt') {
+    if (this.providerId !== 'chatgpt' && this.providerId !== 'gemini') {
       return false;
     }
     switch (action) {
@@ -1872,36 +2002,83 @@ export abstract class LlmService {
   }
 
   private isProviderRateLimitedError(error: unknown): boolean {
-    if (this.providerId !== 'chatgpt') {
-      return false;
-    }
     const message = error instanceof Error ? error.message : String(error);
-    return isChatgptRateLimitMessage(message);
+    if (this.providerId === 'chatgpt') {
+      return isChatgptRateLimitMessage(message);
+    }
+    if (this.providerId === 'gemini') {
+      return /google\.com\/sorry|unusual traffic|captcha|recaptcha|human verification|anti-bot/i.test(message);
+    }
+    return false;
   }
 
   private extractProviderRateLimitSummary(error: unknown): string | null {
     const message = error instanceof Error ? error.message : String(error);
-    return extractChatgptRateLimitSummary(message);
-  }
-
-  private async readProviderGuardState(): Promise<ChatgptRateLimitGuardState | null> {
-    if (this.providerId !== 'chatgpt') {
-      return null;
+    if (this.providerId === 'chatgpt') {
+      return extractChatgptRateLimitSummary(message);
     }
-    return readChatgptRateLimitGuardState({
-      profileName: this.resolveActiveProfileName() ?? 'default',
-      cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
-    });
+    if (this.providerId === 'gemini') {
+      const normalized = message.replace(/\s+/g, ' ').trim();
+      const direct = normalized.match(/(google blocked gemini[^.]*\.?|unusual traffic[^.]*\.?|captcha[^.]*\.?)/i);
+      return direct?.[1]?.trim() ?? null;
+    }
+    return null;
   }
 
-  private async writeProviderGuardState(state: ChatgptRateLimitGuardState): Promise<void> {
-    if (this.providerId !== 'chatgpt') {
+  private async readProviderGuardState(): Promise<ChatgptRateLimitGuardState | SimpleProviderGuardState | null> {
+    if (this.providerId === 'chatgpt') {
+      return readChatgptRateLimitGuardState({
+        profileName: this.resolveActiveProfileName() ?? 'default',
+        cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
+      });
+    }
+    if (this.providerId === 'gemini') {
+      const statePath = this.resolveSimpleProviderGuardStatePath();
+      try {
+        const raw = await fs.readFile(statePath, 'utf8');
+        const parsed = JSON.parse(raw) as Partial<SimpleProviderGuardState>;
+        return {
+          provider: 'gemini',
+          profile: this.resolveActiveProfileName() ?? 'default',
+          updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
+          lastMutationAt: typeof parsed.lastMutationAt === 'number' ? parsed.lastMutationAt : undefined,
+          cooldownUntil: typeof parsed.cooldownUntil === 'number' ? parsed.cooldownUntil : undefined,
+          cooldownDetectedAt: typeof parsed.cooldownDetectedAt === 'number' ? parsed.cooldownDetectedAt : undefined,
+          cooldownReason: typeof parsed.cooldownReason === 'string' ? parsed.cooldownReason : undefined,
+          cooldownAction: typeof parsed.cooldownAction === 'string' ? parsed.cooldownAction : undefined,
+        };
+      } catch (error) {
+        const code = (error as { code?: string }).code;
+        if (code === 'ENOENT') {
+          return null;
+        }
+        throw error;
+      }
+    }
+    return null;
+  }
+
+  private async writeProviderGuardState(state: ChatgptRateLimitGuardState | SimpleProviderGuardState): Promise<void> {
+    if (this.providerId === 'chatgpt') {
+      await writeChatgptRateLimitGuardState(state as ChatgptRateLimitGuardState, {
+        profileName: this.resolveActiveProfileName() ?? 'default',
+        cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
+      });
       return;
     }
-    await writeChatgptRateLimitGuardState(state, {
-      profileName: this.resolveActiveProfileName() ?? 'default',
-      cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
-    });
+    if (this.providerId !== 'gemini') {
+      return;
+    }
+    const statePath = this.resolveSimpleProviderGuardStatePath();
+    await fs.mkdir(path.dirname(statePath), { recursive: true });
+    await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+  }
+
+  private resolveSimpleProviderGuardStatePath(): string {
+    const cacheRoot = this.userConfig.browser?.cache?.rootDir?.trim()
+      ? path.resolve(this.userConfig.browser.cache.rootDir.trim())
+      : path.join(getAuracallHomeDir(), 'cache', 'providers');
+    return path.join(cacheRoot, this.providerId, '__runtime__', `rate-limit-${this.resolveActiveProfileName() ?? 'default'}.json`);
   }
 
   private isRetryableError(error: unknown): boolean {

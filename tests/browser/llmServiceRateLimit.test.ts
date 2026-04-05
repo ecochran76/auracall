@@ -2,7 +2,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import { getAuracallHomeDir, setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import { resolveChatgptRateLimitGuardPath } from '../../src/browser/chatgptRateLimitGuard.js';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../src/browser/providers/types.js';
@@ -28,11 +28,16 @@ class RateLimitTestLlmService extends LlmService {
       postCommitAutoWaitMaxMs: 120,
       postCommitQuietScale: 0.003,
       postCommitJitterMaxMs: 0,
+      simplePostCommitQuietMs: 40,
+      simpleMutationMinIntervalMs: 80,
     };
   }
 
-  getGuardStatePath(): string | null {
-    return resolveChatgptRateLimitGuardPath({ profileName: 'default' });
+  getGuardStatePath(providerId: 'chatgpt' | 'gemini' = 'chatgpt'): string | null {
+    if (providerId === 'chatgpt') {
+      return resolveChatgptRateLimitGuardPath({ profileName: 'default' });
+    }
+    return path.join(homeDirForTests(), 'cache', 'providers', 'gemini', '__runtime__', 'rate-limit-default.json');
   }
 
   async runGuarded<T>(action: string, fn: () => Promise<T>): Promise<T> {
@@ -58,6 +63,10 @@ class RateLimitTestLlmService extends LlmService {
   async getUserIdentity(_options?: BrowserProviderListOptions): Promise<ProviderUserIdentity | null> {
     return null;
   }
+}
+
+function homeDirForTests(): string {
+  return getAuracallHomeDir();
 }
 
 describe('llmService ChatGPT rate-limit guard', () => {
@@ -264,6 +273,61 @@ describe('llmService ChatGPT rate-limit guard', () => {
       const startedAt = Date.now();
       await expect(third.runGuarded('deleteConversation', async () => undefined)).resolves.toBeUndefined();
       expect(Date.now() - startedAt).toBeGreaterThanOrEqual(30);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('persists Gemini anti-bot cooldown after a blocking error and blocks later live calls', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-gemini-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+
+    try {
+      await expect(
+        service.runGuarded('deleteConversation', async () => {
+          throw new Error('Google blocked Gemini with an unusual-traffic interstitial (google.com/sorry).');
+        }),
+      ).rejects.toThrow(/Gemini anti-bot block detected/i);
+
+      const guardStatePath = service.getGuardStatePath('gemini');
+      const persisted = JSON.parse(await readFile(guardStatePath as string, 'utf8')) as {
+        cooldownUntil?: number;
+        cooldownAction?: string;
+      };
+      expect(typeof persisted.cooldownUntil).toBe('number');
+      expect(persisted.cooldownAction).toBe('deleteConversation');
+
+      const nextProcess = new RateLimitTestLlmService(userConfig, provider);
+      await expect(
+        nextProcess.runGuarded('listConversations', async () => []),
+      ).rejects.toThrow(/Gemini anti-bot cooldown active until/i);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('spaces Gemini mutating operations across separate service instances', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-gemini-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const first = new RateLimitTestLlmService(userConfig, provider);
+    const second = new RateLimitTestLlmService(userConfig, provider);
+
+    try {
+      await expect(first.runGuarded('deleteConversation', async () => undefined)).resolves.toBeUndefined();
+      const startedAt = Date.now();
+      await expect(second.runGuarded('renameProject', async () => undefined)).resolves.toBeUndefined();
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(70);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }
