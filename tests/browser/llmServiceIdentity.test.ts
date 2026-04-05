@@ -3,6 +3,7 @@ import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../src/browser/providers/types.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
 import type { LlmServiceAdapter, IdentityPrompt } from '../../src/browser/llmService/types.js';
+import { deriveProviderIdentityFromChromeGoogleAccount } from '../../src/browser/profileDoctor.js';
 
 class IdentityTestLlmService extends LlmService {
   constructor(
@@ -31,6 +32,29 @@ class IdentityTestLlmService extends LlmService {
 }
 
 describe('llmService cache identity resolution', () => {
+  test('derives a provider identity from managed-profile Google account state', () => {
+    expect(deriveProviderIdentityFromChromeGoogleAccount({
+      provider: 'google',
+      source: 'merged',
+      status: 'signed-in',
+      chromeProfile: 'Default',
+      profileName: 'Default',
+      displayName: 'Polymer Consult',
+      givenName: 'Polymer',
+      email: 'consult@polymerconsultingroup.com',
+      gaiaId: '123',
+      consentedPrimaryAccount: true,
+      explicitBrowserSignin: true,
+      activeAccounts: 1,
+      localStatePath: '/tmp/Local State',
+      preferencesPath: '/tmp/Preferences',
+    })).toEqual({
+      name: 'Polymer Consult',
+      email: 'consult@polymerconsultingroup.com',
+      source: 'managed-profile-google-account',
+    });
+  });
+
   test('auto-detects browser identity before prompting by default', async () => {
     const getUserIdentity = vi.fn(async () => ({
       email: 'ecochran76@gmail.com',

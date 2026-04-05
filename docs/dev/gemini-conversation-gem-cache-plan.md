@@ -56,8 +56,7 @@ What Gemini does not yet have in the same way ChatGPT/Grok do:
 - Gem delete proved through generic cache refresh on the shared CLI surface
 - Gem instructions CRUD
 - Gem knowledge/file CRUD
-- conversation list/read/rename/delete
-- conversation cache mirroring
+- conversation rename/delete
 - project/Gem-scoped conversation catalog parity
 - disposable acceptance coverage for project/Gem + conversation CRUD
 
@@ -332,6 +331,21 @@ Target behavior:
 - `readConversationContext(...)`
 - `renameConversation(...)`
 - `deleteConversation(...)`
+
+Current checkpoint:
+
+- `listConversations(...)`: live again
+- global conversation cache write-through: live again
+- `readConversationContext(...)`: not implemented yet
+- `renameConversation(...)`: not implemented yet
+- `deleteConversation(...)`: not implemented yet
+
+Live list/cache proof:
+
+- `auracall --profile wsl-chrome-2 conversations --target gemini`
+  - returned live `/app/<conversationId>` rows
+  - wrote cache under:
+    - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
 
 Required distinctions:
 

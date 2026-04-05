@@ -145,6 +145,13 @@ Notes:
     - resolved id `525572997076`
     - removed it with `projects remove --target gemini`
     - refreshed Gem list no longer included that id
+- Current Gemini conversation/cache checkpoint on `wsl-chrome-2`:
+  - `auracall conversations --target gemini` is live again on the generic
+    browser provider path
+  - Gemini conversation cache identity now falls back to the managed browser
+    profile's Google-account state when a live page label is unavailable
+  - live cache files now write under:
+    - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
 - The earlier raw Gemini upload protocol investigation is still preserved in:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it is now background context, not the default path for ordinary Gemini

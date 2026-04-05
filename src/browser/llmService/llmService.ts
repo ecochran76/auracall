@@ -356,6 +356,10 @@ export abstract class LlmService {
     };
   }
 
+  protected getResolvedUserConfig(): ResolvedUserConfig {
+    return this.userConfig;
+  }
+
   protected async overlayConversationListFromCache(
     items: Conversation[],
     listOptions: BrowserProviderListOptions,

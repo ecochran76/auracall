@@ -5,6 +5,10 @@ import { BrowserService } from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
 import type { Conversation, Project } from '../../providers/domain.js';
+import {
+  deriveProviderIdentityFromChromeGoogleAccount,
+  inspectBrowserDoctorState,
+} from '../../profileDoctor.js';
 
 export class GeminiService extends LlmService {
   private constructor(
@@ -61,10 +65,14 @@ export class GeminiService extends LlmService {
   async getUserIdentity(
     options?: BrowserProviderListOptions,
   ): Promise<ProviderUserIdentity | null> {
-    if (!this.provider.getUserIdentity) {
-      return null;
-    }
     const listOptions = await this.buildListOptions(options, { ensurePort: true });
-    return this.provider.getUserIdentity(listOptions);
+    if (this.provider.getUserIdentity) {
+      const detected = await this.provider.getUserIdentity(listOptions);
+      if (detected) {
+        return detected;
+      }
+    }
+    const localReport = await inspectBrowserDoctorState(this.getResolvedUserConfig(), { target: 'gemini' });
+    return deriveProviderIdentityFromChromeGoogleAccount(localReport.chromeGoogleAccount);
   }
 }

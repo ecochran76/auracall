@@ -7813,3 +7813,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     current Gem list scraper abbreviates the visible list entry
   - delete should key off the authoritative edit-page name plus the manager
     row `aria-label`, not the abbreviated list payload
+
+## 2026-04-04 - Gemini conversation list and cache identity are live again
+
+- Current focus:
+  - start the Gemini conversation/cache slice from the list surface, not
+    rename/delete yet
+- What changed:
+  - Gemini conversation listing no longer inherits a non-Gemini
+    `browser.url` when the active AuraCall runtime profile defaults to another
+    provider
+  - Gemini cache identity now falls back to the managed browser profile's
+    local Google-account state when the live Gemini page does not expose a
+    usable account label
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - `auracall --profile wsl-chrome-2 conversations --target gemini`
+    - returned live `/app/<conversationId>` rows again
+    - no longer emitted the earlier cache-identity warning
+  - cache files now write under:
+    - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
+    - including:
+      - `conversations.json`
+      - `projects.json`
+      - `cache-index.json`
+      - `cache.sqlite`
+- Durable lesson:
+  - for Gemini list/read surfaces, provider-specific adapters must ignore
+    incompatible inherited `configuredUrl` values from other browser providers
+  - Gemini cache identity should not depend only on live page labels; the
+    managed browser profile's Google-account metadata is a valid fallback

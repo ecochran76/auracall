@@ -8108,3 +8108,42 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - do not key Gemini delete off the current list scrape name alone
   - when Gemini shows duplicate destructive dialogs, confirm all visible
     destructive buttons in that pass
+
+## 2026-04-04 - Gemini conversation list should ignore non-Gemini configured URLs
+
+- Context:
+  - Gemini project CRUD was green, but the next conversation/cache slice
+    failed immediately on `conversations --target gemini`
+- Symptom:
+  - `auracall --profile wsl-chrome-2 conversations --target gemini` failed
+    with:
+    - `Gemini conversation surface did not become ready: Gemini conversation surface did not settle`
+  - after that was fixed, the list returned but cache write-through still
+    warned that Gemini cache identity was missing
+- Root cause:
+  - Gemini conversation list was inheriting the generic `browser.url`, which
+    on this host points at ChatGPT, so the Gemini adapter was sometimes being
+    asked to settle a ChatGPT URL
+  - Gemini cache identity also depended too heavily on a live page account
+    label that is not consistently available on the conversation list surface
+- Fix:
+  - added `resolveGeminiConfiguredUrl(...)` so Gemini list/identity surfaces
+    only honor Gemini-compatible configured URLs and otherwise fall back to
+    `https://gemini.google.com/app`
+  - added a Gemini service fallback from `inspectBrowserDoctorState(...)` so
+    cache identity can derive from the managed browser profile's Google-account
+    metadata when live Gemini identity probing returns null
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 conversations --target gemini`
+    - returned live Gemini `/app/<conversationId>` rows
+    - no longer emitted the earlier cache-identity warning
+    - wrote cache files under:
+      - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
+- Durable lesson:
+  - Gemini provider surfaces must not trust a cross-provider inherited
+    `configuredUrl`
+  - managed browser-profile account metadata is an acceptable cache-identity
+    fallback when Gemini's live DOM does not expose a stable account label

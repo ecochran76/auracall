@@ -76,6 +76,15 @@ function isGeminiUrl(url: string): boolean {
   }
 }
 
+export function resolveGeminiConfiguredUrl(
+  value: string | null | undefined,
+  fallback: string = GEMINI_APP_URL,
+): string {
+  const trimmed = String(value ?? '').trim();
+  if (!trimmed) return fallback;
+  return isGeminiUrl(trimmed) ? trimmed : fallback;
+}
+
 function resolveGeminiTargetId(target: { id?: string; targetId?: string } | null | undefined): string | undefined {
   if (!target) return undefined;
   if (typeof target.id === 'string' && target.id.trim()) return target.id;
@@ -688,7 +697,10 @@ export function createGeminiAdapter(): Pick<
       conversations: true,
     },
     async getUserIdentity(options?: BrowserProviderListOptions): Promise<ProviderUserIdentity | null> {
-      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, options?.configuredUrl ?? GEMINI_APP_URL);
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+      );
       try {
         return await readGeminiUserIdentity(client);
       } finally {
@@ -714,7 +726,7 @@ export function createGeminiAdapter(): Pick<
       const normalizedProjectId = normalizeGeminiProjectId(projectId);
       const targetUrl = normalizedProjectId
         ? resolveGeminiProjectUrl(normalizedProjectId)
-        : (options?.configuredUrl ?? GEMINI_APP_URL);
+        : resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
       try {
         await navigateToGeminiConversationSurface(client, targetUrl);

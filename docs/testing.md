@@ -181,6 +181,9 @@
       - returns real Gem rows through the generic browser provider path
     - `auracall --profile wsl-chrome-2 conversations --target gemini`
       - returns real `/app/<conversationId>` chat rows through the same path
+      - now also writes cache under:
+        - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
+      - the earlier cache-identity warning is resolved on this pairing
   - Gemini Gem create is now also live on this pairing:
     - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
     - returned:

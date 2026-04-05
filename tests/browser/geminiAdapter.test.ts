@@ -3,6 +3,7 @@ import {
   extractGeminiProjectIdFromUrl,
   normalizeGeminiConversationId,
   normalizeGeminiProjectId,
+  resolveGeminiConfiguredUrl,
   resolveGeminiCreateProjectUrl,
   resolveGeminiEditProjectUrl,
   resolveGeminiConversationUrl,
@@ -33,5 +34,10 @@ describe('geminiAdapter id helpers', () => {
 
   test('resolves Gemini Gem manager row menu labels', () => {
     expect(resolveGeminiProjectMenuAriaLabel('Oracle')).toBe('More options for "Oracle" Gem');
+  });
+
+  test('ignores non-Gemini configured URLs for Gemini browser surfaces', () => {
+    expect(resolveGeminiConfiguredUrl('https://chatgpt.com/')).toBe('https://gemini.google.com/app');
+    expect(resolveGeminiConfiguredUrl('https://gemini.google.com/gem/3bfcda98acf4')).toBe('https://gemini.google.com/gem/3bfcda98acf4');
   });
 });

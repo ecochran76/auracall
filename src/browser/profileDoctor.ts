@@ -88,6 +88,20 @@ export interface BrowserDoctorIdentityReport {
   reason: string | null;
 }
 
+export function deriveProviderIdentityFromChromeGoogleAccount(
+  account: BrowserDoctorChromeAccountReport | null | undefined,
+): ProviderUserIdentity | null {
+  if (!account) return null;
+  const email = asNonEmptyString(account.email);
+  const name = asNonEmptyString(account.displayName) ?? asNonEmptyString(account.givenName);
+  if (!email && !name) return null;
+  return {
+    name: name ?? undefined,
+    email: email ?? undefined,
+    source: 'managed-profile-google-account',
+  };
+}
+
 export const AURACALL_BROWSER_DOCTOR_CONTRACT_VERSION = 1 as const;
 
 export interface AuracallBrowserDoctorContract {
