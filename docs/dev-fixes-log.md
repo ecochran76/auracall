@@ -8070,3 +8070,41 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     calling a rename failed
   - Gemini Gem delete remains separate and should not be bundled into the
     rename slice until a real durable delete proof exists
+
+## 2026-04-04 - Gemini Gem delete now works through the manager row menu
+
+- Context:
+  - Gemini Gem create and rename were live, but delete still lacked a durable
+    end-to-end proof
+- Symptom:
+  - the first Gemini delete attempt failed at row targeting even though the Gem
+    manager visibly exposed the correct row action
+- Root cause:
+  - Gemini's current manager list scrape can abbreviate user-Gem names, but
+    the manager row action surface still uses the full long-form Gem name in
+    `aria-label`
+  - the generic click helper was also too brittle on that row button
+  - Gemini can render duplicate `Delete Gem?` confirmation dialogs, so delete
+    confirmation must click every visible `Delete` button, not just one
+- Fix:
+  - added Gemini `selectRemoveProjectItem(...)` and
+    `pushProjectRemoveConfirmation(...)`
+  - widened the shared `projects remove` CLI target gate to include Gemini
+  - delete now resolves the authoritative Gem name from `/gems/edit/<id>`,
+    finds the exact `More options for "<name>" Gem` row action on `/gems/view`,
+    selects `Delete`, and confirms all visible `Delete` dialogs
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - created disposable Gem `AuraCall Gemini Gem Delete Proof 2026-04-04 1935`
+    - removed id `525572997076` with:
+      - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 projects remove 525572997076 --target gemini`
+    - refreshed Gem list no longer included that id
+- Durable lesson:
+  - for Gemini delete, the edit page is the authority for the current Gem
+    title, while the Gem manager row action is the authority for destructive
+    actions
+  - do not key Gemini delete off the current list scrape name alone
+  - when Gemini shows duplicate destructive dialogs, confirm all visible
+    destructive buttons in that pass

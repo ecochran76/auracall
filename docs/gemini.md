@@ -23,6 +23,7 @@ implemented from what is merely plausible.
 | Gem/project listing | N/A | Supported | `auracall projects --target gemini` now lists live Gemini Gem rows through the generic browser provider path. |
 | Gem/project create | N/A | Supported | `auracall projects create --target gemini <name>` now drives the native Gemini Gem create flow. |
 | Gem/project rename | N/A | Supported | `auracall projects rename --target gemini <id> <name>` now uses the native Gemini edit page and verifies the persisted name there. |
+| Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem manager delete flow and verifies row disappearance on refresh. |
 | Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
 | Browser doctor | N/A | Local-only supported | Use `auracall doctor --target gemini --local-only`; full live selector diagnosis is not implemented. |
@@ -137,8 +138,13 @@ Notes:
     - `AuraCall Gemini Gem CRUD Proof 2026-04-04 1854`
   - `auracall projects rename --target gemini <id> <name>` is now also live
     through the native `/gems/edit/<id>` flow
-- Current remaining gap:
-  - Gem delete is not yet freshly re-proven as a durable Gemini CRUD surface
+  - `auracall projects remove --target gemini <id>` is now also live through
+    the native Gem manager row-menu delete flow
+  - disposable live delete proof:
+    - created `AuraCall Gemini Gem Delete Proof 2026-04-04 1935`
+    - resolved id `525572997076`
+    - removed it with `projects remove --target gemini`
+    - refreshed Gem list no longer included that id
 - The earlier raw Gemini upload protocol investigation is still preserved in:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it is now background context, not the default path for ordinary Gemini

@@ -1123,7 +1123,7 @@ projectsCommand
   .alias('delete')
   .description('Remove a project/workspace for the active browser provider.')
   .argument('<id>', 'Project identifier or name')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .action(async (projectId, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
     const userConfig = await resolveConfig(
@@ -1131,9 +1131,9 @@ projectsCommand
       process.cwd(),
       process.env,
     );
-    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    const target = (commandOptions.target ?? (parentOptions as CliOptions).target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,

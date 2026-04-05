@@ -6,6 +6,7 @@ import {
   resolveGeminiCreateProjectUrl,
   resolveGeminiEditProjectUrl,
   resolveGeminiConversationUrl,
+  resolveGeminiProjectMenuAriaLabel,
   resolveGeminiProjectUrl,
 } from '../../src/browser/providers/geminiAdapter.js';
 
@@ -28,5 +29,9 @@ describe('geminiAdapter id helpers', () => {
     expect(resolveGeminiCreateProjectUrl()).toBe('https://gemini.google.com/gems/create');
     expect(resolveGeminiEditProjectUrl('3bfcda98acf4')).toBe('https://gemini.google.com/gems/edit/3bfcda98acf4');
     expect(resolveGeminiConversationUrl('ab30a4a92e4b65a9')).toBe('https://gemini.google.com/app/ab30a4a92e4b65a9');
+  });
+
+  test('resolves Gemini Gem manager row menu labels', () => {
+    expect(resolveGeminiProjectMenuAriaLabel('Oracle')).toBe('More options for "Oracle" Gem');
   });
 });

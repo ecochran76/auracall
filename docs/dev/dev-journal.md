@@ -7780,3 +7780,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini Gem delete still does not have an honest durable proof
   - the row menu and delete confirmation are real, but the full delete path
     still needs a dedicated persistence audit before landing
+
+## 2026-04-04 - Gemini Gem delete is live through the manager row menu
+
+- Current focus:
+  - finish the first honest Gemini Gem CRUD pass with delete
+- What changed:
+  - Gemini now supports the shared two-step remove contract:
+    - `selectRemoveProjectItem(...)`
+    - `pushProjectRemoveConfirmation(...)`
+  - `projects remove --target gemini` is now enabled in the shared CLI surface
+  - delete now targets the authoritative Gem manager row action by:
+    - resolving the persisted Gem name from `/gems/edit/<id>`
+    - opening the exact `More options for "<name>" Gem` row menu on
+      `/gems/view`
+    - selecting `Delete`
+    - clicking all visible `Delete` confirmation buttons when Gemini renders
+      duplicate confirmation dialogs
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - created disposable Gem:
+    - `AuraCall Gemini Gem Delete Proof 2026-04-04 1935`
+    - surfaced as id:
+      - `525572997076`
+  - deleted it with:
+    - `auracall --profile wsl-chrome-2 projects remove 525572997076 --target gemini`
+    - returned:
+      - `Removed project 525572997076.`
+  - refreshed Gem list no longer included:
+    - `525572997076`
+- Durable lesson:
+  - Gemini manager rows can expose the full long-form Gem name even when the
+    current Gem list scraper abbreviates the visible list entry
+  - delete should key off the authoritative edit-page name plus the manager
+    row `aria-label`, not the abbreviated list payload

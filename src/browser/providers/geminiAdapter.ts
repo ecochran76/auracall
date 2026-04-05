@@ -526,6 +526,151 @@ async function readGeminiPersistedProjectName(
   return value;
 }
 
+export function resolveGeminiProjectMenuAriaLabel(projectName: string): string {
+  return `More options for "${projectName}" Gem`;
+}
+
+async function openGeminiProjectMenu(
+  client: ChromeClient,
+  projectId: string,
+): Promise<{ projectName: string; menuLabel: string }> {
+  const projectName = await readGeminiPersistedProjectName(client, projectId, { timeoutMs: 20_000 });
+  const menuLabel = resolveGeminiProjectMenuAriaLabel(projectName);
+  await navigateToGeminiGemsViewPage(client);
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const label = ${JSON.stringify(menuLabel)};
+      return Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
+        .some((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label)
+        ? { ready: true }
+        : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: `Gemini Gem row menu ready for ${projectName}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini Gem row menu not found for "${projectName}".`);
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const label = ${JSON.stringify(menuLabel)};
+      const target = Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
+        .find((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label);
+      if (!(target instanceof HTMLElement)) return { ok: false, reason: 'row-menu-missing' };
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      target.click();
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+  if (!payload.ok) {
+    throw new Error(payload.reason || `Gemini Gem row menu not found for "${projectName}".`);
+  }
+  return { projectName, menuLabel };
+}
+
+async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<void> {
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const candidates = Array.from(document.querySelectorAll('[role="menuitem"], button, [role="button"]'));
+      return candidates.some((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete')
+        ? { ready: true }
+        : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini Gem delete menu item ready',
+    },
+  );
+  if (!ready.ok) {
+    throw new Error('Gemini Gem delete menu did not open.');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const candidates = Array.from(document.querySelectorAll('[role="menuitem"], button, [role="button"]'));
+      const deleteNode = candidates.find((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
+      if (!(deleteNode instanceof HTMLElement)) return { ok: false, reason: 'delete-menu-item-missing' };
+      deleteNode.click();
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+  if (!payload.ok) {
+    throw new Error(payload.reason || 'Gemini Gem delete menu item not found.');
+  }
+}
+
+async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<number> {
+  const opened = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+        .filter((node) => visible(node) && normalize(node.textContent || '').includes('delete gem'));
+      return dialogs.length > 0 ? { count: dialogs.length } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini delete confirmation dialog ready',
+    },
+  );
+  if (!opened.ok) {
+    throw new Error('Gemini delete confirmation dialog did not open.');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+        .filter((node) => visible(node) && normalize(node.textContent || '').includes('delete gem'));
+      let clicked = 0;
+      for (const dialog of dialogs) {
+        const buttons = Array.from(dialog.querySelectorAll('button, [role="button"]'))
+          .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
+        for (const button of buttons) {
+          if (!(button instanceof HTMLElement)) continue;
+          button.click();
+          clicked += 1;
+        }
+      }
+      return { clicked };
+    })()`,
+    returnByValue: true,
+  });
+  const clicked = Number((result?.value as { clicked?: number } | undefined)?.clicked ?? 0);
+  if (clicked < 1) {
+    throw new Error('Gemini delete confirmation button not found.');
+  }
+  return clicked;
+}
+
 export function createGeminiAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -534,6 +679,8 @@ export function createGeminiAdapter(): Pick<
   | 'listProjects'
   | 'listConversations'
   | 'renameProject'
+  | 'selectRemoveProjectItem'
+  | 'pushProjectRemoveConfirmation'
 > {
   return {
     capabilities: {
@@ -645,6 +792,62 @@ export function createGeminiAdapter(): Pick<
         });
         if (persistedName !== newTitle.trim()) {
           throw new Error(`Gemini Gem rename did not persist. Expected "${newTitle}", got "${persistedName}".`);
+        }
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        GEMINI_GEMS_VIEW_URL,
+      );
+      try {
+        await openGeminiProjectMenu(client, normalizedProjectId);
+        await selectGeminiProjectDeleteMenuItem(client);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        GEMINI_GEMS_VIEW_URL,
+      );
+      try {
+        const { menuLabel } = await openGeminiProjectMenu(client, normalizedProjectId);
+        await selectGeminiProjectDeleteMenuItem(client);
+        await clickGeminiDeleteConfirmations(client);
+        const deleted = await waitForPredicate(
+          client.Runtime,
+          `(() => {
+            const label = ${JSON.stringify(menuLabel)};
+            return !Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
+              .some((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label)
+              ? { deleted: true }
+              : null;
+          })()`,
+          {
+            timeoutMs: 15_000,
+            description: `Gemini Gem ${normalizedProjectId} removed`,
+          },
+        );
+        if (!deleted.ok) {
+          throw new Error(`Gemini Gem ${normalizedProjectId} still appears in the Gem manager after delete confirmation.`);
         }
       } finally {
         await client.close().catch(() => undefined);

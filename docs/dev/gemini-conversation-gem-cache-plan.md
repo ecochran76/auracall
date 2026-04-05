@@ -53,7 +53,7 @@ What Gemini already has:
 
 What Gemini does not yet have in the same way ChatGPT/Grok do:
 
-- Gem list/create/rename/delete
+- Gem delete proved through generic cache refresh on the shared CLI surface
 - Gem instructions CRUD
 - Gem knowledge/file CRUD
 - conversation list/read/rename/delete
@@ -213,6 +213,24 @@ Target behavior:
 - `createProject(...)`
 - `renameProject(...)`
 - `deleteProject(...)`
+
+Current checkpoint:
+
+- `listProjects(...)`: live
+- `createProject(...)`: live
+- `renameProject(...)`: live
+- `deleteProject(...)`: live
+
+Live delete proof:
+
+- disposable Gem:
+  - `AuraCall Gemini Gem Delete Proof 2026-04-04 1935`
+- resolved id:
+  - `525572997076`
+- deleted with:
+  - `auracall --profile wsl-chrome-2 projects remove 525572997076 --target gemini`
+- refreshed Gem list no longer included:
+  - `525572997076`
 
 Likely rules:
 
