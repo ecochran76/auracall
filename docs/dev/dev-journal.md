@@ -7842,3 +7842,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     incompatible inherited `configuredUrl` values from other browser providers
   - Gemini cache identity should not depend only on live page labels; the
     managed browser profile's Google-account metadata is a valid fallback
+
+## 2026-04-05 - Gemini exact-tab selection now beats broad `/app` reuse
+
+- Current focus:
+  - harden Gemini browser tab ownership for exact conversation routes before
+    returning to conversation delete
+- What changed:
+  - Gemini's browser adapter no longer falls back to the first same-origin
+    Gemini tab when an exact route is requested
+  - the adapter now prefers an exact requested Gemini URL over the broad
+    service-resolved `/app` tab, then falls back to shared
+    `openOrReuseChromeTarget(...)`
+- Why this mattered:
+  - live probing on `https://gemini.google.com/app/17ecd216fc87eacf` showed
+    browser-service resolving the generic `/app` tab even when an exact
+    conversation route was requested
+  - that broad tab selection can bind Aura-Call to the wrong Gemini page
+    instance when multiple Gemini tabs are open
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Durable lesson:
+  - for Gemini exact-route work, broad service-level `/app` tab resolution is
+    too weak by itself; provider adapters must prefer an exact requested URL
+    match before accepting a generic service tab

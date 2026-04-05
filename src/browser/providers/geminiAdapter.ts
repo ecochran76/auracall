@@ -85,6 +85,46 @@ export function resolveGeminiConfiguredUrl(
   return isGeminiUrl(trimmed) ? trimmed : fallback;
 }
 
+export function geminiUrlMatchesPreference(
+  candidateUrl: string | null | undefined,
+  preferredUrl: string | null | undefined,
+): boolean {
+  const candidate = String(candidateUrl ?? '').trim();
+  const preferred = String(preferredUrl ?? '').trim();
+  if (!candidate || !preferred) {
+    return false;
+  }
+  try {
+    const candidateParsed = new URL(candidate);
+    const preferredParsed = new URL(preferred);
+    if (candidateParsed.hostname !== preferredParsed.hostname) {
+      return false;
+    }
+    const normalizePath = (value: string) => value.replace(/\/+$/, '') || '/';
+    const candidatePath = normalizePath(candidateParsed.pathname);
+    const preferredPath = normalizePath(preferredParsed.pathname);
+    if (candidatePath !== preferredPath) {
+      return false;
+    }
+    return candidateParsed.search === preferredParsed.search;
+  } catch {
+    return candidate === preferred;
+  }
+}
+
+export function selectPreferredGeminiTarget<T extends { url?: string | null }>(
+  targets: T[],
+  preferredUrl?: string,
+): T | undefined {
+  if (targets.length === 0) {
+    return undefined;
+  }
+  if (!preferredUrl) {
+    return targets[0];
+  }
+  return targets.find((target) => geminiUrlMatchesPreference(target.url, preferredUrl));
+}
+
 function resolveGeminiTargetId(target: { id?: string; targetId?: string } | null | undefined): string | undefined {
   if (!target) return undefined;
   if (typeof target.id === 'string' && target.id.trim()) return target.id;
@@ -156,7 +196,8 @@ async function connectToGeminiTab(
   const serviceResolved = resolvedTargetIdFromService
     ? candidates.find((target) => resolveGeminiTargetId(target) === resolvedTargetIdFromService)
     : undefined;
-  let targetInfo = serviceResolved ?? candidates[0];
+  const preferred = selectPreferredGeminiTarget(candidates, preferredUrl);
+  let targetInfo = preferred ?? serviceResolved;
   let shouldClose = false;
   let usedExisting = Boolean(resolveGeminiTargetId(targetInfo));
   if (!targetInfo) {

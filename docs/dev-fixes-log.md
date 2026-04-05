@@ -8147,3 +8147,31 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     `configuredUrl`
   - managed browser-profile account metadata is an acceptable cache-identity
     fallback when Gemini's live DOM does not expose a stable account label
+
+## 2026-04-05 - Gemini exact route selection must outrank broad `/app` tabs
+
+- Symptom:
+  - exact Gemini conversation-route work could still bind to the wrong tab
+    instance when multiple Gemini tabs were open
+  - live probing of
+    `https://gemini.google.com/app/17ecd216fc87eacf`
+    showed browser-service resolving a generic `/app` tab, not the exact
+    conversation page
+- Root cause:
+  - the Gemini adapter trusted the service-resolved tab before considering any
+    exact requested URL match among open Gemini page targets
+  - when browser-service returned the broad `/app` tab, Gemini could ignore a
+    more specific already-open exact conversation tab
+- Fix:
+  - added `geminiUrlMatchesPreference(...)` and
+    `selectPreferredGeminiTarget(...)`
+  - changed Gemini tab connection to prefer the exact requested URL match
+    before the broad service-resolved tab and before generic same-origin reuse
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Durable lesson:
+  - Gemini's broad `/app` service tab is not authoritative for exact-route
+    work when multiple Gemini tabs are open
+  - provider adapters should treat exact requested URL matches as stronger
+    evidence than generic same-origin or service-root matches
