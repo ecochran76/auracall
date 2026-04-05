@@ -39,7 +39,7 @@ import {
   resolveProviderCachePath,
 } from '../providers/cache.js';
 import type { BrowserService } from '../service/browserService.js';
-import { CHATGPT_URL, GROK_URL } from '../constants.js';
+import { CHATGPT_URL, GEMINI_URL, GROK_URL } from '../constants.js';
 import type {
   CacheContext,
   CacheIdentity,
@@ -200,9 +200,24 @@ export abstract class LlmService {
   }
 
   getConfiguredUrl(): string | null {
-    return this.providerId === 'grok'
-      ? this.userConfig.browser?.grokUrl ?? null
-      : this.userConfig.browser?.chatgptUrl ?? this.userConfig.browser?.url ?? null;
+    const browser = this.userConfig.browser;
+    if (this.providerId === 'grok') {
+      return browser?.grokUrl ?? browser?.url ?? null;
+    }
+    if (this.providerId === 'gemini') {
+      return browser?.geminiUrl ?? browser?.url ?? null;
+    }
+    return browser?.chatgptUrl ?? browser?.url ?? null;
+  }
+
+  protected getDefaultLaunchUrl(): string {
+    if (this.providerId === 'grok') {
+      return GROK_URL;
+    }
+    if (this.providerId === 'gemini') {
+      return GEMINI_URL;
+    }
+    return CHATGPT_URL;
   }
 
   resolveLaunchUrl(options: {
@@ -317,8 +332,7 @@ export abstract class LlmService {
     const configuredUrl = Object.hasOwn(overrides, 'configuredUrl')
       ? overrides.configuredUrl ?? null
       : this.getConfiguredUrl();
-    const launchUrl =
-      configuredUrl ?? (this.providerId === 'grok' ? GROK_URL : CHATGPT_URL);
+    const launchUrl = configuredUrl ?? this.getDefaultLaunchUrl();
     const hasExplicitEndpoint = overrides.port !== undefined || overrides.host !== undefined;
     const target = overrides.tabTargetId || hasExplicitEndpoint
       ? null

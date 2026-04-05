@@ -7867,3 +7867,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - for Gemini exact-route work, broad service-level `/app` tab resolution is
     too weak by itself; provider adapters must prefer an exact requested URL
     match before accepting a generic service tab
+
+## 2026-04-05 - Gemini browser service audit moved URL ownership into `LlmService`
+
+- Current focus:
+  - audit Gemini's legacy browser path against ChatGPT/Grok and move the
+    generic ownership/config seams into the shared `LlmService` base without
+    discarding the working Gem CRUD/list surfaces
+- What changed:
+  - `LlmService` no longer hardcodes a ChatGPT-vs-Grok URL split
+  - Gemini now resolves its service URL from `browser.geminiUrl` at the same
+    base-class seam where ChatGPT and Grok resolve theirs
+  - `buildListOptions(...)` now falls back to the Gemini app launch URL for
+    Gemini services instead of inheriting the ChatGPT home URL implicitly
+- Why this mattered:
+  - Gemini had already accumulated provider-local fixes for incompatible
+    `configuredUrl` inheritance, but the shared `LlmService` base was still
+    biased toward ChatGPT defaults
+  - that meant Gemini mutation/list paths could still start from the wrong
+    service URL before any adapter-local correction happened
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Current boundary:
+  - Gemini conversation delete is still not ready to land
+  - exact-route preflight exists now, but the conversation ownership check is
+    still too weak to call root-chat delete trustworthy on its own
+- Durable lesson:
+  - Gemini should inherit service URL selection from the shared
+    `LlmService`/browser-service seam, not repair ChatGPT-default drift only in
+    the adapter
+  - preserve working provider-local CRUD flows, but move target/account
+    ownership into shared service-layer seams before trusting destructive
+    mutations

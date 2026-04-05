@@ -8175,3 +8175,34 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     work when multiple Gemini tabs are open
   - provider adapters should treat exact requested URL matches as stronger
     evidence than generic same-origin or service-root matches
+
+## 2026-04-05 - Gemini must not inherit ChatGPT URL defaults from `LlmService`
+
+- Symptom:
+  - Gemini had working provider-local list/Gem CRUD fixes, but shared
+    `LlmService` plumbing still resolved non-Grok services through the
+    ChatGPT URL path
+  - that left Gemini vulnerable to starting browser-service resolution from
+    ChatGPT-biased defaults before adapter-local fixes ran
+- Root cause:
+  - `LlmService.getConfiguredUrl()` and its launch fallback treated the world
+    as:
+    - Grok
+    - everything else is ChatGPT
+- Fix:
+  - taught `LlmService` to resolve service-specific configured URLs and default
+    launch URLs for:
+    - ChatGPT
+    - Gemini
+    - Grok
+  - added focused regression coverage to ensure Gemini uses
+    `browser.geminiUrl` and falls back to the Gemini app route instead of the
+    ChatGPT home URL
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+- Durable lesson:
+  - provider-specific URL ownership belongs in the shared service base, not
+    just in provider adapters
+  - preserve provider-local selectors and CRUD semantics, but keep service URL
+    and target resolution aligned at the `LlmService` seam first

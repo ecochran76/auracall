@@ -11,6 +11,7 @@ import { JsonCacheStore } from '../../src/browser/llmService/cache/store.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
 import type { CacheStore } from '../../src/browser/llmService/cache/store.js';
 import type { LlmServiceAdapter } from '../../src/browser/llmService/types.js';
+import { CHATGPT_URL, GEMINI_URL } from '../../src/browser/constants.js';
 
 class TestLlmService extends LlmService {
   constructor(
@@ -49,8 +50,12 @@ class TestLlmService extends LlmService {
 }
 
 class BuildListOptionsLlmService extends LlmService {
-  constructor(provider: LlmServiceAdapter, browserService: unknown) {
-    super({ browser: { cache: {} } } as ResolvedUserConfig, provider, browserService as never, {});
+  constructor(
+    userConfig: ResolvedUserConfig,
+    provider: LlmServiceAdapter,
+    browserService: unknown,
+  ) {
+    super(userConfig, provider, browserService as never, {});
   }
 
   async listProjects(): Promise<[]> {
@@ -67,6 +72,10 @@ class BuildListOptionsLlmService extends LlmService {
 
   async getUserIdentity() {
     return null;
+  }
+
+  readDefaultLaunchUrl(): string {
+    return this.getDefaultLaunchUrl();
   }
 }
 
@@ -309,7 +318,7 @@ describe('llmService project file cache writes', () => {
       id: 'grok',
       config: { id: 'grok', selectors: {} as never },
     };
-    const service = new BuildListOptionsLlmService(provider as never, browserService);
+    const service = new BuildListOptionsLlmService({ browser: { cache: {} } } as ResolvedUserConfig, provider as never, browserService);
 
     const result = await service.buildListOptions({
       host: '127.0.0.1',
@@ -321,6 +330,75 @@ describe('llmService project file cache writes', () => {
     expect(result.host).toBe('127.0.0.1');
     expect(result.port).toBe(9222);
     expect(result.configuredUrl).toBe('https://grok.com/c/conversation-123');
+  });
+
+  test('buildListOptions uses Gemini service URLs instead of inheriting ChatGPT defaults', async () => {
+    const browserService = {
+      resolveServiceTarget: vi.fn(async ({ configuredUrl }: { configuredUrl?: string | null }) => ({
+        host: '127.0.0.1',
+        port: 45011,
+        tab: {
+          targetId: 'gemini-target',
+          url: configuredUrl,
+        },
+      })),
+    };
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+    };
+    const service = new BuildListOptionsLlmService(
+      {
+        browser: {
+          cache: {},
+          url: CHATGPT_URL,
+          chatgptUrl: CHATGPT_URL,
+          geminiUrl: 'https://gemini.google.com/gem/test-gem',
+        },
+      } as ResolvedUserConfig,
+      provider as never,
+      browserService,
+    );
+
+    const result = await service.buildListOptions();
+
+    expect(browserService.resolveServiceTarget).toHaveBeenCalledWith({
+      serviceId: 'gemini',
+      configuredUrl: 'https://gemini.google.com/gem/test-gem',
+      ensurePort: undefined,
+    });
+    expect(result.configuredUrl).toBe('https://gemini.google.com/gem/test-gem');
+    expect(result.tabUrl).toBe('https://gemini.google.com/gem/test-gem');
+  });
+
+  test('buildListOptions falls back to the Gemini app URL when no Gemini URL is configured', async () => {
+    const browserService = {
+      resolveServiceTarget: vi.fn(async ({ configuredUrl }: { configuredUrl?: string | null }) => ({
+        host: '127.0.0.1',
+        port: undefined,
+        tab: null,
+      })),
+    };
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+    };
+    const service = new BuildListOptionsLlmService(
+      { browser: { cache: {} } } as ResolvedUserConfig,
+      provider as never,
+      browserService,
+    );
+
+    const result = await service.buildListOptions();
+
+    expect(browserService.resolveServiceTarget).toHaveBeenCalledWith({
+      serviceId: 'gemini',
+      configuredUrl: null,
+      ensurePort: undefined,
+    });
+    expect(result.configuredUrl).toBeNull();
+    expect(result.port).toBeUndefined();
+    expect(service.readDefaultLaunchUrl()).toBe(GEMINI_URL);
   });
 
   test('uploadProjectFiles refreshes project-knowledge cache from the live list', async () => {
