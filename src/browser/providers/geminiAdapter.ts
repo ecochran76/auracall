@@ -59,6 +59,10 @@ export function resolveGeminiCreateProjectUrl(): string {
   return GEMINI_GEM_CREATE_URL;
 }
 
+export function resolveGeminiEditProjectUrl(projectId: string): string {
+  return new URL(`gems/edit/${projectId}`, GEMINI_BASE_URL).toString();
+}
+
 export function resolveGeminiConversationUrl(conversationId: string): string {
   return new URL(`app/${conversationId}`, GEMINI_BASE_URL).toString();
 }
@@ -351,6 +355,24 @@ async function navigateToGeminiGemsViewPage(client: Pick<ChromeClient, 'Page' | 
   }
 }
 
+async function navigateToGeminiEditPage(
+  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
+  projectId: string,
+): Promise<void> {
+  const settled = await navigateAndSettle(client, {
+    url: resolveGeminiEditProjectUrl(projectId),
+    routeExpression: `location.pathname === ${JSON.stringify(`/gems/edit/${projectId}`)}`,
+    routeDescription: `Gemini Gem edit route for ${projectId}`,
+    readyExpression: `Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)})) && Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))`,
+    readyDescription: `Gemini Gem edit surface for ${projectId}`,
+    timeoutMs: 20_000,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error(`Gemini Gem edit page did not become ready: ${settled.reason ?? settled.phase}`);
+  }
+}
+
 async function navigateToGeminiConversationSurface(
   client: Pick<ChromeClient, 'Page' | 'Runtime'>,
   url: string,
@@ -469,6 +491,41 @@ async function createGeminiProjectWithClient(
   };
 }
 
+async function readGeminiPersistedProjectName(
+  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
+  projectId: string,
+  options?: { expectedName?: string; timeoutMs?: number },
+): Promise<string> {
+  await navigateToGeminiEditPage(client, projectId);
+  const expectedName = typeof options?.expectedName === 'string' ? options.expectedName.trim() : '';
+  const predicate = expectedName
+    ? `(() => {
+        const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
+        if (!(input instanceof HTMLInputElement)) return null;
+        const value = input.value.trim();
+        return value === ${JSON.stringify(expectedName)} ? { value } : null;
+      })()`
+    : `(() => {
+        const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
+        if (!(input instanceof HTMLInputElement)) return null;
+        const value = input.value.trim();
+        return value ? { value } : null;
+      })()`;
+  const ready = await waitForPredicate(client.Runtime, predicate, {
+    timeoutMs: options?.timeoutMs ?? 15_000,
+    description: expectedName
+      ? `Gemini Gem name persisted as ${expectedName}`
+      : 'Gemini Gem name hydrated',
+  });
+  const value = typeof (ready.value as { value?: string } | undefined)?.value === 'string'
+    ? ((ready.value as { value?: string }).value ?? '').trim()
+    : '';
+  if (!value) {
+    throw new Error('Gemini Gem name input did not expose a persisted name.');
+  }
+  return value;
+}
+
 export function createGeminiAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
@@ -476,6 +533,7 @@ export function createGeminiAdapter(): Pick<
   | 'getUserIdentity'
   | 'listProjects'
   | 'listConversations'
+  | 'renameProject'
 > {
   return {
     capabilities: {
@@ -534,6 +592,60 @@ export function createGeminiAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
       try {
         return await createGeminiProjectWithClient(client, input);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async renameProject(projectId: string, newTitle: string, options?: BrowserProviderListOptions): Promise<void> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiEditProjectUrl(normalizedProjectId),
+      );
+      try {
+        await navigateToGeminiEditPage(client, normalizedProjectId);
+        const setName = await setInputValue(client.Runtime, {
+          selector: GEMINI_GEM_NAME_INPUT_SELECTOR,
+          value: newTitle,
+          timeoutMs: 10_000,
+        });
+        if (!setName) {
+          throw new Error('Gemini Gem name input did not become ready for rename.');
+        }
+        await client.Runtime.evaluate({
+          expression: `(() => {
+            const input = document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)});
+            if (!(input instanceof HTMLInputElement)) return false;
+            input.focus();
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            input.blur();
+            input.dispatchEvent(new Event('blur', { bubbles: true }));
+            return true;
+          })()`,
+          returnByValue: true,
+        });
+        const pressed = await pressButton(client.Runtime, {
+          selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
+          interactionStrategies: ['click', 'pointer'],
+          timeoutMs: 10_000,
+        });
+        if (!pressed.ok) {
+          throw new Error(`Gemini Gem update failed: ${pressed.reason ?? 'Update button not clickable.'}`);
+        }
+        const persistedName = await readGeminiPersistedProjectName(client, normalizedProjectId, {
+          expectedName: newTitle,
+          timeoutMs: 20_000,
+        });
+        if (persistedName !== newTitle.trim()) {
+          throw new Error(`Gemini Gem rename did not persist. Expected "${newTitle}", got "${persistedName}".`);
+        }
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

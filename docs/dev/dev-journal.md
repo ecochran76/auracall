@@ -7757,3 +7757,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     premade Gems still inherit the first visible row name
   - record that for the next Gemini Gem list-quality pass, but do not let it
     block the first create/mutation slice
+
+## 2026-04-04 - Gemini Gem rename is live through the edit surface
+
+- Current focus:
+  - first Gemini Gem rename slice, kept separate from delete
+- What changed:
+  - Gemini now supports `renameProject(...)` through the native edit route:
+    - `/gems/edit/<id>`
+  - `projects rename --target gemini` is now enabled in the shared CLI surface
+  - rename verification now waits for the persisted Gem name to hydrate on the
+    edit page instead of assuming the first immediate reopen is authoritative
+- Live proof on managed `wsl-chrome-2 -> gemini`:
+  - `auracall --profile wsl-chrome-2 projects rename 8206744c0568 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1914' --target gemini`
+    - returned:
+      - `Renamed project 8206744c0568 to "AuraCall Gemini Gem CRUD Proof 2026-04-04 1914".`
+  - authoritative follow-up read on:
+    - `https://gemini.google.com/gems/edit/8206744c0568`
+    - showed the persisted name:
+      - `AuraCall Gemini Gem CRUD Proof 2026-04-04 1914`
+- Deferred side finding:
+  - Gemini Gem delete still does not have an honest durable proof
+  - the row menu and delete confirmation are real, but the full delete path
+    still needs a dedicated persistence audit before landing

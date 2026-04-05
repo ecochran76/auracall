@@ -250,10 +250,12 @@ Still open inside Slice 2:
 
 - Gem list name quality is not yet fully faithful across all Gemini Gem
   manager row shapes
-- rename/delete are still the next Gemini Gem CRUD slices
+- Gem delete is still the next Gemini Gem CRUD slice
 - live `wsl-chrome-2 -> gemini` proofs now exist for:
   - Gem-as-project listing
   - conversation listing
+  - Gem create
+  - Gem rename
 - Gemini cache identity is now detectable from the live Google account label,
   which unblocks ordinary cache write-through for these list surfaces
 

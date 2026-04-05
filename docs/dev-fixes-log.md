@@ -8036,3 +8036,37 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     exists
   - one remaining Gem-list name-quality issue is recorded for a later slice and
     should not block create-path progress
+
+## 2026-04-04 - Gemini Gem rename now works through the native edit page
+
+- Context:
+  - Gemini Gem create was live, but rename had not landed because the first
+    implementation treated the first immediate reopen of `/gems/edit/<id>` as
+    the authoritative persistence check
+- Symptom:
+  - Aura-Call staged the new name and hit a real save path, but rename still
+    failed verification with the old name
+- Root cause:
+  - Gemini does not always expose the persisted renamed title immediately on
+    the first post-save re-open
+  - the save path is real, but persistence verification needed to poll the edit
+    page until the hydrated name input caught up
+- Fix:
+  - added Gemini `renameProject(...)` against the native `/gems/edit/<id>`
+    surface
+  - widened the shared `projects rename` CLI target gate to include Gemini
+  - verified rename by polling the edit-page name input for the expected
+    persisted value instead of trusting the first immediate refresh
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts tests/services/registry.test.ts tests/browser/config.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - live:
+    - `pnpm tsx bin/auracall.ts --profile wsl-chrome-2 projects rename 8206744c0568 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1914' --target gemini`
+    - authoritative follow-up read on:
+      - `https://gemini.google.com/gems/edit/8206744c0568`
+- Durable lesson:
+  - for Gemini Gem rename, the edit page is the authority, not the manager list
+  - Gemini persistence checks should poll hydrated edit-page state before
+    calling a rename failed
+  - Gemini Gem delete remains separate and should not be bundled into the
+    rename slice until a real durable delete proof exists
