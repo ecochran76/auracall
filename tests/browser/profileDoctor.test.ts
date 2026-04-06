@@ -665,7 +665,15 @@ describe('profileDoctor', () => {
     expect(browserAutomationClientMocks.fromConfig).not.toHaveBeenCalled();
   });
 
-  it('marks Gemini account identity as unsupported', async () => {
+  it('probes Gemini account identity when a managed session is alive', async () => {
+    browserAutomationClientMocks.fromConfig.mockResolvedValue({
+      getUserIdentity: vi.fn(async () => ({
+        name: 'Eric Cochran',
+        email: 'ecochran76@gmail.com',
+        source: 'google-account-label',
+      })),
+    });
+
     const identity = await inspectBrowserDoctorIdentity(
       {
         auracallProfile: 'default',
@@ -680,14 +688,17 @@ describe('profileDoctor', () => {
 
     expect(identity).toEqual({
       target: 'gemini',
-      supported: false,
-      attempted: false,
-      identity: null,
+      supported: true,
+      attempted: true,
+      identity: {
+        name: 'Eric Cochran',
+        email: 'ecochran76@gmail.com',
+        source: 'google-account-label',
+      },
       error: null,
-      reason:
-        'Gemini browser doctor currently supports local browser-profile inspection only; provider account identity probing is not implemented.',
+      reason: null,
     });
-    expect(browserAutomationClientMocks.fromConfig).not.toHaveBeenCalled();
+    expect(browserAutomationClientMocks.fromConfig).toHaveBeenCalledTimes(1);
   });
 
   it('wraps doctor output in a versioned Aura-Call contract', async () => {

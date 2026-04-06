@@ -1,3 +1,5 @@
+import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
@@ -7,8 +9,14 @@ import {
   waitForPredicate,
 } from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
-import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
-import type { Conversation, Project, ProjectMemoryMode } from './domain.js';
+import type {
+  BrowserProvider,
+  BrowserProviderListOptions,
+  BrowserProviderPromptInput,
+  BrowserProviderPromptResult,
+  ProviderUserIdentity,
+} from './types.js';
+import type { Conversation, FileRef, Project, ProjectMemoryMode } from './domain.js';
 import { requireBundledServiceBaseUrl, requireBundledServiceCompatibleHosts, requireBundledServiceRouteTemplate } from '../../services/registry.js';
 
 const GEMINI_BASE_URL = requireBundledServiceBaseUrl('gemini');
@@ -20,6 +28,24 @@ const GEMINI_GEM_NAME_INPUT_SELECTOR = 'input[aria-label="Input for a Gem name"]
 const GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR = 'textarea[data-test-id="description-input-field"]';
 const GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR = 'div[aria-label="Enter a prompt for Gemini"]';
 const GEMINI_GEM_CREATE_BUTTON_SELECTOR = 'button[data-test-id="create-button"]';
+const GEMINI_GEM_START_CHAT_BUTTON_SELECTOR = 'button[data-test-id="new-chat-button"]';
+const GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR =
+  'button[aria-label*="upload file menu for gem knowledge" i]';
+const GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR =
+  'button[role="menuitem"][data-test-id="local-images-files-uploader-button"][aria-label*="Upload files" i]';
+const GEMINI_GEM_KNOWLEDGE_HIDDEN_UPLOAD_SELECTORS = [
+  'button[data-test-id="hidden-local-image-upload-button"]',
+  'button[data-test-id="hidden-local-file-upload-button"]',
+];
+const GEMINI_PROMPT_INPUT_SELECTORS = [
+  'div[role="textbox"][aria-label="Enter a prompt for Gemini"]',
+  'div[role="textbox"][contenteditable="true"]',
+  'textarea[aria-label*="Gemini"]',
+];
+const GEMINI_SEND_BUTTON_SELECTORS = [
+  'button[aria-label="Send message"]',
+  'button[type="submit"][aria-label*="Send"]',
+];
 
 function resolvePortFromEnv(): number | undefined {
   const raw = process.env.AURACALL_BROWSER_PORT;
@@ -32,11 +58,77 @@ function normalizeWhitespace(value: string): string {
   return String(value ?? '').replace(/\s+/g, ' ').trim();
 }
 
+function normalizePromptText(value: string): string {
+  return String(value ?? '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\u00a0/g, ' ')
+    .split('\n')
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .join('\n')
+    .trim();
+}
+
+function sanitizeGeminiAssistantText(value: string): string {
+  const normalized = normalizePromptText(value);
+  return normalized
+    .replace(/^(?:show thinking\s+)?gemini said\s+/i, '')
+    .replace(/\s+(?:copy prompt|listen|show more options)(?:\s+(?:copy prompt|listen|show more options))*$/i, '')
+    .trim();
+}
+
+function guessMimeType(filePath: string): string {
+  const ext = path.extname(filePath).toLowerCase();
+  switch (ext) {
+    case '.txt':
+    case '.md':
+    case '.log':
+    case '.csv':
+    case '.ts':
+    case '.tsx':
+    case '.js':
+    case '.json':
+    case '.yaml':
+    case '.yml':
+    case '.xml':
+    case '.html':
+    case '.css':
+      return 'text/plain';
+    case '.pdf':
+      return 'application/pdf';
+    case '.doc':
+      return 'application/msword';
+    case '.docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    case '.xls':
+      return 'application/vnd.ms-excel';
+    case '.xlsx':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    case '.png':
+      return 'image/png';
+    case '.jpg':
+    case '.jpeg':
+      return 'image/jpeg';
+    case '.gif':
+      return 'image/gif';
+    case '.webp':
+      return 'image/webp';
+    default:
+      return 'application/octet-stream';
+  }
+}
+
+function isLikelyImagePath(filePath: string): boolean {
+  return ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(path.extname(filePath).toLowerCase());
+}
+
 export function normalizeGeminiProjectId(value: string | null | undefined): string | null {
   const trimmed = String(value ?? '').trim();
   if (!trimmed) return null;
   const extracted = extractGeminiProjectIdFromUrl(trimmed);
-  return extracted ?? (trimmed.replace(/^gem\//i, '').replace(/^\/+|\/+$/g, '') || null);
+  if (extracted) return extracted;
+  const normalized = trimmed.replace(/^gem\//i, '').replace(/^\/+|\/+$/g, '');
+  if (!normalized) return null;
+  return /^[a-z0-9_-]{6,}$/i.test(normalized) ? normalized : null;
 }
 
 export function normalizeGeminiConversationId(value: string | null | undefined): string | null {
@@ -74,6 +166,63 @@ function isGeminiUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function geminiConversationRouteExpression(url: string): string | undefined {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/+$/, '') || '/';
+    if (/^\/app\/[^/]+$/i.test(path)) {
+      return `location.pathname === ${JSON.stringify(path)}`;
+    }
+    if (path === '/app') {
+      return `location.pathname === "/app" || /^\\/app\\/[^/?#]+$/i.test(location.pathname)`;
+    }
+    return undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+export function geminiConversationSurfaceReadyExpression(): string {
+  return `(() => {
+    const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+    if (visible(document.querySelector('[data-test-id="all-conversations"]'))) return true;
+    if (visible(document.querySelector('button[aria-label="Main menu"]'))) {
+      const text = String(document.body?.innerText || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      if (text.includes('conversation with gemini') || text.includes('what can we get done')) return true;
+      if (Array.from(document.querySelectorAll('div[role="textbox"], textarea')).some((node) => visible(node))) return true;
+    }
+    if (Array.from(document.querySelectorAll('a[href*="/app/"]')).some((node) => visible(node))) return true;
+    if (Array.from(document.querySelectorAll('button[data-test-id="actions-menu-button"], a[data-test-id="actions-menu-button"]')).some((node) => visible(node))) return true;
+    if (Array.from(document.querySelectorAll('button[aria-label], a[aria-label]')).some((node) => {
+      if (!visible(node)) return false;
+      const label = String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      return label.startsWith('more options for ');
+    })) return true;
+    const text = String(document.body?.innerText || '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    if (text.includes('use your precise location')) return true;
+    return false;
+  })()`;
+}
+
+export function classifyGeminiBlockingState(state: {
+  href?: string | null;
+  title?: string | null;
+  bodyText?: string | null;
+} | null | undefined): string | null {
+  const href = normalizeWhitespace(state?.href ?? '').toLowerCase();
+  const title = normalizeWhitespace(state?.title ?? '').toLowerCase();
+  const bodyText = normalizeWhitespace(state?.bodyText ?? '').toLowerCase();
+  const combined = `${title} ${bodyText}`.trim();
+  if (
+    href.includes('google.com/sorry/') ||
+    (combined.includes('our systems have detected unusual traffic') &&
+      combined.includes('this page checks to see if it\'s really you'))
+  ) {
+    return 'Google blocked Gemini with an unusual-traffic interstitial (google.com/sorry).';
+  }
+  return null;
 }
 
 export function resolveGeminiConfiguredUrl(
@@ -231,6 +380,19 @@ type GeminiConversationProbe = {
   url?: string | null;
   updatedAt?: string | null;
 };
+
+type GeminiDeleteTrace = Array<Record<string, unknown>>;
+
+function summarizeGeminiDeleteTrace(trace: GeminiDeleteTrace, edgeCount: number = 6): string {
+  if (trace.length <= edgeCount * 2) {
+    return JSON.stringify(trace);
+  }
+  return JSON.stringify([
+    ...trace.slice(0, edgeCount),
+    { phase: 'trace-truncated', omitted: trace.length - edgeCount * 2 },
+    ...trace.slice(-edgeCount),
+  ]);
+}
 
 function extractGeminiIdentityFromLabel(label: string | null | undefined): ProviderUserIdentity | null {
   const normalized = normalizeWhitespace(label ?? '');
@@ -427,17 +589,1054 @@ async function navigateToGeminiConversationSurface(
   client: Pick<ChromeClient, 'Page' | 'Runtime'>,
   url: string,
 ): Promise<void> {
+  const routeExpression = geminiConversationRouteExpression(url);
+  const readyExpression = geminiConversationSurfaceReadyExpression();
   const settled = await navigateAndSettle(client, {
     url,
+    routeExpression,
     routeDescription: 'Gemini conversation route',
-    readyExpression: `Boolean(document.querySelector('[data-test-id="all-conversations"]')) || /\\/app\\/[^/?#]+$/i.test(location.pathname)`,
+    readyExpression,
     readyDescription: 'Gemini conversation surface',
     timeoutMs: 20_000,
     fallbackToLocationAssign: true,
   });
-  if (!settled.ok) {
-    throw new Error(`Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase}`);
+  if (settled.ok) {
+    return;
   }
+  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+  if (routeExpression) {
+    const routeReady = await waitForPredicate(client.Runtime, routeExpression, {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation route recovery',
+    });
+    if (!routeReady.ok) {
+      const state = await collectGeminiConversationSurfaceState(client.Runtime, 'route-recovery-failed');
+      const blockingReason = classifyGeminiBlockingState(state);
+      if (blockingReason) {
+        throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+      }
+      throw new Error(
+        `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
+      );
+    }
+  }
+  const recovered = await waitForPredicate(client.Runtime, readyExpression, {
+    timeoutMs: 8_000,
+    description: 'Gemini conversation surface recovery',
+  });
+  if (!recovered.ok) {
+    const state = await collectGeminiConversationSurfaceState(client.Runtime, 'ready-recovery-failed');
+    const blockingReason = classifyGeminiBlockingState(state);
+    if (blockingReason) {
+      throw new Error(`${blockingReason} state=${JSON.stringify(state)}`);
+    }
+    throw new Error(
+      `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
+    );
+  }
+}
+
+async function collectGeminiConversationSurfaceState(
+  Runtime: ChromeClient['Runtime'],
+  phase: string,
+): Promise<Record<string, unknown>> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.textContent || ''))
+        .slice(0, 5);
+      const anchors = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .filter((node) => visible(node))
+        .map((node) => ({
+          href: node instanceof HTMLAnchorElement ? node.href : '',
+          text: normalize(node.textContent || ''),
+        }))
+        .slice(0, 8);
+      const actionLabels = Array.from(document.querySelectorAll('button[aria-label], a[aria-label]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter(Boolean)
+        .filter((label) => /more options|dismiss|delete/i.test(label))
+        .slice(0, 12);
+      return {
+        href: location.href,
+        title: document.title || '',
+        hasConversationList: visible(document.querySelector('[data-test-id="all-conversations"]')),
+        dialogs,
+        anchors,
+        actionLabels,
+        bodyText: normalize(document.body?.innerText || '').slice(0, 800),
+      };
+    })()`,
+    returnByValue: true,
+  });
+  return {
+    phase,
+    ...(typeof result?.value === 'object' && result?.value ? (result.value as Record<string, unknown>) : {}),
+  };
+}
+
+async function collectGeminiDeleteSurfaceState(
+  Runtime: ChromeClient['Runtime'],
+  phase: string,
+): Promise<Record<string, unknown>> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const deleteButton = document.querySelector('button[data-test-id="delete-button"]');
+      const confirmButton = document.querySelector('button[data-test-id="confirm-button"]');
+      const confirmButtons = Array.from(document.querySelectorAll('button[data-test-id="confirm-button"]'))
+        .filter((node) => visible(node))
+        .map((node) => {
+          const touchTarget = node instanceof HTMLElement ? node.querySelector('.mat-mdc-button-touch-target') : null;
+          const rect = (touchTarget instanceof HTMLElement ? touchTarget : node).getBoundingClientRect();
+          return {
+            text: normalize(node.textContent || ''),
+            ariaLabel: normalize(node.getAttribute('aria-label') || ''),
+            disabled: node instanceof HTMLButtonElement ? node.disabled : false,
+            ariaDisabled: normalize(node.getAttribute('aria-disabled') || ''),
+            className: normalize(node.getAttribute('class') || '').slice(0, 200),
+            rect: {
+              left: rect.left,
+              top: rect.top,
+              width: rect.width,
+              height: rect.height,
+            },
+          };
+        })
+        .slice(0, 4);
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.textContent || ''))
+        .slice(0, 5);
+      const visibleActionLabels = Array.from(document.querySelectorAll('button[aria-label], a[aria-label]'))
+        .filter((node) => visible(node))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter((label) => /more options|delete|dismiss/i.test(label))
+        .slice(0, 20);
+      return {
+        href: location.href,
+        deleteReady: deleteButton instanceof HTMLElement && visible(deleteButton),
+        confirmReady: confirmButton instanceof HTMLElement && visible(confirmButton),
+        confirmButtons,
+        dialogs,
+        visibleActionLabels,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  return {
+    phase,
+    ...(typeof result?.value === 'object' && result?.value ? (result.value as Record<string, unknown>) : {}),
+  };
+}
+
+async function waitForGeminiConversationListEntry(
+  Runtime: ChromeClient['Runtime'],
+  conversationId: string,
+  options?: { timeoutMs?: number; description?: string },
+): Promise<Awaited<ReturnType<typeof waitForPredicate>>> {
+  await Runtime.evaluate({
+    expression: `(() => {
+      const list = document.querySelector('[data-test-id="all-conversations"]');
+      if (list instanceof HTMLElement) {
+        list.scrollTop = 0;
+        return { reset: true };
+      }
+      return { reset: false };
+    })()`,
+    returnByValue: true,
+  });
+  return waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const list = document.querySelector('[data-test-id="all-conversations"]');
+      const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .find((node) => node instanceof HTMLAnchorElement && node.href.includes('/app/${conversationId}'));
+      if (anchor instanceof HTMLAnchorElement) {
+        const rowNode = anchor.closest('[data-test-id="conversation"], li, div, section, article') || anchor;
+        if (!(rowNode instanceof Element)) {
+          return null;
+        }
+        rowNode.scrollIntoView({ block: 'center', inline: 'center' });
+        const rect = rowNode.getBoundingClientRect();
+        return {
+          title: normalize(rowNode.textContent || anchor.textContent || '') || '${conversationId}',
+          x: rect.left + rect.width - 12,
+          y: rect.top + rect.height / 2,
+          left: rect.left,
+          visible: visible(rowNode),
+        };
+      }
+      if (list instanceof HTMLElement && list.scrollHeight > list.clientHeight) {
+        const before = list.scrollTop;
+        const step = Math.max(Math.floor(list.clientHeight * 0.8), 200);
+        list.scrollTop = Math.min(list.scrollHeight, before + step);
+      }
+      return null;
+    })()`,
+    {
+      timeoutMs: options?.timeoutMs ?? 10_000,
+      description:
+        options?.description ?? `Gemini conversation list entry ready for ${conversationId}`,
+    },
+  );
+}
+
+async function validateGeminiConversationUrlWithClient(
+  client: Pick<ChromeClient, 'Page' | 'Runtime' | 'Runtime'>,
+  conversationId: string,
+): Promise<void> {
+  const targetUrl = resolveGeminiConversationUrl(conversationId);
+  const settled = await navigateAndSettle(client, {
+    url: targetUrl,
+    routeExpression: `location.pathname === ${JSON.stringify(`/app/${conversationId}`)}`,
+    routeDescription: `Gemini conversation route for ${conversationId}`,
+    readyExpression: `document.readyState === "interactive" || document.readyState === "complete"`,
+    readyDescription: `Gemini conversation document ready for ${conversationId}`,
+    timeoutMs: 12_000,
+    fallbackToLocationAssign: true,
+  });
+  if (!settled.ok) {
+    throw new Error('Conversation URL is invalid or missing.');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: 'location.href',
+    returnByValue: true,
+  });
+  const href = typeof result?.value === 'string' ? result.value : '';
+  if (!href.includes(`/app/${conversationId}`)) {
+    throw new Error('Conversation URL is invalid or missing.');
+  }
+  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+  const rowReady = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+    timeoutMs: 8_000,
+    description: `Gemini root conversation list entry visible for ${conversationId}`,
+  });
+  if (!rowReady.ok) {
+    throw new Error('Conversation URL is invalid or missing.');
+  }
+}
+
+async function dismissGeminiPreciseLocationDialog(
+  Runtime: ChromeClient['Runtime'],
+): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { result } = await Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const visible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+          .filter((node) => visible(node) && normalize(node.textContent || '').includes('use your precise location'));
+        if (!dialogs.length) return { present: false };
+        let clicked = 0;
+        for (const dialog of dialogs) {
+          const dismissButtons = Array.from(dialog.querySelectorAll('button, [role="button"]'))
+            .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'dismiss');
+          for (const button of dismissButtons) {
+            if (!(button instanceof HTMLElement)) continue;
+            button.click();
+            clicked += 1;
+          }
+        }
+        return { present: true, clicked };
+      })()`,
+      returnByValue: true,
+    });
+    const payload = (result?.value ?? {}) as { present?: boolean; clicked?: number };
+    if (!payload.present) {
+      return;
+    }
+    if ((payload.clicked ?? 0) < 1) {
+      throw new Error('Gemini precise-location dialog is blocking the conversation list, but no visible Dismiss button was found.');
+    }
+    const dismissed = await waitForPredicate(
+      Runtime,
+      `(() => {
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const visible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const remaining = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+          .filter((node) => visible(node) && normalize(node.textContent || '').includes('use your precise location'));
+        return remaining.length === 0 ? { dismissed: true } : null;
+      })()`,
+      {
+        timeoutMs: 3_000,
+        description: 'Gemini precise-location dialog dismissed',
+      },
+    );
+    if (dismissed.ok) {
+      return;
+    }
+  }
+  throw new Error('Gemini precise-location dialog remained visible after repeated dismiss attempts.');
+}
+
+async function ensureGeminiMainMenuOpen(
+  client: Pick<ChromeClient, 'Runtime'>,
+): Promise<void> {
+  const listReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const list = document.querySelector('[data-test-id="all-conversations"]');
+      if (!(list instanceof Element)) return null;
+      const rect = list.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 ? { open: true } : null;
+    })()`,
+    {
+      timeoutMs: 1_000,
+      description: 'Gemini main menu already open',
+    },
+  );
+  if (listReady.ok) {
+    return;
+  }
+  const opened = await pressButton(client.Runtime, {
+    selector: 'button[aria-label="Main menu"]',
+    interactionStrategies: ['click', 'pointer'],
+    timeoutMs: 5_000,
+  });
+  if (!opened.ok) {
+    throw new Error(opened.reason ?? 'Gemini main menu toggle not found.');
+  }
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const list = document.querySelector('[data-test-id="all-conversations"]');
+      if (!(list instanceof Element)) return null;
+      const rect = list.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 ? { open: true } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini main menu open',
+    },
+  );
+  if (!ready.ok) {
+    throw new Error('Gemini main menu did not open.');
+  }
+}
+
+async function setGeminiPrompt(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  prompt: string,
+): Promise<void> {
+  const normalizedPrompt = normalizePromptText(prompt);
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const dispatchClick = (target) => {
+        for (const type of ['pointerdown', 'mousedown', 'pointerup', 'mouseup', 'click']) {
+          target.dispatchEvent(new MouseEvent(type, {
+            bubbles: true,
+            cancelable: true,
+            composed: true,
+            button: 0,
+            buttons: 1,
+            view: window,
+          }));
+        }
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node));
+      if (!(target instanceof HTMLElement)) return { ok: false };
+      dispatchClick(target);
+      target.focus();
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+        target.value = '';
+        target.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        return { ok: true, mode: 'input' };
+      }
+      if (target.isContentEditable) {
+        const selection = target.ownerDocument?.getSelection?.();
+        if (selection) {
+          const range = target.ownerDocument.createRange();
+          range.selectNodeContents(target);
+          range.collapse(false);
+          selection.removeAllRanges();
+          selection.addRange(range);
+        }
+        target.replaceChildren();
+        target.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: '', inputType: 'deleteByCut' }));
+        target.dispatchEvent(new InputEvent('input', { bubbles: true, data: '', inputType: 'deleteByCut' }));
+        return { ok: true, mode: 'contenteditable' };
+      }
+      return { ok: false };
+    })()`,
+    returnByValue: true,
+  });
+  if (!result?.value?.ok) {
+    throw new Error('Gemini prompt composer did not become ready.');
+  }
+
+  await client.Input.insertText({ text: prompt });
+
+  const verified = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '')
+        .replace(/\\r\\n/g, '\\n')
+        .replace(/\\u00a0/g, ' ')
+        .split('\\n')
+        .map((line) => line.replace(/\\s+/g, ' ').trim())
+        .join('\\n')
+        .trim();
+      const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node));
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+        return { text: normalize(target.value || '') };
+      }
+      if (target instanceof HTMLElement && target.isContentEditable) {
+        return { text: normalize(target.innerText || target.textContent || '') };
+      }
+      return { text: '' };
+    })()`,
+    returnByValue: true,
+  });
+  if (normalizePromptText(String(verified.result?.value?.text ?? '')) === normalizedPrompt) {
+    return;
+  }
+
+  const fallback = await client.Runtime.evaluate({
+    expression: `(() => {
+      const text = ${JSON.stringify(prompt)};
+      const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node));
+      if (target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement) {
+        target.value = text;
+        target.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertFromPaste' }));
+        target.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
+      }
+      if (target instanceof HTMLElement && target.isContentEditable) {
+        target.replaceChildren();
+        const lines = text.split(/\\r?\\n/);
+        lines.forEach((line, index) => {
+          if (index > 0) {
+            target.appendChild(document.createElement('br'));
+          }
+          target.appendChild(document.createTextNode(line));
+        });
+        target.dispatchEvent(new InputEvent('beforeinput', { bubbles: true, cancelable: true, data: text, inputType: 'insertFromPaste' }));
+        target.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertFromPaste' }));
+        return true;
+      }
+      return false;
+    })()`,
+    returnByValue: true,
+  });
+  if (!fallback.result?.value) {
+    throw new Error('Gemini prompt text could not be inserted into the composer.');
+  }
+}
+
+async function clickGeminiSendButton(client: Pick<ChromeClient, 'Runtime' | 'Input'>): Promise<void> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const selectors = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node) && !(node instanceof HTMLButtonElement && node.disabled));
+      if (!(target instanceof HTMLElement)) return null;
+      const rect = target.getBoundingClientRect();
+      return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+    })()`,
+    returnByValue: true,
+  });
+  const point = (result?.value ?? null) as { x?: number; y?: number } | null;
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new Error('Gemini send button did not become ready.');
+  }
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseMoved',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'none',
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mousePressed',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseReleased',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+}
+
+async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<{
+  href: string;
+  conversationId: string | null;
+  assistantTexts: string[];
+  isGenerating: boolean;
+}> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const root =
+        document.querySelector('[data-test-id="chat-history-container"]') ||
+        document.querySelector('main') ||
+        document.body;
+      const assistantTexts = [];
+      const seen = new Set();
+      const responseSelectors = [
+        'structured-content-container.model-response-text',
+        'structured-content-container',
+        'message-content',
+        '.response-content .markdown',
+        '.response-content',
+        'model-response',
+      ];
+      const responseNodes = root
+        ? Array.from(root.querySelectorAll(responseSelectors.join(',')))
+        : [];
+      for (const node of responseNodes) {
+        if (!(node instanceof HTMLElement) || !visible(node)) continue;
+        if (node.closest('form,[role="textbox"],textarea,input,button,nav,aside,[role="dialog"],[data-test-id="all-conversations"],user-query,user-query-content')) continue;
+        const text = normalize(node.innerText || node.textContent || '');
+        if (text.length < 3) continue;
+        const childDuplicates = Array.from(node.children)
+          .filter((child) => child instanceof HTMLElement && visible(child))
+          .some((child) => normalize((child).innerText || child.textContent || '') === text);
+        if (childDuplicates) continue;
+        if (seen.has(text)) continue;
+        seen.add(text);
+        assistantTexts.push(text);
+      }
+      if (assistantTexts.length === 0 && root) {
+        const fallbackNodes = Array.from(root.querySelectorAll('p,li,pre,code,blockquote,div,span'));
+        for (const node of fallbackNodes) {
+          if (!(node instanceof HTMLElement) || !visible(node)) continue;
+          if (node.closest('form,[role="textbox"],textarea,input,button,nav,aside,[role="dialog"],[data-test-id="all-conversations"],user-query,user-query-content')) continue;
+          const text = normalize(node.innerText || node.textContent || '');
+          if (text.length < 16) continue;
+          const childDuplicates = Array.from(node.children)
+            .filter((child) => child instanceof HTMLElement && visible(child))
+            .some((child) => normalize((child).innerText || child.textContent || '') === text);
+          if (childDuplicates) continue;
+          if (seen.has(text)) continue;
+          seen.add(text);
+          assistantTexts.push(text);
+        }
+      }
+      const sendButtons = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
+      const isGenerating = Array.from(document.querySelectorAll('button'))
+        .some((button) => {
+          if (!(button instanceof HTMLButtonElement) || !visible(button)) return false;
+          const label = normalize(button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
+          if (sendButtons.some((selector) => button.matches(selector))) return false;
+          return label.includes('stop') || label.includes('cancel generation');
+        });
+      const match = location.pathname.match(/^\\/app\\/([^/?#]+)/i);
+      return {
+        href: location.href,
+        conversationId: match?.[1] ?? null,
+        assistantTexts,
+        isGenerating,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = (result?.value ?? {}) as {
+    href?: string;
+    conversationId?: string | null;
+    assistantTexts?: string[];
+    isGenerating?: boolean;
+  };
+  return {
+    href: typeof value.href === 'string' ? value.href : '',
+    conversationId: typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId : null,
+    assistantTexts: Array.isArray(value.assistantTexts) ? value.assistantTexts.map((entry) => normalizeWhitespace(entry)) : [],
+    isGenerating: Boolean(value.isGenerating),
+  };
+}
+
+export function selectNewestGeminiAssistantText(
+  baseline: string[],
+  current: string[],
+  prompt: string,
+): string | null {
+  const baselineSet = new Set(baseline.map((entry) => normalizePromptText(entry)));
+  const normalizedPrompt = normalizePromptText(prompt);
+  const candidates = current
+    .map((entry) => sanitizeGeminiAssistantText(entry))
+    .filter((entry) => entry && entry !== normalizedPrompt && !baselineSet.has(entry));
+  return candidates.length > 0 ? candidates[candidates.length - 1] : null;
+}
+
+async function waitForGeminiPromptResponse(
+  Runtime: ChromeClient['Runtime'],
+  baseline: { href: string; conversationId: string | null; assistantTexts: string[] },
+  prompt: string,
+  timeoutMs: number,
+): Promise<BrowserProviderPromptResult> {
+  const deadline = Date.now() + timeoutMs;
+  let stableText: string | null = null;
+  let stableCount = 0;
+  while (Date.now() < deadline) {
+    const state = await readGeminiPromptState(Runtime);
+    const nextText = selectNewestGeminiAssistantText(baseline.assistantTexts, state.assistantTexts, prompt);
+    if (nextText) {
+      if (nextText === stableText) {
+        stableCount += 1;
+      } else {
+        stableText = nextText;
+        stableCount = 1;
+      }
+      if (!state.isGenerating && stableCount >= 2) {
+        return {
+          text: nextText,
+          conversationId: state.conversationId ?? baseline.conversationId,
+          url: state.href || baseline.href,
+        };
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1_250));
+  }
+  throw new Error('Timed out waiting for Gemini assistant response.');
+}
+
+async function openGeminiConversationMenu(
+  client: ChromeClient,
+  conversationId: string,
+  trace?: GeminiDeleteTrace,
+): Promise<void> {
+  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+  await dismissGeminiPreciseLocationDialog(client.Runtime);
+  await ensureGeminiMainMenuOpen(client);
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const list = document.querySelector('[data-test-id="all-conversations"]');
+      if (list instanceof HTMLElement) {
+        list.scrollTop = 0;
+        return { reset: true };
+      }
+      return { reset: false };
+    })()`,
+    returnByValue: true,
+  });
+  const ready = await waitForGeminiConversationListEntry(client.Runtime, conversationId, {
+    timeoutMs: 10_000,
+    description: `Gemini conversation row menu ready for ${conversationId}`,
+  });
+  if (!ready.ok) {
+    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+  }
+  const rowInfo = (ready.value ?? {}) as { title?: string; x?: number; y?: number; left?: number };
+  const title = normalizeWhitespace(rowInfo.title ?? '');
+  const hoverX = Number.isFinite(rowInfo.x) ? Number(rowInfo.x) : 0;
+  const hoverY = Number.isFinite(rowInfo.y) ? Number(rowInfo.y) : 0;
+  const hoverLeft = Number.isFinite(rowInfo.left) ? Number(rowInfo.left) : 0;
+  if (!title || !Number.isFinite(hoverY)) {
+    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+  }
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseMoved',
+    x: hoverLeft + 10,
+    y: hoverY,
+    button: 'none',
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseMoved',
+    x: hoverX,
+    y: hoverY,
+    button: 'none',
+  });
+  if (trace) {
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-hover'));
+  }
+  const menuButtonReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const targetLabel = ${JSON.stringify(`More options for ${title}`)};
+      const targetY = ${JSON.stringify(hoverY)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const candidates = Array.from(document.querySelectorAll('button[aria-label], a[aria-label]'))
+        .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || '') === targetLabel)
+        .map((node) => {
+          const rect = node.getBoundingClientRect();
+          return {
+            distance: Math.abs((rect.top + rect.height / 2) - targetY),
+          };
+        });
+      return candidates.length > 0 ? { count: candidates.length } : null;
+    })()`,
+    {
+      timeoutMs: 3_000,
+      description: `Gemini conversation action button ready for ${conversationId}`,
+    },
+  );
+  if (!menuButtonReady.ok) {
+    if (trace) {
+      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'menu-button-missing'));
+    }
+    throw new Error('conversation-actions-menu-missing');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const targetLabel = ${JSON.stringify(`More options for ${title}`)};
+      const targetY = ${JSON.stringify(hoverY)};
+      const candidates = Array.from(document.querySelectorAll('button[aria-label], a[aria-label]'))
+        .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || '') === targetLabel)
+        .map((node) => {
+          const touchTarget =
+            node instanceof HTMLElement ? node.querySelector('.mat-mdc-button-touch-target') : null;
+          const rect = (touchTarget instanceof HTMLElement ? touchTarget : node).getBoundingClientRect();
+          return {
+            distance: Math.abs((rect.top + rect.height / 2) - targetY),
+            clicked: node instanceof HTMLElement ? (node.click(), true) : false,
+          };
+        })
+        .sort((left, right) => left.distance - right.distance);
+      const match = candidates[0];
+      if (!match) return { ok: false, reason: 'conversation-actions-menu-missing' };
+      return { ok: true, clicked: match.clicked };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string; clicked?: boolean };
+  if (!payload.ok) {
+    throw new Error(payload.reason || `Gemini conversation row menu not found for ${conversationId}.`);
+  }
+  if (!payload.clicked) {
+    throw new Error(`Gemini conversation row menu not found for ${conversationId}.`);
+  }
+  if (trace) {
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-menu-click'));
+  }
+}
+
+async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trace?: GeminiDeleteTrace): Promise<void> {
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const button = document.querySelector('button[data-test-id="delete-button"]');
+      const rect = button instanceof HTMLElement ? button.getBoundingClientRect() : null;
+      return rect && rect.width > 0 && rect.height > 0
+        ? { ready: true }
+        : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation delete menu item ready',
+    },
+  );
+  if (!ready.ok) {
+    if (trace) {
+      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-menu-missing'));
+    }
+    throw new Error('Gemini conversation delete menu did not open.');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const deleteNode = document.querySelector('button[data-test-id="delete-button"]');
+      if (!(deleteNode instanceof HTMLElement)) return { ok: false, reason: 'delete-menu-item-missing' };
+      deleteNode.click();
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+  if (!payload.ok) {
+    throw new Error(payload.reason || 'Gemini conversation delete menu item not found.');
+  }
+  if (trace) {
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-delete-click'));
+  }
+}
+
+async function clickGeminiConversationDeleteConfirmations(
+  client: ChromeClient,
+  trace?: GeminiDeleteTrace,
+): Promise<number> {
+  const opened = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+        .filter((node) => {
+          if (!visible(node)) return false;
+          const text = normalize(node.textContent || '');
+          const buttons = Array.from(node.querySelectorAll('button, [role="button"]'))
+            .filter((button) => visible(button))
+            .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''));
+          return !text.includes('use your precise location') && buttons.includes('delete') && buttons.includes('cancel');
+        });
+      return dialogs.length > 0 ? { count: dialogs.length } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation delete confirmation dialog ready',
+    },
+  );
+  if (!opened.ok) {
+    if (trace) {
+      trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-missing'));
+    }
+    throw new Error('Gemini conversation delete confirmation dialog did not open.');
+  }
+  if (trace) {
+    trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'confirm-dialog-open'));
+  }
+  let clicked = 0;
+  const clearedPredicate = `(() => {
+    const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const visible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const active = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
+      .filter((node) => {
+        if (!visible(node)) return false;
+        if (node.classList.contains('mdc-dialog--closing')) return false;
+        const text = normalize(node.textContent || '');
+        const buttons = Array.from(node.querySelectorAll('button, [role="button"]'))
+          .filter((button) => visible(button))
+          .map((button) => normalize(button.getAttribute('aria-label') || button.textContent || ''));
+        return !text.includes('use your precise location') && buttons.includes('delete') && buttons.includes('cancel');
+      });
+    return active.length === 0 ? { cleared: true } : null;
+  })()`;
+
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const button = document.querySelector('button[data-test-id="confirm-button"]');
+        if (!(button instanceof HTMLElement)) return null;
+        const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
+        const rect = (touchTarget instanceof HTMLElement ? touchTarget : button).getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return null;
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      })()`,
+      returnByValue: true,
+    });
+    const point = (result?.value ?? null) as { x?: number; y?: number } | null;
+    if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+      break;
+    }
+    await client.Input.dispatchMouseEvent({
+      type: 'mouseMoved',
+      x: Number(point.x),
+      y: Number(point.y),
+      button: 'none',
+    });
+    await client.Input.dispatchMouseEvent({
+      type: 'mousePressed',
+      x: Number(point.x),
+      y: Number(point.y),
+      button: 'left',
+      clickCount: 1,
+    });
+    await client.Input.dispatchMouseEvent({
+      type: 'mouseReleased',
+      x: Number(point.x),
+      y: Number(point.y),
+      button: 'left',
+      clickCount: 1,
+    });
+    clicked += 1;
+    const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation delete confirmation dismissed',
+    });
+    if (cleared.ok) {
+      if (trace) {
+        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
+      }
+      return clicked;
+    }
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const button = document.querySelector('button[data-test-id="confirm-button"]');
+      if (!(button instanceof HTMLElement)) return { ok: false };
+      button.click();
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? {}) as { ok?: boolean };
+  if (payload.ok) {
+    clicked += 1;
+    const cleared = await waitForPredicate(client.Runtime, clearedPredicate, {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation delete confirmation dismissed',
+    });
+    if (cleared.ok) {
+      if (trace) {
+        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-confirm-click'));
+      }
+      return clicked;
+    }
+  }
+  if (clicked < 1) {
+    throw new Error('Gemini conversation delete confirmation button not found.');
+  }
+  throw new Error('Gemini conversation delete confirmation remained visible after confirm attempts.');
+}
+
+async function waitForGeminiConversationRemoved(
+  client: ChromeClient,
+  conversationId: string,
+  timeoutMs: number = 90_000,
+  trace?: GeminiDeleteTrace,
+): Promise<void> {
+  const freshAbsenceRequired = 2;
+  let consecutiveFreshAbsenceCount = 0;
+  const startedAt = Date.now();
+  const verifierTrace: Array<Record<string, unknown>> = [];
+
+  const localDisappear = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const remaining = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/app/${conversationId}'));
+      return remaining ? null : { removed: true };
+    })()`,
+    {
+      timeoutMs: 8_000,
+      description: `Gemini conversation ${conversationId} removed from current page`,
+    },
+  );
+  verifierTrace.push({
+    phase: 'current-page',
+    ok: localDisappear.ok,
+    elapsedMs: Date.now() - startedAt,
+    attempts: localDisappear.attempts ?? null,
+  });
+
+  const deadline = Date.now() + timeoutMs;
+  let lastSeen = false;
+  let lastReason = '';
+  let pass = 0;
+  while (Date.now() < deadline) {
+    pass += 1;
+    try {
+      await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+      await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+    } catch (error) {
+      lastReason = error instanceof Error ? error.message : String(error);
+      verifierTrace.push({
+        phase: 'fresh-root-error',
+        pass,
+        elapsedMs: Date.now() - startedAt,
+        reason: lastReason,
+      });
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      continue;
+    }
+    const check = await client.Runtime.evaluate({
+      expression: `(() => {
+        const remaining = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+          .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/app/${conversationId}'));
+        return { remaining };
+      })()`,
+      returnByValue: true,
+    });
+    lastSeen = Boolean((check.result?.value as { remaining?: boolean } | undefined)?.remaining);
+    if (!lastSeen) {
+      consecutiveFreshAbsenceCount += 1;
+      verifierTrace.push({
+        phase: 'fresh-root',
+        pass,
+        elapsedMs: Date.now() - startedAt,
+        remaining: false,
+        consecutiveFreshAbsenceCount,
+      });
+      if (consecutiveFreshAbsenceCount >= freshAbsenceRequired) {
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 5_000));
+      continue;
+    }
+    consecutiveFreshAbsenceCount = 0;
+    verifierTrace.push({
+      phase: 'fresh-root',
+      pass,
+      elapsedMs: Date.now() - startedAt,
+      remaining: true,
+      consecutiveFreshAbsenceCount,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 5_000));
+  }
+  if (trace) {
+    trace.push(...verifierTrace);
+  }
+  const traceSummary = summarizeGeminiDeleteTrace(verifierTrace, 4);
+  if (lastSeen) {
+    throw new Error(`Gemini conversation ${conversationId} still appears in the conversation list after delete. trace=${traceSummary}`);
+  }
+  throw new Error(`${lastReason || `Gemini conversation ${conversationId} delete could not be verified.`} trace=${traceSummary}`);
 }
 
 async function createGeminiProjectWithClient(
@@ -499,11 +1698,7 @@ async function createGeminiProjectWithClient(
       })
     ).result?.value ?? '',
   );
-  const pressed = await pressButton(client.Runtime, {
-    selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
-    interactionStrategies: ['click', 'pointer'],
-    timeoutMs: 10_000,
-  });
+  const pressed = await pressGeminiGemSaveButton(client);
   if (!pressed.ok) {
     throw new Error(`Gemini Gem save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
   }
@@ -533,6 +1728,18 @@ async function createGeminiProjectWithClient(
   if (!createdId) {
     throw new Error(`Gemini Gem creation route resolved without a project id for "${input.name}".`);
   }
+  await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const startChat = document.querySelector(${JSON.stringify(GEMINI_GEM_START_CHAT_BUTTON_SELECTOR)});
+      return visible(startChat) ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: `Gemini Gem edit surface ready after create for ${input.name}`,
+    },
+  ).catch(() => undefined);
   return {
     id: createdId,
     name: input.name,
@@ -580,6 +1787,118 @@ export function resolveGeminiProjectMenuAriaLabel(projectName: string): string {
   return `More options for "${projectName}" Gem`;
 }
 
+async function openGeminiProjectActionsMenuOnProjectPage(
+  client: ChromeClient,
+  projectId: string,
+): Promise<void> {
+  await navigateToGeminiConversationSurface(client, resolveGeminiProjectUrl(projectId));
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const onRoute = location.pathname === ${JSON.stringify(`/gem/${projectId}`)};
+      const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
+      return onRoute && button instanceof HTMLElement && visible(button) ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: `Gemini Gem actions button ready for ${projectId}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini Gem actions button not ready for ${projectId}.`);
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
+      if (!(button instanceof HTMLElement)) return null;
+      button.scrollIntoView({ block: 'center', inline: 'center' });
+      const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : button;
+      const rect = clickTarget.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0
+        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        : null;
+    })()`,
+    returnByValue: true,
+  });
+  const point = result?.value as { x?: number; y?: number } | null;
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new Error(`Gemini Gem actions button not clickable for ${projectId}.`);
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(point.x), y: Number(point.y), button: 'none' });
+  await client.Input.dispatchMouseEvent({
+    type: 'mousePressed',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseReleased',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+}
+
+async function openGeminiConversationActionsMenuOnConversationPage(
+  client: ChromeClient,
+  conversationId: string,
+): Promise<void> {
+  await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const onRoute = location.pathname === ${JSON.stringify(`/app/${conversationId}`)};
+      const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
+      return onRoute && button instanceof HTMLElement && visible(button) ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: `Gemini conversation actions button ready for ${conversationId}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini conversation actions button not ready for ${conversationId}.`);
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const button = document.querySelector('button[data-test-id="conversation-actions-menu-icon-button"]');
+      if (!(button instanceof HTMLElement)) return null;
+      button.scrollIntoView({ block: 'center', inline: 'center' });
+      const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : button;
+      const rect = clickTarget.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0
+        ? { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 }
+        : null;
+    })()`,
+    returnByValue: true,
+  });
+  const point = result?.value as { x?: number; y?: number } | null;
+  if (!point || !Number.isFinite(point.x) || !Number.isFinite(point.y)) {
+    throw new Error(`Gemini conversation actions button not clickable for ${conversationId}.`);
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(point.x), y: Number(point.y), button: 'none' });
+  await client.Input.dispatchMouseEvent({
+    type: 'mousePressed',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseReleased',
+    x: Number(point.x),
+    y: Number(point.y),
+    button: 'left',
+    clickCount: 1,
+  });
+}
+
 async function openGeminiProjectMenu(
   client: ChromeClient,
   projectId: string,
@@ -606,20 +1925,99 @@ async function openGeminiProjectMenu(
   }
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
+      const projectId = ${JSON.stringify(projectId)};
       const label = ${JSON.stringify(menuLabel)};
-      const target = Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
-        .find((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label);
-      if (!(target instanceof HTMLElement)) return { ok: false, reason: 'row-menu-missing' };
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const anchors = Array.from(document.querySelectorAll('a[href]'));
+      const projectAnchor = anchors.find((node) =>
+        node instanceof HTMLAnchorElement &&
+        visible(node) &&
+        node.href.includes('/gem/' + projectId),
+      );
+      const row =
+        (projectAnchor instanceof HTMLElement
+          ? projectAnchor.closest('[role="listitem"], mat-list-item, li, div')
+          : null) ??
+        null;
+      const rowCandidate = row instanceof HTMLElement && visible(row) ? row : null;
+      const scopedButtons = rowCandidate
+        ? Array.from(rowCandidate.querySelectorAll('button[aria-label],a[aria-label]'))
+        : [];
+      const target =
+        scopedButtons.find((node) =>
+          node instanceof HTMLElement &&
+          visible(node) &&
+          String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label,
+        ) ??
+        Array.from(document.querySelectorAll('button[aria-label],a[aria-label]')).find((node) =>
+          node instanceof HTMLElement &&
+          visible(node) &&
+          String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label,
+        );
+      if (!(target instanceof HTMLElement)) return { ok: false, reason: rowCandidate ? 'row-menu-missing' : 'project-row-missing' };
+      if (rowCandidate) {
+        rowCandidate.scrollIntoView({ block: 'center', inline: 'center' });
+      }
       target.scrollIntoView({ block: 'center', inline: 'center' });
-      target.click();
-      return { ok: true };
+      const rowRect = rowCandidate?.getBoundingClientRect();
+      const touchTarget = target.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : target;
+      const rect = clickTarget.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return { ok: false, reason: 'row-menu-not-clickable' };
+      }
+      return {
+        ok: true,
+        rowX: rowRect && rowRect.width > 0 && rowRect.height > 0 ? rowRect.left + Math.min(40, Math.max(12, rowRect.width / 5)) : null,
+        rowY: rowRect && rowRect.width > 0 && rowRect.height > 0 ? rowRect.top + rowRect.height / 2 : null,
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
     })()`,
     returnByValue: true,
   });
-  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+  const payload = (result?.value ?? {}) as {
+    ok?: boolean; reason?: string; x?: number; y?: number; rowX?: number | null; rowY?: number | null;
+  };
   if (!payload.ok) {
     throw new Error(payload.reason || `Gemini Gem row menu not found for "${projectName}".`);
   }
+  if (!Number.isFinite(payload.x) || !Number.isFinite(payload.y)) {
+    throw new Error(`Gemini Gem row menu not clickable for "${projectName}".`);
+  }
+  if (Number.isFinite(payload.rowX) && Number.isFinite(payload.rowY)) {
+    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.rowX), y: Number(payload.rowY), button: 'none' });
+    await client.Input.dispatchMouseEvent({
+      type: 'mousePressed',
+      x: Number(payload.rowX),
+      y: Number(payload.rowY),
+      button: 'left',
+      clickCount: 1,
+    });
+    await client.Input.dispatchMouseEvent({
+      type: 'mouseReleased',
+      x: Number(payload.rowX),
+      y: Number(payload.rowY),
+      button: 'left',
+      clickCount: 1,
+    });
+    await new Promise((resolve) => setTimeout(resolve, 150));
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.x), y: Number(payload.y), button: 'none' });
+  await client.Input.dispatchMouseEvent({
+    type: 'mousePressed',
+    x: Number(payload.x),
+    y: Number(payload.y),
+    button: 'left',
+    clickCount: 1,
+  });
+  await client.Input.dispatchMouseEvent({
+    type: 'mouseReleased',
+    x: Number(payload.x),
+    y: Number(payload.y),
+    button: 'left',
+    clickCount: 1,
+  });
   return { projectName, menuLabel };
 }
 
@@ -627,14 +2025,15 @@ async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<
   const ready = await waitForPredicate(
     client.Runtime,
     `(() => {
-      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
-      const candidates = Array.from(document.querySelectorAll('[role="menuitem"], button, [role="button"]'));
-      return candidates.some((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete')
+      const button =
+        document.querySelector('button[data-test-id="delete-button"]') ??
+        document.querySelector('button[data-test-id="menu-delete-button"]');
+      return button instanceof HTMLElement && visible(button)
         ? { ready: true }
         : null;
     })()`,
@@ -648,23 +2047,640 @@ async function selectGeminiProjectDeleteMenuItem(client: ChromeClient): Promise<
   }
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
-      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
-      const visible = (node) => {
-        if (!(node instanceof Element)) return false;
-        const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      };
-      const candidates = Array.from(document.querySelectorAll('[role="menuitem"], button, [role="button"]'));
-      const deleteNode = candidates.find((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
+      const deleteNode =
+        document.querySelector('button[data-test-id="delete-button"]') ??
+        document.querySelector('button[data-test-id="menu-delete-button"]');
       if (!(deleteNode instanceof HTMLElement)) return { ok: false, reason: 'delete-menu-item-missing' };
-      deleteNode.click();
-      return { ok: true };
+      deleteNode.scrollIntoView({ block: 'center', inline: 'center' });
+      const touchTarget = deleteNode.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : deleteNode;
+      const rect = clickTarget.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return { ok: false, reason: 'delete-menu-item-not-clickable' };
+      return { ok: true, x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
     })()`,
     returnByValue: true,
   });
-  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string };
+  const payload = (result?.value ?? {}) as { ok?: boolean; reason?: string; x?: number; y?: number };
   if (!payload.ok) {
     throw new Error(payload.reason || 'Gemini Gem delete menu item not found.');
+  }
+  const waitForConfirm = async (timeoutMs: number): Promise<boolean> => {
+    const ready = await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+        const button = document.querySelector('button[data-test-id="confirm-button"]');
+        return button instanceof HTMLElement && visible(button) ? { ready: true } : null;
+      })()`,
+      {
+        timeoutMs,
+        description: 'Gemini delete confirm button ready',
+      },
+    );
+    return ready.ok;
+  };
+  if (Number.isFinite(payload.x) && Number.isFinite(payload.y)) {
+    await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: Number(payload.x), y: Number(payload.y), button: 'none' });
+    await client.Input.dispatchMouseEvent({
+      type: 'mousePressed',
+      x: Number(payload.x),
+      y: Number(payload.y),
+      button: 'left',
+      clickCount: 1,
+    });
+    await client.Input.dispatchMouseEvent({
+      type: 'mouseReleased',
+      x: Number(payload.x),
+      y: Number(payload.y),
+      button: 'left',
+      clickCount: 1,
+    });
+    if (await waitForConfirm(1_500)) {
+      return;
+    }
+  }
+  const fallbackClick = await client.Runtime.evaluate({
+    expression: `(() => {
+      const button =
+        document.querySelector('button[data-test-id="delete-button"]') ??
+        document.querySelector('button[data-test-id="menu-delete-button"]');
+      if (!(button instanceof HTMLElement)) return false;
+      button.click();
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  if (fallbackClick.result?.value === true && await waitForConfirm(2_500)) {
+    return;
+  }
+  throw new Error('Gemini Gem delete menu item did not open the confirmation dialog.');
+}
+
+async function pressGeminiGemSaveButton(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+): Promise<{ ok?: boolean; reason?: string }> {
+  const located = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const exact = new Set(['create', 'update chat', 'update gem', 'save', 'update']);
+      const button = Array.from(document.querySelectorAll(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}))
+        .find((node) => {
+          if (!(node instanceof HTMLElement) || !visible(node)) return false;
+          if (node.hasAttribute('disabled') || node.getAttribute('aria-disabled') === 'true') return false;
+          const text = normalize(node.textContent || '').toLowerCase();
+          const aria = normalize(node.getAttribute('aria-label') || '').toLowerCase();
+          return exact.has(text) || exact.has(aria) || aria.includes('save gem updates');
+        });
+      if (!(button instanceof HTMLElement)) return null;
+      const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : button;
+      clickTarget.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = clickTarget.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const point = located.result?.value as { x?: number; y?: number } | undefined;
+  if (typeof point?.x === 'number' && typeof point?.y === 'number') {
+    for (let attempt = 0; attempt < 3; attempt += 1) {
+      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      return { ok: true };
+    }
+  }
+  const fallback = await pressButton(client.Runtime, {
+    selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
+    match: {
+      exact: ['Create', 'Update Chat', 'Update Gem', 'Save', 'Update'],
+    },
+    interactionStrategies: ['click', 'pointer'],
+    timeoutMs: 10_000,
+  });
+  if (!fallback.ok) {
+    return fallback;
+  }
+  return { ok: true };
+}
+
+async function openGeminiKnowledgeUploadMenu(
+  Runtime: ChromeClient['Runtime'],
+): Promise<void> {
+  const pressed = await pressButton(Runtime, {
+    selector: GEMINI_GEM_KNOWLEDGE_UPLOAD_TRIGGER_SELECTOR,
+    interactionStrategies: ['click', 'pointer'],
+    timeoutMs: 10_000,
+  });
+  if (!pressed.ok) {
+    throw new Error(`Gemini Gem knowledge upload menu did not open: ${pressed.reason ?? 'upload trigger not clickable.'}`);
+  }
+  const ready = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const items = Array.from(document.querySelectorAll('button[role="menuitem"], [role="menuitem"]'))
+        .filter((node) => visible(node));
+      return items.length > 0 ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: 'Gemini Gem knowledge upload menu ready',
+    },
+  );
+  if (!ready.ok) {
+    throw new Error('Gemini Gem knowledge upload menu item did not become ready.');
+  }
+}
+
+async function clickFirstGeminiKnowledgeMenuRow(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+): Promise<boolean> {
+  const located = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const items = Array.from(document.querySelectorAll('button[role="menuitem"], [role="menuitem"]'))
+        .filter((node) => visible(node));
+      const first = items[0];
+      if (!(first instanceof HTMLElement)) return null;
+      first.scrollIntoView({ block: 'center', inline: 'center' });
+      const rect = first.getBoundingClientRect();
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const point = located.result?.value as { x?: number; y?: number } | undefined;
+  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+    return false;
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
+  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  return true;
+}
+
+async function dispatchGeminiKnowledgeFiles(
+  client: Pick<ChromeClient, 'Page' | 'DOM' | 'Runtime' | 'Input'>,
+  filePaths: string[],
+): Promise<void> {
+  const imageOnly = filePaths.length > 0 && filePaths.every(isLikelyImagePath);
+  await client.Page.enable();
+  await client.DOM.enable();
+  await (client.Page as unknown as {
+    setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
+    fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
+  }).setInterceptFileChooserDialog({ enabled: true });
+  try {
+    const chooserOpened = new Promise<{ backendNodeId?: number }>((resolve) => {
+      (client.Page as unknown as {
+        fileChooserOpened(callback: (params: { backendNodeId?: number }) => void): void;
+      }).fileChooserOpened((params) => resolve(params));
+    });
+    const trustedClick = async (selector: string): Promise<boolean> => {
+      const located = await client.Runtime.evaluate({
+        expression: `(() => {
+          const target = document.querySelector(${JSON.stringify(selector)});
+          if (!(target instanceof HTMLElement)) return null;
+          const rect = target.getBoundingClientRect();
+          if (rect.width <= 0 || rect.height <= 0) return null;
+          target.scrollIntoView({ block: 'center', inline: 'center' });
+          const nextRect = target.getBoundingClientRect();
+          return {
+            x: nextRect.left + nextRect.width / 2,
+            y: nextRect.top + nextRect.height / 2,
+          };
+        })()`,
+        returnByValue: true,
+      });
+      const point = located.result?.value as { x?: number; y?: number } | undefined;
+      if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+        return false;
+      }
+      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
+      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      return true;
+    };
+    const clickKnowledgeScopedHiddenTrigger = async (selector: string): Promise<boolean> => {
+      const located = await client.Runtime.evaluate({
+        expression: `(() => {
+          const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+          const matchesScope = (node) => {
+            let current = node;
+            for (let depth = 0; current && depth < 6; depth += 1) {
+              const text = normalize(current.textContent || '');
+              if (text.includes('Add files for your Gem to reference')) {
+                return true;
+              }
+              current = current.parentElement;
+            }
+            return false;
+          };
+          const targets = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+          const target = targets.find((node) => node instanceof HTMLElement && matchesScope(node));
+          if (!(target instanceof HTMLElement)) return null;
+          target.scrollIntoView({ block: 'center', inline: 'center' });
+          const rect = target.getBoundingClientRect();
+          return {
+            x: rect.left + Math.max(rect.width, 1) / 2,
+            y: rect.top + Math.max(rect.height, 1) / 2,
+          };
+        })()`,
+        returnByValue: true,
+      });
+      const point = located.result?.value as { x?: number; y?: number } | undefined;
+      if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+        return false;
+      }
+      await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y });
+      await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+      return true;
+    };
+    const hiddenSelectorOrder = imageOnly
+      ? [
+          GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
+          'button[data-test-id="hidden-local-image-upload-button"]',
+          'button[data-test-id="hidden-local-file-upload-button"]',
+        ]
+      : [
+          GEMINI_GEM_KNOWLEDGE_UPLOAD_ITEM_SELECTOR,
+          'button[data-test-id="hidden-local-file-upload-button"]',
+          'button[data-test-id="hidden-local-image-upload-button"]',
+        ];
+    await client.Runtime.evaluate({
+      expression: `(() => {
+        const selectors = ${JSON.stringify(hiddenSelectorOrder)};
+        for (const selector of selectors) {
+          const target = document.querySelector(selector);
+          if (!(target instanceof HTMLElement)) continue;
+          target.click();
+          return { ok: true, selector };
+        }
+        return { ok: false };
+      })()`,
+      returnByValue: true,
+    });
+    let chooserPayload: { backendNodeId?: number } | null = null;
+    try {
+      await clickFirstGeminiKnowledgeMenuRow(client).catch(() => false);
+      chooserPayload = await Promise.race([
+        chooserOpened,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('chooser-timeout')), 3_000)),
+      ]);
+    } catch {
+      let activated = false;
+      for (const selector of hiddenSelectorOrder) {
+        const clickedTrusted = await clickKnowledgeScopedHiddenTrigger(selector).catch(() => false);
+        if (clickedTrusted) {
+          activated = true;
+          break;
+        }
+        const clickedGeneric = await trustedClick(selector).catch(() => false);
+        if (clickedGeneric) {
+          activated = true;
+          break;
+        }
+        const clicked = await client.Runtime.evaluate({
+          expression: `(() => {
+            const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+            const matchesScope = (node) => {
+              let current = node;
+              for (let depth = 0; current && depth < 6; depth += 1) {
+                const text = normalize(current.textContent || '');
+                if (text.includes('Add files for your Gem to reference')) {
+                  return true;
+                }
+                current = current.parentElement;
+              }
+              return false;
+            };
+            const targets = Array.from(document.querySelectorAll(${JSON.stringify(selector)}));
+            const target = targets.find((node) => node instanceof HTMLElement && matchesScope(node)) ?? document.querySelector(${JSON.stringify(selector)});
+            if (!(target instanceof HTMLElement)) return false;
+            target.click();
+            return true;
+          })()`,
+          returnByValue: true,
+        });
+        if (clicked.result?.value === true) {
+          activated = true;
+          break;
+        }
+      }
+      if (!activated) {
+        throw new Error('Gemini Gem knowledge Upload file action did not activate.');
+      }
+      chooserPayload = await Promise.race([
+        chooserOpened,
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Gemini Gem knowledge file chooser did not open.')), 10_000)),
+      ]);
+    }
+    if (!chooserPayload || !Number.isFinite(chooserPayload.backendNodeId)) {
+      throw new Error('Gemini Gem knowledge file chooser did not expose a backend node.');
+    }
+    await client.DOM.setFileInputFiles({
+      backendNodeId: chooserPayload.backendNodeId,
+      files: [...filePaths],
+    });
+  } finally {
+    await (client.Page as unknown as {
+      setInterceptFileChooserDialog(params: { enabled: boolean }): Promise<unknown>;
+    }).setInterceptFileChooserDialog({ enabled: false }).catch(() => undefined);
+  }
+}
+
+async function waitForGeminiKnowledgeFilesVisible(
+  Runtime: ChromeClient['Runtime'],
+  fileNames: string[],
+  timeoutMs: number = 30_000,
+): Promise<void> {
+  const ready = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const names = ${JSON.stringify(fileNames.map((name) => name.toLowerCase()))};
+      const body = normalize(document.body?.innerText || '');
+      const removeLabels = Array.from(document.querySelectorAll('button[aria-label]'))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter(Boolean);
+      const previewNames = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
+        .map((node) => normalize(node.getAttribute('title') || node.textContent || ''))
+        .filter(Boolean);
+      const scopedRemoveLabels = Array.from(document.querySelectorAll('button[data-test-id="cancel-button"][aria-label]'))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter(Boolean);
+      const hasScopedPreview =
+        document.querySelector('uploader-file-preview-container.selected-files-container') !== null ||
+        document.querySelector('uploader-file-preview') !== null ||
+        document.querySelector('img[data-test-id="image-preview"]') !== null ||
+        document.querySelector('div[data-test-id="file-preview"]') !== null;
+      return names.every((name) =>
+        body.includes(name) ||
+        previewNames.includes(name) ||
+        removeLabels.includes('remove file ' + name) ||
+        scopedRemoveLabels.includes('remove file ' + name) ||
+        (hasScopedPreview && scopedRemoveLabels.some((label) => label.startsWith('remove file ')))
+      )
+        ? { ready: true }
+        : null;
+    })()`,
+    {
+      timeoutMs,
+      description: `Gemini Gem knowledge files visible: ${fileNames.join(', ')}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini Gem knowledge upload did not surface files: ${fileNames.join(', ')}`);
+  }
+}
+
+async function waitForGeminiGemSaved(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number = 20_000,
+): Promise<void> {
+  const saved = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const savedBadge = Array.from(document.querySelectorAll('div[role="status"].save-state, div[role="status"], div, span'))
+        .some((node) => visible(node) && normalize(node.textContent || '') === 'gem saved');
+      if (savedBadge) {
+        return { ready: true, state: 'saved-badge' };
+      }
+      return null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'Gemini Gem saved',
+    },
+  );
+  if (!saved.ok) {
+    throw new Error('Gemini Gem save did not settle.');
+  }
+}
+
+async function waitForGeminiGemDirty(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  const dirty = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const dirtyBadge = Array.from(document.querySelectorAll('div[role="status"].save-state, div[role="status"], div, span'))
+        .some((node) => visible(node) && normalize(node.textContent || '') === 'gem not saved');
+      return dirtyBadge ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'Gemini Gem dirty state visible',
+    },
+  );
+  if (!dirty.ok) {
+    throw new Error('Gemini Gem did not enter an unsaved state.');
+  }
+}
+
+async function waitForGeminiEditSurfaceReady(
+  Runtime: ChromeClient['Runtime'],
+  projectId: string,
+  timeoutMs: number = 20_000,
+): Promise<void> {
+  const ready = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const onRoute = location.pathname === ${JSON.stringify(`/gems/edit/${projectId}`)};
+      const hasName = Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_NAME_INPUT_SELECTOR)}));
+      const hasSave = Boolean(document.querySelector(${JSON.stringify(GEMINI_GEM_CREATE_BUTTON_SELECTOR)}));
+      return onRoute && hasName && hasSave ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: `Gemini Gem edit surface settled for ${projectId}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini Gem edit surface did not settle for ${projectId}.`);
+  }
+}
+
+async function scrapeGeminiProjectKnowledgeFiles(
+  Runtime: ChromeClient['Runtime'],
+): Promise<FileRef[]> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const rows = Array.from(document.querySelectorAll('button, [role="button"], div, li, span'))
+        .filter((node) => visible(node))
+        .map((node) => ({
+          text: normalize(node.textContent || ''),
+          aria: normalize(node.getAttribute?.('aria-label') || ''),
+          testId: normalize(node.getAttribute?.('data-test-id') || ''),
+        }));
+      const blocked = new Set([
+        'upload file',
+        'add from drive',
+        'import code',
+        'knowledge',
+        'start chat',
+        'share',
+      ]);
+      const items = [];
+      const seen = new Set();
+      const previewNames = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
+        .map((node) => normalize(node.getAttribute('title') || node.textContent || ''))
+        .filter(Boolean);
+      for (const name of previewNames) {
+        const lower = name.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        items.push({
+          id: name,
+          name,
+          provider: 'gemini',
+          source: 'project',
+        });
+      }
+      const removeButtons = Array.from(document.querySelectorAll('button[data-test-id="cancel-button"][aria-label]'))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter((label) => /^Remove file\\s+/i.test(label))
+        .map((label) => label.replace(/^Remove file\\s+/i, '').trim())
+        .filter(Boolean);
+      for (const name of removeButtons) {
+        const lower = name.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        items.push({
+          id: name,
+          name,
+          provider: 'gemini',
+          source: 'project',
+        });
+      }
+      for (const row of rows) {
+        const text = row.text;
+        if (!text || text.length < 3 || text.length > 220) continue;
+        if (blocked.has(text.toLowerCase())) continue;
+        const corpus = (row.text + ' ' + row.aria + ' ' + row.testId).toLowerCase();
+        if (corpus.includes('upload file') || corpus.includes('add from drive') || corpus.includes('import code')) continue;
+        if (!/[.][a-z0-9]{1,8}$/i.test(text)) continue;
+        const lower = text.toLowerCase();
+        if (seen.has(lower)) continue;
+        seen.add(lower);
+        items.push({
+          id: text,
+          name: text,
+          provider: 'gemini',
+          source: 'project',
+        });
+      }
+      return items;
+    })()`,
+    returnByValue: true,
+  });
+  return Array.isArray(result?.value) ? (result.value as FileRef[]) : [];
+}
+
+async function waitForGeminiProjectKnowledgeHydrated(
+  Runtime: ChromeClient['Runtime'],
+  timeoutMs: number = 8_000,
+): Promise<void> {
+  await waitForPredicate(
+    Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const hasPreviewName = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
+        .some((node) => visible(node) && String(node.getAttribute('title') || node.textContent || '').trim().length > 0);
+      const hasRemoveButton = Array.from(document.querySelectorAll('button[data-test-id="cancel-button"][aria-label]'))
+        .some((node) => visible(node) && /^remove file\\s+/i.test(String(node.getAttribute('aria-label') || '').trim()));
+      const hasPreviewChip = Array.from(document.querySelectorAll('div[data-test-id="file-preview"], uploader-file-preview-container.selected-files-container, uploader-file-preview'))
+        .some((node) => visible(node));
+      return hasPreviewName || hasRemoveButton || hasPreviewChip ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs,
+      description: 'Gemini Gem knowledge list hydrated',
+    },
+  ).catch(() => undefined);
+}
+
+async function clickGeminiKnowledgeRemoveButton(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  fileName: string,
+): Promise<boolean> {
+  const located = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const targetLabel = ${JSON.stringify(`remove file ${fileName}`.toLowerCase())};
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const buttons = Array.from(document.querySelectorAll('button[data-test-id="cancel-button"][aria-label]'));
+      const button = buttons.find((node) => visible(node) && normalize(node.getAttribute('aria-label') || '') === targetLabel);
+      if (!(button instanceof HTMLElement)) {
+        return null;
+      }
+      button.scrollIntoView({ block: 'center', inline: 'center' });
+      const touchTarget = button.querySelector('.mat-mdc-button-touch-target');
+      const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : button;
+      const rect = clickTarget.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) {
+        return null;
+      }
+      return {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const point = located.result?.value as { x?: number; y?: number } | undefined;
+  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+    return false;
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  return true;
+}
+
+async function waitForGeminiKnowledgeFileRemoved(
+  Runtime: ChromeClient['Runtime'],
+  fileName: string,
+  timeoutMs: number = 10_000,
+): Promise<void> {
+  const removed = await waitForPredicate(
+    Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const name = ${JSON.stringify(fileName.toLowerCase())};
+      const previewNames = Array.from(document.querySelectorAll('[data-test-id="file-name"]'))
+        .map((node) => normalize(node.getAttribute('title') || node.textContent || ''))
+        .filter(Boolean);
+      const removeLabels = Array.from(document.querySelectorAll('button[data-test-id="cancel-button"][aria-label]'))
+        .map((node) => normalize(node.getAttribute('aria-label') || ''))
+        .filter(Boolean);
+      const body = normalize(document.body?.innerText || '');
+      const hasRemoveButton = removeLabels.includes('remove file ' + name);
+      const hasPreviewName = previewNames.includes(name);
+      const hasBodyOnly = body.includes(name) && (hasRemoveButton || hasPreviewName);
+      return hasRemoveButton || hasPreviewName || hasBodyOnly ? null : { removed: true };
+    })()`,
+    {
+      timeoutMs,
+      description: `Gemini Gem knowledge file removed: ${fileName}`,
+    },
+  );
+  if (!removed.ok) {
+    throw new Error(`Gemini Gem knowledge file removal did not settle for ${fileName}.`);
   }
 }
 
@@ -672,15 +2688,14 @@ async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<num
   const opened = await waitForPredicate(
     client.Runtime,
     `(() => {
-      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => {
         if (!(node instanceof Element)) return false;
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
-      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
-        .filter((node) => visible(node) && normalize(node.textContent || '').includes('delete gem'));
-      return dialogs.length > 0 ? { count: dialogs.length } : null;
+      const buttons = Array.from(document.querySelectorAll('button[data-test-id="confirm-button"]'))
+        .filter((node) => visible(node));
+      return buttons.length > 0 ? { count: buttons.length } : null;
     })()`,
     {
       timeoutMs: 5_000,
@@ -698,17 +2713,13 @@ async function clickGeminiDeleteConfirmations(client: ChromeClient): Promise<num
         const rect = node.getBoundingClientRect();
         return rect.width > 0 && rect.height > 0;
       };
-      const dialogs = Array.from(document.querySelectorAll('[role="dialog"], dialog[open]'))
-        .filter((node) => visible(node) && normalize(node.textContent || '').includes('delete gem'));
       let clicked = 0;
-      for (const dialog of dialogs) {
-        const buttons = Array.from(dialog.querySelectorAll('button, [role="button"]'))
-          .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
-        for (const button of buttons) {
-          if (!(button instanceof HTMLElement)) continue;
-          button.click();
-          clicked += 1;
-        }
+      const buttons = Array.from(document.querySelectorAll('button[data-test-id="confirm-button"]'))
+        .filter((node) => visible(node) && normalize(node.getAttribute('aria-label') || node.textContent || '') === 'delete');
+      for (const button of buttons) {
+        if (!(button instanceof HTMLElement)) continue;
+        button.click();
+        clicked += 1;
       }
       return { clicked };
     })()`,
@@ -725,12 +2736,18 @@ export function createGeminiAdapter(): Pick<
   BrowserProvider,
   | 'capabilities'
   | 'createProject'
+  | 'deleteConversation'
+  | 'deleteProjectFile'
   | 'getUserIdentity'
   | 'listProjects'
   | 'listConversations'
+  | 'listProjectFiles'
   | 'renameProject'
+  | 'runPrompt'
   | 'selectRemoveProjectItem'
   | 'pushProjectRemoveConfirmation'
+  | 'uploadProjectFiles'
+  | 'validateConversationUrl'
 > {
   return {
     capabilities: {
@@ -779,6 +2796,31 @@ export function createGeminiAdapter(): Pick<
         }
       }
     },
+    async runPrompt(
+      input: BrowserProviderPromptInput,
+      options?: BrowserProviderListOptions,
+    ): Promise<BrowserProviderPromptResult> {
+      const targetUrl = resolveGeminiConfiguredUrl(input.targetUrl ?? options?.configuredUrl, GEMINI_APP_URL);
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
+      try {
+        await navigateToGeminiConversationSurface(client, targetUrl);
+        await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+        const baseline = await readGeminiPromptState(client.Runtime);
+        await setGeminiPrompt(client, input.prompt);
+        await clickGeminiSendButton(client);
+        return await waitForGeminiPromptResponse(
+          client.Runtime,
+          baseline,
+          input.prompt,
+          Math.max(30_000, input.timeoutMs ?? 90_000),
+        );
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
     async createProject(
       input: {
         name: string;
@@ -792,6 +2834,57 @@ export function createGeminiAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
       try {
         return await createGeminiProjectWithClient(client, input);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async deleteConversation(
+      conversationId: string,
+      _projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConversationUrl(normalizedConversationId),
+      );
+      const trace: GeminiDeleteTrace = [];
+      try {
+        await openGeminiConversationActionsMenuOnConversationPage(client, normalizedConversationId);
+        await selectGeminiConversationDeleteMenuItem(client, trace);
+        await clickGeminiConversationDeleteConfirmations(client, trace);
+        await waitForGeminiConversationRemoved(client, normalizedConversationId, 90_000, trace);
+      } catch (error) {
+        trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'delete-error'));
+        const traceSummary = summarizeGeminiDeleteTrace(trace, 5);
+        const message = error instanceof Error ? error.message : String(error);
+        throw new Error(`${message} trace=${traceSummary}`);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async validateConversationUrl(
+      conversationId: string,
+      _projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const targetUrl = resolveGeminiConversationUrl(normalizedConversationId);
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
+      try {
+        await validateGeminiConversationUrlWithClient(client, normalizedConversationId);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {
@@ -831,11 +2924,7 @@ export function createGeminiAdapter(): Pick<
           })()`,
           returnByValue: true,
         });
-        const pressed = await pressButton(client.Runtime, {
-          selector: GEMINI_GEM_CREATE_BUTTON_SELECTOR,
-          interactionStrategies: ['click', 'pointer'],
-          timeoutMs: 10_000,
-        });
+        const pressed = await pressGeminiGemSaveButton(client);
         if (!pressed.ok) {
           throw new Error(`Gemini Gem update failed: ${pressed.reason ?? 'Update button not clickable.'}`);
         }
@@ -853,24 +2942,153 @@ export function createGeminiAdapter(): Pick<
         }
       }
     },
-    async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
+    async uploadProjectFiles(
+      projectId: string,
+      filePaths: string[],
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
       const normalizedProjectId = normalizeGeminiProjectId(projectId);
       if (!normalizedProjectId) {
         throw new Error(`Invalid Gemini Gem id: ${projectId}`);
       }
+      if (filePaths.length === 0) return;
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        GEMINI_GEMS_VIEW_URL,
+        resolveGeminiEditProjectUrl(normalizedProjectId),
       );
       try {
-        await openGeminiProjectMenu(client, normalizedProjectId);
-        await selectGeminiProjectDeleteMenuItem(client);
+        await navigateToGeminiEditPage(client, normalizedProjectId);
+        await openGeminiKnowledgeUploadMenu(client.Runtime);
+        const fileNames = filePaths.map((filePath) => path.basename(filePath));
+        await dispatchGeminiKnowledgeFiles(client, filePaths);
+        let knowledgeVisible = false;
+        try {
+          await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 8_000);
+          knowledgeVisible = true;
+        } catch {
+          await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+          const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+          const persistedNames = persisted.map((item) => item.name.toLowerCase());
+          if (fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
+            knowledgeVisible = true;
+          }
+        }
+        if (!knowledgeVisible) {
+          throw new Error(`Gemini Gem knowledge upload did not surface files: ${fileNames.join(', ')}`);
+        }
+        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+        const pressed = await pressGeminiGemSaveButton(client);
+        if (!pressed.ok) {
+          throw new Error(`Gemini Gem knowledge save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
+        }
+        await waitForGeminiGemSaved(client.Runtime);
+        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+        const persistedAfterSave = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+        const persistedNames = persistedAfterSave.map((item) => item.name.toLowerCase());
+        if (!fileNames.every((name) => persistedNames.includes(name.toLowerCase()))) {
+          const stillOnEditRoute = await client.Runtime.evaluate({
+            expression: `location.pathname === ${JSON.stringify(`/gems/edit/${normalizedProjectId}`)}`,
+            returnByValue: true,
+          });
+          if (stillOnEditRoute.result?.value === true) {
+            await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
+          } else {
+            await navigateToGeminiEditPage(client, normalizedProjectId);
+            await waitForGeminiKnowledgeFilesVisible(client.Runtime, fileNames, 10_000);
+          }
+        }
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {
           await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
         }
       }
+    },
+    async listProjectFiles(
+      projectId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef[]> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiEditProjectUrl(normalizedProjectId),
+      );
+      try {
+        await navigateToGeminiEditPage(client, normalizedProjectId);
+        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+        let files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+        if (files.length === 0) {
+          await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
+          files = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+        }
+        return files;
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async deleteProjectFile(
+      projectId: string,
+      fileName: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiEditProjectUrl(normalizedProjectId),
+      );
+      try {
+        await navigateToGeminiEditPage(client, normalizedProjectId);
+        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+        await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 8_000);
+        const existing = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+        const matched = existing.find((item) => item.name.toLowerCase() === fileName.toLowerCase());
+        if (!matched) {
+          return;
+        }
+        const clicked = await clickGeminiKnowledgeRemoveButton(client, matched.name);
+        if (!clicked) {
+          throw new Error(`Gemini Gem knowledge remove button not found for ${matched.name}.`);
+        }
+        await waitForGeminiKnowledgeFileRemoved(client.Runtime, matched.name, 10_000);
+        await waitForGeminiGemDirty(client.Runtime, 10_000);
+        const pressed = await pressGeminiGemSaveButton(client);
+        if (!pressed.ok) {
+          throw new Error(`Gemini Gem knowledge delete save failed: ${pressed.reason ?? 'Save button not clickable.'}`);
+        }
+        await waitForGeminiGemSaved(client.Runtime);
+        await navigateToGeminiEditPage(client, normalizedProjectId);
+        await waitForGeminiEditSurfaceReady(client.Runtime, normalizedProjectId, 15_000).catch(() => undefined);
+        await waitForGeminiProjectKnowledgeHydrated(client.Runtime, 5_000);
+        const persisted = await scrapeGeminiProjectKnowledgeFiles(client.Runtime);
+        const stillPresent = persisted.some((item) => item.name.toLowerCase() === matched.name.toLowerCase());
+        if (stillPresent) {
+          throw new Error(`Gemini Gem knowledge file "${matched.name}" still appears after delete.`);
+        }
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async selectRemoveProjectItem(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
+      const normalizedProjectId = normalizeGeminiProjectId(projectId);
+      if (!normalizedProjectId) {
+        throw new Error(`Invalid Gemini Gem id: ${projectId}`);
+      }
+      void options;
+      // Gemini keeps delete as one direct-page action chain.
+      // The shared CLI still calls select + confirm as two steps, so Gemini
+      // keeps the full flow in pushProjectRemoveConfirmation(...).
     },
     async pushProjectRemoveConfirmation(projectId: string, options?: BrowserProviderListOptions): Promise<void> {
       const normalizedProjectId = normalizeGeminiProjectId(projectId);
@@ -879,18 +3097,19 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        GEMINI_GEMS_VIEW_URL,
+        resolveGeminiProjectUrl(normalizedProjectId),
       );
       try {
-        const { menuLabel } = await openGeminiProjectMenu(client, normalizedProjectId);
+        await openGeminiProjectActionsMenuOnProjectPage(client, normalizedProjectId);
         await selectGeminiProjectDeleteMenuItem(client);
         await clickGeminiDeleteConfirmations(client);
+        await navigateToGeminiGemsViewPage(client);
         const deleted = await waitForPredicate(
           client.Runtime,
           `(() => {
-            const label = ${JSON.stringify(menuLabel)};
-            return !Array.from(document.querySelectorAll('button[aria-label],a[aria-label]'))
-              .some((node) => String(node.getAttribute('aria-label') || '').replace(/\\s+/g, ' ').trim() === label)
+            const projectId = ${JSON.stringify(normalizedProjectId)};
+            return !Array.from(document.querySelectorAll('a[href]'))
+              .some((node) => node instanceof HTMLAnchorElement && node.href.includes('/gem/' + projectId))
               ? { deleted: true }
               : null;
           })()`,

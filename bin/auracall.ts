@@ -128,12 +128,27 @@ import { LlmService, createLlmService } from '../src/browser/llmService/index.js
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
 import type { BrowserAttachment, BrowserLogger, BrowserRunOptions } from '../src/browser/types.js';
+import type { ProviderCacheContext } from '../src/browser/providers/cache.js';
 import { createCacheStore, type CacheStoreKind } from '../src/browser/llmService/cache/store.js';
 import {
   searchCachedContextsByKeyword,
   searchCachedContextsSemantically,
 } from '../src/browser/llmService/cache/search.js';
-import { listCachedFiles, listCachedSources, resolveCachedFiles } from '../src/browser/llmService/cache/catalog.js';
+import {
+  listCachedArtifacts,
+  listCachedConversationInventory,
+  listCachedFiles,
+  listCachedSources,
+  resolveCachedFiles,
+} from '../src/browser/llmService/cache/catalog.js';
+import {
+  assertCacheIdentity,
+  discoverCacheMaintenanceContexts,
+  isCacheCliProvider,
+  resolveCacheOperatorContext,
+  resolveProviderConfiguredUrl,
+  type CacheCliProvider,
+} from '../src/browser/llmService/cache/operatorContext.js';
 import {
   PROVIDER_CACHE_TTL_MS,
   resolveProviderCacheKey,
@@ -1074,7 +1089,7 @@ projectsCommand
       identityPrompt: promptForCacheIdentity,
     });
     const listOptions = await llmService.buildListOptions({ configuredUrl: userConfig.browser?.url ?? null });
-    const cacheContext = await llmService.resolveCacheContext(listOptions);
+    const cacheContext = await llmService.resolveCacheContext(listOptions, { prompt: false, detect: false });
     assertCacheIdentity(cacheContext, target);
     const resolvedId = await resolveProjectIdArg(llmService, projectId, listOptions);
     const created = await llmService.cloneProject(resolvedId, { listOptions });
@@ -1178,7 +1193,7 @@ projectFilesCommand
   .command('add <id>')
   .description('Upload files to a project.')
   .option('-f, --file <paths...>', 'Files to attach to the project.', collectPaths, [])
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .action(async (projectId, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
     const userConfig = await resolveConfig(
@@ -1192,9 +1207,9 @@ projectFilesCommand
       (program.opts?.() as CliOptions | undefined)?.target ??
       userConfig.browser?.target ??
       'chatgpt'
-    ) as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    ) as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
@@ -1237,7 +1252,7 @@ projectFilesCommand
 projectFilesCommand
   .command('list <id>')
   .description('List files for a project.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .action(async (projectId, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
     const userConfig = await resolveConfig(
@@ -1251,9 +1266,9 @@ projectFilesCommand
       (program.opts?.() as CliOptions | undefined)?.target ??
       userConfig.browser?.target ??
       'chatgpt'
-    ) as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    ) as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,
@@ -1275,7 +1290,7 @@ projectFilesCommand
   .command('remove <id> <file...>')
   .alias('delete')
   .description('Remove files from a project.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .action(async (projectId, fileNames, commandOptions) => {
     const parentOptions = projectsCommand.opts?.() ?? {};
     const userConfig = await resolveConfig(
@@ -1289,9 +1304,9 @@ projectFilesCommand
       (program.opts?.() as CliOptions | undefined)?.target ??
       userConfig.browser?.target ??
       'chatgpt'
-    ) as 'chatgpt' | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    ) as 'chatgpt' | 'gemini' | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     if (!Array.isArray(fileNames) || fileNames.length === 0) {
       throw new Error('Provide one or more file names to remove.');
@@ -2103,7 +2118,7 @@ program
 const cacheCommand = program
   .command('cache')
   .description('Show cached browser project/conversation lists.')
-  .option('--provider <chatgpt|grok>', 'Limit cache listing to a provider (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit cache listing to a provider (chatgpt, gemini, or grok).')
   .option('--refresh', 'Refresh cache entries for the active provider.')
   .option('--include-history', 'Include the History dialog results when refreshing conversations.')
   .option(
@@ -2113,13 +2128,12 @@ const cacheCommand = program
   .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
   .action(async (commandOptions, command) => {
-    const providers = new Set(['chatgpt', 'grok']);
     const filter =
       typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
         ? commandOptions.provider.trim()
         : null;
-    if (filter && !providers.has(filter)) {
-      throw new Error(`Invalid provider "${filter}". Use "chatgpt" or "grok".`);
+    if (filter && !isCacheCliProvider(filter)) {
+      throw new Error(`Invalid provider "${filter}". Use "chatgpt", "gemini", or "grok".`);
     }
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
@@ -2149,15 +2163,15 @@ const cacheCommand = program
         ? Boolean(commandOptions.includeProjectOnlyConversations)
         : Boolean(cacheDefaults?.includeProjectOnlyConversations ?? commandOptions.includeProjectOnlyConversations);
     if (refreshFlag) {
-      const target = (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
-      if (!providers.has(target)) {
-        throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+      const target = (filter ?? userConfig.browser?.target ?? 'chatgpt') as CacheCliProvider;
+      if (!isCacheCliProvider(target)) {
+        throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
       }
       const llmService = createLlmService(target, userConfig, {
         identityPrompt: promptForCacheIdentity,
       });
       const listOptions = await llmService.buildListOptions({
-        configuredUrl: target === 'grok' ? userConfig.browser?.grokUrl ?? null : userConfig.browser?.chatgptUrl ?? null,
+        configuredUrl: resolveProviderConfiguredUrl(userConfig, target),
         includeHistory,
         historyLimit,
         historySince,
@@ -2171,7 +2185,7 @@ const cacheCommand = program
       await refreshProviderCache(llmService, listOptions, { includeProjectOnlyConversations });
     }
     const cacheSettings = createLlmService(
-      (filter ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok',
+      (filter ?? userConfig.browser?.target ?? 'chatgpt') as CacheCliProvider,
       userConfig,
     ).getCacheSettings();
     const cacheRoot = cacheSettings.cacheRoot ?? path.join(getAuracallHomeDir(), 'cache', 'providers');
@@ -2185,6 +2199,13 @@ const cacheCommand = program
       ageHours: number | null;
       stale: boolean;
       sourceUrl?: string | null;
+      inventorySummary?: {
+        conversationCount: number;
+        messageCount: number;
+        sourceCount: number;
+        fileCount: number;
+        artifactCount: number;
+      };
     }> = [];
     let providerEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
     try {
@@ -2234,6 +2255,39 @@ const cacheCommand = program
               parsed?.userIdentity?.handle ||
               parsed?.userIdentity?.name ||
               null;
+            let inventorySummary:
+              | {
+                  conversationCount: number;
+                  messageCount: number;
+                  sourceCount: number;
+                  fileCount: number;
+                  artifactCount: number;
+                }
+              | undefined;
+            if (kind === 'conversations') {
+              const inventory = await listCachedConversationInventory({
+                provider: providerEntry.name as CacheCliProvider,
+                userConfig: {} as ProviderCacheContext['userConfig'],
+                listOptions: {},
+                identityKey: parsed?.identityKey ?? identityEntry.name,
+              });
+              inventorySummary = inventory.reduce(
+                (summary, item) => ({
+                  conversationCount: summary.conversationCount + 1,
+                  messageCount: summary.messageCount + item.messageCount,
+                  sourceCount: summary.sourceCount + item.sourceCount,
+                  fileCount: summary.fileCount + item.fileCount,
+                  artifactCount: summary.artifactCount + item.artifactCount,
+                }),
+                {
+                  conversationCount: 0,
+                  messageCount: 0,
+                  sourceCount: 0,
+                  fileCount: 0,
+                  artifactCount: 0,
+                },
+              );
+            }
             output.push({
               provider: providerEntry.name,
               identityKey: parsed?.identityKey ?? identityEntry.name,
@@ -2243,6 +2297,7 @@ const cacheCommand = program
               ageHours,
               stale,
               sourceUrl: parsed?.sourceUrl ?? null,
+              inventorySummary,
             });
           } catch (error) {
             console.warn(`Failed to read cache file ${fullPath}: ${error instanceof Error ? error.message : String(error)}`);
@@ -2256,7 +2311,7 @@ const cacheCommand = program
 cacheCommand
   .command('search <query>')
   .description('Keyword search cached conversation contexts (alias of `cache context search`).')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter search to one conversation ID.')
   .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
   .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
@@ -2267,7 +2322,7 @@ cacheCommand
 cacheCommand
   .command('semantic-search <query>')
   .description('Semantic search cached contexts (alias of `cache context semantic-search`).')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter search to one conversation ID.')
   .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
   .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
@@ -2287,7 +2342,7 @@ const cacheSourcesCommand = cacheCommand
 cacheSourcesCommand
   .command('list')
   .description('List cached source links (SQL-first, JSON fallback).')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter to a single conversation ID.')
   .option('--domain <domain>', 'Filter by exact source domain.')
   .option('--source-group <group>', 'Filter by source group (for example "Searched web").')
@@ -2342,6 +2397,64 @@ cacheSourcesCommand
     );
   });
 
+const cacheArtifactsCommand = cacheCommand
+  .command('artifacts')
+  .description('Inspect cached normalized artifact catalog.');
+
+cacheArtifactsCommand
+  .command('list')
+  .description('List cached artifacts (SQL-first, JSON fallback).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
+  .option('--conversation-id <id>', 'Filter to a single conversation ID.')
+  .option('--kind <download|canvas|generated|image|spreadsheet>', 'Filter by artifact kind.')
+  .option('--query <text>', 'Match against title/uri/message/metadata text.')
+  .option('--limit <count>', 'Maximum rows to return (default 50, max 500).', parseIntOption)
+  .action(async (...args) => {
+    const command = args[args.length - 1] as { opts?: () => OptionValues; parent?: { opts?: () => OptionValues } };
+    const localOptions =
+      args.length > 0 &&
+      typeof args[0] === 'object' &&
+      args[0] !== null &&
+      typeof (args[0] as { opts?: unknown }).opts !== 'function'
+        ? (args[0] as OptionValues)
+        : {};
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof command?.parent?.opts === 'function' ? command.parent.opts() : {}),
+      ...(typeof command?.opts === 'function' ? command.opts() : {}),
+      ...localOptions,
+    } as OptionValues;
+    const resolved = await resolveCacheSearchContext(commandOptions);
+    const conversationId = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
+    const kind = readStringOption(commandOptions, ['kind']);
+    const query = readStringOption(commandOptions, ['query']);
+    const limit = readNumberOption(commandOptions, ['limit']);
+    const rows = await listCachedArtifacts(resolved.cacheContext, {
+      conversationId,
+      kind,
+      query,
+      limit,
+    });
+    console.log(
+      JSON.stringify(
+        {
+          provider: resolved.provider,
+          identityKey: resolved.cacheContext.identityKey,
+          filters: {
+            conversationId: conversationId ?? null,
+            kind: kind ?? null,
+            query: query ?? null,
+            limit: limit ?? null,
+          },
+          count: rows.length,
+          rows,
+        },
+        null,
+        2,
+      ),
+    );
+  });
+
 const cacheFilesCommand = cacheCommand
   .command('files')
   .description('Inspect cached normalized file-binding catalog.');
@@ -2349,7 +2462,7 @@ const cacheFilesCommand = cacheCommand
 cacheFilesCommand
   .command('list')
   .description('List cached file bindings (SQL-first, JSON fallback).')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter to a single conversation ID.')
   .option('--project-id <id>', 'Filter to a single project ID.')
   .option(
@@ -2414,7 +2527,7 @@ cacheFilesCommand
 cacheFilesCommand
   .command('resolve')
   .description('Resolve cached file pointers and report missing/orphaned local paths.')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter to a single conversation ID.')
   .option('--project-id <id>', 'Filter to a single project ID.')
   .option(
@@ -2498,7 +2611,7 @@ cacheFilesCommand
 cacheCommand
   .command('doctor')
   .description('Run cache integrity checks (SQLite + file-pointer health).')
-  .option('--provider <chatgpt|grok>', 'Limit checks to one provider.')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit checks to one provider.')
   .option('--identity-key <key>', 'Limit checks to one identity key.')
   .option('--missing-limit <count>', 'Max missing-file rows to include per identity.', parseIntOption, 25)
   .option('--strict', 'Exit non-zero on warnings (not just errors).')
@@ -2524,7 +2637,7 @@ cacheCommand
       for (const entry of report.entries) {
         const sqliteStatus = entry.sqlite?.ok ? 'ok' : 'failed';
         console.log(
-          `${entry.provider}/${entry.identityKey}: sqlite=${sqliteStatus}, missingLocal=${entry.filePointerHealth.missingLocalCount}, parity(index->sql=${entry.parity.missingInSqlCount}, sql->index=${entry.parity.missingInIndexCount})`,
+          `${entry.provider}/${entry.identityKey}: sqlite=${sqliteStatus}, conversations=${entry.inventorySummary.conversationCount}, messages=${entry.inventorySummary.messageCount}, missingLocal=${entry.filePointerHealth.missingLocalCount}, parity(index->sql=${entry.parity.missingInSqlCount}, sql->index=${entry.parity.missingInIndexCount})`,
         );
         for (const finding of entry.findings) {
           const prefix = finding.severity.toUpperCase();
@@ -2544,11 +2657,11 @@ cacheCommand
 cacheCommand
   .command('repair')
   .description('Run cache repair actions (dry-run by default).')
-  .option('--provider <chatgpt|grok>', 'Limit repair to one provider.')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit repair to one provider.')
   .option('--identity-key <key>', 'Limit repair to one identity key.')
   .option(
     '--actions <list>',
-    'Comma-separated actions: sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,mark-missing-local,all',
+    'Comma-separated actions: sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,prune-orphan-artifact-bindings,mark-missing-local,all',
     'all',
   )
   .option('--apply', 'Apply mutations (default: dry-run preview).')
@@ -2600,7 +2713,7 @@ cacheCommand
 cacheCommand
   .command('clear')
   .description('Clear cached datasets (dry-run by default; requires --yes to mutate).')
-  .option('--provider <chatgpt|grok>', 'Limit clear to one provider.')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit clear to one provider.')
   .option('--identity-key <key>', 'Limit clear to one identity key.')
   .option(
     '--dataset <all|projects|conversations|context|account-files|conversation-files|conversation-attachments|project-knowledge|project-instructions>',
@@ -2632,7 +2745,7 @@ cacheCommand
       console.log(`Clear mode: ${report.mode}; dataset=${report.dataset}; targets=${report.summary.checked}`);
       for (const entry of report.entries) {
         console.log(
-          `${entry.provider}/${entry.identityKey}: files=${entry.fileTargetsMatched} sqlRows=${entry.sql.cacheEntriesMatched}`,
+          `${entry.provider}/${entry.identityKey}: files=${entry.fileTargetsMatched} sqlRows=${entry.sql.cacheEntriesMatched} conversations=${entry.inventoryBefore.conversationCount}->${entry.inventoryAfter.conversationCount} messages=${entry.inventoryBefore.messageCount}->${entry.inventoryAfter.messageCount}`,
         );
       }
       console.log(
@@ -2645,7 +2758,7 @@ cacheCommand
 cacheCommand
   .command('compact')
   .description('Compact cache SQLite databases (VACUUM + ANALYZE).')
-  .option('--provider <chatgpt|grok>', 'Limit compact to one provider.')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit compact to one provider.')
   .option('--identity-key <key>', 'Limit compact to one identity key.')
   .option('--json', 'Emit machine-readable JSON report.')
   .action(async (...args) => {
@@ -2681,7 +2794,7 @@ cacheCommand
 cacheCommand
   .command('cleanup')
   .description('Cleanup stale cache artifacts (dry-run by default; requires --yes to mutate).')
-  .option('--provider <chatgpt|grok>', 'Limit cleanup to one provider.')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit cleanup to one provider.')
   .option('--identity-key <key>', 'Limit cleanup to one identity key.')
   .option('--older-than <date>', 'Cleanup entries/files older than this date (YYYY-MM-DD or ISO).')
   .option(
@@ -2713,7 +2826,7 @@ cacheCommand
       console.log(`Cleanup mode: ${report.mode}; cutoff=${report.cutoffIso}; targets=${report.summary.checked}`);
       for (const entry of report.entries) {
         console.log(
-          `${entry.provider}/${entry.identityKey}: staleFiles=${entry.clear.fileTargetsMatched} staleSql=${entry.clear.sql.cacheEntriesMatched} prunedIndex=${entry.indexPruned} prunedBackups=${entry.backupsPruned} prunedBlobs=${entry.blobFilesPruned}`,
+          `${entry.provider}/${entry.identityKey}: staleFiles=${entry.clear.fileTargetsMatched} staleSql=${entry.clear.sql.cacheEntriesMatched} conversations=${entry.inventoryBefore.conversationCount}->${entry.inventoryAfter.conversationCount} messages=${entry.inventoryBefore.messageCount}->${entry.inventoryAfter.messageCount} prunedIndex=${entry.indexPruned} prunedBackups=${entry.backupsPruned} prunedBlobs=${entry.blobFilesPruned}`,
         );
       }
       console.log(
@@ -2727,7 +2840,7 @@ program
   .command('delete <id>')
   .alias('remove')
   .description('Delete a conversation (ID or name when supported by the provider).')
-  .option('--target <chatgpt|grok>', 'Choose which provider to use.')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to use.')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
   .option('--match <exact|glob|regex>', 'Match mode for conversation names (default exact).')
   .option('--all', 'Delete all matching conversations (otherwise only one match is allowed).')
@@ -2737,7 +2850,7 @@ program
   .action(async (id, commandOptions, command) => {
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
-    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok';
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
     const llmService = createLlmService(target, userConfig);
     const provider = llmService.provider;
 
@@ -2868,13 +2981,33 @@ program
           ? configuredStore
           : 'dual';
       const cacheStore = createCacheStore(cacheStoreKind);
+      const existingConversations = await cacheStore.readConversations(cacheContext).catch(() => null);
       for (const item of matches) {
         await cacheStore.writeConversationFiles(cacheContext, item.id, []);
         await cacheStore.writeConversationAttachments(cacheContext, item.id, []);
       }
 
       console.log('Refreshing conversation cache...');
-      const refreshed = await llmService.listConversations(projectId, scopedListOptions);
+      let refreshed = await llmService.listConversations(projectId, scopedListOptions);
+      const deletedIds = new Set(matches.map((item) => item.id));
+      const hadPriorConversationCache = Array.isArray(existingConversations?.items) && existingConversations.items.length > 0;
+      if (target === 'gemini' && Array.isArray(refreshed) && refreshed.length === 0 && hadPriorConversationCache) {
+        for (let attempt = 0; attempt < 3; attempt += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1_500));
+          const retry = await llmService.listConversations(projectId, {
+            ...scopedListOptions,
+            includeHistory: true,
+          });
+          if (!Array.isArray(retry)) {
+            continue;
+          }
+          const deletedStillPresent = retry.some((item) => deletedIds.has(item.id));
+          if (retry.length > 0 || !deletedStillPresent) {
+            refreshed = retry;
+            break;
+          }
+        }
+      }
       if (Array.isArray(refreshed)) {
         await writeConversationCache(cacheContext, refreshed);
         console.log('Conversation cache refreshed.');
@@ -2887,7 +3020,7 @@ program
 cacheCommand
   .command('export')
   .description('Export cached project/conversation data.')
-  .option('--provider <chatgpt|grok>', 'Limit export to a provider (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Limit export to a provider (chatgpt, gemini, or grok).')
   .option('--scope <projects|conversations|conversation|contexts>', 'Export scope (default conversations).')
   .option('--format <json|md|html|csv|zip>', 'Export format (default json).')
   .option('--project-id <id>', 'Project ID or name for project-scoped exports.')
@@ -2908,13 +3041,12 @@ cacheCommand
       ...(typeof command?.opts === 'function' ? command.opts() : {}),
       ...localOptions,
     } as OptionValues;
-    const providers = new Set(['chatgpt', 'grok']);
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const provider =
       (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
-    if (!providers.has(provider)) {
-      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    if (!isCacheCliProvider(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt", "gemini", or "grok".`);
     }
 
     const scope =
@@ -2932,17 +3064,11 @@ cacheCommand
       throw new Error('format must be json, md, html, csv, or zip.');
     }
 
-    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+    const { llmService, listOptions, cacheContext } = await resolveCacheOperatorContext({
+      provider,
+      userConfig,
       identityPrompt: promptForCacheIdentity,
     });
-    const listOptions = await llmService.buildListOptions({
-      configuredUrl:
-        provider === 'grok'
-          ? userConfig.browser?.grokUrl ?? null
-          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
-    });
-    const cacheContext = await llmService.resolveCacheContext(listOptions);
-    assertCacheIdentity(cacheContext, provider);
     const projectSelector = readStringOption(commandOptions, ['projectId', 'project-id']);
     const conversationSelector = readStringOption(commandOptions, ['conversationId', 'conversation-id']);
     let resolvedProjectId: string | undefined;
@@ -2982,7 +3108,7 @@ const cacheContextCommand = cacheCommand
 cacheContextCommand
   .command('list')
   .description('List cached conversation context IDs.')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--limit <count>', 'Maximum rows to return (default: all).', parseIntOption)
   .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.')
   .action(async (...args) => {
@@ -2999,25 +3125,21 @@ cacheContextCommand
       ...(typeof command?.opts === 'function' ? command.opts() : {}),
       ...localOptions,
     };
-    const providers = new Set(['chatgpt', 'grok']);
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
-    if (!providers.has(provider)) {
-      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    if (!isCacheCliProvider(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt", "gemini", or "grok".`);
     }
-    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+    const { llmService, listOptions } = await resolveCacheOperatorContext({
+      provider,
+      userConfig,
       identityPrompt: promptForCacheIdentity,
     });
-    const listOptions = await llmService.buildListOptions({
-      configuredUrl:
-        provider === 'grok'
-          ? userConfig.browser?.grokUrl ?? null
-          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
+    const entries = await llmService.listCachedConversationContexts({
+      listOptions,
+      cacheResolve: { prompt: false, detect: false },
     });
-    const cacheContext = await llmService.resolveCacheContext(listOptions);
-    assertCacheIdentity(cacheContext, provider);
-    const entries = await llmService.listCachedConversationContexts({ listOptions });
     const limit =
       typeof commandOptions.limit === 'number' && Number.isFinite(commandOptions.limit)
         ? Math.max(0, Math.trunc(commandOptions.limit))
@@ -3034,7 +3156,7 @@ cacheContextCommand
 cacheContextCommand
   .command('get <id>')
   .description('Read a cached conversation context by ID or cached title.')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--out, --output <path>', 'Optional output path for JSON payload.')
   .option('--json-only', 'Suppress CLI intro banner and print JSON payload only.')
   .action(async (id, ...args) => {
@@ -3051,26 +3173,20 @@ cacheContextCommand
       ...(typeof command?.opts === 'function' ? command.opts() : {}),
       ...localOptions,
     } as OptionValues;
-    const providers = new Set(['chatgpt', 'grok']);
     const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
-    if (!providers.has(provider)) {
-      throw new Error(`Invalid provider "${provider}". Use "chatgpt" or "grok".`);
+    if (!isCacheCliProvider(provider)) {
+      throw new Error(`Invalid provider "${provider}". Use "chatgpt", "gemini", or "grok".`);
     }
-    const llmService = createLlmService(provider as 'chatgpt' | 'grok', userConfig, {
+    const { llmService, listOptions } = await resolveCacheOperatorContext({
+      provider,
+      userConfig,
       identityPrompt: promptForCacheIdentity,
     });
-    const listOptions = await llmService.buildListOptions({
-      configuredUrl:
-        provider === 'grok'
-          ? userConfig.browser?.grokUrl ?? null
-          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
-    });
-    const cacheContext = await llmService.resolveCacheContext(listOptions);
-    assertCacheIdentity(cacheContext, provider);
     const result = await llmService.getCachedConversationContext(String(id || '').trim(), {
       listOptions,
+      cacheResolve: { prompt: false, detect: false },
     });
     const payload = {
       conversationId: result.conversationId,
@@ -3093,7 +3209,7 @@ cacheContextCommand
 cacheContextCommand
   .command('search <query>')
   .description('Keyword search cached conversation contexts.')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter search to one conversation ID.')
   .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
   .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
@@ -3117,7 +3233,7 @@ cacheContextCommand
 cacheContextCommand
   .command('semantic-search <query>')
   .description('Embedding-based semantic search over cached conversation contexts.')
-  .option('--provider <chatgpt|grok>', 'Choose provider cache to inspect (chatgpt or grok).')
+  .option('--provider <chatgpt|gemini|grok>', 'Choose provider cache to inspect (chatgpt, gemini, or grok).')
   .option('--conversation-id <id>', 'Filter search to one conversation ID.')
   .option('--role <user|assistant|system|source>', 'Filter to a specific message role.')
   .option('--limit <count>', 'Maximum hits to return (default 20, max 200).', parseIntOption)
@@ -3386,18 +3502,6 @@ async function promptForCacheIdentity(provider: string): Promise<ProviderUserIde
   }
 }
 
-function assertCacheIdentity(
-  identity: { userIdentity?: ProviderUserIdentity | null; identityKey?: string | null },
-  provider: string,
-): asserts identity is { userIdentity?: ProviderUserIdentity | null; identityKey: string } {
-  if (!identity.identityKey) {
-    throw new Error(
-      `Cache identity for ${provider} is required. ` +
-        'Set browser.cache.identityKey (or browser.cache.identity) in config, or sign in so Aura-Call can detect it.',
-    );
-  }
-}
-
 async function runCacheContextKeywordSearch(query: string, commandOptions: OptionValues): Promise<void> {
   const resolved = await resolveCacheSearchContext(commandOptions);
   const normalizedQuery = String(query ?? '').trim();
@@ -3553,7 +3657,7 @@ type CacheDoctorFinding = {
 };
 
 type CacheDoctorEntry = {
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   cacheDir: string;
   sqlite: {
@@ -3573,6 +3677,13 @@ type CacheDoctorEntry = {
       pathState: string;
     }>;
   };
+  inventorySummary: {
+    conversationCount: number;
+    messageCount: number;
+    sourceCount: number;
+    fileCount: number;
+    artifactCount: number;
+  };
   parity: {
     sqlEntryCount: number | null;
     indexEntryCount: number | null;
@@ -3580,6 +3691,7 @@ type CacheDoctorEntry = {
     missingInIndexCount: number;
     orphanSourceLinksCount: number;
     orphanFileBindingsCount: number;
+    orphanArtifactBindingsCount: number;
   };
   findings: CacheDoctorFinding[];
 };
@@ -3604,8 +3716,8 @@ async function runCacheDoctor(commandOptions: OptionValues): Promise<CacheDoctor
     typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
       ? commandOptions.provider.trim()
       : null;
-  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
-    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  if (providerFilter && !isCacheCliProvider(providerFilter)) {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt", "gemini", or "grok".`);
   }
   const identityFilter =
     typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
@@ -3664,6 +3776,25 @@ async function runCacheDoctor(commandOptions: OptionValues): Promise<CacheDoctor
         }
 
         const parity = await inspectCacheParity(item.cacheDir);
+        const inventory = await listCachedConversationInventory(item.cacheContext, {
+          limit: 10_000,
+        });
+        const inventorySummary = inventory.reduce(
+          (summary, row) => ({
+            conversationCount: summary.conversationCount + 1,
+            messageCount: summary.messageCount + row.messageCount,
+            sourceCount: summary.sourceCount + row.sourceCount,
+            fileCount: summary.fileCount + row.fileCount,
+            artifactCount: summary.artifactCount + row.artifactCount,
+          }),
+          {
+            conversationCount: 0,
+            messageCount: 0,
+            sourceCount: 0,
+            fileCount: 0,
+            artifactCount: 0,
+          },
+        );
         if (parity.missingInSqlCount > 0) {
           findings.push({
             severity: 'warning',
@@ -3692,6 +3823,13 @@ async function runCacheDoctor(commandOptions: OptionValues): Promise<CacheDoctor
             message: `${parity.orphanFileBindingsCount} file_bindings row(s) have no matching cache entry dataset/entity.`,
           });
         }
+        if (parity.orphanArtifactBindingsCount > 0) {
+          findings.push({
+            severity: 'warning',
+            check: 'parity.orphan_artifact_bindings',
+            message: `${parity.orphanArtifactBindingsCount} artifact_bindings row(s) have no matching conversation-context cache entry.`,
+          });
+        }
 
         const warningInc = findings.filter((finding) => finding.severity === 'warning').length;
         const errorInc = findings.filter((finding) => finding.severity === 'error').length;
@@ -3710,6 +3848,7 @@ async function runCacheDoctor(commandOptions: OptionValues): Promise<CacheDoctor
               pathState: row.pathState,
             })),
           },
+          inventorySummary,
           parity,
           findings,
         };
@@ -3743,64 +3882,24 @@ async function discoverCacheDoctorContexts(
   identityFilter: string | null,
 ): Promise<
   Array<{
-    provider: 'chatgpt' | 'grok';
+    provider: CacheCliProvider;
     identityKey: string;
     cacheDir: string;
     cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
   }>
 > {
-  const cacheRoot = path.join(getAuracallHomeDir(), 'cache', 'providers');
-  let providerEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
-  try {
-    providerEntries = await fs.readdir(cacheRoot, { withFileTypes: true });
-  } catch {
-    return [];
-  }
-  const output: Array<{
-    provider: 'chatgpt' | 'grok';
-    identityKey: string;
-    cacheDir: string;
-    cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
-  }> = [];
-  for (const providerEntry of providerEntries) {
-    if (!providerEntry.isDirectory()) continue;
-    if (providerEntry.name !== 'chatgpt' && providerEntry.name !== 'grok') continue;
-    if (providerFilter && providerEntry.name !== providerFilter) continue;
-    const provider = providerEntry.name as 'chatgpt' | 'grok';
-    const llmService = createLlmService(provider, userConfig, {
-      identityPrompt: promptForCacheIdentity,
-    });
-    const listOptions = await llmService.buildListOptions({
-      configuredUrl:
-        provider === 'grok'
-          ? userConfig.browser?.grokUrl ?? null
-          : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
-    });
-    const providerDir = path.join(cacheRoot, provider);
-    let identityEntries: Array<{ name: string; isDirectory: () => boolean }> = [];
-    try {
-      identityEntries = await fs.readdir(providerDir, { withFileTypes: true });
-    } catch {
-      continue;
-    }
-    for (const identityEntry of identityEntries) {
-      if (!identityEntry.isDirectory()) continue;
-      if (identityFilter && identityEntry.name !== identityFilter) continue;
-      output.push({
-        provider,
-        identityKey: identityEntry.name,
-        cacheDir: path.join(providerDir, identityEntry.name),
-        cacheContext: {
-          provider,
-          userConfig,
-          listOptions,
-          identityKey: identityEntry.name,
-          userIdentity: null,
-        },
-      });
-    }
-  }
-  return output;
+  const contexts = await discoverCacheMaintenanceContexts({
+    userConfig,
+    providerFilter,
+    identityFilter,
+    identityPrompt: promptForCacheIdentity,
+  });
+  return contexts.map((item) => ({
+    provider: item.provider,
+    identityKey: item.identityKey,
+    cacheDir: item.cacheDir,
+    cacheContext: item.cacheContext,
+  }));
 }
 
 async function inspectCacheSqlite(cacheDir: string): Promise<{
@@ -3830,7 +3929,15 @@ async function inspectCacheSqlite(cacheDir: string): Promise<{
         const quick = db.prepare('PRAGMA quick_check').all();
         const quickValue =
           quick.length > 0 && typeof quick[0].quick_check === 'string' ? quick[0].quick_check : null;
-        const requiredTables = ['cache_entries', 'meta', 'schema_migrations', 'source_links', 'file_bindings', 'file_assets'];
+        const requiredTables = [
+          'cache_entries',
+          'meta',
+          'schema_migrations',
+          'source_links',
+          'file_bindings',
+          'file_assets',
+          'artifact_bindings',
+        ];
         const tableRows = db
           .prepare("SELECT name FROM sqlite_master WHERE type='table'")
           .all()
@@ -3865,6 +3972,7 @@ async function inspectCacheParity(cacheDir: string): Promise<{
   missingInIndexCount: number;
   orphanSourceLinksCount: number;
   orphanFileBindingsCount: number;
+  orphanArtifactBindingsCount: number;
 }> {
   const sqlKeys = await readSqlCacheEntryKeys(cacheDir);
   const indexKeys = await readIndexEntryKeys(cacheDir);
@@ -3878,6 +3986,7 @@ async function inspectCacheParity(cacheDir: string): Promise<{
     missingInIndexCount,
     orphanSourceLinksCount: sqliteOrphans.orphanSourceLinksCount,
     orphanFileBindingsCount: sqliteOrphans.orphanFileBindingsCount,
+    orphanArtifactBindingsCount: sqliteOrphans.orphanArtifactBindingsCount,
   };
 }
 
@@ -4030,12 +4139,13 @@ function countMissing(source: Set<string> | null, target: Set<string> | null): n
 async function readSqlOrphanCounts(cacheDir: string): Promise<{
   orphanSourceLinksCount: number;
   orphanFileBindingsCount: number;
+  orphanArtifactBindingsCount: number;
 }> {
   const dbPath = path.join(cacheDir, 'cache.sqlite');
   try {
     await fs.access(dbPath);
   } catch {
-    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0 };
+    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0, orphanArtifactBindingsCount: 0 };
   }
   try {
     const sqliteModule = await import('node:sqlite');
@@ -4066,16 +4176,29 @@ async function readSqlOrphanCounts(cacheDir: string): Promise<{
               )`,
           )
           .get() as { c?: number | bigint };
+        const orphanArtifacts = db
+          .prepare(
+            `SELECT COUNT(*) AS c
+               FROM artifact_bindings a
+              WHERE NOT EXISTS (
+                SELECT 1
+                  FROM cache_entries c
+                 WHERE c.dataset = 'conversation-context'
+                   AND c.entity_id = a.conversation_id
+              )`,
+          )
+          .get() as { c?: number | bigint };
         return {
           orphanSourceLinksCount: numberFromSqlValue(orphanSource.c),
           orphanFileBindingsCount: numberFromSqlValue(orphanBindings.c),
+          orphanArtifactBindingsCount: numberFromSqlValue(orphanArtifacts.c),
         };
       } finally {
         db.close();
       }
     });
   } catch {
-    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0 };
+    return { orphanSourceLinksCount: 0, orphanFileBindingsCount: 0, orphanArtifactBindingsCount: 0 };
   }
 }
 
@@ -4200,6 +4323,7 @@ type CacheRepairActionName =
   | 'prune-orphan-assets'
   | 'prune-orphan-source-links'
   | 'prune-orphan-file-bindings'
+  | 'prune-orphan-artifact-bindings'
   | 'mark-missing-local';
 
 type CacheRepairActionResult = {
@@ -4210,7 +4334,7 @@ type CacheRepairActionResult = {
 };
 
 type CacheRepairEntry = {
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   cacheDir: string;
   backupDir: string | null;
@@ -4240,8 +4364,8 @@ async function runCacheRepair(commandOptions: OptionValues): Promise<CacheRepair
     typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
       ? commandOptions.provider.trim()
       : null;
-  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
-    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  if (providerFilter && !isCacheCliProvider(providerFilter)) {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt", "gemini", or "grok".`);
   }
   const identityFilter =
     typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
@@ -4317,6 +4441,14 @@ async function runCacheRepair(commandOptions: OptionValues): Promise<CacheRepair
               results.push(repairResult);
               continue;
             }
+            if (action === 'prune-orphan-artifact-bindings') {
+              if (apply) await ensureBackup();
+              const repairResult = await repairPruneOrphanArtifactBindings(context.cacheDir, apply);
+              if (repairResult.applied) touched += 1;
+              if (repairResult.skipped === 'failed') errors += 1;
+              results.push(repairResult);
+              continue;
+            }
             if (action === 'mark-missing-local') {
               if (apply) await ensureBackup();
               const repairResult = await repairMarkMissingLocal(context.cacheDir, apply);
@@ -4375,6 +4507,7 @@ function parseCacheRepairActions(raw: unknown): CacheRepairActionName[] {
     'prune-orphan-assets',
     'prune-orphan-source-links',
     'prune-orphan-file-bindings',
+    'prune-orphan-artifact-bindings',
     'mark-missing-local',
   ]);
   const source = typeof raw === 'string' && raw.trim().length > 0 ? raw.trim() : 'all';
@@ -4389,6 +4522,7 @@ function parseCacheRepairActions(raw: unknown): CacheRepairActionName[] {
       'prune-orphan-assets',
       'prune-orphan-source-links',
       'prune-orphan-file-bindings',
+      'prune-orphan-artifact-bindings',
       'mark-missing-local',
     ];
   }
@@ -4396,7 +4530,7 @@ function parseCacheRepairActions(raw: unknown): CacheRepairActionName[] {
   for (const token of tokens) {
     if (!valid.has(token as CacheRepairActionName)) {
       throw new Error(
-        `Invalid repair action "${token}". Use sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,mark-missing-local,all.`,
+        `Invalid repair action "${token}". Use sync-sql,rebuild-index,prune-orphan-assets,prune-orphan-source-links,prune-orphan-file-bindings,prune-orphan-artifact-bindings,mark-missing-local,all.`,
       );
     }
     const casted = token as CacheRepairActionName;
@@ -4409,6 +4543,7 @@ function parseCacheRepairActions(raw: unknown): CacheRepairActionName[] {
       'prune-orphan-assets',
       'prune-orphan-source-links',
       'prune-orphan-file-bindings',
+      'prune-orphan-artifact-bindings',
       'mark-missing-local',
     ];
   }
@@ -4813,6 +4948,74 @@ async function repairPruneOrphanFileBindings(
   });
 }
 
+async function repairPruneOrphanArtifactBindings(
+  cacheDir: string,
+  apply: boolean,
+): Promise<CacheRepairActionResult> {
+  const dbPath = path.join(cacheDir, 'cache.sqlite');
+  const sqliteInfo = await inspectCacheSqlite(cacheDir);
+  if (!sqliteInfo.exists) {
+    return {
+      name: 'prune-orphan-artifact-bindings',
+      applied: false,
+      skipped: 'no-op',
+      message: 'No cache.sqlite present.',
+    };
+  }
+  const sqliteModule = await import('node:sqlite');
+  return withSqliteBusyRetry(`repair prune orphan artifact bindings (${cacheDir})`, async () => {
+    const db = new sqliteModule.DatabaseSync(dbPath);
+    try {
+      const row = db
+        .prepare(
+          `SELECT COUNT(*) AS c
+             FROM artifact_bindings a
+            WHERE NOT EXISTS (
+              SELECT 1
+                FROM cache_entries c
+               WHERE c.dataset = 'conversation-context'
+                 AND c.entity_id = a.conversation_id
+            )`,
+        )
+        .get() as { c?: number };
+      const count = Number(row?.c ?? 0);
+      if (!apply) {
+        return {
+          name: 'prune-orphan-artifact-bindings',
+          applied: false,
+          skipped: 'dry-run',
+          message: `Would prune ${count} orphan artifact_bindings row(s).`,
+        };
+      }
+      if (count <= 0) {
+        return {
+          name: 'prune-orphan-artifact-bindings',
+          applied: false,
+          skipped: 'no-op',
+          message: 'No orphan artifact_bindings rows found.',
+        };
+      }
+      db.prepare(
+        `DELETE FROM artifact_bindings
+          WHERE NOT EXISTS (
+            SELECT 1
+              FROM cache_entries c
+             WHERE c.dataset = 'conversation-context'
+               AND c.entity_id = artifact_bindings.conversation_id
+          )`,
+      ).run();
+      return {
+        name: 'prune-orphan-artifact-bindings',
+        applied: true,
+        skipped: 'no-op',
+        message: `Pruned ${count} orphan artifact_bindings row(s).`,
+      };
+    } finally {
+      db.close();
+    }
+  });
+}
+
 async function repairMarkMissingLocal(cacheDir: string, apply: boolean): Promise<CacheRepairActionResult> {
   const dbPath = path.join(cacheDir, 'cache.sqlite');
   const sqliteInfo = await inspectCacheSqlite(cacheDir);
@@ -4906,13 +5109,23 @@ type CacheClearSqlSummary = {
   orphanAssetsDeleted: number;
 };
 
+type CacheConversationInventorySummary = {
+  conversationCount: number;
+  messageCount: number;
+  sourceCount: number;
+  fileCount: number;
+  artifactCount: number;
+};
+
 type CacheClearEntry = {
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   cacheDir: string;
   fileTargetsMatched: number;
   fileTargetsDeleted: number;
   sql: CacheClearSqlSummary;
+  inventoryBefore: CacheConversationInventorySummary;
+  inventoryAfter: CacheConversationInventorySummary;
   warnings: string[];
   errors: string[];
 };
@@ -4941,8 +5154,8 @@ async function runCacheClear(commandOptions: OptionValues): Promise<CacheClearRe
     typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
       ? commandOptions.provider.trim()
       : null;
-  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
-    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  if (providerFilter && !isCacheCliProvider(providerFilter)) {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt", "gemini", or "grok".`);
   }
   const identityFilter =
     typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
@@ -4966,8 +5179,9 @@ async function runCacheClear(commandOptions: OptionValues): Promise<CacheClearRe
     const result = await withCacheMaintenanceLock(
       context.cacheDir,
       `cache-clear ${context.provider}/${context.identityKey}`,
-      async () =>
-        clearCacheForContext({
+      async () => {
+        const inventoryBefore = await summarizeConversationInventory(context.cacheContext);
+        const cleared = await clearCacheForContext({
           cacheDir: context.cacheDir,
           provider: context.provider,
           identityKey: context.identityKey,
@@ -4975,7 +5189,14 @@ async function runCacheClear(commandOptions: OptionValues): Promise<CacheClearRe
           cutoffMs: cutoff?.cutoffMs ?? null,
           includeBlobs,
           apply,
-        }),
+        });
+        const inventoryAfter = await summarizeConversationInventory(context.cacheContext);
+        return {
+          ...cleared,
+          inventoryBefore,
+          inventoryAfter,
+        };
+      },
     );
     if (result.fileTargetsDeleted > 0 || result.sql.cacheEntriesDeleted > 0) touched += 1;
     warnings += result.warnings.length;
@@ -5004,7 +5225,7 @@ async function runCacheClear(commandOptions: OptionValues): Promise<CacheClearRe
 }
 
 type CacheCompactEntry = {
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   cacheDir: string;
   sqliteExists: boolean;
@@ -5034,8 +5255,8 @@ async function runCacheCompact(commandOptions: OptionValues): Promise<CacheCompa
     typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
       ? commandOptions.provider.trim()
       : null;
-  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
-    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  if (providerFilter && !isCacheCliProvider(providerFilter)) {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt", "gemini", or "grok".`);
   }
   const identityFilter =
     typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
@@ -5117,10 +5338,12 @@ async function runCacheCompact(commandOptions: OptionValues): Promise<CacheCompa
 }
 
 type CacheCleanupEntry = {
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   cacheDir: string;
   clear: CacheClearEntry;
+  inventoryBefore: CacheConversationInventorySummary;
+  inventoryAfter: CacheConversationInventorySummary;
   indexPruned: number;
   backupsPruned: number;
   blobFilesPruned: number;
@@ -5151,8 +5374,8 @@ async function runCacheCleanup(commandOptions: OptionValues): Promise<CacheClean
     typeof commandOptions.provider === 'string' && commandOptions.provider.trim().length > 0
       ? commandOptions.provider.trim()
       : null;
-  if (providerFilter && providerFilter !== 'chatgpt' && providerFilter !== 'grok') {
-    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt" or "grok".`);
+  if (providerFilter && !isCacheCliProvider(providerFilter)) {
+    throw new Error(`Invalid provider "${providerFilter}". Use "chatgpt", "gemini", or "grok".`);
   }
   const identityFilter =
     typeof commandOptions.identityKey === 'string' && commandOptions.identityKey.trim().length > 0
@@ -5175,6 +5398,7 @@ async function runCacheCleanup(commandOptions: OptionValues): Promise<CacheClean
       context.cacheDir,
       `cache-cleanup ${context.provider}/${context.identityKey}`,
       async () => {
+        const inventoryBefore = await summarizeConversationInventory(context.cacheContext);
         const clear = await clearCacheForContext({
           cacheDir: context.cacheDir,
           provider: context.provider,
@@ -5187,7 +5411,8 @@ async function runCacheCleanup(commandOptions: OptionValues): Promise<CacheClean
         const indexPruned = await pruneCacheIndexEntries(context.cacheDir, cutoff.cutoffMs, apply);
         const backupsPruned = await pruneOldBackups(context.cacheDir, cutoff.cutoffMs, apply);
         const blobFilesPruned = await pruneDetachedBlobFiles(context.cacheDir, cutoff.cutoffMs, apply);
-        return { clear, indexPruned, backupsPruned, blobFilesPruned };
+        const inventoryAfter = await summarizeConversationInventory(context.cacheContext);
+        return { clear, inventoryBefore, inventoryAfter, indexPruned, backupsPruned, blobFilesPruned };
       },
     );
     const entryWarnings = [...result.clear.warnings];
@@ -5208,6 +5433,8 @@ async function runCacheCleanup(commandOptions: OptionValues): Promise<CacheClean
       identityKey: context.identityKey,
       cacheDir: context.cacheDir,
       clear: result.clear,
+      inventoryBefore: result.inventoryBefore,
+      inventoryAfter: result.inventoryAfter,
       indexPruned: result.indexPruned,
       backupsPruned: result.backupsPruned,
       blobFilesPruned: result.blobFilesPruned,
@@ -5286,7 +5513,7 @@ function parseCutoffForCleanup(
 
 async function clearCacheForContext(input: {
   cacheDir: string;
-  provider: 'chatgpt' | 'grok';
+  provider: CacheCliProvider;
   identityKey: string;
   dataset: CacheDatasetName;
   cutoffMs: number | null;
@@ -5337,6 +5564,8 @@ async function clearCacheForContext(input: {
     fileTargetsMatched: targets.length,
     fileTargetsDeleted: deletedFiles,
     sql: sql.summary,
+    inventoryBefore: emptyConversationInventorySummary(),
+    inventoryAfter: emptyConversationInventorySummary(),
     warnings,
     errors,
   };
@@ -5653,6 +5882,32 @@ async function deleteBindingPairs(
   return deleted;
 }
 
+async function summarizeConversationInventory(
+  cacheContext: ProviderCacheContext,
+): Promise<CacheConversationInventorySummary> {
+  const rows = await listCachedConversationInventory(cacheContext, { limit: 10_000 });
+  return rows.reduce(
+    (summary, row) => ({
+      conversationCount: summary.conversationCount + 1,
+      messageCount: summary.messageCount + row.messageCount,
+      sourceCount: summary.sourceCount + row.sourceCount,
+      fileCount: summary.fileCount + row.fileCount,
+      artifactCount: summary.artifactCount + row.artifactCount,
+    }),
+    emptyConversationInventorySummary(),
+  );
+}
+
+function emptyConversationInventorySummary(): CacheConversationInventorySummary {
+  return {
+    conversationCount: 0,
+    messageCount: 0,
+    sourceCount: 0,
+    fileCount: 0,
+    artifactCount: 0,
+  };
+}
+
 function numberFromSqlValue(value: unknown): number {
   if (typeof value === 'number') return Number.isFinite(value) ? value : 0;
   if (typeof value === 'bigint') return Number(value);
@@ -5865,27 +6120,26 @@ async function resolveCacheSearchContext(
 ): Promise<{
   provider: import('../src/browser/providers/domain.js').ProviderId;
   cacheContext: Awaited<ReturnType<LlmService['resolveCacheContext']>>;
+  llmService: LlmService;
+  listOptions: BrowserProviderListOptions;
 }> {
-  const providers = new Set(['chatgpt', 'gemini', 'grok']);
   const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
   const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
   const provider = (commandOptions.provider ?? userConfig.browser?.target ?? 'chatgpt').toString().trim();
-  if (!providers.has(provider)) {
+  if (!isCacheCliProvider(provider)) {
     throw new Error(`Invalid provider "${provider}". Use "chatgpt", "gemini", or "grok".`);
   }
-  const llmService = createLlmService(provider as import('../src/browser/providers/domain.js').ProviderId, userConfig, {
+  const resolved = await resolveCacheOperatorContext({
+    provider,
+    userConfig,
     identityPrompt: promptForCacheIdentity,
   });
-  const listOptions = await llmService.buildListOptions({
-    configuredUrl: provider === 'grok'
-      ? userConfig.browser?.grokUrl ?? null
-      : provider === 'gemini'
-        ? userConfig.browser?.geminiUrl ?? userConfig.browser?.url ?? null
-        : userConfig.browser?.chatgptUrl ?? userConfig.browser?.url ?? null,
-  });
-  const cacheContext = await llmService.resolveCacheContext(listOptions);
-  assertCacheIdentity(cacheContext, provider);
-  return { provider: provider as import('../src/browser/providers/domain.js').ProviderId, cacheContext };
+  return {
+    provider,
+    llmService: resolved.llmService,
+    listOptions: resolved.listOptions,
+    cacheContext: resolved.cacheContext,
+  };
 }
 
 async function upsertProjectCacheEntry(
@@ -5964,28 +6218,21 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
       ensurePort: Boolean(projectName || conversationName),
     },
   );
-  const identity = await llmService.resolveCacheIdentity(listOptions);
-  if (!identity.identityKey) {
+  const cacheContext = await llmService.resolveCacheContext(listOptions);
+  if (!cacheContext.identityKey) {
     console.warn(
       chalk.yellow(`Skipping cache-based name resolution: missing cache identity for ${target}.`),
     );
     return;
   }
   const normalizedListOptions = { ...listOptions, configuredUrl: listOptions.configuredUrl ?? null };
-  const cacheContext = {
-    provider: target,
-    userConfig,
-    listOptions: normalizedListOptions,
-    ...llmService.getCacheSettings(),
-    ...identity,
-  };
   const provider = llmService.provider;
 
   if (!options.projectId && projectNameFromConfig && projectName) {
     try {
       const projects = await provider.listProjects?.(normalizedListOptions);
       if (Array.isArray(projects)) {
-        await writeProjectCache(cacheContext, projects);
+        await writeProjectCache({ ...cacheContext, listOptions: normalizedListOptions }, projects);
       }
     } catch (error) {
       console.warn(

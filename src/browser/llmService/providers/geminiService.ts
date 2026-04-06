@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
-import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
+import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
 import { BrowserService } from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
@@ -54,12 +54,28 @@ export class GeminiService extends LlmService {
     )) as Conversation[];
   }
 
+  async runPrompt(input: PromptInput, _options?: BrowserProviderListOptions): Promise<PromptResult> {
+    return this.runPlannedPrompt(input);
+  }
+
   async renameConversation(): Promise<void> {
     throw new Error('Conversation rename is not supported for gemini yet.');
   }
 
-  async deleteConversation(): Promise<void> {
-    throw new Error('Conversation delete is not supported for gemini yet.');
+  async deleteConversation(
+    conversationId: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<void> {
+    if (!this.provider.deleteConversation) {
+      throw new Error(`Delete is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    await this.ensureValidConversationUrl(conversationId, { projectId, listOptions });
+    await this.withRetry(
+      () => this.provider.deleteConversation?.(conversationId, projectId, listOptions) as Promise<void>,
+      { action: 'deleteConversation' },
+    );
   }
 
   async getUserIdentity(

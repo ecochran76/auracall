@@ -59,19 +59,21 @@
 - Cache context keyword search smoke: `pnpm tsx bin/auracall.ts cache context search "oracle" --provider grok --limit 5`.
 - Cache context semantic search smoke: `OPENAI_API_KEY=... pnpm tsx bin/auracall.ts cache context semantic-search "oracle" --provider grok --limit 5`.
 - Cache source catalog smoke: `pnpm tsx bin/auracall.ts cache sources list --provider grok --limit 10`.
+- Cache artifact catalog smoke: `pnpm tsx bin/auracall.ts cache artifacts list --provider grok --limit 10`.
 - Cache file catalog smoke: `pnpm tsx bin/auracall.ts cache files list --provider grok --limit 10`.
 - Cache file pointer resolve smoke: `pnpm tsx bin/auracall.ts cache files resolve --provider grok --limit 20` (use `--missing-only` to focus orphan/missing local paths).
-- Cache integrity doctor smoke: `pnpm tsx bin/auracall.ts cache doctor --provider grok --json` (use `--strict` to fail on warnings).
+- Cache integrity doctor smoke: `pnpm tsx bin/auracall.ts cache doctor --provider grok --json` (use `--strict` to fail on warnings; JSON now includes aggregated conversation inventory summary counts).
 - Cache repair smoke:
   - dry-run: `pnpm tsx bin/auracall.ts cache repair --provider grok --actions all --json`
   - apply single action: `pnpm tsx bin/auracall.ts cache repair --provider grok --identity-key <key> --actions rebuild-index --apply --yes --json`
   - parity drift actions:
     - `pnpm tsx bin/auracall.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-source-links --json`
     - `pnpm tsx bin/auracall.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-file-bindings --json`
+    - `pnpm tsx bin/auracall.ts cache repair --provider grok --identity-key <key> --actions prune-orphan-artifact-bindings --json`
 - Cache clear/compact/cleanup smoke:
-  - clear dry-run: `pnpm tsx bin/auracall.ts cache clear --provider grok --identity-key <key> --dataset context --json`
+  - clear dry-run: `pnpm tsx bin/auracall.ts cache clear --provider grok --identity-key <key> --dataset context --json` (JSON now includes `inventoryBefore` / `inventoryAfter`)
   - compact: `pnpm tsx bin/auracall.ts cache compact --provider grok --identity-key <key> --json`
-  - cleanup dry-run: `pnpm tsx bin/auracall.ts cache cleanup --provider grok --identity-key <key> --days 30 --json`
+  - cleanup dry-run: `pnpm tsx bin/auracall.ts cache cleanup --provider grok --identity-key <key> --days 30 --json` (JSON now includes `inventoryBefore` / `inventoryAfter`)
 - Cache refresh hydration modes smoke:
   - conservative (existing IDs only): `pnpm tsx bin/auracall.ts cache --provider grok --refresh --include-history --history-limit 200`
   - opt-in project-only insertion: `pnpm tsx bin/auracall.ts cache --provider grok --refresh --include-history --history-limit 200 --include-project-only-conversations`

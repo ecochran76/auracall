@@ -7,7 +7,7 @@ import { resolveChatgptRateLimitGuardPath } from '../../src/browser/chatgptRateL
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../src/browser/providers/types.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
-import type { LlmServiceAdapter, IdentityPrompt } from '../../src/browser/llmService/types.js';
+import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../../src/browser/llmService/types.js';
 
 class RateLimitTestLlmService extends LlmService {
   constructor(
@@ -54,6 +54,10 @@ class RateLimitTestLlmService extends LlmService {
 
   async listConversations(): Promise<[]> {
     return [];
+  }
+
+  async runPrompt(_input: PromptInput): Promise<PromptResult> {
+    throw new Error('not implemented');
   }
 
   async renameConversation(): Promise<void> {}

@@ -279,44 +279,120 @@ async function triggerGeminiFileChooser(page: Page, attachmentPaths: string[]): 
     }
   }
 
+  const trustedClick = async (selector: string): Promise<boolean> => {
+    try {
+      const handle = await page.$(selector);
+      if (!handle) return false;
+      const box = await handle.boundingBox();
+      if (!box || box.width <= 0 || box.height <= 0) return false;
+      const x = box.x + box.width / 2;
+      const y = box.y + box.height / 2;
+      await page.mouse.move(x, y, { steps: 8 });
+      await page.mouse.down();
+      await page.mouse.up();
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
   const tryChooser = async (
     selector: string,
     timeoutMs: number,
   ): Promise<import('puppeteer-core').FileChooser | null> => {
     try {
+      const clickedTrusted = await trustedClick(selector);
       return await Promise.all([
         page.waitForFileChooser({ timeout: timeoutMs }),
-        page.evaluate((targetSelector: string) => {
-          const target = document.querySelector(targetSelector);
-          if (target instanceof HTMLElement) {
-            target.click();
-            return;
-          }
-          throw new Error(`No Gemini upload trigger matched ${targetSelector}`);
-        }, selector),
+        clickedTrusted
+          ? Promise.resolve()
+          : page.evaluate((targetSelector: string) => {
+              const target = document.querySelector(targetSelector);
+              if (target instanceof HTMLElement) {
+                target.click();
+                return;
+              }
+              throw new Error(`No Gemini upload trigger matched ${targetSelector}`);
+            }, selector),
       ]).then(([fileChooser]) => fileChooser);
     } catch {
       return null;
     }
   };
 
+  const cdp = await page.createCDPSession();
+  await cdp.send('Page.enable').catch(() => undefined);
+  await cdp.send('DOM.enable').catch(() => undefined);
+  await cdp.send('Page.setInterceptFileChooserDialog', { enabled: true }).catch(() => undefined);
+
+  const tryInterceptedChooser = async (selector: string, timeoutMs: number): Promise<boolean> => {
+    const chooserPromise = new Promise<{ backendNodeId?: number } | null>((resolve) => {
+      const timer = setTimeout(() => {
+        cdp.off('Page.fileChooserOpened', onOpened);
+        resolve(null);
+      }, timeoutMs);
+      const onOpened = (event: { backendNodeId?: number }) => {
+        clearTimeout(timer);
+        cdp.off('Page.fileChooserOpened', onOpened);
+        resolve(event);
+      };
+      cdp.on('Page.fileChooserOpened', onOpened);
+    });
+    const clickedTrusted = await trustedClick(selector);
+    if (!clickedTrusted) {
+      await page.evaluate((targetSelector: string) => {
+        const target = document.querySelector(targetSelector);
+        if (target instanceof HTMLElement) {
+          target.click();
+          return;
+        }
+        throw new Error(`No Gemini upload trigger matched ${targetSelector}`);
+      }, selector).catch(() => undefined);
+    }
+    const chooser = await chooserPromise;
+    if (!chooser || typeof chooser.backendNodeId !== 'number') {
+      return false;
+    }
+    await cdp.send('DOM.setFileInputFiles', {
+      backendNodeId: chooser.backendNodeId,
+      files: [...attachmentPaths],
+    });
+    return true;
+  };
+
   const selectorOrder = imageOnly
-    ? [GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR]
-    : [GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR, GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR];
+    ? [GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR, GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR]
+    : [GEMINI_UPLOAD_FILES_MENU_SELECTOR, GEMINI_HIDDEN_FILE_UPLOAD_SELECTOR, GEMINI_HIDDEN_IMAGE_UPLOAD_SELECTOR];
 
-  const chooserAttempt = await runOrderedSurfaceFallback({
-    attempts: selectorOrder.map((selector, index) => ({
-      name: selector,
-      run: async () => tryChooser(selector, index === 0 ? 2_500 : 10_000),
-    })),
-    isSuccess: (value) => value !== null,
-  });
+  try {
+    const interceptedAttempt = await runOrderedSurfaceFallback({
+      attempts: selectorOrder.map((selector, index) => ({
+        name: `intercept:${selector}`,
+        run: async () => tryInterceptedChooser(selector, index === 0 ? 2_500 : 10_000),
+      })),
+      isSuccess: (value) => value === true,
+    });
+    if (interceptedAttempt.ok && interceptedAttempt.value === true) {
+      return;
+    }
 
-  if (!chooserAttempt.ok || !chooserAttempt.value) {
-    throw new Error('Waiting for Gemini file chooser failed across all known upload triggers.');
+    const chooserAttempt = await runOrderedSurfaceFallback({
+      attempts: selectorOrder.map((selector, index) => ({
+        name: selector,
+        run: async () => tryChooser(selector, index === 0 ? 2_500 : 10_000),
+      })),
+      isSuccess: (value) => value !== null,
+    });
+
+    if (!chooserAttempt.ok || !chooserAttempt.value) {
+      throw new Error('Waiting for Gemini file chooser failed across all known upload triggers.');
+    }
+
+    await chooserAttempt.value.accept(attachmentPaths);
+  } finally {
+    await cdp.send('Page.setInterceptFileChooserDialog', { enabled: false }).catch(() => undefined);
+    await cdp.detach().catch(() => undefined);
   }
-
-  await chooserAttempt.value.accept(attachmentPaths);
 }
 
 async function readGeminiNativeState(page: Page): Promise<{

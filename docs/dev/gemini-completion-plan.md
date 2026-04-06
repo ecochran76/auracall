@@ -85,6 +85,78 @@ Gemini completion should mean:
 4. the known supported Gemini surfaces are live-proven enough to trust
 5. remaining out-of-scope gaps are documented instead of silently implied
 
+Operational parity with ChatGPT/Grok should now be interpreted more narrowly
+and more usefully:
+
+- the same operator can reach equivalent browser CRUD/cache workflows from the
+  CLI without provider-specific command surprises
+- provider/account-scoped cache tooling works for Gemini anywhere Gemini now
+  writes real cache state
+- command help, target enums, service wrappers, and docs all agree on what
+  Gemini supports today
+- missing Gemini surfaces are explicit provider gaps, not stale CLI exclusions
+  or undocumented target gating
+
+That means "Gemini parity" is no longer primarily a browser-automation question.
+The remaining work is mostly operational consistency and coverage around the now
+real Gemini browser provider.
+
+## Audited parity gaps (2026-04-05)
+
+The current Gemini browser provider is materially stronger than when this plan
+started:
+
+- root prompt execution is green
+- Gem CRUD is green:
+  - create
+  - rename
+  - delete
+- Gem knowledge file CRUD is green:
+  - add
+  - list
+  - remove
+- root conversation delete is green
+- browser doctor identity and cache identity are green
+
+The next gaps are now narrower and more operational:
+
+1. Cache model centralization is incomplete.
+   - Gemini cache parity work proved that provider-cache policy is still split
+     across:
+     - `LlmService`
+     - cache helper modules
+     - `bin/auracall.ts`
+   - the CLI still reconstructs cache search context, provider URL ownership,
+     identity assertion, and maintenance discovery in multiple places.
+   - as long as cache policy is partially CLI-owned, provider parity will keep
+     drifting command by command.
+
+2. Some CLI target gates still lag provider reality.
+   - We already fixed one live example:
+     - top-level `auracall delete <id> --target gemini`
+   - remaining `chatgpt|grok` gates need review so Gemini exclusions reflect
+     actual provider capability rather than stale wiring.
+
+3. Gemini CLI regression coverage is too thin.
+   - current Gemini tests are mostly adapter/helper tests
+   - there is not yet enough CLI coverage to stop target-enum regressions from
+     silently reappearing
+
+4. Immediate post-delete cache/list behavior still needs hardening.
+   - live proof showed that Gemini conversation delete can succeed while the
+     first non-refresh conversation list briefly returns an empty cache result
+   - refreshed readback is currently the authoritative proof
+
+5. Explicit provider gaps still remain and should stay visible.
+   - conversation rename
+   - conversation context parity
+   - conversation files/artifacts parity
+   - account-level files parity
+   - clone parity
+
+These should be treated as productized backlog items, not hidden under generic
+"Gemini support" wording.
+
 ## Scope split
 
 ### Shared/runtime-owned
@@ -229,8 +301,156 @@ Current proof progress:
     - but the answer is still attachment-blind:
       - `Please upload the image you're referring to, and I'll describe it for you in a single sentence.`
     - active gap:
-      - preserve staged image context through submit so Gemini actually consumes
-        it as model input
+    - preserve staged image context through submit so Gemini actually consumes
+      it as model input
+
+### Slice 4: Reach Gemini CLI/operator parity for already-supported browser surfaces
+
+Goal:
+- remove stale CLI exclusions for Gemini where the provider already has a real
+  implementation and live proof
+
+Primary focus:
+- target enums and help text
+- cache CLI parity for Gemini cache data
+- command/documentation consistency
+
+Must-cover surfaces:
+- `projects --target gemini`
+- `projects remove --target gemini`
+- `projects files add|list|remove --target gemini`
+- `conversations --target gemini`
+- `delete --target gemini`
+- `cache ... --provider gemini` wherever Gemini cache is already real
+
+Acceptance:
+- no stale `chatgpt|grok` exclusions remain for Gemini-supported surfaces
+- docs and help text match actual behavior
+- focused CLI tests cover Gemini target acceptance on the newly supported
+  command set
+
+Status:
+- mostly complete
+- already completed within this slice:
+  - direct-page Gem delete
+  - direct-page conversation delete
+  - top-level `delete --target gemini`
+  - Gem knowledge `projects files add|list|remove --target gemini`
+  - Gemini cache provider acceptance across the main `cache ...` command family
+  - focused Gemini CLI cache parity coverage
+
+Current boundary:
+- the broad target-gate/cache-acceptance gap is no longer the main blocker
+- the remaining CLI parity work should now be treated as explicit provider
+  backlog, not as “Gemini still lacks basic operator parity”
+
+### Slice 5: Harden Gemini cache freshness semantics
+
+Goal:
+- make Gemini cache behavior trustworthy enough that operators do not need to
+  remember special-case refresh rules after destructive actions
+
+Primary focus:
+- post-delete conversation cache refresh
+- stale-empty cache prevention
+- refreshed-vs-cached read semantics in CLI output
+
+Acceptance:
+- Gemini delete flows do not leave the first ordinary list read in a misleading
+  empty state
+- cache behavior is documented where fresh reads are still required
+
+Status:
+- materially addressed
+- remaining problem:
+  - cache freshness improvements landed, but deeper cache model
+    centralization still belongs to shared subsystem work, not Gemini-only
+    follow-up
+
+### Slice 5.5: Centralize provider-cache policy behind shared seams
+
+Goal:
+- move provider-cache policy out of ad hoc CLI code and into one shared cache
+  context / maintenance model
+
+Primary focus:
+- one shared cache operator context resolver:
+  - provider validation
+  - configured URL ownership
+  - cache identity resolution mode
+  - deterministic operator-mode cache context
+- one shared cache maintenance discovery path instead of hand-built
+  provider/identity scans in `bin/auracall.ts`
+- stop manually assembling cache context objects where `LlmService` or a shared
+  cache helper should own the shape
+
+Acceptance:
+- cache inspection/search/export/maintenance commands use the same shared cache
+  context resolution path
+- CLI no longer duplicates provider-cache URL logic or cache identity policy in
+  multiple command families
+- future provider cache parity requires fewer command-local edits
+
+Status:
+- partially addressed
+- already completed within this slice:
+  - shared cache operator context resolver
+  - shared cache maintenance discovery seam
+  - reduced manual cache-context assembly in CLI helpers
+- remaining work:
+  - move more maintenance internals out of `bin/auracall.ts`
+  - land artifact-first cache model improvements from:
+    - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+
+### Slice 6: Close explicit provider-surface gaps toward ChatGPT/Grok parity
+
+Goal:
+- work through the remaining Gemini gaps as explicit provider backlog, in a
+  clear order
+
+Recommended order:
+1. conversation rename
+2. conversation context parity
+3. conversation files / artifacts parity
+4. account-level files parity
+5. clone parity if Gemini exposes a real native surface
+
+Acceptance:
+- each surface should land with:
+  - CLI target exposure
+  - focused tests
+  - live proof or explicit deferred note
+
+Status:
+- not started
+
+### Closeout assessment for Gemini CLI parity for now
+
+Gemini CLI parity can be treated as closed for now when all of the following
+are true:
+
+1. already-supported Gemini browser/provider surfaces have no stale target
+   exclusions in the CLI
+2. `cache ... --provider gemini` works across the main operator/read paths
+3. focused Gemini CLI regression coverage exists for those widened paths
+4. remaining gaps are tracked explicitly as provider backlog, not hidden behind
+   stale CLI gates
+
+Current assessment:
+- this bar is effectively met
+- the remaining work should be tracked under two different buckets:
+  - shared cache architecture work:
+    - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+  - Gemini provider backlog:
+    - conversation rename
+    - conversation context/files/artifacts parity
+    - account-level files parity
+
+Practical implication:
+- stop treating Gemini as blocked on generic CLI/operator parity
+- keep Gemini in maintenance mode for already-green surfaces
+- spend the next effort either on shared cache architecture or on one explicit
+  provider gap at a time
 
 ### Current architectural audit
 
@@ -257,6 +477,18 @@ Current working conclusion:
 Goal:
 - audit and begin converging Gemini native attachment workflow onto the same
   phase model already proven in ChatGPT/Grok
+
+Deferred follow-on TODO:
+- make Gemini browser flows captcha-aware without promoting that work ahead of
+  the current architecture/refactor line:
+  - detect `google.com/sorry` and visible reCAPTCHA/human-verification
+    surfaces explicitly
+  - fail with a provider/operator-meaningful blocked-state error instead of a
+    generic route-settle failure
+  - support one bounded real-pointer assist for simple checkbox challenges
+    when safe
+  - otherwise leave the managed browser profile open and require manual solve
+    plus resume
 
 ## Next deliberate Gemini track
 

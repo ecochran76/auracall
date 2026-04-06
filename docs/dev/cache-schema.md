@@ -1,5 +1,10 @@
 # Cache Schema (Phase 7)
 
+Architecture reference:
+- [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+  defines the anti-drift subsystem model. This schema doc describes the current
+  concrete layout and should evolve in step with that architecture plan.
+
 This document defines the on-disk cache layout and index structure for LLM services.
 
 The default migration mode is `cache.store = "dual"`:
@@ -95,7 +100,10 @@ JSON cache files are stored as `ProviderCache<T>`:
 - `projects.json`: `Project[]` wrapped in cache metadata.
 - `conversations.json`: `Conversation[]` wrapped in cache metadata.
 - `contexts/<id>.json`: `ConversationContext` wrapped in cache metadata.
-  - Includes `messages[]` plus optional `sources[]` (consulted URLs/citations, optional `sourceGroup`).
+  - Includes `messages[]` plus optional:
+    - `sources[]` (consulted URLs/citations, optional `sourceGroup`)
+    - `files[]`
+    - `artifacts[]`
 - `conversation-files/<id>.json`: `FileRef[]` wrapped in cache metadata.
 - `project-instructions/<projectId>.json`: `{ content: string, format: "md" }` wrapped in cache metadata.
 - `project-knowledge/<projectId>/manifest.json`: `FileRef[]` wrapped in cache metadata.
@@ -139,6 +147,10 @@ SQLite store uses:
   - local/remote asset pointers:
     - `asset_id`, `provider`, `identity_key`, `size_bytes`, `mime_type`,
       `storage_relpath`, `status`, `checksum_sha256`
+- `artifact_bindings`
+  - normalized conversation artifact references:
+    - `artifact_id`, `conversation_id`, `message_index`, `message_id`,
+      `title`, `kind`, `uri`, `provider`, `metadata_json`
 
 ## Export Targets
 

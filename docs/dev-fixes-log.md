@@ -8297,3 +8297,793 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - Gemini should not reuse the “no guard except generic retry” path once it
     starts doing real browser CRUD; even a simpler guard than ChatGPT’s is
     materially better than ad hoc sleeps
+
+## 2026-04-05 - Put Gemini prompt execution behind the shared llmService contract
+
+- Context:
+  - Gemini was still partly living on a legacy browserless prompt path while
+    ChatGPT/Grok-oriented browser architecture had moved toward the shared
+    `LlmService` seam
+  - that mismatch made Gemini harder to reason about, harder to cache
+    correctly, and easier to bind to the wrong live tab/profile
+- Fix:
+  - introduced a shared prompt contract on the provider + `LlmService` layers
+  - implemented Gemini prompt execution through the managed browser/service
+    path with:
+    - browser-service tab resolution
+    - live composer focus/insertion
+    - pointer-based send
+    - DOM polling for the new assistant response and conversation id/url
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once a provider starts needing real CRUD/session/cache behavior, prompt
+    execution should live on the same disciplined service contract as the rest
+    of the provider surface; split browserless/browserful paths create state,
+    targeting, and cache drift
+
+## 2026-04-05 - Gemini prompt-response readers must strip provider UI chrome
+
+- Context:
+  - after moving Gemini prompt execution onto the managed browser path,
+    `runPrompt(...)` stopped timing out but could still return polluted answer
+    text like:
+    - `Show thinking Gemini said ACK smoke-...`
+- Root cause:
+  - live Gemini can expose the completed assistant answer inside nodes that
+    also contain provider UI chrome and action labels
+  - taking the newest visible response block verbatim is therefore too broad
+    even when the correct turn is selected
+- Fix:
+  - prioritized assistant-specific Gemini response containers ahead of the
+    broad fallback scan
+  - added assistant-text sanitization to strip leading Gemini UI labels and
+    trailing action labels from the extracted response text
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
+  - live:
+    - disposable prompt:
+      - `Disposable CRUD smoke smoke-1775434245568: reply with exactly ACK smoke-1775434245568`
+    - returned:
+      - `ACK smoke-1775434245568`
+    - conversation id:
+      - `d426a807eaa1c09c`
+- Durable lesson:
+  - for Gemini browser reads, "assistant container found" is not enough;
+    extraction must account for provider-owned labels/actions that share the
+    same rendered response region
+
+## 2026-04-05 - Re-prove Gemini root-chat CRUD as one managed create/delete smoke
+
+- Context:
+  - the Gemini prompt path and the Gemini delete path had each been proven in
+    isolation, but the next honest checkpoint was one bounded live smoke using
+    the same managed browser profile and returned conversation id
+- Fix:
+  - ran a disposable managed-path smoke that:
+    - created a Gemini root chat through `runPrompt(...)`
+    - captured the returned `conversationId`
+    - deleted that same conversation through the provider delete flow
+    - verified absence from a fresh root conversation list
+- Verification:
+  - live:
+    - create prompt:
+      - `Disposable CRUD smoke smoke-1775434245568: reply with exactly ACK smoke-1775434245568`
+    - create result:
+      - text: `ACK smoke-1775434245568`
+      - conversation id: `d426a807eaa1c09c`
+    - delete verification:
+      - `stillPresent: false`
+- Durable lesson:
+  - for Gemini CRUD checkpoints, prefer one bounded end-to-end managed smoke
+    over separate create-only and delete-only proofs; it validates id handoff
+    and authoritative root-list verification in the same slice
+
+## 2026-04-05 - Cache identity should follow the detected logged-in service account
+
+- Context:
+  - cache keys were still allowed to prefer configured/profile identity hints
+    before the actual logged-in service account
+  - that makes cross-account cache segregation brittle when a managed browser
+    profile is signed into a different account than the static config implies
+- Fix:
+  - changed shared `LlmService.resolveCacheIdentity(...)` precedence so:
+    - detected provider identity wins when available
+    - configured/profile identity stays fallback only
+    - prompt fallback still remains last resort when detection is disabled or
+      unavailable
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceIdentity.test.ts tests/browser/geminiAdapter.test.ts`
+  - live on `default -> gemini`:
+    - provider identity:
+      - `Eric Cochran <ecochran76@gmail.com>`
+    - resolved cache key:
+      - `ecochran76@gmail.com`
+- Durable lesson:
+  - service/account cache segregation should key off the live signed-in service
+    identity whenever the provider can determine it; config identity is a
+    fallback hint, not the authority
+
+## 2026-04-05 - Gemini browser doctor should report the same live account identity as cache/provider paths
+
+- Context:
+  - after fixing cache identity precedence, Gemini still had one stale
+    inconsistency:
+    - browser doctor claimed Gemini account identity probing was unsupported
+    - provider/cache paths could already resolve the live signed-in account
+- Fix:
+  - removed the Gemini-specific unsupported branch from
+    `inspectBrowserDoctorIdentity(...)`
+  - browser doctor now probes Gemini identity through the same live provider
+    path used elsewhere when a managed session is alive
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/geminiAdapter.test.ts`
+  - live on `default -> gemini`:
+    - `supported: true`
+    - `attempted: true`
+    - `identity: Eric Cochran <ecochran76@gmail.com>`
+- Durable lesson:
+  - once a provider can determine the live signed-in account, doctor/debug
+    surfaces should expose that same truth; leaving one surface marked
+    unsupported creates avoidable confusion about cache/account authority
+
+## 2026-04-05 - Gemini Gem name resolution must not treat arbitrary names as ids
+
+- Context:
+  - while validating Gemini Gem project-cache updates, a live proof appeared to
+    resolve a newly created Gem name from cache
+  - the first result was misleading because `normalizeGeminiProjectId(...)`
+    accepted arbitrary free-form names as if they were valid Gemini Gem ids
+- Root cause:
+  - Gemini project id normalization was too permissive:
+    - any non-empty trimmed string survived after light prefix stripping
+  - that let name-based resolution bypass the cache path entirely
+- Fix:
+  - restricted Gemini project-id normalization to:
+    - ids extracted from Gemini URLs
+    - id-like bare tokens only
+  - arbitrary Gem names now fall through to the intended cache-backed
+    name-resolution path
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts tests/browser/llmServiceIdentity.test.ts tests/browser/profileDoctor.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - created Gem:
+      - `61f0e955b0ca`
+    - name lookup with `allowAutoRefresh: false` resolved back to:
+      - `61f0e955b0ca`
+- Durable lesson:
+  - provider id normalizers must stay strict; if a selector can be both a human
+    name and an id, over-accepting the id path can create false-positive cache
+    proofs and hide real cache bugs
+
+## 2026-04-05 - Gemini Gem knowledge upload uses hidden upload hosts, not plain file inputs
+
+- Context:
+  - the next Gemini parity slice is Gem knowledge file CRUD, and the first live
+    question was whether the Gem editor exposes an ordinary file input after
+    opening the knowledge upload menu
+- Finding:
+  - the Gem knowledge surface does not expose a normal visible
+    `input[type="file"]` path on the edit page
+  - live DOM mapping on `gems/edit/<id>` showed:
+    - upload trigger:
+      - `button[aria-label*="upload file menu for Gem knowledge"]`
+    - upload menu item:
+      - `data-test-id="local-images-files-uploader-button"`
+    - hidden upload host:
+      - `data-test-id="hidden-local-image-upload-button"`
+- Durable lesson:
+  - Gemini Gem knowledge upload should reuse the existing Gemini hidden-upload
+    dispatch strategy from the browser-native path rather than assuming a
+    standard file-input workflow
+
+## 2026-04-05 - Gemini Gem edit has a second hidden upload surface and chooser activation is stricter than plain prompt upload
+
+- Context:
+  - while implementing Gemini Gem knowledge file CRUD, live upload kept failing
+    even after the edit-surface controls were mapped and the service seam was
+    wired through `uploadProjectFiles(...)`
+- Findings:
+  - the Gem edit page contains at least two upload surfaces:
+    - the Gem knowledge section
+    - the preview conversation composer lower on the page
+  - the knowledge section exposes its own hidden buttons with:
+    - `xapfileselectortrigger`
+    - `data-test-id="hidden-local-image-upload-button"`
+    - `data-test-id="hidden-local-file-upload-button"`
+  - compile-safe upload/list scaffolding can be added before the live upload is
+    fully green, but live proof still matters here because the hidden-trigger
+    activation semantics differ from ordinary prompt upload
+  - on the live Gem editor, both of these attempts are currently insufficient:
+    - synthetic `fileSelected` dispatch alone
+    - CDP chooser interception plus naive button activation
+- Durable lesson:
+  - Gemini Gem knowledge upload should not be treated as "prompt upload, but on
+    a different page"
+  - the adapter needs a knowledge-surface-specific activation sequence that is
+    validated live before claiming Gem knowledge CRUD is green
+
+## 2026-04-05 - Gemini root upload can open the native chooser without Puppeteer emitting a filechooser event
+
+- Context:
+  - root new-chat Gemini file upload had regressed even though the visible
+    upload button and menu still looked normal on `/app`
+  - a live rerun showed the native file chooser opening, but Aura-Call still
+    timed out waiting for Puppeteer's `waitForFileChooser()`
+- Fix:
+  - updated Gemini browser-native upload to:
+    - prefer trusted mouse clicks on visible upload controls
+    - intercept `Page.fileChooserOpened` through CDP
+    - inject files with `DOM.setFileInputFiles`
+    - retain Puppeteer chooser handling only as fallback
+- Verification:
+  - `pnpm vitest run tests/gemini.test.ts tests/gemini-web`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live root composer upload on `default -> gemini`:
+    - staged file:
+      - `gemini-new-chat-upload-smoke.txt`
+    - Gemini answer included:
+      - `GEMINI NEW CHAT UPLOAD SMOKE 1775437518`
+- Durable lesson:
+  - for Gemini upload surfaces, "chooser opened" and "Puppeteer observed a
+    filechooser" are not equivalent
+  - when Gemini uses native chooser plumbing behind custom controls, CDP
+    chooser interception is more reliable than relying only on Puppeteer's
+    higher-level filechooser event
+
+## 2026-04-05 - Gemini Gem knowledge persistence needs explicit save-state verification and hydrated readback
+
+- Context:
+  - Gemini Gem knowledge upload on the edit page progressed from chooser
+    failures to a narrower inconsistency:
+    - upload/save returned success
+    - a fresh `projects files list --target gemini` still returned empty
+- Root cause:
+  - two separate issues were mixed together:
+    - the Gem edit save path should be verified against Gemini's real status
+      indicator (`Gem saved`), not guessed from route changes alone
+    - the fresh list/readback path could scrape the edit page before Gemini had
+      rehydrated the persisted knowledge-file rows
+- Fix:
+  - updated Gemini Gem save verification to watch the live save-state element:
+    - `div[role="status"].save-state`
+    - `Gem saved`
+  - kept the save-button helper focused on trusted clicks against the visible
+    `Save` / `Update` action surface
+  - taught Gemini `listProjectFiles(...)` to wait briefly for hydrated
+    knowledge-file signals before concluding the list is empty
+  - widened CLI `projects files add|list|remove` target validation to include
+    Gemini so the real product path can exercise the provider directly
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live on Gem:
+    - `61f0e955b0ca`
+  - live upload:
+    - `pnpm tsx bin/auracall.ts projects files add 61f0e955b0ca --file /home/ecochran76/workspace.local/oracle/AGENTS.md --target gemini --profile default --verbose`
+    - returned:
+      - `Uploaded 1 file(s) to project 61f0e955b0ca.`
+  - fresh live list:
+    - `pnpm tsx bin/auracall.ts projects files list 61f0e955b0ca --target gemini --profile default --verbose`
+    - returned:
+      - `AGENTS.md`
+- Durable lesson:
+  - on Gemini Gem edit surfaces, mutation proof and read proof are separate:
+    a real save indicator confirms persistence, but fresh list/readback still
+    needs a bounded hydration wait before an empty result is trustworthy
+
+## 2026-04-05 - Gemini Gem knowledge delete must require explicit `Gem not saved` -> `Gem saved` transitions
+
+- Context:
+  - after Gemini Gem knowledge add/list went green, the first real delete path
+    could still fail with:
+    - `Gemini Gem knowledge file "AGENTS.md" still appears after delete.`
+- Root cause:
+  - the initial delete implementation reused a permissive unsaved-state check
+    that could pass even when the remove action had not actually dirtied the
+    Gem
+  - that allowed false-positive progress through the delete flow and made the
+    final post-save readback look like the only failure
+- Fix:
+  - updated Gemini Gem knowledge delete to require the real status transitions:
+    - `Gem not saved` after clicking the row-level `Remove file <name>` control
+    - `Gem saved` after clicking `Update`
+  - kept the final proof on a fresh edit-page readback after save
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - delete:
+      - `pnpm tsx bin/auracall.ts projects files remove 61f0e955b0ca AGENTS.md --target gemini --profile default --verbose`
+      - returned:
+        - `Removed "AGENTS.md" from project 61f0e955b0ca.`
+    - fresh list:
+      - `pnpm tsx bin/auracall.ts projects files list 61f0e955b0ca --target gemini --profile default --verbose`
+      - returned:
+        - `No files found for project 61f0e955b0ca.`
+- Durable lesson:
+  - on Gemini Gem edit pages, save-state text is the authority for destructive
+    knowledge mutations; permissive fallbacks hide whether the remove action
+    actually registered before `Update`
+
+## 2026-04-05 - Gemini Gem delete is more reliable from the direct Gem page than the manager row
+
+- Context:
+  - Gemini Gem delete kept looking flaky when driven from the Gem manager
+    surface
+  - row-menu assumptions were easy to blur with other Gemini menus and did not
+    consistently produce the delete confirmation in automation
+- Root cause:
+  - the manager page is a good verification surface, but it was not the most
+    stable mutation surface for delete on this runtime/profile pairing
+  - the direct Gem page exposes a cleaner action chain with dedicated controls:
+    - `conversation-actions-menu-icon-button`
+    - `delete-button`
+    - `confirm-button`
+- Fix:
+  - moved the Gemini Gem delete mutation flow to `https://gemini.google.com/gem/<id>`
+  - kept `gems/view` only for the final absence proof after the destructive
+    action has already succeeded
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json pnpm tsx bin/auracall.ts projects remove 72ce49fba4a6 --target gemini --profile default --verbose`
+    - returned:
+      - `Removed project 72ce49fba4a6.`
+    - fresh `projects --target gemini` no longer included:
+      - `72ce49fba4a6`
+- Durable lesson:
+  - on Gemini, prefer the direct resource page for destructive Gem actions when
+    it exposes a dedicated action menu; use the manager page for readback and
+    absence verification instead of treating the row menu as the primary
+    mutation authority
+
+## 2026-04-05 - Gemini conversation delete is more reliable from the direct conversation page than the sidebar row
+
+- Context:
+  - Gemini root conversation delete still used an older sidebar/list-oriented
+    flow even after Gem delete had gone green on the direct resource page
+- Root cause:
+  - Gemini exposes the same dedicated action-menu UX on `https://gemini.google.com/app/<id>`
+    as it does on `https://gemini.google.com/gem/<id>`
+  - the sidebar/list surface adds unnecessary state assumptions for a mutation
+    that already has a direct page authority
+  - a separate CLI mismatch hid the provider capability:
+    top-level `auracall delete <id>` still only accepted `chatgpt|grok`
+- Fix:
+  - moved Gemini conversation delete onto the direct `/app/<id>` flow using:
+    - `conversation-actions-menu-icon-button`
+    - `delete-button`
+    - `confirm-button`
+  - widened the top-level delete command to accept `--target gemini`
+  - kept absence verification on a refreshed conversation list after the
+    mutation
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/default/gemini/cookies.json pnpm tsx bin/auracall.ts delete f7fb3a60d65dfe49 --target gemini --profile default --yes`
+    - returned:
+      - `Deleted successfully.`
+    - refreshed `conversations --target gemini --refresh` no longer included:
+      - `f7fb3a60d65dfe49`
+- Durable lesson:
+  - for Gemini destructive actions, prefer the direct resource page whenever it
+    exposes the same native action menu as the list surface
+  - immediately reused caches can lag after Gemini conversation delete, so a
+    refreshed list read is a stronger proof than the first post-delete cached
+    listing
+
+## 2026-04-05 - Gemini cache CLI parity should be handled as shared provider-cache plumbing, not one-off command edits
+
+- Context:
+  - Gemini had real provider/account-scoped cache data and live cache identity,
+    but large parts of the cache CLI still hard-excluded `gemini`
+  - the first practical symptom was operator inconsistency:
+    Gemini CRUD/cache work was real, but `cache` and `cache export` still
+    behaved as though Gemini had no cache surface
+- Root cause:
+  - cache command families had repeated local provider gates typed as
+    `chatgpt|grok`
+  - cache maintenance/reporting helpers also hardcoded those same provider
+    unions, so Gemini parity could not be fixed by help-text edits alone
+- Fix:
+  - centralized cache-provider validation around:
+    - `chatgpt`
+    - `gemini`
+    - `grok`
+  - widened the cache inspection/export/maintenance flows to use the same
+    provider-aware cache plumbing
+  - added a provider-aware configured-URL helper so Gemini cache commands use
+    the correct service URL semantics
+  - added a bounded Gemini delete-refresh guard so transient empty post-delete
+    reads do not immediately poison the conversation cache
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - local:
+    - `pnpm tsx bin/auracall.ts cache --provider gemini`
+    - returned live Gemini `projects` / `conversations` cache entries
+- Durable lesson:
+  - once a provider writes real cache state, cache CLI/operator parity belongs
+    to shared provider-cache plumbing; leaving repeated provider enums in
+    individual commands guarantees drift
+
+## 2026-04-05 - Cache operator flows must not reuse live account detection when the user explicitly targets cache
+
+- Context:
+  - Gemini cache/operator commands were widened to accept `--provider gemini`,
+    but some deeper cache-context flows still behaved inconsistently under test
+  - fixture-backed `cache context list/get --provider gemini` could drift to the
+    live signed-in Gemini identity instead of the requested seeded cache
+- Root cause:
+  - cache operator commands correctly resolved a provider cache context up
+    front, but deeper helper methods re-ran cache resolution with default live
+    detection semantics
+  - cached conversation-context lookup also treated non-UUID selectors as
+    titles, which is wrong for Gemini's native hex conversation IDs
+- Fix:
+  - added explicit `cacheResolve` options to the `LlmService` cached context
+    list/get helpers
+  - made Gemini cache context CLI commands pass `detect: false`
+  - accepted provider-native normalized conversation IDs before title matching
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - when an operator explicitly asks to inspect cache, deterministic provider
+    cache resolution is more important than live browser identity detection
+  - conversation selector logic must follow provider-native ID semantics rather
+    than assuming UUIDs
+
+## 2026-04-05 - Gemini cache parity should be tested against JSON fallback catalogs, not only live browser state
+
+- Context:
+  - Gemini cache CLI parity moved beyond simple provider acceptance into read
+    paths like keyword search, source inspection, and file inspection
+  - these operator commands can read either SQLite catalogs or JSON fallback
+    cache documents depending on what exists on disk
+- Root cause:
+  - without fixture coverage, Gemini cache regressions could hide behind a live
+    machine's existing SQLite state or signed-in browser identity
+  - that made it hard to prove provider parity for deterministic operator flows
+- Fix:
+  - expanded the Gemini CLI cache regression fixture to seed:
+    - cached conversation messages
+    - cached source links
+    - cached file refs in conversation context
+  - verified:
+    - `cache search`
+    - `cache sources list`
+    - `cache files list`
+    - `cache files resolve`
+    against Gemini's provider cache namespace
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - provider cache/operator parity needs fixture-backed coverage for the JSON
+    fallback path, not just live browser smokes or SQLite-backed happy paths
+
+## 2026-04-05 - Provider cache context construction should live in one shared operator seam
+
+- Context:
+  - Gemini parity work kept surfacing stale cache behavior in multiple CLI
+    command families
+  - the root problem was not Gemini-specific selectors; it was that cache
+    provider policy was duplicated in `bin/auracall.ts`
+- Root cause:
+  - `LlmService` owned cache identity/context semantics, but the CLI still
+    reimplemented:
+    - provider validation
+    - configured URL ownership
+    - operator-mode cache resolution
+    - maintenance context discovery
+- Fix:
+  - added a shared cache operator module:
+    - [operatorContext.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/operatorContext.ts)
+  - moved cache export/context/search/catalog flows and maintenance discovery
+    onto that shared seam
+  - removed one remaining manual cache context assembly site in browser name
+    hint resolution
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once provider cache state is real, cache context construction is shared
+    infrastructure, not command-local glue
+
+## 2026-04-05 - Cache robustness depends on separating canonical records from derived catalogs
+
+- Context:
+  - the current cache subsystem already supports:
+    - JSON canonical-ish payloads
+    - SQLite mirrors/indexes
+    - source and file catalogs
+    - export and maintenance flows
+  - but those concerns are still close enough together that maintenance and
+    feature growth can blur what is authoritative versus what is derived
+- Durable lesson:
+  - treat conversation/project/file/source/artifact payloads as canonical cache
+    records
+  - treat search catalogs, parity indexes, export views, and maintenance scans
+    as derived projections over those records
+  - robustness and searchability both improve when the write path and the query
+    path are allowed to evolve separately behind an explicit schema contract
+
+## 2026-04-05 - Cache planning should anchor future work to one subsystem architecture doc
+
+- Context:
+  - the cache stack now spans:
+    - JSON records
+    - SQLite projections
+    - catalog/query helpers
+    - export tooling
+    - maintenance tooling
+  - without one architectural reference, those layers can drift independently
+- Fix:
+  - added:
+    - [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+  - linked it from the active schema and TODO docs so future cache work has one
+    anti-drift reference point
+- Durable lesson:
+  - once a subsystem supports multiple storage layers and operator surfaces,
+    planning drift becomes as dangerous as code drift; the architecture contract
+    needs one explicit home
+
+## 2026-04-05 - Artifact support needs a first-class cache projection seam before more cache growth
+
+- Context:
+  - canonical conversation context already carries `artifacts[]`
+  - exports already render those artifacts
+  - sources/files already have first-class SQL catalog projections
+  - artifacts still do not
+- Root cause:
+  - artifact data is present, but the cache subsystem still lacks a shared
+    projection/query seam for it
+  - that encourages JSON-scan-heavy operator behavior and risks provider-local
+    artifact heuristics drifting into export or adapter code
+- Fix:
+  - wrote:
+    - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+  - defined the next bounded implementation slice around:
+    - `artifact_bindings`
+    - projection-sync extraction
+    - a minimal `cache artifacts list` surface
+- Durable lesson:
+  - once a canonical entity exists in cache payloads, it should gain a
+    first-class projection seam before more operator features are layered on
+    top of raw JSON access
+
+## 2026-04-05 - Gemini CLI parity should be closed by explicit scope, not by vague completeness
+
+- Context:
+  - Gemini browser/provider support now covers real project, conversation,
+    delete, Gem knowledge, and cache operator surfaces
+  - remaining gaps are real, but they are no longer the same kind of problem as
+    stale CLI target exclusions
+- Root cause:
+  - “Gemini parity” can sprawl unless the team distinguishes:
+    - CLI/operator parity for already-supported surfaces
+    - shared cache architecture work
+    - explicit provider backlog
+- Fix:
+  - updated planning docs to treat Gemini CLI parity for already-green surfaces
+    as closed for now
+  - left the remaining work in explicit backlog buckets:
+    - shared cache architecture
+    - conversation rename
+    - conversation context/files/artifacts parity
+    - account-level files parity
+- Durable lesson:
+  - closeout decisions stay robust when the done-bar is defined by explicit
+    supported surfaces and explicit backlog, not by a fuzzy sense that one
+    provider is “fully complete”
+
+## 2026-04-06 - Canonical context entities should project through one shared sync seam
+
+- Context:
+  - cache writes for conversation context already projected:
+    - `source_links`
+    - `file_bindings`
+  - but that relation sync still lived inline inside `SqliteCacheStore`
+  - artifacts existed in canonical context and export, but still had no
+    first-class projection path
+- Root cause:
+  - projection behavior was split across ad hoc store methods instead of one
+    rebuildable shared seam
+  - that made it harder to add artifacts without repeating the same pattern a
+    third time
+- Fix:
+  - added:
+    - [projectionSync.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/cache/projectionSync.ts)
+  - moved source/file relation sync behind that shared module
+  - added `artifact_bindings` and artifact catalog reads on top of the same
+    projection boundary
+- Verification:
+  - `pnpm vitest run tests/browser/cacheCatalog.test.ts tests/browser/providerCache.test.ts tests/cli/cacheGeminiParity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once canonical cache entities need SQL/search projections, the projection
+    logic should live in one explicit sync layer rather than accreting inside
+    store write methods; that keeps new entity types like artifacts from
+    becoming one-off special cases
+
+## 2026-04-06 - New cache entity projections should ship with an operator read surface in the same slice
+
+- Context:
+  - the first artifact projection slice added:
+    - `artifact_bindings`
+    - internal artifact catalog reads
+  - without an operator surface, that new projection would still be hard to
+    validate and easy to forget
+- Fix:
+  - added:
+    - `auracall cache artifacts list`
+  - extended the Gemini cache CLI fixture with artifact rows so the new command
+    is covered through the same provider-acceptance regression path
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/cacheCatalog.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - when a cache entity becomes first-class in projections, it should gain at
+    least one direct operator inspection command in the same slice; otherwise
+    the projection remains real in code but weak in operational practice
+
+## 2026-04-06 - Export views should distinguish user-backed files from provider/model artifacts
+
+- Context:
+  - export surfaces already rendered `artifacts[]`
+  - they did not render `files[]`
+  - CSV context exports only counted messages, which hid both uploaded files and
+    generated/provider artifacts
+- Root cause:
+  - artifact work had advanced faster than export/discovery semantics, which
+    risked making exports look like only model outputs mattered
+- Fix:
+  - updated cache export rendering to show:
+    - `Files` for user/provider-supplied conversation files
+    - `Artifacts` for provider/model outputs
+  - updated context/conversation CSV exports to include:
+    - `sourceCount`
+    - `fileCount`
+    - `artifactCount`
+- Verification:
+  - `pnpm vitest run tests/browser/cacheExport.test.ts tests/browser/cacheCatalog.test.ts tests/cli/cacheGeminiParity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - cache/export work should not collapse uploads and generated outputs into one
+    conceptual bucket; files and artifacts are different entity families and
+    should stay visible as such in operator-facing exports
+
+## 2026-04-06 - Cache maintenance must understand every projected entity family, not just the oldest ones
+
+- Context:
+  - cache projection work had already added:
+    - `artifact_bindings`
+  - operator inspection also had:
+    - `cache artifacts list`
+  - but maintenance still only checked/pruned orphaned:
+    - `source_links`
+    - `file_bindings`
+- Root cause:
+  - doctor/repair logic lagged behind the projection model, so artifacts were
+    first-class in storage and read paths but second-class in integrity checks
+- Fix:
+  - extended `cache doctor` parity inspection to count orphan
+    `artifact_bindings`
+  - added `cache repair --actions prune-orphan-artifact-bindings`
+  - added CLI regression coverage with a real orphan artifact row in SQLite
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - whenever a new cache projection table becomes first-class, maintenance
+    parity checks and prune actions should be extended in the same broad phase;
+    otherwise the cache model drifts into asymmetric operational support
+
+## 2026-04-06 - Reporting/export counts should come from a shared inventory seam, not per-command recomputation
+
+- Context:
+  - export rendering already distinguished:
+    - `files[]`
+    - `artifacts[]`
+  - but CSV/reporting counts were still being recomputed inline in export code
+    from one-off context reads
+- Root cause:
+  - the cache model had richer entities than the reporting layer had explicit
+    shared read models
+- Fix:
+  - added shared conversation inventory reads in the cache catalog layer
+  - moved export CSV count generation onto that seam
+  - widened conversation-list CSV export to include:
+    - `messageCount`
+    - `sourceCount`
+    - `fileCount`
+    - `artifactCount`
+- Verification:
+  - `pnpm vitest run tests/browser/cacheCatalog.test.ts tests/browser/cacheExport.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once cache entities become first-class, reporting surfaces should consume
+    them through one shared inventory API; otherwise search, export, and doctor
+    drift back into parallel count logic
+
+## 2026-04-06 - Freshness-only cache listings are not enough once the cache model gets richer
+
+- Context:
+  - the top-level `auracall cache` command already showed:
+    - freshness
+    - stale status
+    - source URL
+  - but it still said nothing about the actual volume of cached conversation
+    messages, sources, files, or artifacts
+- Root cause:
+  - the operator summary view had not been updated to consume the newer shared
+    inventory model
+- Fix:
+  - reused the conversation inventory seam in `auracall cache`
+  - added `inventorySummary` on conversation cache rows with aggregate:
+    - `conversationCount`
+    - `messageCount`
+    - `sourceCount`
+    - `fileCount`
+    - `artifactCount`
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts tests/browser/cacheCatalog.test.ts tests/browser/cacheExport.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once a cache subsystem has richer entities, operator summary commands should
+    expose at least one compact aggregate view of them; otherwise the surface
+    remains technically correct but operationally under-informative
+
+## 2026-04-06 - Maintenance reports should expose cache volume through the same shared inventory model
+
+- Context:
+  - the new conversation inventory seam already powered:
+    - export CSV counts
+    - top-level `auracall cache` summary rows
+  - `cache doctor` still only reported integrity/freshness findings
+- Root cause:
+  - maintenance and reporting surfaces were still drifting apart even after the
+    shared inventory model existed
+- Fix:
+  - reused the shared conversation inventory seam inside `cache doctor`
+  - added `inventorySummary` to doctor entries and surfaced conversation/message
+    totals in text-mode doctor output
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once a shared cache inventory model exists, new operator surfaces should
+    prefer consuming it directly instead of inventing narrower one-off summary
+    fields
+
+## 2026-04-06 - Mutation reports should show before/after inventory, not just low-level deletion counts
+
+- Context:
+  - `cache doctor` and top-level `cache` already exposed aggregate conversation
+    inventory
+  - `cache clear` and `cache cleanup` still mostly reported:
+    - matched file targets
+    - matched SQL rows
+    - pruned index/blob counts
+- Root cause:
+  - mutation surfaces had not yet been brought onto the same shared inventory
+    model as read/report surfaces
+- Fix:
+  - added `inventoryBefore` / `inventoryAfter` to:
+    - `cache clear`
+    - `cache cleanup`
+  - updated text-mode summaries to show conversation/message before->after
+    transitions
+- Verification:
+  - `pnpm vitest run tests/cli/cacheGeminiParity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - cache mutation commands should report both operational mechanics and entity
+    impact; otherwise the command can be technically precise but still weak for
+    operator decision-making

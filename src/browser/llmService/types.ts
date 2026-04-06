@@ -1,4 +1,9 @@
-import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
+import type {
+  BrowserProvider,
+  BrowserProviderListOptions,
+  BrowserProviderPromptResult,
+  ProviderUserIdentity,
+} from '../providers/types.js';
 import type { Conversation, Project, ProviderId } from '../providers/domain.js';
 import type { ResolvedUserConfig } from '../../config.js';
 
@@ -37,6 +42,7 @@ export type CacheContext = CacheSettings & {
 
 export type ProjectListResult = Project[];
 export type ConversationListResult = Conversation[];
+export type PromptResult = BrowserProviderPromptResult;
 
 export type IdentityPrompt = (provider: ProviderId) => Promise<ProviderUserIdentity | null>;
 
@@ -48,4 +54,19 @@ export type PromptPlan = {
   conversationId: string | null;
   reusePolicy: PromptReusePolicy;
   promptMode: 'new' | 'reuse';
+};
+
+export type PromptInput = {
+  prompt: string;
+  configuredUrl?: string | null;
+  projectId?: string | null;
+  projectName?: string | null;
+  conversationId?: string | null;
+  conversationName?: string | null;
+  noProject?: boolean;
+  allowAutoRefresh?: boolean;
+  forceProjectRefresh?: boolean;
+  forceConversationRefresh?: boolean;
+  timeoutMs?: number | null;
+  listOptions?: BrowserProviderListOptions;
 };

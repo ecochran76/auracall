@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import type { ResolvedUserConfig } from '../../src/config.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../src/browser/providers/types.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
-import type { LlmServiceAdapter, IdentityPrompt } from '../../src/browser/llmService/types.js';
+import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../../src/browser/llmService/types.js';
 import { deriveProviderIdentityFromChromeGoogleAccount } from '../../src/browser/profileDoctor.js';
 
 class IdentityTestLlmService extends LlmService {
@@ -20,6 +20,10 @@ class IdentityTestLlmService extends LlmService {
 
   async listConversations(): Promise<[]> {
     return [];
+  }
+
+  async runPrompt(_input: PromptInput): Promise<PromptResult> {
+    throw new Error('not implemented');
   }
 
   async renameConversation(): Promise<void> {}
@@ -85,6 +89,49 @@ describe('llmService cache identity resolution', () => {
     });
     expect(getUserIdentity).toHaveBeenCalledTimes(1);
     expect(identityPrompt).not.toHaveBeenCalled();
+  });
+
+  test('prefers detected logged-in service identity over configured profile identity', async () => {
+    const getUserIdentity = vi.fn(async () => ({
+      email: 'live-account@example.com',
+      name: 'Live Account',
+      source: 'auth-session',
+    }));
+    const provider = {
+      id: 'chatgpt',
+      config: { id: 'chatgpt', selectors: {} as never },
+      getUserIdentity,
+    } satisfies LlmServiceAdapter;
+    const service = new IdentityTestLlmService(
+      ({
+        browser: { cache: {} },
+        auracallProfile: 'default',
+        profiles: {
+          default: {
+            services: {
+              chatgpt: {
+                identity: {
+                  email: 'stale-config@example.com',
+                  name: 'Stale Config',
+                },
+              },
+            },
+          },
+        },
+      } as unknown) as ResolvedUserConfig,
+      provider,
+    );
+
+    await expect(service.resolveCacheIdentity({})).resolves.toEqual({
+      userIdentity: {
+        email: 'live-account@example.com',
+        name: 'Live Account',
+        source: 'auth-session',
+      },
+      identityKey: 'live-account@example.com',
+      featureSignature: null,
+    });
+    expect(getUserIdentity).toHaveBeenCalledTimes(1);
   });
 
   test('respects explicit cache.useDetectedIdentity = false', async () => {

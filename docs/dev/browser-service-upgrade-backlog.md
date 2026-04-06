@@ -378,6 +378,41 @@ Progress:
 
 Problem:
 - Gemini reached a misleading state where:
+
+## Deferred browser-state TODO - captcha / anti-bot awareness (2026-04-05)
+
+Problem:
+- live Gemini work hit both:
+  - Google `google.com/sorry` unusual-traffic interstitials
+  - visible reCAPTCHA checkbox challenges
+- without first-class handling, those states get misreported as generic
+  route-settle or provider DOM failures
+
+What should eventually move into browser-service:
+- a generic blocking-surface classifier for:
+  - captcha / human-verification
+  - anti-bot interstitials
+  - provider-owned login/challenge gates
+- a small recovery contract:
+  - detect
+  - classify
+  - optionally attempt one bounded real-pointer assist for simple visible
+    checkbox challenges
+  - otherwise pause with an explicit manual-resume path
+
+Important boundary:
+- browser-service should own the blocking-surface mechanics and error shape
+- providers should still own service-specific wording and any provider-local
+  challenge selectors
+
+Candidate extraction:
+- `classifyBlockingSurface(...)`
+- `withHumanVerificationAwareRecovery(...)`
+
+Status:
+- recorded as a roadmap TODO only
+- do not promote this ahead of the active Gemini refactor/delete slice unless
+  captcha/anti-bot interstitials become the primary blocker again
   - prompt committed
   - answer materialized
   - but the answer was attachment-blind

@@ -50,6 +50,20 @@ export interface ProviderUserIdentity {
   source?: string;
 }
 
+export interface BrowserProviderPromptInput {
+  prompt: string;
+  projectId?: string | null;
+  conversationId?: string | null;
+  targetUrl?: string | null;
+  timeoutMs?: number | null;
+}
+
+export interface BrowserProviderPromptResult {
+  text: string;
+  conversationId?: string | null;
+  url?: string | null;
+}
+
 export interface BrowserProvider {
   id: BrowserProviderConfig['id'];
   config: BrowserProviderConfig;
@@ -117,6 +131,10 @@ export interface BrowserProvider {
     projectId?: string,
     options?: BrowserProviderListOptions,
   ) => Promise<unknown>;
+  runPrompt?: (
+    input: BrowserProviderPromptInput,
+    options?: BrowserProviderListOptions,
+  ) => Promise<BrowserProviderPromptResult>;
   listProjectFiles?: (
     projectId: string,
     options?: BrowserProviderListOptions,

@@ -4,10 +4,11 @@ import os from 'node:os';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { ProviderCacheContext } from '../../providers/cache.js';
-import type { ConversationContext } from '../../providers/domain.js';
+import type { ConversationContext, FileRef } from '../../providers/domain.js';
 import { resolveProviderCacheKey } from '../../providers/cache.js';
 import { getAuracallHomeDir } from '../../../auracallHome.js';
 import { readCacheIndex, type CacheIndexEntry } from './index.js';
+import { listCachedConversationInventory } from './catalog.js';
 import { createCacheStore, type CacheStore, type CacheStoreKind } from './store.js';
 
 export type CacheExportFormat = 'json' | 'md' | 'html' | 'csv' | 'zip';
@@ -224,30 +225,49 @@ async function exportCsv(context: ProviderCacheContext, plan: CacheExportPlan): 
   }
   if (plan.scope === 'contexts' || plan.scope === 'conversation') {
     const ids = new Set(plan.entries.map((entry) => entry.conversationId).filter(Boolean));
-    const rows = [['conversationId', 'provider', 'messageCount']];
-    for (const id of ids) {
-      if (!id) continue;
-      const result = await store.readConversationContext(context, id);
+    const rows = [['conversationId', 'provider', 'messageCount', 'sourceCount', 'fileCount', 'artifactCount']];
+    const inventory = await listCachedConversationInventory(context, {
+      conversationIds: Array.from(ids).filter((id): id is string => Boolean(id)),
+      limit: ids.size || undefined,
+    });
+    for (const item of inventory) {
       rows.push([
-        id,
-        context.provider,
-        String(Array.isArray(result.items.messages) ? result.items.messages.length : 0),
+        item.conversationId,
+        item.provider ?? context.provider,
+        String(item.messageCount),
+        String(item.sourceCount),
+        String(item.fileCount),
+        String(item.artifactCount),
       ]);
     }
     await fs.writeFile(path.join(output, 'contexts.csv'), rows.map(csvRow).join('\n') + '\n', 'utf8');
     return;
   }
   const rows = [
-    ['id', 'title', 'provider', 'projectId', 'url', 'updatedAt'],
-    ...filteredConversations.map((item) => [
-      item.id,
-      item.title,
-      item.provider,
-      item.projectId ?? '',
-      item.url ?? '',
-      item.updatedAt ?? '',
-    ]),
+    ['id', 'title', 'provider', 'projectId', 'url', 'updatedAt', 'messageCount', 'sourceCount', 'fileCount', 'artifactCount'],
   ];
+  const inventory = await listCachedConversationInventory(context, {
+    conversationIds: filteredConversations.map((item) => item.id),
+    limit: filteredConversations.length || undefined,
+  });
+  const inventoryById = new Map(inventory.map((item) => [item.conversationId, item]));
+  rows.push(
+    ...filteredConversations.map((item) => {
+      const counts = inventoryById.get(item.id);
+      return [
+        item.id,
+        item.title,
+        item.provider,
+        item.projectId ?? '',
+        item.url ?? '',
+        item.updatedAt ?? '',
+        String(counts?.messageCount ?? 0),
+        String(counts?.sourceCount ?? 0),
+        String(counts?.fileCount ?? 0),
+        String(counts?.artifactCount ?? 0),
+      ];
+    }),
+  );
   await fs.writeFile(path.join(output, 'conversations.csv'), rows.map(csvRow).join('\n') + '\n', 'utf8');
 }
 
@@ -710,6 +730,7 @@ function renderConversationMarkdown(
 ): string {
   const messages = context?.messages ?? [];
   const sources = context?.sources ?? [];
+  const files = context?.files ?? [];
   const artifacts = context?.artifacts ?? [];
   const lines: string[] = [`# Conversation ${conversationId}`, ''];
   for (const message of messages) {
@@ -722,8 +743,19 @@ function renderConversationMarkdown(
     lines.push(message.text ?? '');
     lines.push('');
   }
+  if (files.length > 0) {
+    lines.push('## FILES');
+    lines.push('_User/provider-supplied files referenced in the conversation context._');
+    lines.push('');
+    for (const file of files) {
+      lines.push(`- ${formatConversationFileMarkdown(file)}`);
+    }
+    lines.push('');
+  }
   if (artifacts.length > 0) {
     lines.push('## ARTIFACTS');
+    lines.push('_Provider/model output artifacts discovered from the conversation._');
+    lines.push('');
     for (const artifact of artifacts) {
       const kind = artifact.kind ? ` (${artifact.kind})` : '';
       const uri = artifact.uri ? ` -> ${artifact.uri}` : '';
@@ -748,6 +780,7 @@ function renderConversationHtml(
 ): string {
   const messages = context?.messages ?? [];
   const sources = context?.sources ?? [];
+  const files = context?.files ?? [];
   const artifacts = context?.artifacts ?? [];
   const rows = messages.map((message) => {
     const role = escapeHtml(message.role ?? '');
@@ -755,9 +788,15 @@ function renderConversationHtml(
     const text = escapeHtml(message.text ?? '');
     return `<section class="message"><h3>${role}</h3>${time}<pre>${text}</pre></section>`;
   });
+  const fileSection =
+    files.length > 0
+      ? `<section class="files"><h2>Files</h2><p>User/provider-supplied files referenced in the conversation context.</p><ul>${files
+          .map((file) => `<li>${escapeHtml(formatConversationFileMarkdown(file))}</li>`)
+          .join('')}</ul></section>`
+      : '';
   const artifactSection =
     artifacts.length > 0
-      ? `<section class="artifacts"><h2>Artifacts</h2><ul>${artifacts
+      ? `<section class="artifacts"><h2>Artifacts</h2><p>Provider/model output artifacts discovered from the conversation.</p><ul>${artifacts
           .map((artifact) => {
             const kind = artifact.kind ? ` (${escapeHtml(artifact.kind)})` : '';
             const uri = artifact.uri ? ` <code>${escapeHtml(artifact.uri)}</code>` : '';
@@ -790,10 +829,20 @@ function renderConversationHtml(
 <body>
   <h1>Conversation ${escapeHtml(conversationId)}</h1>
   ${rows.join('\n')}
+  ${fileSection}
   ${artifactSection}
   ${sourceSection}
 </body>
 </html>`;
+}
+
+function formatConversationFileMarkdown(file: FileRef): string {
+  const name = file.name?.trim() || file.id || 'file';
+  const source = file.source ? ` [${file.source}]` : '';
+  const mimeType = file.mimeType?.trim() ? ` (${file.mimeType.trim()})` : '';
+  const pointer = file.remoteUrl?.trim() || file.localPath?.trim() || '';
+  const location = pointer ? ` -> ${pointer}` : '';
+  return `${name}${source}${mimeType}${location}`;
 }
 
 function escapeHtml(value: string): string {

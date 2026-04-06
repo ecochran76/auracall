@@ -10,7 +10,7 @@ import type { ProviderCacheContext } from '../../src/browser/providers/cache.js'
 import { JsonCacheStore } from '../../src/browser/llmService/cache/store.js';
 import { LlmService } from '../../src/browser/llmService/llmService.js';
 import type { CacheStore } from '../../src/browser/llmService/cache/store.js';
-import type { LlmServiceAdapter } from '../../src/browser/llmService/types.js';
+import type { LlmServiceAdapter, PromptInput, PromptResult } from '../../src/browser/llmService/types.js';
 import { CHATGPT_URL, GEMINI_URL } from '../../src/browser/constants.js';
 
 class TestLlmService extends LlmService {
@@ -40,6 +40,10 @@ class TestLlmService extends LlmService {
     return [];
   }
 
+  async runPrompt(_input: PromptInput): Promise<PromptResult> {
+    throw new Error('not implemented');
+  }
+
   async renameConversation(): Promise<void> {}
 
   async deleteConversation(): Promise<void> {}
@@ -64,6 +68,10 @@ class BuildListOptionsLlmService extends LlmService {
 
   async listConversations(): Promise<[]> {
     return [];
+  }
+
+  async runPrompt(_input: PromptInput): Promise<PromptResult> {
+    throw new Error('not implemented');
   }
 
   async renameConversation(): Promise<void> {}
@@ -109,6 +117,102 @@ describe('llmService project file cache writes', () => {
       expect(result).toEqual(files);
       const cached = await store.readProjectKnowledge(cacheContext, 'project-123');
       expect(cached.items).toEqual(files);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('createProject upserts the created project into the shared projects cache', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-projects-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    const created = {
+      id: 'gem-123',
+      name: 'Fresh Gem',
+      provider: 'gemini' as const,
+      url: 'https://gemini.google.com/gem/gem-123',
+    };
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      createProject: vi.fn(async () => created),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      await service.createProject({ name: 'Fresh Gem' }, { listOptions: {} });
+      const cached = await store.readProjects(cacheContext);
+      expect(cached.items).toEqual([created]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('renameProject updates the shared projects cache', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-projects-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    await store.writeProjects(cacheContext, [
+      { id: 'gem-123', name: 'Old Gem', provider: 'gemini', url: 'https://gemini.google.com/gem/gem-123' },
+    ]);
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      renameProject: vi.fn(async () => undefined),
+      resolveProjectUrl: vi.fn((projectId: string) => `https://gemini.google.com/gem/${projectId}`),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      await service.renameProject('gem-123', 'Renamed Gem', { listOptions: {} });
+      const cached = await store.readProjects(cacheContext);
+      expect(cached.items).toEqual([
+        { id: 'gem-123', name: 'Renamed Gem', provider: 'gemini', url: 'https://gemini.google.com/gem/gem-123' },
+      ]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('pushProjectRemoveConfirmation prunes the project from the shared projects cache', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-projects-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    await store.writeProjects(cacheContext, [
+      { id: 'gem-123', name: 'Disposable Gem', provider: 'gemini', url: 'https://gemini.google.com/gem/gem-123' },
+      { id: 'gem-999', name: 'Keep Gem', provider: 'gemini', url: 'https://gemini.google.com/gem/gem-999' },
+    ]);
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      pushProjectRemoveConfirmation: vi.fn(async () => undefined),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      await service.pushProjectRemoveConfirmation('gem-123', { listOptions: {} });
+      const cached = await store.readProjects(cacheContext);
+      expect(cached.items).toEqual([
+        { id: 'gem-999', name: 'Keep Gem', provider: 'gemini', url: 'https://gemini.google.com/gem/gem-999' },
+      ]);
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

@@ -286,17 +286,6 @@ export async function inspectBrowserDoctorIdentity(
   } = {},
 ): Promise<BrowserDoctorIdentityReport> {
   const target = options.target ?? (userConfig.browser?.target as BrowserDoctorTarget | undefined) ?? 'chatgpt';
-  if (target === 'gemini') {
-    return {
-      target,
-      supported: false,
-      attempted: false,
-      identity: null,
-      error: null,
-      reason:
-        'Gemini browser doctor currently supports local browser-profile inspection only; provider account identity probing is not implemented.',
-    };
-  }
 
   const localReport =
     options.localReport ??

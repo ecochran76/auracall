@@ -49,7 +49,9 @@ import type {
   IdentityPrompt,
   LlmCapabilities,
   LlmServiceAdapter,
+  PromptInput,
   PromptPlan,
+  PromptResult,
   ProjectListResult,
 } from './types.js';
 import type { CacheStore, CachedConversationContextEntry } from './cache/store.js';
@@ -406,12 +408,83 @@ export abstract class LlmService {
     return cached.items;
   }
 
+  private async resolveProjectCacheContext(
+    listOptions: BrowserProviderListOptions,
+  ): Promise<CacheContext> {
+    const globalListOptions = Object.hasOwn(listOptions, 'projectId')
+      ? { ...listOptions, projectId: undefined }
+      : listOptions;
+    return this.resolveCacheContext(globalListOptions);
+  }
+
+  private async upsertProjectCacheEntry(
+    listOptions: BrowserProviderListOptions,
+    project: Project,
+  ): Promise<void> {
+    const cacheContext = await this.resolveProjectCacheContext(listOptions);
+    const cached = await this.cacheStore.readProjects(cacheContext);
+    const merged = new Map(cached.items.map((entry) => [entry.id, entry] as const));
+    const existing = merged.get(project.id);
+    merged.set(project.id, {
+      ...existing,
+      ...project,
+      name: project.name || existing?.name || project.id,
+      provider: project.provider || existing?.provider || this.providerId,
+      url: project.url ?? existing?.url,
+      memoryMode: project.memoryMode ?? existing?.memoryMode,
+    });
+    await this.cacheStore.writeProjects(cacheContext, Array.from(merged.values()));
+  }
+
+  private async renameProjectCacheEntry(
+    listOptions: BrowserProviderListOptions,
+    projectId: string,
+    newTitle: string,
+  ): Promise<void> {
+    const cacheContext = await this.resolveProjectCacheContext(listOptions);
+    const cached = await this.cacheStore.readProjects(cacheContext);
+    const items = cached.items.map((entry) =>
+      entry.id === projectId
+        ? {
+            ...entry,
+            name: newTitle,
+          }
+        : entry,
+    );
+    if (!items.some((entry) => entry.id === projectId)) {
+      items.push({
+        id: projectId,
+        name: newTitle,
+        provider: this.providerId,
+        url: this.provider.resolveProjectUrl?.(projectId) ?? undefined,
+      });
+    }
+    await this.cacheStore.writeProjects(cacheContext, items);
+  }
+
+  private async removeProjectCacheEntry(
+    listOptions: BrowserProviderListOptions,
+    projectId: string,
+  ): Promise<void> {
+    const cacheContext = await this.resolveProjectCacheContext(listOptions);
+    const cached = await this.cacheStore.readProjects(cacheContext);
+    await this.cacheStore.writeProjects(
+      cacheContext,
+      cached.items.filter((entry) => entry.id !== projectId),
+    );
+  }
+
   abstract listProjects(options?: BrowserProviderListOptions): Promise<ProjectListResult>;
 
   abstract listConversations(
     projectId?: string,
     options?: BrowserProviderListOptions,
   ): Promise<ConversationListResult>;
+
+  abstract runPrompt(
+    input: PromptInput,
+    options?: BrowserProviderListOptions,
+  ): Promise<PromptResult>;
 
   abstract renameConversation(
     conversationId: string,
@@ -444,6 +517,7 @@ export abstract class LlmService {
       () => this.provider.renameProject?.(projectId, newTitle, listOptions) as Promise<void>,
       { action: 'renameProject' },
     );
+    await this.renameProjectCacheEntry(listOptions, projectId, newTitle);
   }
 
   async cloneProject(
@@ -459,6 +533,9 @@ export abstract class LlmService {
       () => this.provider.cloneProject?.(projectId, listOptions) as Promise<Project | null>,
       { action: 'cloneProject' },
     );
+    if (created?.id) {
+      await this.upsertProjectCacheEntry(listOptions, created);
+    }
     return created ?? null;
   }
 
@@ -531,6 +608,7 @@ export abstract class LlmService {
       () => this.provider.pushProjectRemoveConfirmation?.(projectId, listOptions) as Promise<void>,
       { action: 'pushProjectRemoveConfirmation' },
     );
+    await this.removeProjectCacheEntry(listOptions, projectId);
   }
 
   async ensureValidProjectUrl(
@@ -891,6 +969,9 @@ export abstract class LlmService {
       () => this.provider.createProject?.(input, listOptions) as Promise<Project | null>,
       { action: 'createProject' },
     );
+    if (created?.id) {
+      await this.upsertProjectCacheEntry(listOptions, created);
+    }
     if (created?.id && typeof input.instructions === 'string' && input.instructions.trim().length > 0) {
       const cacheContext = await this.resolveCacheContext(listOptions);
       await this.cacheStore.writeProjectInstructions(cacheContext, created.id, input.instructions);
@@ -899,6 +980,42 @@ export abstract class LlmService {
       await this.refreshProjectKnowledgeCache(created.id, listOptions);
     }
     return created ?? null;
+  }
+
+  async runPlannedPrompt(input: PromptInput): Promise<PromptResult> {
+    if (!this.provider.runPrompt) {
+      throw new Error(`Prompt execution is not supported for ${this.providerId}.`);
+    }
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(input.listOptions, { ensurePort: true }),
+      input.projectId ?? undefined,
+    );
+    const plan = await this.planPrompt({
+      configuredUrl: input.configuredUrl,
+      projectId: input.projectId,
+      projectName: input.projectName,
+      conversationId: input.conversationId,
+      conversationName: input.conversationName,
+      noProject: input.noProject,
+      allowAutoRefresh: input.allowAutoRefresh,
+      forceProjectRefresh: input.forceProjectRefresh,
+      forceConversationRefresh: input.forceConversationRefresh,
+      listOptions,
+    });
+    return this.withRetry(
+      () =>
+        this.provider.runPrompt?.(
+          {
+            prompt: input.prompt,
+            targetUrl: plan.targetUrl,
+            projectId: plan.projectId,
+            conversationId: plan.conversationId,
+            timeoutMs: input.timeoutMs,
+          },
+          this.scopeConversationListOptions(listOptions, plan.projectId ?? undefined),
+        ) as Promise<PromptResult>,
+      { action: 'runPrompt' },
+    );
   }
 
   async toggleProjectSidebar(
@@ -1069,15 +1186,19 @@ export abstract class LlmService {
 
   async listCachedConversationContexts(options?: {
     listOptions?: BrowserProviderListOptions;
+    cacheResolve?: { prompt?: boolean; detect?: boolean };
   }): Promise<CachedConversationContextEntry[]> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
-    const cacheContext = await this.resolveCacheContext(listOptions);
+    const cacheContext = await this.resolveCacheContext(listOptions, options?.cacheResolve);
     return this.cacheStore.listConversationContexts(cacheContext);
   }
 
   async getCachedConversationContext(
     selector: string,
-    options?: { listOptions?: BrowserProviderListOptions },
+    options?: {
+      listOptions?: BrowserProviderListOptions;
+      cacheResolve?: { prompt?: boolean; detect?: boolean };
+    },
   ): Promise<{
     conversationId: string;
     fetchedAt: string | null;
@@ -1085,15 +1206,17 @@ export abstract class LlmService {
     context: ConversationContext;
   }> {
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
-    const cacheContext = await this.resolveCacheContext(listOptions);
+    const cacheContext = await this.resolveCacheContext(listOptions, options?.cacheResolve);
     const raw = selector.trim();
     if (!raw) {
       throw new Error('Conversation selector is required.');
     }
+    const normalizedDirectId = this.provider.normalizeConversationId?.(raw) ?? null;
     const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw);
-    let conversationId = raw;
-    if (!isUuid) {
-      const cachedConversations = await this.cacheStore.readConversations(cacheContext);
+    let conversationId = normalizedDirectId ?? raw;
+    const cachedConversations = await this.cacheStore.readConversations(cacheContext);
+    const directMatch = cachedConversations.items.find((entry) => entry.id === conversationId) ?? null;
+    if (!isUuid && !directMatch) {
       const match = matchConversationByTitle(cachedConversations.items ?? [], raw);
       if (!match.match) {
         throw new Error(
@@ -1265,7 +1388,7 @@ export abstract class LlmService {
 
   async resolveCacheContext(
     listOptions: BrowserProviderListOptions,
-    options: { prompt?: boolean } = {},
+    options: { prompt?: boolean; detect?: boolean } = {},
   ): Promise<CacheContext> {
     const settings = this.getCacheSettings();
     const identity = await this.resolveCacheIdentity(listOptions, options);
@@ -1293,12 +1416,21 @@ export abstract class LlmService {
 
   async resolveCacheIdentity(
     listOptions: BrowserProviderListOptions,
-    options: { prompt?: boolean } = {},
+    options: { prompt?: boolean; detect?: boolean } = {},
   ): Promise<CacheIdentity> {
     const normalizeIdentityKey = (value: string | null | undefined): string | null => {
       if (!value) return null;
       const trimmed = value.trim();
       return trimmed.length > 0 ? trimmed.toLowerCase() : null;
+    };
+    const deriveIdentityKey = (identity: ProviderUserIdentity | null | undefined): string | null => {
+      if (!identity) return null;
+      return (
+        normalizeIdentityKey(identity.email) ||
+        normalizeIdentityKey(identity.handle) ||
+        normalizeIdentityKey(identity.name) ||
+        null
+      );
     };
     const profileIdentity = this.resolveProfileServiceIdentity(this.providerId);
     let userIdentity: ProviderUserIdentity | null = profileIdentity;
@@ -1310,13 +1442,24 @@ export abstract class LlmService {
         : null;
     const identityHint = cacheConfig?.identity ?? null;
 
-    let identityKey: string | null = identityKeyHint;
+    const useDetectedIdentity = options.detect !== false && cacheConfig?.useDetectedIdentity !== false;
+    let detectedIdentity: ProviderUserIdentity | null = null;
+    if (useDetectedIdentity) {
+      try {
+        detectedIdentity = await this.getUserIdentity(listOptions);
+      } catch {
+        detectedIdentity = null;
+      }
+    }
+    const detectedIdentityKey = deriveIdentityKey(detectedIdentity);
+
+    let identityKey: string | null = detectedIdentityKey ?? identityKeyHint;
+    if (detectedIdentity) {
+      userIdentity = detectedIdentity;
+    }
     if (!identityKey && profileIdentity) {
-      identityKey =
-        normalizeIdentityKey(profileIdentity.email) ||
-        normalizeIdentityKey(profileIdentity.handle) ||
-        normalizeIdentityKey(profileIdentity.name) ||
-        null;
+      identityKey = deriveIdentityKey(profileIdentity);
+      userIdentity = userIdentity ?? profileIdentity;
     }
     if (!identityKey && identityHint) {
       identityKey =
@@ -1334,33 +1477,16 @@ export abstract class LlmService {
       }
     }
 
-    const useDetectedIdentity = cacheConfig?.useDetectedIdentity !== false;
-    if (!identityKey && !userIdentity && useDetectedIdentity) {
-      try {
-        userIdentity = await this.getUserIdentity(listOptions);
-      } catch {
-        userIdentity = null;
-      }
-    }
-
     if (!identityKey && !userIdentity && this.identityPrompt && options.prompt !== false) {
       const prompted = await this.identityPrompt(this.providerId);
       if (prompted) {
         userIdentity = prompted;
-        identityKey =
-          normalizeIdentityKey(prompted.email) ||
-          normalizeIdentityKey(prompted.handle) ||
-          normalizeIdentityKey(prompted.name) ||
-          null;
+        identityKey = deriveIdentityKey(prompted);
       }
     }
 
     if (!identityKey && userIdentity) {
-      identityKey =
-        normalizeIdentityKey(userIdentity.email) ||
-        normalizeIdentityKey(userIdentity.handle) ||
-        normalizeIdentityKey(userIdentity.name) ||
-        null;
+      identityKey = deriveIdentityKey(userIdentity);
     }
 
     const configuredFeatures = this.resolveConfiguredServiceFeatures();
@@ -1995,6 +2121,7 @@ export abstract class LlmService {
       case 'updateProjectInstructions':
       case 'renameConversation':
       case 'deleteConversation':
+      case 'runPrompt':
         return true;
       default:
         return false;

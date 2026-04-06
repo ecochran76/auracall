@@ -1,6 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import type { ConversationContext, FileRef } from '../../providers/domain.js';
+import type { ConversationArtifact, ConversationContext, FileRef } from '../../providers/domain.js';
 import type { ProviderCacheContext } from '../../providers/cache.js';
 import { resolveProviderCachePath } from '../../providers/cache.js';
 
@@ -91,6 +91,41 @@ export interface FileResolveRow extends FileCatalogRow {
   localPathExists: boolean | null;
 }
 
+export interface ArtifactCatalogOptions {
+  conversationId?: string;
+  kind?: string;
+  query?: string;
+  limit?: number;
+}
+
+export interface ArtifactCatalogRow {
+  artifactId: string | null;
+  conversationId: string;
+  messageIndex: number | null;
+  messageId: string | null;
+  title: string;
+  kind: string | null;
+  uri: string | null;
+  provider: string | null;
+  updatedAt: string | null;
+  metadata: Record<string, unknown> | null;
+}
+
+export interface ConversationInventoryOptions {
+  conversationIds?: string[];
+  limit?: number;
+}
+
+export interface ConversationInventoryRow {
+  conversationId: string;
+  provider: string | null;
+  updatedAt: string | null;
+  messageCount: number;
+  sourceCount: number;
+  fileCount: number;
+  artifactCount: number;
+}
+
 export async function listCachedSources(
   context: ProviderCacheContext,
   options: SourceCatalogOptions = {},
@@ -155,6 +190,28 @@ export async function resolveCachedFiles(
   }
   resolved.sort((a, b) => compareTimestampDesc(a.updatedAt, b.updatedAt));
   return resolved.slice(0, normalizeLimit(options.limit));
+}
+
+export async function listCachedArtifacts(
+  context: ProviderCacheContext,
+  options: ArtifactCatalogOptions = {},
+): Promise<ArtifactCatalogRow[]> {
+  const sqlRows = await listArtifactsFromSqlite(context, options);
+  if (sqlRows.length > 0) return sqlRows.slice(0, normalizeLimit(options.limit));
+  const fallbackRows = await listArtifactsFromJson(context, options);
+  fallbackRows.sort((a, b) => compareTimestampDesc(a.updatedAt, b.updatedAt));
+  return fallbackRows.slice(0, normalizeLimit(options.limit));
+}
+
+export async function listCachedConversationInventory(
+  context: ProviderCacheContext,
+  options: ConversationInventoryOptions = {},
+): Promise<ConversationInventoryRow[]> {
+  const sqlRows = await listConversationInventoryFromSqlite(context, options);
+  if (sqlRows.length > 0) return sqlRows.slice(0, normalizeLimit(options.limit));
+  const fallbackRows = await listConversationInventoryFromJson(context, options);
+  fallbackRows.sort((a, b) => compareTimestampDesc(a.updatedAt, b.updatedAt));
+  return fallbackRows.slice(0, normalizeLimit(options.limit));
 }
 
 async function listSourcesFromSqlite(
@@ -432,6 +489,174 @@ async function listFilesFromJson(
   return uniqueRows;
 }
 
+async function listArtifactsFromSqlite(
+  context: ProviderCacheContext,
+  options: ArtifactCatalogOptions,
+): Promise<ArtifactCatalogRow[]> {
+  const dbPath = resolveSqlitePath(context);
+  const sqlite = await tryOpenSqlite(dbPath);
+  if (!sqlite) return [];
+  try {
+    const whereParts: string[] = [];
+    const params: unknown[] = [];
+    if (options.conversationId?.trim()) {
+      whereParts.push('conversation_id = ?');
+      params.push(options.conversationId.trim());
+    }
+    if (options.kind?.trim()) {
+      whereParts.push('kind = ?');
+      params.push(options.kind.trim());
+    }
+    if (options.query?.trim()) {
+      whereParts.push('(title LIKE ? OR uri LIKE ? OR metadata_json LIKE ? OR message_id LIKE ?)');
+      const like = `%${options.query.trim()}%`;
+      params.push(like, like, like, like);
+    }
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+    const sql = `
+      SELECT
+        artifact_id,
+        conversation_id,
+        message_index,
+        message_id,
+        title,
+        kind,
+        uri,
+        provider,
+        metadata_json,
+        updated_at
+      FROM artifact_bindings
+      ${whereClause}
+      ORDER BY updated_at DESC
+      LIMIT ?
+    `;
+    params.push(normalizeLimit(options.limit));
+    const rows = sqlite.prepare(sql).all(...params);
+    return rows
+      .map((row) => ({
+        artifactId: asNullableString(row.artifact_id),
+        conversationId: asString(row.conversation_id),
+        messageIndex: asNullableNumber(row.message_index),
+        messageId: asNullableString(row.message_id),
+        title: asString(row.title),
+        kind: asNullableString(row.kind),
+        uri: asNullableString(row.uri),
+        provider: asNullableString(row.provider),
+        updatedAt: asNullableString(row.updated_at),
+        metadata: parseJsonRecord(row.metadata_json),
+      }))
+      .filter((row) => row.conversationId.length > 0 && row.title.length > 0);
+  } catch {
+    return [];
+  } finally {
+    sqlite.close();
+  }
+}
+
+async function listArtifactsFromJson(
+  context: ProviderCacheContext,
+  options: ArtifactCatalogOptions,
+): Promise<ArtifactCatalogRow[]> {
+  const docs = await loadContextDocuments(context);
+  const targetConversationId = options.conversationId?.trim();
+  const targetKind = options.kind?.trim().toLowerCase();
+  const query = options.query?.trim().toLowerCase();
+  const rows: ArtifactCatalogRow[] = [];
+  for (const doc of docs) {
+    if (targetConversationId && doc.conversationId !== targetConversationId) continue;
+    const artifacts = Array.isArray(doc.context.artifacts) ? doc.context.artifacts : [];
+    for (const artifact of artifacts) {
+      const mapped = mapJsonArtifactToCatalogRow(context, doc.conversationId, artifact, doc.updatedAt);
+      if (!mapped) continue;
+      if (targetKind && (mapped.kind ?? '').toLowerCase() !== targetKind) continue;
+      if (query && !jsonArtifactRowMatches(mapped, query)) continue;
+      rows.push(mapped);
+    }
+  }
+  return rows;
+}
+
+async function listConversationInventoryFromSqlite(
+  context: ProviderCacheContext,
+  options: ConversationInventoryOptions,
+): Promise<ConversationInventoryRow[]> {
+  const dbPath = resolveSqlitePath(context);
+  const sqlite = await tryOpenSqlite(dbPath);
+  if (!sqlite) return [];
+  try {
+    const conversationIds = normalizeConversationIds(options.conversationIds);
+    const idClause =
+      conversationIds.length > 0 ? ` AND entity_id IN (${conversationIds.map(() => '?').join(', ')})` : '';
+    const rows = sqlite
+      .prepare(
+        `SELECT entity_id, items_json, updated_at
+           FROM cache_entries
+          WHERE dataset = 'conversation-context'${idClause}
+          ORDER BY updated_at DESC
+          LIMIT ?`,
+      )
+      .all(...conversationIds, normalizeLimit(options.limit)) as Array<{
+      entity_id?: unknown;
+      items_json?: unknown;
+      updated_at?: unknown;
+    }>;
+    if (rows.length === 0) return [];
+
+    const rowIds = rows.map((row) => asString(row.entity_id)).filter((value) => value.length > 0);
+    const sourceCounts = queryConversationCountMap(sqlite, 'source_links', rowIds);
+    const artifactCounts = queryConversationCountMap(sqlite, 'artifact_bindings', rowIds);
+    const fileCounts = queryConversationContextFileCountMap(sqlite, rowIds);
+
+    const mapped: Array<ConversationInventoryRow | null> = rows.map((row) => {
+        const conversationId = asString(row.entity_id);
+        if (!conversationId) return null;
+        const parsed = parseJsonRecord(row.items_json) as ConversationContext | null;
+        const messages = Array.isArray(parsed?.messages) ? parsed.messages : [];
+        const provider: string | null =
+          parsed && typeof parsed.provider === 'string' && parsed.provider.trim().length > 0
+            ? parsed.provider.trim()
+            : context.provider;
+        return {
+          conversationId,
+          provider,
+          updatedAt: asNullableString(row.updated_at),
+          messageCount: messages.length,
+          sourceCount: sourceCounts.get(conversationId) ?? 0,
+          fileCount: fileCounts.get(conversationId) ?? 0,
+          artifactCount: artifactCounts.get(conversationId) ?? 0,
+        } satisfies ConversationInventoryRow;
+      });
+    return mapped.filter((row): row is ConversationInventoryRow => row !== null);
+  } catch {
+    return [];
+  } finally {
+    sqlite.close();
+  }
+}
+
+async function listConversationInventoryFromJson(
+  context: ProviderCacheContext,
+  options: ConversationInventoryOptions,
+): Promise<ConversationInventoryRow[]> {
+  const docs = await loadContextDocuments(context);
+  const wanted = new Set(normalizeConversationIds(options.conversationIds));
+  return docs
+    .filter((doc) => wanted.size === 0 || wanted.has(doc.conversationId))
+    .map((doc) => ({
+      conversationId: doc.conversationId,
+      provider:
+        typeof doc.context.provider === 'string' && doc.context.provider.trim().length > 0
+          ? doc.context.provider.trim()
+          : context.provider,
+      updatedAt: doc.updatedAt,
+      messageCount: Array.isArray(doc.context.messages) ? doc.context.messages.length : 0,
+      sourceCount: Array.isArray(doc.context.sources) ? doc.context.sources.length : 0,
+      fileCount: Array.isArray(doc.context.files) ? doc.context.files.length : 0,
+      artifactCount: Array.isArray(doc.context.artifacts) ? doc.context.artifacts.length : 0,
+    }))
+    .sort((a, b) => compareTimestampDesc(a.updatedAt, b.updatedAt));
+}
+
 function mapJsonFileToCatalogRow(
   context: ProviderCacheContext,
   file: FileRef,
@@ -480,6 +705,41 @@ function mapJsonFileToCatalogRow(
   };
 }
 
+function mapJsonArtifactToCatalogRow(
+  context: ProviderCacheContext,
+  conversationId: string,
+  artifact: ConversationArtifact,
+  updatedAt: string | null,
+): ArtifactCatalogRow | null {
+  const title = typeof artifact.title === 'string' ? artifact.title.trim() : '';
+  if (!title) return null;
+  const artifactId =
+    typeof artifact.id === 'string' && artifact.id.trim().length > 0 ? artifact.id.trim() : null;
+  const kind = typeof artifact.kind === 'string' && artifact.kind.trim().length > 0 ? artifact.kind.trim() : null;
+  const uri = typeof artifact.uri === 'string' && artifact.uri.trim().length > 0 ? artifact.uri.trim() : null;
+  const messageId =
+    typeof artifact.messageId === 'string' && artifact.messageId.trim().length > 0
+      ? artifact.messageId.trim()
+      : null;
+  return {
+    artifactId,
+    conversationId,
+    messageIndex:
+      typeof artifact.messageIndex === 'number' && Number.isFinite(artifact.messageIndex)
+        ? artifact.messageIndex
+        : null,
+    messageId,
+    title,
+    kind,
+    uri,
+    provider: context.provider,
+    updatedAt,
+    metadata: artifact.metadata && typeof artifact.metadata === 'object'
+      ? (artifact.metadata as Record<string, unknown>)
+      : null,
+  };
+}
+
 function jsonFileRowMatches(row: FileCatalogRow, query: string): boolean {
   const haystack = [
     row.displayName,
@@ -488,6 +748,20 @@ function jsonFileRowMatches(row: FileCatalogRow, query: string): boolean {
     row.entityId,
     row.remoteUrl ?? '',
     row.localPath ?? '',
+  ]
+    .join(' ')
+    .toLowerCase();
+  return haystack.includes(query);
+}
+
+function jsonArtifactRowMatches(row: ArtifactCatalogRow, query: string): boolean {
+  const haystack = [
+    row.title,
+    row.kind ?? '',
+    row.uri ?? '',
+    row.messageId ?? '',
+    row.artifactId ?? '',
+    row.metadata ? JSON.stringify(row.metadata) : '',
   ]
     .join(' ')
     .toLowerCase();
@@ -677,6 +951,59 @@ function parseJsonRecord(value: unknown): Record<string, unknown> | null {
   } catch {
     return null;
   }
+}
+
+function normalizeConversationIds(conversationIds: string[] | undefined): string[] {
+  if (!Array.isArray(conversationIds) || conversationIds.length === 0) return [];
+  return Array.from(new Set(conversationIds.map((id) => id.trim()).filter((id) => id.length > 0)));
+}
+
+function queryConversationCountMap(
+  sqlite: SqliteLikeDatabase,
+  table: 'source_links' | 'artifact_bindings',
+  conversationIds: string[],
+): Map<string, number> {
+  if (conversationIds.length === 0) return new Map();
+  const placeholders = conversationIds.map(() => '?').join(', ');
+  const rows = sqlite
+    .prepare(
+      `SELECT conversation_id, COUNT(*) AS c
+         FROM ${table}
+        WHERE conversation_id IN (${placeholders})
+        GROUP BY conversation_id`,
+    )
+    .all(...conversationIds) as Array<{ conversation_id?: unknown; c?: unknown }>;
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const conversationId = asString(row.conversation_id);
+    if (!conversationId) continue;
+    map.set(conversationId, asNullableNumber(row.c) ?? 0);
+  }
+  return map;
+}
+
+function queryConversationContextFileCountMap(
+  sqlite: SqliteLikeDatabase,
+  conversationIds: string[],
+): Map<string, number> {
+  if (conversationIds.length === 0) return new Map();
+  const placeholders = conversationIds.map(() => '?').join(', ');
+  const rows = sqlite
+    .prepare(
+      `SELECT entity_id, COUNT(*) AS c
+         FROM file_bindings
+        WHERE dataset = 'conversation-context'
+          AND entity_id IN (${placeholders})
+        GROUP BY entity_id`,
+    )
+    .all(...conversationIds) as Array<{ entity_id?: unknown; c?: unknown }>;
+  const map = new Map<string, number>();
+  for (const row of rows) {
+    const conversationId = asString(row.entity_id);
+    if (!conversationId) continue;
+    map.set(conversationId, asNullableNumber(row.c) ?? 0);
+  }
+  return map;
 }
 
 function asRecordString(record: Record<string, unknown> | null, key: string): string | null {

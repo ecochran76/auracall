@@ -9,6 +9,7 @@ import { BrowserService } from './service/browserService.js';
 import { createLlmService } from './llmService/index.js';
 import type { LlmService } from './llmService/llmService.js';
 import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
+import type { PromptInput, PromptResult } from './llmService/types.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'gemini' | 'grok';
@@ -80,6 +81,13 @@ export class BrowserAutomationClient {
     options?: BrowserProviderListOptions,
   ): Promise<void> {
     await this.llmService.renameConversation(conversationId, newTitle, projectId, options);
+  }
+
+  async runPrompt(
+    input: PromptInput,
+    options?: BrowserProviderListOptions,
+  ): Promise<PromptResult> {
+    return this.llmService.runPrompt(input, options);
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {

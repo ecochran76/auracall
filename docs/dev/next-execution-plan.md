@@ -26,6 +26,19 @@ The profile-family refactor has also crossed its useful first boundary:
 That means the next active architecture track should be the larger
 config-model refactor, not more opportunistic browser cleanup.
 
+Deferred browser reliability TODO:
+
+- add shared captcha/anti-bot awareness before any broader browser CRUD push
+  resumes:
+  - detect `google.com/sorry`, reCAPTCHA, Cloudflare, and similar human-check
+    surfaces explicitly
+  - classify them separately from generic route-settle/DOM drift failures
+  - optionally allow one bounded real-pointer assist for simple checkbox
+    challenges
+  - otherwise pause and surface a clear manual-resume operator path
+  - do not let this TODO sidetrack the current Gemini/browser-service slice
+    unless it becomes the active blocker again
+
 Config-model state now:
 
 - target-shape is the primary documented model:
@@ -175,13 +188,50 @@ Gemini is also at a better checkpoint now:
   Linux proof path when keyring-backed Chrome cookie reads return zero Google
   auth cookies
 
-That means the next Gemini move should not be more blind probing on the same
-account/pairing. It should be either:
+That means the next Gemini move should no longer be more blind probing on the
+same account/pairing. The next useful Gemini track is operational parity with
+ChatGPT/Grok for the browser CLI surfaces that now already have real Gemini
+implementations.
 
-- setup plus a second explicit pairing/account proof pass
-- or one bounded implementation gap with a concrete failure
+Immediate Gemini priority order:
 
-not more open-ended Gemini proof churn
+1. CLI parity for already-green Gemini surfaces
+   - remove stale `chatgpt|grok` target gates where Gemini is already real
+   - keep help text and docs aligned with actual Gemini behavior
+2. Cache/operator parity
+   - enable Gemini in the cache operator surfaces that already consume provider
+     cache data
+   - harden post-delete cache freshness so operators do not need special-case
+     refresh knowledge
+3. Cache model centralization
+   - move provider-cache policy out of command-local CLI code and behind one
+     shared cache context / maintenance seam
+   - stop reconstructing cache provider URL ownership, identity resolution
+     policy, and maintenance discovery in multiple `auracall.ts` helpers
+4. Coverage parity
+   - add focused CLI regression tests for Gemini target acceptance and cache
+     operator behavior
+5. Remaining provider-gap backlog
+   - conversation rename
+   - conversation context/files/artifacts parity
+   - account-level files
+
+Current status update:
+
+- items 1 through 4 are now largely addressed for the currently green Gemini
+  browser surfaces
+- the next cache move should not be more Gemini-specific CLI widening
+- the next durable cache move is the shared subsystem slice in:
+  - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+- for Gemini specifically, the remaining meaningful work is now explicit
+  provider backlog:
+  - conversation rename
+  - conversation context/files/artifacts parity
+  - account-level files
+
+Do not treat second-pairing proof churn as the immediate next Gemini slice
+unless a new browser pairing is specifically required to validate one of those
+parity lines.
 
 Current local reality:
 

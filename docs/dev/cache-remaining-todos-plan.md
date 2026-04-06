@@ -1,5 +1,13 @@
 # Cache Remaining TODOs Plan
 
+Architecture reference:
+- [cache-architecture-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-architecture-plan.md)
+  is the anti-drift guide for canonical records vs derived projections vs
+  operator views. This TODO plan should be interpreted within that model.
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+  is the concrete next-step plan for artifact catalogs and projection-sync
+  extraction.
+
 ## Objective
 Finish the cache transition so Oracle can depend on SQLite as the primary cache system for:
 - agent retrieval,
@@ -20,6 +28,8 @@ This plan focuses on what is still missing after SQL catalog + SQL-first `cache 
   - doctor parity checks (`cache_entries` vs `cache-index.json`) + orphan catalog checks
   - repair parity actions (`prune-orphan-source-links`, `prune-orphan-file-bindings`)
 - Not done:
+  - first-class artifact catalog/query path
+  - shared projection-sync module for source/file/artifact relations
   - operator cache lifecycle commands (advanced multi-process contention monitoring still pending)
   - SQL-first catalog query commands (sources/files) in CLI (base `list` commands landed)
   - SQL-first export/discovery path (still index/json-centric in places)
@@ -33,6 +43,25 @@ This plan focuses on what is still missing after SQL catalog + SQL-first `cache 
 - Keep rollback simple: `cache.store=json` must continue to work.
 
 ## Workstreams
+
+### WS0: Artifact catalog + projection sync
+Purpose: make artifacts first-class cache/query entities and stop mixing
+projection sync into ad hoc store write paths.
+
+Status: Planned in
+- [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
+
+Tasks:
+1. Add `artifact_bindings` schema + migration.
+2. Extract source/file projection sync into a shared module.
+3. Add artifact projection sync from canonical `ConversationContext.artifacts[]`.
+4. Add SQLite-first + JSON-fallback artifact catalog helpers.
+5. Expose a bounded `cache artifacts list` operator surface.
+
+Acceptance:
+- artifacts are queryable without raw JSON scans.
+- projection sync is a named rebuildable seam.
+- source/file/artifact relation sync shares one implementation boundary.
 
 ### WS1: Cache operations (reset/cleanup)
 Purpose: give users/admins safe cache lifecycle controls.
@@ -117,13 +146,15 @@ Acceptance:
 - repair actions are idempotent and reversible via backup/snapshot.
 
 ## Priority and sequence
-1. WS1 (operations) and WS5 (doctor/repair) first.
-2. WS2 (SQL query commands) second.
-3. WS3 (export SQL-first) third.
-4. WS4 (download lifecycle) fourth.
+1. WS0 (artifact catalog + projection sync) first.
+2. WS1 (operations) and WS5 (doctor/repair) second.
+3. WS2 (SQL query commands) third.
+4. WS3 (export SQL-first) fourth.
+5. WS4 (download lifecycle) fifth.
 
 Reason:
-- operational safety and integrity are prerequisite to relying on SQL at scale.
+- the next structural risk is artifact/query drift, and fixing that now gives
+  later operations/export work a cleaner model to depend on.
 
 ## Smoke checklist (must pass before marking complete)
 - `pnpm run -s check`

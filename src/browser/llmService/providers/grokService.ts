@@ -1,6 +1,6 @@
 import type { ResolvedUserConfig } from '../../../config.js';
 import { getProvider } from '../../providers/index.js';
-import type { LlmServiceAdapter, IdentityPrompt } from '../types.js';
+import type { LlmServiceAdapter, IdentityPrompt, PromptInput, PromptResult } from '../types.js';
 import { BrowserService } from '../../service/browserService.js';
 import { LlmService } from '../llmService.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../../providers/types.js';
@@ -49,6 +49,10 @@ export class GrokService extends LlmService {
       { action: 'listConversations' },
     )) as Conversation[];
     return this.overlayConversationListFromCache(items, listOptions, projectId);
+  }
+
+  async runPrompt(_input: PromptInput, _options?: BrowserProviderListOptions): Promise<PromptResult> {
+    throw new Error('Prompt execution is not supported for grok in llmService yet.');
   }
 
   async renameConversation(

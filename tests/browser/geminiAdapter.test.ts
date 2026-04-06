@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
+  classifyGeminiBlockingState,
+  geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
   geminiUrlMatchesPreference,
   normalizeGeminiConversationId,
@@ -10,6 +12,7 @@ import {
   resolveGeminiConversationUrl,
   resolveGeminiProjectMenuAriaLabel,
   resolveGeminiProjectUrl,
+  selectNewestGeminiAssistantText,
   selectPreferredGeminiTarget,
 } from '../../src/browser/providers/geminiAdapter.js';
 
@@ -63,5 +66,47 @@ describe('geminiAdapter id helpers', () => {
     const second = { url: 'https://gemini.google.com/app/17ecd216fc87eacf' };
     expect(selectPreferredGeminiTarget([first, second], 'https://gemini.google.com/app/17ecd216fc87eacf')).toBe(second);
     expect(selectPreferredGeminiTarget([first, second], 'https://gemini.google.com/app')).toBeUndefined();
+  });
+
+  test('classifies Google unusual-traffic interstitials explicitly', () => {
+    expect(classifyGeminiBlockingState({
+      href: 'https://www.google.com/sorry/index?continue=https://gemini.google.com/app',
+      title: 'https://gemini.google.com/app',
+      bodyText: "About this page Our systems have detected unusual traffic from your computer network. This page checks to see if it's really you sending the requests, and not a robot.",
+    })).toContain('unusual-traffic interstitial');
+    expect(classifyGeminiBlockingState({
+      href: 'https://gemini.google.com/app',
+      title: 'Gemini',
+      bodyText: 'Normal Gemini content',
+    })).toBeNull();
+  });
+
+  test('extracts the newest Gemini assistant text while ignoring prompt echo and baseline content', () => {
+    expect(selectNewestGeminiAssistantText(
+      ['Older answer'],
+      ['Older answer', 'Describe the uploaded image in one short sentence.', 'The image shows a yellow flower.'],
+      'Describe the uploaded image in one short sentence.',
+    )).toBe('The image shows a yellow flower.');
+  });
+
+  test('strips Gemini response chrome from extracted assistant text', () => {
+    expect(selectNewestGeminiAssistantText(
+      [],
+      ['Show thinking Gemini said ACK smoke-1775434174360'],
+      'Disposable CRUD smoke smoke-1775434174360: reply with exactly ACK smoke-1775434174360',
+    )).toBe('ACK smoke-1775434174360');
+  });
+
+  test('treats collapsed Gemini root app state as a ready conversation surface', () => {
+    const expression = geminiConversationSurfaceReadyExpression();
+    expect(expression).toContain('button[aria-label="Main menu"]');
+    expect(expression).toContain('conversation with gemini');
+    expect(expression).toContain('what can we get done');
+  });
+
+  test('does not treat arbitrary Gemini project names as normalized ids', () => {
+    expect(normalizeGeminiProjectId('AuraCall Gemini Cache Smoke 1775435764170')).toBeNull();
+    expect(normalizeGeminiProjectId('84a7f7d4768c')).toBe('84a7f7d4768c');
+    expect(normalizeGeminiProjectId('https://gemini.google.com/gems/edit/84a7f7d4768c')).toBe('84a7f7d4768c');
   });
 });

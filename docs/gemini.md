@@ -23,8 +23,11 @@ implemented from what is merely plausible.
 | Gem/project listing | N/A | Supported | `auracall projects --target gemini` now lists live Gemini Gem rows through the generic browser provider path. |
 | Gem/project create | N/A | Supported | `auracall projects create --target gemini <name>` now drives the native Gemini Gem create flow. |
 | Gem/project rename | N/A | Supported | `auracall projects rename --target gemini <id> <name>` now uses the native Gemini edit page and verifies the persisted name there. |
-| Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem manager delete flow and verifies row disappearance on refresh. |
+| Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem delete flow from the direct `/gem/<id>` page and verifies absence from a refreshed Gem manager list. |
+| Gem/project files add/list/remove | N/A | Supported | `auracall projects files add|list|remove --target gemini <id>` now drives Gemini Gem knowledge file CRUD through the native edit page and verifies persisted rows on fresh reads. |
 | Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
+| Conversation delete | N/A | Supported | `auracall delete --target gemini <id>` now drives the native Gemini conversation delete flow from the direct `/app/<id>` page and verifies absence from a refreshed conversation list. |
+| Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
 | Browser doctor | N/A | Local-only supported | Use `auracall doctor --target gemini --local-only`; full live selector diagnosis is not implemented. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
@@ -139,7 +142,7 @@ Notes:
   - `auracall projects rename --target gemini <id> <name>` is now also live
     through the native `/gems/edit/<id>` flow
   - `auracall projects remove --target gemini <id>` is now also live through
-    the native Gem manager row-menu delete flow
+    the native direct `/gem/<id>` delete flow
   - disposable live delete proof:
     - created `AuraCall Gemini Gem Delete Proof 2026-04-04 1935`
     - resolved id `525572997076`
@@ -152,6 +155,9 @@ Notes:
     profile's Google-account state when a live page label is unavailable
   - live cache files now write under:
     - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
+  - Gemini cache operator entry points now also accept provider `gemini`:
+    - `auracall cache --provider gemini`
+    - `auracall cache export --provider gemini --scope ...`
 - The earlier raw Gemini upload protocol investigation is still preserved in:
   - [gemini-native-upload-investigation.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-native-upload-investigation.md)
   - but it is now background context, not the default path for ordinary Gemini

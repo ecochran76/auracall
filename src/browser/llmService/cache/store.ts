@@ -4,7 +4,6 @@ import { createHash } from 'node:crypto';
 import type {
   Conversation,
   ConversationContext,
-  ConversationSource,
   FileRef,
   Project,
 } from '../../providers/domain.js';
@@ -32,6 +31,12 @@ import {
   resolveConversationCacheScopeId,
 } from '../../providers/cache.js';
 import { resolveCacheEntryPath, upsertCacheIndexEntry } from './index.js';
+import {
+  syncArtifactBindings,
+  syncFileBindings,
+  syncSourceLinks,
+  type StagedLocalFileAsset,
+} from './projectionSync.js';
 import { choosePreferredGrokConversation } from '../../providers/grokAdapter.js';
 
 export interface CachedConversationContextEntry {
@@ -970,12 +975,32 @@ export class SqliteCacheStore implements CacheStore {
           updated_at TEXT NOT NULL,
           UNIQUE(conversation_id, message_index, url)
         );
+        CREATE TABLE IF NOT EXISTS artifact_bindings (
+          artifact_id TEXT PRIMARY KEY,
+          conversation_id TEXT NOT NULL,
+          message_index INTEGER,
+          message_id TEXT,
+          title TEXT NOT NULL,
+          kind TEXT,
+          uri TEXT,
+          provider TEXT NOT NULL,
+          metadata_json TEXT,
+          created_at TEXT NOT NULL,
+          updated_at TEXT NOT NULL,
+          UNIQUE(conversation_id, message_index, title, kind, uri)
+        );
         CREATE INDEX IF NOT EXISTS idx_file_bindings_conversation
           ON file_bindings(conversation_id, updated_at);
         CREATE INDEX IF NOT EXISTS idx_file_bindings_project
           ON file_bindings(project_id, updated_at);
         CREATE INDEX IF NOT EXISTS idx_source_links_conversation
           ON source_links(conversation_id, message_index, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_artifact_bindings_conversation
+          ON artifact_bindings(conversation_id, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_artifact_bindings_kind
+          ON artifact_bindings(kind, updated_at);
+        CREATE INDEX IF NOT EXISTS idx_artifact_bindings_message
+          ON artifact_bindings(message_id, updated_at);
       `);
       const nowIso = new Date().toISOString();
       db.prepare(
@@ -987,6 +1012,9 @@ export class SqliteCacheStore implements CacheStore {
       db.prepare(
         'INSERT OR IGNORE INTO schema_migrations (version, description, applied_at) VALUES (?, ?, ?)',
       ).run(3, 'catalog backfill + file asset pointers', nowIso);
+      db.prepare(
+        'INSERT OR IGNORE INTO schema_migrations (version, description, applied_at) VALUES (?, ?, ?)',
+      ).run(4, 'artifact bindings + projection sync seam', nowIso);
     });
     await this.backfillFromJsonIfNeeded(context, dbPath);
     await this.backfillCatalogFromEntriesIfNeeded(context, dbPath);
@@ -1202,60 +1230,29 @@ export class SqliteCacheStore implements CacheStore {
     conversationId: string,
     payload: ConversationContext,
   ): Promise<void> {
-    const sources = Array.isArray(payload.sources) ? payload.sources : [];
-    await this.syncSourceLinks(dbPath, context, conversationId, sources);
-    const files = Array.isArray(payload.files) ? payload.files : [];
-    await this.syncFileBindings(dbPath, context, {
-      dataset: 'conversation-context',
-      entityId: conversationId,
-      conversationId,
-      projectId: null,
-      files,
-    });
-  }
-
-  private async syncSourceLinks(
-    dbPath: string,
-    context: ProviderCacheContext,
-    conversationId: string,
-    sources: ConversationSource[],
-  ): Promise<void> {
     await this.withDatabase(dbPath, async (db) => {
-      db.prepare('DELETE FROM source_links WHERE conversation_id = ?').run(conversationId);
-      if (!sources.length) return;
-      const nowIso = new Date().toISOString();
-      const stmt = db.prepare(
-        `INSERT INTO source_links (
-          source_id, conversation_id, message_index, url, domain, title, source_group, provider, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(conversation_id, message_index, url) DO UPDATE SET
-          domain = excluded.domain,
-          title = excluded.title,
-          source_group = excluded.source_group,
-          provider = excluded.provider,
-          updated_at = excluded.updated_at`,
-      );
-      for (const source of sources) {
-        const url = typeof source.url === 'string' ? source.url.trim() : '';
-        if (!url) continue;
-        const messageIndex =
-          typeof source.messageIndex === 'number' && Number.isFinite(source.messageIndex)
-            ? source.messageIndex
-            : null;
-        const sourceId = this.hashId(['source', conversationId, String(messageIndex), url]);
-        stmt.run(
-          sourceId,
+      const hashId = this.hashId.bind(this);
+      const sources = Array.isArray(payload.sources) ? payload.sources : [];
+      await syncSourceLinks(db, context, conversationId, sources, hashId);
+      const artifacts = Array.isArray(payload.artifacts) ? payload.artifacts : [];
+      await syncArtifactBindings(db, context, conversationId, artifacts, hashId);
+      const files = Array.isArray(payload.files) ? payload.files : [];
+      await syncFileBindings(
+        db,
+        context,
+        {
+          dataset: 'conversation-context',
+          entityId: conversationId,
           conversationId,
-          messageIndex,
-          url,
-          typeof source.domain === 'string' ? source.domain : null,
-          typeof source.title === 'string' ? source.title : null,
-          typeof source.sourceGroup === 'string' ? source.sourceGroup.trim() : null,
-          context.provider,
-          nowIso,
-          nowIso,
-        );
-      }
+          projectId: null,
+          files,
+        },
+        {
+          cacheDir: this.resolveCacheDir(context),
+          hashId,
+          stageLocalFileAsset: this.stageLocalFileAsset.bind(this),
+        },
+      );
     });
   }
 
@@ -1271,124 +1268,16 @@ export class SqliteCacheStore implements CacheStore {
     },
   ): Promise<void> {
     await this.withDatabase(dbPath, async (db) => {
-      db.prepare('DELETE FROM file_bindings WHERE dataset = ? AND entity_id = ?').run(
-        input.dataset,
-        input.entityId,
+      await syncFileBindings(
+        db,
+        context,
+        input,
+        {
+          cacheDir: this.resolveCacheDir(context),
+          hashId: this.hashId.bind(this),
+          stageLocalFileAsset: this.stageLocalFileAsset.bind(this),
+        },
       );
-      if (!input.files.length) return;
-      const nowIso = new Date().toISOString();
-      const cacheDir = this.resolveCacheDir(context);
-      const assetStmt = db.prepare(
-        `INSERT INTO file_assets (
-          asset_id, provider, identity_key, size_bytes, mime_type, storage_relpath, status, checksum_sha256, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(asset_id) DO UPDATE SET
-          size_bytes = excluded.size_bytes,
-          mime_type = excluded.mime_type,
-          storage_relpath = excluded.storage_relpath,
-          status = excluded.status,
-          checksum_sha256 = excluded.checksum_sha256,
-          updated_at = excluded.updated_at`,
-      );
-      const stmt = db.prepare(
-        `INSERT INTO file_bindings (
-          binding_id, dataset, entity_id, conversation_id, project_id, message_index, role,
-          provider_file_id, display_name, provider, source, size_bytes, remote_url, asset_id, metadata_json, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(dataset, entity_id, provider_file_id, display_name) DO UPDATE SET
-          conversation_id = excluded.conversation_id,
-          project_id = excluded.project_id,
-          message_index = excluded.message_index,
-          role = excluded.role,
-          provider = excluded.provider,
-          source = excluded.source,
-          size_bytes = excluded.size_bytes,
-          remote_url = excluded.remote_url,
-          asset_id = excluded.asset_id,
-          metadata_json = excluded.metadata_json,
-          updated_at = excluded.updated_at`,
-      );
-      for (const file of input.files) {
-        const fileId = typeof file.id === 'string' ? file.id.trim() : '';
-        const fileName = typeof file.name === 'string' ? file.name.trim() : '';
-        if (!fileId && !fileName) continue;
-        const stagedLocal = await this.stageLocalFileAsset(cacheDir, file, fileName || fileId);
-        const remoteUrl =
-          typeof file.remoteUrl === 'string' && file.remoteUrl.trim().length > 0
-            ? file.remoteUrl.trim()
-            : null;
-        const mimeType =
-          stagedLocal.mimeType ??
-          (typeof file.mimeType === 'string' && file.mimeType.trim().length > 0
-            ? file.mimeType.trim()
-            : null);
-        const checksum =
-          stagedLocal.checksumSha256 ??
-          (typeof file.checksumSha256 === 'string' && file.checksumSha256.trim().length > 0
-            ? file.checksumSha256.trim()
-            : null);
-        const sizeBytes =
-          stagedLocal.sizeBytes ??
-          (typeof file.size === 'number' && Number.isFinite(file.size) ? file.size : null);
-        const assetId = stagedLocal.absolutePath
-          ? this.hashId(['asset', context.provider, context.identityKey ?? '', stagedLocal.absolutePath])
-          : null;
-        if (assetId) {
-          assetStmt.run(
-            assetId,
-            context.provider,
-            context.identityKey ?? null,
-            sizeBytes,
-            mimeType,
-            stagedLocal.storageRelpath,
-            stagedLocal.status,
-            checksum,
-            nowIso,
-            nowIso,
-          );
-        }
-        const metadata: Record<string, unknown> = {};
-        if (remoteUrl) metadata.remoteUrl = remoteUrl;
-        if (mimeType) metadata.mimeType = mimeType;
-        if (checksum) metadata.checksumSha256 = checksum;
-        if (stagedLocal.absolutePath) {
-          metadata.localPath = stagedLocal.absolutePath;
-        }
-        if (stagedLocal.storageRelpath) {
-          metadata.storageRelpath = stagedLocal.storageRelpath;
-        }
-        if (stagedLocal.sourceLocalPath && stagedLocal.sourceLocalPath !== stagedLocal.absolutePath) {
-          metadata.sourceLocalPath = stagedLocal.sourceLocalPath;
-        }
-        if (file.metadata && typeof file.metadata === 'object') {
-          Object.assign(metadata, file.metadata);
-        }
-        const bindingId = this.hashId([
-          'binding',
-          input.dataset,
-          input.entityId,
-          fileId || fileName,
-        ]);
-        stmt.run(
-          bindingId,
-          input.dataset,
-          input.entityId,
-          input.conversationId,
-          input.projectId,
-          null,
-          null,
-          fileId || null,
-          fileName || fileId,
-          context.provider,
-          file.source,
-          sizeBytes,
-          remoteUrl,
-          assetId,
-          Object.keys(metadata).length > 0 ? JSON.stringify(metadata) : null,
-          nowIso,
-          nowIso,
-        );
-      }
     });
   }
 
@@ -1396,15 +1285,7 @@ export class SqliteCacheStore implements CacheStore {
     cacheDir: string,
     file: FileRef,
     fallbackName: string,
-  ): Promise<{
-    absolutePath: string | null;
-    storageRelpath: string | null;
-    sourceLocalPath: string | null;
-    sizeBytes: number | null;
-    checksumSha256: string | null;
-    mimeType: string | null;
-    status: 'local_cached' | 'external_path' | 'missing_local';
-  }> {
+  ): Promise<StagedLocalFileAsset> {
     const localPathRaw = typeof file.localPath === 'string' ? file.localPath.trim() : '';
     const mimeType =
       typeof file.mimeType === 'string' && file.mimeType.trim().length > 0
