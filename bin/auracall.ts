@@ -1997,7 +1997,7 @@ conversationArtifactsCommand
 conversationContextCommand
   .command('get <id>')
   .description('Retrieve conversation context by ID or cached title/selector.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
   .option('--history-limit <count>', `Maximum History conversations to fetch (default ${DEFAULT_CACHE_HISTORY_LIMIT}).`)
   .option('--history-since <date>', 'Stop once History entries are older than this date (YYYY-MM-DD or ISO).')
@@ -2010,9 +2010,10 @@ conversationContextCommand
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
       | 'chatgpt'
+      | 'gemini'
       | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,

@@ -58,8 +58,21 @@ export class GeminiService extends LlmService {
     return this.runPlannedPrompt(input);
   }
 
-  async renameConversation(): Promise<void> {
-    throw new Error('Conversation rename is not supported for gemini yet.');
+  async renameConversation(
+    conversationId: string,
+    newTitle: string,
+    projectId?: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<void> {
+    if (!this.provider.renameConversation) {
+      throw new Error(`Rename is not supported for ${this.providerId}.`);
+    }
+    const listOptions = await this.buildListOptions(options, { ensurePort: true });
+    await this.ensureValidConversationUrl(conversationId, { projectId, listOptions });
+    await this.withRetry(
+      () => this.provider.renameConversation?.(conversationId, newTitle, projectId, listOptions) as Promise<void>,
+      { action: 'renameConversation' },
+    );
   }
 
   async deleteConversation(

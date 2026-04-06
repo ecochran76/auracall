@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'vitest';
 import {
   classifyGeminiBlockingState,
+  createGeminiAdapter,
   geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
   geminiUrlMatchesPreference,
@@ -102,6 +103,13 @@ describe('geminiAdapter id helpers', () => {
     expect(expression).toContain('button[aria-label="Main menu"]');
     expect(expression).toContain('conversation with gemini');
     expect(expression).toContain('what can we get done');
+  });
+
+  test('exposes direct conversation rename support on the Gemini provider surface', () => {
+    const adapter = createGeminiAdapter();
+    expect(typeof adapter.renameConversation).toBe('function');
+    expect(typeof adapter.deleteConversation).toBe('function');
+    expect(typeof adapter.readConversationContext).toBe('function');
   });
 
   test('does not treat arbitrary Gemini project names as normalized ids', () => {

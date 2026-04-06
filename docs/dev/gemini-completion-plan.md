@@ -115,6 +115,7 @@ started:
   - add
   - list
   - remove
+- root conversation rename is green
 - root conversation delete is green
 - browser doctor identity and cache identity are green
 
@@ -148,8 +149,6 @@ The next gaps are now narrower and more operational:
    - refreshed readback is currently the authoritative proof
 
 5. Explicit provider gaps still remain and should stay visible.
-   - conversation rename
-   - conversation context parity
    - conversation files/artifacts parity
    - account-level files parity
    - clone parity
@@ -409,11 +408,9 @@ Goal:
   clear order
 
 Recommended order:
-1. conversation rename
-2. conversation context parity
-3. conversation files / artifacts parity
-4. account-level files parity
-5. clone parity if Gemini exposes a real native surface
+1. conversation files / artifacts parity
+2. account-level files parity
+4. clone parity if Gemini exposes a real native surface
 
 Acceptance:
 - each surface should land with:
@@ -442,8 +439,7 @@ Current assessment:
   - shared cache architecture work:
     - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
   - Gemini provider backlog:
-    - conversation rename
-    - conversation context/files/artifacts parity
+    - conversation files/artifacts parity
     - account-level files parity
 
 Practical implication:

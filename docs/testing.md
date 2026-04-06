@@ -186,6 +186,29 @@
       - now also writes cache under:
         - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
       - the earlier cache-identity warning is resolved on this pairing
+  - Gemini conversation rename is now live on the active `default` pairing:
+    - `pnpm tsx bin/auracall.ts rename dc7b095922577de3 'AuraCall Gemini Rename Smoke 1775466602' --target gemini --profile default`
+    - returned:
+      - `Renamed successfully.`
+    - implementation note:
+      - Gemini rename uses the direct `/app/<conversationId>` page action menu
+        (`rename-button`), the rename dialog input
+        (`edit-title-input`), and native keystroke submission through the
+        shared browser-service `submitInlineRename(...)` helper
+  - Gemini conversation context read is now minimally live on the active
+    `default` pairing:
+    - `pnpm tsx bin/auracall.ts conversations context get 841b485bcb3819af --target gemini --profile default --json-only`
+    - returned canonical `messages[]`:
+      - user:
+        - `Read the uploaded file and reply exactly with its full contents, with no extra words.`
+      - assistant:
+        - `GEMINI NEW CHAT UPLOAD SMOKE 1775437518`
+    - implementation note:
+      - the extractor now reads ordered `user-query` / `model-response` turn
+        containers from the direct `/app/<conversationId>` page and pulls text
+        from the inner message nodes instead of the outer Gemini chrome wrappers
+      - this is message-only parity for now; Gemini `sources[]`,
+        conversation `files[]`, and `artifacts[]` are still pending
   - Gemini Gem create is now also live on this pairing:
     - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
     - returned:

@@ -9087,3 +9087,78 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - cache mutation commands should report both operational mechanics and entity
     impact; otherwise the command can be technically precise but still weak for
     operator decision-making
+
+## 2026-04-06 - Gemini conversation rename needs the direct chat-page dialog and native inline-rename submission
+
+- Context:
+  - Gemini conversation delete was already green from the direct
+    `/app/<conversationId>` page action menu
+  - the next parity slice was conversation rename
+- Root cause:
+  - Gemini does expose rename on the direct chat page, but not as a simple
+    setter-plus-save flow
+  - the real surface is:
+    - menu item `rename-button`
+    - dialog input `edit-title-input`
+    - dialog save button `save-button`
+  - generic setter-style input updates were not enough to make Gemini persist
+    the new title
+- Fix:
+  - added Gemini `renameConversation(...)` through the direct `/app/<id>` page
+  - switched the dialog submission onto the shared browser-service
+    `submitInlineRename(...)` helper with native input entry and native/synthetic
+    Enter fallback
+  - verified persistence from a fresh root Gemini conversation-list readback
+    instead of trusting only dialog close
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts rename dc7b095922577de3 'AuraCall Gemini Rename Smoke 1775466602' --target gemini --profile default`
+- Durable lesson:
+  - for inline rename dialogs on modern SPA providers, prefer the shared
+    browser-service rename helper once the live surface is understood; setter
+    updates alone can close the dialog without actually committing the rename
+
+## 2026-04-06 - Gemini conversation context should read inner turn nodes, not outer UI wrappers
+
+- Context:
+  - Gemini browser CRUD was already green for:
+    - conversation list
+    - conversation rename
+    - conversation delete
+  - the next parity slice was `conversations context get --target gemini`
+- Root cause:
+  - the first Gemini context extractor scraped broad visible response nodes such
+    as `.response-content` and broad user containers such as `user-query-content`
+  - on real Gemini chats that pulled in wrapper chrome instead of canonical
+    turn text, producing values like:
+    - `Show thinking Gemini said ...`
+    - file-chip/user-label wrapper text around the actual prompt
+- Fix:
+  - implemented Gemini `readConversationContext(...)` on the direct
+    `/app/<conversationId>` page
+  - changed extraction to read ordered turn containers first:
+    - `user-query`
+    - `model-response`
+  - then extract text from the inner message nodes:
+    - user:
+      - `user-query-content .query-text-line`
+      - `user-query-content .query-text`
+    - assistant:
+      - `structured-content-container.model-response-text message-content`
+      - `.markdown`
+  - sanitized wrapper prefixes:
+    - `You said`
+    - `Show thinking Gemini said`
+  - widened `auracall conversations context get` to accept provider `gemini`
+    and write through the shared conversation-context cache contract
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 841b485bcb3819af --target gemini --profile default --json-only`
+- Durable lesson:
+  - for Gemini reads, treat `user-query` and `model-response` as the
+    authoritative turn boundaries; broad visible wrapper nodes often mix real
+    message text with Gemini chrome and attachment UI

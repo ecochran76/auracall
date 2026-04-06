@@ -8753,3 +8753,88 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `cache`, `cache doctor`, `cache clear`, `cache cleanup`, and export CSV now
     all share the same aggregate conversation inventory model
   - `cache compact` remains size-oriented, which is appropriate
+
+## 2026-04-06 - Gemini conversation rename is now live through the direct chat page
+
+- Focus:
+  - close the next explicit Gemini provider backlog item after cache
+    centralization: root conversation rename
+- What changed:
+  - implemented `renameConversation(...)` in
+    `src/browser/providers/geminiAdapter.ts`
+  - Gemini now renames from the direct `/app/<conversationId>` page via:
+    - `conversation-actions-menu-icon-button`
+    - `rename-button`
+    - rename dialog `edit-title-input`
+  - the flow now submits through the shared browser-service
+    `submitInlineRename(...)` helper using native input entry and native/synthetic
+    Enter fallback, then verifies the renamed row on a fresh root Gemini
+    conversation list read
+  - wired `GeminiService.renameConversation(...)` onto the real provider seam
+    instead of the old unsupported stub
+  - added focused provider-surface coverage in
+    `tests/browser/geminiAdapter.test.ts`
+- Docs updated:
+  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts rename dc7b095922577de3 'AuraCall Gemini Rename Smoke 1775466602' --target gemini --profile default`
+    - returned:
+      - `Renamed successfully.`
+- Current boundary:
+  - Gemini conversation rename/delete are now green on the direct `/app/<id>`
+    action-menu surface
+  - the remaining explicit Gemini provider backlog is now:
+    - conversation files/artifacts parity
+    - account-level files
+
+## 2026-04-06 - Gemini conversation context now reads canonical messages from the direct chat page
+
+- Focus:
+  - close the next explicit Gemini provider backlog item after rename:
+    minimal conversation context parity
+- What changed:
+  - implemented Gemini `readConversationContext(...)` in
+    `src/browser/providers/geminiAdapter.ts` and wired it through
+    `src/browser/llmService/providers/geminiService.ts`
+  - widened `auracall conversations context get` so `--target gemini` now uses
+    the shared provider/cache contract instead of a stale ChatGPT/Grok-only gate
+  - Gemini now reads ordered `user-query` / `model-response` turn containers
+    from the direct `/app/<conversationId>` page and extracts text from the
+    inner message nodes:
+    - user turns from `user-query-content .query-text-line` / `.query-text`
+    - assistant turns from
+      `structured-content-container.model-response-text message-content` /
+      `.markdown`
+  - the extractor now sanitizes Gemini chrome wrappers instead of treating them
+    as content:
+    - strips `You said`
+    - strips `Show thinking Gemini said`
+  - added focused shared-contract coverage in:
+    - `tests/browser/geminiAdapter.test.ts`
+    - `tests/browser/llmServiceContext.test.ts`
+- Docs updated:
+  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 841b485bcb3819af --target gemini --profile default --json-only`
+    - returned canonical `messages[]`:
+      - user:
+        - `Read the uploaded file and reply exactly with its full contents, with no extra words.`
+      - assistant:
+        - `GEMINI NEW CHAT UPLOAD SMOKE 1775437518`
+- Current boundary:
+  - Gemini now has minimal conversation context parity for `messages[]`
+  - the remaining explicit Gemini provider backlog is now:
+    - conversation files/artifacts parity
+    - account-level files

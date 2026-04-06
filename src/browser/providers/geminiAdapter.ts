@@ -6,6 +6,7 @@ import {
   navigateAndSettle,
   pressButton,
   setInputValue,
+  submitInlineRename,
   waitForPredicate,
 } from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
@@ -16,7 +17,7 @@ import type {
   BrowserProviderPromptResult,
   ProviderUserIdentity,
 } from './types.js';
-import type { Conversation, FileRef, Project, ProjectMemoryMode } from './domain.js';
+import type { Conversation, ConversationContext, FileRef, Project, ProjectMemoryMode } from './domain.js';
 import { requireBundledServiceBaseUrl, requireBundledServiceCompatibleHosts, requireBundledServiceRouteTemplate } from '../../services/registry.js';
 
 const GEMINI_BASE_URL = requireBundledServiceBaseUrl('gemini');
@@ -46,6 +47,9 @@ const GEMINI_SEND_BUTTON_SELECTORS = [
   'button[aria-label="Send message"]',
   'button[type="submit"][aria-label*="Send"]',
 ];
+const GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR =
+  'input[data-test-id="edit-title-input"][aria-label="Rename this chat"]';
+const GEMINI_CONVERSATION_RENAME_SAVE_SELECTOR = 'button[data-test-id="save-button"]';
 
 function resolvePortFromEnv(): number | undefined {
   const raw = process.env.AURACALL_BROWSER_PORT;
@@ -73,6 +77,12 @@ function sanitizeGeminiAssistantText(value: string): string {
   return normalized
     .replace(/^(?:show thinking\s+)?gemini said\s+/i, '')
     .replace(/\s+(?:copy prompt|listen|show more options)(?:\s+(?:copy prompt|listen|show more options))*$/i, '')
+    .trim();
+}
+
+function sanitizeGeminiUserText(value: string): string {
+  return normalizePromptText(value)
+    .replace(/^you said\s+/i, '')
     .trim();
 }
 
@@ -379,6 +389,15 @@ type GeminiConversationProbe = {
   title: string;
   url?: string | null;
   updatedAt?: string | null;
+};
+
+type GeminiConversationContextProbe = {
+  provider: 'gemini';
+  conversationId: string;
+  messages: Array<{
+    role: 'user' | 'assistant';
+    text: string;
+  }>;
 };
 
 type GeminiDeleteTrace = Array<Record<string, unknown>>;
@@ -1249,6 +1268,117 @@ async function waitForGeminiPromptResponse(
   throw new Error('Timed out waiting for Gemini assistant response.');
 }
 
+async function readGeminiConversationContextWithClient(
+  client: Pick<ChromeClient, 'Runtime' | 'Page'>,
+  conversationId: string,
+): Promise<GeminiConversationContextProbe> {
+  await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const hasUser = Array.from(document.querySelectorAll('user-query, user-query-content'))
+        .some((node) => visible(node));
+      const hasAssistant = Array.from(document.querySelectorAll(
+        'structured-content-container.model-response-text, structured-content-container, message-content, .response-content .markdown, .response-content, model-response'
+      )).some((node) => visible(node));
+      return hasUser || hasAssistant ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: `Gemini conversation content ready for ${conversationId}`,
+    },
+  );
+  if (!ready.ok) {
+    throw new Error(`Gemini conversation content not found for ${conversationId}.`);
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const sanitizeAssistant = (value) => normalize(value)
+        .replace(/^(?:show thinking\\s+)?gemini said\\s+/i, '')
+        .replace(/\\s+(?:copy prompt|listen|show more options)(?:\\s+(?:copy prompt|listen|show more options))*$/i, '')
+        .trim();
+      const sanitizeUser = (value) => normalize(value)
+        .replace(/^you said\\s+/i, '')
+        .trim();
+      const chooseText = (container, selectors, sanitizer) => {
+        for (const selector of selectors) {
+          for (const node of Array.from(container.querySelectorAll(selector))) {
+            if (!(node instanceof HTMLElement) || !visible(node)) continue;
+            const text = sanitizer(node.innerText || node.textContent || '');
+            if (!text) continue;
+            const childDuplicates = Array.from(node.children)
+              .filter((child) => child instanceof HTMLElement && visible(child))
+              .some((child) => sanitizer(child.innerText || child.textContent || '') === text);
+            if (childDuplicates) continue;
+            return text;
+          }
+        }
+        return sanitizer(container.innerText || container.textContent || '');
+      };
+      const root = document.querySelector('main') || document.body;
+      const turns = Array.from(root.querySelectorAll('user-query, model-response'))
+        .filter((node) => node instanceof HTMLElement && visible(node));
+      turns.sort((left, right) => {
+        const position = left.compareDocumentPosition(right);
+        if (position & Node.DOCUMENT_POSITION_PRECEDING) return 1;
+        if (position & Node.DOCUMENT_POSITION_FOLLOWING) return -1;
+        return 0;
+      });
+      const messages = [];
+      for (const node of turns) {
+        if (!(node instanceof HTMLElement)) continue;
+        const isUser = node.matches('user-query');
+        const text = isUser
+          ? chooseText(
+              node,
+              [
+                'user-query-content p.query-text-line',
+                'user-query-content .query-text',
+                'user-query-content .query-content',
+                'user-query-content',
+              ],
+              sanitizeUser,
+            )
+          : chooseText(
+              node,
+              [
+                'structured-content-container.model-response-text message-content',
+                'structured-content-container.model-response-text .markdown',
+                'structured-content-container.model-response-text',
+                'message-content',
+                '.response-content .markdown',
+                '.response-content',
+              ],
+              sanitizeAssistant,
+            );
+        if (!text) continue;
+        const role = isUser ? 'user' : 'assistant';
+        const previous = messages[messages.length - 1];
+        if (previous && previous.role === role && previous.text === text) continue;
+        messages.push({ role, text });
+      }
+      return {
+        provider: 'gemini',
+        conversationId: ${JSON.stringify(conversationId)},
+        messages,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = (result?.value ?? null) as GeminiConversationContextProbe | null;
+  if (!payload || !Array.isArray(payload.messages) || payload.messages.length === 0) {
+    throw new Error(`Gemini conversation messages not found for ${conversationId}.`);
+  }
+  return payload;
+}
+
 async function openGeminiConversationMenu(
   client: ChromeClient,
   conversationId: string,
@@ -1406,6 +1536,142 @@ async function selectGeminiConversationDeleteMenuItem(client: ChromeClient, trac
   }
   if (trace) {
     trace.push(await collectGeminiDeleteSurfaceState(client.Runtime, 'after-delete-click'));
+  }
+}
+
+async function openGeminiConversationRenameDialog(client: ChromeClient): Promise<void> {
+  const ready = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const button = document.querySelector('button[data-test-id="rename-button"]');
+      const rect = button instanceof HTMLElement ? button.getBoundingClientRect() : null;
+      return rect && rect.width > 0 && rect.height > 0 ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation rename menu item ready',
+    },
+  );
+  if (!ready.ok) {
+    throw new Error('Gemini conversation rename menu did not open.');
+  }
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const button = Array.from(document.querySelectorAll('[role="menuitem"]'))
+        .find((node) => node instanceof HTMLElement &&
+          node.getAttribute('data-test-id') === 'rename-button' &&
+          node.getBoundingClientRect().width > 0 &&
+          node.getBoundingClientRect().height > 0);
+      if (!(button instanceof HTMLElement)) return { ok: false };
+      button.click();
+      return { ok: true };
+    })()`,
+    returnByValue: true,
+  });
+  if (result?.value?.ok !== true) {
+    throw new Error('Gemini conversation rename menu item not found.');
+  }
+  const dialogReady = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const input = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR)});
+      const save = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_SAVE_SELECTOR)});
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      return visible(input) && visible(save) ? { ready: true } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini conversation rename dialog ready',
+    },
+  );
+  if (!dialogReady.ok) {
+    throw new Error('Gemini conversation rename dialog did not open.');
+  }
+}
+
+async function renameGeminiConversationOnPage(
+  client: ChromeClient,
+  conversationId: string,
+  newTitle: string,
+): Promise<void> {
+  const normalizedTitle = normalizeWhitespace(newTitle);
+  if (!normalizedTitle) {
+    throw new Error('Gemini conversation title cannot be empty.');
+  }
+  await openGeminiConversationActionsMenuOnConversationPage(client, conversationId);
+  await openGeminiConversationRenameDialog(client);
+  const renamed = await submitInlineRename(
+    client.Runtime,
+    {
+      inputSelector: GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR,
+      value: normalizedTitle,
+      closeSelector: '[role="dialog"], mat-dialog-container',
+      submitStrategy: 'native-then-synthetic',
+      entryStrategy: 'native-input',
+      timeoutMs: 10_000,
+    },
+    {
+      Input: client.Input,
+    },
+  );
+  if (!renamed.ok) {
+    throw new Error(`Gemini conversation rename save failed: ${renamed.reason ?? 'Rename dialog did not submit.'}`);
+  }
+  const dialogClosed = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const dialog = document.querySelector('[role="dialog"], mat-dialog-container');
+      const input = document.querySelector(${JSON.stringify(GEMINI_CONVERSATION_RENAME_INPUT_SELECTOR)});
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      return !visible(dialog) && !visible(input) ? { closed: true } : null;
+    })()`,
+    {
+      timeoutMs: 10_000,
+      description: 'Gemini conversation rename dialog dismissed',
+    },
+  );
+  if (!dialogClosed.ok) {
+    throw new Error('Gemini conversation rename dialog remained visible after save.');
+  }
+  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+  await ensureGeminiMainMenuOpen(client);
+  const persisted = await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+        .find((node) =>
+          node instanceof HTMLAnchorElement &&
+          visible(node) &&
+          node.href.includes('/app/' + ${JSON.stringify(conversationId)}),
+        );
+      if (!(anchor instanceof HTMLAnchorElement)) return null;
+      const title = normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
+      return title === ${JSON.stringify(normalizedTitle)} ? { title } : null;
+    })()`,
+    {
+      timeoutMs: 15_000,
+      description: `Gemini renamed conversation visible in root list for ${conversationId}`,
+    },
+  );
+  if (!persisted.ok) {
+    const { result } = await client.Runtime.evaluate({
+      expression: `(() => {
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+        const anchor = Array.from(document.querySelectorAll('a[href*="/app/"]'))
+          .find((node) =>
+            node instanceof HTMLAnchorElement &&
+            node.href.includes('/app/' + ${JSON.stringify(conversationId)}),
+          );
+        if (!(anchor instanceof HTMLAnchorElement)) return null;
+        return normalize(anchor.textContent || anchor.getAttribute('aria-label') || '');
+      })()`,
+      returnByValue: true,
+    });
+    throw new Error(
+      `Gemini conversation rename did not persist. Expected "${normalizedTitle}", got "${String(result?.value ?? '')}".`,
+    );
   }
 }
 
@@ -2742,6 +3008,8 @@ export function createGeminiAdapter(): Pick<
   | 'listProjects'
   | 'listConversations'
   | 'listProjectFiles'
+  | 'readConversationContext'
+  | 'renameConversation'
   | 'renameProject'
   | 'runPrompt'
   | 'selectRemoveProjectItem'
@@ -2834,6 +3102,51 @@ export function createGeminiAdapter(): Pick<
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, GEMINI_GEM_CREATE_URL);
       try {
         return await createGeminiProjectWithClient(client, input);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async readConversationContext(
+      conversationId: string,
+      _projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<ConversationContext> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConversationUrl(normalizedConversationId),
+      );
+      try {
+        return await readGeminiConversationContextWithClient(client, normalizedConversationId);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async renameConversation(
+      conversationId: string,
+      newTitle: string,
+      _projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConversationUrl(normalizedConversationId),
+      );
+      try {
+        await renameGeminiConversationOnPage(client, normalizedConversationId, newTitle);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

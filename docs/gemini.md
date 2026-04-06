@@ -26,6 +26,8 @@ implemented from what is merely plausible.
 | Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem delete flow from the direct `/gem/<id>` page and verifies absence from a refreshed Gem manager list. |
 | Gem/project files add/list/remove | N/A | Supported | `auracall projects files add|list|remove --target gemini <id>` now drives Gemini Gem knowledge file CRUD through the native edit page and verifies persisted rows on fresh reads. |
 | Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
+| Conversation context read | N/A | Partially supported | `auracall conversations context get --target gemini <id>` now reads canonical `messages[]` from the direct `/app/<id>` page and writes them through the shared cache contract; Gemini `sources[]`, conversation `files[]`, and `artifacts[]` are still pending. |
+| Conversation rename | N/A | Supported | `auracall rename --target gemini <id> <name>` now drives the native Gemini conversation rename dialog from the direct `/app/<id>` page and verifies the renamed row on a fresh root list read. |
 | Conversation delete | N/A | Supported | `auracall delete --target gemini <id>` now drives the native Gemini conversation delete flow from the direct `/app/<id>` page and verifies absence from a refreshed conversation list. |
 | Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
@@ -151,6 +153,11 @@ Notes:
 - Current Gemini conversation/cache checkpoint on `wsl-chrome-2`:
   - `auracall conversations --target gemini` is live again on the generic
     browser provider path
+  - `auracall conversations context get --target gemini <id> --json-only` is
+    now live for canonical `messages[]` through the direct `/app/<id>` page
+    read path
+  - `auracall rename --target gemini <id> <name>` is now also live through the
+    native `/app/<id>` conversation actions menu and rename dialog
   - Gemini conversation cache identity now falls back to the managed browser
     profile's Google-account state when a live page label is unavailable
   - live cache files now write under:
