@@ -398,6 +398,7 @@ type GeminiConversationContextProbe = {
     role: 'user' | 'assistant';
     text: string;
   }>;
+  files?: FileRef[];
 };
 
 type GeminiDeleteTrace = Array<Record<string, unknown>>;
@@ -1307,6 +1308,22 @@ async function readGeminiConversationContextWithClient(
       const sanitizeUser = (value) => normalize(value)
         .replace(/^you said\\s+/i, '')
         .trim();
+      const inferMimeType = (name) => {
+        const lower = String(name || '').toLowerCase();
+        if (lower.endsWith('.png')) return 'image/png';
+        if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+        if (lower.endsWith('.gif')) return 'image/gif';
+        if (lower.endsWith('.webp')) return 'image/webp';
+        if (lower.endsWith('.pdf')) return 'application/pdf';
+        if (lower.endsWith('.doc')) return 'application/msword';
+        if (lower.endsWith('.docx')) return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        if (lower.endsWith('.xls')) return 'application/vnd.ms-excel';
+        if (lower.endsWith('.xlsx')) return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+        if (lower.endsWith('.csv')) return 'text/csv';
+        if (lower.endsWith('.md')) return 'text/markdown';
+        if (lower.endsWith('.txt')) return 'text/plain';
+        return undefined;
+      };
       const chooseText = (container, selectors, sanitizer) => {
         for (const selector of selectors) {
           for (const node of Array.from(container.querySelectorAll(selector))) {
@@ -1332,6 +1349,8 @@ async function readGeminiConversationContextWithClient(
         return 0;
       });
       const messages = [];
+      const files = [];
+      const seenFileIds = new Set();
       for (const node of turns) {
         if (!(node instanceof HTMLElement)) continue;
         const isUser = node.matches('user-query');
@@ -1363,11 +1382,63 @@ async function readGeminiConversationContextWithClient(
         const previous = messages[messages.length - 1];
         if (previous && previous.role === role && previous.text === text) continue;
         messages.push({ role, text });
+        if (!isUser) continue;
+        const turnFileNodes = Array.from(node.querySelectorAll(
+          '[data-test-id="uploaded-file"], [data-test-id="file-preview"], img[data-test-id="image-preview"], button[aria-label^="Remove file "]',
+        )).filter((entry) => entry instanceof HTMLElement && visible(entry));
+        let fileOrdinal = 0;
+        for (const fileNode of turnFileNodes) {
+          if (!(fileNode instanceof HTMLElement)) continue;
+          const chip = fileNode.closest('[data-test-id="uploaded-file"], [data-test-id="file-preview"], uploader-file-preview, uploader-file-preview-container')
+            || fileNode;
+          const labeledButton = chip.querySelector('button[aria-label]') || chip.querySelector('[aria-label]');
+          const removeButton = chip.querySelector('button[aria-label^="Remove file "]');
+          const imagePreview = chip.matches('img[data-test-id="image-preview"]')
+            ? chip
+            : chip.querySelector('img[data-test-id="image-preview"]');
+          const explicitName = labeledButton instanceof HTMLElement
+            ? normalize(labeledButton.getAttribute('aria-label') || labeledButton.getAttribute('title') || '')
+            : '';
+          const removeName = removeButton instanceof HTMLElement
+            ? normalize((removeButton.getAttribute('aria-label') || '').replace(/^Remove file\\s+/i, ''))
+            : '';
+          const visibleName = normalize(
+            chip.querySelector('.new-file-name, [data-test-id="file-name"]')?.textContent || '',
+          );
+          const visibleType = normalize(
+            chip.querySelector('.new-file-type, .file-type')?.textContent || '',
+          );
+          let name = explicitName || removeName || visibleName;
+          if (name && visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[A-Z0-9]{1,8}$/i.test(visibleType)) {
+            name = name + '.' + visibleType.toLowerCase();
+          }
+          if (!name && imagePreview instanceof HTMLImageElement) {
+            name = normalize(imagePreview.getAttribute('aria-label') || imagePreview.getAttribute('alt') || '');
+          }
+          if (!name) continue;
+          const fileId = ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
+          fileOrdinal += 1;
+          if (seenFileIds.has(fileId)) continue;
+          seenFileIds.add(fileId);
+          const mimeType = inferMimeType(name);
+          files.push({
+            id: fileId,
+            name,
+            provider: 'gemini',
+            source: 'conversation',
+            mimeType,
+            metadata: {
+              messageIndex: messages.length - 1,
+              kind: imagePreview instanceof HTMLImageElement ? 'image-preview' : 'uploaded-file',
+            },
+          });
+        }
       }
       return {
         provider: 'gemini',
         conversationId: ${JSON.stringify(conversationId)},
         messages,
+        files,
       };
     })()`,
     returnByValue: true,

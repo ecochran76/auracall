@@ -9162,3 +9162,38 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - for Gemini reads, treat `user-query` and `model-response` as the
     authoritative turn boundaries; broad visible wrapper nodes often mix real
     message text with Gemini chrome and attachment UI
+
+## 2026-04-06 - Gemini conversation files should come from the visible sent-upload chips on the chat page
+
+- Context:
+  - Gemini already had live conversation message reads through the direct
+    `/app/<conversationId>` page
+  - the next bounded parity gap was `conversations files list --target gemini`
+- Root cause:
+  - the CLI gate still excluded Gemini even though the shared `LlmService`
+    fallback can already use `context.files[]` when a provider does not expose a
+    dedicated `listConversationFiles(...)`
+  - Gemini conversation pages do not expose the file through a separate list
+    surface; the durable visible signal is the sent upload chip inside the user
+    turn
+- Fix:
+  - widened `auracall conversations files list` to accept provider `gemini`
+  - extended Gemini `readConversationContext(...)` so user turns now collect
+    visible sent upload chips from:
+    - `[data-test-id="uploaded-file"]`
+    - `[data-test-id="file-preview"]`
+    - image-preview variants when present
+  - file metadata now comes from the live chip surface:
+    - full filename from the inner button `aria-label`
+    - visible fallback name/type from `.new-file-name` and `.new-file-type`
+  - returned stable synthetic file refs under:
+    - `gemini-conversation-file:<conversationId>:<ordinal>:<name>`
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations files list 841b485bcb3819af --target gemini --profile default`
+- Durable lesson:
+  - on Gemini conversation pages, sent file parity should anchor on the
+    user-turn upload chip surface first; do not wait for a nonexistent separate
+    file catalog when the visible chat chip is the authoritative UI

@@ -212,7 +212,7 @@ Immediate Gemini priority order:
    - add focused CLI regression tests for Gemini target acceptance and cache
      operator behavior
 5. Remaining provider-gap backlog
-   - conversation files/artifacts parity
+   - conversation artifacts parity
    - account-level files
 
 Current status update:
@@ -224,7 +224,7 @@ Current status update:
   - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
 - for Gemini specifically, the remaining meaningful work is now explicit
   provider backlog:
-  - conversation files/artifacts parity
+  - conversation artifacts parity
   - account-level files
 
 Do not treat second-pairing proof churn as the immediate next Gemini slice

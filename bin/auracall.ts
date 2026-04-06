@@ -1868,7 +1868,7 @@ conversationFilesCommand
 conversationFilesCommand
   .command('list <id>')
   .description('List files for a conversation.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--project-id <id>', 'Project ID or name (if the conversation is in a project).')
   .action(async (conversationId, commandOptions, command) => {
     const parentOptions = command.parent?.parent?.opts?.() ?? {};
@@ -1876,9 +1876,10 @@ conversationFilesCommand
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
       | 'chatgpt'
+      | 'gemini'
       | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,

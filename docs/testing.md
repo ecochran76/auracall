@@ -203,12 +203,17 @@
         - `Read the uploaded file and reply exactly with its full contents, with no extra words.`
       - assistant:
         - `GEMINI NEW CHAT UPLOAD SMOKE 1775437518`
+    - and the same direct chat surface now exposes a visible conversation file:
+      - `pnpm tsx bin/auracall.ts conversations files list 841b485bcb3819af --target gemini --profile default`
+      - returned:
+        - `gemini-new-chat-upload-smoke.txt`
     - implementation note:
       - the extractor now reads ordered `user-query` / `model-response` turn
         containers from the direct `/app/<conversationId>` page and pulls text
         from the inner message nodes instead of the outer Gemini chrome wrappers
-      - this is message-only parity for now; Gemini `sources[]`,
-        conversation `files[]`, and `artifacts[]` are still pending
+      - visible sent upload chips now also populate `context.files[]` and the
+        shared `conversations files list` fallback
+      - Gemini `sources[]` and `artifacts[]` are still pending
   - Gemini Gem create is now also live on this pairing:
     - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
     - returned:

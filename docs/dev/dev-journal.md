@@ -8836,5 +8836,43 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current boundary:
   - Gemini now has minimal conversation context parity for `messages[]`
   - the remaining explicit Gemini provider backlog is now:
-    - conversation files/artifacts parity
+    - conversation artifacts parity
+    - account-level files
+
+## 2026-04-06 - Gemini conversation files now read from visible sent-upload chips
+
+- Focus:
+  - close the next narrow Gemini read-side gap after message-level context:
+    conversation file parity for visible sent uploads
+- What changed:
+  - extended Gemini `readConversationContext(...)` in
+    `src/browser/providers/geminiAdapter.ts` so user turns now collect visible
+    upload chips from the direct `/app/<conversationId>` page
+  - the extractor now reads file metadata from the live chip surface:
+    - full filename from the inner button `aria-label`
+    - visible fallback name from `.new-file-name`
+    - visible fallback type from `.new-file-type` / `.file-type`
+  - widened `auracall conversations files list` so `--target gemini` can use
+    the shared `context.files[]` fallback path instead of a stale
+    ChatGPT/Grok-only gate
+  - Gemini now returns synthetic stable conversation file refs shaped like:
+    - `gemini-conversation-file:<conversationId>:<ordinal>:<name>`
+- Docs updated:
+  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations files list 841b485bcb3819af --target gemini --profile default`
+    - returned:
+      - `gemini-new-chat-upload-smoke.txt`
+- Current boundary:
+  - Gemini conversation read parity now covers:
+    - `messages[]`
+    - visible sent `files[]`
+  - the remaining explicit Gemini provider backlog is now:
+    - conversation artifacts parity
     - account-level files
