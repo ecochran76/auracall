@@ -28,17 +28,21 @@ config-model refactor, not more opportunistic browser cleanup.
 
 Deferred browser reliability TODO:
 
-- add shared captcha/anti-bot awareness before any broader browser CRUD push
-  resumes:
-  - detect `google.com/sorry`, reCAPTCHA, Cloudflare, and similar human-check
-    surfaces explicitly
-  - classify them separately from generic route-settle/DOM drift failures
-  - make browser-service / `browser-tools` report those states first-class
-    instead of relying on provider-only classification or raw page inspection
+- extend the new shared browser-tools anti-bot classification before any
+  broader browser CRUD push resumes:
+  - `browser-tools` / page probe now classify:
+    - `google.com/sorry`
+    - CAPTCHA / reCAPTCHA
+    - Cloudflare
+    - generic human-verification surfaces
+  - next:
+    - propagate that classification more broadly through operator flows so
+      tools stop before noisy retries
   - keep the distinction explicit:
     - AuraCall Gemini provider/service already classifies `google.com/sorry`
       and persists anti-bot cooldowns
-    - the remaining gap is browser-tools / doctor / manual-probe visibility
+    - browser-tools / generic doctor now expose the blocking surface too
+    - the remaining gap is broader behavior built on top of that shared signal
   - optionally allow one bounded real-pointer assist for simple checkbox
     challenges
   - otherwise pause and surface a clear manual-resume operator path
