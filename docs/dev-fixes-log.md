@@ -9688,3 +9688,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-07: Once a shared blocking-state seam exists, doctor/features should
   consume it directly instead of continuing with deeper selector diagnosis on a
   page that already requires manual human clearance.
+- 2026-04-07: Setup/login verification flows should also consult the shared
+  blocking-state seam before launching a live verification prompt. If the
+  managed browser is already on a blocking page, the right move is to stop and
+  surface manual-clear guidance, not to burn another verification run.

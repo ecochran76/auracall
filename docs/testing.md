@@ -36,6 +36,10 @@
       - `auracall doctor --target ...` and `auracall features --target ...`
         now exit nonzero on those blocking surfaces and tell the operator to
         clear the page manually before retrying
+      - `auracall setup --target ...` now also checks for a blocking surface
+        after login and before live verification, so setup stops early instead
+        of burning a verification run on a page that already needs manual
+        clearance
       - `auracall features --target gemini --json` is now the first-class live
         feature-discovery surface for Gemini tools, toggles, and upload paths
       - when browser-service can gather a live Gemini `uiList` census, doctor

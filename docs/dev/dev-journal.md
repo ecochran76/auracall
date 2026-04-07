@@ -9540,3 +9540,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Notes:
   - this still does not automate CAPTCHA clearance
   - the value is that operator flows now stop earlier and more explicitly
+
+## 2026-04-07 - Setup now checks blocking state before verification
+
+- Focus:
+  - stop `auracall setup --target ...` from immediately spending a verification
+    run on a managed browser profile that is already sitting on a blocking page
+- Progress:
+  - after login and before verification, setup now collects the shared
+    browser-tools runtime report and checks `pageProbe.blockingState`
+  - if the selected page requires human clearance, setup now:
+    - marks verification failed with the blocking summary
+    - prints the manual-clear guidance
+    - skips the live verification run
+  - final setup doctor output now also embeds browser-tools evidence so the
+    resulting setup contract carries the same blocking-page context
+- Verification:
+  - `pnpm vitest run tests/cli/browserSetup.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

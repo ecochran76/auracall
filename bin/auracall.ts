@@ -6984,6 +6984,7 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
   const {
     inspectBrowserDoctorState,
     inspectBrowserDoctorIdentity,
+    collectBrowserFeatureRuntime,
     createAuracallBrowserDoctorContract,
   } = await import('../src/browser/profileDoctor.js');
   const managedProfileSeedPolicy = commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer';
@@ -7062,6 +7063,32 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
     if (commandOptions.skipVerify || setupFailed) {
       if (!commandOptions.skipVerify && setupFailed) {
         verificationReport.status = 'skipped';
+      }
+      return;
+    }
+
+    const preVerifyLocalReport = await inspectBrowserDoctorState(userConfig, {
+      target,
+      pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
+    });
+    const preVerifyRuntime = await collectBrowserFeatureRuntime(target, preVerifyLocalReport);
+    const preVerifyBlockingState = preVerifyRuntime.browserTools?.report?.pageProbe?.blockingState ?? null;
+    if (preVerifyBlockingState?.requiresHuman) {
+      verificationReport.status = 'failed';
+      verificationReport.error = preVerifyBlockingState.summary;
+      setupFailed = true;
+      if (!jsonMode) {
+        console.log('');
+        console.log(
+          chalk.yellow(
+            `Blocking page detected before verification: ${preVerifyBlockingState.summary}`,
+          ),
+        );
+        console.log(
+          chalk.dim(
+            'Clear the page manually in the managed browser, then rerun the lowest-churn AuraCall command.',
+          ),
+        );
       }
       return;
     }
@@ -7166,6 +7193,7 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
       target,
       pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
     });
+    const finalRuntime = await collectBrowserFeatureRuntime(target, finalLocalReport);
     const finalIdentityStatus = await inspectBrowserDoctorIdentity(userConfig, {
       target,
       localReport: finalLocalReport,
@@ -7174,7 +7202,13 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
       target,
       localReport: finalLocalReport,
       identityStatus: finalIdentityStatus,
+      browserTools: finalRuntime.browserTools,
+      browserToolsError: finalRuntime.browserToolsError,
     });
+    const finalBlockingState = finalRuntime.browserTools?.report?.pageProbe?.blockingState ?? null;
+    if (finalBlockingState?.requiresHuman) {
+      setupFailed = true;
+    }
 
     if (!jsonMode) {
       console.log('');
@@ -7183,6 +7217,8 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
           ? `Managed profile state after setup for ${target}:`
           : `Managed profile state after verification for ${target}:`,
         identityStatus: finalIdentityStatus,
+        browserTools: finalRuntime.browserTools,
+        browserToolsError: finalRuntime.browserToolsError,
       });
       if (commandOptions.skipVerify) {
         console.log(chalk.dim('Skipping live verification (--skip-verify).'));

@@ -1026,5 +1026,5 @@ Next:
   - Cloudflare interstitials
   - generic human-verification pages
 - Next browser-service anti-bot step:
-  - broaden runtime consumers beyond doctor/features so more operator flows stop
-    before noisy retry loops, especially on Gemini
+  - broaden runtime consumers beyond doctor/features/setup so more operator
+    flows stop before noisy retry loops, especially on Gemini
