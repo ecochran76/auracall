@@ -29,6 +29,13 @@
       - `auracall doctor --target gemini --json` now reports live account
         identity plus detected Gemini feature signature when a managed Gemini
         browser session is alive
+      - when browser-tools sees a blocking page such as `google.com/sorry`,
+        CAPTCHA / reCAPTCHA, Cloudflare, or another human-verification
+        interstitial, the embedded runtime report now carries a first-class
+        blocking classification instead of only raw page text
+      - `auracall doctor --target ...` and `auracall features --target ...`
+        now exit nonzero on those blocking surfaces and tell the operator to
+        clear the page manually before retrying
       - `auracall features --target gemini --json` is now the first-class live
         feature-discovery surface for Gemini tools, toggles, and upload paths
       - when browser-service can gather a live Gemini `uiList` census, doctor

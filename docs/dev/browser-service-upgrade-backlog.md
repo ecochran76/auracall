@@ -1019,3 +1019,12 @@ Next:
 - Decide whether registry mismatch reporting belongs in the package doctor or in
   host-app wrappers that know where registry state lives.
 - Keep the JSON contract additive and version-gated as the probe surface grows.
+- Browser-tools now classifies visible anti-bot / human-verification surfaces in
+  `pageProbe.blockingState` for:
+  - Google `google.com/sorry`
+  - CAPTCHA / reCAPTCHA
+  - Cloudflare interstitials
+  - generic human-verification pages
+- Next browser-service anti-bot step:
+  - broaden runtime consumers beyond doctor/features so more operator flows stop
+    before noisy retry loops, especially on Gemini

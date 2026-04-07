@@ -122,10 +122,17 @@ export interface BrowserToolsCookieProbe {
 
 export interface BrowserToolsPageProbeResult {
   document: BrowserToolsDocumentProbe;
+  blockingState: BrowserToolsBlockingState | null;
   selectors: BrowserToolsSelectorProbe[];
   scriptText: BrowserToolsScriptTextProbe | null;
   storage: BrowserToolsStorageProbe | null;
   cookies: BrowserToolsCookieProbe | null;
+}
+
+export interface BrowserToolsBlockingState {
+  kind: 'google-sorry' | 'captcha' | 'cloudflare' | 'human-verification';
+  summary: string;
+  requiresHuman: boolean;
 }
 
 export interface BrowserToolsPageProbeOptions {
@@ -282,6 +289,56 @@ function isBrowserToolsBlankUrl(url: string): boolean {
 
 function isBrowserToolsInternalUrl(url: string): boolean {
   return url.startsWith('chrome://') || url.startsWith('devtools://');
+}
+
+export function classifyBrowserToolsBlockingState(input: {
+  url?: string | null;
+  title?: string | null;
+  bodyText?: string | null;
+}): BrowserToolsBlockingState | null {
+  const url = String(input.url ?? '').trim().toLowerCase();
+  const title = String(input.title ?? '').trim().toLowerCase();
+  const bodyText = String(input.bodyText ?? '').replace(/\s+/g, ' ').trim().toLowerCase();
+  const corpus = [url, title, bodyText].filter(Boolean).join(' ');
+  if (
+    url.includes('google.com/sorry') ||
+    /unusual traffic|not a robot/.test(corpus)
+  ) {
+    return {
+      kind: 'google-sorry',
+      summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+      requiresHuman: true,
+    };
+  }
+  if (
+    /cloudflare/.test(corpus) &&
+    /(just a moment|verify you are human|checking your browser|security check)/.test(corpus)
+  ) {
+    return {
+      kind: 'cloudflare',
+      summary: 'Cloudflare anti-bot interstitial detected.',
+      requiresHuman: true,
+    };
+  }
+  if (
+    /recaptcha|g-recaptcha|hcaptcha|captcha/.test(corpus)
+  ) {
+    return {
+      kind: 'captcha',
+      summary: 'CAPTCHA or reCAPTCHA challenge detected.',
+      requiresHuman: true,
+    };
+  }
+  if (
+    /human verification|verify you are human|prove you are human|confirm you are human/.test(corpus)
+  ) {
+    return {
+      kind: 'human-verification',
+      summary: 'Human-verification page detected.',
+      requiresHuman: true,
+    };
+  }
+  return null;
 }
 
 export function explainBrowserToolsPageSelection(
@@ -718,6 +775,7 @@ export async function collectBrowserToolsPageProbe(
           bodyTextLength: normalizeText(document.body?.innerText || document.body?.textContent || '').length,
           visibleCounts,
         },
+        bodyText: normalizeText(document.body?.innerText || document.body?.textContent || '').slice(0, 4000),
         selectors: selectorReports,
         storage: {
           localStorageCount: localStorageKeys.length,
@@ -750,6 +808,7 @@ export async function collectBrowserToolsPageProbe(
     })()
   `) as {
     document: BrowserToolsPageProbeResult['document'];
+    bodyText: string;
     selectors: BrowserToolsPageProbeResult['selectors'];
     scriptText: BrowserToolsPageProbeResult['scriptText'];
     storage: BrowserToolsPageProbeResult['storage'];
@@ -769,6 +828,11 @@ export async function collectBrowserToolsPageProbe(
       bodyTextLength: result.document.bodyTextLength,
       visibleCounts: result.document.visibleCounts,
     },
+    blockingState: classifyBrowserToolsBlockingState({
+      url: pageUrl,
+      title: pageTitle,
+      bodyText: result.bodyText,
+    }),
     selectors: result.selectors,
     scriptText: result.scriptText,
     storage: result.storage,
@@ -1203,6 +1267,12 @@ export function summarizeBrowserToolsPageProbe(result: BrowserToolsPageProbeResu
     `  bodyTextLength: ${result.document.bodyTextLength}`,
     `  visibleCounts: buttons=${result.document.visibleCounts.buttons}, links=${result.document.visibleCounts.links}, inputs=${result.document.visibleCounts.inputs}, textareas=${result.document.visibleCounts.textareas}, contenteditables=${result.document.visibleCounts.contenteditables}`,
   ];
+  if (result.blockingState) {
+    lines.push(
+      `Blocking state: ${result.blockingState.kind} (${result.blockingState.requiresHuman ? 'manual-clear required' : 'auto-recoverable'})`,
+    );
+    lines.push(`  summary: ${result.blockingState.summary}`);
+  }
   if (result.storage) {
     lines.push(
       `Storage: local=${result.storage.localStorageCount}, session=${result.storage.sessionStorageCount}, matchedAny=${result.storage.matchedAny.join(', ') || '(none)'}, missingAll=${result.storage.missingAll.join(', ') || '(none)'}`,

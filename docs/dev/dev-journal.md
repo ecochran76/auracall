@@ -9497,3 +9497,46 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - Gemini upload chips can expose multiple nested nodes for the same logical
     file. The provider should dedupe by chip host first and semantic file
     identity second, not by raw leaf selector matches.
+## 2026-04-07 - Browser-tools now classifies anti-bot pages first-class
+
+- Focus:
+  - close the browser-service visibility gap between Gemini provider anti-bot
+    handling and generic manual/live probing
+- Progress:
+  - added a shared browser-tools blocking-state classifier covering:
+    - Google `google.com/sorry`
+    - CAPTCHA / reCAPTCHA
+    - Cloudflare interstitials
+    - generic human-verification pages
+  - `browser-tools` page-probe/doctor output now carries
+    `pageProbe.blockingState`
+  - this makes the embedded `auracall doctor` runtime evidence more explicit
+    even when the provider-specific path is not the one classifying the page
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this is a visibility/reporting seam, not full captcha automation
+  - the next anti-bot step is broader operator behavior built on top of the new
+    shared signal
+
+## 2026-04-07 - Doctor/features now stop early on blocking pages and give a manual-resume path
+
+- Focus:
+  - turn the new shared browser-tools blocking-state signal into visible
+    operator behavior instead of leaving it buried in JSON
+- Progress:
+  - `auracall doctor --target ...` now:
+    - prints the blocking classification in text mode
+    - skips extra selector diagnosis when the selected page already requires
+      manual clearance
+    - exits nonzero in JSON mode when a blocking page is present
+  - `auracall features --target ...` now:
+    - prints the same blocking/manual-clear guidance in text mode
+    - exits nonzero in JSON mode when a blocking page is present
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this still does not automate CAPTCHA clearance
+  - the value is that operator flows now stop earlier and more explicitly

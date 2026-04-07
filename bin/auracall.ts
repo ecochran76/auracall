@@ -3398,6 +3398,7 @@ program
       browserTools = runtime.browserTools;
       browserToolsError = runtime.browserToolsError;
     }
+    const runtimeBlockingState = browserTools?.report?.pageProbe?.blockingState ?? null;
     const featureStatus = commandOptions.localOnly
       ? null
       : await inspectBrowserDoctorFeatures(userConfig, {
@@ -3410,7 +3411,7 @@ program
       let selectorDiagnosis = null;
       let selectorDiagnosisError: string | null = null;
 
-      if (!commandOptions.localOnly && target !== 'gemini') {
+      if (!commandOptions.localOnly && target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
         try {
           const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
           selectorDiagnosis = await client.diagnose({
@@ -3434,15 +3435,31 @@ program
         selectorDiagnosisError,
       });
       console.log(JSON.stringify(contract, null, 2));
-      if (selectorDiagnosisError || (selectorDiagnosis && !selectorDiagnosis.report.allPassed)) {
+      if (
+        selectorDiagnosisError ||
+        (selectorDiagnosis && !selectorDiagnosis.report.allPassed) ||
+        runtimeBlockingState?.requiresHuman
+      ) {
         process.exitCode = 1;
       }
       return;
     }
 
-    printLocalBrowserDoctorReport(localReport, { identityStatus, featureStatus });
+    printLocalBrowserDoctorReport(localReport, {
+      identityStatus,
+      featureStatus,
+      browserTools,
+      browserToolsError,
+    });
 
     if (commandOptions.localOnly) {
+      return;
+    }
+    if (runtimeBlockingState?.requiresHuman) {
+      process.exitCode = 1;
+      if (target !== 'gemini') {
+        console.log('- selectorDiagnosis: (skipped because the selected page is blocked and requires manual clearance)');
+      }
       return;
     }
     if (target === 'gemini') {
@@ -3530,6 +3547,9 @@ const featuresCommand = program
         browserToolsError: runtime.browserToolsError,
       });
       console.log(JSON.stringify(contract, null, 2));
+      if (runtime.browserTools?.report?.pageProbe?.blockingState?.requiresHuman) {
+        process.exitCode = 1;
+      }
       return;
     }
 
@@ -3537,6 +3557,9 @@ const featuresCommand = program
       browserTools: runtime.browserTools,
       browserToolsError: runtime.browserToolsError,
     });
+    if (runtime.browserTools?.report?.pageProbe?.blockingState?.requiresHuman) {
+      process.exitCode = 1;
+    }
   });
 
 featuresCommand
@@ -6589,6 +6612,18 @@ function printLocalBrowserDoctorReport(
     title?: string;
     identityStatus?: BrowserDoctorIdentityReportLike | null;
     featureStatus?: BrowserDoctorFeatureReportLike | null;
+    browserTools?: {
+      report?: {
+        pageProbe?: {
+          blockingState?: {
+            kind?: string | null;
+            summary?: string | null;
+            requiresHuman?: boolean | null;
+          } | null;
+        } | null;
+      } | null;
+    } | null;
+    browserToolsError?: string | null;
   } = {},
 ): void {
   console.log(options.title ?? `Local browser state for ${localReport.target}:`);
@@ -6655,6 +6690,20 @@ function printLocalBrowserDoctorReport(
       console.log('- detectedFeatures: (none detected)');
     }
   }
+  const blockingState = options.browserTools?.report?.pageProbe?.blockingState ?? null;
+  if (blockingState) {
+    console.log(
+      `- blockingState: ${blockingState.kind ?? 'blocked'} (${blockingState.requiresHuman ? 'manual-clear required' : 'detected'})`,
+    );
+    if (blockingState.summary?.trim()) {
+      console.log(`- blockingSummary: ${blockingState.summary.trim()}`);
+    }
+    if (blockingState.requiresHuman) {
+      console.log('- blockingAction: clear the page manually in the managed browser, then rerun the lowest-churn AuraCall command');
+    }
+  } else if (options.browserToolsError) {
+    console.log(`- browserTools: (collection failed: ${options.browserToolsError})`);
+  }
   if (localReport.registryEntries.length > 0) {
     const registryTable = localReport.registryEntries.map((entry) => ({
       Profile: entry.profilePath,
@@ -6691,6 +6740,13 @@ function printBrowserFeatureDiscoveryReport(
   options: {
     browserTools?: {
       report?: {
+        pageProbe?: {
+          blockingState?: {
+            kind?: string | null;
+            summary?: string | null;
+            requiresHuman?: boolean | null;
+          } | null;
+        } | null;
         uiList?: {
           summary: {
             menus: number;
@@ -6724,6 +6780,18 @@ function printBrowserFeatureDiscoveryReport(
     console.log(
       `- browserToolsUiList: menus=${uiListSummary.menus}, menuItems=${uiListSummary.menuItems}, switches=${uiListSummary.switches}, uploadCandidates=${uiListSummary.uploadCandidates}`,
     );
+  }
+  const blockingState = options.browserTools?.report?.pageProbe?.blockingState ?? null;
+  if (blockingState) {
+    console.log(
+      `- blockingState: ${blockingState.kind ?? 'blocked'} (${blockingState.requiresHuman ? 'manual-clear required' : 'detected'})`,
+    );
+    if (blockingState.summary?.trim()) {
+      console.log(`- blockingSummary: ${blockingState.summary.trim()}`);
+    }
+    if (blockingState.requiresHuman) {
+      console.log('- blockingAction: clear the page manually in the managed browser, then rerun the lowest-churn AuraCall command');
+    }
   }
   if (options.browserToolsError) {
     console.log(`- browserTools: (collection failed: ${options.browserToolsError})`);

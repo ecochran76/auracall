@@ -9678,3 +9678,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   enough. First dedupe by chip host element, then normalize the resulting
   `FileRef[]` by stable semantics such as `remoteUrl` or
   `name + kind + messageIndex`.
+- 2026-04-07: Browser-tools page probes now classify anti-bot/human-check
+  surfaces first-class instead of leaving them as raw page text. The shared
+  `blockingState` seam currently covers:
+  - Google `google.com/sorry`
+  - CAPTCHA / reCAPTCHA
+  - Cloudflare interstitials
+  - generic human-verification pages
+- 2026-04-07: Once a shared blocking-state seam exists, doctor/features should
+  consume it directly instead of continuing with deeper selector diagnosis on a
+  page that already requires manual human clearance.

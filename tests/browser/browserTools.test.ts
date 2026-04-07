@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
   BROWSER_TOOLS_CONTRACT_VERSION,
+  classifyBrowserToolsBlockingState,
   collectBrowserToolsDomSearch,
   collectBrowserToolsUiList,
   collectBrowserToolsPageProbe,
@@ -140,6 +141,7 @@ describe('selectBrowserToolsPageIndex', () => {
           contenteditables: 0,
         },
       },
+      blockingState: null,
       selectors: [
         {
           selector: 'textarea',
@@ -220,6 +222,7 @@ describe('selectBrowserToolsPageIndex', () => {
             contenteditables: 0,
           },
         },
+        blockingState: null,
         selectors: [],
         storage: {
           localStorageCount: 1,
@@ -268,6 +271,7 @@ describe('selectBrowserToolsPageIndex', () => {
             contenteditables: 0,
           },
         },
+        bodyText: 'Normal Grok page',
         selectors: [
           {
             selector: 'textarea',
@@ -307,6 +311,7 @@ describe('selectBrowserToolsPageIndex', () => {
     });
 
     expect(result.document.url).toBe('https://grok.com/c/abc123');
+    expect(result.blockingState).toBeNull();
     expect(result.storage).toEqual({
       localStorageCount: 2,
       sessionStorageCount: 1,
@@ -660,6 +665,29 @@ describe('selectBrowserToolsPageIndex', () => {
         },
       },
       pageProbe: null,
+    });
+  });
+
+  test('classifies google sorry and cloudflare blocking pages explicitly', () => {
+    expect(classifyBrowserToolsBlockingState({
+      url: 'https://www.google.com/sorry/index?continue=https://gemini.google.com/app',
+      title: 'About this page',
+      bodyText:
+        'Our systems have detected unusual traffic from your computer network. This page checks to see if it is really you sending the requests, and not a robot.',
+    })).toEqual({
+      kind: 'google-sorry',
+      summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+      requiresHuman: true,
+    });
+
+    expect(classifyBrowserToolsBlockingState({
+      url: 'https://chat.openai.com/',
+      title: 'Just a moment...',
+      bodyText: 'Cloudflare verify you are human before continuing.',
+    })).toEqual({
+      kind: 'cloudflare',
+      summary: 'Cloudflare anti-bot interstitial detected.',
+      requiresHuman: true,
     });
   });
 
