@@ -18,10 +18,12 @@
     - edit-image: supported
     - Gem URL targeting: supported
     - cookie/login flow: supported
-    - browser doctor: partially supported
+  - browser doctor: partially supported
       - `auracall doctor --target gemini --json` now reports live account
         identity plus detected Gemini feature signature when a managed Gemini
         browser session is alive
+      - `auracall features --target gemini --json` is now the first-class live
+        feature-discovery surface for Gemini tools, toggles, and upload paths
       - when browser-service can gather a live Gemini `uiList` census, doctor
         now merges that runtime evidence into `featureStatus.detected.evidence`
         instead of silently trusting a weaker provider-local fallback probe
@@ -53,6 +55,31 @@
             - `hard-click-preferred`
             - `hover-or-pointer-state-likely`
             - `file-chooser-candidate`
+- Browser feature discovery:
+  - `auracall features --target gemini --json`
+    - returns `contract: "auracall.browser-features"`
+    - current live `default` proof includes:
+      - `modes`
+        - `canvas`
+        - `create image`
+        - `create music`
+        - `create video`
+        - `deep research`
+      - `toggles.personal intelligence = true`
+      - browser-tools `uiList` evidence with:
+        - `menus = 1`
+        - `menuItems = 6`
+        - `switches = 1`
+        - `uploadCandidates = 3`
+  - `auracall features snapshot --target gemini --json`
+    - writes under:
+      - `~/.auracall/feature-snapshots/<auracallProfile>/gemini/`
+    - updates:
+      - `latest.json`
+  - `auracall features diff --target gemini --json`
+    - compares live discovery to the latest saved snapshot by default
+    - current live `default` proof returns:
+      - `changed = false`
   - treat unsupported or undocumented cells as non-commitments until the Gemini completion plan advances them.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).

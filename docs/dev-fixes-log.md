@@ -9366,3 +9366,62 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - a cleanup step that closes transient overlays after capture
     otherwise repeated live diagnosis leaves the page in mixed or misleading UI
     states
+
+## 2026-04-06 - live provider feature discovery should not stay buried inside browser doctor
+
+- Context:
+  - once Gemini drawer/toggle discovery became reliable through browser-service
+    `uiList` evidence, `auracall doctor` was carrying two unrelated jobs:
+    - browser/runtime health
+    - live provider feature inventory
+  - that made feature discovery harder to keep current and harder to diff over
+    time
+- Fix:
+  - added a first-class `auracall features --target <provider> [--json]`
+    surface
+  - added a versioned `auracall.browser-features` contract so live discovery
+    has one stable machine-readable payload
+  - extracted shared browser feature runtime collection so `doctor` and
+    `features` reuse the same browser-tools evidence and Gemini `Tools` drawer
+    prep/cleanup path
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts features --target gemini --profile default --json`
+- Durable lesson:
+  - browser doctor should answer browser health
+  - provider feature discovery should have its own command and contract
+  - if snapshot/diff is coming next, build it on the same feature-discovery
+    contract instead of inventing a second drift format
+
+## 2026-04-06 - feature discovery needs snapshot/diff on the same contract, and nested Commander options need explicit merge semantics
+
+- Context:
+  - once `auracall features --target <provider> --json` existed, the next
+    practical need was diffing current live surfaces against a saved baseline
+  - the first subcommand implementation also exposed a Commander edge case:
+    parent and child commands both defined `--json` / `--target`, and naive
+    option spreading let a child default overwrite a parent-provided value
+- Fix:
+  - added shared snapshot/diff support in
+    `src/browser/featureDiscovery.ts`
+  - added:
+    - `auracall features snapshot --target <provider> [--json]`
+    - `auracall features diff --target <provider> [--json]`
+  - snapshots now live under:
+    - `~/.auracall/feature-snapshots/<auracallProfile>/<target>/`
+  - changed the nested `features` command family to merge parent/child
+    Commander options explicitly instead of relying on naive object spreads
+- Verification:
+  - `pnpm vitest run tests/browser/featureDiscovery.test.ts tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts features snapshot --target gemini --profile default --label smoke --json`
+    - `pnpm tsx bin/auracall.ts features diff --target gemini --profile default --json`
+- Durable lesson:
+  - when a new CLI family introduces nested subcommands with repeated flags,
+    merge option state explicitly and test the real nested path
+  - if a new anti-drift workflow is meant to compare live and saved state, use
+    the same versioned contract for both instead of inventing a second
+    snapshot-only format

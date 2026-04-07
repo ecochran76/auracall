@@ -9118,3 +9118,75 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     explicit Gemini browser-tools prep/cleanup so doctor dismisses stale
     overlays, opens only `Tools`, captures the `uiList`, then closes transient
     overlays before returning
+
+## 2026-04-06 - browser feature discovery is now a first-class AuraCall surface
+
+- Focus:
+  - extract live provider feature discovery out of `doctor` so operators can
+    inspect volatile provider tools/toggles without coupling that work to
+    browser health diagnostics
+- Progress:
+  - added a versioned `auracall.browser-features` contract in
+    `src/browser/profileDoctor.ts`
+  - extracted shared browser-tools collection into a reusable browser feature
+    runtime helper so `doctor` and `features` use the same Gemini `Tools`
+    drawer prep/cleanup path
+  - added top-level:
+    - `auracall features --target <chatgpt|gemini|grok> [--json]`
+  - live Gemini feature discovery now returns:
+    - `canvas`
+    - `create image`
+    - `create music`
+    - `create video`
+    - `deep research`
+    - `personal intelligence = true`
+    - browser-tools `uiList` summary with `menus=1`, `menuItems=6`,
+      `switches=1`, `uploadCandidates=3`
+- Verification:
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts features --target gemini --profile default --json`
+    - `pnpm tsx bin/auracall.ts features --target gemini --profile default`
+- Next:
+  - add `features snapshot`
+  - add `features diff`
+  - keep those flows bound to the same `auracall.browser-features` contract
+
+## 2026-04-06 - browser feature snapshot/diff now gives AuraCall an anti-drift workflow
+
+- Focus:
+  - turn live provider feature discovery into something operators can compare
+    over time instead of a one-shot probe
+- Progress:
+  - added `src/browser/featureDiscovery.ts`
+  - added:
+    - `auracall features snapshot --target <provider> [--json]`
+    - `auracall features diff --target <provider> [--json]`
+  - snapshots now write under:
+    - `~/.auracall/feature-snapshots/<auracallProfile>/<target>/`
+  - `features diff` now compares:
+    - detected modes
+    - detected toggles
+    - browser-tools `uiList` menu items
+    - browser-tools `uiList` upload candidates
+  - fixed a nested Commander-option bug in the new subcommands:
+    - `--target`
+    - `--json`
+    now resolve correctly even when the parent `features` command also defines
+    them
+- Verification:
+  - `pnpm vitest run tests/browser/featureDiscovery.test.ts tests/browser/profileDoctor.test.ts tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts features snapshot --target gemini --profile default --label smoke --json`
+    - `pnpm tsx bin/auracall.ts features diff --target gemini --profile default --json`
+  - current live `default` diff result:
+    - `changed = false`
+- Next:
+  - decide whether to broaden diff beyond:
+    - modes
+    - toggles
+    - menu items
+    - upload candidates
+  - otherwise return to Gemini provider backlog

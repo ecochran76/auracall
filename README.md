@@ -49,6 +49,13 @@ auracall setup --target grok \
 # Machine-readable browser doctor output
 auracall doctor --target grok --json
 
+# Machine-readable live browser feature discovery
+auracall features --target gemini --json
+
+# Save and diff live feature snapshots
+auracall features snapshot --target gemini --json
+auracall features diff --target gemini --json
+
 # Machine-readable browser setup output
 auracall setup --target grok --skip-login --skip-verify --json
 

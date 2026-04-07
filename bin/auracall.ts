@@ -124,6 +124,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { getAuracallHomeDir } from '../src/auracallHome.js';
 import { BrowserAutomationClient } from '../src/browser/client.js';
+import {
+  diffBrowserFeaturesContracts,
+  resolveBrowserFeaturesBaseline,
+  writeBrowserFeaturesSnapshot,
+} from '../src/browser/featureDiscovery.js';
 import { LlmService, createLlmService } from '../src/browser/llmService/index.js';
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
@@ -3287,6 +3292,7 @@ program
       throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
     }
     const {
+      collectBrowserFeatureRuntime,
       inspectBrowserDoctorState,
       inspectBrowserDoctorIdentity,
       inspectBrowserDoctorFeatures,
@@ -3305,43 +3311,9 @@ program
     let browserTools = null;
     let browserToolsError: string | null = null;
     if (commandOptions.json && !commandOptions.localOnly) {
-      const activeInstance = localReport.managedRegistryEntry;
-      if (activeInstance?.alive) {
-        if (isLoopbackHost(activeInstance.host)) {
-          try {
-            const { collectBrowserToolsDoctorReport, createBrowserToolsDoctorContract } = await import(
-              '../packages/browser-service/src/browserTools.js'
-            );
-            const prepareSelectedPage =
-              target === 'gemini'
-                ? (async (page: import('puppeteer-core').Page) => {
-                    const { prepareGeminiToolsDrawerForUiList } = await import('../src/browser/providers/geminiAdapter.js');
-                    await prepareGeminiToolsDrawerForUiList(page);
-                  })
-                : null;
-            const cleanupSelectedPage =
-              target === 'gemini'
-                ? (async (page: import('puppeteer-core').Page) => {
-                    const { cleanupGeminiUiListPreparation } = await import('../src/browser/providers/geminiAdapter.js');
-                    await cleanupGeminiUiListPreparation(page);
-                  })
-                : null;
-            const report = await collectBrowserToolsDoctorReport(activeInstance.port, {
-              urlContains: resolveBrowserDoctorUrlContains(target),
-              includeUiList: target === 'gemini',
-              uiListLimitPerKind: target === 'gemini' ? 20 : undefined,
-              uiListMaxScan: target === 'gemini' ? 10_000 : undefined,
-              prepareSelectedPage,
-              cleanupSelectedPage,
-            });
-            browserTools = createBrowserToolsDoctorContract(report);
-          } catch (error) {
-            browserToolsError = error instanceof Error ? error.message : String(error);
-          }
-        } else {
-          browserToolsError = `Managed browser instance is on non-loopback host ${activeInstance.host}; browser-tools doctor currently expects localhost CDP access.`;
-        }
-      }
+      const runtime = await collectBrowserFeatureRuntime(target, localReport);
+      browserTools = runtime.browserTools;
+      browserToolsError = runtime.browserToolsError;
     }
     const featureStatus = commandOptions.localOnly
       ? null
@@ -3429,6 +3401,195 @@ program
       console.error(`Failed to connect or diagnose: ${error instanceof Error ? error.message : String(error)}`);
       process.exit(1);
     }
+  });
+
+const featuresCommand = program
+  .command('features')
+  .description('Discover live browser-provider tools, modes, toggles, and related feature evidence.')
+  .option('--target <chatgpt|grok|gemini>', 'Choose which provider to inspect (chatgpt, grok, or gemini).')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    const parentOptions =
+      typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+    const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...parentOptions,
+      ...ownOptions,
+      target: (ownOptions.target ?? parentOptions.target) as OptionValues['target'],
+      json: Boolean(parentOptions.json || ownOptions.json),
+    } as OptionValues;
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok' | 'gemini';
+    if (target !== 'chatgpt' && target !== 'grok' && target !== 'gemini') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
+    }
+    const {
+      collectBrowserFeatureRuntime,
+      createAuracallBrowserFeaturesContract,
+      inspectBrowserDoctorState,
+      inspectBrowserFeatures,
+    } = await import('../src/browser/profileDoctor.js');
+    const localReport = await inspectBrowserDoctorState(userConfig, { target });
+    const runtime = await collectBrowserFeatureRuntime(target, localReport);
+    const featureStatus = await inspectBrowserFeatures(userConfig, {
+      target,
+      localReport,
+      browserTools: runtime.browserTools,
+    });
+
+    if (commandOptions.json) {
+      const contract = createAuracallBrowserFeaturesContract({
+        target,
+        featureStatus,
+        browserTools: runtime.browserTools,
+        browserToolsError: runtime.browserToolsError,
+      });
+      console.log(JSON.stringify(contract, null, 2));
+      return;
+    }
+
+    printBrowserFeatureDiscoveryReport(target, featureStatus, {
+      browserTools: runtime.browserTools,
+      browserToolsError: runtime.browserToolsError,
+    });
+  });
+
+featuresCommand
+  .command('snapshot')
+  .description('Capture a live provider feature snapshot and save it under ~/.auracall/feature-snapshots.')
+  .option('--target <chatgpt|grok|gemini>', 'Choose which provider to inspect (chatgpt, grok, or gemini).')
+  .option('--label <label>', 'Optional snapshot label to append to the saved file name.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    const parentOptions =
+      typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+    const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...parentOptions,
+      ...ownOptions,
+      target: (ownOptions.target ?? parentOptions.target) as OptionValues['target'],
+      label: (ownOptions.label ?? parentOptions.label) as OptionValues['label'],
+      json: Boolean(parentOptions.json || ownOptions.json),
+    } as OptionValues;
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok' | 'gemini';
+    if (target !== 'chatgpt' && target !== 'grok' && target !== 'gemini') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
+    }
+    const {
+      collectBrowserFeatureRuntime,
+      createAuracallBrowserFeaturesContract,
+      inspectBrowserDoctorState,
+      inspectBrowserFeatures,
+    } = await import('../src/browser/profileDoctor.js');
+    const localReport = await inspectBrowserDoctorState(userConfig, { target });
+    const runtime = await collectBrowserFeatureRuntime(target, localReport);
+    const featureStatus = await inspectBrowserFeatures(userConfig, {
+      target,
+      localReport,
+      browserTools: runtime.browserTools,
+    });
+    const contract = createAuracallBrowserFeaturesContract({
+      target,
+      featureStatus,
+      browserTools: runtime.browserTools,
+      browserToolsError: runtime.browserToolsError,
+    });
+    const snapshot = await writeBrowserFeaturesSnapshot(contract, {
+      auracallProfile: userConfig.auracallProfile ?? 'default',
+      label: typeof commandOptions.label === 'string' ? commandOptions.label : null,
+    });
+    if (commandOptions.json) {
+      console.log(
+        JSON.stringify(
+          {
+            target,
+            snapshot,
+            contract,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    console.log(`Saved feature snapshot for ${target} to ${snapshot.snapshotPath}`);
+    console.log(`Updated latest snapshot at ${snapshot.latestPath}`);
+  });
+
+featuresCommand
+  .command('diff')
+  .description('Compare live provider features against the latest saved feature snapshot.')
+  .option('--target <chatgpt|grok|gemini>', 'Choose which provider to inspect (chatgpt, grok, or gemini).')
+  .option('--snapshot <path>', 'Optional explicit baseline snapshot path (defaults to latest.json for the active AuraCall runtime profile).')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    const parentOptions =
+      typeof this.parent?.opts === 'function' ? (this.parent.opts() as OptionValues) : ({} as OptionValues);
+    const ownOptions = typeof this.opts === 'function' ? (this.opts() as OptionValues) : ({} as OptionValues);
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...parentOptions,
+      ...ownOptions,
+      target: (ownOptions.target ?? parentOptions.target) as OptionValues['target'],
+      snapshot: (ownOptions.snapshot ?? parentOptions.snapshot) as OptionValues['snapshot'],
+      json: Boolean(parentOptions.json || ownOptions.json),
+    } as OptionValues;
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as 'chatgpt' | 'grok' | 'gemini';
+    if (target !== 'chatgpt' && target !== 'grok' && target !== 'gemini') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
+    }
+    const {
+      collectBrowserFeatureRuntime,
+      createAuracallBrowserFeaturesContract,
+      inspectBrowserDoctorState,
+      inspectBrowserFeatures,
+    } = await import('../src/browser/profileDoctor.js');
+    const localReport = await inspectBrowserDoctorState(userConfig, { target });
+    const runtime = await collectBrowserFeatureRuntime(target, localReport);
+    const featureStatus = await inspectBrowserFeatures(userConfig, {
+      target,
+      localReport,
+      browserTools: runtime.browserTools,
+    });
+    const current = createAuracallBrowserFeaturesContract({
+      target,
+      featureStatus,
+      browserTools: runtime.browserTools,
+      browserToolsError: runtime.browserToolsError,
+    });
+    const baseline = await resolveBrowserFeaturesBaseline(target, {
+      auracallProfile: userConfig.auracallProfile ?? 'default',
+      snapshotPath: typeof commandOptions.snapshot === 'string' ? commandOptions.snapshot : null,
+    });
+    const diff = diffBrowserFeaturesContracts(baseline.contract, current, {
+      baselinePath: baseline.path,
+    });
+    if (commandOptions.json) {
+      console.log(
+        JSON.stringify(
+          {
+            target,
+            diff,
+            current,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    console.log(`Feature diff for ${target}: ${diff.changed ? 'changed' : 'no changes'}`);
+    console.log(`- baseline: ${diff.baselinePath}`);
+    console.log(
+      `- summary: +modes=${diff.summary.addedModes}, -modes=${diff.summary.removedModes}, toggles=${diff.summary.changedToggles}, +menuItems=${diff.summary.addedMenuItems}, -menuItems=${diff.summary.removedMenuItems}, +uploads=${diff.summary.addedUploadCandidates}, -uploads=${diff.summary.removedUploadCandidates}`,
+    );
   });
 
 async function refreshProviderCache(
@@ -6441,6 +6602,51 @@ function printLocalBrowserDoctorReport(
   }
 }
 
+function printBrowserFeatureDiscoveryReport(
+  target: 'chatgpt' | 'grok' | 'gemini',
+  featureStatus: BrowserDoctorFeatureReportLike | null,
+  options: {
+    browserTools?: {
+      report?: {
+        uiList?: {
+          summary: {
+            menus: number;
+            menuItems: number;
+            switches: number;
+            uploadCandidates: number;
+          };
+        } | null;
+      };
+    } | null;
+    browserToolsError?: string | null;
+  } = {},
+): void {
+  console.log(`Live feature discovery for ${target}:`);
+  if (!featureStatus) {
+    console.log('- detectedFeatures: (not checked)');
+  } else if (!featureStatus.supported) {
+    console.log(`- detectedFeatures: (${featureStatus.reason?.trim() || `not supported for ${target}`})`);
+  } else if (!featureStatus.attempted) {
+    console.log('- detectedFeatures: (not checked; no active managed browser instance)');
+  } else if (featureStatus.detected) {
+    console.log(`- detectedFeatures: ${JSON.stringify(featureStatus.detected)}`);
+  } else if (featureStatus.error) {
+    console.log(`- detectedFeatures: (check failed: ${featureStatus.error})`);
+  } else {
+    console.log('- detectedFeatures: (none detected)');
+  }
+
+  const uiListSummary = options.browserTools?.report?.uiList?.summary ?? null;
+  if (uiListSummary) {
+    console.log(
+      `- browserToolsUiList: menus=${uiListSummary.menus}, menuItems=${uiListSummary.menuItems}, switches=${uiListSummary.switches}, uploadCandidates=${uiListSummary.uploadCandidates}`,
+    );
+  }
+  if (options.browserToolsError) {
+    console.log(`- browserTools: (collection failed: ${options.browserToolsError})`);
+  }
+}
+
 function formatChromeGoogleAccount(
   account: BrowserDoctorReportLike['chromeGoogleAccount'],
 ): string {
@@ -6458,20 +6664,6 @@ function formatChromeGoogleAccount(
     return `(active Google-account markers present, but no primary account identity; ${account.source}; activeAccounts=${account.activeAccounts})`;
   }
   return '(signed-in Google account not detected)';
-}
-
-function resolveBrowserDoctorUrlContains(target: 'chatgpt' | 'grok' | 'gemini'): string {
-  if (target === 'grok') return 'grok.com';
-  if (target === 'gemini') return 'gemini.google.com';
-  return 'chatgpt.com';
-}
-
-function isLoopbackHost(host: string | null | undefined): boolean {
-  if (!host) {
-    return false;
-  }
-  const normalized = host.trim().toLowerCase();
-  return normalized === '127.0.0.1' || normalized === 'localhost' || normalized === '::1' || normalized === '[::1]';
 }
 
 function formatProviderIdentity(identity: ProviderUserIdentity): string {

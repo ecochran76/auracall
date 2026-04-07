@@ -14,6 +14,7 @@ vi.mock('../../src/browser/client.js', () => ({
 }));
 
 import {
+  createAuracallBrowserFeaturesContract,
   createAuracallBrowserDoctorContract,
   inspectBrowserDoctorIdentity,
   inspectBrowserDoctorState,
@@ -921,6 +922,106 @@ describe('profileDoctor', () => {
           },
         },
         selectorDiagnosisError: null,
+      },
+    });
+  });
+
+  it('wraps browser feature discovery output in a versioned Aura-Call contract', () => {
+    const contract = createAuracallBrowserFeaturesContract(
+      {
+        target: 'gemini',
+        featureStatus: {
+          target: 'gemini',
+          supported: true,
+          attempted: true,
+          featureSignature: '{"detector":"gemini-feature-probe-v1","modes":["canvas"]}',
+          detected: {
+            detector: 'gemini-feature-probe-v1',
+            modes: ['canvas'],
+          },
+          error: null,
+          reason: null,
+        },
+        browserTools: {
+          contract: 'browser-tools.doctor-report',
+          version: 1,
+          generatedAt: '2026-04-06T20:00:00.000Z',
+          report: {
+            census: {
+              selectedIndex: 0,
+              selectedReason: 'url-contains',
+              selectedTab: {
+                index: 0,
+                url: 'https://gemini.google.com/app',
+                focused: true,
+                title: 'Gemini',
+                readyState: 'complete',
+                visibilityState: 'visible',
+                selected: true,
+                matchesUrlContains: true,
+                selectionReasons: ['url-contains'],
+                isBlank: false,
+                isBrowserInternal: false,
+              },
+              tabs: [],
+              candidates: [],
+            },
+            pageProbe: null,
+            uiList: null,
+          },
+        },
+        browserToolsError: null,
+      },
+      { generatedAt: '2026-04-06T20:00:05.000Z' },
+    );
+
+    expect(contract).toEqual({
+      contract: 'auracall.browser-features',
+      version: 1,
+      generatedAt: '2026-04-06T20:00:05.000Z',
+      target: 'gemini',
+      featureStatus: {
+        target: 'gemini',
+        supported: true,
+        attempted: true,
+        featureSignature: '{"detector":"gemini-feature-probe-v1","modes":["canvas"]}',
+        detected: {
+          detector: 'gemini-feature-probe-v1',
+          modes: ['canvas'],
+        },
+        error: null,
+        reason: null,
+      },
+      runtime: {
+        browserTools: {
+          contract: 'browser-tools.doctor-report',
+          version: 1,
+          generatedAt: '2026-04-06T20:00:00.000Z',
+          report: {
+            census: {
+              selectedIndex: 0,
+              selectedReason: 'url-contains',
+              selectedTab: {
+                index: 0,
+                url: 'https://gemini.google.com/app',
+                focused: true,
+                title: 'Gemini',
+                readyState: 'complete',
+                visibilityState: 'visible',
+                selected: true,
+                matchesUrlContains: true,
+                selectionReasons: ['url-contains'],
+                isBlank: false,
+                isBrowserInternal: false,
+              },
+              tabs: [],
+              candidates: [],
+            },
+            pageProbe: null,
+            uiList: null,
+          },
+        },
+        browserToolsError: null,
       },
     });
   });

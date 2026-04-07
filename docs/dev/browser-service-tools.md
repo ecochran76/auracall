@@ -14,6 +14,13 @@ When targeting managed Aura-Call sessions through that wrapper, prefer
 same AuraCall runtime profile and managed browser profile that the real product
 path would use.
 
+`auracall features --target <provider> --json` is now the operator-facing
+consumer of this browser-service evidence for live provider feature discovery.
+`auracall features snapshot|diff ...` now layers anti-drift workflows on top of
+that same contract. Use `browser-tools search` / `browser-tools ls` when you
+need lower-level DOM evidence or are diagnosing why the higher-level feature
+contract missed a live surface.
+
 Current upgrade backlog:
 - generic browser-service work: [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
 - lessons review: [browser-service-lessons-review-2026-03-30.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-lessons-review-2026-03-30.md)

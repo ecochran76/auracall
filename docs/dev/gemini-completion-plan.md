@@ -683,3 +683,29 @@ Best next implementation after this doc:
 2. choose one Gemini operator/runtime alignment slice
 3. only then take a targeted Gemini code fix if the audit proves a concrete
    gap
+
+## 2026-04-06 browser feature discovery checkpoint
+
+- Completed:
+  - `auracall features --target gemini --json` now emits a versioned
+    `auracall.browser-features` contract
+  - the current Gemini implementation uses browser-service `uiList` evidence
+    from the live `Tools` drawer instead of hiding discovery under `doctor`
+- Current live proof on `default`:
+  - modes:
+    - `canvas`
+    - `create image`
+    - `create music`
+    - `create video`
+    - `deep research`
+  - toggle:
+    - `personal intelligence = true`
+  - upload evidence:
+    - `uploadCandidates = 3`
+- Next Gemini-adjacent slice:
+  - completed:
+    - `features snapshot`
+    - `features diff`
+  - after that, return to provider backlog:
+    - broader non-image artifact parity
+    - account-level files

@@ -119,6 +119,8 @@ export function deriveProviderIdentityFromChromeGoogleAccount(
 
 export const AURACALL_BROWSER_DOCTOR_CONTRACT_VERSION = 1 as const;
 
+export const AURACALL_BROWSER_FEATURES_CONTRACT_VERSION = 1 as const;
+
 export interface AuracallBrowserDoctorContract {
   contract: 'auracall.browser-doctor';
   version: typeof AURACALL_BROWSER_DOCTOR_CONTRACT_VERSION;
@@ -137,6 +139,18 @@ export interface AuracallBrowserDoctorContract {
         }
       | null;
     selectorDiagnosisError: string | null;
+  };
+}
+
+export interface AuracallBrowserFeaturesContract {
+  contract: 'auracall.browser-features';
+  version: typeof AURACALL_BROWSER_FEATURES_CONTRACT_VERSION;
+  generatedAt: string;
+  target: BrowserDoctorTarget;
+  featureStatus: BrowserDoctorFeatureReport | null;
+  runtime: {
+    browserTools: BrowserToolsDoctorContract | null;
+    browserToolsError: string | null;
   };
 }
 
@@ -173,6 +187,101 @@ export function createAuracallBrowserDoctorContract(
       selectorDiagnosisError: input.selectorDiagnosisError ?? null,
     },
   };
+}
+
+export function createAuracallBrowserFeaturesContract(
+  input: {
+    target: BrowserDoctorTarget;
+    featureStatus?: BrowserDoctorFeatureReport | null;
+    browserTools?: BrowserToolsDoctorContract | null;
+    browserToolsError?: string | null;
+  },
+  options: { generatedAt?: string } = {},
+): AuracallBrowserFeaturesContract {
+  return {
+    contract: 'auracall.browser-features',
+    version: AURACALL_BROWSER_FEATURES_CONTRACT_VERSION,
+    generatedAt: options.generatedAt ?? new Date().toISOString(),
+    target: input.target,
+    featureStatus: input.featureStatus ?? null,
+    runtime: {
+      browserTools: input.browserTools ?? null,
+      browserToolsError: input.browserToolsError ?? null,
+    },
+  };
+}
+
+export function resolveBrowserFeatureUrlContains(target: BrowserDoctorTarget): string {
+  switch (target) {
+    case 'chatgpt':
+      return 'chatgpt.com';
+    case 'grok':
+      return 'grok.com';
+    case 'gemini':
+      return 'gemini.google.com';
+    default:
+      return target;
+  }
+}
+
+export function isLoopbackBrowserHost(host: string | null | undefined): boolean {
+  return host === '127.0.0.1' || host === '::1' || host === 'localhost';
+}
+
+export async function collectBrowserFeatureRuntime(
+  target: BrowserDoctorTarget,
+  localReport: BrowserDoctorReport,
+): Promise<{
+  browserTools: BrowserToolsDoctorContract | null;
+  browserToolsError: string | null;
+}> {
+  const activeInstance = localReport.managedRegistryEntry;
+  if (!activeInstance?.alive) {
+    return { browserTools: null, browserToolsError: null };
+  }
+  if (!isLoopbackBrowserHost(activeInstance.host)) {
+    return {
+      browserTools: null,
+      browserToolsError: `Managed browser instance is on non-loopback host ${activeInstance.host}; browser-tools doctor currently expects localhost CDP access.`,
+    };
+  }
+
+  try {
+    const { collectBrowserToolsDoctorReport, createBrowserToolsDoctorContract } = await import(
+      '../../packages/browser-service/src/browserTools.js'
+    );
+    const prepareSelectedPage =
+      target === 'gemini'
+        ? (async (page: import('puppeteer-core').Page) => {
+            const { prepareGeminiToolsDrawerForUiList } = await import('./providers/geminiAdapter.js');
+            await prepareGeminiToolsDrawerForUiList(page);
+          })
+        : null;
+    const cleanupSelectedPage =
+      target === 'gemini'
+        ? (async (page: import('puppeteer-core').Page) => {
+            const { cleanupGeminiUiListPreparation } = await import('./providers/geminiAdapter.js');
+            await cleanupGeminiUiListPreparation(page);
+          })
+        : null;
+    const report = await collectBrowserToolsDoctorReport(activeInstance.port, {
+      urlContains: resolveBrowserFeatureUrlContains(target),
+      includeUiList: target === 'gemini',
+      uiListLimitPerKind: target === 'gemini' ? 20 : undefined,
+      uiListMaxScan: target === 'gemini' ? 10_000 : undefined,
+      prepareSelectedPage,
+      cleanupSelectedPage,
+    });
+    return {
+      browserTools: createBrowserToolsDoctorContract(report),
+      browserToolsError: null,
+    };
+  } catch (error) {
+    return {
+      browserTools: null,
+      browserToolsError: error instanceof Error ? error.message : String(error),
+    };
+  }
 }
 
 export async function inspectBrowserDoctorState(
@@ -344,7 +453,7 @@ export async function inspectBrowserDoctorIdentity(
   }
 }
 
-export async function inspectBrowserDoctorFeatures(
+export async function inspectBrowserFeatures(
   userConfig: ResolvedUserConfig,
   options: {
     target?: BrowserDoctorTarget;
@@ -461,6 +570,17 @@ export async function inspectBrowserDoctorFeatures(
       reason: null,
     };
   }
+}
+
+export async function inspectBrowserDoctorFeatures(
+  userConfig: ResolvedUserConfig,
+  options: {
+    target?: BrowserDoctorTarget;
+    localReport?: BrowserDoctorReport | null;
+    browserTools?: BrowserToolsDoctorContract | null;
+  } = {},
+): Promise<BrowserDoctorFeatureReport> {
+  return inspectBrowserFeatures(userConfig, options);
 }
 
 async function classifyRegistryEntries(

@@ -33,6 +33,8 @@ implemented from what is merely plausible.
 | Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
 | Browser doctor | N/A | Partially supported | `auracall doctor --target gemini` now reports the live signed-in account plus detected Gemini feature/drawer signature when a managed browser instance is alive; full live selector diagnosis is still not implemented there, but `browser-tools search` can now do structured live DOM discovery against the same managed Gemini page. |
+| Browser feature discovery | N/A | Supported | `auracall features --target gemini --json` now emits a versioned `auracall.browser-features` contract backed by browser-service `uiList` evidence from the live Gemini `Tools` drawer. |
+| Browser feature snapshot/diff | N/A | Supported | `auracall features snapshot --target gemini --json` now saves live feature contracts under `~/.auracall/feature-snapshots/<auracallProfile>/gemini/`, and `auracall features diff --target gemini --json` compares the current live Gemini surface against the latest saved snapshot. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
 
 Deliberately not implied by this matrix:
@@ -71,6 +73,10 @@ Prereqs:
   - Aura-Call still mirrors that export to `~/.auracall/cookies.json` as a compatibility fallback.
 - Local managed browser-profile inspection is available via:
   - `auracall doctor --target gemini --local-only`
+- Live Gemini feature discovery is available via:
+  - `auracall features --target gemini --json`
+  - `auracall features snapshot --target gemini --json`
+  - `auracall features diff --target gemini --json`
 - Full live Gemini UI selector diagnosis is not implemented in `auracall doctor` yet.
 
 Primary config shape example:
@@ -109,6 +115,13 @@ Examples:
 ```bash
 # Text run
 auracall --engine browser --model gemini-3-pro --prompt "Say OK."
+
+# Discover live Gemini tools/toggles on the managed browser session
+auracall features --target gemini --json
+
+# Save a live Gemini feature snapshot, then diff against the latest snapshot
+auracall features snapshot --target gemini --json
+auracall features diff --target gemini --json
 
 # Generate an image (writes an output file)
 auracall --engine browser --model gemini-3-pro \

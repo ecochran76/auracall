@@ -549,3 +549,24 @@ Recommendation:
 - take the team execution boundary checkpoint next
 - reason: the lower team-ready composition path is now established enough that
   the next risk is semantic drift, not missing plumbing
+
+## 2026-04-06 browser discovery checkpoint
+
+- Current checkpoint:
+  - live browser feature discovery is now a first-class AuraCall surface via:
+    - `auracall features --target <provider> --json`
+  - snapshot/diff is now also live on that same surface:
+    - `auracall features snapshot --target <provider> --json`
+    - `auracall features diff --target <provider> --json`
+  - Gemini discovery is currently the most mature consumer:
+    - live `Tools` drawer modes
+    - live `Personal Intelligence` switch state
+    - upload-path evidence from browser-service `uiList`
+- Immediate next slice:
+  - decide whether diff should stay focused on:
+    - modes
+    - toggles
+    - menu items
+    - upload candidates
+  - or whether it should expand into richer widget-state drift for other
+    providers before returning to provider backlog work

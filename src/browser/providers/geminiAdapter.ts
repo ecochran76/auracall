@@ -351,7 +351,7 @@ export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<voi
     }
     return null;
   })()`;
-  const point = await page.evaluate(pointExpression);
+  const point = (await page.evaluate(pointExpression)) as { x: number; y: number } | null;
 
   if (!point) {
     return;
