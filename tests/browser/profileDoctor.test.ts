@@ -683,6 +683,40 @@ describe('profileDoctor', () => {
       } as never,
       {
         target: 'gemini',
+        localReport: {
+          target: 'gemini',
+          registryPath: '/tmp/browser-state.json',
+          managedProfileRoot: '/tmp/managed',
+          managedProfileDir: '/tmp/managed/default/gemini',
+          chromeProfile: 'Default',
+          sourceCookiePath: null,
+          sourceProfile: null,
+          managedProfileExists: true,
+          managedCookiePath: null,
+          managedPreferencesPath: null,
+          managedLocalStatePath: null,
+          chromeGoogleAccount: null,
+          registryEntries: [],
+          staleRegistryEntries: [],
+          legacyRegistryEntries: [],
+          managedRegistryEntry: {
+            key: '/tmp/managed/default/gemini::default',
+            profilePath: '/tmp/managed/default/gemini',
+            profileName: 'Default',
+            pid: 123,
+            port: 45011,
+            host: '127.0.0.1',
+            alive: true,
+            liveness: 'live',
+            actualPid: 123,
+            managed: true,
+            legacy: false,
+            services: ['gemini'],
+          },
+          prunedRegistryEntries: 0,
+          prunedRegistryEntryReasons: {},
+          warnings: [],
+        },
       },
     );
 
@@ -742,6 +776,17 @@ describe('profileDoctor', () => {
           error: null,
           reason: null,
         },
+        featureStatus: {
+          target: 'grok',
+          supported: true,
+          attempted: true,
+          featureSignature: '{"detector":"grok-feature-probe-v1"}',
+          detected: {
+            detector: 'grok-feature-probe-v1',
+          },
+          error: null,
+          reason: null,
+        },
         browserTools: {
           contract: 'browser-tools.doctor-report',
           version: 1,
@@ -767,6 +812,7 @@ describe('profileDoctor', () => {
               candidates: [],
             },
             pageProbe: null,
+            uiList: null,
           },
         },
         selectorDiagnosis: {
@@ -824,6 +870,17 @@ describe('profileDoctor', () => {
         error: null,
         reason: null,
       },
+      featureStatus: {
+        target: 'grok',
+        supported: true,
+        attempted: true,
+        featureSignature: '{"detector":"grok-feature-probe-v1"}',
+        detected: {
+          detector: 'grok-feature-probe-v1',
+        },
+        error: null,
+        reason: null,
+      },
       runtime: {
         browserTools: {
           contract: 'browser-tools.doctor-report',
@@ -850,6 +907,7 @@ describe('profileDoctor', () => {
               candidates: [],
             },
             pageProbe: null,
+            uiList: null,
           },
         },
         browserToolsError: null,

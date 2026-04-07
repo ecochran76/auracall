@@ -212,8 +212,23 @@ Immediate Gemini priority order:
    - add focused CLI regression tests for Gemini target acceptance and cache
      operator behavior
 5. Remaining provider-gap backlog
-   - conversation artifacts parity
+   - richer Gemini composer drawer / mode discovery parity
+   - broader conversation artifacts parity
    - account-level files
+
+Current browser-service follow-on for that Gemini discovery line:
+
+- package-owned DOM discovery is now the right shared seam:
+  - `browser-tools search`
+  - generic matching on text / aria / role / class / `data-test-id`
+  - toggle state via `aria-checked`
+- use that seam to tighten Gemini `featureStatus` before adding more
+  provider-local drawer census code
+- next extraction step:
+  - move provider feature discovery out of `doctor`
+  - add a first-class `auracall features --target <provider> --json` surface
+  - keep browser doctor focused on browser/runtime health instead of becoming
+    the permanent home for provider feature inventory
 
 Current status update:
 
@@ -224,7 +239,9 @@ Current status update:
   - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
 - for Gemini specifically, the remaining meaningful work is now explicit
   provider backlog:
-  - conversation artifacts parity
+  - first-class feature discovery / snapshot groundwork
+  - richer Gemini composer drawer / mode discovery parity
+  - broader conversation artifacts parity
   - account-level files
 
 Do not treat second-pairing proof churn as the immediate next Gemini slice

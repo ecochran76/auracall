@@ -950,12 +950,33 @@ Progress:
   - local/session storage presence
   - cookie presence
 - Added `browser-tools probe` as a package-owned CLI surface for those probes.
+- Added `browser-tools search` as a package-owned structured DOM-census surface
+  for:
+  - generic text / aria / role / class / `data-test-id` matching
+  - `aria-checked` / `aria-expanded` state reads
+  - bounded visible-node discovery without app-specific `eval` snippets
+- Added `browser-tools ls` as the broader package-owned page census surface for
+  generic discoverable UI features and controls:
+  - dialogs
+  - menus
+  - buttons
+  - menu items
+  - switches
+  - inputs
+  - links
+- Live Gemini proof now shows why this belongs in browser-service:
+  - the same tool can find the `Tools` opener, the drawer rows
+    (`Create image`, `Canvas`, `Deep research`, `Create video`,
+    `Create music`, `Guided learning`), and the `Personal Intelligence` switch
+    once the drawer is open
 
 Next:
 - Keep the output generic; service-specific interpretation still belongs in the
   host app.
 - Decide whether storage/cookie probe matching should stay exact-name based or
   grow a generic substring/prefix mode later.
+- Start moving volatile provider DOM discovery onto `search`-style structured
+  probes before adding more one-off adapter-local `evaluate(...)` census code.
 
 ## 5. Browser-service doctor surface
 

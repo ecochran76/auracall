@@ -315,6 +315,16 @@ interface BrowserDoctorIdentityReportLike {
   reason: string | null;
 }
 
+interface BrowserDoctorFeatureReportLike {
+  target: 'chatgpt' | 'gemini' | 'grok';
+  supported: boolean;
+  attempted: boolean;
+  featureSignature: string | null;
+  detected: Record<string, unknown> | null;
+  error: string | null;
+  reason: string | null;
+}
+
 interface BrowserLoginLaunchOptions {
   chromePath: string;
   chromeProfile: string;
@@ -3276,14 +3286,10 @@ program
     if (target !== 'chatgpt' && target !== 'grok' && target !== 'gemini') {
       throw new Error(`Invalid provider "${target}". Use "chatgpt", "grok", or "gemini".`);
     }
-    if (target === 'gemini' && !commandOptions.localOnly) {
-      throw new Error(
-        'Gemini browser doctor currently supports only --local-only inspection. Live UI selector diagnosis is not implemented.',
-      );
-    }
     const {
       inspectBrowserDoctorState,
       inspectBrowserDoctorIdentity,
+      inspectBrowserDoctorFeatures,
       createAuracallBrowserDoctorContract,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, {
@@ -3296,33 +3302,60 @@ program
           target,
           localReport,
         });
+    let browserTools = null;
+    let browserToolsError: string | null = null;
+    if (commandOptions.json && !commandOptions.localOnly) {
+      const activeInstance = localReport.managedRegistryEntry;
+      if (activeInstance?.alive) {
+        if (isLoopbackHost(activeInstance.host)) {
+          try {
+            const { collectBrowserToolsDoctorReport, createBrowserToolsDoctorContract } = await import(
+              '../packages/browser-service/src/browserTools.js'
+            );
+            const prepareSelectedPage =
+              target === 'gemini'
+                ? (async (page: import('puppeteer-core').Page) => {
+                    const { prepareGeminiToolsDrawerForUiList } = await import('../src/browser/providers/geminiAdapter.js');
+                    await prepareGeminiToolsDrawerForUiList(page);
+                  })
+                : null;
+            const cleanupSelectedPage =
+              target === 'gemini'
+                ? (async (page: import('puppeteer-core').Page) => {
+                    const { cleanupGeminiUiListPreparation } = await import('../src/browser/providers/geminiAdapter.js');
+                    await cleanupGeminiUiListPreparation(page);
+                  })
+                : null;
+            const report = await collectBrowserToolsDoctorReport(activeInstance.port, {
+              urlContains: resolveBrowserDoctorUrlContains(target),
+              includeUiList: target === 'gemini',
+              uiListLimitPerKind: target === 'gemini' ? 20 : undefined,
+              uiListMaxScan: target === 'gemini' ? 10_000 : undefined,
+              prepareSelectedPage,
+              cleanupSelectedPage,
+            });
+            browserTools = createBrowserToolsDoctorContract(report);
+          } catch (error) {
+            browserToolsError = error instanceof Error ? error.message : String(error);
+          }
+        } else {
+          browserToolsError = `Managed browser instance is on non-loopback host ${activeInstance.host}; browser-tools doctor currently expects localhost CDP access.`;
+        }
+      }
+    }
+    const featureStatus = commandOptions.localOnly
+      ? null
+      : await inspectBrowserDoctorFeatures(userConfig, {
+          target,
+          localReport,
+          browserTools,
+        });
 
     if (commandOptions.json) {
-      let browserTools = null;
-      let browserToolsError: string | null = null;
       let selectorDiagnosis = null;
       let selectorDiagnosisError: string | null = null;
 
       if (!commandOptions.localOnly && target !== 'gemini') {
-        const activeInstance = localReport.managedRegistryEntry;
-        if (activeInstance?.alive) {
-          if (isLoopbackHost(activeInstance.host)) {
-            try {
-              const { collectBrowserToolsDoctorReport, createBrowserToolsDoctorContract } = await import(
-                '../packages/browser-service/src/browserTools.js'
-              );
-              const report = await collectBrowserToolsDoctorReport(activeInstance.port, {
-                urlContains: resolveBrowserDoctorUrlContains(target),
-              });
-              browserTools = createBrowserToolsDoctorContract(report);
-            } catch (error) {
-              browserToolsError = error instanceof Error ? error.message : String(error);
-            }
-          } else {
-            browserToolsError = `Managed browser instance is on non-loopback host ${activeInstance.host}; browser-tools doctor currently expects localhost CDP access.`;
-          }
-        }
-
         try {
           const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
           selectorDiagnosis = await client.diagnose({
@@ -3339,6 +3372,7 @@ program
         target,
         localReport,
         identityStatus,
+        featureStatus,
         browserTools,
         browserToolsError,
         selectorDiagnosis,
@@ -3351,15 +3385,14 @@ program
       return;
     }
 
-    printLocalBrowserDoctorReport(localReport, { identityStatus });
+    printLocalBrowserDoctorReport(localReport, { identityStatus, featureStatus });
 
     if (commandOptions.localOnly) {
       return;
     }
     if (target === 'gemini') {
-      throw new Error(
-        'Gemini browser doctor currently supports only --local-only inspection. Live UI selector diagnosis is not implemented.',
-      );
+      console.log('- selectorDiagnosis: (not implemented for gemini yet)');
+      return;
     }
 
     const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
@@ -6308,7 +6341,11 @@ async function resolveBrowserNameHints(options: CliOptions, userConfig: Resolved
 
 function printLocalBrowserDoctorReport(
   localReport: BrowserDoctorReportLike,
-  options: { title?: string; identityStatus?: BrowserDoctorIdentityReportLike | null } = {},
+  options: {
+    title?: string;
+    identityStatus?: BrowserDoctorIdentityReportLike | null;
+    featureStatus?: BrowserDoctorFeatureReportLike | null;
+  } = {},
 ): void {
   console.log(options.title ?? `Local browser state for ${localReport.target}:`);
   console.log(`- managedProfileDir: ${localReport.managedProfileDir}`);
@@ -6354,6 +6391,24 @@ function printLocalBrowserDoctorReport(
       console.log(`- accountIdentity: (check failed: ${identityStatus.error})`);
     } else {
       console.log('- accountIdentity: (signed-in account not detected)');
+    }
+  }
+  if (options.featureStatus) {
+    const { featureStatus } = options;
+    if (!featureStatus.supported) {
+      console.log(
+        `- detectedFeatures: (${
+          featureStatus.reason?.trim() || `not supported for ${featureStatus.target}`
+        })`,
+      );
+    } else if (!featureStatus.attempted) {
+      console.log('- detectedFeatures: (not checked; no active managed browser instance)');
+    } else if (featureStatus.detected) {
+      console.log(`- detectedFeatures: ${JSON.stringify(featureStatus.detected)}`);
+    } else if (featureStatus.error) {
+      console.log(`- detectedFeatures: (check failed: ${featureStatus.error})`);
+    } else {
+      console.log('- detectedFeatures: (none detected)');
     }
   }
   if (localReport.registryEntries.length > 0) {

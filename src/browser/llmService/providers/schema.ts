@@ -22,6 +22,11 @@ export const GrokFeatureSchema = z.object({
 export const GeminiFeatureSchema = z.object({
   search: FeatureFlagSchema,
   grounding: FeatureFlagSchema,
+  deep_research: FeatureFlagSchema,
+  personal_intelligence: FeatureFlagSchema,
+  modes: z.array(z.string()).optional(),
+  toggles: z.record(z.string(), z.boolean()).optional(),
+  active_mode: z.string().optional(),
   apps: z.array(z.string()).optional(),
 });
 

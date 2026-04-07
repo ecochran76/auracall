@@ -118,6 +118,11 @@ started:
 - root conversation rename is green
 - root conversation delete is green
 - browser doctor identity and cache identity are green
+- Gemini browser doctor now also has a real live feature-signature seam:
+  - live `featureStatus`
+  - manifest-backed feature/drawer tokens
+  - current boundary: richer composer-drawer census still needs a dedicated
+    feature-discovery surface outside `doctor`
 
 The next gaps are now narrower and more operational:
 
@@ -149,7 +154,9 @@ The next gaps are now narrower and more operational:
    - refreshed readback is currently the authoritative proof
 
 5. Explicit provider gaps still remain and should stay visible.
-   - conversation artifacts parity
+   - first-class feature discovery command / snapshot groundwork
+   - richer composer drawer / mode discovery parity
+   - broader conversation artifacts parity
    - account-level files parity
    - clone parity
 
@@ -408,7 +415,7 @@ Goal:
   clear order
 
 Recommended order:
-1. conversation artifacts parity
+1. broader conversation artifacts parity
 2. account-level files parity
 4. clone parity if Gemini exposes a real native surface
 
@@ -439,7 +446,7 @@ Current assessment:
   - shared cache architecture work:
     - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
   - Gemini provider backlog:
-    - conversation artifacts parity
+    - broader conversation artifacts parity
     - account-level files parity
 
 Practical implication:

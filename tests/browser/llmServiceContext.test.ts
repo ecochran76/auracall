@@ -120,6 +120,24 @@ describe('project-scoped conversation context normalization', () => {
         { role: 'user', text: 'Disposable Gemini context probe 2026-04-06: reply exactly ACK CONTEXT PROBE' },
         { role: 'assistant', text: 'ACK CONTEXT PROBE' },
       ],
+      files: [
+        {
+          id: 'gemini-conversation-file:conversation-ctx:0:probe.txt',
+          name: 'probe.txt',
+          provider: 'gemini',
+          source: 'conversation',
+          mimeType: 'text/plain',
+        },
+      ],
+      artifacts: [
+        {
+          id: 'gemini-artifact:conversation-ctx:1:0',
+          title: 'Generated image 1',
+          kind: 'image',
+          uri: 'blob:https://gemini.google.com/fake-artifact',
+          messageIndex: 1,
+        },
+      ],
     };
     const provider = {
       id: 'gemini',

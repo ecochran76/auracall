@@ -9197,3 +9197,172 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - on Gemini conversation pages, sent file parity should anchor on the
     user-turn upload chip surface first; do not wait for a nonexistent separate
     file catalog when the visible chat chip is the authoritative UI
+
+## 2026-04-06 - Gemini generated-image artifacts need direct assistant-media scraping plus in-page payload serialization
+
+- Context:
+  - Gemini conversation reads already covered:
+    - canonical `messages[]`
+    - visible sent conversation `files[]`
+  - the next question was whether Gemini chat pages expose a real artifact
+    surface or only text/files
+- Root cause:
+  - a real managed-browser Gemini image-generation chat showed a visible
+    assistant image tile with download/share controls, but
+    `conversations context get` still returned no `artifacts[]`
+  - the issue was twofold:
+    - image-only assistant turns do not always provide useful text content
+    - CDP by-value result marshaling was dropping the richer page payload even
+      though a direct in-page probe could see it
+- Fix:
+  - treated visible assistant image nodes on `model-response` as first-class
+    conversation artifacts
+  - normalized them into `kind: "image"` artifacts with:
+    - blob `uri`
+    - width / height metadata
+    - chat-relative `messageIndex`
+  - changed Gemini context extraction to serialize the full page payload inside
+    the browser and parse it in Node before shared normalization/cache writes
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 3525c884edae4fa4 --target gemini --profile default --json-only`
+- Durable lesson:
+  - for Gemini assistant media, do not couple artifact extraction too tightly to
+    assistant text extraction; image-only turns are real responses and may need
+    direct media scraping plus serialized in-page payload handoff
+
+## 2026-04-06 - Gemini feature/drawer discovery should live in the shared detected-feature signature seam
+
+- Context:
+  - Gemini’s browser surface is no longer just CRUD on chats and Gems
+  - the product surface now includes evolving mode/drawer choices such as image,
+    music, video, canvas, research, and personalization affordances
+- Fix:
+  - extended browser doctor with a provider-neutral `featureStatus` payload
+  - implemented Gemini `getFeatureSignature()` so live Gemini UI discovery now
+    feeds the same normalized feature-signature path already used for
+    cache/drift semantics
+  - widened `auracall doctor --target gemini` to report live identity plus
+    detected Gemini feature state when a managed Gemini browser instance is
+    alive, while still keeping selector diagnosis unsupported
+  - added manifest-backed Gemini feature/drawer tokens so discovery logic is
+    explicit and reviewable instead of hiding string probes in adapter code
+- Durable lesson:
+  - when a provider’s available UI surfaces are volatile, treat feature/drawer
+    discovery as first-class provider state and expose it through one shared
+    detected-feature signature seam; do not bury it inside one-off debugging
+    scripts or cache-only heuristics
+
+## 2026-04-06 - Volatile provider DOM discovery should use one package-owned structured search surface
+
+- Context:
+  - Gemini feature discovery started drifting because each new drawer/menu/toggle
+    probe wanted another provider-local `evaluate(...)` snippet
+  - browser-service already had generic page probes, but not a bounded way to
+    ask “which visible nodes currently match these facts?”
+- Fix:
+  - added `browser-tools search` in
+    `packages/browser-service/src/browserTools.ts`
+  - the new command matches nodes by generic facts:
+    - text
+    - `aria-label`
+    - role
+    - `data-test-id`
+    - class substring
+    - tag
+    - checked / expanded state
+  - it returns structured match rows instead of raw DOM dumps, so adapters and
+    operators can reason about volatile surfaces without immediately dropping to
+    custom page scripts
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live Gemini proof on the managed `default` browser profile:
+    - found the exact `Tools` opener
+    - found `Create image`, `Canvas`, `Deep research`, `Create video`,
+      `Create music`, and `Guided learning` after the drawer opened
+    - found the `Personal Intelligence` switch with `checked: true`
+- Durable lesson:
+  - when a provider surface is volatile, first extract a package-owned
+    structured DOM-census primitive, then let provider adapters consume that
+    seam; do not keep solving the same discovery problem with one-off
+    provider-local `eval(...)` probes
+
+## 2026-04-06 - Shared DOM-search semantics should be extracted once and reused by provider discovery code
+
+- Context:
+  - after `browser-tools search` landed, Gemini feature discovery still had its
+    own parallel row/switch census implementation
+  - that would eventually drift again even if the browser-tools CLI stayed
+    correct
+- Fix:
+  - extracted the DOM-search expression builder into
+    `packages/browser-service/src/service/domSearch.ts`
+  - moved both:
+    - `browser-tools search`
+    - Gemini `readGeminiToolsDrawerProbe(...)`
+    onto the same shared matching semantics
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - once a volatile DOM-census pattern becomes package-owned, adapters should
+    consume that exact helper path instead of preserving a second local copy of
+    the same matching model; otherwise the old drift loop just moves one layer
+    down
+
+## 2026-04-06 - Browser-service should support both targeted search and broad page listing
+
+- Context:
+  - `search` answered “does this exact control exist?”
+  - but operators and adapters still needed a generic answer to
+    “what important discoverable controls and surfaces are on this page right
+    now?”
+- Fix:
+  - added package-owned `browser-tools ls`
+  - the new listing groups visible UI into generic sections:
+    - dialogs
+    - menus
+    - buttons
+    - menu items
+    - switches
+    - inputs
+    - links
+  - each item now also carries heuristic widget and interaction hints plus
+    upload-path detection, including hidden `input[type="file"]` surfaces
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Durable lesson:
+  - browser-service should offer both:
+    - a targeted structured search surface
+    - a broader structured page listing surface
+  - provider adapters can then use the right level of evidence instead of
+    jumping straight to custom DOM scripts
+
+## 2026-04-06 - Gemini doctor should consume browser-service discovery directly
+
+- Context:
+  - `browser-tools ls` could already prove the live Gemini drawer and toggle
+    surface, but `auracall doctor --target gemini --json` still sometimes
+    returned a weaker provider-local fallback signature
+- Fix:
+  - extended the browser-tools doctor contract with optional `uiList` evidence
+  - changed Gemini feature inspection to derive mode/toggle evidence from that
+    `uiList` and merge it with the provider feature signature when present
+  - `featureStatus.detected` now includes explicit evidence metadata so it is
+    clear when browser-tools `uiList` evidence was present and merged
+- Durable lesson:
+  - once browser-service can prove a volatile provider surface, browser doctor
+    should consume that evidence directly instead of treating it as unrelated
+    debugging output and silently preferring weaker provider-local heuristics
+  - if the richer browser-service evidence is already present, skip the older
+    provider-local fallback probe entirely so doctor does not trigger unrelated
+    UI side effects like opening the model picker
+  - when doctor depends on a volatile overlay surface, it needs both:
+    - a prep step that dismisses stale overlays and opens the intended surface
+    - a cleanup step that closes transient overlays after capture
+    otherwise repeated live diagnosis leaves the page in mixed or misleading UI
+    states

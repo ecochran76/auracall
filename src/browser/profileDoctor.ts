@@ -6,6 +6,11 @@ import type { ResolvedUserConfig } from '../config.js';
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { BrowserAutomationClient } from './client.js';
 import {
+  deriveGeminiFeatureProbeFromUiList,
+  mergeGeminiFeatureProbes,
+  normalizeGeminiFeatureSignature,
+} from './providers/geminiAdapter.js';
+import {
   resolveManagedBrowserLaunchContextFromResolvedConfig,
   resolveUserBrowserLaunchContext,
 } from './service/profileResolution.js';
@@ -88,6 +93,16 @@ export interface BrowserDoctorIdentityReport {
   reason: string | null;
 }
 
+export interface BrowserDoctorFeatureReport {
+  target: BrowserDoctorTarget;
+  supported: boolean;
+  attempted: boolean;
+  featureSignature: string | null;
+  detected: Record<string, unknown> | null;
+  error: string | null;
+  reason: string | null;
+}
+
 export function deriveProviderIdentityFromChromeGoogleAccount(
   account: BrowserDoctorChromeAccountReport | null | undefined,
 ): ProviderUserIdentity | null {
@@ -111,6 +126,7 @@ export interface AuracallBrowserDoctorContract {
   target: BrowserDoctorTarget;
   localReport: BrowserDoctorReport;
   identityStatus: BrowserDoctorIdentityReport | null;
+  featureStatus: BrowserDoctorFeatureReport | null;
   runtime: {
     browserTools: BrowserToolsDoctorContract | null;
     browserToolsError: string | null;
@@ -129,6 +145,7 @@ export function createAuracallBrowserDoctorContract(
     target: BrowserDoctorTarget;
     localReport: BrowserDoctorReport;
     identityStatus?: BrowserDoctorIdentityReport | null;
+    featureStatus?: BrowserDoctorFeatureReport | null;
     browserTools?: BrowserToolsDoctorContract | null;
     browserToolsError?: string | null;
     selectorDiagnosis?:
@@ -148,6 +165,7 @@ export function createAuracallBrowserDoctorContract(
     target: input.target,
     localReport: input.localReport,
     identityStatus: input.identityStatus ?? null,
+    featureStatus: input.featureStatus ?? null,
     runtime: {
       browserTools: input.browserTools ?? null,
       browserToolsError: input.browserToolsError ?? null,
@@ -321,6 +339,125 @@ export async function inspectBrowserDoctorIdentity(
       attempted: true,
       identity: null,
       error: error instanceof Error ? error.message : String(error),
+      reason: null,
+    };
+  }
+}
+
+export async function inspectBrowserDoctorFeatures(
+  userConfig: ResolvedUserConfig,
+  options: {
+    target?: BrowserDoctorTarget;
+    localReport?: BrowserDoctorReport | null;
+    browserTools?: BrowserToolsDoctorContract | null;
+  } = {},
+): Promise<BrowserDoctorFeatureReport> {
+  const target = options.target ?? (userConfig.browser?.target as BrowserDoctorTarget | undefined) ?? 'chatgpt';
+  const localReport =
+    options.localReport ??
+    (await inspectBrowserDoctorState(userConfig, {
+      target,
+    }));
+  if (!localReport.managedRegistryEntry?.alive) {
+    return {
+      target,
+      supported: true,
+      attempted: false,
+      featureSignature: null,
+      detected: null,
+      error: null,
+      reason: null,
+    };
+  }
+
+  const browserTools = options.browserTools ?? null;
+  const browserToolsUiList = browserTools?.report.uiList ?? null;
+  const parseDetectedObject = (raw: string | null): Record<string, unknown> | null => {
+    if (!raw) return null;
+    try {
+      const parsed = JSON.parse(raw) as unknown;
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  };
+  const mergeGeminiBrowserToolsEvidence = (
+    providerFeatureSignature: string | null,
+    providerError: string | null,
+    providerSkipped = false,
+  ): BrowserDoctorFeatureReport | null => {
+    if (target !== 'gemini') {
+      return null;
+    }
+    const uiListProbe = deriveGeminiFeatureProbeFromUiList(browserToolsUiList);
+    if (!uiListProbe) {
+      return null;
+    }
+    const providerDetected = parseDetectedObject(providerFeatureSignature) as
+      | Parameters<typeof mergeGeminiFeatureProbes>[0]
+      | null;
+    const mergedProbe = mergeGeminiFeatureProbes(providerDetected, uiListProbe);
+    const mergedFeatureSignature = normalizeGeminiFeatureSignature(mergedProbe);
+    if (!mergedFeatureSignature) {
+      return null;
+    }
+    const mergedDetected = parseDetectedObject(mergedFeatureSignature) ?? {};
+    return {
+      target,
+      supported: true,
+      attempted: true,
+      featureSignature: mergedFeatureSignature,
+      detected: {
+        ...mergedDetected,
+        evidence: {
+          providerSignaturePresent: Boolean(providerFeatureSignature),
+          providerProbeSkipped: providerSkipped,
+          browserToolsUiListPresent: true,
+          browserToolsUiListMerged: providerFeatureSignature !== mergedFeatureSignature,
+          providerProbeError: providerError,
+        },
+      },
+      error: null,
+      reason: providerError ? 'Used browser-tools uiList evidence after provider feature probe failed.' : null,
+    };
+  };
+  const browserToolsOnlyGeminiReport = mergeGeminiBrowserToolsEvidence(null, null, true);
+  if (browserToolsOnlyGeminiReport) {
+    return browserToolsOnlyGeminiReport;
+  }
+
+  try {
+    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+    const featureSignature = await client.getFeatureSignature();
+    const mergedGeminiReport = mergeGeminiBrowserToolsEvidence(featureSignature, null);
+    if (mergedGeminiReport) {
+      return mergedGeminiReport;
+    }
+    return {
+      target,
+      supported: true,
+      attempted: true,
+      featureSignature,
+      detected: parseDetectedObject(featureSignature),
+      error: null,
+      reason: null,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const mergedGeminiReport = mergeGeminiBrowserToolsEvidence(null, errorMessage);
+    if (mergedGeminiReport) {
+      return mergedGeminiReport;
+    }
+    return {
+      target,
+      supported: true,
+      attempted: true,
+      featureSignature: null,
+      detected: null,
+      error: errorMessage,
       reason: null,
     };
   }

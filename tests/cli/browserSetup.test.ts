@@ -125,6 +125,7 @@ describe('createAuracallBrowserSetupContract', () => {
             warnings: [],
           },
           identityStatus: null,
+          featureStatus: null,
           runtime: {
             browserTools: null,
             browserToolsError: null,
@@ -190,6 +191,7 @@ describe('createAuracallBrowserSetupContract', () => {
           warnings: [],
         },
         identityStatus: null,
+        featureStatus: null,
         runtime: {
           browserTools: null,
           browserToolsError: null,
@@ -248,6 +250,7 @@ describe('createAuracallBrowserSetupContract', () => {
           warnings: [],
         },
         identityStatus: null,
+        featureStatus: null,
         runtime: {
           browserTools: null,
           browserToolsError: null,

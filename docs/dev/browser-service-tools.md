@@ -392,6 +392,80 @@ Current active extraction plan:
     - `contract: "browser-tools.doctor-report"`
     - `version: 1`
 
+- `pnpm tsx scripts/browser-tools.ts search --port <port> [--selector <css>] [--text <token>] [--aria-label <label>] [--role <role>] [--data-testid <id>] [--class-includes <token>] [--tag <name>] [--checked <true|false>] [--expanded <true|false>] [--visible-only] [--json]`
+  - Collects a bounded structured DOM census from the selected page and returns
+    only nodes matching the requested generic facts.
+  - Each match reports reusable metadata:
+    - tag
+    - role
+    - text
+    - `aria-label`
+    - `data-test-id`
+    - class list
+    - `aria-checked`
+    - `aria-expanded`
+    - visible state
+  - Use this before ad hoc `eval` when the question is “does the live DOM
+    currently expose a button/row/switch like this?” rather than “run this app
+    behavior.”
+  - Common Gemini drawer examples:
+    - find the `Tools` opener on the managed Gemini page:
+      - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini search --class-includes toolbox-drawer-button --text Tools --limit 10 --json`
+    - after opening the drawer, census the visible tool rows:
+      - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini search --class-includes toolbox-drawer-item-list-button --role menuitemcheckbox --limit 20 --json`
+    - read the `Personal Intelligence` toggle state:
+      - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini search --aria-label "Personal Intelligence" --role switch --limit 10 --json`
+  - Drawer/open-surface note:
+    - `search` only reports what is currently in the live DOM.
+    - If a menu or drawer is closed, query the opener first, open the surface,
+      then rerun `search` for the rows inside that surface.
+
+- `pnpm tsx scripts/browser-tools.ts ls --port <port> [--selector <css>] [--limit-per-kind <count>] [--json]`
+  - Produces a generic structured listing of the important discoverable visible
+    UI surfaces and controls on the selected page.
+  - Groups results into:
+    - `dialogs`
+    - `menus`
+    - `buttons`
+    - `menuItems`
+    - `switches`
+    - `inputs`
+    - `links`
+  - Each row includes reusable metadata such as:
+    - tag
+    - role
+    - text
+    - `aria-label`
+    - `data-test-id`
+    - class list
+    - checked / expanded / disabled state
+    - inferred widget type
+    - path hint
+    - interaction hints
+    - input type when relevant
+  - It also hunts for likely upload paths:
+    - `fileInputs` includes native `input[type="file"]` paths even when hidden
+    - `uploadCandidates` includes visible upload/attach triggers plus hidden
+      native chooser inputs that likely back them
+  - Interaction hints are heuristic, not authoritative. Current generic hints:
+    - `hard-click-preferred`
+    - `keyboard-activatable`
+    - `soft-js-events-possible`
+    - `hover-or-pointer-state-likely`
+    - `pointer-gesture-preferred`
+    - `file-chooser-candidate`
+    - `hidden-native-file-input`
+  - Use this when the question is “what important interactive surfaces are on
+    this page right now?” rather than “does this exact selector exist?”
+  - Common Gemini usage:
+    - first open the `Tools` drawer
+    - then run:
+      - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini ls --limit-per-kind 10 --json`
+    - the listing should surface the drawer as `menus`, the drawer rows as
+      `menuItems`, the `Personal Intelligence` control as a `switch`, the
+      prompt composer as an `input`, and any upload affordances under
+      `uploadCandidates` / `fileInputs`
+
 - `pnpm tsx scripts/verify-grok-project-sources-steps.ts <step|all> <projectId|current> [file... ] [--delete <fileName>]`
   - Steps 1–6 are independent; use `all` to run the full flow.
   - `current` resolves the project id from the active grok tab.

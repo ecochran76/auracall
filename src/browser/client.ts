@@ -74,6 +74,16 @@ export class BrowserAutomationClient {
     return this.llmService.getUserIdentity(options);
   }
 
+  async getFeatureSignature(
+    options?: BrowserProviderListOptions,
+  ): Promise<string | null> {
+    if (!this.provider.getFeatureSignature) {
+      return null;
+    }
+    const listOptions = await this.llmService.buildListOptions(options, { ensurePort: true });
+    return this.provider.getFeatureSignature(listOptions);
+  }
+
   async renameConversation(
     conversationId: string,
     newTitle: string,

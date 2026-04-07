@@ -5,6 +5,11 @@ import path from 'node:path';
 import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import puppeteer, { type Browser, type Page } from 'puppeteer-core';
+import {
+  buildBrowserDomSearchExpression,
+  type BrowserDomSearchMatch,
+  type BrowserDomSearchOptions,
+} from './service/domSearch.js';
 
 /** Utility type so TypeScript knows the async function constructor */
 type AsyncFunctionCtor = new (...args: string[]) => (...fnArgs: unknown[]) => Promise<unknown>;
@@ -138,6 +143,77 @@ export interface BrowserToolsPageProbeOptions {
 export interface BrowserToolsDoctorReport {
   census: BrowserToolsTabCensusResult;
   pageProbe: BrowserToolsPageProbeResult | null;
+  uiList: BrowserToolsUiListResult | null;
+}
+
+export type BrowserToolsDomSearchMatch = BrowserDomSearchMatch;
+
+export interface BrowserToolsDomSearchResult {
+  url: string;
+  title: string | null;
+  totalScanned: number;
+  matched: BrowserToolsDomSearchMatch[];
+}
+
+export type BrowserToolsDomSearchOptions = BrowserDomSearchOptions;
+
+export interface BrowserToolsUiListItem {
+  tag: string;
+  role: string | null;
+  text: string | null;
+  ariaLabel: string | null;
+  title: string | null;
+  dataTestId: string | null;
+  className: string | null;
+  href: string | null;
+  checked: boolean | null;
+  expanded: boolean | null;
+  disabled: boolean | null;
+  visible: boolean;
+  inputType: string | null;
+  widgetType: string | null;
+  pathHint: string | null;
+  interactionHints: string[];
+}
+
+export interface BrowserToolsUiListSummary {
+  buttons: number;
+  menuItems: number;
+  switches: number;
+  inputs: number;
+  links: number;
+  dialogs: number;
+  menus: number;
+  fileInputs: number;
+  uploadCandidates: number;
+}
+
+export interface BrowserToolsUiListSections {
+  buttons: BrowserToolsUiListItem[];
+  menuItems: BrowserToolsUiListItem[];
+  switches: BrowserToolsUiListItem[];
+  inputs: BrowserToolsUiListItem[];
+  links: BrowserToolsUiListItem[];
+  dialogs: BrowserToolsUiListItem[];
+  menus: BrowserToolsUiListItem[];
+  fileInputs: BrowserToolsUiListItem[];
+  uploadCandidates: BrowserToolsUiListItem[];
+}
+
+export interface BrowserToolsUiListResult {
+  url: string;
+  title: string | null;
+  totalScanned: number;
+  summary: BrowserToolsUiListSummary;
+  sections: BrowserToolsUiListSections;
+}
+
+export interface BrowserToolsUiListOptions {
+  selector?: string | null;
+  visibleOnly?: boolean;
+  caseSensitive?: boolean;
+  limitPerKind?: number;
+  maxScan?: number;
 }
 
 export const BROWSER_TOOLS_CONTRACT_VERSION = 1 as const;
@@ -699,9 +775,383 @@ export async function collectBrowserToolsPageProbe(
   };
 }
 
+export async function collectBrowserToolsDomSearch(
+  page: Page,
+  options: BrowserToolsDomSearchOptions = {},
+): Promise<BrowserToolsDomSearchResult> {
+  const pageUrl = page.url();
+  const pageTitle = await page.title().catch(() => null);
+  const result = await page.evaluate(
+    buildBrowserDomSearchExpression(options),
+  ) as { totalScanned: number; matched: BrowserToolsDomSearchMatch[] };
+  return {
+    url: pageUrl,
+    title: pageTitle,
+    totalScanned: result.totalScanned,
+    matched: result.matched,
+  };
+}
+
+export async function collectBrowserToolsUiList(
+  page: Page,
+  options: BrowserToolsUiListOptions = {},
+): Promise<BrowserToolsUiListResult> {
+  const pageUrl = page.url();
+  const pageTitle = await page.title().catch(() => null);
+  const normalizedOptions = {
+    selector: typeof options.selector === 'string' && options.selector.trim().length > 0 ? options.selector.trim() : null,
+    visibleOnly: options.visibleOnly ?? true,
+    caseSensitive: options.caseSensitive ?? false,
+    limitPerKind: Math.max(1, Math.min(options.limitPerKind ?? 20, 200)),
+    maxScan: Math.max(100, Math.min(options.maxScan ?? 5000, 20000)),
+  };
+  const optionsJson = JSON.stringify(normalizedOptions);
+  const result = await page.evaluate(`
+    (() => {
+      const options = ${optionsJson};
+      const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+      const normalizeMatch = (value) => {
+        const text = normalize(value);
+        return options.caseSensitive ? text : text.toLowerCase();
+      };
+      const isVisible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const style = window.getComputedStyle(node);
+        return style.display !== 'none' && style.visibility !== 'hidden';
+      };
+      const startsWithAny = (value, prefixes) => prefixes.some((prefix) => value.startsWith(prefix));
+      const sections = {
+        buttons: [],
+        menuItems: [],
+        switches: [],
+        inputs: [],
+        links: [],
+        dialogs: [],
+        menus: [],
+        fileInputs: [],
+        uploadCandidates: [],
+      };
+      const summary = {
+        buttons: 0,
+        menuItems: 0,
+        switches: 0,
+        inputs: 0,
+        links: 0,
+        dialogs: 0,
+        menus: 0,
+        fileInputs: 0,
+        uploadCandidates: 0,
+      };
+      const seenBySection = {
+        buttons: new Set(),
+        menuItems: new Set(),
+        switches: new Set(),
+        inputs: new Set(),
+        links: new Set(),
+        dialogs: new Set(),
+        menus: new Set(),
+        fileInputs: new Set(),
+        uploadCandidates: new Set(),
+      };
+      const root = options.selector
+        ? Array.from(document.querySelectorAll(options.selector))
+        : Array.from(document.querySelectorAll('*'));
+      let totalScanned = 0;
+      const serialize = (node) => {
+        const tag = String(node.tagName || '').toLowerCase();
+        const role = normalize(node.getAttribute('role') || '') || null;
+        const text = normalize(node.textContent || '') || null;
+        const ariaLabel = normalize(node.getAttribute('aria-label') || '') || null;
+        const title = normalize(node.getAttribute('title') || '') || null;
+        const dataTestId = normalize(node.getAttribute('data-test-id') || '') || null;
+        const className = normalize(node.className || '') || null;
+        const href = node instanceof HTMLAnchorElement ? normalize(node.href || '') || null : null;
+        const checkedAttr = node.getAttribute('aria-checked');
+        const expandedAttr = node.getAttribute('aria-expanded');
+        const disabledAttr = node.getAttribute('disabled') !== null || node.getAttribute('aria-disabled') === 'true';
+        const inputType =
+          node instanceof HTMLInputElement
+            ? normalize(node.getAttribute('type') || node.type || '') || null
+            : null;
+        const lowerText = normalizeMatch([text, ariaLabel, title, dataTestId, className].filter(Boolean).join(' '));
+        const normalizedAriaLabel = normalizeMatch(ariaLabel || '');
+        const attributeCorpus = normalizeMatch([title, dataTestId, className].filter(Boolean).join(' '));
+        const shortControlLabel = normalizeMatch(text || '');
+        const hasUploadAriaLabel =
+          !normalizedAriaLabel.startsWith('more options for ') &&
+          (
+            normalizedAriaLabel.includes('upload') ||
+            normalizedAriaLabel.includes('attach') ||
+            normalizedAriaLabel.includes('choose file') ||
+            normalizedAriaLabel.includes('choose files') ||
+            normalizedAriaLabel.includes('browse') ||
+            normalizedAriaLabel.includes('file-picker') ||
+            normalizedAriaLabel.includes('file chooser')
+          );
+        const frameworkManaged =
+          lowerText.includes('mat-mdc') ||
+          lowerText.includes('mdc-') ||
+          lowerText.includes('toolbox-drawer') ||
+          lowerText.includes('menu-trigger') ||
+          lowerText.includes('touch-target');
+        const hoverLikely =
+          lowerText.includes('hover') ||
+          lowerText.includes('tooltip-trigger') ||
+          lowerText.includes('reveal') ||
+          lowerText.includes('conversation-actions') ||
+          lowerText.includes('actions-menu');
+        const uploadCandidate =
+          inputType === 'file' ||
+          ((tag === 'button' ||
+            tag === 'input' ||
+            tag === 'label' ||
+            tag === 'a' ||
+            tag === 'textarea' ||
+            tag === 'select' ||
+            node.isContentEditable ||
+            role === 'button' ||
+            role === 'link' ||
+            role === 'switch' ||
+            (role ? role.startsWith('menuitem') : false)) &&
+            (
+              attributeCorpus.includes('upload') ||
+              attributeCorpus.includes('attach') ||
+              attributeCorpus.includes('choose file') ||
+              attributeCorpus.includes('choose files') ||
+              attributeCorpus.includes('browse') ||
+              attributeCorpus.includes('file-picker') ||
+              attributeCorpus.includes('file chooser') ||
+              hasUploadAriaLabel ||
+              ((tag === 'button' || tag === 'label') && (
+                shortControlLabel.includes('upload') ||
+                shortControlLabel.includes('attach') ||
+                shortControlLabel.includes('choose file') ||
+                shortControlLabel.includes('choose files') ||
+                shortControlLabel.includes('browse')
+              ))
+            ));
+        const pathParts = [];
+        let current = node;
+        while (current instanceof HTMLElement && pathParts.length < 4) {
+          const currentTag = String(current.tagName || '').toLowerCase();
+          const id = normalize(current.id || '');
+          const cls = normalize(current.className || '')
+            .split(/\s+/)
+            .filter(Boolean)
+            .slice(0, 2)
+            .map((entry) => '.' + entry)
+            .join('');
+          pathParts.unshift(currentTag + (id ? '#' + id : '') + cls);
+          current = current.parentElement;
+        }
+        let widgetType = null;
+        if (role === 'dialog' || tag === 'dialog' || node.getAttribute('aria-modal') === 'true') widgetType = 'dialog';
+        else if (role === 'menu' || role === 'listbox') widgetType = 'menu';
+        else if (role === 'switch') widgetType = 'switch';
+        else if (role && role.startsWith('menuitem')) widgetType = 'menu-item';
+        else if (inputType === 'file') widgetType = 'file-input';
+        else if (tag === 'input' || tag === 'textarea' || tag === 'select' || node.isContentEditable) widgetType = 'input';
+        else if (tag === 'a' || role === 'link') widgetType = 'link';
+        else if (uploadCandidate) widgetType = 'upload-trigger';
+        else if (tag === 'button' || role === 'button') widgetType = 'button';
+        const interactionHints = [];
+        if (widgetType === 'button' || widgetType === 'menu-item' || widgetType === 'switch' || widgetType === 'upload-trigger') {
+          interactionHints.push('hard-click-preferred');
+        }
+        if (
+          widgetType === 'button' ||
+          widgetType === 'menu-item' ||
+          widgetType === 'switch' ||
+          widgetType === 'input' ||
+          widgetType === 'link' ||
+          widgetType === 'upload-trigger'
+        ) {
+          interactionHints.push('keyboard-activatable');
+        }
+        if (frameworkManaged) {
+          interactionHints.push('soft-js-events-possible');
+        }
+        if (hoverLikely) {
+          interactionHints.push('hover-or-pointer-state-likely');
+        }
+        if (widgetType === 'switch') {
+          interactionHints.push('pointer-gesture-preferred');
+        }
+        if (uploadCandidate) {
+          interactionHints.push('file-chooser-candidate');
+        }
+        if (inputType === 'file' && !isVisible(node)) {
+          interactionHints.push('hidden-native-file-input');
+        }
+        return {
+          tag,
+          role,
+          text,
+          ariaLabel,
+          title,
+          dataTestId,
+          className,
+          href,
+          checked: checkedAttr === 'true' ? true : checkedAttr === 'false' ? false : null,
+          expanded: expandedAttr === 'true' ? true : expandedAttr === 'false' ? false : null,
+          disabled: disabledAttr ? true : node.getAttribute('aria-disabled') === 'false' ? false : null,
+          visible: isVisible(node),
+          inputType,
+          widgetType,
+          pathHint: pathParts.join(' > ') || null,
+          interactionHints: Array.from(new Set(interactionHints)),
+        };
+      };
+      const add = (section, node) => {
+        summary[section] += 1;
+        if (sections[section].length >= options.limitPerKind) return;
+        const key = [
+          node.tagName,
+          node.getAttribute('role') || '',
+          node.getAttribute('aria-label') || '',
+          node.getAttribute('data-test-id') || '',
+          normalize(node.textContent || '').slice(0, 160),
+        ].join('::');
+        if (seenBySection[section].has(key)) return;
+        seenBySection[section].add(key);
+        sections[section].push(serialize(node));
+      };
+      for (const node of root) {
+        if (!(node instanceof HTMLElement)) continue;
+        totalScanned += 1;
+        if (totalScanned > options.maxScan) break;
+        const visible = isVisible(node);
+        const tag = normalizeMatch(node.tagName || '');
+        const role = normalizeMatch(node.getAttribute('role') || '');
+        if (tag === 'dialog' || role === 'dialog' || node.getAttribute('aria-modal') === 'true') {
+          add('dialogs', node);
+        }
+        if (role === 'menu' || role === 'listbox') {
+          add('menus', node);
+        }
+        const textCorpus = normalizeMatch(
+          [
+            node.textContent || '',
+            node.getAttribute('aria-label') || '',
+            node.getAttribute('title') || '',
+            node.getAttribute('data-test-id') || '',
+            node.className || '',
+          ].join(' '),
+        );
+        const normalizedAriaLabel = normalizeMatch(node.getAttribute('aria-label') || '');
+        const attributeCorpus = normalizeMatch(
+          [
+            node.getAttribute('title') || '',
+            node.getAttribute('data-test-id') || '',
+            node.className || '',
+          ].join(' '),
+        );
+        const shortControlLabel = normalizeMatch(node.textContent || '');
+        const hasUploadAriaLabel =
+          !normalizedAriaLabel.startsWith('more options for ') &&
+          (
+            normalizedAriaLabel.includes('upload') ||
+            normalizedAriaLabel.includes('attach') ||
+            normalizedAriaLabel.includes('choose file') ||
+            normalizedAriaLabel.includes('choose files') ||
+            normalizedAriaLabel.includes('browse') ||
+            normalizedAriaLabel.includes('file-picker') ||
+            normalizedAriaLabel.includes('file chooser')
+          );
+        const inputType =
+          node instanceof HTMLInputElement
+            ? normalizeMatch(node.getAttribute('type') || node.type || '')
+            : '';
+        const uploadCandidate =
+          inputType === 'file' ||
+          ((tag === 'button' ||
+            tag === 'input' ||
+            tag === 'label' ||
+            tag === 'a' ||
+            tag === 'textarea' ||
+            tag === 'select' ||
+            node.isContentEditable ||
+            role === 'button' ||
+            role === 'link' ||
+            role === 'switch' ||
+            startsWithAny(role, ['menuitem'])) &&
+            (
+              attributeCorpus.includes('upload') ||
+              attributeCorpus.includes('attach') ||
+              attributeCorpus.includes('choose file') ||
+              attributeCorpus.includes('choose files') ||
+              attributeCorpus.includes('browse') ||
+              attributeCorpus.includes('file-picker') ||
+              attributeCorpus.includes('file chooser') ||
+              hasUploadAriaLabel ||
+              ((tag === 'button' || tag === 'label') && (
+                shortControlLabel.includes('upload') ||
+                shortControlLabel.includes('attach') ||
+                shortControlLabel.includes('choose file') ||
+                shortControlLabel.includes('choose files') ||
+                shortControlLabel.includes('browse')
+              ))
+            ));
+        if (options.visibleOnly && !visible && inputType !== 'file' && !uploadCandidate) continue;
+        if (inputType === 'file') {
+          add('fileInputs', node);
+        }
+        if (uploadCandidate) {
+          add('uploadCandidates', node);
+        }
+        if (!visible) continue;
+        if (role === 'switch') {
+          add('switches', node);
+          continue;
+        }
+        if (startsWithAny(role, ['menuitem'])) {
+          add('menuItems', node);
+          continue;
+        }
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || node.isContentEditable) {
+          add('inputs', node);
+          continue;
+        }
+        if (tag === 'a' || role === 'link') {
+          add('links', node);
+          continue;
+        }
+        if (tag === 'button' || role === 'button') {
+          add('buttons', node);
+          continue;
+        }
+      }
+      return { totalScanned, summary, sections };
+    })()
+  `) as {
+    totalScanned: number;
+    summary: BrowserToolsUiListSummary;
+    sections: BrowserToolsUiListSections;
+  };
+  return {
+    url: pageUrl,
+    title: pageTitle,
+    totalScanned: result.totalScanned,
+    summary: result.summary,
+    sections: result.sections,
+  };
+}
+
 export async function collectBrowserToolsDoctorReport(
   port: number,
-  options: { urlContains?: string } & BrowserToolsPageProbeOptions = {},
+  options: {
+    urlContains?: string;
+    includeUiList?: boolean;
+    uiListSelector?: string;
+    uiListVisibleOnly?: boolean;
+    uiListCaseSensitive?: boolean;
+    uiListLimitPerKind?: number;
+    uiListMaxScan?: number;
+    prepareSelectedPage?: ((page: Page) => Promise<void>) | null;
+    cleanupSelectedPage?: ((page: Page) => Promise<void>) | null;
+  } & BrowserToolsPageProbeOptions = {},
 ): Promise<BrowserToolsDoctorReport> {
   const browser = await connectBrowser(port);
   try {
@@ -710,10 +1160,26 @@ export async function collectBrowserToolsDoctorReport(
     });
     const pages = await browser.pages();
     const selectedPage = census.selectedIndex >= 0 ? pages[census.selectedIndex] : null;
+    if (selectedPage && options.prepareSelectedPage) {
+      await options.prepareSelectedPage(selectedPage);
+    }
     const pageProbe = selectedPage
       ? await collectBrowserToolsPageProbe(selectedPage, options)
       : null;
-    return { census, pageProbe };
+    const uiList =
+      selectedPage && options.includeUiList
+        ? await collectBrowserToolsUiList(selectedPage, {
+            selector: options.uiListSelector,
+            visibleOnly: options.uiListVisibleOnly ?? true,
+            caseSensitive: options.uiListCaseSensitive ?? false,
+            limitPerKind: options.uiListLimitPerKind ?? 20,
+            maxScan: options.uiListMaxScan ?? 5000,
+          })
+        : null;
+    if (selectedPage && options.cleanupSelectedPage) {
+      await options.cleanupSelectedPage(selectedPage);
+    }
+    return { census, pageProbe, uiList };
   } finally {
     await browser.disconnect();
   }
@@ -780,6 +1246,11 @@ export function summarizeBrowserToolsDoctorReport(report: BrowserToolsDoctorRepo
   } else {
     lines.push('No selected page to probe.');
   }
+  if (report.uiList) {
+    lines.push(
+      `UI list: menus=${report.uiList.summary.menus}, menuItems=${report.uiList.summary.menuItems}, switches=${report.uiList.summary.switches}, uploadCandidates=${report.uiList.summary.uploadCandidates}`,
+    );
+  }
   return lines;
 }
 
@@ -820,6 +1291,69 @@ function printBrowserToolsDoctorReport(report: BrowserToolsDoctorReport): void {
   printBrowserToolsTabCensus(report.census);
   console.log('');
   summarizeBrowserToolsDoctorReport(report).forEach((line) => console.log(line));
+}
+
+function printBrowserToolsDomSearch(result: BrowserToolsDomSearchResult): void {
+  console.log(`Page: ${result.title || '(untitled)'}`);
+  console.log(`URL: ${result.url}`);
+  console.log(`Scanned: ${result.totalScanned}`);
+  console.log(`Matches: ${result.matched.length}`);
+  result.matched.forEach((match, index) => {
+    console.log('');
+    console.log(`Match ${index + 1}: <${match.tag}>${match.role ? ` role=${match.role}` : ''}`);
+    if (match.text) console.log(`  text: ${match.text}`);
+    if (match.ariaLabel) console.log(`  ariaLabel: ${match.ariaLabel}`);
+    if (match.dataTestId) console.log(`  dataTestId: ${match.dataTestId}`);
+    if (match.className) console.log(`  class: ${match.className}`);
+    if (match.id) console.log(`  id: ${match.id}`);
+    if (match.href) console.log(`  href: ${match.href}`);
+    if (match.checked !== null) console.log(`  checked: ${match.checked ? 'true' : 'false'}`);
+    if (match.expanded !== null) console.log(`  expanded: ${match.expanded ? 'true' : 'false'}`);
+  });
+}
+
+function printBrowserToolsUiList(result: BrowserToolsUiListResult): void {
+  console.log(`Page: ${result.title || '(untitled)'}`);
+  console.log(`URL: ${result.url}`);
+  console.log(`Scanned: ${result.totalScanned}`);
+  console.log(
+    `Summary: buttons=${result.summary.buttons}, menuItems=${result.summary.menuItems}, switches=${result.summary.switches}, inputs=${result.summary.inputs}, links=${result.summary.links}, dialogs=${result.summary.dialogs}, menus=${result.summary.menus}, fileInputs=${result.summary.fileInputs}, uploadCandidates=${result.summary.uploadCandidates}`,
+  );
+  const sectionOrder: Array<keyof BrowserToolsUiListSections> = [
+    'dialogs',
+    'menus',
+    'buttons',
+    'menuItems',
+    'switches',
+    'inputs',
+    'links',
+    'fileInputs',
+    'uploadCandidates',
+  ];
+  for (const section of sectionOrder) {
+    const items = result.sections[section];
+    if (items.length === 0) continue;
+    console.log('');
+    console.log(`${section}: ${items.length}`);
+    items.forEach((item, index) => {
+      console.log(`  ${index + 1}. <${item.tag}>${item.role ? ` role=${item.role}` : ''}`);
+      if (item.text) console.log(`     text: ${item.text}`);
+      if (item.ariaLabel) console.log(`     ariaLabel: ${item.ariaLabel}`);
+      if (item.dataTestId) console.log(`     dataTestId: ${item.dataTestId}`);
+      if (item.widgetType) console.log(`     widgetType: ${item.widgetType}`);
+      if (item.inputType) console.log(`     inputType: ${item.inputType}`);
+      if (item.href) console.log(`     href: ${item.href}`);
+      if (item.checked !== null) console.log(`     checked: ${item.checked}`);
+      if (item.expanded !== null) console.log(`     expanded: ${item.expanded}`);
+      if (item.disabled !== null) console.log(`     disabled: ${item.disabled}`);
+      console.log(`     visible: ${item.visible}`);
+      if (item.pathHint) console.log(`     pathHint: ${item.pathHint}`);
+      if (item.interactionHints.length > 0) {
+        console.log(`     hints: ${item.interactionHints.join(', ')}`);
+      }
+      if (item.className) console.log(`     class: ${item.className}`);
+    });
+  }
 }
 
 function collectStringArg(value: string, previous: string[] = []): string[] {
@@ -985,6 +1519,95 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
         return;
       }
       printBrowserToolsDoctorReport(report);
+    });
+
+  program
+    .command('ls')
+    .description('List the important visible UI surfaces and interactive controls on the selected page.')
+    .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+    .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
+    .option('--selector <selector>', 'Optional root selector to limit the listing scope.')
+    .option('--visible-only', 'Only consider visible nodes.', true)
+    .option('--all', 'Include hidden nodes too.')
+    .option('--limit-per-kind <count>', 'Return at most N rows per UI section.', (value) => Number.parseInt(value, 10), 20)
+    .option('--max-scan <count>', 'Scan at most N nodes before stopping.', (value) => Number.parseInt(value, 10), 5000)
+    .option('--case-sensitive', 'Treat text normalization as case-sensitive.', false)
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .action(async (commandOptions) => {
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
+      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+      try {
+        const result = await collectBrowserToolsUiList(page, {
+          selector: commandOptions.selector as string | undefined,
+          visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
+          caseSensitive: Boolean(commandOptions.caseSensitive),
+          limitPerKind: commandOptions.limitPerKind as number,
+          maxScan: commandOptions.maxScan as number,
+        });
+        if (commandOptions.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+        printBrowserToolsUiList(result);
+      } finally {
+        await browser.disconnect();
+      }
+    });
+
+  program
+    .command('search')
+    .description('Search the selected page DOM for visible nodes that match structured criteria.')
+    .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
+    .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
+    .option('--selector <selector>', 'Optional root selector to limit the search scope.')
+    .option('--text <value>', 'Require matching text content substring (repeatable).', collectStringArg, [])
+    .option('--aria-label <value>', 'Require matching aria-label substring (repeatable).', collectStringArg, [])
+    .option('--role <value>', 'Require matching role substring (repeatable).', collectStringArg, [])
+    .option('--data-testid <value>', 'Require matching data-test-id substring (repeatable).', collectStringArg, [])
+    .option('--class-includes <value>', 'Require matching class substring (repeatable).', collectStringArg, [])
+    .option('--tag <value>', 'Require matching tag name (repeatable).', collectStringArg, [])
+    .option('--checked <value>', 'Filter on aria-checked state (true|false).')
+    .option('--expanded <value>', 'Filter on aria-expanded state (true|false).')
+    .option('--visible-only', 'Only consider visible nodes.', true)
+    .option('--all', 'Include hidden nodes too.')
+    .option('--limit <count>', 'Return at most N matches.', (value) => Number.parseInt(value, 10), 50)
+    .option('--max-scan <count>', 'Scan at most N nodes before stopping.', (value) => Number.parseInt(value, 10), 5000)
+    .option('--case-sensitive', 'Treat text filters as case-sensitive.', false)
+    .option('--json', 'Emit machine-readable JSON output.', false)
+    .action(async (commandOptions) => {
+      const parseBooleanOption = (value: unknown): boolean | null => {
+        if (typeof value !== 'string') return null;
+        const normalized = value.trim().toLowerCase();
+        if (normalized === 'true') return true;
+        if (normalized === 'false') return false;
+        throw new Error(`Expected "true" or "false", received "${value}".`);
+      };
+      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
+      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+      try {
+        const result = await collectBrowserToolsDomSearch(page, {
+          selector: commandOptions.selector as string | undefined,
+          text: commandOptions.text as string[],
+          ariaLabel: commandOptions.ariaLabel as string[],
+          role: commandOptions.role as string[],
+          dataTestId: commandOptions.dataTestid as string[] | undefined ?? commandOptions.dataTestId as string[] | undefined,
+          classIncludes: commandOptions.classIncludes as string[],
+          tag: commandOptions.tag as string[],
+          checked: parseBooleanOption(commandOptions.checked),
+          expanded: parseBooleanOption(commandOptions.expanded),
+          visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
+          caseSensitive: Boolean(commandOptions.caseSensitive),
+          limit: commandOptions.limit as number,
+          maxScan: commandOptions.maxScan as number,
+        });
+        if (commandOptions.json) {
+          console.log(JSON.stringify(result, null, 2));
+          return;
+        }
+        printBrowserToolsDomSearch(result);
+      } finally {
+        await browser.disconnect();
+      }
     });
 
   program

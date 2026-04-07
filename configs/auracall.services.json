@@ -466,6 +466,35 @@
           "https://accounts.google.com",
           "https://www.google.com"
         ]
+      },
+      "features": {
+        "detector": "gemini-feature-probe-v1",
+        "flags": {
+          "search": [
+            "search"
+          ],
+          "grounding": [
+            "grounding"
+          ],
+          "deep_research": [
+            "deep research"
+          ],
+          "personal_intelligence": [
+            "personal intelligence"
+          ]
+        }
+      },
+      "composer": {
+        "knownLabels": [
+          "create image",
+          "create music",
+          "write anything",
+          "create video",
+          "help me learn",
+          "canvas",
+          "deep research",
+          "personal intelligence"
+        ]
       }
     },
     "grok": {

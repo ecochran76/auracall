@@ -2,10 +2,13 @@ import { describe, expect, test } from 'vitest';
 import {
   classifyGeminiBlockingState,
   createGeminiAdapter,
+  deriveGeminiFeatureProbeFromUiList,
   geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
+  mergeGeminiFeatureProbes,
   geminiUrlMatchesPreference,
   normalizeGeminiConversationId,
+  normalizeGeminiFeatureSignature,
   normalizeGeminiProjectId,
   resolveGeminiConfiguredUrl,
   resolveGeminiCreateProjectUrl,
@@ -110,6 +113,154 @@ describe('geminiAdapter id helpers', () => {
     expect(typeof adapter.renameConversation).toBe('function');
     expect(typeof adapter.deleteConversation).toBe('function');
     expect(typeof adapter.readConversationContext).toBe('function');
+    expect(typeof adapter.getFeatureSignature).toBe('function');
+  });
+
+  test('normalizes Gemini feature signatures from drawer choices and toggles', () => {
+    expect(JSON.parse(normalizeGeminiFeatureSignature({
+      detector: 'gemini-feature-probe-v1',
+      deep_research: true,
+      personal_intelligence: true,
+      active_mode: ' Fast ',
+      modes: ['Create video', 'Canvas', 'Create music', 'Deep research', 'Create video'],
+      toggles: {
+        'Personal intelligence': true,
+      },
+    }) ?? 'null')).toEqual({
+      detector: 'gemini-feature-probe-v1',
+      deep_research: true,
+      personal_intelligence: true,
+      active_mode: 'fast',
+      modes: ['canvas', 'create music', 'create video', 'deep research'],
+      toggles: {
+        'personal intelligence': true,
+      },
+    });
+  });
+
+  test('derives Gemini feature probe evidence from browser-tools uiList output', () => {
+    expect(deriveGeminiFeatureProbeFromUiList({
+      url: 'https://gemini.google.com/app',
+      title: 'Gemini',
+      totalScanned: 42,
+      summary: {
+        buttons: 1,
+        menuItems: 2,
+        switches: 1,
+        inputs: 1,
+        links: 0,
+        dialogs: 0,
+        menus: 1,
+        fileInputs: 0,
+        uploadCandidates: 0,
+      },
+      sections: {
+        buttons: [],
+        menuItems: [
+          {
+            tag: 'button',
+            role: 'menuitemcheckbox',
+            text: 'Canvas',
+            ariaLabel: null,
+            title: null,
+            dataTestId: null,
+            className: 'toolbox-drawer-item-list-button',
+            href: null,
+            checked: false,
+            expanded: null,
+            disabled: false,
+            visible: true,
+            inputType: null,
+            widgetType: 'menu-item',
+            pathHint: null,
+            interactionHints: ['hard-click-preferred'],
+          },
+          {
+            tag: 'button',
+            role: 'menuitemcheckbox',
+            text: 'Deep research',
+            ariaLabel: null,
+            title: null,
+            dataTestId: null,
+            className: 'toolbox-drawer-item-list-button',
+            href: null,
+            checked: false,
+            expanded: null,
+            disabled: false,
+            visible: true,
+            inputType: null,
+            widgetType: 'menu-item',
+            pathHint: null,
+            interactionHints: ['hard-click-preferred'],
+          },
+        ],
+        switches: [
+          {
+            tag: 'button',
+            role: 'switch',
+            text: null,
+            ariaLabel: 'Personal Intelligence',
+            title: null,
+            dataTestId: null,
+            className: 'mdc-switch mdc-switch--checked',
+            href: null,
+            checked: true,
+            expanded: null,
+            disabled: false,
+            visible: true,
+            inputType: null,
+            widgetType: 'switch',
+            pathHint: null,
+            interactionHints: ['pointer-gesture-preferred'],
+          },
+        ],
+        inputs: [],
+        links: [],
+        dialogs: [],
+        menus: [],
+        fileInputs: [],
+        uploadCandidates: [],
+      },
+    }) ?? null).toEqual({
+      detector: 'gemini-feature-probe-v1',
+      deep_research: true,
+      personal_intelligence: true,
+      modes: ['canvas', 'deep research'],
+      toggles: {
+        'personal intelligence': true,
+      },
+      active_mode: null,
+    });
+  });
+
+  test('merges Gemini provider and browser-tools feature probes', () => {
+    expect(mergeGeminiFeatureProbes(
+      {
+        detector: 'gemini-feature-probe-v1',
+        search: true,
+        modes: ['create image'],
+      },
+      {
+        detector: 'gemini-feature-probe-v1',
+        deep_research: true,
+        personal_intelligence: true,
+        modes: ['canvas', 'deep research'],
+        toggles: {
+          'personal intelligence': true,
+        },
+      },
+    )).toEqual({
+      detector: 'gemini-feature-probe-v1',
+      search: true,
+      grounding: undefined,
+      deep_research: true,
+      personal_intelligence: true,
+      modes: ['canvas', 'create image', 'deep research'],
+      toggles: {
+        'personal intelligence': true,
+      },
+      active_mode: null,
+    });
   });
 
   test('does not treat arbitrary Gemini project names as normalized ids', () => {

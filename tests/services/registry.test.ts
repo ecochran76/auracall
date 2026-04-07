@@ -28,6 +28,7 @@ import {
   resolveBundledServiceDomSelector,
   resolveBundledServiceDomSelectorSet,
   resolveBundledServiceFeatureFlagTokens,
+  resolveBundledServiceFeatureDetector,
   resolveBundledServiceModelLabels,
   resolveBundledServiceRouteTemplate,
   resolveBundledServiceSelectors,
@@ -219,6 +220,14 @@ describe('service registry manifest helpers', () => {
         'https://fallback.example/project/{projectId}?chat={conversationId}',
       ),
     ).toBe('https://grok.com/project/{projectId}?chat={conversationId}');
+  });
+
+  test('resolves gemini feature detector and tokens through the bundled manifest', () => {
+    expect(resolveBundledServiceFeatureDetector('gemini', 'fallback-detector')).toBe('gemini-feature-probe-v1');
+    expect(resolveBundledServiceFeatureFlagTokens('gemini', {})).toMatchObject({
+      deep_research: ['deep research'],
+      personal_intelligence: ['personal intelligence'],
+    });
   });
 
   test('resolves chatgpt composer aliases and known labels through the bundled manifest', () => {

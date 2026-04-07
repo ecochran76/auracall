@@ -1,7 +1,14 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
+import type { Page } from 'puppeteer-core';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
+import {
+  buildBrowserDomSearchExpression,
+  type BrowserDomSearchMatch,
+  type BrowserDomSearchOptions,
+} from '../../../packages/browser-service/src/service/domSearch.js';
+import type { BrowserToolsUiListResult } from '../../../packages/browser-service/src/browserTools.js';
 import {
   navigateAndSettle,
   pressButton,
@@ -18,13 +25,62 @@ import type {
   ProviderUserIdentity,
 } from './types.js';
 import type { Conversation, ConversationContext, FileRef, Project, ProjectMemoryMode } from './domain.js';
-import { requireBundledServiceBaseUrl, requireBundledServiceCompatibleHosts, requireBundledServiceRouteTemplate } from '../../services/registry.js';
+import {
+  requireBundledServiceBaseUrl,
+  requireBundledServiceCompatibleHosts,
+  requireBundledServiceRouteTemplate,
+  resolveBundledServiceComposerKnownLabels,
+  resolveBundledServiceFeatureDetector,
+  resolveBundledServiceFeatureFlagTokens,
+} from '../../services/registry.js';
+import { GeminiFeatureSchema } from '../llmService/providers/schema.js';
 
 const GEMINI_BASE_URL = requireBundledServiceBaseUrl('gemini');
 const GEMINI_APP_URL = requireBundledServiceRouteTemplate('gemini', 'app');
 const GEMINI_COMPATIBLE_HOSTS = requireBundledServiceCompatibleHosts('gemini');
 const GEMINI_GEMS_VIEW_URL = new URL('gems/view', GEMINI_BASE_URL).toString();
 const GEMINI_GEM_CREATE_URL = new URL('gems/create', GEMINI_BASE_URL).toString();
+const GEMINI_FEATURE_DETECTOR = resolveBundledServiceFeatureDetector('gemini', 'gemini-feature-probe-v1');
+const GEMINI_FEATURE_FLAG_TOKENS = resolveBundledServiceFeatureFlagTokens('gemini', {
+  search: ['search'],
+  grounding: ['grounding'],
+  deep_research: ['deep research'],
+  personal_intelligence: ['personal intelligence'],
+});
+const GEMINI_DISCOVERY_LABELS = resolveBundledServiceComposerKnownLabels('gemini', [
+  'create image',
+  'create music',
+  'write anything',
+  'create video',
+  'help me learn',
+  'guided learning',
+  'canvas',
+  'deep research',
+  'personal intelligence',
+]);
+const GEMINI_TOOLS_BUTTON_SELECTORS = [
+  'button.toolbox-drawer-button',
+  'button.toolbox-drawer-button-with-label',
+  'button[aria-haspopup="menu"] .toolbox-drawer-button-label-icon-text',
+  'button[aria-haspopup="menu"]',
+];
+const GEMINI_TOOLS_DRAWER_ROW_SELECTORS = [
+  'button.toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
+  'button[mat-list-item].toolbox-drawer-item-list-button[role="menuitemcheckbox"]',
+  'button[role="menuitemcheckbox"]',
+];
+const GEMINI_PERSONAL_INTELLIGENCE_SELECTORS = [
+  'button[role="switch"][aria-label="Personal Intelligence"]',
+  'button[role="switch"][aria-label*="Personal Intelligence"]',
+];
+const GEMINI_MODE_PICKER_SELECTORS = [
+  'button[data-test-id="bard-mode-menu-button"]',
+  'button[aria-label="Open mode picker"]',
+];
+const GEMINI_NEW_CHAT_BUTTON_SELECTORS = [
+  'button[data-test-id="new-chat-button"]',
+  'button[aria-label="New chat"]',
+];
 const GEMINI_GEM_NAME_INPUT_SELECTOR = 'input[aria-label="Input for a Gem name"]';
 const GEMINI_GEM_DESCRIPTION_INPUT_SELECTOR = 'textarea[data-test-id="description-input-field"]';
 const GEMINI_GEM_INSTRUCTIONS_INPUT_SELECTOR = 'div[aria-label="Enter a prompt for Gemini"]';
@@ -75,7 +131,7 @@ function normalizePromptText(value: string): string {
 function sanitizeGeminiAssistantText(value: string): string {
   const normalized = normalizePromptText(value);
   return normalized
-    .replace(/^(?:show thinking\s+)?gemini said\s+/i, '')
+    .replace(/^(?:show thinking\s+)?gemini said(?:\s+|$)/i, '')
     .replace(/\s+(?:copy prompt|listen|show more options)(?:\s+(?:copy prompt|listen|show more options))*$/i, '')
     .trim();
 }
@@ -84,6 +140,349 @@ function sanitizeGeminiUserText(value: string): string {
   return normalizePromptText(value)
     .replace(/^you said\s+/i, '')
     .trim();
+}
+
+type GeminiFeatureProbe = {
+  detector?: string | null;
+  search?: boolean;
+  grounding?: boolean;
+  deep_research?: boolean;
+  personal_intelligence?: boolean;
+  modes?: string[] | null;
+  toggles?: Record<string, boolean> | null;
+  active_mode?: string | null;
+};
+
+type GeminiDomSearchResult = {
+  totalScanned: number;
+  matched: BrowserDomSearchMatch[];
+};
+
+function normalizeGeminiDiscoveryLabel(value: string | null | undefined): string {
+  return normalizeWhitespace(value ?? '')
+    .toLowerCase()
+    .replace(/^[^\p{L}\p{N}]+/gu, '')
+    .replace(/[^\p{L}\p{N}\s]+/gu, ' ')
+    .replace(/(?:\s+new)+$/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+export function normalizeGeminiFeatureSignature(probe: GeminiFeatureProbe | null | undefined): string | null {
+  if (!probe || typeof probe !== 'object') {
+    return null;
+  }
+  const knownModes = new Set(GEMINI_DISCOVERY_LABELS.map((entry) => normalizeGeminiDiscoveryLabel(entry)).filter(Boolean));
+  const modes = Array.isArray(probe.modes)
+    ? Array.from(
+        new Set(
+          probe.modes
+            .map((entry) => normalizeGeminiDiscoveryLabel(entry))
+            .filter((entry) => Boolean(entry) && knownModes.has(entry)),
+        ),
+      ).sort()
+    : [];
+  const toggles = probe.toggles && typeof probe.toggles === 'object'
+    ? Object.fromEntries(
+        Object.entries(probe.toggles)
+          .map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
+          .filter(([key]) => key.length > 0)
+          .sort(([left], [right]) => left.localeCompare(right)),
+      )
+    : undefined;
+  const normalizedActiveMode = normalizeGeminiDiscoveryLabel(probe.active_mode ?? '');
+  const normalized = {
+    detector: normalizeWhitespace(probe.detector ?? '') || GEMINI_FEATURE_DETECTOR,
+    search: typeof probe.search === 'boolean' ? probe.search : undefined,
+    grounding: typeof probe.grounding === 'boolean' ? probe.grounding : undefined,
+    deep_research: typeof probe.deep_research === 'boolean' ? probe.deep_research : undefined,
+    personal_intelligence:
+      typeof probe.personal_intelligence === 'boolean' ? probe.personal_intelligence : undefined,
+    modes,
+    toggles: toggles && Object.keys(toggles).length > 0 ? toggles : undefined,
+    active_mode:
+      normalizedActiveMode && normalizedActiveMode !== 'open mode picker' ? normalizedActiveMode : undefined,
+  };
+  const parsed = GeminiFeatureSchema.safeParse(normalized);
+  if (!parsed.success) {
+    return null;
+  }
+  const hasAnySignal =
+    normalized.search !== undefined ||
+    normalized.grounding !== undefined ||
+    normalized.deep_research !== undefined ||
+    normalized.personal_intelligence !== undefined ||
+    normalized.modes.length > 0 ||
+    (normalized.toggles && Object.keys(normalized.toggles).length > 0) ||
+    normalized.active_mode !== undefined;
+  if (!hasAnySignal) {
+    return null;
+  }
+  return JSON.stringify(normalized);
+}
+
+export function deriveGeminiFeatureProbeFromUiList(
+  uiList: BrowserToolsUiListResult | null | undefined,
+): GeminiFeatureProbe | null {
+  if (!uiList) {
+    return null;
+  }
+  const modes = Array.from(
+    new Set(
+      uiList.sections.menuItems
+        .map((item) => normalizeGeminiDiscoveryLabel(item.text ?? item.ariaLabel ?? null))
+        .filter(Boolean),
+    ),
+  ).sort();
+  const toggles = Object.fromEntries(
+    uiList.sections.switches
+      .map((item) => {
+        const label = normalizeGeminiDiscoveryLabel(item.ariaLabel ?? item.text ?? null);
+        if (!label || typeof item.checked !== 'boolean') {
+          return null;
+        }
+        return [label, item.checked] as const;
+      })
+      .filter((entry): entry is readonly [string, boolean] => Boolean(entry))
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+  if (modes.length === 0 && Object.keys(toggles).length === 0) {
+    return null;
+  }
+  return {
+    detector: GEMINI_FEATURE_DETECTOR,
+    deep_research: modes.includes('deep research'),
+    personal_intelligence: Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+      ? Boolean(toggles['personal intelligence'])
+      : undefined,
+    modes,
+    toggles,
+    active_mode: null,
+  };
+}
+
+export function mergeGeminiFeatureProbes(
+  providerProbe: GeminiFeatureProbe | null | undefined,
+  uiListProbe: GeminiFeatureProbe | null | undefined,
+): GeminiFeatureProbe | null {
+  if (!providerProbe && !uiListProbe) {
+    return null;
+  }
+  const modes = Array.from(
+    new Set(
+      [...(providerProbe?.modes ?? []), ...(uiListProbe?.modes ?? [])]
+        .map((entry) => normalizeGeminiDiscoveryLabel(entry))
+        .filter(Boolean),
+    ),
+  ).sort();
+  const toggles = Object.fromEntries(
+    Object.entries({
+      ...(providerProbe?.toggles ?? {}),
+      ...(uiListProbe?.toggles ?? {}),
+    })
+      .map(([key, value]) => [normalizeGeminiDiscoveryLabel(key), Boolean(value)] as const)
+      .filter(([key]) => key.length > 0)
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+  return {
+    detector: normalizeWhitespace(providerProbe?.detector ?? uiListProbe?.detector ?? '') || GEMINI_FEATURE_DETECTOR,
+    search: providerProbe?.search,
+    grounding: providerProbe?.grounding,
+    deep_research:
+      typeof uiListProbe?.deep_research === 'boolean'
+        ? uiListProbe.deep_research
+        : providerProbe?.deep_research ?? modes.includes('deep research'),
+    personal_intelligence:
+      Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+        ? Boolean(toggles['personal intelligence'])
+        : providerProbe?.personal_intelligence ?? uiListProbe?.personal_intelligence,
+    modes,
+    toggles,
+    active_mode: normalizeGeminiDiscoveryLabel(providerProbe?.active_mode ?? uiListProbe?.active_mode ?? '') || null,
+  };
+}
+
+export async function prepareGeminiToolsDrawerForUiList(page: Page): Promise<void> {
+  const dismissOverlayExpression = `(() => {
+    const dispatchEscape = () => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+    };
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+    dispatchEscape();
+    dispatchEscape();
+    return true;
+  })()`;
+  await page.evaluate(dismissOverlayExpression).catch(() => undefined);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+
+  const drawerReadyExpression = `(() => {
+    const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
+    const switchSelectors = ${JSON.stringify(GEMINI_PERSONAL_INTELLIGENCE_SELECTORS)};
+    const modeMenus = Array.from(document.querySelectorAll('.gds-mode-switch-menu, [data-test-id="bard-mode-menu-button"][aria-expanded="true"]'))
+      .filter((node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+    const visible = (node) => Boolean(node && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+    return (
+      modeMenus.length === 0 &&
+      rowSelectors.some((selector) => Array.from(document.querySelectorAll(selector)).some((node) => visible(node))) ||
+      switchSelectors.some((selector) => Array.from(document.querySelectorAll(selector)).some((node) => visible(node)))
+    );
+  })()`;
+  const drawerReady = await page.evaluate(drawerReadyExpression);
+  if (drawerReady) {
+    return;
+  }
+
+  const pointExpression = `(() => {
+    const selectors = ${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS)};
+    const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+    const visible = (node) => Boolean(node && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+    for (const selector of selectors) {
+      for (const node of Array.from(document.querySelectorAll(selector))) {
+        if (!(node instanceof HTMLElement) || !visible(node)) continue;
+        const button = node.matches('button') ? node : node.closest('button');
+        if (!(button instanceof HTMLElement) || !visible(button)) continue;
+        const label = normalize(button.getAttribute('aria-label') || button.textContent);
+        if (label !== 'tools') continue;
+        const rect = button.getBoundingClientRect();
+        return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+      }
+    }
+    return null;
+  })()`;
+  const point = await page.evaluate(pointExpression);
+
+  if (!point) {
+    return;
+  }
+
+  await page.mouse.move(point.x, point.y);
+  await page.mouse.down();
+  await page.mouse.up();
+  await new Promise((resolve) => setTimeout(resolve, 200));
+
+  await page.waitForFunction(
+    `(() => {
+      const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
+      const switchSelectors = ${JSON.stringify(GEMINI_PERSONAL_INTELLIGENCE_SELECTORS)};
+      const modeMenus = Array.from(document.querySelectorAll('.gds-mode-switch-menu'))
+        .filter((node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+      const visible = (node: Element | null) =>
+        Boolean(node && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+      return (
+        modeMenus.length === 0 &&
+        (rowSelectors.some((selector) => Array.from(document.querySelectorAll(selector)).some((node) => visible(node))) ||
+        switchSelectors.some((selector) => Array.from(document.querySelectorAll(selector)).some((node) => visible(node)))
+        )
+      );
+    })()`,
+    {
+      timeout: 3000,
+    },
+  ).catch(() => undefined);
+}
+
+export async function cleanupGeminiUiListPreparation(page: Page): Promise<void> {
+  await page.evaluate(`(() => {
+    const active = document.activeElement;
+    if (active instanceof HTMLElement) active.blur();
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+    return true;
+  })()`).catch(() => undefined);
+  await new Promise((resolve) => setTimeout(resolve, 150));
+}
+
+async function runGeminiDomSearch(
+  Runtime: ChromeClient['Runtime'],
+  options: BrowserDomSearchOptions,
+): Promise<GeminiDomSearchResult> {
+  const { result } = await Runtime.evaluate({
+    expression: buildBrowserDomSearchExpression(options),
+    returnByValue: true,
+  });
+  return (result?.value as GeminiDomSearchResult | null | undefined) ?? { totalScanned: 0, matched: [] };
+}
+
+function buildGeminiDomSearchHasMatchesExpression(options: BrowserDomSearchOptions): string {
+  const searchExpression = buildBrowserDomSearchExpression(options);
+  return `(() => {
+    const result = ${searchExpression};
+    return Boolean(result && Array.isArray(result.matched) && result.matched.length > 0);
+  })()`;
+}
+
+async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolean> {
+  const buttonSearch = await runGeminiDomSearch(client.Runtime, {
+    classIncludes: ['toolbox-drawer-button'],
+    text: ['Tools'],
+    tag: ['button'],
+    visibleOnly: true,
+    limit: 10,
+  }).catch(() => ({ totalScanned: 0, matched: [] }));
+  const hasExpandedToolsButton = buttonSearch.matched.some((match) => match.expanded === true);
+  const existingRows = await runGeminiDomSearch(client.Runtime, {
+    classIncludes: ['toolbox-drawer-item-list-button'],
+    role: ['menuitemcheckbox'],
+    visibleOnly: true,
+    limit: 50,
+    maxScan: 10_000,
+  }).catch(() => ({ totalScanned: 0, matched: [] }));
+  if (hasExpandedToolsButton && existingRows.matched.length > 0) {
+    return true;
+  }
+  const programmaticOpen = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const candidates = Array.from(document.querySelectorAll(${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS.join(','))}));
+      const button = candidates.find((candidate) => {
+        if (!(candidate instanceof HTMLElement)) return false;
+        if (!visible(candidate)) return false;
+        const label = normalize(candidate.textContent || candidate.getAttribute('aria-label') || '');
+        return label === 'tools';
+      });
+      if (!(button instanceof HTMLElement)) return false;
+      button.scrollIntoView({ block: 'center', inline: 'center' });
+      button.click();
+      return true;
+    })()`,
+    returnByValue: true,
+  }).catch(() => ({ result: { value: false } }));
+  let opened = Boolean(programmaticOpen.result?.value);
+  if (!opened) {
+    opened = await clickGeminiFeatureProbeTarget(client, GEMINI_TOOLS_BUTTON_SELECTORS, {
+      requireText: 'tools',
+    }).catch(() => false);
+  }
+  if (!opened) {
+    return false;
+  }
+  await waitForPredicate(
+    client.Runtime,
+    buildGeminiDomSearchHasMatchesExpression({
+      classIncludes: ['toolbox-drawer-item-list-button'],
+      role: ['menuitemcheckbox'],
+      visibleOnly: true,
+      limit: 1,
+      maxScan: 10_000,
+    }),
+    {
+      timeoutMs: 3_000,
+      description: 'Gemini tools drawer rows',
+    },
+  ).catch(() => undefined);
+  const rows = await runGeminiDomSearch(client.Runtime, {
+    classIncludes: ['toolbox-drawer-item-list-button'],
+    role: ['menuitemcheckbox'],
+    visibleOnly: true,
+    limit: 50,
+    maxScan: 10_000,
+  }).catch(() => ({ totalScanned: 0, matched: [] }));
+  return rows.matched.length > 0;
 }
 
 function guessMimeType(filePath: string): string {
@@ -399,6 +798,7 @@ type GeminiConversationContextProbe = {
     text: string;
   }>;
   files?: FileRef[];
+  artifacts?: ConversationContext['artifacts'];
 };
 
 type GeminiDeleteTrace = Array<Record<string, unknown>>;
@@ -502,6 +902,260 @@ async function readGeminiUserIdentity(client: ChromeClient): Promise<ProviderUse
     returnByValue: true,
   });
   return extractGeminiIdentityFromLabel(typeof result?.value === 'string' ? result.value : null);
+}
+
+async function clickGeminiFeatureProbeTarget(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  selectors: readonly string[],
+  options: { requireText?: string | null } = {},
+): Promise<boolean> {
+  const located = await client.Runtime.evaluate({
+    expression: `(() => {
+      const selectors = ${JSON.stringify(selectors)};
+      const requiredText = ${JSON.stringify(normalizeGeminiDiscoveryLabel(options.requireText ?? ''))};
+      const normalize = (value) =>
+        String(value ?? '')
+          .replace(/\\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+          .replace(/^[^\\p{L}\\p{N}]+/gu, '')
+          .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+      for (const selector of selectors) {
+        const candidates = Array.from(document.querySelectorAll(selector));
+        const target = candidates.find((candidate) => {
+          if (!(candidate instanceof HTMLElement)) return false;
+          if (requiredText) {
+            const text = normalize(candidate.textContent || candidate.getAttribute('aria-label') || '');
+            if (text !== requiredText) return false;
+          }
+          return true;
+        });
+        if (!(target instanceof HTMLElement)) continue;
+        target.scrollIntoView({ block: 'center', inline: 'center' });
+        const touchTarget = target.querySelector('.mat-mdc-button-touch-target');
+        const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : target;
+        const rect = clickTarget.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        return {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        };
+      }
+      return null;
+    })()`,
+    returnByValue: true,
+  });
+  const point = located.result?.value as { x?: number; y?: number } | undefined;
+  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+    return false;
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  return true;
+}
+
+async function readGeminiToolsDrawerProbe(Runtime: ChromeClient['Runtime']): Promise<GeminiFeatureProbe | null> {
+  const [rowSearch, toggleSearch] = await Promise.all([
+    runGeminiDomSearch(Runtime, {
+      classIncludes: ['toolbox-drawer-item-list-button'],
+      role: ['menuitemcheckbox'],
+      visibleOnly: true,
+      limit: 50,
+      maxScan: 10_000,
+    }),
+    runGeminiDomSearch(Runtime, {
+      ariaLabel: ['Personal Intelligence'],
+      role: ['switch'],
+      visibleOnly: true,
+      limit: 10,
+      maxScan: 10_000,
+    }),
+  ]);
+  const modes = Array.from(
+    new Set(
+      rowSearch.matched
+        .map((match) => normalizeGeminiDiscoveryLabel(match.text || match.ariaLabel || null))
+        .filter(Boolean),
+    ),
+  ).sort();
+  const toggles = Object.fromEntries(
+    toggleSearch.matched
+      .map((match) => {
+        const label = normalizeGeminiDiscoveryLabel(match.ariaLabel || match.text || null);
+        if (!label || typeof match.checked !== 'boolean') {
+          return null;
+        }
+        return [label, match.checked] as const;
+      })
+      .filter((entry): entry is readonly [string, boolean] => Boolean(entry))
+      .sort(([left], [right]) => left.localeCompare(right)),
+  );
+  if (modes.length === 0 && Object.keys(toggles).length === 0) {
+    return null;
+  }
+  return {
+    detector: GEMINI_FEATURE_DETECTOR,
+    deep_research: modes.includes('deep research'),
+    personal_intelligence: Object.prototype.hasOwnProperty.call(toggles, 'personal intelligence')
+      ? Boolean(toggles['personal intelligence'])
+      : undefined,
+    modes,
+    toggles,
+    active_mode: null,
+  };
+}
+
+async function readGeminiFeatureProbe(Runtime: ChromeClient['Runtime']): Promise<GeminiFeatureProbe | null> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const simplify = (value) =>
+        normalize(value)
+          .toLowerCase()
+          .replace(/^[^\\p{L}\\p{N}]+/gu, '')
+          .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const detector = ${JSON.stringify(GEMINI_FEATURE_DETECTOR)};
+      const flagTokens = ${JSON.stringify(GEMINI_FEATURE_FLAG_TOKENS)};
+      const knownLabels = ${JSON.stringify(GEMINI_DISCOVERY_LABELS)};
+      const ignore = new Set([
+        'main menu',
+        'new chat',
+        'my stuff',
+        'settings help',
+        'microphone',
+        'temporary chat',
+        'search',
+        'pro',
+        'open mode picker',
+      ]);
+      const addText = (sink, value) => {
+        const normalized = simplify(value);
+        if (normalized) sink.push(normalized);
+      };
+      const bodyCorpus = [];
+      addText(bodyCorpus, document.body?.innerText || '');
+      for (const key of Object.keys(localStorage).slice(0, 100)) {
+        addText(bodyCorpus, key);
+        try { addText(bodyCorpus, localStorage.getItem(key) || ''); } catch {}
+      }
+      for (const key of Object.keys(sessionStorage).slice(0, 100)) {
+        addText(bodyCorpus, key);
+        try { addText(bodyCorpus, sessionStorage.getItem(key) || ''); } catch {}
+      }
+      for (const script of Array.from(document.querySelectorAll('script[type="application/json"], script')).slice(0, 20)) {
+        addText(bodyCorpus, (script.textContent || '').slice(0, 50000));
+      }
+      const pickerButton = document.querySelector(${JSON.stringify(GEMINI_MODE_PICKER_SELECTORS.join(','))});
+      const activeMode = pickerButton instanceof HTMLElement
+        ? simplify(pickerButton.getAttribute('aria-label') || pickerButton.textContent || '')
+        : '';
+      const overlayRoots = Array.from(document.querySelectorAll('.cdk-overlay-pane, .cdk-overlay-container [role="menu"], .cdk-overlay-container [role="dialog"]'))
+        .filter((node) => visible(node));
+      const drawerRoot = overlayRoots[0] || null;
+      const modeLabels = new Set();
+      const toggleStates = {};
+      const modeCorpus = [];
+      const sourceRoot = drawerRoot || document.body;
+      for (const node of Array.from(sourceRoot.querySelectorAll('button, [role="button"], [role="menuitem"], [role="switch"], a[aria-label], button[aria-label]')).slice(0, 500)) {
+        if (!visible(node)) continue;
+        const label = simplify(node.getAttribute?.('aria-label') || node.textContent || '');
+        if (!label) continue;
+        if (ignore.has(label)) continue;
+        if (label.startsWith('google account ')) continue;
+        modeLabels.add(label);
+        modeCorpus.push(label);
+        const ariaChecked = node.getAttribute?.('aria-checked');
+        if (ariaChecked === 'true' || ariaChecked === 'false') {
+          toggleStates[label] = ariaChecked === 'true';
+        }
+      }
+      const haystack = Array.from(new Set([...bodyCorpus, ...modeCorpus, activeMode].filter(Boolean))).join('\\n');
+      const flags = {};
+      for (const [name, tokens] of Object.entries(flagTokens)) {
+        flags[name] = tokens.some((token) => haystack.includes(String(token || '').toLowerCase().trim()));
+      }
+      for (const label of knownLabels) {
+        const normalized = simplify(label);
+        if (normalized && haystack.includes(normalized)) {
+          modeLabels.add(normalized);
+        }
+      }
+      return {
+        detector,
+        search: Boolean(flags.search),
+        grounding: Boolean(flags.grounding),
+        deep_research: Boolean(flags.deep_research),
+        personal_intelligence: Boolean(flags.personal_intelligence),
+        modes: Array.from(modeLabels).sort(),
+        toggles: toggleStates,
+        active_mode: activeMode || null,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  return (result?.value as GeminiFeatureProbe | null | undefined) ?? null;
+}
+
+async function readGeminiFeatureSignature(client: ChromeClient): Promise<string | null> {
+  await navigateToGeminiConversationSurface(client, GEMINI_APP_URL);
+  await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+  await clickGeminiFeatureProbeTarget(client, GEMINI_NEW_CHAT_BUTTON_SELECTORS).catch(() => false);
+  await waitForPredicate(
+    client.Runtime,
+    `(() => location.pathname === "/app")()`,
+    {
+      timeoutMs: 5_000,
+      description: 'Gemini root composer route',
+    },
+  ).catch(() => undefined);
+  const openedTools = await ensureGeminiToolsDrawerOpen(client).catch(() => false);
+  if (openedTools) {
+    const drawerProbe = await readGeminiToolsDrawerProbe(client.Runtime);
+    const normalizedDrawerSignature = normalizeGeminiFeatureSignature(drawerProbe);
+    if (normalizedDrawerSignature) {
+      await client.Runtime.evaluate({
+        expression: `(() => {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+          document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+          return true;
+        })()`,
+        returnByValue: true,
+      }).catch(() => undefined);
+      return normalizedDrawerSignature;
+    }
+  }
+  const opened = await clickGeminiFeatureProbeTarget(client, GEMINI_MODE_PICKER_SELECTORS).catch(() => false);
+  if (opened) {
+    await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const roots = document.querySelectorAll('.cdk-overlay-pane, .cdk-overlay-container [role="menu"], .cdk-overlay-container [role="dialog"]');
+        return Array.from(roots).some((node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0);
+      })()`,
+      {
+        timeoutMs: 3_000,
+        description: 'Gemini mode picker overlay',
+      },
+    ).catch(() => undefined);
+  }
+  const probe = await readGeminiFeatureProbe(client.Runtime);
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      const active = document.activeElement;
+      if (active instanceof HTMLElement) active.blur();
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+      return true;
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
+  return normalizeGeminiFeatureSignature(probe);
 }
 
 async function scrapeGeminiConversations(
@@ -1280,10 +1934,13 @@ async function readGeminiConversationContextWithClient(
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const hasUser = Array.from(document.querySelectorAll('user-query, user-query-content'))
         .some((node) => visible(node));
-      const hasAssistant = Array.from(document.querySelectorAll(
+      const hasAssistantText = Array.from(document.querySelectorAll(
         'structured-content-container.model-response-text, structured-content-container, message-content, .response-content .markdown, .response-content, model-response'
       )).some((node) => visible(node));
-      return hasUser || hasAssistant ? { ready: true } : null;
+      const hasAssistantMedia = Array.from(document.querySelectorAll(
+        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"]'
+      )).some((node) => visible(node));
+      return hasUser || hasAssistantText || hasAssistantMedia ? { ready: true } : null;
     })()`,
     {
       timeoutMs: 10_000,
@@ -1293,6 +1950,23 @@ async function readGeminiConversationContextWithClient(
   if (!ready.ok) {
     throw new Error(`Gemini conversation content not found for ${conversationId}.`);
   }
+  await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const hasAssistantText = Array.from(document.querySelectorAll(
+        'structured-content-container.model-response-text message-content, structured-content-container.model-response-text .markdown, message-content'
+      )).some((node) => visible(node) && String(node.textContent || '').trim().length > 0);
+      const hasAssistantMedia = Array.from(document.querySelectorAll(
+        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"]'
+      )).some((node) => visible(node));
+      return hasAssistantText || hasAssistantMedia ? { settled: true } : null;
+    })()`,
+    {
+      timeoutMs: 5_000,
+      description: `Gemini conversation response settled for ${conversationId}`,
+    },
+  ).catch(() => undefined);
   const { result } = await client.Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
@@ -1302,7 +1976,7 @@ async function readGeminiConversationContextWithClient(
         return rect.width > 0 && rect.height > 0;
       };
       const sanitizeAssistant = (value) => normalize(value)
-        .replace(/^(?:show thinking\\s+)?gemini said\\s+/i, '')
+        .replace(/^(?:show thinking\\s+)?gemini said(?:\\s+|$)/i, '')
         .replace(/\\s+(?:copy prompt|listen|show more options)(?:\\s+(?:copy prompt|listen|show more options))*$/i, '')
         .trim();
       const sanitizeUser = (value) => normalize(value)
@@ -1350,10 +2024,57 @@ async function readGeminiConversationContextWithClient(
       });
       const messages = [];
       const files = [];
+      const artifacts = [];
       const seenFileIds = new Set();
+      const seenArtifactIds = new Set();
       for (const node of turns) {
         if (!(node instanceof HTMLElement)) continue;
         const isUser = node.matches('user-query');
+        let assistantArtifactsAdded = 0;
+        if (!isUser) {
+          const messageIndex = messages.length;
+          const generatedImages = Array.from(node.querySelectorAll('img.image, img.loaded, img'))
+            .filter((entry) => entry instanceof HTMLImageElement && visible(entry));
+          let artifactOrdinal = 0;
+          for (const image of generatedImages) {
+            if (!(image instanceof HTMLImageElement)) continue;
+            const container =
+              image.closest('image-renderer, image-response, .image-container, .image-button') ||
+              image.parentElement ||
+              node;
+            const dedupeKey = normalize(image.src || '') || ('message-' + messageIndex + '-image-' + artifactOrdinal);
+            if (seenArtifactIds.has(dedupeKey)) continue;
+            seenArtifactIds.add(dedupeKey);
+            const artifactId =
+              ${JSON.stringify('gemini-artifact:')} +
+              ${JSON.stringify(conversationId)} +
+              ':' + messageIndex +
+              ':' + artifactOrdinal;
+            artifactOrdinal += 1;
+            const width = image.naturalWidth || image.width || null;
+            const height = image.naturalHeight || image.height || null;
+            artifacts.push({
+              id: artifactId,
+              title: 'Generated image ' + artifactOrdinal,
+              kind: 'image',
+              uri: image.src || undefined,
+              messageIndex,
+              metadata: {
+                width,
+                height,
+                hasDownloadButton: Boolean(
+                  container instanceof Element &&
+                  container.querySelector('button[data-test-id="download-generated-image-button"]'),
+                ),
+                hasShareButton: Boolean(
+                  container instanceof Element &&
+                  container.querySelector('button[data-test-id="share-button"]'),
+                ),
+              },
+            });
+            assistantArtifactsAdded += 1;
+          }
+        }
         const text = isUser
           ? chooseText(
               node,
@@ -1377,73 +2098,126 @@ async function readGeminiConversationContextWithClient(
               ],
               sanitizeAssistant,
             );
-        if (!text) continue;
+        if (!text && assistantArtifactsAdded === 0) continue;
         const role = isUser ? 'user' : 'assistant';
         const previous = messages[messages.length - 1];
         if (previous && previous.role === role && previous.text === text) continue;
-        messages.push({ role, text });
-        if (!isUser) continue;
-        const turnFileNodes = Array.from(node.querySelectorAll(
-          '[data-test-id="uploaded-file"], [data-test-id="file-preview"], img[data-test-id="image-preview"], button[aria-label^="Remove file "]',
-        )).filter((entry) => entry instanceof HTMLElement && visible(entry));
-        let fileOrdinal = 0;
-        for (const fileNode of turnFileNodes) {
-          if (!(fileNode instanceof HTMLElement)) continue;
-          const chip = fileNode.closest('[data-test-id="uploaded-file"], [data-test-id="file-preview"], uploader-file-preview, uploader-file-preview-container')
-            || fileNode;
-          const labeledButton = chip.querySelector('button[aria-label]') || chip.querySelector('[aria-label]');
-          const removeButton = chip.querySelector('button[aria-label^="Remove file "]');
-          const imagePreview = chip.matches('img[data-test-id="image-preview"]')
-            ? chip
-            : chip.querySelector('img[data-test-id="image-preview"]');
-          const explicitName = labeledButton instanceof HTMLElement
-            ? normalize(labeledButton.getAttribute('aria-label') || labeledButton.getAttribute('title') || '')
-            : '';
-          const removeName = removeButton instanceof HTMLElement
-            ? normalize((removeButton.getAttribute('aria-label') || '').replace(/^Remove file\\s+/i, ''))
-            : '';
-          const visibleName = normalize(
-            chip.querySelector('.new-file-name, [data-test-id="file-name"]')?.textContent || '',
-          );
-          const visibleType = normalize(
-            chip.querySelector('.new-file-type, .file-type')?.textContent || '',
-          );
-          let name = explicitName || removeName || visibleName;
-          if (name && visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[A-Z0-9]{1,8}$/i.test(visibleType)) {
-            name = name + '.' + visibleType.toLowerCase();
+        if (text) {
+          messages.push({ role, text });
+        }
+        if (isUser) {
+          const turnFileNodes = Array.from(node.querySelectorAll(
+            '[data-test-id="uploaded-file"], [data-test-id="file-preview"], img[data-test-id="image-preview"], button[aria-label^="Remove file "]',
+          )).filter((entry) => entry instanceof HTMLElement && visible(entry));
+          let fileOrdinal = 0;
+          for (const fileNode of turnFileNodes) {
+            if (!(fileNode instanceof HTMLElement)) continue;
+            const chip = fileNode.closest('[data-test-id="uploaded-file"], [data-test-id="file-preview"], uploader-file-preview, uploader-file-preview-container')
+              || fileNode;
+            const labeledButton = chip.querySelector('button[aria-label]') || chip.querySelector('[aria-label]');
+            const removeButton = chip.querySelector('button[aria-label^="Remove file "]');
+            const imagePreview = chip.matches('img[data-test-id="image-preview"]')
+              ? chip
+              : chip.querySelector('img[data-test-id="image-preview"]');
+            const explicitName = labeledButton instanceof HTMLElement
+              ? normalize(labeledButton.getAttribute('aria-label') || labeledButton.getAttribute('title') || '')
+              : '';
+            const removeName = removeButton instanceof HTMLElement
+              ? normalize((removeButton.getAttribute('aria-label') || '').replace(/^Remove file\\s+/i, ''))
+              : '';
+            const visibleName = normalize(
+              chip.querySelector('.new-file-name, [data-test-id="file-name"]')?.textContent || '',
+            );
+            const visibleType = normalize(
+              chip.querySelector('.new-file-type, .file-type')?.textContent || '',
+            );
+            let name = explicitName || removeName || visibleName;
+            if (name && visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[A-Z0-9]{1,8}$/i.test(visibleType)) {
+              name = name + '.' + visibleType.toLowerCase();
+            }
+            if (!name && imagePreview instanceof HTMLImageElement) {
+              name = normalize(imagePreview.getAttribute('aria-label') || imagePreview.getAttribute('alt') || '');
+            }
+            if (!name) continue;
+            const fileId = ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
+            fileOrdinal += 1;
+            if (seenFileIds.has(fileId)) continue;
+            seenFileIds.add(fileId);
+            const mimeType = inferMimeType(name);
+            files.push({
+              id: fileId,
+              name,
+              provider: 'gemini',
+              source: 'conversation',
+              mimeType,
+              metadata: {
+                messageIndex: messages.length - 1,
+                kind: imagePreview instanceof HTMLImageElement ? 'image-preview' : 'uploaded-file',
+              },
+            });
           }
-          if (!name && imagePreview instanceof HTMLImageElement) {
-            name = normalize(imagePreview.getAttribute('aria-label') || imagePreview.getAttribute('alt') || '');
-          }
-          if (!name) continue;
-          const fileId = ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
-          fileOrdinal += 1;
-          if (seenFileIds.has(fileId)) continue;
-          seenFileIds.add(fileId);
-          const mimeType = inferMimeType(name);
-          files.push({
-            id: fileId,
-            name,
-            provider: 'gemini',
-            source: 'conversation',
-            mimeType,
-            metadata: {
-              messageIndex: messages.length - 1,
-              kind: imagePreview instanceof HTMLImageElement ? 'image-preview' : 'uploaded-file',
-            },
-          });
+          continue;
         }
       }
-      return {
+      if (artifacts.length === 0) {
+        const responseNodes = Array.from(root.querySelectorAll('model-response'))
+          .filter((entry) => entry instanceof HTMLElement && visible(entry));
+        let responseIndex = 0;
+        for (const responseNode of responseNodes) {
+          if (!(responseNode instanceof HTMLElement)) continue;
+          const generatedImages = Array.from(responseNode.querySelectorAll('img.image, img.loaded, img'))
+            .filter((entry) => entry instanceof HTMLImageElement && visible(entry));
+          let artifactOrdinal = 0;
+          for (const image of generatedImages) {
+            if (!(image instanceof HTMLImageElement)) continue;
+            const src = normalize(image.src || '');
+            if (!src || seenArtifactIds.has(src)) continue;
+            seenArtifactIds.add(src);
+            const container =
+              image.closest('image-renderer, image-response, .image-container, .image-button') ||
+              image.parentElement ||
+              responseNode;
+            const width = image.naturalWidth || image.width || null;
+            const height = image.naturalHeight || image.height || null;
+            artifacts.push({
+              id:
+                ${JSON.stringify('gemini-artifact:')} +
+                ${JSON.stringify(conversationId)} +
+                ':fallback:' + responseIndex + ':' + artifactOrdinal,
+              title: 'Generated image ' + (artifactOrdinal + 1),
+              kind: 'image',
+              uri: src || undefined,
+              messageIndex: messages.length > 0 ? messages.length - 1 : undefined,
+              metadata: {
+                width,
+                height,
+                hasDownloadButton: Boolean(
+                  container instanceof Element &&
+                  container.querySelector('button[data-test-id="download-generated-image-button"]'),
+                ),
+                hasShareButton: Boolean(
+                  container instanceof Element &&
+                  container.querySelector('button[data-test-id="share-button"]'),
+                ),
+              },
+            });
+            artifactOrdinal += 1;
+          }
+          responseIndex += 1;
+        }
+      }
+      return JSON.stringify({
         provider: 'gemini',
         conversationId: ${JSON.stringify(conversationId)},
         messages,
         files,
-      };
+        artifacts,
+      });
     })()`,
     returnByValue: true,
   });
-  const payload = (result?.value ?? null) as GeminiConversationContextProbe | null;
+  const rawPayload = typeof result?.value === 'string' ? result.value : null;
+  const payload = rawPayload ? (JSON.parse(rawPayload) as GeminiConversationContextProbe) : null;
   if (!payload || !Array.isArray(payload.messages) || payload.messages.length === 0) {
     throw new Error(`Gemini conversation messages not found for ${conversationId}.`);
   }
@@ -3075,6 +3849,7 @@ export function createGeminiAdapter(): Pick<
   | 'createProject'
   | 'deleteConversation'
   | 'deleteProjectFile'
+  | 'getFeatureSignature'
   | 'getUserIdentity'
   | 'listProjects'
   | 'listConversations'
@@ -3100,6 +3875,20 @@ export function createGeminiAdapter(): Pick<
       );
       try {
         return await readGeminiUserIdentity(client);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async getFeatureSignature(options?: BrowserProviderListOptions): Promise<string | null> {
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL),
+      );
+      try {
+        return await readGeminiFeatureSignature(client);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

@@ -8874,5 +8874,247 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - `messages[]`
     - visible sent `files[]`
   - the remaining explicit Gemini provider backlog is now:
-    - conversation artifacts parity
+    - broader conversation artifacts parity
     - account-level files
+
+## 2026-04-06 - Gemini conversation context now returns visible generated-image artifacts
+
+- Focus:
+  - prove whether Gemini chat pages expose a real artifact surface worth
+    normalizing in `conversations context get`
+- What changed:
+  - created a disposable managed-browser Gemini image chat:
+    - `/app/3525c884edae4fa4`
+  - live DOM inspection on the direct chat page proved a real assistant image
+    surface:
+    - rendered image node `img.image.loaded`
+    - image tile button `button.image-button`
+    - direct image action button
+      `button[data-test-id="download-generated-image-button"]`
+  - extended Gemini `readConversationContext(...)` so visible assistant image
+    nodes now normalize into first-class `artifacts[]` entries with:
+    - `kind: "image"`
+    - blob `uri`
+    - width / height metadata
+  - changed the provider readback to serialize the page payload in-browser and
+    parse it in Node, which avoided the earlier CDP by-value marshaling gap
+    that was dropping `artifacts[]`
+- Docs updated:
+  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 3525c884edae4fa4 --target gemini --profile default --json-only`
+    - returned one `image` artifact with blob `uri` plus `width`/`height`
+- Current boundary:
+  - Gemini conversation read parity now covers:
+    - `messages[]`
+    - visible sent `files[]`
+    - visible generated-image `artifacts[]`
+  - the remaining explicit Gemini provider backlog is now:
+    - broader conversation artifacts parity
+    - account-level files
+
+## 2026-04-06 - Gemini browser doctor now emits a live feature signature for drawer/composer drift detection
+
+- Focus:
+  - stop treating Gemini browser doctor as local-files-only and give Aura-Call a
+    real live feature/discovery seam for Gemini’s evolving composer surfaces
+- What changed:
+  - extended the shared browser doctor contract with `featureStatus`
+  - added `BrowserAutomationClient.getFeatureSignature()` and
+    `inspectBrowserDoctorFeatures(...)`
+  - implemented Gemini `getFeatureSignature()` in
+    `src/browser/providers/geminiAdapter.ts`
+  - Gemini now emits a normalized feature signature shaped around:
+    - detector version
+    - detected Gemini feature flags
+    - discovered mode labels
+    - discovered toggle state when visible
+    - current active mode label when visible
+  - widened `auracall doctor --target gemini` so it no longer hard-fails
+    outside `--local-only`; it now reports:
+    - local managed-profile state
+    - live signed-in account identity
+    - live `featureStatus`
+    while still leaving selector diagnosis explicitly unsupported for Gemini
+  - added manifest-backed Gemini feature/drawer tokens in
+    `configs/auracall.services.json` so discovery can feed a durable drift
+    signature instead of one-off ad hoc text probes
+- Docs updated:
+  - [gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+  - [testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts tests/services/registry.test.ts tests/browser/llmServiceIdentity.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations --target gemini --profile default --refresh`
+    - `pnpm tsx bin/auracall.ts doctor --target gemini --json`
+- Current boundary:
+  - the Gemini feature signature seam is now real and cache/doctor-compatible
+  - the current probe still captures the model-picker + visible composer
+    surfaces more reliably than the richer hidden creation drawer the user
+    identified
+  - the next Gemini discovery slice should explicitly find and normalize that
+    richer composer drawer (`create music`, `create video`, `canvas`,
+    `deep research`, `personal intelligence`, etc.) rather than broadening more
+    unrelated Gemini CRUD
+
+## 2026-04-06 - browser-tools search now gives browser-service a structured DOM-census primitive for volatile provider surfaces
+
+- Focus:
+  - stop relying on ad hoc provider-local `eval(...)` snippets for volatile DOM
+    discovery, especially on Gemini's evolving `Tools` drawer surface
+- What changed:
+  - added a package-owned `browser-tools search` command in
+    `packages/browser-service/src/browserTools.ts`
+  - the new primitive supports bounded generic matching on:
+    - text
+    - `aria-label`
+    - role
+    - `data-test-id`
+    - class substring
+    - tag name
+    - `aria-checked`
+    - `aria-expanded`
+    - visibility
+  - each match now returns reusable structured metadata instead of raw HTML:
+    - tag
+    - role
+    - text
+    - `aria-label`
+    - `data-test-id`
+    - classes
+    - href
+    - checked / expanded state
+  - added focused coverage in
+    `tests/browser/browserTools.test.ts`
+- Live proof:
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini search --class-includes toolbox-drawer-button --text Tools --limit 10 --json`
+    found the real Gemini `Tools` opener on the managed `default` Gemini page
+  - after opening the drawer, the same search surface found the richer Gemini
+    drawer rows:
+    - `Create image`
+    - `Canvas`
+    - `Deep research`
+    - `Create video`
+    - `Create music`
+    - `Guided learning`
+  - `search --aria-label "Personal Intelligence" --role switch --json`
+    returned the live switch node with `checked: true`
+- Docs updated:
+  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-tools.md)
+  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+  - [docs/gemini.md](/home/ecochran76/workspace.local/oracle/docs/gemini.md)
+- Durable lesson:
+  - volatile provider DOM discovery belongs on one package-owned structured
+    DOM-census seam; adapters should consume reusable facts from that seam
+    before adding more one-off `evaluate(...)` census code
+- Next:
+  - refactor Gemini feature discovery to consume the same structured DOM-search
+    semantics more directly instead of mixing drawer census and provider-local
+    fallback heuristics
+
+## 2026-04-06 - Gemini feature discovery now shares browser-service DOM-search semantics, but live doctor still needs a more reliable drawer-open transition
+
+- Focus:
+  - stop keeping a second provider-local Gemini drawer census model now that
+    browser-service owns `browser-tools search`
+- What changed:
+  - extracted the generic DOM-search expression builder into
+    `packages/browser-service/src/service/domSearch.ts`
+  - cut `packages/browser-service/src/browserTools.ts` over to that shared
+    expression builder instead of embedding its own separate matching logic
+  - cut Gemini's `readGeminiToolsDrawerProbe(...)` over to the same shared
+    DOM-search semantics in
+    `src/browser/providers/geminiAdapter.ts`
+  - added an explicit `ensureGeminiToolsDrawerOpen(...)` helper so Gemini
+    feature discovery now has a single drawer-open seam before it falls back to
+    the older model-picker/body probe
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts doctor --target gemini --profile default --json`
+- Issues:
+  - the shared DOM-search model is now real, but the live `doctor` run still
+    falls back to the older Gemini feature probe more often than it should
+  - that means the remaining problem is not DOM matching drift anymore; it is
+    the reliability of the live `Tools` drawer activation inside the doctor flow
+- Next:
+  - harden the doctor-side drawer-open transition itself before widening Gemini
+    discovery further
+
+## 2026-04-06 - browser-tools ls now gives browser-service a generic page census for discoverable UI controls
+
+- Focus:
+  - add the missing browser-service answer to “what important controls and UI
+    surfaces are on this page right now?”
+- What changed:
+  - added package-owned `browser-tools ls` in
+    `packages/browser-service/src/browserTools.ts`
+  - the new listing groups visible UI into:
+    - dialogs
+    - menus
+    - buttons
+    - menu items
+    - switches
+    - inputs
+    - links
+  - each row includes structured facts instead of raw DOM:
+    - tag
+    - role
+    - text
+    - `aria-label`
+    - `data-test-id`
+    - class list
+    - checked / expanded / disabled state
+    - inferred widget type
+    - path hint
+    - interaction hints
+  - `ls` now also looks for upload paths explicitly:
+    - `fileInputs` includes native `input[type="file"]` paths even when hidden
+    - `uploadCandidates` includes visible upload/attach triggers plus hidden
+      chooser inputs that likely back them
+  - added focused coverage in
+    `tests/browser/browserTools.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Docs updated:
+  - [docs/dev/browser-service-tools.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-tools.md)
+  - [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md)
+  - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Next:
+  - use `ls` plus `search` as the browser-service evidence surfaces before
+    widening Gemini doctor/discovery semantics again
+## 2026-04-06 - Gemini doctor now consumes browser-tools uiList evidence
+
+- Focus: make `auracall doctor --target gemini --json` reflect what
+  browser-service can actually prove on the live Gemini page
+- Progress:
+  - extended the browser-tools doctor report with optional `uiList` census data
+  - changed the Gemini doctor JSON path to collect that `uiList` evidence on
+    the active managed Gemini tab
+  - added provider-owned helpers to derive and merge Gemini mode/toggle
+    evidence from browser-tools `uiList`
+  - changed browser doctor feature inspection to surface explicit evidence
+    metadata under `featureStatus.detected.evidence`
+- Notes:
+  - the remaining issue is now drawer-open reliability, not loss of already
+    collected browser-service evidence
+  - follow-up: when live doctor still opened the Gemini model picker, changed
+    the doctor path to skip the provider feature probe entirely whenever
+    browser-tools `uiList` evidence is already present, so the proven
+    browser-service drawer census becomes authoritative and side-effect free
+  - follow-up: when live doctor still left overlapping overlays behind, added
+    explicit Gemini browser-tools prep/cleanup so doctor dismisses stale
+    overlays, opens only `Tools`, captures the `uiList`, then closes transient
+    overlays before returning

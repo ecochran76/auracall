@@ -18,7 +18,41 @@
     - edit-image: supported
     - Gem URL targeting: supported
     - cookie/login flow: supported
-    - browser doctor: local-only supported
+    - browser doctor: partially supported
+      - `auracall doctor --target gemini --json` now reports live account
+        identity plus detected Gemini feature signature when a managed Gemini
+        browser session is alive
+      - when browser-service can gather a live Gemini `uiList` census, doctor
+        now merges that runtime evidence into `featureStatus.detected.evidence`
+        instead of silently trusting a weaker provider-local fallback probe
+      - full live selector diagnosis is still not implemented in
+        `auracall doctor`, but package-owned DOM discovery is now available via
+        `pnpm tsx scripts/browser-tools.ts ... search`
+      - current live Gemini drawer proof on `default`:
+        - `search --class-includes toolbox-drawer-button --text Tools`
+          finds the real `Tools` opener
+        - after opening the drawer, `search --class-includes toolbox-drawer-item-list-button --role menuitemcheckbox`
+          finds:
+          - `Create image`
+          - `Canvas`
+          - `Deep research`
+          - `Create video`
+          - `Create music`
+          - `Guided learning`
+        - `search --aria-label "Personal Intelligence" --role switch`
+          returns the live switch state
+        - `ls --limit-per-kind 10`
+          returns the broader page census:
+          - drawer surface under `menus`
+          - drawer rows under `menuItems`
+          - `Personal Intelligence` under `switches`
+          - prompt composer under `inputs`
+          - upload surfaces under `uploadCandidates`
+          - hidden chooser paths under `fileInputs` when present
+          - heuristic interaction hints such as:
+            - `hard-click-preferred`
+            - `hover-or-pointer-state-likely`
+            - `file-chooser-candidate`
   - treat unsupported or undocumented cells as non-commitments until the Gemini completion plan advances them.
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).
@@ -213,7 +247,14 @@
         from the inner message nodes instead of the outer Gemini chrome wrappers
       - visible sent upload chips now also populate `context.files[]` and the
         shared `conversations files list` fallback
-      - Gemini `sources[]` and `artifacts[]` are still pending
+      - Gemini now also returns visible generated-image artifacts on the active
+        `default` pairing:
+        - `pnpm tsx bin/auracall.ts conversations context get 3525c884edae4fa4 --target gemini --profile default --json-only`
+        - returned one `image` artifact with:
+          - `uri: blob:https://gemini.google.com/...`
+          - `width: 1024`
+          - `height: 559`
+      - Gemini `sources[]` and broader non-image artifact parity are still pending
   - Gemini Gem create is now also live on this pairing:
     - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
     - returned:
