@@ -33,13 +33,25 @@
         CAPTCHA / reCAPTCHA, Cloudflare, or another human-verification
         interstitial, the embedded runtime report now carries a first-class
         blocking classification instead of only raw page text
+      - package-owned `browser-tools probe|doctor` now also exit nonzero on
+        those blocking pages instead of quietly reporting them as ordinary page
+        probes
       - `auracall doctor --target ...` and `auracall features --target ...`
         now exit nonzero on those blocking surfaces and tell the operator to
         clear the page manually before retrying
+      - `auracall features snapshot|diff --target ...` now also stop early on
+        those blocking surfaces instead of writing misleading anti-drift output
       - `auracall setup --target ...` now also checks for a blocking surface
         after login and before live verification, so setup stops early instead
         of burning a verification run on a page that already needs manual
         clearance
+      - `auracall login --target ...` now checks the managed browser after
+        launch and exits nonzero with the same manual-clear guidance if the
+        page is already blocked
+      - shared browser execution now also does one early blocking-page probe
+        after navigation settles, so headful browser runs stop before deeper
+        automation on obviously blocked pages and leave the browser open for
+        manual clearance
       - `auracall features --target gemini --json` is now the first-class live
         feature-discovery surface for Gemini tools, toggles, and upload paths
       - when browser-service can gather a live Gemini `uiList` census, doctor

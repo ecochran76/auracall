@@ -9692,3 +9692,20 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   blocking-state seam before launching a live verification prompt. If the
   managed browser is already on a blocking page, the right move is to stop and
   surface manual-clear guidance, not to burn another verification run.
+- 2026-04-07: Package-owned browser-service CLIs should follow the same rule.
+  `browser-tools probe|doctor` now exit nonzero on `blockingState.requiresHuman`
+  so manual DOM work stops early instead of looking like a successful ordinary
+  probe on a page that already requires human clearance.
+- 2026-04-07: Anti-drift browser feature commands must not persist blocked-page
+  state as if it were a real provider feature surface. `auracall features
+  snapshot|diff` now stop early on `blockingState.requiresHuman` instead of
+  writing or comparing misleading feature evidence.
+- 2026-04-07: `auracall login --target ...` should verify the post-launch page
+  with the same shared blocking-state seam used by doctor/features/setup. A
+  managed browser that lands on `google.com/sorry`, CAPTCHA, Cloudflare, or a
+  similar human-check page is not a successful ordinary login result.
+- 2026-04-07: Shared browser execution should consult the same generic
+  blocking-page seam immediately after navigation settles, before deeper
+  login/prompt automation. For headful local runs, manual-clear blocking pages
+  should preserve the browser session so a human can clear the page without
+  another relaunch.

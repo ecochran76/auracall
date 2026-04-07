@@ -96,6 +96,7 @@ import {
   logStructuredDebugEvent,
   persistBrowserPostmortemRecord,
 } from './domDebug.js';
+import { classifyBrowserToolsBlockingState } from '../../packages/browser-service/src/browserTools.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -210,12 +211,56 @@ function isCloudflareChallengeError(error: unknown): error is BrowserAutomationE
   return (error.details as { stage?: string } | undefined)?.stage === 'cloudflare-challenge';
 }
 
+function isManualClearBlockingPageError(error: unknown): error is BrowserAutomationError {
+  if (!(error instanceof BrowserAutomationError)) return false;
+  return (error.details as { stage?: string } | undefined)?.stage === 'manual-clear-blocking-page';
+}
+
 function shouldPreserveBrowserOnError(error: unknown, headless: boolean): boolean {
-  return !headless && isCloudflareChallengeError(error);
+  return !headless && (isCloudflareChallengeError(error) || isManualClearBlockingPageError(error));
 }
 
 export function shouldPreserveBrowserOnErrorForTest(error: unknown, headless: boolean): boolean {
   return shouldPreserveBrowserOnError(error, headless);
+}
+
+async function detectManualClearBlockingState(
+  Runtime: ChromeClient['Runtime'],
+): Promise<ReturnType<typeof classifyBrowserToolsBlockingState>> {
+  const evaluation = await Runtime.evaluate({
+    expression: `(() => ({
+      url: String(globalThis.location?.href ?? ''),
+      title: String(document.title ?? ''),
+      bodyText: String(document.body?.innerText ?? document.body?.textContent ?? '').slice(0, 20000),
+    }))()`,
+    returnByValue: true,
+  }).catch(() => null);
+  const value = evaluation?.result?.value as { url?: unknown; title?: unknown; bodyText?: unknown } | undefined;
+  return classifyBrowserToolsBlockingState({
+    url: typeof value?.url === 'string' ? value.url : '',
+    title: typeof value?.title === 'string' ? value.title : '',
+    bodyText: typeof value?.bodyText === 'string' ? value.bodyText : '',
+  });
+}
+
+async function ensureNoManualClearBlockingPage(
+  Runtime: ChromeClient['Runtime'],
+  logger: BrowserLogger,
+  options: { action: string } = { action: 'browser run' },
+): Promise<void> {
+  const blockingState = await detectManualClearBlockingState(Runtime);
+  if (!blockingState?.requiresHuman) {
+    return;
+  }
+  logger(`Blocking page detected before ${options.action}: ${blockingState.summary}`);
+  throw new BrowserAutomationError(
+    `${blockingState.summary} Clear the page manually in the open browser, then rerun the lowest-churn AuraCall command.`,
+    {
+      stage: 'manual-clear-blocking-page',
+      blockingState,
+      action: options.action,
+    },
+  );
 }
 
 function shouldTreatChatgptAssistantResponseAsStale(options: {
@@ -915,6 +960,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     // then hop to the requested URL if it differs.
     await raceWithDisconnect(navigateToChatGPT(Page, Runtime, baseUrl, logger));
     await raceWithDisconnect(ensureNotBlocked(Runtime, config.headless, logger));
+    await raceWithDisconnect(
+      ensureNoManualClearBlockingPage(Runtime, logger, { action: 'ChatGPT login/prompt preparation' }),
+    );
     // Learned: login checks must happen on the base domain before jumping into project URLs.
     await raceWithDisconnect(
       waitForLogin({ runtime: Runtime, logger, appliedCookies, manualLogin, timeoutMs: config.timeoutMs }),
@@ -929,6 +977,9 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
           headless: config.headless,
           logger,
         }),
+      );
+      await raceWithDisconnect(
+        ensureNoManualClearBlockingPage(Runtime, logger, { action: 'ChatGPT prompt preparation' }),
       );
     } else {
       await raceWithDisconnect(ensurePromptReady(Runtime, config.inputTimeoutMs, logger));
@@ -1710,6 +1761,7 @@ async function runRemoteBrowserMode(
 
     await navigateToChatGPT(Page, Runtime, config.url, logger);
     await ensureNotBlocked(Runtime, config.headless, logger);
+    await ensureNoManualClearBlockingPage(Runtime, logger, { action: 'ChatGPT remote prompt preparation' });
     await ensureLoggedIn(Runtime, logger, { remoteSession: true });
     await ensurePromptReady(Runtime, config.inputTimeoutMs, logger);
     logger(`Prompt textarea ready (initial focus, ${promptText.length.toLocaleString()} chars queued)`);
@@ -2196,6 +2248,7 @@ async function runRemoteGrokBrowserMode(
     logger('Skipping cookie sync for remote Chrome (using existing session)');
     await navigateToGrok(Page, Runtime, grokTargetUrl, logger);
     await ensureNotBlocked(Runtime, config.headless, logger);
+    await ensureNoManualClearBlockingPage(Runtime, logger, { action: 'Grok remote prompt preparation' });
     await ensureGrokLoggedIn(Runtime, logger, { headless: config.headless, timeoutMs: config.timeoutMs });
     await ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger);
     logger(`Prompt textarea ready (initial focus, ${promptText.length.toLocaleString()} chars queued)`);
@@ -2726,6 +2779,9 @@ async function runGrokBrowserMode({
     }
     await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
     await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
+    await raceWithDisconnect(
+      ensureNoManualClearBlockingPage(Runtime, logger, { action: 'Grok login/prompt preparation' }),
+    );
     const projectLookup = await Runtime.evaluate({
       expression: `(() => {
         const text = (document.body?.innerText || '').toLowerCase();
@@ -2752,6 +2808,9 @@ async function runGrokBrowserMode({
       });
       await raceWithDisconnect(navigateToGrok(Page, Runtime, grokTargetUrl, logger));
       await raceWithDisconnect(ensureNotBlocked(Runtime, headless, logger));
+      await raceWithDisconnect(
+        ensureNoManualClearBlockingPage(Runtime, logger, { action: 'Grok project/conversation navigation' }),
+      );
     }
     await raceWithDisconnect(ensureGrokLoggedIn(Runtime, logger, { headless, timeoutMs: config.timeoutMs }));
     await raceWithDisconnect(ensureGrokPromptReady(Runtime, config.inputTimeoutMs, logger));

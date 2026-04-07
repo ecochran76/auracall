@@ -1348,6 +1348,12 @@ export function createBrowserToolsProbeContract(
   };
 }
 
+export function browserToolsReportRequiresManualClear(
+  report: BrowserToolsDoctorReport | null | undefined,
+): boolean {
+  return Boolean(report?.pageProbe?.blockingState?.requiresHuman);
+}
+
 export function createBrowserToolsDoctorContract(
   report: BrowserToolsDoctorReport,
   options: { generatedAt?: string } = {},
@@ -1553,6 +1559,9 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
       });
       if (commandOptions.json) {
         console.log(JSON.stringify(createBrowserToolsProbeContract(report), null, 2));
+        if (browserToolsReportRequiresManualClear(report)) {
+          process.exitCode = 1;
+        }
         return;
       }
       if (!report.pageProbe) {
@@ -1560,6 +1569,9 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
         return;
       }
       printBrowserToolsPageProbe(report.pageProbe);
+      if (browserToolsReportRequiresManualClear(report)) {
+        process.exitCode = 1;
+      }
     });
 
   program
@@ -1593,9 +1605,15 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
       });
       if (commandOptions.json) {
         console.log(JSON.stringify(createBrowserToolsDoctorContract(report), null, 2));
+        if (browserToolsReportRequiresManualClear(report)) {
+          process.exitCode = 1;
+        }
         return;
       }
       printBrowserToolsDoctorReport(report);
+      if (browserToolsReportRequiresManualClear(report)) {
+        process.exitCode = 1;
+      }
     });
 
   program

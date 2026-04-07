@@ -3599,6 +3599,29 @@ featuresCommand
       localReport,
       browserTools: runtime.browserTools,
     });
+    const runtimeBlockingState = getRuntimeBlockingState(runtime.browserTools);
+    if (runtimeBlockingState?.requiresHuman) {
+      if (commandOptions.json) {
+        console.log(
+          JSON.stringify(
+            {
+              target,
+              error: runtimeBlockingState.summary ?? 'Blocking page requires manual clearance.',
+              blockingState: runtimeBlockingState,
+              browserToolsError: runtime.browserToolsError,
+            },
+            null,
+            2,
+          ),
+        );
+      } else {
+        printBlockingStateGuidance(runtimeBlockingState, {
+          prefix: `Cannot snapshot ${target} features while the selected page is blocked`,
+        });
+      }
+      process.exitCode = 1;
+      return;
+    }
     const contract = createAuracallBrowserFeaturesContract({
       target,
       featureStatus,
@@ -3664,6 +3687,29 @@ featuresCommand
       localReport,
       browserTools: runtime.browserTools,
     });
+    const runtimeBlockingState = getRuntimeBlockingState(runtime.browserTools);
+    if (runtimeBlockingState?.requiresHuman) {
+      if (commandOptions.json) {
+        console.log(
+          JSON.stringify(
+            {
+              target,
+              error: runtimeBlockingState.summary ?? 'Blocking page requires manual clearance.',
+              blockingState: runtimeBlockingState,
+              browserToolsError: runtime.browserToolsError,
+            },
+            null,
+            2,
+          ),
+        );
+      } else {
+        printBlockingStateGuidance(runtimeBlockingState, {
+          prefix: `Cannot diff ${target} features while the selected page is blocked`,
+        });
+      }
+      process.exitCode = 1;
+      return;
+    }
     const current = createAuracallBrowserFeaturesContract({
       target,
       featureStatus,
@@ -6798,6 +6844,39 @@ function printBrowserFeatureDiscoveryReport(
   }
 }
 
+type RuntimeBlockingStateLike = {
+  kind?: string | null;
+  summary?: string | null;
+  requiresHuman?: boolean | null;
+};
+
+function getRuntimeBlockingState(
+  browserTools:
+    | {
+        report?: {
+          pageProbe?: {
+            blockingState?: RuntimeBlockingStateLike | null;
+          } | null;
+        } | null;
+      }
+    | null
+    | undefined,
+): RuntimeBlockingStateLike | null {
+  return browserTools?.report?.pageProbe?.blockingState ?? null;
+}
+
+function printBlockingStateGuidance(blockingState: RuntimeBlockingStateLike, options: { prefix?: string } = {}): void {
+  const prefix = options.prefix?.trim();
+  const summary = blockingState.summary?.trim() || 'Blocking page detected.';
+  console.log('');
+  console.log(chalk.yellow(prefix ? `${prefix}: ${summary}` : summary));
+  console.log(
+    chalk.dim(
+      'Clear the page manually in the managed browser, then rerun the lowest-churn AuraCall command.',
+    ),
+  );
+}
+
 function formatChromeGoogleAccount(
   account: BrowserDoctorReportLike['chromeGoogleAccount'],
 ): string {
@@ -7612,6 +7691,16 @@ program
       exportCookies: Boolean(commandOptions.exportCookies),
       managedProfileSeedPolicy: commandOptions.forceReseedManagedProfile ? 'force-reseed' : 'reseed-if-source-newer',
     });
+    const { inspectBrowserDoctorState, collectBrowserFeatureRuntime } = await import('../src/browser/profileDoctor.js');
+    const localReport = await inspectBrowserDoctorState(userConfig, { target });
+    const runtime = await collectBrowserFeatureRuntime(target, localReport);
+    const runtimeBlockingState = getRuntimeBlockingState(runtime.browserTools);
+    if (runtimeBlockingState?.requiresHuman) {
+      printBlockingStateGuidance(runtimeBlockingState, {
+        prefix: `Managed ${target} browser profile landed on a blocking page after login`,
+      });
+      process.exitCode = 1;
+    }
   });
 
 const profileCommand = program

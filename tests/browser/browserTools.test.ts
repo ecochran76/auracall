@@ -1,6 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
 import {
   BROWSER_TOOLS_CONTRACT_VERSION,
+  browserToolsReportRequiresManualClear,
   classifyBrowserToolsBlockingState,
   collectBrowserToolsDomSearch,
   collectBrowserToolsUiList,
@@ -714,6 +715,58 @@ describe('selectBrowserToolsPageIndex', () => {
       generatedAt: '2026-03-25T20:31:00.000Z',
       report,
     });
+  });
+
+  test('flags doctor reports that require manual clearance', () => {
+    expect(browserToolsReportRequiresManualClear({
+      census: {
+        selectedIndex: 0,
+        selectedReason: 'url-contains',
+        selectedTab: null,
+        tabs: [],
+        candidates: [],
+      },
+      pageProbe: {
+        document: {
+          url: 'https://www.google.com/sorry/index',
+          title: 'About this page',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          scriptCount: 0,
+          bodyTextLength: 120,
+          visibleCounts: {
+            buttons: 0,
+            links: 0,
+            inputs: 0,
+            textareas: 0,
+            contenteditables: 0,
+          },
+        },
+        blockingState: {
+          kind: 'google-sorry',
+          summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+          requiresHuman: true,
+        },
+        selectors: [],
+        storage: null,
+        cookies: null,
+        scriptText: null,
+      },
+      uiList: null,
+    })).toBe(true);
+
+    expect(browserToolsReportRequiresManualClear({
+      census: {
+        selectedIndex: 0,
+        selectedReason: 'url-contains',
+        selectedTab: null,
+        tabs: [],
+        candidates: [],
+      },
+      pageProbe: null,
+      uiList: null,
+    })).toBe(false);
   });
 
   test('browser-tools start forwards AuraCall runtime profile and browser target to the resolver', async () => {

@@ -20,12 +20,15 @@ describe('browserMode exports', () => {
     expect(typeof CHATGPT_URL).toBe('string');
   });
 
-  test('preserves browser only for non-headless cloudflare challenges', () => {
+  test('preserves browser only for non-headless manual-clear challenges', () => {
     const cloudflare = new BrowserAutomationError('blocked', { stage: 'cloudflare-challenge' });
+    const manualClear = new BrowserAutomationError('blocked', { stage: 'manual-clear-blocking-page' });
     const other = new BrowserAutomationError('failed', { stage: 'execute-browser' });
 
     expect(shouldPreserveBrowserOnErrorForTest(cloudflare, false)).toBe(true);
     expect(shouldPreserveBrowserOnErrorForTest(cloudflare, true)).toBe(false);
+    expect(shouldPreserveBrowserOnErrorForTest(manualClear, false)).toBe(true);
+    expect(shouldPreserveBrowserOnErrorForTest(manualClear, true)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(other, false)).toBe(false);
     expect(shouldPreserveBrowserOnErrorForTest(new Error('nope'), false)).toBe(false);
   });

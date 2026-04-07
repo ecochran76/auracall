@@ -9558,3 +9558,59 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/cli/browserSetup.test.ts tests/browser/profileDoctor.test.ts tests/browser/browserTools.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-07 - Browser-tools probe/doctor now fail fast on manual-clear blocking pages too
+
+- Focus:
+  - make the package-owned browser-service CLI behave like the higher AuraCall
+    surfaces once a blocking page is already known
+- Progress:
+  - `browser-tools probe` now exits nonzero when
+    `pageProbe.blockingState.requiresHuman` is true
+  - `browser-tools doctor` now does the same
+  - added a focused helper/test lock so this stays explicit in the package
+    contract rather than depending on ad hoc CLI behavior
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-07 - Features snapshot/diff and login now respect blocking pages too
+
+- Focus:
+  - close the remaining obvious CLI anti-bot inconsistencies after
+    doctor/features/setup/browser-tools had already adopted the shared
+    blocking-state seam
+- Progress:
+  - `auracall features snapshot --target ...` now stops early on manual-clear
+    blocking pages instead of writing misleading feature snapshots
+  - `auracall features diff --target ...` now does the same instead of
+    comparing against a blocked live surface
+  - `auracall login --target ...` now runs one shared post-launch runtime probe
+    and exits nonzero with the same manual-clear guidance if the managed
+    browser lands on a blocking page
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - the remaining intended propagation target is shared browser execution
+    itself, not more command-local anti-bot glue
+
+## 2026-04-07 - Shared browser execution now preflights manual-clear blocking pages
+
+- Focus:
+  - stop the main browser-run path from pushing deeper into automation when the
+    active page is already obviously blocked and requires human clearance
+- Progress:
+  - added one shared browser-runtime probe that classifies manual-clear
+    blocking pages from live page URL/title/body text
+  - local and remote ChatGPT/Grok browser runs now check that probe right after
+    navigation settles and before login/prompt work ramps up
+  - on headful local runs, those manual-clear blocking pages now preserve the
+    browser session the same way Cloudflare already did
+- Verification:
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/browserTools.test.ts tests/browser/profileDoctor.test.ts tests/cli/browserSetup.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this is still not captcha automation
+  - the value is earlier stop behavior with less page churn and a clearer
+    manual-resume path

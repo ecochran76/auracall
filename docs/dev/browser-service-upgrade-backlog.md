@@ -259,6 +259,21 @@ Problem:
   - final answer-time state
 - without that, the failure looked like random timeout churn
 
+## 2026-04-07 anti-bot adoption checkpoint
+
+Shared blocking-state classification is now consumed by:
+- `browser-tools probe|doctor`
+- `auracall doctor`
+- `auracall features`
+- `auracall features snapshot|diff`
+- `auracall setup`
+- `auracall login`
+
+Remaining intended propagation target:
+- keep extending the same seam to any remaining high-churn live browser flows,
+  but the primary shared browser execution entry points now do one early
+  blocking-page preflight before deeper automation
+
 What should move into browser-service:
 - a small generic action-phase diagnostic helper for attachment-backed flows
 - intended shape:
@@ -1026,5 +1041,5 @@ Next:
   - Cloudflare interstitials
   - generic human-verification pages
 - Next browser-service anti-bot step:
-  - broaden runtime consumers beyond doctor/features/setup so more operator
-    flows stop before noisy retry loops, especially on Gemini
+  - broaden runtime consumers beyond browser-tools/doctor/features/setup so
+    more operator flows stop before noisy retry loops, especially on Gemini
