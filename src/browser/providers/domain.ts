@@ -61,7 +61,7 @@ export interface ConversationSource {
 export interface ConversationArtifact {
   id: string;
   title: string;
-  kind?: 'download' | 'canvas' | 'generated' | 'image' | 'spreadsheet';
+  kind?: 'document' | 'download' | 'canvas' | 'generated' | 'image' | 'spreadsheet';
   uri?: string;
   messageIndex?: number;
   messageId?: string;

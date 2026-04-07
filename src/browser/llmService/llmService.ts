@@ -1876,6 +1876,7 @@ export abstract class LlmService {
         id,
         title,
         kind:
+          candidate.kind === 'document' ||
           candidate.kind === 'download' ||
           candidate.kind === 'canvas' ||
           candidate.kind === 'generated' ||

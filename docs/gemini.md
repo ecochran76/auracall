@@ -26,8 +26,8 @@ implemented from what is merely plausible.
 | Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem delete flow from the direct `/gem/<id>` page and verifies absence from a refreshed Gem manager list. |
 | Gem/project files add/list/remove | N/A | Supported | `auracall projects files add|list|remove --target gemini <id>` now drives Gemini Gem knowledge file CRUD through the native edit page and verifies persisted rows on fresh reads. |
 | Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
-| Conversation context read | N/A | Partially supported | `auracall conversations context get --target gemini <id>` now reads canonical `messages[]`, visible sent `files[]`, visible generated-image `artifacts[]`, visible generated music/video `artifacts[]`, and visible Canvas document `artifacts[]` from the direct `/app/<id>` page and writes them through the shared cache contract; Gemini `sources[]` and broader artifact coverage beyond the proven image/music/video/canvas surfaces are still pending. |
-| Conversation artifact fetch | N/A | Partially supported | `auracall conversations artifacts fetch --target gemini <id>` now materializes proven Gemini conversation artifacts into the local cache for canvas documents (`.txt`) and generated music/video media (`.mp4`); broader artifact fetch coverage beyond the proven image/music/video/canvas surfaces is still pending. |
+| Conversation context read | N/A | Partially supported | `auracall conversations context get --target gemini <id>` now reads canonical `messages[]`, visible sent `files[]`, visible generated-image `artifacts[]`, visible generated music/video `artifacts[]`, visible Canvas document `artifacts[]`, and visible Deep Research document `artifacts[]` from the direct `/app/<id>` page and writes them through the shared cache contract; Gemini `sources[]` and broader artifact coverage beyond the proven image/music/video/canvas/deep-research surfaces are still pending. |
+| Conversation artifact fetch | N/A | Partially supported | `auracall conversations artifacts fetch --target gemini <id>` now materializes proven Gemini conversation artifacts into the local cache for canvas documents (`.txt`), Deep Research documents (`.txt`), and generated music/video media (`.mp4`). Deep Research fetch prefers the live `Share & Export -> Copy contents` path when the export menu is automatable and otherwise falls back to the visible immersive-panel document text on the same `/app/<id>` page; broader artifact fetch coverage beyond the proven image/music/video/canvas/deep-research surfaces is still pending. |
 | Conversation files list | N/A | Supported | `auracall conversations files list --target gemini <id>` now reads visible sent upload chips from the direct `/app/<id>` page through the shared conversation-context fallback. |
 | Conversation files fetch | N/A | Partially supported | `auracall conversations files fetch --target gemini <id>` now materializes visible chat-uploaded files from the direct `/app/<id>` page, including text-file chips and uploaded-image chips, with browser-native fallback capture for visible uploaded-image previews when signed media URLs are not directly fetchable; broader file-fetch coverage beyond those currently exposed chat surfaces is still pending. |
 | Account-level files | N/A | Not supported | Shared CLI/service seams exist, but Gemini does not yet expose a wired provider implementation for `account-files list|add|remove`. |
@@ -187,6 +187,7 @@ Notes:
     - generated music tracks
     - generated videos
     - canvas documents
+    - Deep Research documents
   - `auracall conversations files list --target gemini <id>` is now also live
     for visible sent uploads on the same direct chat-page surface
   - `auracall conversations files fetch --target gemini <id>` is now also live
@@ -229,10 +230,18 @@ Notes:
   - Gemini artifact fetch is now also live for the currently proven surfaces:
     - `auracall conversations artifacts fetch 59b6f9ac9e510adc --target gemini --profile default`
       - materializes `AuraCall Canvas Route Probe.txt`
+    - `auracall conversations artifacts fetch 06ebd4699b387019 --target gemini --profile default`
+      - materializes `Researching FreshRoof Soy Technology Claims.txt`
     - `auracall conversations artifacts fetch 8e8e58b57ae544ea --target gemini --profile default`
       - materializes `before_the_tide_returns.mp4`
     - `auracall conversations artifacts fetch 23340d1698de29b8 --target gemini --profile default`
       - materializes `video.mp4`
+    - current Deep Research boundary:
+      - AuraCall now surfaces Deep Research results as first-class Gemini
+        `document` artifacts
+      - fetch prefers the native `Share & Export -> Copy contents` path
+      - if that export menu item is not reachable on the live page, fetch
+        falls back to the visible immersive-panel document text
 - Gemini cache operator entry points now also accept provider `gemini`:
   - `auracall cache --provider gemini`
   - `auracall cache export --provider gemini --scope ...`

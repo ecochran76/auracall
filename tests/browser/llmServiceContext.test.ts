@@ -137,6 +137,16 @@ describe('project-scoped conversation context normalization', () => {
           uri: 'blob:https://gemini.google.com/fake-artifact',
           messageIndex: 1,
         },
+        {
+          id: 'gemini-document:conversation-ctx',
+          title: 'Deep Research Brief',
+          kind: 'document',
+          uri: 'gemini://document/conversation-ctx',
+          messageIndex: 1,
+          metadata: {
+            documentType: 'deep-research',
+          },
+        },
       ],
     };
     const provider = {

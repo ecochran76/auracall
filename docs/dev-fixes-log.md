@@ -9720,3 +9720,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   independent launch, it needs its own package-facing README now. The package
   boundary should be documented at the package root, not only in Aura-Call
   internal planning docs.
+- 2026-04-07: Gemini Deep Research immersive panels should be modeled as
+  first-class conversation `document` artifacts on the standard `/app/<id>`
+  route. If the shared artifact contract does not explicitly allow
+  `kind: "document"`, the provider read succeeds locally but the new artifact
+  disappears during service normalization and cache persistence.
+- 2026-04-07: For Gemini Deep Research artifact fetch, the preferred
+  materialization path is the live `Share & Export -> Copy contents` control.
+  Keep a bounded fallback to the visible immersive-panel text while that export
+  menu item is still not reliably reachable through automation, so operator
+  fetch stays useful instead of failing outright.

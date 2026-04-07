@@ -1996,6 +1996,17 @@ export function normalizeGeminiConversationArtifacts(
 ): ConversationArtifact[] {
   if (!Array.isArray(artifacts) || artifacts.length === 0) return [];
   return artifacts.map((artifact, index) => {
+    if (artifact.kind === 'document') {
+      const documentTitle =
+        (typeof artifact.metadata?.documentTitle === 'string' && artifact.metadata.documentTitle.trim()) ||
+        (typeof artifact.metadata?.taskTitle === 'string' && artifact.metadata.taskTitle.trim()) ||
+        '';
+      if (!documentTitle) return artifact;
+      return {
+        ...artifact,
+        title: documentTitle,
+      };
+    }
     const mediaType = inferGeminiGeneratedArtifactMediaType(artifact);
     if (!mediaType) return artifact;
     const fileName =
@@ -2198,6 +2209,166 @@ function isGeminiTextLikeFileName(fileName: string): boolean {
 async function pressEscape(client: ChromeClient): Promise<void> {
   await client.Input.dispatchKeyEvent({ type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
   await client.Input.dispatchKeyEvent({ type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+}
+
+async function copyGeminiDeepResearchContentsWithClient(
+  client: ChromeClient,
+): Promise<{ text: string; documentTitle?: string; taskTitle?: string } | null> {
+  const stateKey = '__auracallGeminiDeepResearchCopyState';
+  const setup = await client.Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const panel = Array.from(document.querySelectorAll('deep-research-immersive-panel, immersive-panel'))
+        .find((node) =>
+          node instanceof HTMLElement &&
+          visible(node) &&
+          Boolean(node.querySelector('button[data-test-id="export-menu-button"]')) &&
+          !node.querySelector('button[aria-label="Share and export canvas"]'),
+        );
+      if (!(panel instanceof HTMLElement)) {
+        return { ok: false, reason: 'missing-panel' };
+      }
+      const toolbarTitle = panel.querySelector(
+        'toolbar [data-test-id="title"], toolbar [data-test-id="title-text"], .toolbar [data-test-id="title"], .toolbar [data-test-id="title-text"]',
+      );
+      const taskTitle = normalize(toolbarTitle?.textContent || '');
+      const contentHeadings = Array.from(panel.querySelectorAll('h1, h2, h3'))
+        .map((node) => normalize(node.textContent || ''))
+        .filter((value) =>
+          value &&
+          value.toLowerCase() !== taskTitle.toLowerCase() &&
+          !/^researching\b/i.test(value) &&
+          !/^completed\b/i.test(value),
+        );
+      const documentTitle = contentHeadings[0] || taskTitle;
+      const clipboard = navigator.clipboard;
+      const state = {
+        text: '',
+        updatedAt: 0,
+        taskTitle,
+        documentTitle,
+        originalWriteText: clipboard?.writeText?.bind(clipboard) || null,
+        originalWrite: clipboard?.write?.bind(clipboard) || null,
+      };
+      if (clipboard) {
+        clipboard.writeText = (value) => {
+          state.text = typeof value === 'string' ? value : '';
+          state.updatedAt = Date.now();
+          return Promise.resolve();
+        };
+        clipboard.write = async (items) => {
+          try {
+            const list = Array.isArray(items) ? items : items ? [items] : [];
+            for (const item of list) {
+              if (!item) continue;
+              const types = Array.isArray(item.types) ? item.types : [];
+              if (types.includes('text/plain') && typeof item.getType === 'function') {
+                const blob = await item.getType('text/plain');
+                const text = await blob.text();
+                state.text = typeof text === 'string' ? text : '';
+                state.updatedAt = Date.now();
+                break;
+              }
+            }
+          } catch {
+            state.text = '';
+            state.updatedAt = Date.now();
+          }
+          return Promise.resolve();
+        };
+      }
+      globalThis[${JSON.stringify(stateKey)}] = state;
+      return { ok: true, taskTitle, documentTitle };
+    })()`,
+    returnByValue: true,
+  });
+  const setupValue = setup.result?.value;
+  if (!isRecord(setupValue) || setupValue.ok !== true) {
+    return null;
+  }
+  try {
+    const exportClicked = await clickGeminiFeatureProbeTarget(client, ['button[data-test-id="export-menu-button"]']);
+    if (!exportClicked) {
+      return null;
+    }
+    const copyReady = await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+        const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+        const button = Array.from(document.querySelectorAll('button[data-test-id="copy-button"], [role="menuitem"][data-test-id="copy-button"]'))
+          .find((node) =>
+            node instanceof HTMLElement &&
+            visible(node) &&
+            (node.classList.contains('menu-item-button') || node.getAttribute('role') === 'menuitem') &&
+            normalize(node.textContent || node.getAttribute('aria-label') || '').includes('copy')
+          );
+        return button ? { ready: true } : null;
+      })()`,
+      {
+        timeoutMs: 5_000,
+        description: 'Gemini deep research copy contents menu item',
+      },
+    );
+    if (!copyReady.ok) {
+      return null;
+    }
+    const copyClicked = await clickGeminiFeatureProbeTarget(
+      client,
+      ['button[data-test-id="copy-button"].menu-item-button', '[role="menuitem"][data-test-id="copy-button"]'],
+      { requireText: 'copy contents' },
+    );
+    if (!copyClicked) {
+      return null;
+    }
+    const copied = await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const state = globalThis[${JSON.stringify(stateKey)}];
+        if (!state || typeof state !== 'object') return null;
+        if (typeof state.text !== 'string' || !state.text.trim()) return null;
+        if (Date.now() - (Number(state.updatedAt) || 0) < 250) return null;
+        return {
+          text: state.text,
+          taskTitle: typeof state.taskTitle === 'string' ? state.taskTitle : '',
+          documentTitle: typeof state.documentTitle === 'string' ? state.documentTitle : '',
+        };
+      })()`,
+      {
+        timeoutMs: 10_000,
+        description: 'Gemini deep research clipboard contents',
+      },
+    );
+    if (!copied.ok || !isRecord(copied.value) || typeof copied.value.text !== 'string') {
+      return null;
+    }
+    return {
+      text: copied.value.text,
+      documentTitle: typeof copied.value.documentTitle === 'string' ? copied.value.documentTitle : undefined,
+      taskTitle: typeof copied.value.taskTitle === 'string' ? copied.value.taskTitle : undefined,
+    };
+  } finally {
+    await client.Runtime.evaluate({
+      expression: `(() => {
+        const state = globalThis[${JSON.stringify(stateKey)}];
+        const clipboard = navigator.clipboard;
+        if (state && clipboard) {
+          if (typeof state.originalWriteText === 'function') clipboard.writeText = state.originalWriteText;
+          if (typeof state.originalWrite === 'function') clipboard.write = state.originalWrite;
+        }
+        try {
+          delete globalThis[${JSON.stringify(stateKey)}];
+        } catch {}
+        return true;
+      })()`,
+      returnByValue: true,
+    }).catch(() => undefined);
+  }
 }
 
 async function clickGeminiConversationFileChip(
@@ -2617,6 +2788,45 @@ async function materializeGeminiConversationArtifactWithClient(
   const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
   const resolvedArtifact = normalizeGeminiConversationArtifacts(refreshed.artifacts).find((candidate) => candidate.id === artifact.id) ?? artifact;
 
+  if (resolvedArtifact.kind === 'document') {
+    try {
+      const copied = await copyGeminiDeepResearchContentsWithClient(client);
+      const contentText =
+        (copied?.text && copied.text.trim()) ||
+        (resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
+          ? resolvedArtifact.metadata.contentText.trim()
+          : '');
+      if (!contentText) return null;
+      const fileName = ensureGeminiArtifactExtension(
+        copied?.documentTitle || resolvedArtifact.title,
+        '.txt',
+      );
+      const destPath = path.join(destDir, fileName);
+      await fs.writeFile(destPath, contentText.endsWith('\n') ? contentText : `${contentText}\n`, 'utf8');
+      const stat = await fs.stat(destPath);
+      return {
+        id: resolvedArtifact.id,
+        name: fileName,
+        provider: 'gemini',
+        source: 'conversation',
+        size: stat.size,
+        mimeType: 'text/plain',
+        remoteUrl: resolvedArtifact.uri,
+        localPath: destPath,
+        metadata: {
+          artifactKind: resolvedArtifact.kind,
+          artifactTitle: resolvedArtifact.title,
+          materialization: copied?.text ? 'deep-research-copy-contents' : 'document-content-text',
+          ...(resolvedArtifact.metadata ?? {}),
+          ...(copied?.documentTitle ? { documentTitle: copied.documentTitle } : {}),
+          ...(copied?.taskTitle ? { taskTitle: copied.taskTitle } : {}),
+        },
+      };
+    } finally {
+      await pressEscape(client).catch(() => undefined);
+    }
+  }
+
   if (resolvedArtifact.kind === 'canvas') {
     const contentText =
       resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
@@ -2877,6 +3087,40 @@ async function readGeminiConversationContextWithClient(
           contentText,
           hasShareButton,
           hasPrintButton,
+          hasCreateButton,
+        };
+      };
+      const readVisibleDeepResearchSurface = () => {
+        const panel = Array.from(document.querySelectorAll('deep-research-immersive-panel, immersive-panel'))
+          .find((node) =>
+            node instanceof HTMLElement &&
+            visible(node) &&
+            Boolean(node.querySelector('button[data-test-id="export-menu-button"]')) &&
+            !node.querySelector('button[aria-label="Share and export canvas"]'),
+          );
+        if (!(panel instanceof HTMLElement)) return null;
+        const toolbarTitle = panel.querySelector(
+          'toolbar [data-test-id="title"], toolbar [data-test-id="title-text"], .toolbar [data-test-id="title"], .toolbar [data-test-id="title-text"]',
+        );
+        const taskTitle = normalize(toolbarTitle?.textContent || '');
+        const headings = Array.from(panel.querySelectorAll('h1, h2, h3'))
+          .map((node) => normalize(node.textContent || ''))
+          .filter((value) =>
+            value &&
+            value.toLowerCase() !== taskTitle.toLowerCase() &&
+            !/^researching\b/i.test(value) &&
+            !/^completed\b/i.test(value),
+          );
+        const documentTitle = headings[0] || taskTitle;
+        const contentText = normalize(panel.innerText || panel.textContent || '');
+        const hasCreateButton = Boolean(Array.from(panel.querySelectorAll('button')).find((node) =>
+          normalize(node.textContent || node.getAttribute('aria-label') || '').toLowerCase() === 'create'
+        ));
+        return {
+          taskTitle,
+          documentTitle,
+          contentText,
+          hasExportButton: Boolean(panel.querySelector('button[data-test-id="export-menu-button"]')),
           hasCreateButton,
         };
       };
@@ -3200,6 +3444,35 @@ async function readGeminiConversationContextWithClient(
               hasShareButton: canvasSurface.hasShareButton,
               hasPrintButton: canvasSurface.hasPrintButton,
               hasCreateButton: canvasSurface.hasCreateButton,
+            },
+          });
+        }
+      }
+      const deepResearchSurface = readVisibleDeepResearchSurface();
+      if (deepResearchSurface && deepResearchSurface.contentText) {
+        const artifactId = ${JSON.stringify('gemini-document:')} + ${JSON.stringify(conversationId)};
+        if (!seenArtifactIds.has(artifactId)) {
+          seenArtifactIds.add(artifactId);
+          let lastAssistantMessageIndex;
+          for (let index = messages.length - 1; index >= 0; index -= 1) {
+            if (messages[index]?.role === 'assistant') {
+              lastAssistantMessageIndex = index;
+              break;
+            }
+          }
+          artifacts.push({
+            id: artifactId,
+            title: deepResearchSurface.documentTitle || deepResearchSurface.taskTitle || 'Deep Research document',
+            kind: 'document',
+            uri: ${JSON.stringify('gemini://document/')} + ${JSON.stringify(conversationId)},
+            messageIndex: lastAssistantMessageIndex,
+            metadata: {
+              documentTitle: deepResearchSurface.documentTitle || undefined,
+              taskTitle: deepResearchSurface.taskTitle || undefined,
+              contentText: deepResearchSurface.contentText,
+              hasExportButton: deepResearchSurface.hasExportButton,
+              hasCreateButton: deepResearchSurface.hasCreateButton,
+              documentType: 'deep-research',
             },
           });
         }

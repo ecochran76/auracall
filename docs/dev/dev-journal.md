@@ -9668,3 +9668,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this is documentation-only
   - the package is still private today, but the README now matches the
     intended extraction boundary
+## 2026-04-07 - Gemini Deep Research document artifact parity
+
+- Added first-class Gemini `document` artifacts for Deep Research immersive
+  panels on direct `/app/<id>` chat reads.
+- `auracall conversations context get --target gemini 06ebd4699b387019 --profile default --refresh --json-only`
+  now returns:
+  - `kind: "document"`
+  - `uri: "gemini://document/06ebd4699b387019"`
+- `auracall conversations artifacts fetch --target gemini 06ebd4699b387019 --profile default --verbose`
+  now materializes:
+  - `Researching FreshRoof Soy Technology Claims.txt`
+- Added shared artifact-kind support for `document` in the provider domain and
+  `LlmService` normalization so the new Gemini surface persists through the
+  standard cache/fetch contract.
+- Current honest boundary:
+  - the intended fetch path is the live `Share & Export -> Copy contents`
+    surface on the Deep Research immersive panel
+  - however, on the current live page that export menu item is still not
+    reliably reachable through automation, so materialization falls back to the
+    visible immersive-panel document text when copy capture does not succeed
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

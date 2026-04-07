@@ -189,6 +189,34 @@ describe('geminiAdapter id helpers', () => {
     ]);
   });
 
+  test('normalizes Gemini deep research document artifacts to the document title', () => {
+    expect(normalizeGeminiConversationArtifacts([
+      {
+        id: 'artifact-document-1',
+        title: 'Researching FreshRoof Soy Technology Claims',
+        kind: 'document',
+        uri: 'gemini://document/06ebd4699b387019',
+        metadata: {
+          documentTitle: 'Advanced Biomolecular Rejuvenation of Asphalt Roofing Systems: An Exhaustive Analysis of Fresh Roof and GreenSoy Technology',
+          taskTitle: 'Researching FreshRoof Soy Technology Claims',
+          documentType: 'deep-research',
+        },
+      },
+    ])).toEqual([
+      {
+        id: 'artifact-document-1',
+        title: 'Advanced Biomolecular Rejuvenation of Asphalt Roofing Systems: An Exhaustive Analysis of Fresh Roof and GreenSoy Technology',
+        kind: 'document',
+        uri: 'gemini://document/06ebd4699b387019',
+        metadata: {
+          documentTitle: 'Advanced Biomolecular Rejuvenation of Asphalt Roofing Systems: An Exhaustive Analysis of Fresh Roof and GreenSoy Technology',
+          taskTitle: 'Researching FreshRoof Soy Technology Claims',
+          documentType: 'deep-research',
+        },
+      },
+    ]);
+  });
+
   test('deduplicates Gemini conversation files that resolve to the same upload chip semantics', () => {
     expect(normalizeGeminiConversationFiles([
       {
