@@ -89,6 +89,12 @@ Terminology note:
 - API mode expects API keys in your environment: `OPENAI_API_KEY` (GPT-5.x), `GEMINI_API_KEY` (Gemini 3 Pro), `ANTHROPIC_API_KEY` (Claude Sonnet 4.5 / Opus 4.1).
 - Gemini browser mode uses Chrome cookies instead of an API key—just be logged into `gemini.google.com` in Chrome (no Python/venv required).
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).
+- Gemini feature discovery/snapshot/diff is now first-class through
+  `auracall features ...`.
+- Blocking pages such as `google.com/sorry`, CAPTCHA / reCAPTCHA, or similar
+  human-verification surfaces now stop `doctor`, `features`, `setup`, `login`,
+  and shared browser runs early with manual-clear guidance instead of being
+  treated as ordinary pages.
 - Prefer API mode or `--copy` + manual paste; browser automation is experimental.
 - Browser support: stable on macOS; works on Linux (add `--browser-chrome-path/--browser-cookie-path` when needed) and Windows (manual-login or inline cookies recommended when app-bound cookies block decryption).
 - Remote browser service: `auracall serve` on a signed-in host; clients use `--remote-host/--remote-token`.

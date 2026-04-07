@@ -12,6 +12,24 @@ Latest cross-provider review:
   captures the confirmed ChatGPT-era package-boundary lessons and the next
   recommended extraction order.
 
+## Current anti-bot checkpoint (2026-04-07)
+
+Shared blocking-state classification is now real and consumed by:
+- `browser-tools probe|doctor`
+- `auracall doctor`
+- `auracall features`
+- `auracall features snapshot|diff`
+- `auracall setup`
+- `auracall login`
+- shared local/remote ChatGPT browser runs
+- shared local/remote Grok browser runs
+
+That means the next browser-service anti-bot work should be maintenance-level
+and concrete:
+- only reopen this line when a real unmanaged flow still bypasses the shared
+  signal
+- do not keep broadening anti-bot glue speculatively
+
 ## Current DOM-drift repair plan (2026-03-28)
 
 This is the current follow-on plan from the Grok stabilization work. The main

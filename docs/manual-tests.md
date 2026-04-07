@@ -57,6 +57,19 @@ Prereqs:
 2. Edit an image:
    `pnpm run auracall -- --engine browser --model gemini-3-pro --prompt "add sunglasses" --edit-image /tmp/gemini-gen.jpg --output /tmp/gemini-edit.jpg --wait --verbose`
    - Confirm `/tmp/gemini-edit.jpg` exists.
+3. Feature discovery:
+   `pnpm tsx bin/auracall.ts features --target gemini --json`
+   - Confirm the result includes a versioned `auracall.browser-features`
+     contract and live Gemini drawer/toggle data.
+4. Feature snapshot/diff:
+   `pnpm tsx bin/auracall.ts features snapshot --target gemini --json`
+   `pnpm tsx bin/auracall.ts features diff --target gemini --json`
+   - Confirm snapshot writes succeed and `diff` compares against `latest.json`.
+5. Blocking-page rule:
+   - If the managed Gemini page is on `google.com/sorry`, CAPTCHA,
+     reCAPTCHA, Cloudflare, or a similar human-verification surface, the
+     commands above should stop early with manual-clear guidance instead of
+     continuing into ordinary automation.
 
 ### Multi-Model CLI fan-out
 

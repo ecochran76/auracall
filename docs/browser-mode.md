@@ -59,9 +59,15 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-target`: force the browser automation target (`chatgpt`, `gemini`, or `grok`) regardless of the model shorthand.
 - `--project-id` / `--conversation-id`: override the browser run scope without changing the configured default URL. Conversation takes precedence over project; both are optional.
 - `auracall login --target gemini`: opens the configured browser profile for Gemini sign-in (useful when cookies are missing).
+  - if the managed Gemini page lands on `google.com/sorry`, CAPTCHA,
+    reCAPTCHA, Cloudflare, or another human-verification surface, the command
+    now exits nonzero with manual-clear guidance instead of treating that as a
+    successful ordinary login result
 - `auracall login --target grok`: opens the configured browser profile for Grok sign-in.
 - `auracall wizard`: guided first-run onboarding. It detects candidate local/WSL/Windows Chromium profiles, writes a profile-scoped Aura-Call config entry, then runs the same managed-profile setup flow described below. On WSL, prefer the WSL Chrome path first unless you are intentionally testing the Windows relay path; for the primary WSL setup, keep that profile on Aura-Call `default`.
 - `auracall setup --target <chatgpt|gemini|grok>`: inspect the managed Aura-Call profile, open the managed login browser when needed, then send a real verification prompt through that same profile. Use `--skip-login` when the managed profile is already signed in and `--skip-verify` when you only want inspection/bootstrap.
+  - setup now also stops early if the selected managed page is already on a
+    blocking surface that requires human clearance
 - `--browser-bootstrap-cookie-path`: use a different Chrome/Chromium cookie DB as the managed-profile bootstrap source without changing the runtime browser selection. This is the right flag for “run WSL Chrome, but seed Aura-Call from Windows Brave/Chrome/Edge.”
 - `--force-reseed-managed-profile`: rebuild the managed Aura-Call profile from the configured source Chrome profile before opening login/setup. Without this flag, `auracall login` and `auracall setup` already refresh the managed profile automatically when the source cookie DB is newer than the managed one.
 - `--browser-chrome-profile`, `--browser-chrome-path`: cookie source + binary override (defaults to the standard `"Default"` Chrome profile so existing ChatGPT logins carry over).
@@ -124,6 +130,12 @@ All options are persisted with the session so reruns (`auracall exec <id>`) reus
 - `auracall cache artifacts list [--provider <chatgpt|gemini|grok>] [--conversation-id <id>] [--kind <download|canvas|generated|image|spreadsheet>] [--query <text>] [--limit <count>]`: list normalized artifact rows from the cache catalog (SQL-first, JSON fallback).
 - `auracall cache files list [--provider <chatgpt|gemini|grok>] [--conversation-id <id>] [--project-id <id>] [--dataset <...>] [--query <text>] [--resolve-paths] [--limit <count>]`: list normalized file bindings from the cache catalog (SQL-first, JSON fallback).
 - `auracall cache files resolve [--provider <chatgpt|gemini|grok>] [--conversation-id <id>] [--project-id <id>] [--dataset <...>] [--query <text>] [--missing-only] [--limit <count>]`: resolve cached file pointers and classify each binding as `local_exists`, `missing_local`, `external_path`, `remote_only`, or `unknown`.
+- `auracall features --target <chatgpt|gemini|grok> [--json]`: discover the
+  live provider tool/mode/toggle surface from the managed browser session.
+- `auracall features snapshot --target <chatgpt|gemini|grok> [--json]`: save a
+  live feature snapshot under `~/.auracall/feature-snapshots/<auracallProfile>/<provider>/`.
+- `auracall features diff --target <chatgpt|gemini|grok> [--json]`: compare
+  the current live provider feature surface against the latest saved snapshot.
 - `auracall cache doctor [--provider <chatgpt|gemini|grok>] [--identity-key <key>] [--strict] [--json]`: run cache integrity checks (SQLite `quick_check`, expected table presence, missing local file pointers, and aggregated conversation inventory summary).
 - `auracall cache clear [--provider <chatgpt|gemini|grok>] [--identity-key <key>] [--dataset <name>] [--older-than <date>] [--include-blobs] [--yes] [--json]`: clear cached datasets; entries now include `inventoryBefore` and `inventoryAfter` so operator reports show the conversation/message/source/file/artifact effect of the mutation.
 - `auracall cache cleanup [--provider <chatgpt|gemini|grok>] [--identity-key <key>] [--older-than <date> | --days <n>] [--include-blobs] [--yes] [--json]`: cleanup stale cache entries/files; entries now also include `inventoryBefore` and `inventoryAfter`.
@@ -134,6 +146,9 @@ All options are persisted with the session so reruns (`auracall exec <id>`) reus
 - `auracall session <id> --open-conversation [--print-url] [--browser-path <path>] [--browser-profile <name>]`: open the provider conversation linked to a stored session (uses the saved context, not the cache). Use `--print-url` to emit the URL only, `--browser-path` to override the browser binary, and `--browser-profile` to override the profile directory.
 - `auracall conversations [--project-id <id>] [--project-name <name>] [--conversation-name <name>] [--include-history] [--history-limit <count>] [--history-since <date>] [--filter <text>] [--refresh]`: list conversations for a provider (uses the registry or `AURACALL_BROWSER_PORT`, and spawns a manual-login Chrome session when no DevTools target is available). Use `--include-history` if you want the History dialog opened to pull older conversations; use `--history-limit` (default `2000`) and/or `--history-since` to scroll deeper; use `--filter` to match title/id text; use `--refresh` to force cache updates.
 - Browser project/conversation lists are cached under `~/.auracall/cache/providers/<provider>/<username-or-email>/` (identity-scoped, stale after ~6h or when the configured URL changes). Cache identity comes from `profiles.<name>.services.<service>.identity` unless `profiles.<name>.cache.useDetectedIdentity` is enabled.
+- Doctor/features/setup/browser runs now stop early on blocking pages such as
+  `google.com/sorry`, CAPTCHA / reCAPTCHA, Cloudflare, or similar
+  human-verification surfaces when those require manual clearance.
 
 Latest selectors
 - `--conversation-name latest` selects the most recent conversation (scoped to `--project-id`/`--project-name` when provided).

@@ -9709,3 +9709,14 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   login/prompt automation. For headful local runs, manual-clear blocking pages
   should preserve the browser session so a human can clear the page without
   another relaunch.
+- 2026-04-07: User-facing Gemini/browser docs should describe the current
+  public contract, not stale roadmap state. In particular:
+  - Gemini feature discovery / snapshot / diff are first-class now
+  - blocking pages now stop the main operator/browser-run surfaces early with
+    manual-clear guidance
+  - Gemini account-level files are still unsupported and should be called out
+    explicitly instead of being implied by the broader file surfaces
+- 2026-04-07: If `packages/browser-service/` is intended for future
+  independent launch, it needs its own package-facing README now. The package
+  boundary should be documented at the package root, not only in Aura-Call
+  internal planning docs.

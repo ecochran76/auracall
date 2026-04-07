@@ -35,14 +35,21 @@ Deferred browser reliability TODO:
     - CAPTCHA / reCAPTCHA
     - Cloudflare
     - generic human-verification surfaces
-  - next:
-    - propagate that classification more broadly through operator flows so
-      tools stop before noisy retries
+  - current adoption checkpoint:
+    - `browser-tools probe|doctor`
+    - `auracall doctor`
+    - `auracall features`
+    - `auracall features snapshot|diff`
+    - `auracall setup`
+    - `auracall login`
+    - shared local/remote ChatGPT browser runs
+    - shared local/remote Grok browser runs
   - keep the distinction explicit:
     - AuraCall Gemini provider/service already classifies `google.com/sorry`
       and persists anti-bot cooldowns
     - browser-tools / generic doctor now expose the blocking surface too
-    - the remaining gap is broader behavior built on top of that shared signal
+    - the remaining gap is no longer broad propagation; it is only any
+      concrete unmanaged flow that still bypasses the shared signal
   - optionally allow one bounded real-pointer assist for simple checkbox
     challenges
   - otherwise pause and surface a clear manual-resume operator path
@@ -222,8 +229,10 @@ Immediate Gemini priority order:
    - add focused CLI regression tests for Gemini target acceptance and cache
      operator behavior
 5. Remaining provider-gap backlog
-  - richer Gemini composer drawer / mode discovery parity
-  - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
+  - broader artifact parity/fetch parity beyond the proven
+    image/music/video/canvas surfaces
+  - broader conversation-file fetch parity beyond the currently proven direct
+    chat upload-chip surfaces
   - account-level files
 
 Current browser-service follow-on for that Gemini discovery line:
@@ -234,11 +243,13 @@ Current browser-service follow-on for that Gemini discovery line:
   - toggle state via `aria-checked`
 - use that seam to tighten Gemini `featureStatus` before adding more
   provider-local drawer census code
-- next extraction step:
-  - move provider feature discovery out of `doctor`
-  - add a first-class `auracall features --target <provider> --json` surface
-  - keep browser doctor focused on browser/runtime health instead of becoming
-    the permanent home for provider feature inventory
+- status:
+  - provider feature discovery is already out of `doctor`
+  - a first-class `auracall features --target <provider> --json` surface now
+    exists
+  - snapshot/diff workflows also exist on that same contract
+  - browser doctor is now back to browser/runtime health plus embedded runtime
+    evidence
 
 Current status update:
 
@@ -249,9 +260,10 @@ Current status update:
   - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
 - for Gemini specifically, the remaining meaningful work is now explicit
   provider backlog:
-  - first-class feature discovery / snapshot groundwork
-  - richer Gemini composer drawer / mode discovery parity
-  - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
+  - broader artifact parity/fetch parity beyond the proven
+    image/music/video/canvas surfaces
+  - broader conversation-file fetch parity beyond the currently proven direct
+    chat upload-chip surfaces
   - account-level files
 
 Do not treat second-pairing proof churn as the immediate next Gemini slice

@@ -9614,3 +9614,57 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this is still not captcha automation
   - the value is earlier stop behavior with less page churn and a clearer
     manual-resume path
+
+## 2026-04-07 - Roadmap/docs now match the real Gemini and anti-bot baseline
+
+- Focus:
+  - stop the planning docs from lagging behind the now-green code paths
+- Progress:
+  - refreshed the active roadmap docs to reflect that these are already real:
+    - shared anti-bot propagation across main operator/browser-run surfaces
+    - first-class Gemini feature discovery plus snapshot/diff
+    - Gemini conversation context/files/artifact parity for the proven
+      surfaces
+  - reframed the Gemini provider backlog around the actual next gap:
+    - account-level files parity
+- Notes:
+  - the next roadmap item should no longer be generic Gemini feature discovery
+    or broad anti-bot propagation
+  - the next honest provider-parity target is Gemini account-level files
+
+## 2026-04-07 - User docs now match the real Gemini/browser operator surface
+
+- Focus:
+  - close the remaining user-facing doc drift after the roadmap refresh
+- Progress:
+  - updated user docs so they now explicitly reflect:
+    - first-class Gemini feature discovery plus snapshot/diff
+    - blocking-page stop behavior across doctor/features/setup/login/browser
+      runs
+    - Gemini account-level files as still unsupported
+  - touched:
+    - `README.md`
+    - `docs/gemini.md`
+    - `docs/browser-mode.md`
+    - `docs/manual-tests.md`
+- Notes:
+  - this slice is documentation-only
+  - the code baseline did not change
+
+## 2026-04-07 - Browser-service package now has its own README
+
+- Focus:
+  - make the package boundary legible on its own before future independent
+    launch work
+- Progress:
+  - added [`packages/browser-service/README.md`](/home/ecochran76/workspace.local/oracle/packages/browser-service/README.md)
+  - the new package README now documents:
+    - purpose
+    - stable vs provisional exports
+    - package-owned browser-tools surface
+    - current anti-bot boundary
+    - host-app non-goals
+- Notes:
+  - this is documentation-only
+  - the package is still private today, but the README now matches the
+    intended extraction boundary

@@ -14,7 +14,7 @@ implemented from what is merely plausible.
 | --- | --- | --- | --- |
 | Text generation | Supported | Supported | Core happy path on both surfaces. |
 | Streaming text | Supported | N/A | API adapter supports streaming; Gemini web executor returns a completed browser result. |
-| Attachments/files | Not first-class today | Partially supported | Web path supports Aura-Call file input; current live proof includes inline file bundling. Real Gemini attachment transport still needs hardening on at least one second browser pairing. |
+| Attachments/files | Not first-class today | Partially supported | Web path supports Aura-Call file input. Current live proof includes inline bundling, direct chat upload-chip reads/fetches for the proven surfaces, and Gem knowledge file CRUD. Account-level Gemini files are still not implemented. |
 | YouTube input | Not documented | Supported | Web executor has an explicit `--youtube` flow. |
 | Generate image | Not documented | Supported | Web/browser path supports `--generate-image`. |
 | Edit image | Not documented | Supported | Web/browser path supports `--edit-image`. |
@@ -30,11 +30,12 @@ implemented from what is merely plausible.
 | Conversation artifact fetch | N/A | Partially supported | `auracall conversations artifacts fetch --target gemini <id>` now materializes proven Gemini conversation artifacts into the local cache for canvas documents (`.txt`) and generated music/video media (`.mp4`); broader artifact fetch coverage beyond the proven image/music/video/canvas surfaces is still pending. |
 | Conversation files list | N/A | Supported | `auracall conversations files list --target gemini <id>` now reads visible sent upload chips from the direct `/app/<id>` page through the shared conversation-context fallback. |
 | Conversation files fetch | N/A | Partially supported | `auracall conversations files fetch --target gemini <id>` now materializes visible chat-uploaded files from the direct `/app/<id>` page, including text-file chips and uploaded-image chips, with browser-native fallback capture for visible uploaded-image previews when signed media URLs are not directly fetchable; broader file-fetch coverage beyond those currently exposed chat surfaces is still pending. |
+| Account-level files | N/A | Not supported | Shared CLI/service seams exist, but Gemini does not yet expose a wired provider implementation for `account-files list|add|remove`. |
 | Conversation rename | N/A | Supported | `auracall rename --target gemini <id> <name>` now drives the native Gemini conversation rename dialog from the direct `/app/<id>` page and verifies the renamed row on a fresh root list read. |
 | Conversation delete | N/A | Supported | `auracall delete --target gemini <id>` now drives the native Gemini conversation delete flow from the direct `/app/<id>` page and verifies absence from a refreshed conversation list. |
 | Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
 | Cookie/login flow | N/A | Supported | Via `auracall login --target gemini` and cookie export fallback. |
-| Browser doctor | N/A | Partially supported | `auracall doctor --target gemini` now reports the live signed-in account plus detected Gemini feature/drawer signature when a managed browser instance is alive; full live selector diagnosis is still not implemented there, but `browser-tools search` can now do structured live DOM discovery against the same managed Gemini page. |
+| Browser doctor | N/A | Partially supported | `auracall doctor --target gemini` now reports the live signed-in account plus detected Gemini feature/drawer signature when a managed browser instance is alive. It also exits nonzero and gives manual-clear guidance if the selected managed Gemini page is blocked by `google.com/sorry`, CAPTCHA, reCAPTCHA, Cloudflare, or a similar human-verification surface. Full live selector diagnosis is still not implemented there, but `browser-tools search` can now do structured live DOM discovery against the same managed Gemini page. |
 | Browser feature discovery | N/A | Supported | `auracall features --target gemini --json` now emits a versioned `auracall.browser-features` contract backed by browser-service `uiList` evidence from the live Gemini `Tools` drawer. |
 | Browser feature snapshot/diff | N/A | Supported | `auracall features snapshot --target gemini --json` now saves live feature contracts under `~/.auracall/feature-snapshots/<auracallProfile>/gemini/`, and `auracall features diff --target gemini --json` compares the current live Gemini surface against the latest saved snapshot. |
 | Session/provenance alignment | Shared Aura-Call semantics apply | Shared Aura-Call semantics apply | This is the next likely alignment area if a concrete gap is found. |
@@ -79,6 +80,8 @@ Prereqs:
   - `auracall features --target gemini --json`
   - `auracall features snapshot --target gemini --json`
   - `auracall features diff --target gemini --json`
+- These feature commands now stop early and exit nonzero if the selected
+  managed Gemini page is on a blocking surface that requires human clearance.
 - Full live Gemini UI selector diagnosis is not implemented in `auracall doctor` yet.
 
 Primary config shape example:
@@ -149,6 +152,10 @@ Notes:
   human-verification state, stop automated retries on that managed browser
   profile. Until captcha automation exists, a human must clear that page
   before Aura-Call should resume Gemini automation on that session.
+- `auracall login --target gemini`, `auracall setup --target gemini`,
+  `auracall doctor --target gemini`, `auracall features --target gemini`, and
+  the shared browser-run path now all surface that blocking state explicitly
+  and stop early instead of treating it as an ordinary page.
 - For `--file` inputs in Gemini browser mode, Aura-Call may satisfy the request by pasting file contents inline instead of using the real Gemini attachment transport. Treat inline-bundled file proofs as valid Aura-Call file-input proofs, but not as native Gemini upload proofs.
 - On Gemini specifically, `--browser-attachments always` now routes ordinary
   attachment-backed browser runs through the live Gemini page itself rather
@@ -236,11 +243,12 @@ Notes:
     - live signed-in account identity when a managed Gemini session is alive
     - `featureStatus` with a normalized Gemini feature signature for detected
       drawer/composer surfaces
+    - first-class blocking-state classification when the selected Gemini page
+      is on `google.com/sorry`, CAPTCHA, reCAPTCHA, Cloudflare, or another
+      human-verification surface
   - current boundary:
     - this is a feature/discovery seam, not full live selector diagnosis
-    - the richer Gemini composer drawer census is still being tightened inside
-      `auracall doctor`, but package-owned live DOM discovery is now available
-      through:
+    - package-owned live DOM discovery is available through:
       - `pnpm tsx scripts/browser-tools.ts --auracall-profile <name> --browser-target gemini search ...`
     - current live `default` proofs through `browser-tools search`:
       - `Tools` opener via `--class-includes toolbox-drawer-button --text Tools`

@@ -121,8 +121,10 @@ started:
 - Gemini browser doctor now also has a real live feature-signature seam:
   - live `featureStatus`
   - manifest-backed feature/drawer tokens
-  - current boundary: richer composer-drawer census still needs a dedicated
-    feature-discovery surface outside `doctor`
+  - that richer feature-discovery surface now exists via:
+    - `auracall features --target gemini --json`
+    - `auracall features snapshot --target gemini --json`
+    - `auracall features diff --target gemini --json`
 
 The next gaps are now narrower and more operational:
 
@@ -154,7 +156,10 @@ The next gaps are now narrower and more operational:
    - refreshed readback is currently the authoritative proof
 
 5. Explicit provider gaps still remain and should stay visible.
-   - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
+   - broader artifact parity/fetch parity beyond the proven
+     image/music/video/canvas surfaces
+   - broader conversation-file fetch parity beyond the currently proven direct
+     chat upload-chip surfaces
    - account-level files parity
    - clone parity
 
@@ -175,9 +180,8 @@ These belong to shared Aura-Call architecture, not Gemini-specific logic:
 - anti-bot handling boundary is now explicit:
   - Gemini provider/service already detects `google.com/sorry` /
     unusual-traffic blocking states and persists cooldowns
-  - browser-tools / generic doctor still need first-class blocking-surface
-    classification so manual/live probes do not degrade into raw page
-    inspection
+  - browser-tools / generic operator flows now also classify those blocking
+    surfaces first-class and stop early with manual-clear guidance
 - future service/runtime orchestration
 
 ### Gemini-owned
@@ -419,8 +423,11 @@ Goal:
   clear order
 
 Recommended order:
-1. broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond direct preview/download or text-preview chat surfaces
-2. account-level files parity
+1. account-level files parity
+2. broader artifact parity/fetch parity beyond the proven
+   image/music/video/canvas surfaces
+3. broader conversation-file fetch parity beyond direct preview/download or
+   text-preview chat surfaces
 4. clone parity if Gemini exposes a real native surface
 
 Acceptance:
@@ -430,7 +437,19 @@ Acceptance:
   - live proof or explicit deferred note
 
 Status:
-- not started
+- partially started
+- completed enough before this slice:
+  - feature discovery / snapshot groundwork
+  - conversation context parity
+  - conversation files list/fetch for the currently proven direct chat upload
+    chip surfaces
+  - artifact capture/materialization for the currently proven:
+    - image
+    - music
+    - video
+    - canvas
+- main remaining explicit gap:
+  - account-level files parity
 
 ### Closeout assessment for Gemini CLI parity for now
 
@@ -450,14 +469,21 @@ Current assessment:
   - shared cache architecture work:
     - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
   - Gemini provider backlog:
-    - broader artifact parity/fetch parity beyond image/music/video/canvas, plus broader conversation-file fetch parity beyond direct preview/download or text-preview chat surfaces
     - account-level files parity
+    - broader artifact parity/fetch parity beyond image/music/video/canvas
+    - broader conversation-file fetch parity beyond direct preview/download or
+      text-preview chat surfaces
 
 Practical implication:
 - stop treating Gemini as blocked on generic CLI/operator parity
 - keep Gemini in maintenance mode for already-green surfaces
 - spend the next effort either on shared cache architecture or on one explicit
   provider gap at a time
+
+Current practical recommendation:
+- the next Gemini provider slice should be account-level files first
+- only return to broader artifact/file expansion when the live DOM proves a
+  new stable surface
 
 ### Current architectural audit
 
@@ -503,9 +529,9 @@ The native attachment/browser workflow line is now in a better checkpoint.
 
 The next Gemini feature-expansion track should be:
 
-- Gemini conversation CRUD
-- Gemini Gem-as-project CRUD
-- Gemini cache integration
+- Gemini account-level files parity
+- then only DOM-proven broader artifact/file expansion beyond the currently
+  green surfaces
 
 That work is planned separately in:
 
