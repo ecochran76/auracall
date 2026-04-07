@@ -9190,3 +9190,310 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - menu items
     - upload candidates
   - otherwise return to Gemini provider backlog
+
+## 2026-04-06 - Gemini conversation context now captures generated music/video artifacts, while Canvas remains unsupported
+
+- Focus:
+  - extend Gemini chat read parity beyond generated images without inventing a
+    fake canvas/doc artifact model
+- Progress:
+  - probed three real Gemini chat surfaces on the active managed `default`
+    pairing:
+    - music chat `8e8e58b57ae544ea`
+    - video chat `23340d1698de29b8`
+    - canvas probe chat `c653ec3c84410829`
+  - confirmed that both music and video responses materialize as assistant-turn
+    `video` elements with nearby share/download controls inside
+    `model-response`
+  - extended `src/browser/providers/geminiAdapter.ts` so
+    `readConversationContext(...)` now normalizes those assistant-turn media
+    nodes into first-class `artifacts[]` with:
+    - `kind = generated`
+    - stable `uri`
+    - `mediaType = music|video`
+    - `fileName`
+    - share/download/play/mute labels
+  - added exported Gemini artifact-normalization helpers and focused coverage in
+    `tests/browser/geminiAdapter.test.ts`
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 8e8e58b57ae544ea --target gemini --profile default --json-only`
+    - `pnpm tsx bin/auracall.ts conversations context get 23340d1698de29b8 --target gemini --profile default --json-only`
+    - `pnpm tsx bin/auracall.ts conversations context get c653ec3c84410829 --target gemini --profile default --json-only`
+- Notes:
+  - current honest boundary:
+    - Gemini `Canvas` selection is real
+    - but the current live probe still rendered only ordinary assistant text on
+      the `/app/<id>` page and no first-class canvas/doc artifact surface
+  - next Gemini artifact work should therefore be:
+    - canvas/doc artifact parity if a real surface appears
+    - otherwise broader non-image artifact coverage beyond the now-proven
+      image/music/video surfaces
+
+## 2026-04-06 - Gemini Canvas artifacts are now live on the standard conversation route
+
+- Focus:
+  - turn the newly proven Gemini Canvas editor surface into a first-class
+    `conversations context get` artifact instead of leaving it as a manual DOM
+    curiosity
+- Progress:
+  - followed shared Gemini page `https://g.co/gemini/share/3ed147d51ed4`
+    through `Try Gemini Canvas`
+  - confirmed the dedicated `/canvas` route exposes a real document/editor
+    surface with:
+    - `div.ProseMirror[aria-label="Canvas editor"]`
+    - `button[aria-label="Share and export canvas"]`
+    - `button[data-test-id="print-button"]`
+    - `button[data-test-id="canvas-create-task-menu"]`
+  - proved the same document can reopen on the normal `/app/<conversationId>`
+    route for conversation `59b6f9ac9e510adc`
+  - extended `src/browser/providers/geminiAdapter.ts` so Gemini context reads:
+    - wait for canvas-specific hydration when a canvas chip is present
+    - normalize the visible immersive panel into a `kind = canvas` artifact
+      with:
+      - `uri = gemini://canvas/<conversationId>`
+      - `metadata.contentText`
+      - `metadata.createdAt`
+      - share/print/create capability flags
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations context get 59b6f9ac9e510adc --target gemini --profile default --refresh --json-only`
+- Notes:
+  - earlier chat `c653ec3c84410829` still matters as a negative control:
+    merely selecting the Canvas tool does not guarantee a durable canvas
+    artifact on every Gemini conversation
+  - current Gemini artifact baseline is now:
+    - image
+    - music
+    - video
+    - canvas
+
+## 2026-04-06 - Gemini artifact materialization is now live for the proven conversation artifacts
+
+- Focus:
+  - move Gemini from artifact discovery only to real `conversations artifacts fetch`
+    parity on the currently proven surfaces
+- Progress:
+  - added Gemini `materializeConversationArtifact(...)` support in
+    `src/browser/providers/geminiAdapter.ts`
+  - widened the CLI gate in `bin/auracall.ts` so:
+    - `auracall conversations artifacts fetch --target gemini <id>`
+      is actually reachable
+  - implemented the first bounded Gemini materializers:
+    - `canvas` -> `.txt` from `metadata.contentText`
+    - generated music/video -> authenticated browser-context binary fetch
+      written as `.mp4`
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live:
+    - `pnpm tsx bin/auracall.ts conversations artifacts fetch 59b6f9ac9e510adc --target gemini --profile default`
+      - `materializedCount = 1`
+      - `AuraCall Canvas Route Probe.txt`
+    - `pnpm tsx bin/auracall.ts conversations artifacts fetch 8e8e58b57ae544ea --target gemini --profile default`
+      - `materializedCount = 1`
+      - `before_the_tide_returns.mp4`
+    - `pnpm tsx bin/auracall.ts conversations artifacts fetch 23340d1698de29b8 --target gemini --profile default`
+      - `materializedCount = 1`
+      - `video.mp4`
+- Notes:
+  - this slice is intentionally bounded to the proven Gemini artifact families:
+    - canvas
+    - music
+    - video
+  - next Gemini artifact work should target breadth beyond the proven
+    image/music/video/canvas surfaces, not re-litigate the now-green fetch path
+
+## 2026-04-06 - Gemini conversation file fetch now has a shared CLI path, but live proof is still bounded by what the chat preview surface exposes
+
+- Focus:
+  - add a real `conversations files fetch` seam for Gemini chat uploads instead
+    of stopping at list-only metadata
+- Progress:
+  - added shared `LlmService.materializeConversationFiles(...)` and
+    `auracall conversations files fetch <conversationId>`
+  - wired Gemini `downloadConversationFile(...)` in
+    `src/browser/providers/geminiAdapter.ts`
+  - Gemini now tries two bounded fetch paths for chat-uploaded files:
+    - direct preview/download URL already exposed on the chat chip
+    - text-preview recovery after trusted-clicking the visible file chip
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this is intentionally not documented as fully green live parity yet
+  - current honest boundary:
+    - the shared CLI/service path is real
+    - Gemini file fetch is only expected to work when the chat page or preview
+      surface actually exposes:
+      - a direct fetchable URL
+      - or a recoverable text preview
+  - the known text-upload smoke conversation is not a clean live fetch proof
+    right now because direct `/app/<id>` route open on this account can hit
+    Google’s `sorry` interstitial before the preview surface is reached
+
+## 2026-04-07 - Anti-bot detection boundary is provider-green but browser-tools-red
+
+- Focus:
+  - clarify whether AuraCall actually detected Gemini anti-bot state during the
+    recent `google.com/sorry` chat-file fetch probe
+- Progress:
+  - confirmed the Gemini provider/service path already does the right thing:
+    - `classifyGeminiBlockingState(...)` detects `google.com/sorry` /
+      unusual-traffic states
+    - `LlmService` persists a Gemini anti-bot cooldown once such an error is
+      raised through the guarded path
+  - confirmed the remaining gap is outside the provider:
+    - raw `browser-tools` navigation/eval and generic doctor output still do
+      not classify `google.com/sorry` as a first-class blocking surface
+- Notes:
+  - added this explicitly to the planning docs so future browser-service work
+    does not confuse:
+    - missing provider anti-bot handling
+    - missing browser-tools / generic doctor anti-bot reporting
+
+## 2026-04-07 - Gemini anti-bot pages are manual-clear only until captcha automation exists
+
+- Focus:
+  - make the operator rule explicit in repo instructions and runbooks so Gemini
+    debugging does not keep re-triggering blocked sessions
+- Progress:
+  - updated `AGENTS.md`
+  - updated `docs/wsl-gemini-runbook.md`
+  - updated `docs/manual-tests.md`
+  - updated `docs/gemini.md`
+- Notes:
+  - the rule is now explicit:
+    - if Gemini shows `google.com/sorry`, CAPTCHA, reCAPTCHA, or similar
+      human-verification state, stop automated retries
+    - require human interaction to clear the page before resuming automation on
+      that managed browser profile
+    - after clearance, prefer the lowest-churn resume path first
+
+## 2026-04-07 - Gemini uploaded-image chat retrieval is still split between hydrated live tabs and fresh route reads
+
+- Focus:
+  - close the Gemini chat-upload parity gap for user-uploaded image chips on
+    `/app/ab30a4a92e4b65a9`
+- Progress:
+  - confirmed the live managed Gemini tab exposes the exact uploaded-image
+    surface inside the user turn:
+    - `button.preview-image-button.large-preview-image`
+    - `img[data-test-id="uploaded-img"]`
+  - hardened Gemini tab reuse so `connectToGeminiTab(...)` no longer blindly
+    trusts a stale `tabTargetId` or mismatched `tabUrl` for a different
+    conversation route
+  - hardened Gemini read/fetch paths so they do not forcibly reload an already
+    hydrated exact conversation tab before scraping/materializing
+  - added a bounded post-read helper for visible uploaded-image buttons to
+    avoid relying only on the larger all-in-one context extractor
+- Verification:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live DOM proof on the exact route:
+    - `browser-tools search --url-contains ab30a4a92e4b65a9 --class-includes preview-image-button`
+    - `browser-tools search --url-contains ab30a4a92e4b65a9 --data-testid uploaded-img`
+    - `browser-tools eval --url-contains ab30a4a92e4b65a9 ...`
+- Notes:
+  - current honest boundary:
+    - the live tab definitely contains the uploaded image on the user turn
+    - the managed `conversations context get|files list|files fetch` path still
+      returns no files for this conversation
+  - strongest current hypothesis:
+    - Gemini uploaded-image availability differs between:
+      - the already-hydrated live tab surface
+      - a fresh provider-driven read of the same `/app/<id>` route
+    - or the live provider read is failing and `llmService` is serving cached
+      context silently because messages already exist
+
+## 2026-04-07 - Gemini upload chips are button-host widgets, and browser-tools should prefer visible route matches
+
+- Focus:
+  - stop treating Gemini chat uploads as unrelated leaf selectors and reduce
+    browser drift back to `/app`
+- Progress:
+  - normalized Gemini conversation upload discovery around one shared host
+    model:
+    - `user-query` button widgets
+    - `button.new-file-preview-file` for file-row chips
+    - `button.preview-image-button` for uploaded-image chips
+    - child metadata / preview nodes are now treated as button content, not as
+      the primary host identity
+  - widened the Gemini conversation-upload fallback reader to merge both text-
+    file and uploaded-image button hosts through one abstraction
+  - updated browser-tools tab selection so `--url-contains` prefers a visible
+    route match over a focused hidden tab, which better matches the intended
+    “stay on this exact conversation” workflow
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this reduces drift and makes the DOM model cleaner, but the exact live
+    `ab30a4a92e4b65a9` uploaded-image file initially still was not
+    materializing through `conversations files fetch`
+  - follow-on fix:
+    - deduped Gemini uploaded-image rows by physical `remoteUrl` instead of by
+      DOM leaf occurrence
+    - added a bounded browser-native image materialization fallback:
+      - if direct fetch of the `lh3.googleusercontent.com` image URL fails
+      - and Gemini already renders the uploaded image inline
+      - capture the visible image surface instead of failing the fetch
+  - current live state on `ab30a4a92e4b65a9`:
+    - `conversations context get`: green
+    - `conversations files list`: green
+    - `conversations files fetch`: green
+    - one normalized uploaded image:
+      - `uploaded-image-1`
+## 2026-04-07 - Gemini direct chat uploaded-image retrieval green
+
+- Focus:
+  - finish the Gemini direct `/app/<id>` uploaded-file retrieval slice without
+    further route churn
+  - reduce Gemini tab drift because it increases anti-bot risk and hides the
+    real chat surface
+- Progress:
+  - changed Gemini conversation upload handling to treat user-turn upload chips
+    as clickable button hosts under `user-query`
+  - unified the text-file chip (`button.new-file-preview-file`) and uploaded
+    image chip (`button.preview-image-button`) under one shared extraction
+    model
+  - hardened managed tab selection so browser-tools prefers a visible exact URL
+    match over a hidden/focused generic Gemini root tab
+  - proved live green on `default` for uploaded-image conversation
+    `ab30a4a92e4b65a9`:
+    - `conversations context get`
+    - `conversations files list`
+    - `conversations files fetch`
+  - added a browser-native visible-image capture fallback for Gemini uploaded
+    images because direct signed image URLs can return HTTP 403 outside the
+    live page context
+- Durable note:
+  - for Gemini direct chat reads, prefer staying on an already-hydrated exact
+    `/app/<id>` tab and avoid unnecessary route reloads; otherwise both drift
+    and anti-bot risk go up
+
+## 2026-04-07 - Gemini multi-upload chat dedupe repaired
+
+- Focus:
+  - verify that a Gemini chat containing both an uploaded image and a second
+    uploaded file surfaces all real uploads exactly once
+- Progress:
+  - live rerun on `ab30a4a92e4b65a9` proved:
+    - `conversations context get` returns exactly two files:
+      - `uploaded-image-1`
+      - `AGENTS.md`
+    - `conversations files list` returns the same two files
+    - `conversations files fetch` returns:
+      - `fileCount = 2`
+      - `materializedCount = 2`
+  - fixed the duplicate-chip bug by deduping Gemini conversation uploads by
+    chip host element during DOM collection and by stable file semantics during
+    normalization
+- Durable note:
+  - Gemini upload chips can expose multiple nested nodes for the same logical
+    file. The provider should dedupe by chip host first and semantic file
+    identity second, not by raw leaf selector matches.

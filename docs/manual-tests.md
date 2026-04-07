@@ -13,6 +13,10 @@ and run the live API suite before shipping major transport changes.
 - When debugging, add `--browser-keep-browser` so Chrome stays open after Aura-Call exits, then connect with `pnpm exec tsx scripts/browser-tools.ts ...` (screenshot, eval, DOM picker, etc.). The `pick` command is the general-purpose DOM inspector we use for browser automation selectors.
 - Ensure no Chrome instances are force-terminated mid-run; let Aura-Call clean up once you’re done capturing state.
 - Clipboard checks (`browser-tools.ts eval "navigator.clipboard.readText()"`) trigger a permission dialog in Chrome—approve it for debugging, but remember that we can’t rely on readText in unattended runs.
+- On Gemini, if the browser shows `google.com/sorry`, CAPTCHA, reCAPTCHA, or
+  similar human-verification state, stop automated retries immediately. Until
+  captcha automation exists, a human must clear that page before any more
+  automated Gemini steps on that managed browser profile.
 
 ## Test Cases
 
@@ -44,6 +48,8 @@ Run this whenever you touch the Gemini web client or the `--generate-image` / `-
 
 Prereqs:
 - Chrome profile is signed into `gemini.google.com`.
+- If Gemini is currently on `google.com/sorry` or a CAPTCHA page, clear it
+  manually before running these smokes.
 
 1. Generate an image:
    `pnpm run auracall -- --engine browser --model gemini-3-pro --prompt "a cute robot holding a banana" --generate-image /tmp/gemini-gen.jpg --aspect 1:1 --wait --verbose`

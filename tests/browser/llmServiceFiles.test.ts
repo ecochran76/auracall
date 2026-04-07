@@ -1,5 +1,6 @@
 import os from 'node:os';
 import path from 'node:path';
+import * as fs from 'node:fs/promises';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
@@ -403,6 +404,88 @@ describe('llmService project file cache writes', () => {
           artifactId: 'artifact-2',
           status: 'error',
           error: 'artifact fetch failed',
+        }),
+      ]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('materializeConversationFiles writes a sidecar fetch manifest without changing the attachment manifest shape', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-files-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'gemini',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    const conversationFiles: FileRef[] = [
+      {
+        id: 'conv-file-1',
+        name: 'notes.txt',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/plain',
+      },
+      {
+        id: 'conv-file-2',
+        name: 'image.png',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'image/png',
+      },
+    ];
+    const provider = {
+      id: 'gemini',
+      config: { id: 'gemini', selectors: {} as never },
+      listConversationFiles: vi.fn(async () => conversationFiles),
+      downloadConversationFile: vi.fn(async (_conversationId: string, fileId: string, destPath: string) => {
+        if (fileId === 'conv-file-1') {
+          await fs.writeFile(destPath, 'hello from gemini chat upload', 'utf8');
+          return;
+        }
+        throw new Error('conversation file fetch failed');
+      }),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      const result = await service.materializeConversationFiles('conversation-123', {
+        listOptions: {},
+      });
+      expect(result.conversationFiles).toHaveLength(2);
+      expect(result.files).toHaveLength(1);
+      expect(result.manifestPath).toBeTruthy();
+      const cached = await store.readConversationAttachments(cacheContext, 'conversation-123');
+      expect(cached.items).toEqual([
+        expect.objectContaining({
+          id: 'conv-file-1',
+          name: 'notes.txt',
+          provider: 'gemini',
+          source: 'conversation',
+          mimeType: 'text/plain',
+        }),
+      ]);
+      const manifest = JSON.parse(await readFile(result.manifestPath as string, 'utf8')) as {
+        fileCount: number;
+        materializedCount: number;
+        entries: Array<{ fileId: string; status: string; error?: string; fileName?: string }>;
+      };
+      expect(manifest.fileCount).toBe(2);
+      expect(manifest.materializedCount).toBe(1);
+      expect(manifest.entries).toEqual([
+        expect.objectContaining({
+          fileId: 'conv-file-1',
+          fileName: 'notes.txt',
+          status: 'materialized',
+        }),
+        expect.objectContaining({
+          fileId: 'conv-file-2',
+          fileName: 'image.png',
+          status: 'error',
+          error: 'conversation file fetch failed',
         }),
       ]);
     } finally {

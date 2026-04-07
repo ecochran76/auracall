@@ -154,7 +154,7 @@ export class BrowserService extends BrowserServiceCore {
       }
     }
     const configuredMatcher =
-      options.serviceId === 'grok' ? createConfiguredUrlMatcher(options.configuredUrl) : null;
+      options.serviceId === 'chatgpt' ? null : createConfiguredUrlMatcher(options.configuredUrl);
     const serviceMatcher = (url: string) => matchesServiceUrl(options.serviceId, url);
     const matchUrl = configuredMatcher ?? serviceMatcher;
     const tabSelection = scan?.tabs ? explainTabResolution(scan.tabs, { matchUrl }) : undefined;

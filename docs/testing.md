@@ -10,7 +10,7 @@
     - search/tooling: partially supported through `web_search_preview -> googleSearch`
     - attachments/files: not yet documented as a first-class Gemini API surface
     - image generation/editing: not yet documented as a first-class Gemini API surface
-  - Gemini web/browser:
+- Gemini web/browser:
     - text: supported
     - attachments: supported
     - YouTube: supported
@@ -18,6 +18,13 @@
     - edit-image: supported
     - Gem URL targeting: supported
     - cookie/login flow: supported
+    - conversation context read: supported for canonical `messages[]`, visible
+      sent `files[]`, and proven generated `artifacts[]`
+    - conversation files list: supported for visible direct `/app/<id>` upload
+      chips
+    - conversation files fetch: partially supported for visible direct
+      `/app/<id>` upload chips, including text-file chips and uploaded-image
+      chips
   - browser doctor: partially supported
       - `auracall doctor --target gemini --json` now reports live account
         identity plus detected Gemini feature signature when a managed Gemini
@@ -162,12 +169,18 @@
   - YouTube
   - generate-image
   - edit-image
+  - conversation context
+  - conversation files list
+  - conversation files fetch
 - Recommended Gemini live-proof order:
   - text
   - attachment
   - YouTube
   - generate-image
   - edit-image
+  - conversation context
+  - conversation files list
+  - conversation files fetch
 - Run Gemini live proof against one explicit AuraCall runtime profile / browser
   profile pairing at a time so failures can be classified cleanly.
 - Latest Gemini web proof on 2026-04-03:
@@ -258,6 +271,23 @@
         shared browser-service `submitInlineRename(...)` helper
   - Gemini conversation context read is now minimally live on the active
     `default` pairing:
+    - `auracall conversations context get 841b485bcb3819af --target gemini --profile default --json-only`
+      - returns canonical `messages[]`
+    - `auracall conversations context get ab30a4a92e4b65a9 --target gemini --profile default --json-only`
+      - returns visible uploaded-image `files[]`
+  - Gemini conversation files list/fetch are now also live on the active
+    `default` pairing for direct chat upload chips:
+    - text upload proof:
+      - `auracall conversations files list 841b485bcb3819af --target gemini --profile default`
+      - `auracall conversations files fetch 841b485bcb3819af --target gemini --profile default --verbose`
+    - uploaded-image proof:
+      - `auracall conversations files list ab30a4a92e4b65a9 --target gemini --profile default`
+      - returns:
+        - `gemini-conversation-file:ab30a4a92e4b65a9:0:uploaded-image-1`
+      - `auracall conversations files fetch ab30a4a92e4b65a9 --target gemini --profile default --verbose`
+      - current image materialization path can fall back to browser-native
+        visible-preview capture when the signed image URL returns 403 outside
+        the live page context
     - `pnpm tsx bin/auracall.ts conversations context get 841b485bcb3819af --target gemini --profile default --json-only`
     - returned canonical `messages[]`:
       - user:
@@ -274,14 +304,60 @@
         from the inner message nodes instead of the outer Gemini chrome wrappers
       - visible sent upload chips now also populate `context.files[]` and the
         shared `conversations files list` fallback
-      - Gemini now also returns visible generated-image artifacts on the active
+      - Gemini now also returns visible generated artifacts on the active
         `default` pairing:
         - `pnpm tsx bin/auracall.ts conversations context get 3525c884edae4fa4 --target gemini --profile default --json-only`
         - returned one `image` artifact with:
           - `uri: blob:https://gemini.google.com/...`
           - `width: 1024`
           - `height: 559`
-      - Gemini `sources[]` and broader non-image artifact parity are still pending
+        - `pnpm tsx bin/auracall.ts conversations context get 8e8e58b57ae544ea --target gemini --profile default --json-only`
+        - returned one `generated` artifact with:
+          - `title: Before The Tide Returns`
+          - `mediaType: music`
+          - `fileName: before_the_tide_returns.mp4`
+        - `pnpm tsx bin/auracall.ts conversations context get 23340d1698de29b8 --target gemini --profile default --json-only`
+        - returned one `generated` artifact with:
+          - `title: Generated video 1`
+          - `mediaType: video`
+          - `fileName: video.mp4`
+        - `pnpm tsx bin/auracall.ts conversations context get 59b6f9ac9e510adc --target gemini --profile default --refresh --json-only`
+        - returned one `canvas` artifact with:
+          - `title: AuraCall Canvas Route Probe`
+          - `uri: gemini://canvas/59b6f9ac9e510adc`
+          - `metadata.contentText`
+          - `metadata.createdAt: Apr 6, 9:44 PM`
+          - `metadata.hasShareButton: true`
+          - `metadata.hasPrintButton: true`
+      - earlier generic Canvas probe `c653ec3c84410829` still matters as a
+        caution:
+        - simply selecting the Canvas tool does not guarantee a first-class
+          canvas artifact on every Gemini chat
+      - Gemini `sources[]` and broader artifact parity beyond the proven
+        image/music/video/canvas surfaces are still pending
+      - Gemini artifact fetch is now also live for the proven conversation
+        artifacts on the active `default` pairing:
+        - `pnpm tsx bin/auracall.ts conversations artifacts fetch 59b6f9ac9e510adc --target gemini --profile default`
+          - `artifactCount = 1`
+          - `materializedCount = 1`
+          - materialized `AuraCall Canvas Route Probe.txt`
+        - `pnpm tsx bin/auracall.ts conversations artifacts fetch 8e8e58b57ae544ea --target gemini --profile default`
+          - `artifactCount = 1`
+          - `materializedCount = 1`
+          - materialized `before_the_tide_returns.mp4`
+        - `pnpm tsx bin/auracall.ts conversations artifacts fetch 23340d1698de29b8 --target gemini --profile default`
+          - `artifactCount = 1`
+          - `materializedCount = 1`
+          - materialized `video.mp4`
+      - Gemini conversation file fetch now also has a bounded shared CLI path:
+        - `pnpm tsx bin/auracall.ts conversations files fetch <conversationId> --target gemini --profile default`
+        - current implementation is intentionally limited to chat-uploaded files
+          whose Gemini chat surface exposes either:
+          - a direct preview/download URL
+          - or a recoverable text preview after opening the chip
+        - the known text-upload smoke conversation currently is not a clean live
+          fetch proof because direct `/app/<id>` route open on this account can
+          trip Google’s `sorry` interstitial before the file preview is reached
   - Gemini Gem create is now also live on this pairing:
     - `auracall --profile wsl-chrome-2 projects create 'AuraCall Gemini Gem CRUD Proof 2026-04-04 1854' --target gemini --instructions-text 'Reply helpfully about AuraCall Gemini CRUD proofs.'`
     - returned:

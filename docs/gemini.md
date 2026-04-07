@@ -26,8 +26,10 @@ implemented from what is merely plausible.
 | Gem/project delete | N/A | Supported | `auracall projects remove --target gemini <id>` now drives the native Gemini Gem delete flow from the direct `/gem/<id>` page and verifies absence from a refreshed Gem manager list. |
 | Gem/project files add/list/remove | N/A | Supported | `auracall projects files add|list|remove --target gemini <id>` now drives Gemini Gem knowledge file CRUD through the native edit page and verifies persisted rows on fresh reads. |
 | Conversation listing | N/A | Supported | `auracall conversations --target gemini` now lists live Gemini chats through the generic browser provider path. |
-| Conversation context read | N/A | Partially supported | `auracall conversations context get --target gemini <id>` now reads canonical `messages[]`, visible sent `files[]`, and visible generated-image `artifacts[]` from the direct `/app/<id>` page and writes them through the shared cache contract; Gemini `sources[]` and broader non-image artifact parity are still pending. |
+| Conversation context read | N/A | Partially supported | `auracall conversations context get --target gemini <id>` now reads canonical `messages[]`, visible sent `files[]`, visible generated-image `artifacts[]`, visible generated music/video `artifacts[]`, and visible Canvas document `artifacts[]` from the direct `/app/<id>` page and writes them through the shared cache contract; Gemini `sources[]` and broader artifact coverage beyond the proven image/music/video/canvas surfaces are still pending. |
+| Conversation artifact fetch | N/A | Partially supported | `auracall conversations artifacts fetch --target gemini <id>` now materializes proven Gemini conversation artifacts into the local cache for canvas documents (`.txt`) and generated music/video media (`.mp4`); broader artifact fetch coverage beyond the proven image/music/video/canvas surfaces is still pending. |
 | Conversation files list | N/A | Supported | `auracall conversations files list --target gemini <id>` now reads visible sent upload chips from the direct `/app/<id>` page through the shared conversation-context fallback. |
+| Conversation files fetch | N/A | Partially supported | `auracall conversations files fetch --target gemini <id>` now materializes visible chat-uploaded files from the direct `/app/<id>` page, including text-file chips and uploaded-image chips, with browser-native fallback capture for visible uploaded-image previews when signed media URLs are not directly fetchable; broader file-fetch coverage beyond those currently exposed chat surfaces is still pending. |
 | Conversation rename | N/A | Supported | `auracall rename --target gemini <id> <name>` now drives the native Gemini conversation rename dialog from the direct `/app/<id>` page and verifies the renamed row on a fresh root list read. |
 | Conversation delete | N/A | Supported | `auracall delete --target gemini <id>` now drives the native Gemini conversation delete flow from the direct `/app/<id>` page and verifies absence from a refreshed conversation list. |
 | Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
@@ -143,6 +145,10 @@ Notes:
   - `AURACALL_BROWSER_COOKIES_FILE=~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
 - `auracall login --target gemini --export-cookies` now fails fast if the opened Gemini page still shows a visible signed-out `Sign in` state, instead of waiting for cookies indefinitely.
 - On Gemini specifically, Aura-Call will also try one bounded recovery click on a visible `Sign in` CTA before failing, which is enough on some already-authenticated Chrome profiles to complete the Google handoff and export cookies successfully.
+- If Gemini shows `google.com/sorry`, CAPTCHA, reCAPTCHA, or similar
+  human-verification state, stop automated retries on that managed browser
+  profile. Until captcha automation exists, a human must clear that page
+  before Aura-Call should resume Gemini automation on that session.
 - For `--file` inputs in Gemini browser mode, Aura-Call may satisfy the request by pasting file contents inline instead of using the real Gemini attachment transport. Treat inline-bundled file proofs as valid Aura-Call file-input proofs, but not as native Gemini upload proofs.
 - On Gemini specifically, `--browser-attachments always` now routes ordinary
   attachment-backed browser runs through the live Gemini page itself rather
@@ -169,15 +175,57 @@ Notes:
     browser provider path
   - `auracall conversations context get --target gemini <id> --json-only` is
     now live for canonical `messages[]`, visible sent `files[]`, and visible
-    generated-image `artifacts[]` through the direct `/app/<id>` page read path
+    generated `artifacts[]` through the direct `/app/<id>` page read path:
+    - generated images
+    - generated music tracks
+    - generated videos
+    - canvas documents
   - `auracall conversations files list --target gemini <id>` is now also live
     for visible sent uploads on the same direct chat-page surface
+  - `auracall conversations files fetch --target gemini <id>` is now also live
+    for:
+    - visible text-file upload chips
+    - visible uploaded-image chips
+    - multi-upload direct chat proof:
+      - `ab30a4a92e4b65a9` now returns exactly two visible uploads across
+        `context get`, `files list`, and `files fetch`:
+        - `uploaded-image-1`
+        - `AGENTS.md`
+    - current live uploaded-image proof on `default`:
+      - `auracall conversations context get ab30a4a92e4b65a9 --target gemini --profile default --json-only`
+        - returns one visible uploaded-image file in `files[]`
+      - `auracall conversations files list ab30a4a92e4b65a9 --target gemini --profile default`
+        - returns:
+          - `gemini-conversation-file:ab30a4a92e4b65a9:0:uploaded-image-1`
+      - `auracall conversations files fetch ab30a4a92e4b65a9 --target gemini --profile default --verbose`
+        - materializes:
+          - `uploaded-image-1`
+    - implementation note:
+      - Gemini user-turn upload chips should be treated as clickable button
+        hosts under `user-query`, not separate text-file vs image-only selector
+        families
   - `auracall rename --target gemini <id> <name>` is now also live through the
     native `/app/<id>` conversation actions menu and rename dialog
   - Gemini conversation cache identity now falls back to the managed browser
     profile's Google-account state when a live page label is unavailable
   - live cache files now write under:
     - `~/.auracall/cache/providers/gemini/ecochran76@gmail.com/`
+  - current live Canvas proof on `default`:
+    - `auracall conversations context get 59b6f9ac9e510adc --target gemini --profile default --refresh --json-only`
+    - returns:
+      - `kind = "canvas"`
+      - `uri = "gemini://canvas/59b6f9ac9e510adc"`
+      - `metadata.contentText`
+      - `metadata.createdAt`
+      - `metadata.hasShareButton = true`
+      - `metadata.hasPrintButton = true`
+  - Gemini artifact fetch is now also live for the currently proven surfaces:
+    - `auracall conversations artifacts fetch 59b6f9ac9e510adc --target gemini --profile default`
+      - materializes `AuraCall Canvas Route Probe.txt`
+    - `auracall conversations artifacts fetch 8e8e58b57ae544ea --target gemini --profile default`
+      - materializes `before_the_tide_returns.mp4`
+    - `auracall conversations artifacts fetch 23340d1698de29b8 --target gemini --profile default`
+      - materializes `video.mp4`
 - Gemini cache operator entry points now also accept provider `gemini`:
   - `auracall cache --provider gemini`
   - `auracall cache export --provider gemini --scope ...`

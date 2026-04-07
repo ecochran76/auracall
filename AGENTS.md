@@ -54,6 +54,14 @@ Avoid using plain `profile` when the meaning is ambiguous.
 - For browser smokes that look suspicious, rerun with
   `--browser-keep-browser --verbose` and inspect the live DOM with
   `pnpm tsx scripts/browser-tools.ts ...`.
+- Until captcha/human-verification automation exists, treat Gemini
+  `google.com/sorry`, visible CAPTCHA, reCAPTCHA, and similar anti-bot pages
+  as a hard stop:
+  - do not keep retrying automation against the same managed browser profile
+  - require human interaction to clear the page before resuming
+  - after clearance, resume with the lowest-churn path first:
+    - one real AuraCall command
+    - then one bounded `browser-tools` inspection only if still needed
 - Browser/account state lives under `~/.auracall`. Managed browser profiles
   are under `~/.auracall/browser-profiles/<auracallProfile>/<service>`.
 
@@ -65,6 +73,10 @@ Avoid using plain `profile` when the meaning is ambiguous.
   at a time.
 - On WSL, prefer WSL Chrome first. Treat Windows Chrome from WSL as a separate
   browser profile, not a default assumption.
+- On Gemini specifically, serialize live probes and avoid repeated direct
+  `/app/<id>` navigation when debugging. If a `sorry`/captcha page appears,
+  stop and let a human clear it before any more automated steps on that
+  managed browser profile.
 
 ## ChatGPT browser notes
 
@@ -97,4 +109,3 @@ Avoid using plain `profile` when the meaning is ambiguous.
   - `docs/wsl-chatgpt-runbook.md`
 - Windows-specific work:
   - `docs/windows-work.md`
-

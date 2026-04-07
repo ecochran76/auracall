@@ -154,9 +154,7 @@ The next gaps are now narrower and more operational:
    - refreshed readback is currently the authoritative proof
 
 5. Explicit provider gaps still remain and should stay visible.
-   - first-class feature discovery command / snapshot groundwork
-   - richer composer drawer / mode discovery parity
-   - broader conversation artifacts parity
+   - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
    - account-level files parity
    - clone parity
 
@@ -174,6 +172,12 @@ These belong to shared Aura-Call architecture, not Gemini-specific logic:
 - session metadata/provenance
 - config/schema integration
 - login/profile doctor integration
+- anti-bot handling boundary is now explicit:
+  - Gemini provider/service already detects `google.com/sorry` /
+    unusual-traffic blocking states and persists cooldowns
+  - browser-tools / generic doctor still need first-class blocking-surface
+    classification so manual/live probes do not degrade into raw page
+    inspection
 - future service/runtime orchestration
 
 ### Gemini-owned
@@ -415,7 +419,7 @@ Goal:
   clear order
 
 Recommended order:
-1. broader conversation artifacts parity
+1. broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond direct preview/download or text-preview chat surfaces
 2. account-level files parity
 4. clone parity if Gemini exposes a real native surface
 
@@ -446,7 +450,7 @@ Current assessment:
   - shared cache architecture work:
     - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
   - Gemini provider backlog:
-    - broader conversation artifacts parity
+    - broader artifact parity/fetch parity beyond image/music/video/canvas, plus broader conversation-file fetch parity beyond direct preview/download or text-preview chat surfaces
     - account-level files parity
 
 Practical implication:
@@ -707,5 +711,5 @@ Best next implementation after this doc:
     - `features snapshot`
     - `features diff`
   - after that, return to provider backlog:
-    - broader non-image artifact parity
+    - broader artifact parity/fetch parity beyond image/music/video/canvas, plus broader conversation-file fetch parity beyond direct preview/download or text-preview chat surfaces
     - account-level files

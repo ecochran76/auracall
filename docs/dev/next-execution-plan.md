@@ -33,6 +33,12 @@ Deferred browser reliability TODO:
   - detect `google.com/sorry`, reCAPTCHA, Cloudflare, and similar human-check
     surfaces explicitly
   - classify them separately from generic route-settle/DOM drift failures
+  - make browser-service / `browser-tools` report those states first-class
+    instead of relying on provider-only classification or raw page inspection
+  - keep the distinction explicit:
+    - AuraCall Gemini provider/service already classifies `google.com/sorry`
+      and persists anti-bot cooldowns
+    - the remaining gap is browser-tools / doctor / manual-probe visibility
   - optionally allow one bounded real-pointer assist for simple checkbox
     challenges
   - otherwise pause and surface a clear manual-resume operator path
@@ -212,9 +218,9 @@ Immediate Gemini priority order:
    - add focused CLI regression tests for Gemini target acceptance and cache
      operator behavior
 5. Remaining provider-gap backlog
-   - richer Gemini composer drawer / mode discovery parity
-   - broader conversation artifacts parity
-   - account-level files
+  - richer Gemini composer drawer / mode discovery parity
+  - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
+  - account-level files
 
 Current browser-service follow-on for that Gemini discovery line:
 
@@ -241,7 +247,7 @@ Current status update:
   provider backlog:
   - first-class feature discovery / snapshot groundwork
   - richer Gemini composer drawer / mode discovery parity
-  - broader conversation artifacts parity
+  - broader artifact parity/fetch parity beyond the proven image/music/video/canvas surfaces, plus broader conversation-file fetch parity beyond the currently proven direct chat upload-chip surfaces
   - account-level files
 
 Do not treat second-pairing proof churn as the immediate next Gemini slice

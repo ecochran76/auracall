@@ -387,6 +387,12 @@ Problem:
   - visible reCAPTCHA checkbox challenges
 - without first-class handling, those states get misreported as generic
   route-settle or provider DOM failures
+- current nuance to preserve:
+  - AuraCall's Gemini provider/service path already classifies
+    `google.com/sorry` and can persist a Gemini anti-bot cooldown
+  - the unresolved gap is browser-service / `browser-tools` / generic doctor
+    output, which still leaves those states as raw page observations unless a
+    provider-specific guarded path is in play
 
 What should eventually move into browser-service:
 - a generic blocking-surface classifier for:
@@ -411,6 +417,9 @@ Candidate extraction:
 
 Status:
 - recorded as a roadmap TODO only
+- next anti-drift refinement when this resumes:
+  - browser-tools and package doctor should emit an explicit blocking-surface
+    classification for `google.com/sorry` instead of forcing manual inference
 - do not promote this ahead of the active Gemini refactor/delete slice unless
   captcha/anti-bot interstitials become the primary blocker again
   - prompt committed

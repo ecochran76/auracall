@@ -293,9 +293,16 @@ export function explainBrowserToolsPageSelection(
   let selectedReason: BrowserToolsPageSelectionReason | null = null;
 
   if (urlContains) {
-    const matchingIndex = pages.findIndex((candidate) => candidate.url && candidate.url.includes(urlContains));
-    if (matchingIndex >= 0) {
-      selectedIndex = matchingIndex;
+    const matchingIndexes = pages
+      .map((candidate, index) => ({ candidate, index }))
+      .filter(({ candidate }) => candidate.url && candidate.url.includes(urlContains));
+    const visibleMatch = matchingIndexes.find(
+      ({ candidate }) => candidate.visibilityState === 'visible',
+    );
+    const focusedMatch = matchingIndexes.find(({ candidate }) => candidate.focused);
+    const chosenMatch = visibleMatch ?? focusedMatch ?? matchingIndexes[0];
+    if (chosenMatch) {
+      selectedIndex = chosenMatch.index;
       selectedReason = 'url-contains';
     }
   }

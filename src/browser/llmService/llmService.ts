@@ -122,6 +122,29 @@ type ConversationArtifactFetchManifest = {
   entries: ConversationArtifactFetchManifestEntry[];
 };
 
+type ConversationFileFetchStatus = 'materialized' | 'error';
+
+type ConversationFileFetchManifestEntry = {
+  fileId: string;
+  fileName: string;
+  status: ConversationFileFetchStatus;
+  localPath?: string;
+  remoteUrl?: string | null;
+  mimeType?: string;
+  size?: number;
+  error?: string;
+};
+
+type ConversationFileFetchManifest = {
+  provider: ProviderId;
+  conversationId: string;
+  projectId: string | null;
+  generatedAt: string;
+  fileCount: number;
+  materializedCount: number;
+  entries: ConversationFileFetchManifestEntry[];
+};
+
 function stableStringify(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map((entry) => stableStringify(entry)).join(',')}]`;
@@ -154,6 +177,15 @@ function normalizeArtifactFetchError(error: unknown): string {
     return error.message.trim();
   }
   return String(error ?? 'Unknown artifact materialization error');
+}
+
+function sanitizeConversationFileName(value: string, fallback: string = 'conversation-file'): string {
+  const normalized = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\\/:"*?<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return normalized.length > 0 ? normalized.slice(0, 180) : fallback;
 }
 
 export function stripProjectInstructionsPrefixFromConversationContext(
@@ -936,6 +968,110 @@ export abstract class LlmService {
     };
     await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
     return { artifacts, files: materialized, manifestPath };
+  }
+
+  async materializeConversationFiles(
+    conversationId: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean },
+  ): Promise<{ conversationFiles: FileRef[]; files: FileRef[]; manifestPath: string | null }> {
+    if (!this.provider.downloadConversationFile) {
+      throw new Error(`Conversation file fetch is not supported for ${this.providerId}.`);
+    }
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+      options?.projectId,
+    );
+    const conversationFiles = await this.listConversationFiles(conversationId, {
+      projectId: options?.projectId,
+      listOptions,
+    });
+    if (conversationFiles.length === 0) {
+      return { conversationFiles: [], files: [], manifestPath: null };
+    }
+    const cacheContext = await this.resolveCacheContext(listOptions);
+    const { cacheDir } = resolveProviderCachePath(
+      cacheContext,
+      `conversation-attachments/${conversationId}/manifest.json`,
+    );
+    const attachmentsDir = path.join(cacheDir, 'conversation-attachments', conversationId, 'files');
+    const manifestPath = path.join(
+      cacheDir,
+      'conversation-attachments',
+      conversationId,
+      'file-fetch-manifest.json',
+    );
+    await fs.mkdir(attachmentsDir, { recursive: true });
+    const existing = await this.cacheStore.readConversationAttachments(cacheContext, conversationId);
+    const merged = new Map(existing.items.map((item) => [item.id, item]));
+    const materialized: FileRef[] = [];
+    const manifestEntries: ConversationFileFetchManifestEntry[] = [];
+    for (const file of conversationFiles) {
+      const fileDir = path.join(
+        attachmentsDir,
+        sanitizeArtifactPathSegment(file.id || file.name || `file-${materialized.length + 1}`),
+      );
+      await fs.mkdir(fileDir, { recursive: true });
+      const destPath = path.join(
+        fileDir,
+        sanitizeConversationFileName(file.name || file.id || `conversation-file-${materialized.length + 1}`),
+      );
+      try {
+        await this.withRetry(
+          () =>
+            this.provider.downloadConversationFile?.(
+              conversationId,
+              file.id,
+              destPath,
+              listOptions,
+            ) as Promise<void>,
+          { action: 'downloadConversationFile' },
+        );
+        const stat = await fs.stat(destPath);
+        const materializedFile: FileRef = {
+          ...file,
+          size: stat.size,
+          localPath: destPath,
+        };
+        materialized.push(materializedFile);
+        merged.set(materializedFile.id, materializedFile);
+        manifestEntries.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: 'materialized',
+          localPath: destPath,
+          remoteUrl: file.remoteUrl ?? null,
+          mimeType: materializedFile.mimeType,
+          size: stat.size,
+        });
+      } catch (error) {
+        manifestEntries.push({
+          fileId: file.id,
+          fileName: file.name,
+          status: 'error',
+          remoteUrl: file.remoteUrl ?? null,
+          mimeType: file.mimeType,
+          error: normalizeArtifactFetchError(error),
+        });
+      }
+    }
+    if (materialized.length > 0) {
+      await this.cacheStore.writeConversationAttachments(
+        cacheContext,
+        conversationId,
+        Array.from(merged.values()),
+      );
+    }
+    const manifest: ConversationFileFetchManifest = {
+      provider: this.providerId,
+      conversationId,
+      projectId: options?.projectId ?? null,
+      generatedAt: new Date().toISOString(),
+      fileCount: conversationFiles.length,
+      materializedCount: materialized.length,
+      entries: manifestEntries,
+    };
+    await fs.writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
+    return { conversationFiles, files: materialized, manifestPath };
   }
 
   async clickCreateProjectConfirm(

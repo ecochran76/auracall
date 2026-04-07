@@ -57,6 +57,21 @@ auracall --engine browser --model gemini-3-pro --profile gemini-windows-brave --
   - Make sure Brave launches and you are signed in on the profile shown.
   - Try again once after signing in.
 
+## If Gemini shows `google.com/sorry` or a CAPTCHA / human-verification page
+
+- Treat that as a real anti-bot block, not a normal selector or route-settle
+  failure.
+- Until Aura-Call has first-class captcha automation, the page requires human
+  interaction to clear.
+- Do not keep retrying automated commands against that same managed browser
+  profile while the block is active.
+- Clear it manually in the live browser first, then resume with the
+  lowest-churn path:
+  - one real AuraCall command
+  - then one bounded `browser-tools` inspection only if still needed
+- Avoid repeated direct `/app/<id>` route opens while debugging Gemini on the
+  same session; prefer an already-open, hydrated Gemini tab when possible.
+
 ## Fallback: export on Windows, copy into WSL
 If you already exported on Windows:
 
@@ -72,6 +87,8 @@ auracall --engine browser --model gemini-3-pro --profile gemini-windows-brave --
 
 ## Notes
 - Gemini runs use inline cookies first; the fallback to Chrome cookie DB on Windows can fail if Brave is locked. `--export-cookies` is the reliable path.
+- Gemini anti-bot pages (`google.com/sorry`, CAPTCHA, reCAPTCHA, human
+  verification) are currently manual-clear only.
 - To use a Linux browser instead, point the selected browser profile's
   `chromePath` at the Linux Chrome/Brave binary in WSL and sign in there;
   cookies will come from that Linux source browser profile.

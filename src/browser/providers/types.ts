@@ -166,7 +166,12 @@ export interface BrowserProvider {
     conversationId: string,
     options?: BrowserProviderListOptions,
   ) => Promise<unknown>;
-  downloadConversationFile?: (conversationId: string, fileId: string, destPath: string) => Promise<void>;
+  downloadConversationFile?: (
+    conversationId: string,
+    fileId: string,
+    destPath: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<void>;
   materializeConversationArtifact?: (
     conversationId: string,
     artifact: ConversationArtifact,

@@ -64,6 +64,40 @@ describe('selectBrowserToolsPageIndex', () => {
     });
   });
 
+  test('prefers a visible url match over a focused hidden tab', () => {
+    const pages = [
+      {
+        url: 'https://gemini.google.com/app',
+        focused: true,
+        title: 'Google Gemini',
+        visibilityState: 'hidden',
+      },
+      {
+        url: 'https://gemini.google.com/app/ab30a4a92e4b65a9',
+        focused: false,
+        title: 'Google Gemini',
+        visibilityState: 'visible',
+      },
+    ];
+
+    const result = explainBrowserToolsPageSelection(pages, {
+      urlContains: '/app/ab30a4a92e4b65a9',
+    });
+
+    expect(result.selectedIndex).toBe(1);
+    expect(result.selectedReason).toBe('url-contains');
+    expect(result.candidates[0]).toMatchObject({
+      selected: false,
+      focused: true,
+      visibilityState: 'hidden',
+    });
+    expect(result.candidates[1]).toMatchObject({
+      selected: true,
+      matchesUrlContains: true,
+      visibilityState: 'visible',
+    });
+  });
+
   test('explains non-internal fallback when no focused or matched tab exists', () => {
     const pages = [
       { url: 'chrome://newtab', focused: false, title: 'New Tab' },

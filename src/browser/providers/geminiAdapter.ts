@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import * as fs from 'node:fs/promises';
 import path from 'node:path';
 import CDP from 'chrome-remote-interface';
 import type { Page } from 'puppeteer-core';
@@ -24,7 +24,15 @@ import type {
   BrowserProviderPromptResult,
   ProviderUserIdentity,
 } from './types.js';
-import type { Conversation, ConversationContext, FileRef, Project, ProjectMemoryMode } from './domain.js';
+import type {
+  Conversation,
+  ConversationArtifact,
+  ConversationContext,
+  ConversationMessage,
+  FileRef,
+  Project,
+  ProjectMemoryMode,
+} from './domain.js';
 import {
   requireBundledServiceBaseUrl,
   requireBundledServiceCompatibleHosts,
@@ -683,6 +691,21 @@ export function selectPreferredGeminiTarget<T extends { url?: string | null }>(
   return targets.find((target) => geminiUrlMatchesPreference(target.url, preferredUrl));
 }
 
+export function canReuseGeminiResolvedTabTarget(
+  tabUrl: string | null | undefined,
+  preferredUrl: string | null | undefined,
+): boolean {
+  const preferred = String(preferredUrl ?? '').trim();
+  if (!preferred) {
+    return true;
+  }
+  const tab = String(tabUrl ?? '').trim();
+  if (!tab) {
+    return true;
+  }
+  return geminiUrlMatchesPreference(tab, preferred);
+}
+
 function resolveGeminiTargetId(target: { id?: string; targetId?: string } | null | undefined): string | undefined {
   if (!target) return undefined;
   if (typeof target.id === 'string' && target.id.trim()) return target.id;
@@ -703,7 +726,9 @@ async function connectToGeminiTab(
 }> {
   let host = options?.host ?? '127.0.0.1';
   let port = options?.port ?? resolvePortFromEnv();
-  if (options?.tabTargetId && port) {
+  const preferredUrl = urlOverride ?? options?.configuredUrl ?? GEMINI_APP_URL;
+  const allowDirectTabReuse = canReuseGeminiResolvedTabTarget(options?.tabUrl, preferredUrl);
+  if (options?.tabTargetId && port && allowDirectTabReuse) {
     try {
       const client = await connectToChromeTarget({ host, port, target: options.tabTargetId });
       await Promise.all([client.Page.enable(), client.Runtime.enable()]);
@@ -723,7 +748,6 @@ async function connectToGeminiTab(
       })
     | undefined;
 
-  const preferredUrl = urlOverride ?? options?.configuredUrl ?? GEMINI_APP_URL;
   let resolvedTargetIdFromService: string | undefined;
   if (serviceResolver?.resolveServiceTarget) {
     const target = await serviceResolver.resolveServiceTarget({
@@ -755,7 +779,7 @@ async function connectToGeminiTab(
     ? candidates.find((target) => resolveGeminiTargetId(target) === resolvedTargetIdFromService)
     : undefined;
   const preferred = selectPreferredGeminiTarget(candidates, preferredUrl);
-  let targetInfo = preferred ?? serviceResolved;
+  let targetInfo = serviceResolved ?? preferred;
   let shouldClose = false;
   let usedExisting = Boolean(resolveGeminiTargetId(targetInfo));
   if (!targetInfo) {
@@ -802,6 +826,10 @@ type GeminiConversationContextProbe = {
 };
 
 type GeminiDeleteTrace = Array<Record<string, unknown>>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 function summarizeGeminiDeleteTrace(trace: GeminiDeleteTrace, edgeCount: number = 6): string {
   if (trace.length <= edgeCount * 2) {
@@ -1308,6 +1336,31 @@ async function navigateToGeminiConversationSurface(
       `Gemini conversation surface did not become ready: ${settled.reason ?? settled.phase} state=${JSON.stringify(state)}`,
     );
   }
+}
+
+async function isGeminiConversationSurfaceAlreadyReady(
+  client: Pick<ChromeClient, 'Runtime'>,
+  conversationId: string,
+): Promise<boolean> {
+  const route = `/app/${conversationId}`;
+  const ready = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      if (location.pathname !== ${JSON.stringify(route)}) return false;
+      const hasUser = Array.from(document.querySelectorAll(
+        'user-query, user-query-content, button.preview-image-button, img[data-test-id="uploaded-img"], button.new-file-preview-file'
+      )).some((node) => visible(node));
+      const hasAssistant = Array.from(document.querySelectorAll(
+        'structured-content-container.model-response-text, structured-content-container, message-content, .response-content, model-response, model-response video, model-response img.image, model-response img.loaded'
+      )).some((node) => visible(node));
+      const hasCanvas = Array.from(document.querySelectorAll(
+        '[data-test-id="container"], [data-test-id="artifact-text"], immersive-panel, .ProseMirror[aria-label="Canvas editor"]'
+      )).some((node) => visible(node));
+      return hasUser || hasAssistant || hasCanvas;
+    })()`,
+    returnByValue: true,
+  });
+  return ready.result?.value === true;
 }
 
 async function collectGeminiConversationSurfaceState(
@@ -1891,6 +1944,742 @@ export function selectNewestGeminiAssistantText(
   return candidates.length > 0 ? candidates[candidates.length - 1] : null;
 }
 
+function extractGeminiArtifactFileName(uri: string | null | undefined): string | null {
+  if (typeof uri !== 'string' || !uri.trim()) return null;
+  try {
+    const parsed = new URL(uri);
+    const fromQuery = parsed.searchParams.get('filename');
+    if (typeof fromQuery === 'string' && fromQuery.trim()) {
+      return fromQuery.trim();
+    }
+    const pathname = parsed.pathname || '';
+    const lastSegment = pathname.split('/').filter(Boolean).pop();
+    return typeof lastSegment === 'string' && lastSegment.trim() ? decodeURIComponent(lastSegment.trim()) : null;
+  } catch {
+    return null;
+  }
+}
+
+function prettifyGeminiArtifactBaseName(fileName: string): string {
+  const trimmed = fileName.trim();
+  if (!trimmed) return '';
+  const withoutExtension = trimmed.replace(/\.[a-z0-9]{1,8}$/i, '').trim();
+  const humanized = withoutExtension.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+  if (!humanized || /^(video|track|audio|music)$/i.test(humanized)) return '';
+  return humanized.replace(/\b\p{L}/gu, (match) => match.toUpperCase());
+}
+
+export function inferGeminiGeneratedArtifactMediaType(
+  artifact: Pick<ConversationArtifact, 'kind' | 'uri' | 'metadata'>,
+): 'music' | 'video' | null {
+  if (artifact.kind !== 'generated') return null;
+  const metadata = artifact.metadata ?? {};
+  const directType = typeof metadata.mediaType === 'string' ? metadata.mediaType.trim().toLowerCase() : '';
+  if (directType === 'music' || directType === 'video') return directType;
+  const labelCandidates = [
+    typeof metadata.shareLabel === 'string' ? metadata.shareLabel : '',
+    typeof metadata.downloadLabel === 'string' ? metadata.downloadLabel : '',
+    typeof metadata.playLabel === 'string' ? metadata.playLabel : '',
+    typeof metadata.muteLabel === 'string' ? metadata.muteLabel : '',
+  ]
+    .join(' ')
+    .toLowerCase();
+  if (/\b(track|music|song|remix)\b/.test(labelCandidates)) return 'music';
+  if (/\b(video|movie)\b/.test(labelCandidates)) return 'video';
+  const fileName = extractGeminiArtifactFileName(artifact.uri);
+  if (typeof fileName === 'string' && /\b(track|music|song|remix)\b/i.test(fileName)) return 'music';
+  return null;
+}
+
+export function normalizeGeminiConversationArtifacts(
+  artifacts: ReadonlyArray<ConversationArtifact> | null | undefined,
+): ConversationArtifact[] {
+  if (!Array.isArray(artifacts) || artifacts.length === 0) return [];
+  return artifacts.map((artifact, index) => {
+    const mediaType = inferGeminiGeneratedArtifactMediaType(artifact);
+    if (!mediaType) return artifact;
+    const fileName =
+      (typeof artifact.metadata?.fileName === 'string' && artifact.metadata.fileName.trim()) ||
+      extractGeminiArtifactFileName(artifact.uri);
+    const titleFromFile = typeof fileName === 'string' ? prettifyGeminiArtifactBaseName(fileName) : '';
+    const fallbackTitle = mediaType === 'music' ? `Generated track ${index + 1}` : `Generated video ${index + 1}`;
+    const currentTitle = typeof artifact.title === 'string' ? artifact.title.trim() : '';
+    const normalizedTitle =
+      titleFromFile ||
+      (!currentTitle || /^generated media\b/i.test(currentTitle) ? fallbackTitle : currentTitle);
+    return {
+      ...artifact,
+      title: normalizedTitle,
+      metadata: {
+        ...(artifact.metadata ?? {}),
+        mediaType,
+        ...(fileName ? { fileName } : {}),
+      },
+    };
+  });
+}
+
+export function normalizeGeminiConversationFiles(
+  files: ReadonlyArray<FileRef> | null | undefined,
+): FileRef[] {
+  if (!Array.isArray(files) || files.length === 0) return [];
+  const normalized: FileRef[] = [];
+  const seen = new Set<string>();
+  for (const file of files) {
+    const remoteUrl = normalizeWhitespace(file.remoteUrl ?? '');
+    const kind = normalizeWhitespace(
+      file.metadata && typeof file.metadata === 'object' && typeof file.metadata.kind === 'string'
+        ? file.metadata.kind
+        : '',
+    ).toLowerCase();
+    const messageIndex =
+      file.metadata && typeof file.metadata === 'object' && typeof file.metadata.messageIndex === 'number'
+        ? String(file.metadata.messageIndex)
+        : '';
+    const key = remoteUrl || [
+      normalizeWhitespace(file.name).toLowerCase(),
+      kind,
+      messageIndex,
+      normalizeWhitespace(file.mimeType ?? '').toLowerCase(),
+      normalizeWhitespace(file.source ?? '').toLowerCase(),
+    ].join('::');
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(file);
+  }
+  return normalized;
+}
+
+function sanitizeGeminiArtifactFileName(value: string | null | undefined): string {
+  const normalized = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/[\\/:"*?<>|]+/g, '-')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return normalized.length > 0 ? normalized.slice(0, 160) : 'artifact';
+}
+
+function ensureGeminiArtifactExtension(name: string, fallbackExt: string): string {
+  const trimmed = sanitizeGeminiArtifactFileName(name);
+  if (/\.[a-z0-9]{1,8}$/i.test(trimmed)) {
+    return trimmed;
+  }
+  return `${trimmed}${fallbackExt}`;
+}
+
+function geminiContentTypeToExtension(contentType: string | null | undefined): string {
+  const normalized = String(contentType ?? '').trim().toLowerCase();
+  if (normalized.includes('image/png')) return '.png';
+  if (normalized.includes('image/jpeg')) return '.jpg';
+  if (normalized.includes('image/webp')) return '.webp';
+  if (normalized.includes('image/gif')) return '.gif';
+  if (normalized.includes('video/mp4')) return '.mp4';
+  if (normalized.includes('audio/mpeg')) return '.mp3';
+  if (normalized.includes('audio/mp4')) return '.m4a';
+  if (normalized.includes('text/plain')) return '.txt';
+  return '';
+}
+
+function extractFilenameFromContentDisposition(value: string | null | undefined): string | null {
+  const normalized = String(value ?? '').trim();
+  if (!normalized) return null;
+  const utfMatch = normalized.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utfMatch?.[1]) {
+    try {
+      return decodeURIComponent(utfMatch[1]);
+    } catch {
+      return utfMatch[1];
+    }
+  }
+  const quotedMatch = normalized.match(/filename="([^"]+)"/i);
+  if (quotedMatch?.[1]) return quotedMatch[1];
+  const plainMatch = normalized.match(/filename=([^;]+)/i);
+  return plainMatch?.[1]?.trim() ?? null;
+}
+
+function inferGeminiArtifactMimeType(name: string | null | undefined): string | undefined {
+  const lower = String(name || '').toLowerCase();
+  if (lower.endsWith('.png')) return 'image/png';
+  if (lower.endsWith('.jpg') || lower.endsWith('.jpeg')) return 'image/jpeg';
+  if (lower.endsWith('.gif')) return 'image/gif';
+  if (lower.endsWith('.webp')) return 'image/webp';
+  if (lower.endsWith('.mp4')) return 'video/mp4';
+  if (lower.endsWith('.mp3')) return 'audio/mpeg';
+  if (lower.endsWith('.m4a')) return 'audio/mp4';
+  if (lower.endsWith('.txt')) return 'text/plain';
+  return undefined;
+}
+
+async function fetchGeminiBinaryWithClient(
+  client: ChromeClient,
+  url: string,
+): Promise<{ buffer: Buffer; contentType: string | null; contentDisposition: string | null }> {
+  const expression = `(async () => {
+    const response = await fetch(${JSON.stringify(url)}, { credentials: 'include' });
+    if (!response.ok) {
+      return { ok: false, status: response.status };
+    }
+    const contentType = response.headers.get('content-type');
+    const contentDisposition = response.headers.get('content-disposition');
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    let binary = '';
+    const chunkSize = 0x8000;
+    for (let index = 0; index < bytes.length; index += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+    }
+    return {
+      ok: true,
+      contentType,
+      contentDisposition,
+      base64: btoa(binary),
+    };
+  })()`;
+  const result = await client.Runtime.evaluate({
+    expression,
+    awaitPromise: true,
+    returnByValue: true,
+  });
+  const value = isRecord(result.result?.value) ? result.result.value : null;
+  if (!value || value.ok !== true || typeof value.base64 !== 'string') {
+    const status = typeof value?.status === 'number' ? ` (status ${value.status})` : '';
+    throw new Error(`Gemini artifact binary fetch failed${status}`);
+  }
+  return {
+    buffer: Buffer.from(value.base64, 'base64'),
+    contentType: typeof value.contentType === 'string' ? value.contentType : null,
+    contentDisposition: typeof value.contentDisposition === 'string' ? value.contentDisposition : null,
+  };
+}
+
+function isGeminiTextLikeFileName(fileName: string): boolean {
+  const extension = path.extname(String(fileName ?? '')).trim().toLowerCase();
+  return new Set([
+    '.txt',
+    '.md',
+    '.markdown',
+    '.json',
+    '.jsonl',
+    '.csv',
+    '.tsv',
+    '.js',
+    '.mjs',
+    '.cjs',
+    '.ts',
+    '.tsx',
+    '.jsx',
+    '.py',
+    '.rb',
+    '.go',
+    '.rs',
+    '.java',
+    '.kt',
+    '.swift',
+    '.html',
+    '.htm',
+    '.css',
+    '.scss',
+    '.less',
+    '.xml',
+    '.yml',
+    '.yaml',
+    '.toml',
+    '.ini',
+    '.cfg',
+    '.conf',
+    '.log',
+    '.sql',
+    '.sh',
+    '.bash',
+    '.zsh',
+    '.ps1',
+  ]).has(extension);
+}
+
+async function pressEscape(client: ChromeClient): Promise<void> {
+  await client.Input.dispatchKeyEvent({ type: 'keyDown', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+  await client.Input.dispatchKeyEvent({ type: 'keyUp', key: 'Escape', code: 'Escape', windowsVirtualKeyCode: 27 });
+}
+
+async function clickGeminiConversationFileChip(
+  client: ChromeClient,
+  fileName: string,
+  targetOrdinal?: number,
+): Promise<boolean> {
+  const normalizedName = normalizeWhitespace(fileName).toLowerCase();
+  const located = await client.Runtime.evaluate({
+    expression: `(() => {
+      const targetName = ${JSON.stringify(normalizedName)};
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const chips = Array.from(document.querySelectorAll(
+        '[data-test-id="uploaded-file"], [data-test-id="file-preview"], button.new-file-preview-file, button.preview-image-button, uploader-file-preview, uploader-file-preview-container'
+      )).filter((node) => node instanceof HTMLElement && visible(node));
+      let ordinal = 0;
+      for (const chip of chips) {
+        if (!(chip instanceof HTMLElement)) continue;
+        const directPreviewButton =
+          chip.matches('button.new-file-preview-file, button.preview-image-button')
+            ? chip
+            : chip.querySelector('button.new-file-preview-file, button.preview-image-button');
+        const removeButton = chip.querySelector('button[aria-label^="Remove file "]');
+        const labeledButton = chip.querySelector('button[aria-label]') || chip.querySelector('[aria-label]');
+        const imagePreview = chip.matches('img[data-test-id="image-preview"], img[data-test-id="uploaded-img"]')
+          ? chip
+          : chip.querySelector('img[data-test-id="image-preview"], img[data-test-id="uploaded-img"]');
+        const currentOrdinal = ordinal;
+        ordinal += 1;
+        const explicitName = labeledButton instanceof HTMLElement
+          ? normalize(labeledButton.getAttribute('aria-label') || labeledButton.getAttribute('title') || '')
+          : '';
+        const directButtonName = directPreviewButton instanceof HTMLElement
+          ? normalize(directPreviewButton.getAttribute('aria-label') || directPreviewButton.getAttribute('title') || '')
+          : '';
+        const removeName = removeButton instanceof HTMLElement
+          ? normalize((removeButton.getAttribute('aria-label') || '').replace(/^Remove file\\s+/i, ''))
+          : '';
+        const visibleName = normalize(
+          chip.querySelector('.new-file-name, [data-test-id="file-name"]')?.textContent || ''
+        );
+        const visibleType = normalize(
+          chip.querySelector('.new-file-type, .file-type')?.textContent || ''
+        );
+        let name = directButtonName || explicitName || removeName || visibleName;
+        if (name && visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[a-z0-9]{1,8}$/i.test(visibleType)) {
+          name = name + '.' + visibleType.toLowerCase();
+        }
+        if (!name && imagePreview instanceof HTMLImageElement) {
+          name = normalize(imagePreview.getAttribute('aria-label') || imagePreview.getAttribute('alt') || '');
+        }
+        if (name !== targetName && (typeof targetOrdinal !== 'number' || currentOrdinal !== targetOrdinal)) continue;
+        const clickable =
+          (directPreviewButton instanceof HTMLElement ? directPreviewButton : null) ||
+          chip.querySelector('button.image-preview, button.clickable, .file-preview.clickable, .image-preview.clickable') ||
+          chip;
+        if (!(clickable instanceof HTMLElement)) continue;
+        clickable.scrollIntoView({ block: 'center', inline: 'center' });
+        const rect = clickable.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) continue;
+        return {
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        };
+      }
+      return null;
+    })()`,
+    returnByValue: true,
+  });
+  const point = located.result?.value as { x?: number; y?: number } | undefined;
+  if (typeof point?.x !== 'number' || typeof point?.y !== 'number') {
+    return false;
+  }
+  await client.Input.dispatchMouseEvent({ type: 'mouseMoved', x: point.x, y: point.y, button: 'none' });
+  await client.Input.dispatchMouseEvent({ type: 'mousePressed', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  await client.Input.dispatchMouseEvent({ type: 'mouseReleased', x: point.x, y: point.y, button: 'left', clickCount: 1 });
+  return true;
+}
+
+async function readGeminiConversationFilePreviewState(
+  Runtime: ChromeClient['Runtime'],
+): Promise<{
+  directUrl: string | null;
+  imageUrl: string | null;
+  textContent: string | null;
+} | null> {
+  const result = await Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const roots = Array.from(document.querySelectorAll(
+        '[role="dialog"], .cdk-overlay-pane, mat-dialog-container, .mat-mdc-dialog-container, .docs-preview, .preview-container'
+      ))
+        .filter((node) => node instanceof HTMLElement && visible(node))
+        .sort((left, right) => {
+          const leftRect = left.getBoundingClientRect();
+          const rightRect = right.getBoundingClientRect();
+          return rightRect.width * rightRect.height - leftRect.width * leftRect.height;
+        });
+      const root = roots[0] instanceof HTMLElement ? roots[0] : document.body;
+      const directAnchor = root.querySelector('a[href][download], a[href*="usercontent"], a[href*="googleusercontent"], a[href*="download"]');
+      const image = root.querySelector('img[src]');
+      const textCandidates = Array.from(root.querySelectorAll('pre, code, textarea, .cm-content, [role="textbox"], article, [role="document"]'))
+        .filter((node) => node instanceof HTMLElement && visible(node))
+        .map((node) => String(node.textContent || '').trim())
+        .filter((value) => value.length > 0)
+        .sort((left, right) => right.length - left.length);
+      return {
+        directUrl: directAnchor instanceof HTMLAnchorElement ? (directAnchor.getAttribute('href') || directAnchor.href || null) : null,
+        imageUrl: image instanceof HTMLImageElement ? (image.currentSrc || image.src || image.getAttribute('src') || null) : null,
+        textContent: textCandidates[0] || null,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = isRecord(result.result?.value) ? result.result.value : null;
+  if (!value) return null;
+  return {
+    directUrl: typeof value.directUrl === 'string' && value.directUrl.trim() ? value.directUrl.trim() : null,
+    imageUrl: typeof value.imageUrl === 'string' && value.imageUrl.trim() ? value.imageUrl.trim() : null,
+    textContent: typeof value.textContent === 'string' && value.textContent.trim() ? value.textContent : null,
+  };
+}
+
+async function captureGeminiVisibleImageToFile(
+  client: Pick<ChromeClient, 'Runtime' | 'Page'>,
+  destPath: string,
+): Promise<boolean> {
+  const geometry = await client.Runtime.evaluate({
+    expression: `(() => {
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const images = Array.from(document.querySelectorAll(
+        '[role="dialog"] img[src], .cdk-overlay-pane img[src], mat-dialog-container img[src], .mat-mdc-dialog-container img[src], img[data-test-id="uploaded-img"], button.preview-image-button img[src]'
+      ))
+        .filter((entry) => entry instanceof HTMLImageElement && visible(entry))
+        .sort((left, right) => {
+          const leftRect = left.getBoundingClientRect();
+          const rightRect = right.getBoundingClientRect();
+          return rightRect.width * rightRect.height - leftRect.width * leftRect.height;
+        });
+      const image = images[0];
+      if (!(image instanceof HTMLImageElement)) return null;
+      const rect = image.getBoundingClientRect();
+      return {
+        x: rect.left,
+        y: rect.top,
+        width: rect.width,
+        height: rect.height,
+      };
+    })()`,
+    returnByValue: true,
+  });
+  const value = isRecord(geometry.result?.value) ? geometry.result.value : null;
+  const x = typeof value?.x === 'number' ? value.x : NaN;
+  const y = typeof value?.y === 'number' ? value.y : NaN;
+  const width = typeof value?.width === 'number' ? value.width : NaN;
+  const height = typeof value?.height === 'number' ? value.height : NaN;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(width) || !Number.isFinite(height)) {
+    return false;
+  }
+  if (width < 2 || height < 2) {
+    return false;
+  }
+  const screenshot = await client.Page.captureScreenshot({
+    format: 'png',
+    clip: {
+      x,
+      y,
+      width,
+      height,
+      scale: 1,
+    },
+  });
+  if (typeof screenshot.data !== 'string' || !screenshot.data) {
+    return false;
+  }
+  await fs.writeFile(destPath, Buffer.from(screenshot.data, 'base64'));
+  return true;
+}
+
+async function readGeminiVisibleConversationUploadFiles(
+  Runtime: ChromeClient['Runtime'],
+  conversationId: string,
+  messages: ConversationMessage[],
+): Promise<FileRef[]> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const buttonHosts = Array.from(document.querySelectorAll(
+        'user-query button.new-file-preview-file, user-query button.preview-image-button, user-query [data-test-id="uploaded-file"], user-query [data-test-id="file-preview"]'
+      )).filter((entry) => entry instanceof HTMLElement && visible(entry));
+      const fallbackImageNodes = Array.from(document.querySelectorAll('user-query img[data-test-id="uploaded-img"]'))
+        .filter((entry) => entry instanceof HTMLElement && visible(entry));
+      const chips = [];
+      const seenChips = new Set();
+      for (const entry of [...buttonHosts, ...fallbackImageNodes]) {
+        const chip =
+          entry.closest('button.new-file-preview-file, button.preview-image-button, [data-test-id="uploaded-file"], [data-test-id="file-preview"]')
+          || entry;
+        if (!(chip instanceof Element) || seenChips.has(chip)) continue;
+        seenChips.add(chip);
+        chips.push(chip);
+      }
+      const seenKeys = new Set();
+      let ordinal = 0;
+      return chips.map((entry) => {
+        const chip = entry;
+        const button =
+          chip instanceof Element && chip.matches('button.new-file-preview-file, button.preview-image-button')
+            ? chip
+            : chip instanceof Element
+              ? chip.querySelector('button.new-file-preview-file, button.preview-image-button')
+              : null;
+        const image =
+          chip instanceof Element && chip.matches('img[data-test-id="uploaded-img"]')
+            ? chip
+            : chip instanceof Element
+              ? chip.querySelector('img[data-test-id="uploaded-img"]')
+              : null;
+        const visibleName = normalize(
+          chip instanceof Element
+            ? (chip.querySelector('.new-file-name, [data-test-id="file-name"]')?.textContent || '')
+            : '',
+        );
+        const visibleType = normalize(
+          chip instanceof Element
+            ? (chip.querySelector('.new-file-type, .file-type')?.textContent || '')
+            : '',
+        );
+        const remoteUrl = image instanceof HTMLImageElement
+          ? normalize(image.currentSrc || image.src || image.getAttribute('src') || '')
+          : '';
+        let name = normalize(
+          button instanceof HTMLElement
+            ? (button.getAttribute('aria-label') || button.getAttribute('title') || '')
+            : '',
+        );
+        if (visibleName) {
+          name = visibleName;
+          if (visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[a-z0-9]{1,8}$/i.test(visibleType)) {
+            name = name + '.' + visibleType.toLowerCase();
+          }
+        }
+        if ((!name || /show the uploaded image in a lightbox/i.test(name)) && remoteUrl) {
+          name = 'uploaded-image-' + (ordinal + 1);
+        }
+        if (!name) return null;
+        const dedupeKey = remoteUrl ? normalize(remoteUrl) : normalize(name);
+        if (seenKeys.has(dedupeKey)) return null;
+        seenKeys.add(dedupeKey);
+        const file = {
+          id: ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + ordinal + ':' + name,
+          name,
+          remoteUrl: remoteUrl || null,
+          mimeType: remoteUrl ? 'image/*' : null,
+          kind: remoteUrl ? 'uploaded-image' : 'uploaded-file',
+        };
+        ordinal += 1;
+        return file;
+      }).filter(Boolean);
+    })()`,
+    returnByValue: true,
+  });
+  const rows = Array.isArray(result?.value) ? result.value : [];
+  let messageIndex: number | undefined;
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    if (messages[index]?.role === 'user') {
+      messageIndex = index;
+      break;
+    }
+  }
+  return rows
+    .filter((entry): entry is { id: string; name: string; remoteUrl: string | null; mimeType: string | null; kind: string | null } => isRecord(entry))
+    .map((entry) => ({
+      id: typeof entry.id === 'string' ? entry.id : '',
+      name: typeof entry.name === 'string' ? entry.name : '',
+      provider: 'gemini' as const,
+      source: 'conversation' as const,
+      mimeType: typeof entry.mimeType === 'string' ? entry.mimeType : undefined,
+      remoteUrl: typeof entry.remoteUrl === 'string' ? entry.remoteUrl : undefined,
+      metadata: {
+        messageIndex,
+        kind: typeof entry.kind === 'string' ? entry.kind : 'uploaded-file',
+        hasDirectUrl: typeof entry.remoteUrl === 'string' && entry.remoteUrl.length > 0,
+      },
+    }))
+    .filter((entry) => entry.id && entry.name);
+}
+
+async function downloadGeminiConversationFileWithClient(
+  client: ChromeClient,
+  conversationId: string,
+  fileId: string,
+  destPath: string,
+): Promise<void> {
+  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
+    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  }
+  const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
+  const file = (Array.isArray(refreshed.files) ? refreshed.files : []).find((candidate) => candidate.id === fileId);
+  if (!file) {
+    throw new Error(`Gemini conversation file ${fileId} was not found on ${conversationId}.`);
+  }
+  const directUrl = normalizeWhitespace(file.remoteUrl ?? '');
+  if (directUrl) {
+    try {
+      const { buffer } = await fetchGeminiBinaryWithClient(client, directUrl);
+      await fs.writeFile(destPath, buffer);
+      return;
+    } catch (error) {
+      const isUploadedImage = file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image';
+      if (!isUploadedImage) {
+        throw error;
+      }
+    }
+  }
+  let targetOrdinal: number | undefined;
+  const ordinalMatch = file.id.match(new RegExp(`^gemini-conversation-file:${conversationId}:(\\d+):`));
+  if (ordinalMatch) {
+    const parsed = Number.parseInt(ordinalMatch[1] ?? '', 10);
+    if (Number.isFinite(parsed)) {
+      targetOrdinal = parsed;
+    }
+  }
+  const clicked = await clickGeminiConversationFileChip(client, file.name, targetOrdinal);
+  if (!clicked) {
+    if (file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image') {
+      const captured = await captureGeminiVisibleImageToFile(client, destPath);
+      if (captured) {
+        return;
+      }
+    }
+    throw new Error(`Gemini conversation file preview did not open for ${file.name}.`);
+  }
+  try {
+    const preview = await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const visible = (node) => {
+          if (!(node instanceof Element)) return false;
+          const rect = node.getBoundingClientRect();
+          return rect.width > 0 && rect.height > 0;
+        };
+        const root = Array.from(document.querySelectorAll('[role="dialog"], .cdk-overlay-pane, mat-dialog-container, .mat-mdc-dialog-container'))
+          .find((node) => node instanceof HTMLElement && visible(node));
+        if (!root && !Array.from(document.querySelectorAll('img[src], pre, code, textarea')).some((node) => visible(node))) {
+          return null;
+        }
+        return { ready: true };
+      })()`,
+      { timeoutMs: 5_000 },
+    );
+    if (!preview) {
+      throw new Error(`Gemini conversation file preview did not hydrate for ${file.name}.`);
+    }
+    const previewState = await readGeminiConversationFilePreviewState(client.Runtime);
+    if (previewState?.directUrl) {
+      const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.directUrl);
+      await fs.writeFile(destPath, buffer);
+      return;
+    }
+    if (previewState?.imageUrl) {
+      try {
+        const { buffer } = await fetchGeminiBinaryWithClient(client, previewState.imageUrl);
+        await fs.writeFile(destPath, buffer);
+        return;
+      } catch {
+        const captured = await captureGeminiVisibleImageToFile(client, destPath);
+        if (captured) {
+          return;
+        }
+      }
+    }
+    if (file.metadata && typeof file.metadata === 'object' && file.metadata.kind === 'uploaded-image') {
+      const captured = await captureGeminiVisibleImageToFile(client, destPath);
+      if (captured) {
+        return;
+      }
+    }
+    if (previewState?.textContent && isGeminiTextLikeFileName(file.name)) {
+      const text = previewState.textContent.endsWith('\n') ? previewState.textContent : `${previewState.textContent}\n`;
+      await fs.writeFile(destPath, text, 'utf8');
+      return;
+    }
+    throw new Error(`Gemini conversation file ${file.name} did not expose a downloadable or text-preview surface.`);
+  } finally {
+    await pressEscape(client).catch(() => undefined);
+  }
+}
+
+async function materializeGeminiConversationArtifactWithClient(
+  client: ChromeClient,
+  conversationId: string,
+  artifact: ConversationArtifact,
+  destDir: string,
+): Promise<FileRef | null> {
+  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
+    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  }
+  const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
+  const resolvedArtifact = normalizeGeminiConversationArtifacts(refreshed.artifacts).find((candidate) => candidate.id === artifact.id) ?? artifact;
+
+  if (resolvedArtifact.kind === 'canvas') {
+    const contentText =
+      resolvedArtifact.metadata && typeof resolvedArtifact.metadata.contentText === 'string'
+        ? resolvedArtifact.metadata.contentText.trim()
+        : '';
+    if (!contentText) return null;
+    const fileName = ensureGeminiArtifactExtension(resolvedArtifact.title, '.txt');
+    const destPath = path.join(destDir, fileName);
+    await fs.writeFile(destPath, contentText.endsWith('\n') ? contentText : `${contentText}\n`, 'utf8');
+    const stat = await fs.stat(destPath);
+    return {
+      id: resolvedArtifact.id,
+      name: fileName,
+      provider: 'gemini',
+      source: 'conversation',
+      size: stat.size,
+      mimeType: 'text/plain',
+      remoteUrl: resolvedArtifact.uri,
+      localPath: destPath,
+      metadata: {
+        artifactKind: resolvedArtifact.kind,
+        artifactTitle: resolvedArtifact.title,
+        materialization: 'canvas-content-text',
+        ...(resolvedArtifact.metadata ?? {}),
+      },
+    };
+  }
+
+  if (resolvedArtifact.kind === 'generated' || resolvedArtifact.kind === 'image') {
+    const remoteUrl = typeof resolvedArtifact.uri === 'string' ? resolvedArtifact.uri.trim() : '';
+    if (!remoteUrl) return null;
+    const { buffer, contentType, contentDisposition } = await fetchGeminiBinaryWithClient(client, remoteUrl);
+    const fallbackBaseName =
+      extractFilenameFromContentDisposition(contentDisposition) ||
+      extractGeminiArtifactFileName(remoteUrl) ||
+      resolvedArtifact.title;
+    const fileName = ensureGeminiArtifactExtension(
+      fallbackBaseName,
+      geminiContentTypeToExtension(contentType) || (resolvedArtifact.kind === 'image' ? '.png' : '.mp4'),
+    );
+    const destPath = path.join(destDir, fileName);
+    await fs.writeFile(destPath, buffer);
+    return {
+      id: resolvedArtifact.id,
+      name: fileName,
+      provider: 'gemini',
+      source: 'conversation',
+      size: buffer.byteLength,
+      mimeType: contentType ?? inferGeminiArtifactMimeType(fileName),
+      remoteUrl,
+      localPath: destPath,
+      metadata: {
+        artifactKind: resolvedArtifact.kind,
+        artifactTitle: resolvedArtifact.title,
+        materialization: resolvedArtifact.kind === 'image' ? 'blob-image-fetch' : 'generated-media-fetch',
+        ...(resolvedArtifact.metadata ?? {}),
+      },
+    };
+  }
+
+  return null;
+}
+
 async function waitForGeminiPromptResponse(
   Runtime: ChromeClient['Runtime'],
   baseline: { href: string; conversationId: string | null; assistantTexts: string[] },
@@ -1927,7 +2716,9 @@ async function readGeminiConversationContextWithClient(
   client: Pick<ChromeClient, 'Runtime' | 'Page'>,
   conversationId: string,
 ): Promise<GeminiConversationContextProbe> {
-  await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
+    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+  }
   const ready = await waitForPredicate(
     client.Runtime,
     `(() => {
@@ -1938,9 +2729,12 @@ async function readGeminiConversationContextWithClient(
         'structured-content-container.model-response-text, structured-content-container, message-content, .response-content .markdown, .response-content, model-response'
       )).some((node) => visible(node));
       const hasAssistantMedia = Array.from(document.querySelectorAll(
-        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"]'
+        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"], model-response video'
       )).some((node) => visible(node));
-      return hasUser || hasAssistantText || hasAssistantMedia ? { ready: true } : null;
+      const hasCanvasSignals = Array.from(document.querySelectorAll(
+        '[data-test-id="container"], [data-test-id="artifact-text"], immersive-panel, .ProseMirror[aria-label="Canvas editor"], button[aria-label="Share and export canvas"]'
+      )).some((node) => visible(node));
+      return hasUser || hasAssistantText || hasAssistantMedia || hasCanvasSignals ? { ready: true } : null;
     })()`,
     {
       timeoutMs: 10_000,
@@ -1958,13 +2752,33 @@ async function readGeminiConversationContextWithClient(
         'structured-content-container.model-response-text message-content, structured-content-container.model-response-text .markdown, message-content'
       )).some((node) => visible(node) && String(node.textContent || '').trim().length > 0);
       const hasAssistantMedia = Array.from(document.querySelectorAll(
-        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"]'
+        'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"], model-response video'
       )).some((node) => visible(node));
-      return hasAssistantText || hasAssistantMedia ? { settled: true } : null;
+      const hasCanvasEditor = Array.from(document.querySelectorAll(
+        'immersive-panel, .ProseMirror[aria-label="Canvas editor"], [data-test-id="artifact-text"], button[aria-label="Share and export canvas"]'
+      )).some((node) => visible(node));
+      return hasAssistantText || hasAssistantMedia || hasCanvasEditor ? { settled: true } : null;
     })()`,
     {
       timeoutMs: 5_000,
       description: `Gemini conversation response settled for ${conversationId}`,
+    },
+  ).catch(() => undefined);
+  await waitForPredicate(
+    client.Runtime,
+    `(() => {
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      const hasCanvasChip = Array.from(document.querySelectorAll('[data-test-id="container"], [data-test-id="artifact-text"]'))
+        .some((node) => visible(node));
+      if (!hasCanvasChip) return { settled: true };
+      const hasCanvasPanel = Array.from(document.querySelectorAll(
+        'immersive-panel, .ProseMirror[aria-label="Canvas editor"], button[aria-label="Share and export canvas"]'
+      )).some((node) => visible(node));
+      return hasCanvasPanel ? { settled: true } : null;
+    })()`,
+    {
+      timeoutMs: 8_000,
+      description: `Gemini canvas surface settled for ${conversationId}`,
     },
   ).catch(() => undefined);
   const { result } = await client.Runtime.evaluate({
@@ -1998,6 +2812,74 @@ async function readGeminiConversationContextWithClient(
         if (lower.endsWith('.txt')) return 'text/plain';
         return undefined;
       };
+      const extractFileNameFromUri = (uri) => {
+        const value = normalize(uri || '');
+        if (!value) return '';
+        try {
+          const parsed = new URL(value, location.href);
+          const fromQuery = normalize(parsed.searchParams.get('filename') || '');
+          if (fromQuery) return fromQuery;
+          const pathname = parsed.pathname || '';
+          const lastSegment = pathname.split('/').filter(Boolean).pop();
+          return normalize(lastSegment || '');
+        } catch {
+          return '';
+        }
+      };
+      const collectMediaControls = (container, fallbackRoot) => {
+        const scope = container instanceof Element ? container : fallbackRoot;
+        const controls = Array.from(scope.querySelectorAll('button[aria-label]'))
+          .filter((entry) => entry instanceof HTMLElement && visible(entry))
+          .map((entry) => normalize(entry.getAttribute('aria-label') || ''))
+          .filter(Boolean);
+        const findLabel = (needle) => controls.find((label) => label.toLowerCase().includes(needle)) || '';
+        const shareLabel = findLabel('share');
+        const downloadLabel = findLabel('download');
+        const playLabel = findLabel('play');
+        const muteLabel = findLabel('mute');
+        const combined = [shareLabel, downloadLabel, playLabel, muteLabel].join(' ').toLowerCase();
+        const mediaType =
+          /\b(track|music|song|remix)\b/.test(combined)
+            ? 'music'
+            : /\b(video|movie)\b/.test(combined)
+              ? 'video'
+              : '';
+        return {
+          mediaType,
+          shareLabel,
+          downloadLabel,
+          playLabel,
+          muteLabel,
+        };
+      };
+      const readVisibleCanvasSurface = () => {
+        const panel = document.querySelector('immersive-panel');
+        if (!(panel instanceof HTMLElement) || !visible(panel)) return null;
+        const editor =
+          panel.querySelector('.ProseMirror[aria-label="Canvas editor"]') ||
+          panel.querySelector('.ProseMirror') ||
+          document.querySelector('.ProseMirror[aria-label="Canvas editor"]') ||
+          document.querySelector('.ProseMirror');
+        if (!(editor instanceof HTMLElement) || !visible(editor)) return null;
+        const title = normalize(
+          document.querySelector('[data-test-id="artifact-text"]')?.textContent || '',
+        );
+        const createdAt = normalize(
+          document.querySelector('[data-test-id="creation-timestamp"]')?.textContent || '',
+        );
+        const contentText = normalize(editor.innerText || editor.textContent || '');
+        const hasShareButton = Boolean(document.querySelector('button[aria-label="Share and export canvas"]'));
+        const hasPrintButton = Boolean(document.querySelector('button[aria-label="Print"], [data-test-id="print-button"]'));
+        const hasCreateButton = Boolean(document.querySelector('[data-test-id="canvas-create-task-menu"]'));
+        return {
+          title,
+          createdAt,
+          contentText,
+          hasShareButton,
+          hasPrintButton,
+          hasCreateButton,
+        };
+      };
       const chooseText = (container, selectors, sanitizer) => {
         for (const selector of selectors) {
           for (const node of Array.from(container.querySelectorAll(selector))) {
@@ -2026,6 +2908,7 @@ async function readGeminiConversationContextWithClient(
       const files = [];
       const artifacts = [];
       const seenFileIds = new Set();
+      const seenFileKeys = new Set();
       const seenArtifactIds = new Set();
       for (const node of turns) {
         if (!(node instanceof HTMLElement)) continue;
@@ -2033,9 +2916,9 @@ async function readGeminiConversationContextWithClient(
         let assistantArtifactsAdded = 0;
         if (!isUser) {
           const messageIndex = messages.length;
+          let artifactOrdinal = 0;
           const generatedImages = Array.from(node.querySelectorAll('img.image, img.loaded, img'))
             .filter((entry) => entry instanceof HTMLImageElement && visible(entry));
-          let artifactOrdinal = 0;
           for (const image of generatedImages) {
             if (!(image instanceof HTMLImageElement)) continue;
             const container =
@@ -2074,6 +2957,46 @@ async function readGeminiConversationContextWithClient(
             });
             assistantArtifactsAdded += 1;
           }
+          const generatedMedia = Array.from(node.querySelectorAll('video'))
+            .filter((entry) => entry instanceof HTMLVideoElement && visible(entry));
+          for (const media of generatedMedia) {
+            if (!(media instanceof HTMLVideoElement)) continue;
+            const src = normalize(media.currentSrc || media.src || media.getAttribute('src') || '');
+            if (!src || seenArtifactIds.has(src)) continue;
+            seenArtifactIds.add(src);
+            const container =
+              media.closest('video-player, response-container, model-response, .response-container') ||
+              media.parentElement ||
+              node;
+            const controls = collectMediaControls(container, node);
+            const fileName = extractFileNameFromUri(src);
+            const artifactId =
+              ${JSON.stringify('gemini-artifact:')} +
+              ${JSON.stringify(conversationId)} +
+              ':' + messageIndex +
+              ':' + artifactOrdinal;
+            artifactOrdinal += 1;
+            artifacts.push({
+              id: artifactId,
+              title: 'Generated media ' + artifactOrdinal,
+              kind: 'generated',
+              uri: src || undefined,
+              messageIndex,
+              metadata: {
+                mediaType: controls.mediaType || undefined,
+                fileName: fileName || undefined,
+                width: media.videoWidth || null,
+                height: media.videoHeight || null,
+                shareLabel: controls.shareLabel || undefined,
+                downloadLabel: controls.downloadLabel || undefined,
+                playLabel: controls.playLabel || undefined,
+                muteLabel: controls.muteLabel || undefined,
+                hasDownloadButton: Boolean(controls.downloadLabel),
+                hasShareButton: Boolean(controls.shareLabel),
+              },
+            });
+            assistantArtifactsAdded += 1;
+          }
         }
         const text = isUser
           ? chooseText(
@@ -2107,20 +3030,42 @@ async function readGeminiConversationContextWithClient(
         }
         if (isUser) {
           const turnFileNodes = Array.from(node.querySelectorAll(
-            '[data-test-id="uploaded-file"], [data-test-id="file-preview"], img[data-test-id="image-preview"], button[aria-label^="Remove file "]',
+            '[data-test-id="uploaded-file"], [data-test-id="file-preview"], button.new-file-preview-file, button.preview-image-button, img[data-test-id="image-preview"], img[data-test-id="uploaded-img"], button[aria-label^="Remove file "]',
           )).filter((entry) => entry instanceof HTMLElement && visible(entry));
-          let fileOrdinal = 0;
+          const turnFileChips = [];
+          const seenTurnFileChips = new Set();
           for (const fileNode of turnFileNodes) {
             if (!(fileNode instanceof HTMLElement)) continue;
-            const chip = fileNode.closest('[data-test-id="uploaded-file"], [data-test-id="file-preview"], uploader-file-preview, uploader-file-preview-container')
+            const chip = fileNode.closest('[data-test-id="uploaded-file"], [data-test-id="file-preview"], button.new-file-preview-file, button.preview-image-button, uploader-file-preview, uploader-file-preview-container')
               || fileNode;
+            if (!(chip instanceof Element) || seenTurnFileChips.has(chip)) continue;
+            seenTurnFileChips.add(chip);
+            turnFileChips.push(chip);
+          }
+          let fileOrdinal = 0;
+          for (const chip of turnFileChips) {
+            if (!(chip instanceof HTMLElement)) continue;
+            const directPreviewButton =
+              chip.matches('button.new-file-preview-file, button.preview-image-button')
+                ? chip
+                : chip.querySelector('button.new-file-preview-file, button.preview-image-button');
             const labeledButton = chip.querySelector('button[aria-label]') || chip.querySelector('[aria-label]');
             const removeButton = chip.querySelector('button[aria-label^="Remove file "]');
-            const imagePreview = chip.matches('img[data-test-id="image-preview"]')
+            const imagePreview = chip.matches('img[data-test-id="image-preview"], img[data-test-id="uploaded-img"]')
               ? chip
-              : chip.querySelector('img[data-test-id="image-preview"]');
+              : chip.querySelector('img[data-test-id="image-preview"], img[data-test-id="uploaded-img"]');
+            const anchor = chip.querySelector('a[href]');
+            const imageSrc = imagePreview instanceof HTMLImageElement
+              ? normalize(imagePreview.currentSrc || imagePreview.src || imagePreview.getAttribute('src') || '')
+              : '';
+            const anchorHref = anchor instanceof HTMLAnchorElement
+              ? normalize(anchor.getAttribute('href') || anchor.href || '')
+              : '';
             const explicitName = labeledButton instanceof HTMLElement
               ? normalize(labeledButton.getAttribute('aria-label') || labeledButton.getAttribute('title') || '')
+              : '';
+            const directButtonName = directPreviewButton instanceof HTMLElement
+              ? normalize(directPreviewButton.getAttribute('aria-label') || directPreviewButton.getAttribute('title') || '')
               : '';
             const removeName = removeButton instanceof HTMLElement
               ? normalize((removeButton.getAttribute('aria-label') || '').replace(/^Remove file\\s+/i, ''))
@@ -2131,18 +3076,25 @@ async function readGeminiConversationContextWithClient(
             const visibleType = normalize(
               chip.querySelector('.new-file-type, .file-type')?.textContent || '',
             );
-            let name = explicitName || removeName || visibleName;
+            let name = directButtonName || explicitName || removeName || visibleName;
             if (name && visibleType && !/\\.[a-z0-9]{1,8}$/i.test(name) && /^[A-Z0-9]{1,8}$/i.test(visibleType)) {
               name = name + '.' + visibleType.toLowerCase();
             }
             if (!name && imagePreview instanceof HTMLImageElement) {
               name = normalize(imagePreview.getAttribute('aria-label') || imagePreview.getAttribute('alt') || '');
             }
+            if ((!name || /^uploaded image preview$/i.test(name) || /^show the uploaded image in a lightbox$/i.test(name)) && imageSrc) {
+              name = 'uploaded-image-' + (fileOrdinal + 1);
+            }
             if (!name) continue;
             const fileId = ${JSON.stringify('gemini-conversation-file:')} + ${JSON.stringify(conversationId)} + ':' + fileOrdinal + ':' + name;
+            const fileKey = imageSrc
+              ? normalize(imageSrc)
+              : (anchorHref ? normalize(anchorHref + '::' + name) : fileId);
             fileOrdinal += 1;
-            if (seenFileIds.has(fileId)) continue;
+            if (seenFileIds.has(fileId) || seenFileKeys.has(fileKey)) continue;
             seenFileIds.add(fileId);
+            seenFileKeys.add(fileKey);
             const mimeType = inferMimeType(name);
             files.push({
               id: fileId,
@@ -2150,13 +3102,106 @@ async function readGeminiConversationContextWithClient(
               provider: 'gemini',
               source: 'conversation',
               mimeType,
+              remoteUrl: anchorHref || imageSrc || undefined,
               metadata: {
                 messageIndex: messages.length - 1,
-                kind: imagePreview instanceof HTMLImageElement ? 'image-preview' : 'uploaded-file',
+                kind:
+                  imagePreview instanceof HTMLImageElement && imagePreview.getAttribute('data-test-id') === 'uploaded-img'
+                    ? 'uploaded-image'
+                    : imagePreview instanceof HTMLImageElement
+                      ? 'image-preview'
+                      : 'uploaded-file',
+                hasDirectUrl: Boolean(anchorHref || imageSrc),
               },
             });
           }
           continue;
+        }
+      }
+      const fallbackImageButtons = Array.from(document.querySelectorAll('button.preview-image-button, img[data-test-id="uploaded-img"]'))
+        .filter((entry) => entry instanceof HTMLElement && visible(entry));
+      let fallbackImageOrdinal = files.filter((entry) => entry.metadata?.kind === 'uploaded-image').length;
+      for (const fallbackNode of fallbackImageButtons) {
+        if (!(fallbackNode instanceof HTMLElement)) continue;
+        const chip =
+          fallbackNode.closest('button.preview-image-button, [data-test-id="uploaded-file"], [data-test-id="file-preview"]')
+          || fallbackNode;
+        const directPreviewButton =
+          chip.matches('button.preview-image-button')
+            ? chip
+            : chip.querySelector('button.preview-image-button');
+        const imagePreview =
+          chip.matches('img[data-test-id="uploaded-img"]')
+            ? chip
+            : chip.querySelector('img[data-test-id="uploaded-img"]');
+        if (!(imagePreview instanceof HTMLImageElement)) continue;
+        const imageSrc = normalize(imagePreview.currentSrc || imagePreview.src || imagePreview.getAttribute('src') || '');
+        if (!imageSrc || files.some((entry) => normalize(entry.remoteUrl || '') === imageSrc)) continue;
+        let fallbackName = normalize(
+          directPreviewButton instanceof HTMLElement
+            ? (directPreviewButton.getAttribute('aria-label') || directPreviewButton.getAttribute('title') || '')
+            : '',
+        );
+        if (!fallbackName || /show the uploaded image in a lightbox/i.test(fallbackName)) {
+          fallbackName = 'uploaded-image-' + (fallbackImageOrdinal + 1);
+        }
+        const fallbackFileId =
+          ${JSON.stringify('gemini-conversation-file:')} +
+          ${JSON.stringify(conversationId)} +
+          ':' + fallbackImageOrdinal +
+          ':' + fallbackName;
+        const fallbackFileKey = normalize(imageSrc);
+        if (seenFileIds.has(fallbackFileId) || seenFileKeys.has(fallbackFileKey)) continue;
+        seenFileIds.add(fallbackFileId);
+        seenFileKeys.add(fallbackFileKey);
+        let messageIndex;
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+          if (messages[index]?.role === 'user') {
+            messageIndex = index;
+            break;
+          }
+        }
+        files.push({
+          id: fallbackFileId,
+          name: fallbackName,
+          provider: 'gemini',
+          source: 'conversation',
+          mimeType: 'image/*',
+          remoteUrl: imageSrc || undefined,
+          metadata: {
+            messageIndex,
+            kind: 'uploaded-image',
+            hasDirectUrl: true,
+          },
+        });
+        fallbackImageOrdinal += 1;
+      }
+      const canvasSurface = readVisibleCanvasSurface();
+      if (canvasSurface && canvasSurface.contentText) {
+        const artifactId = ${JSON.stringify('gemini-canvas:')} + ${JSON.stringify(conversationId)};
+        if (!seenArtifactIds.has(artifactId)) {
+          seenArtifactIds.add(artifactId);
+          let lastAssistantMessageIndex;
+          for (let index = messages.length - 1; index >= 0; index -= 1) {
+            if (messages[index]?.role === 'assistant') {
+              lastAssistantMessageIndex = index;
+              break;
+            }
+          }
+          artifacts.push({
+            id: artifactId,
+            title: canvasSurface.title || 'Canvas document',
+            kind: 'canvas',
+            uri: ${JSON.stringify('gemini://canvas/')} + ${JSON.stringify(conversationId)},
+            messageIndex: lastAssistantMessageIndex,
+            metadata: {
+              contentText: canvasSurface.contentText,
+              createdAt: canvasSurface.createdAt || undefined,
+              hasShareButton: canvasSurface.hasShareButton,
+              hasPrintButton: canvasSurface.hasPrintButton,
+              hasCreateButton: canvasSurface.hasCreateButton,
+            },
+          });
         }
       }
       if (artifacts.length === 0) {
@@ -2165,9 +3210,9 @@ async function readGeminiConversationContextWithClient(
         let responseIndex = 0;
         for (const responseNode of responseNodes) {
           if (!(responseNode instanceof HTMLElement)) continue;
+          let artifactOrdinal = 0;
           const generatedImages = Array.from(responseNode.querySelectorAll('img.image, img.loaded, img'))
             .filter((entry) => entry instanceof HTMLImageElement && visible(entry));
-          let artifactOrdinal = 0;
           for (const image of generatedImages) {
             if (!(image instanceof HTMLImageElement)) continue;
             const src = normalize(image.src || '');
@@ -2203,6 +3248,43 @@ async function readGeminiConversationContextWithClient(
             });
             artifactOrdinal += 1;
           }
+          const generatedMedia = Array.from(responseNode.querySelectorAll('video'))
+            .filter((entry) => entry instanceof HTMLVideoElement && visible(entry));
+          for (const media of generatedMedia) {
+            if (!(media instanceof HTMLVideoElement)) continue;
+            const src = normalize(media.currentSrc || media.src || media.getAttribute('src') || '');
+            if (!src || seenArtifactIds.has(src)) continue;
+            seenArtifactIds.add(src);
+            const container =
+              media.closest('video-player, response-container, model-response, .response-container') ||
+              media.parentElement ||
+              responseNode;
+            const controls = collectMediaControls(container, responseNode);
+            const fileName = extractFileNameFromUri(src);
+            artifacts.push({
+              id:
+                ${JSON.stringify('gemini-artifact:')} +
+                ${JSON.stringify(conversationId)} +
+                ':fallback:' + responseIndex + ':' + artifactOrdinal,
+              title: 'Generated media ' + (artifactOrdinal + 1),
+              kind: 'generated',
+              uri: src || undefined,
+              messageIndex: messages.length > 0 ? messages.length - 1 : undefined,
+              metadata: {
+                mediaType: controls.mediaType || undefined,
+                fileName: fileName || undefined,
+                width: media.videoWidth || null,
+                height: media.videoHeight || null,
+                shareLabel: controls.shareLabel || undefined,
+                downloadLabel: controls.downloadLabel || undefined,
+                playLabel: controls.playLabel || undefined,
+                muteLabel: controls.muteLabel || undefined,
+                hasDownloadButton: Boolean(controls.downloadLabel),
+                hasShareButton: Boolean(controls.shareLabel),
+              },
+            });
+            artifactOrdinal += 1;
+          }
           responseIndex += 1;
         }
       }
@@ -2221,6 +3303,23 @@ async function readGeminiConversationContextWithClient(
   if (!payload || !Array.isArray(payload.messages) || payload.messages.length === 0) {
     throw new Error(`Gemini conversation messages not found for ${conversationId}.`);
   }
+  const uploadedFiles = await readGeminiVisibleConversationUploadFiles(client.Runtime, conversationId, payload.messages);
+  if (uploadedFiles.length > 0) {
+    const existing = Array.isArray(payload.files) ? payload.files : [];
+    const merged = [...existing];
+    const seen = new Set(existing.map((entry) =>
+      normalizeWhitespace(entry.remoteUrl ?? '') || entry.id,
+    ));
+    for (const file of uploadedFiles) {
+      const key = normalizeWhitespace(file.remoteUrl ?? '') || file.id;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(file);
+    }
+    payload.files = merged;
+  }
+  payload.files = normalizeGeminiConversationFiles(payload.files);
+  payload.artifacts = normalizeGeminiConversationArtifacts(payload.artifacts);
   return payload;
 }
 
@@ -3854,6 +4953,8 @@ export function createGeminiAdapter(): Pick<
   | 'listProjects'
   | 'listConversations'
   | 'listProjectFiles'
+  | 'downloadConversationFile'
+  | 'materializeConversationArtifact'
   | 'readConversationContext'
   | 'renameConversation'
   | 'renameProject'
@@ -3984,6 +5085,58 @@ export function createGeminiAdapter(): Pick<
       );
       try {
         return await readGeminiConversationContextWithClient(client, normalizedConversationId);
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async materializeConversationArtifact(
+      conversationId: string,
+      artifact: ConversationArtifact,
+      destDir: string,
+      _projectId?: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<FileRef | null> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConversationUrl(normalizedConversationId),
+      );
+      try {
+        return await materializeGeminiConversationArtifactWithClient(
+          client,
+          normalizedConversationId,
+          artifact,
+          destDir,
+        );
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async downloadConversationFile(
+      conversationId: string,
+      fileId: string,
+      destPath: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<void> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        resolveGeminiConversationUrl(normalizedConversationId),
+      );
+      try {
+        await downloadGeminiConversationFileWithClient(client, normalizedConversationId, fileId, destPath);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

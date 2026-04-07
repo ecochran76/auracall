@@ -1921,6 +1921,88 @@ conversationFilesCommand
     console.log(chalk.dim(`Listed ${files.length} conversation file(s).`));
   });
 
+conversationFilesCommand
+  .command('fetch <id>')
+  .description('Fetch conversation-uploaded files and store them under conversation-attachments.')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
+  .option('--project-id <id>', 'Project ID or name (if the conversation is in a project).')
+  .action(async (id, commandOptions, command) => {
+    const parentOptions = command.parent?.parent?.opts?.() ?? {};
+    const cliOptions = { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
+      | 'chatgpt'
+      | 'gemini'
+      | 'grok';
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
+    }
+    const llmService = createLlmService(target, userConfig, {
+      identityPrompt: promptForCacheIdentity,
+    });
+    const listOptions = await llmService.buildListOptions({
+      configuredUrl: userConfig.browser?.url ?? null,
+      includeHistory: true,
+      historyLimit: DEFAULT_CACHE_HISTORY_LIMIT,
+    });
+    const projectArg =
+      commandOptions.projectId ?? parentOptions.projectId ?? userConfig.browser?.projectId;
+    const projectId = projectArg ? await resolveProjectIdArg(llmService, projectArg, listOptions) : undefined;
+    const selector = String(id || '').trim();
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(selector);
+    const conversationId = isUuid
+      ? selector
+      : (
+          await llmService.resolveConversationSelector(selector, {
+            projectId,
+            forceRefresh: true,
+            listOptions: projectId ? { ...listOptions, projectId } : listOptions,
+          })
+        ).id;
+    const result = await llmService.materializeConversationFiles(conversationId, {
+      projectId,
+      listOptions,
+      refresh: true,
+    });
+    if (!process.stdout.isTTY) {
+      console.log(
+        JSON.stringify(
+          {
+            provider: target,
+            conversationId,
+            fileCount: result.conversationFiles.length,
+            materializedCount: result.files.length,
+            manifestPath: result.manifestPath,
+            files: result.files,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+    if (result.conversationFiles.length === 0) {
+      console.log(`No files found for conversation ${conversationId}.`);
+      return;
+    }
+    if (result.files.length === 0) {
+      console.log(`No conversation files were materialized for ${conversationId}.`);
+      if (result.manifestPath) {
+        console.log(chalk.dim(`Manifest: ${result.manifestPath}`));
+      }
+      return;
+    }
+    console.log(
+      `Materialized ${result.files.length}/${result.conversationFiles.length} conversation file(s) for ${conversationId}.`,
+    );
+    for (const file of result.files) {
+      console.log(`${file.name}\t${file.localPath ?? ''}`);
+    }
+    if (result.manifestPath) {
+      console.log(chalk.dim(`Manifest: ${result.manifestPath}`));
+    }
+  });
+
 const conversationContextCommand = conversationsCommand
   .command('context')
   .description('Read cached/live conversation context payloads.');
@@ -1932,7 +2014,7 @@ const conversationArtifactsCommand = conversationsCommand
 conversationArtifactsCommand
   .command('fetch <id>')
   .description('Fetch supported artifacts for a conversation and store them under conversation-attachments.')
-  .option('--target <chatgpt|grok>', 'Choose which provider to query (chatgpt or grok).')
+  .option('--target <chatgpt|gemini|grok>', 'Choose which provider to query (chatgpt, gemini, or grok).')
   .option('--project-id <id>', 'Project ID or name (if conversation is in a project).')
   .action(async (id, commandOptions, command) => {
     const parentOptions = command.parent?.parent?.opts?.() ?? {};
@@ -1940,9 +2022,10 @@ conversationArtifactsCommand
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     const target = (commandOptions.target ?? parentOptions.target ?? userConfig.browser?.target ?? 'chatgpt') as
       | 'chatgpt'
+      | 'gemini'
       | 'grok';
-    if (target !== 'chatgpt' && target !== 'grok') {
-      throw new Error(`Invalid provider "${target}". Use "chatgpt" or "grok".`);
+    if (target !== 'chatgpt' && target !== 'gemini' && target !== 'grok') {
+      throw new Error(`Invalid provider "${target}". Use "chatgpt", "gemini", or "grok".`);
     }
     const llmService = createLlmService(target, userConfig, {
       identityPrompt: promptForCacheIdentity,

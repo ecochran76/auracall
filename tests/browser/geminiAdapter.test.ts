@@ -1,12 +1,16 @@
 import { describe, expect, test } from 'vitest';
 import {
   classifyGeminiBlockingState,
+  canReuseGeminiResolvedTabTarget,
   createGeminiAdapter,
   deriveGeminiFeatureProbeFromUiList,
+  inferGeminiGeneratedArtifactMediaType,
   geminiConversationSurfaceReadyExpression,
   extractGeminiProjectIdFromUrl,
   mergeGeminiFeatureProbes,
   geminiUrlMatchesPreference,
+  normalizeGeminiConversationArtifacts,
+  normalizeGeminiConversationFiles,
   normalizeGeminiConversationId,
   normalizeGeminiFeatureSignature,
   normalizeGeminiProjectId,
@@ -72,6 +76,21 @@ describe('geminiAdapter id helpers', () => {
     expect(selectPreferredGeminiTarget([first, second], 'https://gemini.google.com/app')).toBeUndefined();
   });
 
+  test('does not reuse a resolved Gemini tab target for the wrong conversation route', () => {
+    expect(canReuseGeminiResolvedTabTarget(
+      'https://gemini.google.com/app/06ebd4699b387019',
+      'https://gemini.google.com/app/ab30a4a92e4b65a9',
+    )).toBe(false);
+    expect(canReuseGeminiResolvedTabTarget(
+      'https://gemini.google.com/app/ab30a4a92e4b65a9',
+      'https://gemini.google.com/app/ab30a4a92e4b65a9',
+    )).toBe(true);
+    expect(canReuseGeminiResolvedTabTarget(
+      undefined,
+      'https://gemini.google.com/app/ab30a4a92e4b65a9',
+    )).toBe(true);
+  });
+
   test('classifies Google unusual-traffic interstitials explicitly', () => {
     expect(classifyGeminiBlockingState({
       href: 'https://www.google.com/sorry/index?continue=https://gemini.google.com/app',
@@ -101,6 +120,153 @@ describe('geminiAdapter id helpers', () => {
     )).toBe('ACK smoke-1775434174360');
   });
 
+  test('infers Gemini generated media type from assistant media controls', () => {
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=before_the_tide_returns.mp4',
+      metadata: {
+        shareLabel: 'Share track',
+        downloadLabel: 'Download track',
+      },
+    })).toBe('music');
+    expect(inferGeminiGeneratedArtifactMediaType({
+      kind: 'generated',
+      uri: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+      metadata: {
+        shareLabel: 'Share video',
+        downloadLabel: 'Download video',
+      },
+    })).toBe('video');
+  });
+
+  test('normalizes Gemini generated media artifacts into stable titles and metadata', () => {
+    expect(normalizeGeminiConversationArtifacts([
+      {
+        id: 'artifact-1',
+        title: 'Generated media 1',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=before_the_tide_returns.mp4',
+        metadata: {
+          shareLabel: 'Share track',
+          downloadLabel: 'Download track',
+        },
+      },
+      {
+        id: 'artifact-2',
+        title: 'Generated media 2',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+        metadata: {
+          shareLabel: 'Share video',
+          downloadLabel: 'Download video',
+        },
+      },
+    ])).toEqual([
+      {
+        id: 'artifact-1',
+        title: 'Before The Tide Returns',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=before_the_tide_returns.mp4',
+        metadata: {
+          shareLabel: 'Share track',
+          downloadLabel: 'Download track',
+          mediaType: 'music',
+          fileName: 'before_the_tide_returns.mp4',
+        },
+      },
+      {
+        id: 'artifact-2',
+        title: 'Generated video 2',
+        kind: 'generated',
+        uri: 'https://contribution.usercontent.google.com/download?filename=video.mp4',
+        metadata: {
+          shareLabel: 'Share video',
+          downloadLabel: 'Download video',
+          mediaType: 'video',
+          fileName: 'video.mp4',
+        },
+      },
+    ]);
+  });
+
+  test('deduplicates Gemini conversation files that resolve to the same upload chip semantics', () => {
+    expect(normalizeGeminiConversationFiles([
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:0:AGENTS.md',
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        metadata: {
+          messageIndex: 2,
+          kind: 'uploaded-file',
+          hasDirectUrl: false,
+        },
+      },
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:1:AGENTS.md',
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        metadata: {
+          messageIndex: 2,
+          kind: 'uploaded-file',
+          hasDirectUrl: false,
+        },
+      },
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:0:uploaded-image-1',
+        name: 'uploaded-image-1',
+        provider: 'gemini',
+        source: 'conversation',
+        remoteUrl: 'https://lh3.googleusercontent.com/example',
+        metadata: {
+          messageIndex: 0,
+          kind: 'uploaded-image',
+          hasDirectUrl: true,
+        },
+      },
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:1:uploaded-image-1',
+        name: 'uploaded-image-1',
+        provider: 'gemini',
+        source: 'conversation',
+        remoteUrl: 'https://lh3.googleusercontent.com/example',
+        metadata: {
+          messageIndex: 0,
+          kind: 'uploaded-image',
+          hasDirectUrl: true,
+        },
+      },
+    ])).toEqual([
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:0:AGENTS.md',
+        name: 'AGENTS.md',
+        provider: 'gemini',
+        source: 'conversation',
+        mimeType: 'text/markdown',
+        metadata: {
+          messageIndex: 2,
+          kind: 'uploaded-file',
+          hasDirectUrl: false,
+        },
+      },
+      {
+        id: 'gemini-conversation-file:ab30a4a92e4b65a9:0:uploaded-image-1',
+        name: 'uploaded-image-1',
+        provider: 'gemini',
+        source: 'conversation',
+        remoteUrl: 'https://lh3.googleusercontent.com/example',
+        metadata: {
+          messageIndex: 0,
+          kind: 'uploaded-image',
+          hasDirectUrl: true,
+        },
+      },
+    ]);
+  });
+
   test('treats collapsed Gemini root app state as a ready conversation surface', () => {
     const expression = geminiConversationSurfaceReadyExpression();
     expect(expression).toContain('button[aria-label="Main menu"]');
@@ -113,6 +279,8 @@ describe('geminiAdapter id helpers', () => {
     expect(typeof adapter.renameConversation).toBe('function');
     expect(typeof adapter.deleteConversation).toBe('function');
     expect(typeof adapter.readConversationContext).toBe('function');
+    expect(typeof adapter.downloadConversationFile).toBe('function');
+    expect(typeof adapter.materializeConversationArtifact).toBe('function');
     expect(typeof adapter.getFeatureSignature).toBe('function');
   });
 
