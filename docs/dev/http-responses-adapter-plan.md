@@ -177,8 +177,8 @@ Current explicit limits:
 - no auth
 - local dev-only CLI exposure now exists through:
   - `auracall api serve`
-- non-loopback host binding is still warned as unsafe because the server
-  remains unauthenticated
+- loopback is the default bind posture
+- non-loopback now requires explicit `--listen-public`
 - still no broader service-host integration yet
 - no `chat/completions` adapter yet
 

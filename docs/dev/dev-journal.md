@@ -9955,6 +9955,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 
+## 2026-04-08 - Responses server host posture is explicit
+
+- Focus:
+  - finish the service-host shaping slice without widening protocol breadth
+- Progress:
+  - `auracall api serve` now defaults to loopback-only posture in practice
+  - non-loopback bind now requires explicit `--listen-public`
+  - `/status` remains the explicit source of truth for:
+    - development mode
+    - unauthenticated posture
+    - route surface
+    - compatibility limits
+  - added focused regression coverage for:
+    - status payload
+    - non-loopback bind refusal without explicit opt-in
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
 ## 2026-04-08 - Local responses host posture is explicit
 
 - Focus:
