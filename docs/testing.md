@@ -25,6 +25,10 @@
     - conversation files fetch: partially supported for visible direct
       `/app/<id>` upload chips, including text-file chips and uploaded-image
       chips
+    - account files: not supported
+    - conversation artifact lane: closed for now at the proven
+      image/music/video/canvas/deep-research surfaces; only reopen for
+      regressions or newly proven live DOM surfaces
   - browser doctor: partially supported
       - `auracall doctor --target gemini --json` now reports live account
         identity plus detected Gemini feature signature when a managed Gemini

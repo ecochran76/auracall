@@ -9691,3 +9691,58 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/browser/llmServiceContext.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-07 - Gemini My stuff should stay out of account-files semantics
+
+- Focus:
+  - correct the semantic mistake of treating Gemini `My stuff` as account-file
+    parity
+- Progress:
+  - removed the local Gemini `account-files list` wiring before commit
+  - kept the product boundary explicit:
+    - Gemini `My stuff` is a link aggregator for conversation-scoped
+      documents/media
+    - it is not the Gemini equivalent of Grok `/files`
+- Notes:
+  - the live page still proves useful discovery value for future artifact/library
+    work
+  - it should not back `account-files` commands
+
+## 2026-04-07 - Gemini artifact lane closed for now
+
+- Focus:
+  - mark the Gemini conversation-artifact lane complete at the currently
+    proven surfaces
+- Progress:
+  - updated roadmap and user docs to treat Gemini artifact support as closed
+    for now at:
+    - image
+    - music
+    - video
+    - canvas
+    - Deep Research document
+- Notes:
+  - remaining Gemini work is now narrower:
+    - account-level files only if Gemini exposes a real native CRUD surface
+    - broader conversation files/artifacts only when the live DOM proves a new
+      stable surface
+
+## 2026-04-07 - Planned the next service/runtime track
+
+- Focus:
+  - turn the broad “service mode / runners / orchestration” direction into one
+    bounded next implementation plan
+- Progress:
+  - added
+    [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - anchored the next track around:
+    - one durable execution vocabulary
+    - sequential-first dispatch
+    - lease/runner ownership
+    - one shared execution core for CLI, API, and MCP
+  - linked the active roadmap to that plan from
+    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Notes:
+  - the repo already has useful planning/data seams in `src/teams/*`
+  - the next goal is not broad service mode delivery; it is preventing future
+    API/MCP/team execution drift before it starts

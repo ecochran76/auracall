@@ -144,6 +144,10 @@ The next planning seam is now also explicit:
   - `handoff`
   - `sharedState`
 
+That next seam is now captured in:
+
+- [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+
 ChatGPT hardening is also in a better checkpoint than before:
 
 - mutation-side persistence/verification is substantially hardened:
@@ -229,11 +233,11 @@ Immediate Gemini priority order:
    - add focused CLI regression tests for Gemini target acceptance and cache
      operator behavior
 5. Remaining provider-gap backlog
-  - broader artifact parity/fetch parity beyond the proven
-    image/music/video/canvas surfaces
-  - broader conversation-file fetch parity beyond the currently proven direct
-    chat upload-chip surfaces
-  - account-level files
+  - account-level files only if Gemini exposes a real native CRUD surface
+  - broader conversation-file fetch parity only when a new chat surface is
+    live-DOM-proven
+  - broader artifact parity/fetch parity only when a new artifact family is
+    live-DOM-proven
 
 Current browser-service follow-on for that Gemini discovery line:
 
@@ -258,13 +262,19 @@ Current status update:
 - the next cache move should not be more Gemini-specific CLI widening
 - the next durable cache move is the shared subsystem slice in:
   - [cache-artifact-projection-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/cache-artifact-projection-plan.md)
-- for Gemini specifically, the remaining meaningful work is now explicit
-  provider backlog:
-  - broader artifact parity/fetch parity beyond the proven
-    image/music/video/canvas surfaces
-  - broader conversation-file fetch parity beyond the currently proven direct
-    chat upload-chip surfaces
-  - account-level files
+- for Gemini specifically, the conversation-artifact lane is closed for now at
+  the proven surfaces:
+  - image
+  - music
+  - video
+  - canvas
+  - Deep Research document
+- remaining Gemini work is now narrower provider backlog:
+  - account-level files only if Gemini exposes a real native CRUD surface
+  - broader conversation-file fetch parity only for newly proven upload-chip
+    surfaces
+  - broader artifact parity/fetch parity only for newly proven artifact
+    families
 
 Do not treat second-pairing proof churn as the immediate next Gemini slice
 unless a new browser pairing is specifically required to validate one of those
@@ -314,6 +324,12 @@ Short rationale:
   semantics underneath them
 - retrieval and provider expansion are important, but they should not outrun
   the service/runtime foundation
+
+Current recommended next implementation track:
+
+- start with the first bounded service/runtime slice from
+  [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+- do not reopen broad Gemini/browser work unless a concrete regression appears
 
 ## Now / Soon / Later
 

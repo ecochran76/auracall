@@ -156,11 +156,14 @@ The next gaps are now narrower and more operational:
    - refreshed readback is currently the authoritative proof
 
 5. Explicit provider gaps still remain and should stay visible.
-   - broader artifact parity/fetch parity beyond the proven
-     image/music/video/canvas surfaces
+   - the conversation-artifact lane is closed for now at the proven
+     image/music/video/canvas/deep-research surfaces
+   - broader artifact parity/fetch parity should only reopen for newly proven
+     live DOM surfaces or regressions on those existing surfaces
    - broader conversation-file fetch parity beyond the currently proven direct
      chat upload-chip surfaces
-   - account-level files parity
+   - account-level files parity only if Gemini exposes a real native CRUD
+     surface
    - clone parity
 
 These should be treated as productized backlog items, not hidden under generic

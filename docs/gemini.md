@@ -30,7 +30,7 @@ implemented from what is merely plausible.
 | Conversation artifact fetch | N/A | Partially supported | `auracall conversations artifacts fetch --target gemini <id>` now materializes proven Gemini conversation artifacts into the local cache for canvas documents (`.txt`), Deep Research documents (`.txt`), and generated music/video media (`.mp4`). Deep Research fetch prefers the live `Share & Export -> Copy contents` path when the export menu is automatable and otherwise falls back to the visible immersive-panel document text on the same `/app/<id>` page; broader artifact fetch coverage beyond the proven image/music/video/canvas/deep-research surfaces is still pending. |
 | Conversation files list | N/A | Supported | `auracall conversations files list --target gemini <id>` now reads visible sent upload chips from the direct `/app/<id>` page through the shared conversation-context fallback. |
 | Conversation files fetch | N/A | Partially supported | `auracall conversations files fetch --target gemini <id>` now materializes visible chat-uploaded files from the direct `/app/<id>` page, including text-file chips and uploaded-image chips, with browser-native fallback capture for visible uploaded-image previews when signed media URLs are not directly fetchable; broader file-fetch coverage beyond those currently exposed chat surfaces is still pending. |
-| Account-level files | N/A | Not supported | Shared CLI/service seams exist, but Gemini does not yet expose a wired provider implementation for `account-files list|add|remove`. |
+| Account-level files | N/A | Not supported | Shared CLI/service seams exist, but Gemini does not yet expose a wired provider implementation for `account-files list|add|remove`. Gemini `My stuff` is treated as a conversation/artifact link index, not an account-file CRUD surface. |
 | Conversation rename | N/A | Supported | `auracall rename --target gemini <id> <name>` now drives the native Gemini conversation rename dialog from the direct `/app/<id>` page and verifies the renamed row on a fresh root list read. |
 | Conversation delete | N/A | Supported | `auracall delete --target gemini <id>` now drives the native Gemini conversation delete flow from the direct `/app/<id>` page and verifies absence from a refreshed conversation list. |
 | Cache/operator tooling | N/A | Partially supported | `auracall cache --provider gemini`, `auracall cache export --provider gemini ...`, `auracall cache context list|get --provider gemini`, `auracall cache search --provider gemini`, `auracall cache sources list --provider gemini`, `auracall cache artifacts list --provider gemini`, and `auracall cache files list|resolve --provider gemini` now operate on Gemini cache data; semantic search and some maintenance/reporting depth are still being aligned on the same provider cache surface. |
@@ -45,6 +45,18 @@ Deliberately not implied by this matrix:
 - parity between Gemini API and Gemini web on every modality
 - provider-side search beyond the current API tool mapping
 - a broad rewrite onto the newest ChatGPT/Grok browser-service/provider seams
+
+Current closure note:
+- The Gemini conversation-artifact lane is closed for now at the currently
+  proven surfaces:
+  - image
+  - music
+  - video
+  - canvas
+  - Deep Research document
+- New Gemini artifact/file work should only reopen when the live DOM proves a
+  new stable surface or a regression appears on one of those existing
+  surfaces.
 
 ## Usage (API)
 

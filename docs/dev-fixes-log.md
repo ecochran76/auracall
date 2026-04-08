@@ -9730,3 +9730,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Keep a bounded fallback to the visible immersive-panel text while that export
   menu item is still not reliably reachable through automation, so operator
   fetch stays useful instead of failing outright.
+- 2026-04-07: Gemini `/mystuff` route readiness is not sufficient proof that
+  account-library content is present. The route can settle before the
+  `Documents` / `Media` sections hydrate, so account-level listing needs a
+  second wait on visible library content, not just pathname readiness.
+- 2026-04-07: Gemini `My stuff` is not an account-file CRUD surface. Even
+  though the page exposes account-scoped `Documents` / `Media` entries, it is
+  better modeled as a conversation/artifact link index than as the Gemini
+  equivalent of Grok `/files`. Do not wire it into `account-files` commands.
+- 2026-04-07: Once provider/browser parity reaches a maintenance checkpoint,
+  the next highest-value work is usually not another provider-specific slice.
+  Capture the next platform track explicitly instead. Aura-Call now has enough
+  team-run planning/data vocabulary that the next strategic seam should be the
+  shared service/runtime execution model, so future CLI/API/MCP/team execution
+  can sit on one execution core instead of growing separate orchestration
+  paths.
