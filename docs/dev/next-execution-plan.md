@@ -148,6 +148,7 @@ That next seam is now captured in:
 
 - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
 - [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+- [runtime-control-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-control-surface-plan.md)
 
 Current execution/service checkpoint:
 
@@ -197,12 +198,40 @@ Recommended next slice after mutation discipline:
   - compose dispatcher + lease helpers
   - still no external transport surface
 
-Not yet:
+Adapter choice is now explicit:
 
-- HTTP routes
-- Responses adapter
-- Chat Completions adapter
-- MCP transport binding
+- HTTP first
+  - anchor on OpenAI-compatible `responses`
+  - keep `chat/completions` as a later compatibility adapter
+- MCP later as a client of the same runtime contract
+
+That first bounded HTTP slice is now captured in:
+
+- [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/http-responses-adapter-plan.md)
+
+Current HTTP adapter checkpoint:
+
+- internal runtime-backed module now exists for:
+  - `POST /v1/responses`
+  - `GET /v1/responses/{response_id}`
+  - `GET /v1/models`
+- it creates and reads persisted direct runtime runs
+- it preserves ordered mixed output when runtime shared state exposes
+  `structuredOutputs` keyed as `response.output`
+- it still intentionally stops before:
+  - real execution/runner behavior
+  - streaming
+  - auth
+  - `chat/completions`
+  - any public CLI/service exposure
+
+Recommended next slice after this checkpoint:
+
+- local dev-only exposure is now in place through:
+  - `auracall api serve`
+- keep the next decision bounded to:
+  - whether a service-integrated host is needed
+- do not widen protocol breadth until that exposure decision is explicit
 
 ChatGPT hardening is also in a better checkpoint than before:
 

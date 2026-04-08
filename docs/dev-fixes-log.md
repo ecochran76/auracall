@@ -9802,3 +9802,46 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   inspection, and lease transitions. That keeps future CLI/API/MCP adapters
   pointed at one local control contract instead of assembling the runtime core
   ad hoc in each surface.
+- 2026-04-08: Once the internal runtime control seam exists, define the first
+  transport-neutral control-surface contract in docs before building HTTP or
+  MCP adapters. The adapter decision should follow an explicit `create/read/
+  inspect/list run` plus lease operation contract, not whichever transport gets
+  implemented first.
+- 2026-04-08: After the transport-neutral control contract is documented,
+  extract it into one internal code module and keep the concrete control
+  implementation conformant to it. Include run listing in that contract so the
+  first adapter does not have to widen the host-facing model on its own.
+- 2026-04-08: Once the runtime control contract is explicit, pick the first
+  external adapter deliberately. HTTP should go first because OpenAI
+  compatibility is already a product requirement and the runtime model now fits
+  a durable `responses`-first surface; MCP should follow as a client of that
+  same contract rather than becoming the place where execution semantics are
+  defined first.
+- 2026-04-08: After choosing HTTP first, pin the first adapter slice narrowly:
+  `POST /v1/responses` plus `GET /v1/responses/{id}` first, with
+  `chat/completions`, streaming, and other protocol breadth deferred. That
+  keeps the first HTTP implementation from expanding into a whole API family
+  before the `responses`-first contract is proven.
+- 2026-04-08: The first HTTP `responses` adapter should be a client of the
+  runtime control contract, not a parallel store reader/writer. Let the
+  adapter create/read persisted direct runs and reuse runtime-to-response
+  mapping, even if the first slice only returns bounded `in_progress` records
+  without real execution.
+- 2026-04-08: For the first bounded `responses` adapter, use the persisted run
+  id as the `response_id` instead of inventing a second identity layer before
+  a broader execution registry exists. Keep any richer response/run indirection
+  deferred until there is a concrete need for it.
+- 2026-04-08: When the runtime layer needs to preserve ordered mixed text +
+  artifact output through a bounded HTTP adapter, use one explicit runtime
+  shared-state convention such as `structuredOutputs[key=\"response.output\"]`
+  rather than inventing transport-only side storage. Fall back to known shared
+  artifacts when that richer output timeline is absent.
+- 2026-04-08: The first public exposure of the bounded `responses` adapter
+  should be a local dev-only server command, not a broader service host. That
+  gives the runtime-backed HTTP surface a real operator entrypoint without
+  forcing early decisions about auth, deployment, or wider protocol breadth.
+- 2026-04-08: For compatibility-first execution hints, prefer optional
+  `X-AuraCall-*` headers over request-body extensions, and make headers win
+  when both are present. That keeps standard OpenAI bodies usable while still
+  allowing AuraCall runtime/agent/team/service selection in the bounded
+  `responses` adapter.

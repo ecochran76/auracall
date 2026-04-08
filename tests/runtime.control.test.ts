@@ -3,7 +3,8 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { createExecutionRuntimeControl, getActiveExecutionRunLease } from '../src/runtime/control.js';
+import { getActiveExecutionRunLease } from '../src/runtime/contract.js';
+import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { createExecutionRunRecordBundleFromTeamRun } from '../src/runtime/model.js';
 import { createTeamRunBundle } from '../src/teams/model.js';
 
@@ -112,5 +113,18 @@ describe('runtime control module', () => {
     expect(released.revision).toBe(4);
     expect(getActiveExecutionRunLease(released)).toBeNull();
     expect(released.bundle.leases[0]?.status).toBe('released');
+  });
+
+  it('lists persisted runs through the contract-shaped control seam', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createBundle('team_run_alpha'));
+    await control.createRun(createBundle('team_run_beta'));
+
+    const listed = await control.listRuns({ limit: 10 });
+    expect(listed.map((record) => record.runId).sort()).toEqual(['team_run_alpha', 'team_run_beta']);
   });
 });

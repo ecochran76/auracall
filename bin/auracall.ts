@@ -863,6 +863,21 @@ program
     });
   });
 
+program
+  .command('api')
+  .description('Run bounded local AuraCall API surfaces for development.')
+  .command('serve')
+  .description('Run the bounded local OpenAI-compatible responses adapter.')
+  .option('--host <address>', 'Interface to bind (default 127.0.0.1).')
+  .option('--port <number>', 'Port to listen on (default random).', parseIntOption)
+  .action(async (commandOptions) => {
+    const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
+    await serveResponsesHttp({
+      host: commandOptions.host,
+      port: commandOptions.port,
+    });
+  });
+
 const projectsCommand = program
   .command('projects')
   .description('List available projects/workspaces for the active browser provider.')

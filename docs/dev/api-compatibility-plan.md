@@ -39,21 +39,38 @@ The repo also now contains a small route-neutral API scaffolding seam under:
 That code should be treated as provisional scaffolding, not as permission to
 start building the HTTP surface yet.
 
-Current stop line:
+Current implementation line:
 
 - acceptable now:
   - request/response vocabulary
   - compatibility-first mixed text + artifact response modeling
   - route-neutral helpers that do not imply transport behavior
-- not started yet:
-  - HTTP route handlers
-  - `POST /v1/responses`
+  - one bounded HTTP module for:
+    - `POST /v1/responses`
+    - `GET /v1/responses/{response_id}`
+    - `GET /v1/models`
+- still deferred:
   - `POST /v1/chat/completions`
   - streaming/SSE contracts
   - auth and request-routing behavior
+  - public CLI/service exposure of the new HTTP adapter
 
-The next implementation work should return to the runtime/service plan and add
-the execution-record persistence boundary before any HTTP work advances.
+The next implementation work should keep the `responses` surface bounded and
+avoid widening into transport breadth until the first adapter checkpoint is
+explicitly accepted.
+
+Current adapter choice:
+
+- HTTP is the first external adapter to target once the runtime control
+  contract is accepted
+
+Why:
+
+- OpenAI compatibility is already the stated product requirement
+- the runtime layer now has enough internal shape to support a clean
+  `responses`-first adapter
+- MCP can follow later as a client of the same runtime contract instead of
+  becoming the place where execution semantics are defined first
 
 ## Design rule
 
@@ -212,6 +229,15 @@ Candidate headers:
 - `X-AuraCall-Team`
 - `X-AuraCall-Service`
 - `X-AuraCall-Execution-Mode`
+
+Current bounded implementation:
+
+- the local `responses` adapter currently accepts:
+  - `X-AuraCall-Runtime-Profile`
+  - `X-AuraCall-Agent`
+  - `X-AuraCall-Team`
+  - `X-AuraCall-Service`
+- when both body `auracall` hints and headers are present, headers win
 
 Why headers first:
 - easier for gateways and proxies
