@@ -44,7 +44,9 @@ export interface ResponsesHttpServerInstance {
   close(): Promise<void>;
 }
 
-export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {}
+export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
+  listenPublic?: boolean;
+}
 
 interface HttpErrorPayload {
   error: {
@@ -65,6 +67,34 @@ interface HttpModelListResponse {
   data: HttpModelDescriptor[];
 }
 
+interface HttpStatusResponse {
+  object: 'status';
+  ok: true;
+  mode: 'development';
+  binding: {
+    host: string;
+    port: number;
+    localOnly: boolean;
+    unauthenticated: boolean;
+  };
+  routes: {
+    status: string;
+    models: string;
+    responsesCreate: string;
+    responsesGetTemplate: string;
+  };
+  compatibility: {
+    openai: true;
+    chatCompletions: false;
+    streaming: false;
+    auth: false;
+  };
+  executionHints: {
+    headerNames: string[];
+    bodyObject: 'auracall';
+  };
+}
+
 const StructuredResponseOutputSchema = z.array(ExecutionResponseOutputItemSchema);
 
 export async function createResponsesHttpServer(
@@ -76,6 +106,7 @@ export async function createResponsesHttpServer(
   const now = deps.now ?? (() => new Date());
   const generateResponseId =
     deps.generateResponseId ?? (() => `resp_${randomUUID().replace(/-/g, '')}`);
+  const boundHost = options.host ?? '127.0.0.1';
   const server = http.createServer();
 
   server.on('request', async (req, res) => {
@@ -83,7 +114,9 @@ export async function createResponsesHttpServer(
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
 
       if (req.method === 'GET' && url.pathname === '/status') {
-        sendJson(res, 200, { ok: true });
+        const address = server.address();
+        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        sendJson(res, 200, createHttpStatusResponse({ host: boundHost, port: boundPort }));
         return;
       }
 
@@ -145,7 +178,7 @@ export async function createResponsesHttpServer(
   });
 
   await new Promise<void>((resolve) => {
-    server.listen(options.port ?? 0, options.host ?? '127.0.0.1', () => resolve());
+    server.listen(options.port ?? 0, boundHost, () => resolve());
   });
 
   const address = server.address();
@@ -164,10 +197,18 @@ export async function createResponsesHttpServer(
 }
 
 export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}): Promise<void> {
+  assertResponsesHostAllowed(options.host, options.listenPublic ?? false);
   const logger = options.logger ?? console.log;
   const server = await createResponsesHttpServer(options, { now: () => new Date() });
-  const url = `http://${options.host ?? '127.0.0.1'}:${server.port}`;
+  const host = options.host ?? '127.0.0.1';
+  const url = `http://${host}:${server.port}`;
+  const localOnly = isLoopbackHost(host);
   logger(`AuraCall responses server listening at ${url}`);
+  if (localOnly) {
+    logger('Posture: local development only; bound to loopback and intentionally unauthenticated.');
+  } else {
+    logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
+  }
   logger('Endpoints: GET /status, GET /v1/models, POST /v1/responses, GET /v1/responses/{id}');
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
 
@@ -181,6 +222,15 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     process.once('SIGINT', handleSignal);
     process.once('SIGTERM', handleSignal);
   });
+}
+
+export function assertResponsesHostAllowed(host: string | undefined, listenPublic: boolean): void {
+  if (listenPublic || isLoopbackHost(host ?? '127.0.0.1')) {
+    return;
+  }
+  throw new Error(
+    `Refusing to bind responses server to non-loopback host "${host}". Re-run with --listen-public if you really want an unauthenticated development server on a public interface.`,
+  );
 }
 
 export function createExecutionResponseForStoredRecord(bundle: ExecutionRunRecordBundle): ExecutionResponse {
@@ -329,6 +379,41 @@ function createHttpModelListResponse(): HttpModelListResponse {
   };
 }
 
+function createHttpStatusResponse(input: { host: string; port: number }): HttpStatusResponse {
+  return {
+    object: 'status',
+    ok: true,
+    mode: 'development',
+    binding: {
+      host: input.host,
+      port: input.port,
+      localOnly: isLoopbackHost(input.host),
+      unauthenticated: true,
+    },
+    routes: {
+      status: '/status',
+      models: '/v1/models',
+      responsesCreate: '/v1/responses',
+      responsesGetTemplate: '/v1/responses/{response_id}',
+    },
+    compatibility: {
+      openai: true,
+      chatCompletions: false,
+      streaming: false,
+      auth: false,
+    },
+    executionHints: {
+      headerNames: [
+        'X-AuraCall-Runtime-Profile',
+        'X-AuraCall-Agent',
+        'X-AuraCall-Team',
+        'X-AuraCall-Service',
+      ],
+      bodyObject: 'auracall',
+    },
+  };
+}
+
 function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {
   const structured = bundle.sharedState.structuredOutputs.find((entry) => entry.key === 'response.output');
   if (structured) {
@@ -421,6 +506,11 @@ function readSingleHeader(value: string | string[] | undefined): string | null {
 
 function normalizeTransportHeader(value: string | null): ExecutionRequestExtensionHints['transport'] {
   return value === 'api' || value === 'browser' || value === 'auto' ? value : null;
+}
+
+function isLoopbackHost(host: string): boolean {
+  const normalized = host.trim().toLowerCase();
+  return normalized === '127.0.0.1' || normalized === 'localhost' || normalized === '::1';
 }
 
 function normalizeResponseArtifactType(kind: string): ExecutionResponseArtifactType {

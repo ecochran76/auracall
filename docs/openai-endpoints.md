@@ -16,6 +16,13 @@ OpenAI-compatible runtime surfaces:
 auracall api serve --port 8080
 ```
 
+Non-loopback bind is blocked by default. To opt into an unauthenticated public
+bind intentionally:
+
+```bash
+auracall api serve --host 0.0.0.0 --listen-public --port 8080
+```
+
 Current endpoints:
 
 - `GET /status`
@@ -25,7 +32,10 @@ Current endpoints:
 
 Current limits:
 
+- loopback by default; non-loopback requires `--listen-public`
 - runtime-backed create/read only
+- `/status` reports explicit development posture, route surface, and
+  unauthenticated/local-only state
 - optional `X-AuraCall-*` headers for execution hints:
   - `X-AuraCall-Runtime-Profile`
   - `X-AuraCall-Agent`
@@ -34,6 +44,7 @@ Current limits:
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet
+- non-loopback host binding is still unauthenticated and warned as unsafe
 
 This server is intended as the first local compatibility surface, not yet a
 full production API layer.

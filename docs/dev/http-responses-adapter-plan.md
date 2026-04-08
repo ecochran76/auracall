@@ -159,6 +159,9 @@ Current implemented behavior:
 - `GET /v1/models`
   - returns a minimal list-compatible catalog from AuraCall's current model
     registry
+- `GET /status`
+  - reports explicit development posture
+  - reports current route surface and unauthenticated/local-only state
 - `POST /v1/responses`
   - also accepts bounded `X-AuraCall-*` execution hints:
     - runtime profile
@@ -174,6 +177,8 @@ Current explicit limits:
 - no auth
 - local dev-only CLI exposure now exists through:
   - `auracall api serve`
+- non-loopback host binding is still warned as unsafe because the server
+  remains unauthenticated
 - still no broader service-host integration yet
 - no `chat/completions` adapter yet
 

@@ -9845,3 +9845,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   when both are present. That keeps standard OpenAI bodies usable while still
   allowing AuraCall runtime/agent/team/service selection in the bounded
   `responses` adapter.
+- 2026-04-08: The first local API host should declare its posture explicitly.
+  A richer `/status` payload and a startup warning for non-loopback binding are
+  low-risk ways to make “dev-only and unauthenticated” operationally obvious
+  without widening the protocol surface.

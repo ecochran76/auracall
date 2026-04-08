@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { createResponsesHttpServer } from '../src/http/responsesServer.js';
+import { assertResponsesHostAllowed, createResponsesHttpServer } from '../src/http/responsesServer.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import {
   createExecutionRun,
@@ -74,6 +74,44 @@ describe('http responses adapter', () => {
         status: 'in_progress',
         model: 'gemini-3-pro',
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports explicit development posture through /status', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      expect(payload).toMatchObject({
+        object: 'status',
+        ok: true,
+        mode: 'development',
+        binding: {
+          host: '127.0.0.1',
+          port: server.port,
+          localOnly: true,
+          unauthenticated: true,
+        },
+        compatibility: {
+          openai: true,
+          chatCompletions: false,
+          streaming: false,
+          auth: false,
+        },
+        executionHints: {
+          bodyObject: 'auracall',
+        },
+      });
+      expect(payload.executionHints.headerNames).toEqual([
+        'X-AuraCall-Runtime-Profile',
+        'X-AuraCall-Agent',
+        'X-AuraCall-Team',
+        'X-AuraCall-Service',
+      ]);
     } finally {
       await server.close();
     }
@@ -286,5 +324,42 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('reports development-only posture through the status endpoint', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'status',
+        ok: true,
+        mode: 'development',
+        binding: {
+          host: '127.0.0.1',
+          localOnly: true,
+          unauthenticated: true,
+        },
+        compatibility: {
+          openai: true,
+          chatCompletions: false,
+          streaming: false,
+          auth: false,
+        },
+        executionHints: {
+          bodyObject: 'auracall',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('refuses non-loopback bind unless explicitly allowed', () => {
+    expect(() => assertResponsesHostAllowed('0.0.0.0', false)).toThrow(/--listen-public/);
+    expect(() => assertResponsesHostAllowed('127.0.0.1', false)).not.toThrow();
+    expect(() => assertResponsesHostAllowed('0.0.0.0', true)).not.toThrow();
   });
 });

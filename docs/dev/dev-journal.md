@@ -9954,3 +9954,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-08 - Local responses host posture is explicit
+
+- Focus:
+  - improve host lifecycle clarity without widening protocol breadth
+- Progress:
+  - `GET /status` now reports explicit development posture, route surface,
+    compatibility limits, and execution-hint support
+  - `auracall api serve` now warns when `--host` is non-loopback because the
+    server remains intentionally unauthenticated
+  - updated user-facing docs in:
+    - `README.md`
+    - `docs/openai-endpoints.md`
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

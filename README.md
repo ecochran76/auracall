@@ -59,6 +59,9 @@ auracall features diff --target gemini --json
 # Local dev-only OpenAI-compatible responses server
 auracall api serve --port 8080
 
+# Explicitly allow a non-loopback bind only when you mean it
+auracall api serve --host 0.0.0.0 --listen-public --port 8080
+
 # Machine-readable browser setup output
 auracall setup --target grok --skip-login --skip-verify --json
 
@@ -98,7 +101,10 @@ Terminology note:
   - `POST /v1/responses`
   - `GET /v1/responses/{id}`
 - Current API boundary for that local server:
+  - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read only
+  - `/status` now reports explicit development posture, route surface, and
+    unauthenticated/local-only state
   - optional `X-AuraCall-*` execution headers for:
     - `X-AuraCall-Runtime-Profile`
     - `X-AuraCall-Agent`
@@ -107,6 +113,8 @@ Terminology note:
   - no auth
   - no streaming
   - no `chat/completions` adapter yet
+  - non-loopback `--host` bindings are allowed but still warned as unsafe for
+    anything beyond local development
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).
 - Gemini feature discovery/snapshot/diff is now first-class through
   `auracall features ...`.

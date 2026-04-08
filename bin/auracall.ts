@@ -868,13 +868,15 @@ program
   .description('Run bounded local AuraCall API surfaces for development.')
   .command('serve')
   .description('Run the bounded local OpenAI-compatible responses adapter.')
-  .option('--host <address>', 'Interface to bind (default 127.0.0.1).')
+  .option('--host <address>', 'Interface to bind (default 127.0.0.1; non-loopback remains unauthenticated).')
   .option('--port <number>', 'Port to listen on (default random).', parseIntOption)
+  .option('--listen-public', 'Allow binding the unauthenticated development server to a non-loopback interface.')
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     await serveResponsesHttp({
       host: commandOptions.host,
       port: commandOptions.port,
+      listenPublic: Boolean(commandOptions.listenPublic),
     });
   });
 
