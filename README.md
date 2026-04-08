@@ -56,6 +56,9 @@ auracall features --target gemini --json
 auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
 
+# Local dev-only OpenAI-compatible responses server
+auracall api serve --port 8080
+
 # Machine-readable browser setup output
 auracall setup --target grok --skip-login --skip-verify --json
 
@@ -88,6 +91,22 @@ Terminology note:
 **CLI**
 - API mode expects API keys in your environment: `OPENAI_API_KEY` (GPT-5.x), `GEMINI_API_KEY` (Gemini 3 Pro), `ANTHROPIC_API_KEY` (Claude Sonnet 4.5 / Opus 4.1).
 - Gemini browser mode uses Chrome cookies instead of an API key—just be logged into `gemini.google.com` in Chrome (no Python/venv required).
+- A bounded local OpenAI-compatible responses adapter is available for
+  development through `auracall api serve`. Current endpoints are:
+  - `GET /status`
+  - `GET /v1/models`
+  - `POST /v1/responses`
+  - `GET /v1/responses/{id}`
+- Current API boundary for that local server:
+  - runtime-backed create/read only
+  - optional `X-AuraCall-*` execution headers for:
+    - `X-AuraCall-Runtime-Profile`
+    - `X-AuraCall-Agent`
+    - `X-AuraCall-Team`
+    - `X-AuraCall-Service`
+  - no auth
+  - no streaming
+  - no `chat/completions` adapter yet
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).
 - Gemini feature discovery/snapshot/diff is now first-class through
   `auracall features ...`.

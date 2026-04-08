@@ -13,6 +13,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Pin the first bounded HTTP adapter slice so implementation stays narrow.
+- Progress: Added `docs/dev/http-responses-adapter-plan.md` to define the first HTTP work as `responses` create/read/inspect only, with `chat/completions`, streaming, image routes, and MCP changes explicitly deferred. Linked that plan from the active execution plan so the next implementation step is scoped before any route code lands.
+- Issues: This is still a planning checkpoint. No HTTP implementation started in this slice.
+- Next: Implement the bounded `responses` HTTP adapter against the runtime control contract, without widening into `chat/completions`.
+
+- Date: 2026-04-08
+- Focus: Choose the first external adapter on purpose now that the runtime control contract is explicit.
+- Progress: Reviewed the existing remote HTTP server and MCP server against the new runtime control contract and recorded the adapter decision in the plans: HTTP should be the first external adapter, anchored on the OpenAI-compatible `responses` surface. MCP remains important, but it should follow as a client of the same runtime contract instead of becoming the place where runtime semantics are invented first.
+- Issues: No transport implementation started in this slice. The decision is recorded, but route handlers and MCP changes are still deferred.
+- Next: Plan the first HTTP adapter slice around a bounded `responses` create/read/inspect surface, while keeping `chat/completions` as a later compatibility adapter.
+
+- Date: 2026-04-08
+- Focus: Align the new runtime control implementation with the transport-neutral contract before any adapter work begins.
+- Progress: Added `src/runtime/contract.ts` to hold the transport-neutral runtime control interface and moved the shared control input/output types there. Updated `src/runtime/control.ts` to implement that contract explicitly and added `listRuns(...)` so the code seam now matches the documented control-surface plan more closely. Extended `tests/runtime.control.test.ts` to cover run listing through the contract.
+- Issues: The code seam is now aligned with the contract, but it is still intentionally internal and transport-free. No external adapter choice has been made.
+- Next: Review this checkpoint, then decide whether the first external adapter should be HTTP or MCP.
+
+- Date: 2026-04-08
+- Focus: Define the first transport-neutral control contract before any HTTP or MCP adapter lands.
+- Progress: Added `docs/dev/runtime-control-surface-plan.md` to spell out the host-facing runtime operations that future adapters should call: create/read/inspect run, acquire/heartbeat/release/expire lease, and list runs. Linked that plan from the active execution plan so the next adapter choice stays downstream of one explicit control contract.
+- Issues: The adapter choice is still intentionally open. The repo now has enough internal runtime core that the next risk is adapter drift, not missing primitives.
+- Next: Decide whether HTTP or MCP should be the first external adapter after the transport-neutral control contract is accepted.
+
+- Date: 2026-04-08
 - Focus: Add one internal runtime control seam before any external surface work.
 - Progress: Added `src/runtime/control.ts` as the first local composition layer over the runtime core. It creates persisted runs, inspects them through the dispatcher plan, and applies lease transitions through revisioned store writes. Added focused coverage in `tests/runtime.control.test.ts` and updated the runtime planning docs so this seam is explicitly internal and transport-free.
 - Issues: This is intentionally not a public API. There is still no HTTP route, MCP tool, streaming layer, or background runner loop.
@@ -9863,3 +9887,70 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this slice still stops before HTTP route handlers
   - the next API-facing move should be an adapter from these runtime API types
     onto `POST /v1/responses`
+
+## 2026-04-08 - Bounded HTTP responses adapter is live
+
+- Focus:
+  - add the first real external-adapter module while keeping the runtime stop
+    line intact
+- Progress:
+  - added `src/http/responsesServer.ts`
+  - implemented bounded HTTP routes for:
+    - `POST /v1/responses`
+    - `GET /v1/responses/{response_id}`
+    - `GET /v1/models`
+  - kept the adapter pointed at the runtime control seam instead of direct file
+    access
+  - mapped `response_id` directly onto the persisted runtime run id for this
+    first slice
+  - preserved ordered mixed output when runtime shared state exposes
+    `structuredOutputs` keyed as `response.output`
+  - added focused regression coverage in:
+    - `tests/http.responsesServer.test.ts`
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this is still a bounded internal module, not a public server command yet
+  - there is still no runner/execution loop, streaming, auth, or
+    `chat/completions` adapter
+
+## 2026-04-08 - Local dev-only responses server exposure is live
+
+- Focus:
+  - expose the bounded `responses` adapter without widening protocol breadth
+- Progress:
+  - added `auracall api serve`
+  - wired it to the bounded local HTTP server in
+    `src/http/responsesServer.ts`
+  - kept the exposure narrow:
+    - `GET /status`
+    - `GET /v1/models`
+    - `POST /v1/responses`
+    - `GET /v1/responses/{id}`
+  - updated user-facing docs in:
+    - `README.md`
+    - `docs/openai-endpoints.md`
+- Notes:
+  - this is still local dev-only
+  - there is still no auth, streaming, service-host integration, or
+    `chat/completions` adapter
+
+## 2026-04-08 - Responses adapter now honors bounded X-AuraCall headers
+
+- Focus:
+  - improve compatibility-preserving execution hints without widening route
+    scope
+- Progress:
+  - `POST /v1/responses` now accepts:
+    - `X-AuraCall-Runtime-Profile`
+    - `X-AuraCall-Agent`
+    - `X-AuraCall-Team`
+    - `X-AuraCall-Service`
+  - header hints merge into the existing optional body `auracall` object
+  - headers take precedence when both are present
+  - added focused coverage in:
+    - `tests/http.responsesServer.test.ts`
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`

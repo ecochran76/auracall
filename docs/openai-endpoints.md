@@ -7,6 +7,37 @@ Oracle uses the official OpenAI Node.js SDK, which allows it to connect to any A
 - Local inference servers (e.g., vLLM, Ollama)
 - Proxy servers (e.g., LiteLLM)
 
+## AuraCall local compatibility server
+
+AuraCall now has a bounded local development server for the first
+OpenAI-compatible runtime surfaces:
+
+```bash
+auracall api serve --port 8080
+```
+
+Current endpoints:
+
+- `GET /status`
+- `GET /v1/models`
+- `POST /v1/responses`
+- `GET /v1/responses/{id}`
+
+Current limits:
+
+- runtime-backed create/read only
+- optional `X-AuraCall-*` headers for execution hints:
+  - `X-AuraCall-Runtime-Profile`
+  - `X-AuraCall-Agent`
+  - `X-AuraCall-Team`
+  - `X-AuraCall-Service`
+- no auth
+- no streaming/SSE
+- no `POST /v1/chat/completions` adapter yet
+
+This server is intended as the first local compatibility surface, not yet a
+full production API layer.
+
 ## Azure OpenAI
 
 To use Azure OpenAI, point Oracle at your Azure resource and supply the Azure key:

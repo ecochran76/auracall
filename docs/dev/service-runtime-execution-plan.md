@@ -232,6 +232,21 @@ Deliverables:
 Acceptance:
 - API and MCP are clients of one execution model, not separate orchestrators
 
+Current checkpoint for this slice:
+
+- the transport-neutral runtime control contract is now explicit in:
+  - `src/runtime/contract.ts`
+- the local control implementation conforms to it in:
+  - `src/runtime/control.ts`
+- one bounded HTTP adapter now exists in:
+  - `src/http/responsesServer.ts`
+- still intentionally deferred:
+  - public server exposure
+  - auth
+  - streaming
+  - `chat/completions`
+  - MCP runtime-native adoption
+
 ### Slice 5: Team execution bridge
 
 Goal:

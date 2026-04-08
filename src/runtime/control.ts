@@ -10,52 +10,19 @@ import {
   type ExecutionRunRecordStore,
   type ExecutionRunStoredRecord,
 } from './store.js';
-import type { ExecutionRunLease, ExecutionRunRecordBundle } from './types.js';
+import type { ExecutionRunRecordBundle } from './types.js';
+import type {
+  AcquireStoredExecutionRunLeaseInput,
+  ExecutionRuntimeControlContract,
+  ExpireStoredExecutionRunLeasesInput,
+  HeartbeatStoredExecutionRunLeaseInput,
+  ListStoredExecutionRunsInput,
+  ReleaseStoredExecutionRunLeaseInput,
+} from './contract.js';
 
-export interface ExecutionRunInspection {
-  record: ExecutionRunStoredRecord;
-  dispatchPlan: ExecutionRunDispatchPlan;
-}
-
-export interface AcquireStoredExecutionRunLeaseInput {
-  runId: string;
-  leaseId: string;
-  ownerId: string;
-  acquiredAt: string;
-  expiresAt: string;
-  heartbeatAt?: string;
-}
-
-export interface HeartbeatStoredExecutionRunLeaseInput {
-  runId: string;
-  leaseId: string;
-  heartbeatAt: string;
-  expiresAt: string;
-}
-
-export interface ReleaseStoredExecutionRunLeaseInput {
-  runId: string;
-  leaseId: string;
-  releasedAt: string;
-  releaseReason?: string | null;
-}
-
-export interface ExpireStoredExecutionRunLeasesInput {
-  runId: string;
-  now: string;
-}
-
-export interface ExecutionRuntimeControl {
-  createRun(bundle: ExecutionRunRecordBundle): Promise<ExecutionRunStoredRecord>;
-  readRun(runId: string): Promise<ExecutionRunStoredRecord | null>;
-  inspectRun(runId: string): Promise<ExecutionRunInspection | null>;
-  acquireLease(input: AcquireStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
-  heartbeatLease(input: HeartbeatStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
-  releaseLease(input: ReleaseStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
-  expireLeases(input: ExpireStoredExecutionRunLeasesInput): Promise<ExecutionRunStoredRecord | null>;
-}
-
-export function createExecutionRuntimeControl(store: ExecutionRunRecordStore = createExecutionRunRecordStore()): ExecutionRuntimeControl {
+export function createExecutionRuntimeControl(
+  store: ExecutionRunRecordStore = createExecutionRunRecordStore(),
+): ExecutionRuntimeControlContract {
   return {
     async createRun(bundle) {
       await store.ensureStorage();
@@ -73,6 +40,12 @@ export function createExecutionRuntimeControl(store: ExecutionRunRecordStore = c
         record,
         dispatchPlan: createExecutionRunDispatchPlan(record.bundle),
       };
+    },
+
+    async listRuns(input: ListStoredExecutionRunsInput = {}) {
+      const bundles = await store.listBundles(input);
+      const records = await Promise.all(bundles.map(async (bundle) => store.readRecord(bundle.run.id)));
+      return records.filter((record): record is ExecutionRunStoredRecord => record !== null);
     },
 
     async acquireLease(input) {
@@ -129,8 +102,4 @@ async function requireStoredRecord(store: ExecutionRunRecordStore, runId: string
     throw new Error(`Execution run ${runId} was not found`);
   }
   return record;
-}
-
-export function getActiveExecutionRunLease(record: ExecutionRunStoredRecord): ExecutionRunLease | null {
-  return record.bundle.leases.find((lease) => lease.status === 'active') ?? null;
 }
