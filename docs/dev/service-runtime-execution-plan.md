@@ -155,6 +155,19 @@ Acceptance:
 - no implied parallelism
 - no provider-specific branching in the dispatcher model
 
+Current intended boundary for this slice:
+
+- pure classification/planning is in scope:
+  - next runnable step
+  - deferred runnable steps under sequential mode
+  - blocked-by-failure classification for fail-fast policy
+  - missing dependency reporting
+- still out of scope:
+  - actual step execution
+  - lease acquisition
+  - retries
+  - worker ownership
+
 ### Slice 3: Lease and runner ownership model
 
 Goal:
@@ -169,6 +182,23 @@ Deliverables:
 Acceptance:
 - one run has one active owner at a time
 - crash recovery semantics are documented before broad execution lands
+
+Current intended boundary for this slice:
+
+- pure lease-state transitions are in scope:
+  - acquire
+  - heartbeat
+  - release
+  - expire
+- acceptable outputs:
+  - updated run bundle
+  - appended lease events
+  - explicit single-owner rejection when an active lease already exists
+- still out of scope:
+  - background runners
+  - polling loops
+  - automatic stale-run recovery daemons
+  - step execution side effects
 
 ### Slice 4: External control surface contract
 
@@ -232,6 +262,50 @@ That should likely produce:
 
 The immediate goal is to make future implementation harder to fragment, not to
 ship service mode in one jump.
+
+## Current checkpoint
+
+The repo has now crossed the first half of Slice 1:
+
+- runtime execution vocabulary exists under:
+  - `src/runtime/types.ts`
+  - `src/runtime/schema.ts`
+  - `src/runtime/model.ts`
+- deterministic projection from team-run planning data into runtime execution
+  records also exists
+
+This is within the intended scope of this plan.
+
+The repo has also added a small route-neutral API scaffolding seam under:
+
+- `src/runtime/apiTypes.ts`
+- `src/runtime/apiSchema.ts`
+- `src/runtime/apiModel.ts`
+
+Treat that API seam as provisional scaffolding only.
+
+Current stop line:
+
+- do not extend the API seam into:
+  - HTTP handlers
+  - `responses` routes
+  - `chat/completions` adapters
+  - streaming contracts
+- do not let the provisional API files become the de facto architecture by
+  continued expansion before the persistence boundary is settled
+
+That means the next active implementation target returns to this plan, not the
+API plan:
+
+- execution-record persistence boundary first
+- dispatcher/lease work later
+- transport surfaces after the runtime core is more explicit
+
+The next concrete code slice after this checkpoint is:
+
+- JSON-first execution-record persistence under the AuraCall home dir
+- read/write/list helpers only
+- no queue/dispatcher semantics yet
 
 ## Definition of done for this planning seam
 

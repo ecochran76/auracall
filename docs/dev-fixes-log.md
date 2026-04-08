@@ -9745,3 +9745,50 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   shared service/runtime execution model, so future CLI/API/MCP/team execution
   can sit on one execution core instead of growing separate orchestration
   paths.
+- 2026-04-07: When adding the first shared runtime execution model, do not
+  mutate the existing team-run vocabulary in place. Keep `src/teams/*` as the
+  planning/orchestration-facing model and add a separate `src/runtime/*` seam
+  for execution records, then project deterministically from team-run bundles
+  into runtime bundles. That keeps planning semantics and execution semantics
+  explicit instead of collapsing them prematurely.
+- 2026-04-07: The first runtime execution slice should stop at shared
+  vocabulary plus projection. `run`, `runStep`, `runEvent`, `runLease`, and
+  `sharedState` are enough to anchor later dispatcher/API/MCP work without
+  smuggling in premature runner behavior.
+- 2026-04-07: For the future HTTP API, default to OpenAI-compatible `/v1/...`
+  routes wherever the conceptual operation already matches. Prefer optional
+  `X-AuraCall-*` headers for execution hints like runtime profile, agent, or
+  team selection, because headers preserve request-body compatibility better
+  than mandatory AuraCall-specific JSON fields. Reserve `/auracall/...` for
+  operational/admin surfaces that do not fit cleanly into the OpenAI
+  compatibility model.
+- 2026-04-07: Mixed text + artifact answers should be modeled as ordered
+  sibling output items in one `responses` timeline, not as text-only messages
+  with hidden side metadata and not as a separate out-of-band artifact API.
+  Keep assistant prose in `message` items and durable non-text outputs in
+  explicit `artifact` items with stable ids, typed artifact family, MIME/URI,
+  and bounded metadata.
+- 2026-04-07: The first API-facing implementation seam should be route-neutral
+  request/response types under the runtime layer, not HTTP handlers first. That
+  keeps `responses`, `chat/completions`, and MCP adapters pointed at one shared
+  execution contract instead of letting route handlers define the model by
+  accident.
+- 2026-04-07: Once route-neutral runtime API scaffolding exists, freeze it
+  until the runtime persistence boundary is explicit. The existence of
+  `src/runtime/api*` is not permission to start HTTP handlers or transport
+  adapters early; the next active implementation target remains durable
+  execution-record persistence, with API routes/adapters deferred until that
+  runtime core is settled.
+- 2026-04-07: The first runtime persistence seam should stay JSON-first and
+  bundle-oriented: `~/.auracall/runtime/runs/<id>/bundle.json` is sufficient
+  to make run identity durable without smuggling in dispatcher, queue, or HTTP
+  behavior. Read/write/list helpers are the right boundary for this slice.
+- 2026-04-07: The first dispatcher slice should stay classification-only. A
+  runtime dispatch plan may identify `nextRunnableStepId`, deferred runnable
+  work under sequential mode, missing dependencies, and fail-fast
+  `blockedByFailureStepIds`, but it should not yet acquire leases, mutate run
+  state, or execute steps.
+- 2026-04-07: The first lease slice should stay bundle-local and explicit.
+  Acquire/heartbeat/release/expire transitions may update a persisted runtime
+  bundle and append lease events, but they should not imply a background
+  runner loop, automatic recovery daemon, or step execution behavior.
