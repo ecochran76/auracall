@@ -200,6 +200,22 @@ Current intended boundary for this slice:
   - automatic stale-run recovery daemons
   - step execution side effects
 
+Storage discipline note for this phase:
+
+- bundle-local lease/dispatcher mutations should move through explicit
+  persistence revisions
+- optimistic compare-and-swap semantics are in scope before any external
+  control surface lands
+- distributed locking and daemon ownership are still out of scope
+
+Immediate follow-on after this phase:
+
+- one local runtime control seam may compose:
+  - persisted record reads
+  - dispatch-plan inspection
+  - lease-state transitions
+- but it should remain an internal/local module, not an HTTP or MCP surface
+
 ### Slice 4: External control surface contract
 
 Goal:

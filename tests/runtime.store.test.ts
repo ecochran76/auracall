@@ -8,10 +8,13 @@ import {
   createExecutionRunRecordStore,
   ensureExecutionRunStorage,
   getExecutionRunBundlePath,
+  getExecutionRunRecordPath,
   getExecutionRunsDir,
   listExecutionRunRecordBundles,
   readExecutionRunRecordBundle,
+  readExecutionRunStoredRecord,
   writeExecutionRunRecordBundle,
+  writeExecutionRunStoredRecord,
 } from '../src/runtime/store.js';
 import { createTeamRunBundle } from '../src/teams/model.js';
 
@@ -66,6 +69,12 @@ describe('runtime execution store', () => {
     expect(loaded).not.toBeNull();
     expect(loaded?.run.id).toBe('team_run_1');
     expect(loaded?.steps).toHaveLength(1);
+
+    const stored = await readExecutionRunStoredRecord('team_run_1');
+    expect(stored?.runId).toBe('team_run_1');
+    expect(stored?.revision).toBe(1);
+    expect(stored?.bundle.run.id).toBe('team_run_1');
+    expect(getExecutionRunRecordPath('team_run_1')).toContain('record.json');
   });
 
   it('lists persisted bundles in reverse chronological order with filters', async () => {
@@ -148,5 +157,59 @@ describe('runtime execution store', () => {
 
     const filtered = await listExecutionRunRecordBundles({ status: 'running', limit: 1 });
     expect(filtered.map((entry) => entry.run.id)).toEqual(['team_run_newer']);
+  });
+
+  it('supports compare-and-swap style record writes through revision checks', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-store-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const base = createExecutionRunRecordBundleFromTeamRun(
+      createTeamRunBundle({
+        runId: 'team_run_cas',
+        teamId: 'ops',
+        createdAt: '2026-04-07T00:00:00.000Z',
+        trigger: 'service',
+        steps: [
+          {
+            id: 'team_run_cas:step:1',
+            agentId: 'analyst',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'ready',
+            order: 1,
+            input: {
+              prompt: 'CAS bundle',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          },
+        ],
+      }),
+    );
+
+    const firstWrite = await writeExecutionRunStoredRecord(base);
+    expect(firstWrite.revision).toBe(1);
+
+    const nextBundle = {
+      ...base,
+      run: {
+        ...base.run,
+        status: 'running' as const,
+        updatedAt: '2026-04-07T00:01:00.000Z',
+      },
+    };
+
+    const secondWrite = await writeExecutionRunStoredRecord(nextBundle, { expectedRevision: 1 });
+    expect(secondWrite.revision).toBe(2);
+    expect(secondWrite.bundle.run.status).toBe('running');
+
+    await expect(
+      writeExecutionRunStoredRecord(nextBundle, { expectedRevision: 1 }),
+    ).rejects.toThrow(/revision mismatch/);
   });
 });

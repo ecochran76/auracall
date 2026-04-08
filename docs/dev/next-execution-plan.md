@@ -183,6 +183,20 @@ Recommended next slice after dispatcher:
   - heartbeat/release/expire state transitions
   - no worker loop yet
 
+Recommended next slice after lease ownership:
+
+- storage-level mutation discipline
+  - revisioned JSON record writes
+  - compare-and-swap update semantics
+  - no daemon/distributed locking yet
+
+Recommended next slice after mutation discipline:
+
+- local runtime control module
+  - inspect persisted runs
+  - compose dispatcher + lease helpers
+  - still no external transport surface
+
 Not yet:
 
 - HTTP routes
