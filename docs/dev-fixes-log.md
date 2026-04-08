@@ -9792,3 +9792,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Acquire/heartbeat/release/expire transitions may update a persisted runtime
   bundle and append lease events, but they should not imply a background
   runner loop, automatic recovery daemon, or step execution behavior.
+- 2026-04-08: Once the runtime store is durable enough for lease/dispatcher
+  mutations, add explicit revisioned record writes before exposing broader
+  control surfaces. `record.json` plus optional compare-and-swap semantics are
+  enough to make bundle updates disciplined without pretending we already have
+  distributed locking or runner daemons.
+- 2026-04-08: Before any external control surface lands, add one internal
+  runtime control seam that composes persisted-record reads, dispatch-plan
+  inspection, and lease transitions. That keeps future CLI/API/MCP adapters
+  pointed at one local control contract instead of assembling the runtime core
+  ad hoc in each surface.

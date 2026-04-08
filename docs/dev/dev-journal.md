@@ -12,6 +12,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-04-08
+- Focus: Add one internal runtime control seam before any external surface work.
+- Progress: Added `src/runtime/control.ts` as the first local composition layer over the runtime core. It creates persisted runs, inspects them through the dispatcher plan, and applies lease transitions through revisioned store writes. Added focused coverage in `tests/runtime.control.test.ts` and updated the runtime planning docs so this seam is explicitly internal and transport-free.
+- Issues: This is intentionally not a public API. There is still no HTTP route, MCP tool, streaming layer, or background runner loop.
+- Next: Pause and review the accumulated runtime core before deciding whether to expose it through a higher-level local service facade or stop at this checkpoint.
+
+- Date: 2026-04-08
+- Focus: Add optimistic mutation discipline to the JSON runtime store before any external control surface appears.
+- Progress: Extended `src/runtime/store.ts` from bundle-only persistence to revisioned stored records via `record.json`, while keeping `bundle.json` as the readable payload mirror. Added `readRecord` / `writeRecord` helpers with optional `expectedRevision` compare-and-swap checks, and expanded `tests/runtime.store.test.ts` to prove revision bumps and mismatch failures.
+- Issues: This is still single-host JSON discipline, not locking. There is no daemon or cross-process atomic lease owner yet; the explicit revision boundary just prevents the runtime layer from pretending writes are unconstrained.
+- Next: Decide whether the next slice should expose this runtime core through one local control module or pause here and review the accumulated runtime foundation before any surface work.
+
 - Date: 2026-04-07
 - Focus: Add the first lease ownership contract without introducing a runner loop.
 - Progress: Added `src/runtime/lease.ts` with pure bundle-level lease state transitions for acquire, heartbeat, release, and expire. The helper appends runtime lease events into both `events` and shared-state history and enforces the single-active-owner rule directly at the runtime model boundary. Added focused coverage in `tests/runtime.lease.test.ts` and updated the planning docs to keep this slice explicitly about ownership semantics, not background execution.
