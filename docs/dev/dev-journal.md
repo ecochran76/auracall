@@ -12,6 +12,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-04-07
+- Focus: Add the first lease ownership contract without introducing a runner loop.
+- Progress: Added `src/runtime/lease.ts` with pure bundle-level lease state transitions for acquire, heartbeat, release, and expire. The helper appends runtime lease events into both `events` and shared-state history and enforces the single-active-owner rule directly at the runtime model boundary. Added focused coverage in `tests/runtime.lease.test.ts` and updated the planning docs to keep this slice explicitly about ownership semantics, not background execution.
+- Issues: This is still a mutation helper, not a worker system. There is no compare-and-swap persistence, no poller, and no stale-lease scavenger process yet.
+- Next: Decide whether the next slice is storage-level mutation helpers/CAS semantics or the external control-surface contract, but still avoid HTTP execution handlers.
+
+- Date: 2026-04-07
+- Focus: Add the first runtime sequential-dispatch contract without crossing into worker behavior.
+- Progress: Added `src/runtime/dispatcher.ts` as a pure planning helper over persisted execution bundles. The new dispatch plan classifies terminal, blocked, blocked-by-failure, waiting, deferred, running, and the single next runnable step allowed under sequential mode. Added focused coverage in `tests/runtime.dispatcher.test.ts` and updated the runtime planning docs to keep this slice explicitly classification-only.
+- Issues: This still intentionally stops short of any mutation path, lease acquisition, retry policy, or execution loop. The API seam also remains frozen.
+- Next: Decide whether the next runtime slice should be dispatch-plan persistence/index summaries or the first lease ownership model, but not worker execution yet.
+
+- Date: 2026-04-07
+- Focus: Land the first persistence boundary for runtime execution records without widening into dispatcher or API work.
+- Progress: Added a minimal JSON-first runtime store under `src/runtime/store.ts` with explicit AuraCall-home path helpers plus read/write/list operations for execution bundles under `~/.auracall/runtime/runs/<id>/bundle.json`. Added focused coverage in `tests/runtime.store.test.ts` using the existing AuraCall-home test override hook. Updated the execution plan docs so persistence is now the active next seam after vocabulary/projection.
+- Issues: This is intentionally storage-only. There is still no dispatcher, lease ownership behavior, or HTTP transport, and the route-neutral API seam remains frozen.
+- Next: Keep the store boundary narrow and only then decide whether the next slice is metadata/indexing polish or the first sequential dispatcher contract.
+
+- Date: 2026-04-07
+- Focus: Reconcile the new runtime/API scaffolding with the intended roadmap boundary before more implementation accumulates.
+- Progress: Audited the new `src/runtime/*` and `src/runtime/api*` seams against the service/runtime and API planning docs. Confirmed that the runtime execution vocabulary and team-run projection are on-plan, but marked the route-neutral API seam as provisional scaffolding only. Updated the planning docs so the stop line is explicit: no HTTP handlers, `responses` route, `chat/completions` adapter, or transport work yet; the next active implementation target is the execution-record persistence boundary.
+- Issues: We went one bounded slice past “planning only” on the API line. The current API scaffolding is still small and neutral, but it would become drift if we keep expanding it before persistence/runtime ownership is settled.
+- Next: Keep the API seam frozen and take the runtime persistence boundary as the next real code slice.
+
 - Date: 2026-03-31
 - Focus: Finish the last pure declarative Grok route cleanup and stop the route-manifest slice at the right boundary.
 - Progress: Replaced the remaining hardcoded Grok root conversation URL fallbacks embedded in browser-evaluated scripts with helper-backed injected values in [src/browser/providers/grokAdapter.ts](/home/ecochran76/workspace.local/oracle/src/browser/providers/grokAdapter.ts). A final grep now shows only manifest defaults/templates themselves, not duplicated runtime route literals. Focused Grok/registry tests and `pnpm run check` passed.
@@ -9746,3 +9770,84 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the repo already has useful planning/data seams in `src/teams/*`
   - the next goal is not broad service mode delivery; it is preventing future
     API/MCP/team execution drift before it starts
+
+## 2026-04-07 - Slice 1 runtime execution vocabulary is live
+
+- Focus:
+  - land the first code seam from the service/runtime plan without adding real
+    dispatcher or runner behavior
+- Progress:
+  - added `src/runtime/` with:
+    - `types.ts`
+    - `schema.ts`
+    - `model.ts`
+  - defined one shared execution-record vocabulary for:
+    - `run`
+    - `runStep`
+    - `runEvent`
+    - `runLease`
+    - `sharedState`
+  - added deterministic projection from the existing
+    `teamRun + steps + sharedState` bundle into one runtime execution-record
+    bundle
+  - added focused regression coverage in:
+    - `tests/runtime.types.test.ts`
+    - `tests/runtime.schema.test.ts`
+    - `tests/runtime.model.test.ts`
+- Verification:
+  - `pnpm vitest run tests/runtime.types.test.ts tests/runtime.schema.test.ts tests/runtime.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this slice intentionally stops at vocabulary + projection
+  - there is still no real dispatcher, lease ownership, or persistence layer
+
+## 2026-04-07 - Planned the compatibility-first HTTP API shape
+
+- Focus:
+  - define the future API shape with OpenAI compatibility as the default
+    contract
+- Progress:
+  - added
+    [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+  - set the default API policy to:
+    - standard `/v1/models`
+    - standard `/v1/responses`
+    - standard `/v1/chat/completions` as a compatibility adapter
+    - standard image routes where they map cleanly
+  - kept AuraCall-specific extensions bounded:
+    - prefer optional `X-AuraCall-*` headers for runtime/agent/team hints
+    - allow optional top-level `auracall` body object only for tolerant
+      first-party clients
+    - reserve `/auracall/...` for operational/admin surfaces that should not be
+      forced into OpenAI compatibility
+- Notes:
+  - the next API-facing implementation anchor should be a route-neutral
+    runtime-backed `responses` contract, not a bespoke AuraCall-only HTTP shape
+
+## 2026-04-07 - Route-neutral runtime API contract is live
+
+- Focus:
+  - land the first code seam for a runtime-backed `responses` surface without
+    adding real HTTP handlers
+- Progress:
+  - added runtime API vocabulary in:
+    - `src/runtime/apiTypes.ts`
+    - `src/runtime/apiSchema.ts`
+    - `src/runtime/apiModel.ts`
+  - defined one route-neutral execution request/response contract with:
+    - optional AuraCall hints
+    - compatibility-first response shape
+    - ordered mixed output items
+  - made mixed text + artifact responses explicit:
+    - assistant text remains `message` output
+    - durable non-text outputs are sibling `artifact` items in the same
+      `output[]` timeline
+  - added focused regression coverage in:
+    - `tests/runtime.api.test.ts`
+- Verification:
+  - `pnpm vitest run tests/runtime.types.test.ts tests/runtime.schema.test.ts tests/runtime.model.test.ts tests/runtime.api.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Notes:
+  - this slice still stops before HTTP route handlers
+  - the next API-facing move should be an adapter from these runtime API types
+    onto `POST /v1/responses`

@@ -147,6 +147,48 @@ The next planning seam is now also explicit:
 That next seam is now captured in:
 
 - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+- [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+
+Current execution/service checkpoint:
+
+- the runtime execution vocabulary/projection seam is now in place under
+  `src/runtime/*`
+- a small route-neutral API vocabulary seam also exists under
+  `src/runtime/api*`
+- that API seam should be treated as frozen provisional scaffolding for now,
+  not as an instruction to start handlers or adapters
+
+The next active implementation target is therefore:
+
+- persistence boundary for execution records
+
+Recommended immediate shape:
+
+- JSON-first runtime store under `~/.auracall/runtime/runs/<id>/`
+- durable `bundle.json` write/read/list helpers
+- no dispatcher or transport behavior in the same slice
+
+Recommended next slice after persistence:
+
+- sequential dispatcher contract only
+  - classify one next runnable step
+  - report deferred runnable work under sequential mode
+  - report fail-fast blocked work
+  - no runner behavior yet
+
+Recommended next slice after dispatcher:
+
+- lease ownership contract only
+  - one active lease at a time
+  - heartbeat/release/expire state transitions
+  - no worker loop yet
+
+Not yet:
+
+- HTTP routes
+- Responses adapter
+- Chat Completions adapter
+- MCP transport binding
 
 ChatGPT hardening is also in a better checkpoint than before:
 
@@ -330,6 +372,11 @@ Current recommended next implementation track:
 - start with the first bounded service/runtime slice from
   [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
 - do not reopen broad Gemini/browser work unless a concrete regression appears
+- keep the future HTTP API compatibility-first:
+  - [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+  - standard OpenAI-style `/v1/...` paths where they make sense
+  - AuraCall-native extensions only where compatibility would be misleading or
+    too lossy
 
 ## Now / Soon / Later
 
