@@ -152,7 +152,8 @@ Current implemented behavior:
 - `POST /v1/responses`
   - accepts a bounded compatibility-first request
   - creates a direct runtime run
-  - returns an immediate persisted `response` object
+  - runs one bounded sequential local execution pass for that direct run
+  - returns the persisted `response` object after that pass
 - `GET /v1/responses/{response_id}`
   - reads the stored runtime run by the same id
   - maps runtime state back into a bounded `response`
@@ -172,7 +173,7 @@ Current implemented behavior:
 
 Current explicit limits:
 
-- no actual runner/execution loop
+- no broad runner/service host yet
 - no streaming
 - no auth
 - local dev-only CLI exposure now exists through:

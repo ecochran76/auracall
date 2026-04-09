@@ -9,6 +9,7 @@ import {
   createExecutionResponseArtifact,
   createExecutionResponseFromRunRecord,
 } from '../runtime/apiModel.js';
+import { executeStoredExecutionRunOnce, type ExecuteStoredRunStepResult } from '../runtime/runner.js';
 import { ExecutionResponseOutputItemSchema } from '../runtime/apiSchema.js';
 import type {
   ExecutionRequest,
@@ -38,6 +39,7 @@ export interface ResponsesHttpServerDeps {
   control?: ExecutionRuntimeControlContract;
   now?: () => Date;
   generateResponseId?: () => string;
+  executeStoredRunStep?: (request: ExecutionRequest) => Promise<ExecuteStoredRunStepResult | void>;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -131,7 +133,13 @@ export async function createResponsesHttpServer(
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
         const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
-        const response = await createStoredExecutionResponse({ control, request, now, generateResponseId });
+        const response = await createStoredExecutionResponse({
+          control,
+          request,
+          now,
+          generateResponseId,
+          executeStoredRunStep: deps.executeStoredRunStep,
+        });
         sendJson(res, 200, response);
         return;
       }
@@ -253,6 +261,7 @@ async function createStoredExecutionResponse(input: {
   request: ExecutionRequest;
   now: () => Date;
   generateResponseId: () => string;
+  executeStoredRunStep?: (request: ExecutionRequest) => Promise<ExecuteStoredRunStepResult | void>;
 }): Promise<ExecutionResponse> {
   const createdAt = input.now().toISOString();
   const responseId = input.generateResponseId();
@@ -261,8 +270,15 @@ async function createStoredExecutionResponse(input: {
     request: input.request,
     createdAt,
   });
-  const stored = await input.control.createRun(bundle);
-  return createExecutionResponseForStoredRecord(stored.bundle);
+  await input.control.createRun(bundle);
+  const executed = await executeStoredExecutionRunOnce({
+    runId: responseId,
+    ownerId: 'runner:http-responses',
+    now: () => input.now().toISOString(),
+    control: input.control,
+    executeStep: async () => input.executeStoredRunStep?.(input.request),
+  });
+  return createExecutionResponseForStoredRecord(executed.bundle);
 }
 
 function createDirectExecutionBundle(input: {

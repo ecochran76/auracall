@@ -9881,3 +9881,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - persisted run/step/event/shared-state transitions
   It should not widen into `chat/completions`, streaming, auth, or team
   execution in the same step.
+- 2026-04-08: The first bounded runner slice should reuse the existing runtime
+  lease/control/store seams and only add the missing lifecycle transitions.
+  A direct run can now move through one sequential local pass with persisted
+  `step-started`, `step-succeeded`, or `step-failed` events before the lease is
+  released, while the `responses` host stays on the same routes and avoids
+  streaming/auth/team behavior.

@@ -173,3 +173,23 @@ Only after the first local runner behavior is real should the repo consider:
 - MCP runtime-native adoption on the same runner substrate
 - the team-execution bridge onto that shared execution path
 - `chat/completions` only if concrete client pressure appears
+
+## Current checkpoint
+
+This acceptance bar is now met in bounded local form:
+
+- `src/runtime/runner.ts`
+  - one sequential local runner pass
+  - single-owner lease-backed execution
+  - fail-fast success/failure transitions
+- `src/http/responsesServer.ts`
+  - `POST /v1/responses` now performs one bounded local execution pass for
+    direct runs before returning
+
+Current explicit limits remain:
+
+- no streaming
+- no auth
+- no `chat/completions`
+- no broader service-host integration yet
+- no team-specific execution semantics yet

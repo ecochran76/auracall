@@ -33,7 +33,8 @@ Current endpoints:
 Current limits:
 
 - loopback by default; non-loopback requires `--listen-public`
-- runtime-backed create/read only
+- runtime-backed create/read with one bounded local execution pass for direct
+  runs
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
 - optional `X-AuraCall-*` headers for execution hints:
@@ -48,6 +49,17 @@ Current limits:
 
 This server is intended as the first local compatibility surface, not yet a
 full production API layer.
+
+Current direct-run behavior:
+
+- `POST /v1/responses` creates a durable runtime record
+- the local host then performs one bounded sequential local runner pass
+- the same response can therefore come back:
+  - `completed`
+  - `failed`
+  - or still `in_progress` later if broader runner behavior is added in the
+    future
+- there is still no streaming, auth, or `chat/completions` adapter
 
 Minimal local smoke:
 

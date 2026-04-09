@@ -105,7 +105,7 @@ Terminology note:
   - `GET /v1/responses/{response_id}`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
-  - runtime-backed create/read only
+  - runtime-backed create/read with one bounded local execution pass for direct runs
   - `/status` now reports explicit development posture, route surface, and
     unauthenticated/local-only state, including the current AuraCall version
   - optional `X-AuraCall-*` execution headers for:
@@ -116,6 +116,7 @@ Terminology note:
   - no auth
   - no streaming
   - no `chat/completions` adapter yet
+  - no broader service-host integration yet
   - non-loopback `--host` bindings are allowed but still warned as unsafe for
     anything beyond local development
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).

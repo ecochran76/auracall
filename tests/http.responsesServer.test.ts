@@ -55,7 +55,7 @@ describe('http responses adapter', () => {
       expect(created).toMatchObject({
         id: 'resp_create_1',
         object: 'response',
-        status: 'in_progress',
+        status: 'completed',
         model: 'gemini-3-pro',
         output: [],
         metadata: {
@@ -71,7 +71,7 @@ describe('http responses adapter', () => {
       expect(reread).toMatchObject({
         id: 'resp_create_1',
         object: 'response',
-        status: 'in_progress',
+        status: 'completed',
         model: 'gemini-3-pro',
       });
     } finally {
@@ -169,10 +169,57 @@ describe('http responses adapter', () => {
       const reread = (await readBack.json()) as Record<string, unknown>;
       expect(reread).toMatchObject({
         id: 'resp_headers_1',
+        status: 'completed',
         metadata: {
           runtimeProfile: 'review',
           service: 'grok',
         },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded runner failures through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-08T12:10:00.000Z'),
+        generateResponseId: () => 'resp_failure_1',
+        executeStoredRunStep: async () => {
+          throw new Error('runner failed');
+        },
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Fail once.',
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: 'resp_failure_1',
+        object: 'response',
+        status: 'failed',
+        model: 'gpt-5.2',
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/resp_failure_1`);
+      const readPayload = (await reread.json()) as Record<string, unknown>;
+      expect(readPayload).toMatchObject({
+        id: 'resp_failure_1',
+        status: 'failed',
       });
     } finally {
       await server.close();

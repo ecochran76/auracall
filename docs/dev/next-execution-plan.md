@@ -207,8 +207,9 @@ Post-checkpoint review result:
 
 Why this lane wins:
 
-- the current bounded HTTP host still creates durable `in_progress` runs
-  without a real execution path
+- the current bounded HTTP host now has one real bounded local execution path,
+  but still lacks a broader runner/service host beyond that single direct-run
+  pass
 - future MCP adoption and future teams both need the same runner-owned
   execution substrate
 - building team execution first would risk inventing team-specific execution
