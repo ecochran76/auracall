@@ -233,7 +233,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   const server = await createResponsesHttpServer(
     {
       ...serverOptions,
-      recoverRunsOnStart: true,
+      recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
     },
     {
       now: () => new Date(),

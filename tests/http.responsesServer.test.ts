@@ -3,7 +3,11 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
-import { assertResponsesHostAllowed, createResponsesHttpServer } from '../src/http/responsesServer.js';
+import {
+  assertResponsesHostAllowed,
+  createResponsesHttpServer,
+  serveResponsesHttp,
+} from '../src/http/responsesServer.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import {
   createExecutionRun,
@@ -21,6 +25,77 @@ describe('http responses adapter', () => {
     setAuracallHomeDirOverrideForTest(null);
     await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
   });
+
+  const seedPlannedDirectRun = async (
+    control: ReturnType<typeof createExecutionRuntimeControl>,
+    runId: string,
+    createdAt: string,
+    prompt: string,
+  ) => {
+    const stepId = `${runId}:step:1`;
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'planned',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: prompt,
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt,
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+  };
+
+  const terminateServeResponsesHttp = async (options: Parameters<typeof serveResponsesHttp>[0]) => {
+    const servePromise = serveResponsesHttp(options);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    process.emit('SIGINT');
+    await servePromise;
+  };
 
   it('creates and retrieves persisted bounded responses', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
@@ -666,6 +741,81 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('enables startup recovery by default for serveResponsesHttp', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-default-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'serve_recover_default';
+    await seedPlannedDirectRun(control, runId, '2026-04-08T15:00:00.000Z', 'Recover by default');
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+    expect(startupLog).toBeDefined();
+    expect(startupLog).toContain(`executed=${runId}`);
+  });
+
+  it('respects startup recovery opt-out and cap from serveResponsesHttp', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-opts-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await Promise.all([
+      seedPlannedDirectRun(control, 'serve_recover_1', '2026-04-08T15:10:00.000Z', 'Recover this one'),
+      seedPlannedDirectRun(control, 'serve_recover_2', '2026-04-08T15:11:00.000Z', 'Recover this one too'),
+      seedPlannedDirectRun(control, 'serve_recover_3', '2026-04-08T15:12:00.000Z', 'Also recover'),
+    ]);
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStart: false,
+      recoverRunsOnStartMaxRuns: 1,
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+    expect(startupLog).toBeUndefined();
+
+    const capLog = logs.find((entry) => entry.includes('scanned 3 candidate run(s)'));
+    expect(capLog).toBeUndefined();
+  });
+
+  it('forwards startup recovery cap to serveResponsesHttp', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-cap-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await Promise.all([
+      seedPlannedDirectRun(control, 'serve_cap_1', '2026-04-08T15:20:00.000Z', 'Recover run 1'),
+      seedPlannedDirectRun(control, 'serve_cap_2', '2026-04-08T15:21:00.000Z', 'Recover run 2'),
+      seedPlannedDirectRun(control, 'serve_cap_3', '2026-04-08T15:22:00.000Z', 'Recover run 3'),
+    ]);
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStartMaxRuns: 1,
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+    expect(startupLog).toBeDefined();
+    expect(startupLog).toContain('cap=1 hits reached');
+    expect(startupLog).toContain('1 executed');
   });
 
   it('preserves structured mixed output when a stored run exposes response.output', async () => {
