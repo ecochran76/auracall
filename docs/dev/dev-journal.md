@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Harden startup recovery observability for bounded host recovery.
+- Progress: Added coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for startup-recovery cap saturation (`recoverRunsOnStartMaxRuns`) so bounded recovery logs include a `cap=<n> hits reached` marker plus skip-reason accounting when candidates exceed the run cap.
+- Issues: None.
+- Next: Keep startup recovery bounded and startup-only while we validate whether a dedicated recovery daemon is needed for multi-process operators.
+
+- Date: 2026-04-09
 - Focus: Add startup run recovery to `serve` without changing route shape.
 - Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `serveResponsesHttp` starts with `recoverRunsOnStart: true`, and `createResponsesHttpServer` can now invoke `executionHost.drainRunsUntilIdle(...)` for stale persisted direct runs before serving readback. Added host reuse options (`recoverRunsOnStart`, `recoverRunsOnStartMaxRuns`) and optional injectable `executionHost`, and ensured recovered runs use the same injected `now`/runner wiring as foreground execution. Exported `createExecutionRequestFromRecord` from [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) so server-level host recovery can reconstruct requests with the same normalization path used by request-driven execution.
 - Issues: This recovery remains bounded and direct-run only. We intentionally avoid introducing a background scheduler; startup recovery is a recovery-on-launch hook.
