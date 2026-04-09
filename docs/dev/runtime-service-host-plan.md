@@ -150,3 +150,25 @@ Only after the local service-host seam is real should the repo consider:
 - `chat/completions` only if concrete client pressure appears
 - team-execution bridge on top of the shared host/runner substrate
 
+## Current checkpoint
+
+The first bounded host-owned execution seam is now in code:
+
+- `src/runtime/serviceHost.ts`
+  - local host identity
+  - sequential `drainRunsOnce(...)`
+  - stale-lease expiry before reclaim
+  - deterministic oldest-first candidate ordering
+- `src/runtime/responsesService.ts`
+  - now delegates direct-run execution to the service-host seam instead of
+    calling the runner directly
+
+Current explicit limits remain:
+
+- still request-scoped through the existing `responses` create path
+- no background loop
+- no restart watcher/daemon
+- no new routes
+- no streaming
+- no auth
+- no `chat/completions`

@@ -21,7 +21,8 @@ import {
   createExecutionRunSharedState,
   createExecutionRunStep,
 } from './model.js';
-import { executeStoredExecutionRunOnce, type ExecuteStoredRunStepResult } from './runner.js';
+import type { ExecuteStoredRunStepResult } from './runner.js';
+import { createExecutionServiceHost } from './serviceHost.js';
 import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from './types.js';
 
 const StructuredResponseOutputSchema = ExecutionResponseOutputItemSchema.array();
@@ -56,13 +57,20 @@ export function createExecutionResponsesService(
         createdAt,
       });
       await control.createRun(bundle);
-      const executed = await executeStoredExecutionRunOnce({
-        runId: responseId,
-        ownerId: 'runner:http-responses',
-        now: () => now().toISOString(),
+      const host = createExecutionServiceHost({
         control,
-        executeStep: async () => deps.executeStoredRunStep?.(request),
+        now: () => now().toISOString(),
+        ownerId: 'host:http-responses',
+        executeStoredRunStep: async () => deps.executeStoredRunStep?.(request),
       });
+      const drained = await host.drainRunsOnce({
+        runId: responseId,
+        maxRuns: 1,
+      });
+      const executed = drained.drained[0]?.record;
+      if (!executed) {
+        throw new Error(`Execution response ${responseId} was not drained after creation`);
+      }
       return createExecutionResponseForStoredRecord(executed.bundle);
     },
 

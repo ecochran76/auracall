@@ -9915,3 +9915,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - expiring stale leases before reclaim
   - restart recovery under one local host identity
   Do not spend the next slice on more adapter micro-refactors instead.
+- 2026-04-08: The first broader service-host slice should still keep HTTP thin.
+  Add one local host-owned drain seam above the runner, then have
+  `responsesService.ts` call that seam instead of invoking the runner
+  directly. Let the host own:
+  - deterministic candidate selection
+  - stale-lease expiry before reclaim
+  - sequential drain-once behavior
+  Keep background loops, auth, streaming, and new routes deferred.

@@ -10081,3 +10081,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the current direct-run path is still request-scoped
   - restart recovery, stale-lease reclaim, and broader local drain ownership
     are still deferred into the new service-host lane
+## 2026-04-08 - First bounded service-host seam is in
+
+- Focus:
+  - start the broader service-host / runner lane without widening transport
+    breadth
+- Progress:
+  - added `src/runtime/serviceHost.ts` as the first local host-owned execution
+    seam
+  - the new seam now owns:
+    - deterministic candidate selection
+    - stale-lease expiry before reclaim
+    - sequential bounded drain-once execution over persisted runs
+  - `src/runtime/responsesService.ts` now delegates direct-run execution
+    through the service-host seam instead of calling the runner directly
+  - added focused coverage in:
+    - `tests/runtime.serviceHost.test.ts`
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts tests/runtime.runner.test.ts tests/runtime.control.test.ts tests/runtime.api.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - execution is still triggered from the request path
+  - no broader background drain/recovery loop exists yet
