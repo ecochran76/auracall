@@ -573,6 +573,101 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('logs cap hits when startup recovery is bounded', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-cap-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+
+    await Promise.all(
+      ['resp_cap_1', 'resp_cap_2'].map(async (runId, index) =>
+        control.createRun(
+          createExecutionRunRecordBundle({
+            run: createExecutionRun({
+              id: runId,
+              sourceKind: 'direct',
+              sourceId: null,
+              status: 'planned',
+              createdAt: `2026-04-08T14:${20 + index}:00.000Z`,
+              updatedAt: `2026-04-08T14:${20 + index}:00.000Z`,
+              trigger: 'api',
+              requestedBy: null,
+              entryPrompt: `Run ${index + 1}`,
+              initialInputs: {
+                model: 'gpt-5.2',
+                runtimeProfile: 'default',
+                service: 'chatgpt',
+              },
+              sharedStateId: `${runId}:state`,
+              stepIds: [`${runId}:step:1`],
+              policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+            }),
+            steps: [
+              createExecutionRunStep({
+                id: `${runId}:step:1`,
+                runId,
+                agentId: 'api-responses',
+                runtimeProfileId: 'default',
+                browserProfileId: null,
+                service: 'chatgpt',
+                kind: 'prompt',
+                status: 'runnable',
+                order: 1,
+                dependsOnStepIds: [],
+                input: {
+                  prompt: `Run ${index + 1}`,
+                  handoffIds: [],
+                  artifacts: [],
+                  structuredData: {},
+                  notes: [],
+                },
+              }),
+            ],
+            sharedState: createExecutionRunSharedState({
+              id: `${runId}:state`,
+              runId,
+              status: 'active',
+              artifacts: [],
+              structuredOutputs: [],
+              notes: [],
+              history: [],
+              lastUpdatedAt: `2026-04-08T14:${20 + index}:00.000Z`,
+            }),
+            events: [],
+          }),
+        ),
+      ),
+    );
+
+    const logs: string[] = [];
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+        recoverRunsOnStartMaxRuns: 1,
+        logger: (message) => {
+          logs.push(message);
+        },
+      },
+      {
+        control,
+      },
+    );
+
+    try {
+      const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+      expect(startupLog).toBeDefined();
+      expect(startupLog).toContain('cap=1 hits reached');
+      expect(startupLog).toContain('scanned 2 candidate run(s)');
+      expect(startupLog).toContain('limit-reached:1');
+      expect(startupLog).toContain('1 executed');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('preserves structured mixed output when a stored run exposes response.output', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
     cleanup.push(homeDir);
