@@ -284,8 +284,7 @@ function mergeExecutionRequestHints(
     !headerHints.runtimeProfile &&
     !headerHints.agent &&
     !headerHints.team &&
-    !headerHints.service &&
-    !headerHints.transport
+    !headerHints.service
   ) {
     return request;
   }
@@ -307,17 +306,12 @@ function extractExecutionRequestHintsFromHeaders(
     agent: readSingleHeader(headers['x-auracall-agent']),
     team: readSingleHeader(headers['x-auracall-team']),
     service: readSingleHeader(headers['x-auracall-service']),
-    transport: normalizeTransportHeader(readSingleHeader(headers['x-auracall-transport'])),
   };
 }
 
 function readSingleHeader(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function normalizeTransportHeader(value: string | null): ExecutionRequestExtensionHints['transport'] {
-  return value === 'api' || value === 'browser' || value === 'auto' ? value : null;
 }
 
 function isLoopbackHost(host: string): boolean {

@@ -10031,3 +10031,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Verification:
   - `pnpm vitest run tests/http.responsesServer.test.ts`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
+## 2026-04-08 - Responses host checkpoint is complete enough to pause
+
+- Focus:
+  - close the bounded local `responses` host checkpoint cleanly instead of
+    inventing another internal seam by inertia
+- Progress:
+  - audited the current host/runtime split after the new
+    `metadata.executionSummary` readback slice
+  - confirmed the present separation is already the right one:
+    - `responsesService.ts` owns direct-run creation, bounded local execution,
+      and stored-response mapping
+    - `responsesServer.ts` stays responsible for HTTP-native concerns such as
+      parsing, status/models routes, bind posture, and error translation
+  - removed a stray internal `X-AuraCall-Transport` header parse path from
+    `responsesServer.ts` so the accepted header contract now matches `/status`,
+    docs, and tests exactly:
+    - `X-AuraCall-Runtime-Profile`
+    - `X-AuraCall-Agent`
+    - `X-AuraCall-Team`
+    - `X-AuraCall-Service`
+- Verification:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts tests/runtime.runner.test.ts tests/runtime.control.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - no blocking host/runtime defect remains in this bounded slice
+  - the remaining work is broader service-host / runner orchestration, which
+    should stay a distinct next lane rather than more adapter micro-refactors

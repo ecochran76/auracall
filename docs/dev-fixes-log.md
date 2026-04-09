@@ -9902,3 +9902,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `completedAt`
   - `lastUpdatedAt`
   - `failureSummary`
+- 2026-04-08: Keep the bounded `X-AuraCall-*` header contract exact. If the
+  local `responses` host only advertises runtime profile, agent, team, and
+  service hints, do not silently accept extra headers like
+  `X-AuraCall-Transport` in the adapter. Hidden compatibility inputs create
+  drift between `/status`, docs, tests, and actual behavior without adding
+  enough value to justify the ambiguity.
