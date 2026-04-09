@@ -29,6 +29,7 @@ export interface ResponsesHttpServerOptions {
   logger?: (message: string) => void;
   recoverRunsOnStart?: boolean;
   recoverRunsOnStartMaxRuns?: number;
+  recoverRunsOnStartSourceKind?: ExecutionRunSourceKind | 'all';
 }
 
 export interface ResponsesHttpServerDeps {
@@ -107,6 +108,7 @@ export async function createResponsesHttpServer(
   const boundHost = options.host ?? '127.0.0.1';
   const recoverRunsOnStart = options.recoverRunsOnStart ?? false;
   const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
+  const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const host =
     deps.executionHost ??
     createExecutionServiceHost({
@@ -132,14 +134,17 @@ export async function createResponsesHttpServer(
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
-      const statusQuery = parseStatusQuery(url.searchParams);
 
       if (req.method === 'GET' && url.pathname === '/status') {
+        const statusQuery = parseStatusQuery(url.searchParams);
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        const statusSourceKind = statusQuery.sourceKindSummary === 'all'
+          ? undefined
+          : statusQuery.sourceKindSummary ?? 'direct';
         const statusResponseRecoverySummary = statusQuery.recovery
           ? await host.summarizeRecoveryState({
-              sourceKind: statusQuery.sourceKindSummary ?? 'direct',
+              sourceKind: statusSourceKind,
             })
           : undefined;
         const statusResponse = await createHttpStatusResponse({
@@ -213,13 +218,14 @@ export async function createResponsesHttpServer(
   });
 
   if (recoverRunsOnStart) {
+    const sourceKind = recoverRunsOnStartSourceKind === 'all' ? undefined : recoverRunsOnStartSourceKind;
     const recoveryResult = await host.drainRunsUntilIdle({
-      sourceKind: 'direct',
+      sourceKind,
       maxRuns: recoverRunsOnStartMaxRuns,
     });
     logger(
       createStartupRecoveryLog(recoveryResult, {
-        sourceKind: 'direct',
+        sourceKind: recoverRunsOnStartSourceKind,
         maxRuns: recoverRunsOnStartMaxRuns,
       }),
     );
@@ -248,6 +254,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     {
       ...serverOptions,
       recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
+      recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
     },
     {
       now: () => new Date(),
@@ -380,7 +387,7 @@ function createStartupRecoveryLog(
 
 interface ParsedStatusQuery {
   recovery: boolean;
-  sourceKindSummary?: ExecutionRunSourceKind;
+  sourceKindSummary?: ExecutionRunSourceKind | 'all';
 }
 
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
@@ -391,7 +398,7 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
         .enum(['0', '1', 'true', 'false'])
         .transform((value) => value === '1' || value.toLowerCase() === 'true')
         .optional(),
-      sourceKind: z.enum(['direct', 'team-run']).optional(),
+      sourceKind: z.enum(['direct', 'team-run', 'all']).optional(),
     })
     .superRefine((value, ctx) => {
       if (!value.recovery && value.sourceKind !== undefined) {

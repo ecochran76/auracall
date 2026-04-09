@@ -106,9 +106,12 @@ Terminology note:
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
+  - startup recovery default source can be tuned with
+    `--recover-runs-on-start-source <direct|team-run|all>`
+    (`direct` by default)
   - `GET /status?recovery=true` (or `1`) returns optional recovery state:
     - defaults to `sourceKind=direct`
-    - optionally narrows with `sourceKind=direct|team-run`
+    - optionally filters with `sourceKind=direct|team-run|all`
     - includes `totalRuns`, plus `reclaimableRunIds`, `activeLeaseRunIds`,
       `strandedRunIds`, and `idleRunIds`
   - `/status` now reports explicit development posture, route surface, and

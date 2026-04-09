@@ -873,9 +873,25 @@ program
   .option('--listen-public', 'Allow binding the unauthenticated development server to a non-loopback interface.')
   .option(
     '--no-recover-runs-on-start',
-    'Disable startup recovery of persisted direct runs before serving readback (defaults to enabled).',
+    'Disable startup recovery of persisted runs before serving readback (defaults to enabled).',
   )
-  .option('--recover-runs-on-start-max <count>', 'Max persisted direct runs to recover on startup.', parseIntOption, 100)
+  .option(
+    '--recover-runs-on-start-max <count>',
+    'Max persisted runs to recover on startup (for the selected recovery source).',
+    parseIntOption,
+    100,
+  )
+  .option(
+    '--recover-runs-on-start-source <direct|team-run|all>',
+    'Startup recovery source kind (direct, team-run, all).',
+    (value) => {
+      if (value === 'direct' || value === 'team-run' || value === 'all') {
+        return value;
+      }
+      throw new Error('Invalid --recover-runs-on-start-source value. Use direct, team-run, or all.');
+    },
+    'direct',
+  )
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     await serveResponsesHttp({
@@ -884,6 +900,7 @@ program
       listenPublic: Boolean(commandOptions.listenPublic),
       recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
+      recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
     });
   });
 

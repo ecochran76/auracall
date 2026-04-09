@@ -10037,3 +10037,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - `ExecutionServiceHost.drainRunsOnce(...)`
   Do not introduce a second team-only runner model or require new HTTP/MCP
   surfaces for the initial bridge.
+- 2026-04-09: Keep startup recovery scope and status inspection scope aligned.
+  `--recover-runs-on-start-source` now controls startup recovery across
+  `direct`, `team-run`, and `all`, so `/status` should expose the same values
+  for inspection. Avoid route-wide status-query parsing that leaks into unrelated
+  endpoints because it turns benign query params into 400s and makes operator
+  probing inconsistent.

@@ -242,6 +242,19 @@ describe('http responses adapter', () => {
           idleRunIds: [],
         },
       });
+
+      const allResponse = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=all`);
+      expect(allResponse.status).toBe(200);
+      const allPayload = (await allResponse.json()) as Record<string, unknown>;
+      expect(allPayload).toMatchObject({
+        recoverySummary: {
+          totalRuns: 2,
+          reclaimableRunIds: ['status_recovery_direct', 'status_recovery_team'],
+          activeLeaseRunIds: [],
+          strandedRunIds: [],
+          idleRunIds: [],
+        },
+      });
     } finally {
       await server.close();
     }
@@ -316,6 +329,19 @@ describe('http responses adapter', () => {
           service: 'grok',
         },
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('ignores status-only query validation on non-status routes', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/models?sourceKind=team-run&foo=bar`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({ object: 'list', data: expect.any(Array) });
     } finally {
       await server.close();
     }
@@ -458,6 +484,41 @@ describe('http responses adapter', () => {
         host: '127.0.0.1',
         port: 0,
         recoverRunsOnStart: true,
+      },
+      { control },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        object: 'response',
+        status: 'completed',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('recovers a persisted runnable team run when startup recovery source is team-run', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-team-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const createdAt = '2026-04-08T13:30:00.000Z';
+    const runId = 'team_recover_1';
+
+    await seedPlannedDirectRun(control, runId, createdAt, 'Recover team run on startup', 'team-run');
+
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+        recoverRunsOnStartSourceKind: 'team-run',
       },
       { control },
     );
@@ -876,6 +937,35 @@ describe('http responses adapter', () => {
     expect(startupLog).toBeDefined();
     expect(startupLog).toContain('cap=1 hits reached');
     expect(startupLog).toContain('1 executed');
+  });
+
+  it('forwards team-run startup recovery source filter to serveResponsesHttp', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-team-source-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'serve_team_filter_direct', '2026-04-08T15:30:00.000Z', 'Direct should not recover');
+    await seedPlannedDirectRun(
+      control,
+      'serve_team_filter_team',
+      '2026-04-08T15:31:00.000Z',
+      'Team should recover',
+      'team-run',
+    );
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStartSourceKind: 'team-run',
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (team-run) completed'));
+    expect(startupLog).toBeDefined();
+    expect(startupLog).toContain('executed=serve_team_filter_team');
+    expect(startupLog).not.toContain('serve_team_filter_direct');
   });
 
   it('preserves structured mixed output when a stored run exposes response.output', async () => {

@@ -6,6 +6,8 @@
   - optional startup-recovery tuning:
     - disable startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --no-recover-runs-on-start`
     - cap startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-max 25`
+    - recover only team source runs: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source team-run`
+    - recover both sources: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source all`
   - terminal 2: `curl http://127.0.0.1:8080/status`
   - create bounded response:
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`

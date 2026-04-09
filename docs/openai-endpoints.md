@@ -36,7 +36,11 @@ Current limits:
 - runtime-backed create/read with one bounded local execution pass for direct
   runs
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
-  this enabled by default, or disable with `--no-recover-runs-on-start`
+  this enabled by default, or disable with `--no-recover-runs-on-start`.
+  - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`
+    - `direct` (default): only direct API responses
+    - `team-run`: only team-mode executions
+    - `all`: both direct and team-run
 - tune startup recovery scan cap with `--recover-runs-on-start-max <count>`
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
@@ -46,7 +50,7 @@ Current limits:
     - busy active-lease IDs in `recoverySummary.activeLeaseRunIds`
     - stranded-running-without-lease IDs in `recoverySummary.strandedRunIds`
     - idle/terminal IDs in `recoverySummary.idleRunIds`
-    - optional `sourceKind` filter (`direct` or `team-run`), defaulting to
+    - optional `sourceKind` filter (`direct`, `team-run`, or `all`), defaulting to
       `direct`
 - optional `X-AuraCall-*` headers for execution hints:
   - `X-AuraCall-Runtime-Profile`

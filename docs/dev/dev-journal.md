@@ -10237,3 +10237,30 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts`
 - Issues:
   - no operator-facing background drain/retry loop is yet exposed, only on-demand status summary
+
+## 2026-04-09 - Startup recovery source scoping refined
+
+- Focus:
+  - close the startup-recovery source-kind gap between startup behavior and status
+    inspection, especially for `team-run` and `all`
+- Progress:
+  - added source-kind selection for startup recovery on `auracall api serve` via
+    `--recover-runs-on-start-source <direct|team-run|all>`
+  - wired startup recovery to filter `direct`, `team-run`, or both (`all`) in
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  - fixed status-query semantics so `/status` now supports
+    `sourceKind=all` and no longer rejects status-only filters on non-status routes
+  - added regression coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    for:
+    - `sourceKind=all` recovery summary
+    - non-status routes with status-filter-like query params
+  - updated user docs and command help text for consistent wording:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - no blocking issues in this slice

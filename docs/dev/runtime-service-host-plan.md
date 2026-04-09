@@ -126,6 +126,9 @@ Safe first posture:
   - may still create a run synchronously
   - may ask the local host to drain once
   - should stop owning runner orchestration details directly
+- `auracall api serve`
+  - startup recovery source can be selected with
+    `--recover-runs-on-start-source <direct|team-run|all>`
 - `GET /v1/responses/{response_id}`
   - remains a readback of persisted state
 
@@ -137,7 +140,7 @@ This slice is good enough when:
 - it can drain persisted eligible runs sequentially
 - it expires stale leases before reclaiming work
 - it uses the existing runtime control/runner seams
-- restart recovery is possible for local persisted direct runs
+- restart recovery is possible for local persisted direct runs, team runs, or both
 - no new route breadth is introduced
 
 ## After this slice
