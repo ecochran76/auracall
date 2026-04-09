@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Add bounded execution readback on the existing `responses` routes without widening the protocol.
+- Progress: Extended the runtime/API response model so runtime-backed direct responses now surface a small `metadata.executionSummary` object. The current fields are `terminalStepId`, `completedAt`, `lastUpdatedAt`, and `failureSummary`. Added focused coverage in `tests/runtime.api.test.ts`, `tests/runtime.responsesService.test.ts`, and `tests/http.responsesServer.test.ts`, and updated the user/runtime docs so the new readback is documented as a bounded metadata extension on the existing routes.
+- Issues: This is intentionally not a general execution-inspection API. The host still does not expose event streams, full event history, lease state, or a separate inspect route.
+- Next: Decide whether the next bounded host improvement should be a slightly richer local service seam above `responsesService` or stop here and push the current runtime/API checkpoint.
+
+- Date: 2026-04-08
 - Focus: Pull bounded direct-run orchestration back out of HTTP so the host stays a thin adapter.
 - Progress: Added `src/runtime/responsesService.ts` as the runtime-backed application seam for direct `responses` work. That module now owns direct-run bundle construction, bounded local runner invocation, and response readback mapping. `src/http/responsesServer.ts` now delegates to that service instead of building bundles and invoking `executeStoredExecutionRunOnce(...)` itself. Added focused coverage in `tests/runtime.responsesService.test.ts`.
 - Issues: The host is thinner now, but response readback is still intentionally minimal. Failed runs surface `status: failed`, but there is still room for a later bounded execution-summary polish on the same routes if we need more operator detail.

@@ -61,6 +61,16 @@ Current direct-run behavior:
     future
 - there is still no streaming, auth, or `chat/completions` adapter
 
+Current response readback note:
+
+- AuraCall now adds a bounded `metadata.executionSummary` object on the same
+  response body for runtime-backed direct runs
+- current fields are:
+  - `terminalStepId`
+  - `completedAt`
+  - `lastUpdatedAt`
+  - `failureSummary`
+
 Minimal local smoke:
 
 ```bash

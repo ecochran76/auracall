@@ -157,6 +157,8 @@ Current implemented behavior:
 - `GET /v1/responses/{response_id}`
   - reads the stored runtime run by the same id
   - maps runtime state back into a bounded `response`
+  - now includes bounded terminal execution readback under
+    `metadata.executionSummary`
 - `GET /v1/models`
   - returns a minimal list-compatible catalog from AuraCall's current model
     registry
@@ -182,6 +184,10 @@ Current explicit limits:
 - non-loopback now requires explicit `--listen-public`
 - still no broader service-host integration yet
 - no `chat/completions` adapter yet
+- execution readback remains intentionally bounded:
+  - no streaming progress frames
+  - no separate inspect route
+  - no broad event dump on the wire
 
 ## Next step after this slice
 

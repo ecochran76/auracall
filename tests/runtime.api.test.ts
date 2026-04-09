@@ -115,6 +115,12 @@ describe('runtime api model', () => {
       runId: 'team_run_1',
       runtimeProfile: 'default',
       service: 'gemini',
+      executionSummary: {
+        terminalStepId: null,
+        completedAt: null,
+        lastUpdatedAt: '2026-04-07T00:00:00.000Z',
+        failureSummary: null,
+      },
     });
   });
 });

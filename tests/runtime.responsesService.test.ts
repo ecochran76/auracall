@@ -41,6 +41,12 @@ describe('runtime responses service', () => {
         runId: 'resp_service_1',
         runtimeProfile: 'default',
         service: 'chatgpt',
+        executionSummary: {
+          terminalStepId: 'resp_service_1:step:1',
+          completedAt: '2026-04-08T14:00:00.000Z',
+          lastUpdatedAt: '2026-04-08T14:00:00.000Z',
+          failureSummary: null,
+        },
       },
     });
 
@@ -73,6 +79,17 @@ describe('runtime responses service', () => {
       id: 'resp_service_fail_1',
       status: 'failed',
       model: 'gpt-5.2',
+      metadata: {
+        executionSummary: {
+          terminalStepId: 'resp_service_fail_1:step:1',
+          completedAt: '2026-04-08T14:05:00.000Z',
+          lastUpdatedAt: '2026-04-08T14:05:00.000Z',
+          failureSummary: {
+            code: 'runner_execution_failed',
+            message: 'service seam failed',
+          },
+        },
+      },
     });
   });
 });

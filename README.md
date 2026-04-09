@@ -117,6 +117,8 @@ Terminology note:
   - no streaming
   - no `chat/completions` adapter yet
   - no broader service-host integration yet
+  - direct-run responses now include bounded execution readback under
+    `metadata.executionSummary`
   - non-loopback `--host` bindings are allowed but still warned as unsafe for
     anything beyond local development
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).

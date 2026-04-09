@@ -99,6 +99,21 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
       runId: z.string().nullable().optional(),
       runtimeProfile: z.string().nullable().optional(),
       service: z.string().nullable().optional(),
+      executionSummary: z
+        .object({
+          terminalStepId: z.string().nullable().optional(),
+          completedAt: z.string().nullable().optional(),
+          lastUpdatedAt: z.string().nullable().optional(),
+          failureSummary: z
+            .object({
+              code: z.string().nullable().optional(),
+              message: z.string().nullable().optional(),
+            })
+            .nullable()
+            .optional(),
+        })
+        .nullable()
+        .optional(),
     })
     .optional(),
 });

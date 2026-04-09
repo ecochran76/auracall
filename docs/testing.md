@@ -12,6 +12,8 @@
     - one bounded sequential local runner pass executes for a direct run
     - the returned response should normally be `completed` or `failed`, not
       just a durable placeholder
+    - terminal direct-run readback now also includes bounded execution details
+      under `metadata.executionSummary`
 - Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-refactor-plan.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
 - Gemini support matrix checkpoint:

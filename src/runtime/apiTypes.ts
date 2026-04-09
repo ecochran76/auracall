@@ -83,6 +83,15 @@ export interface ExecutionResponse {
     runId?: string | null;
     runtimeProfile?: string | null;
     service?: string | null;
+    executionSummary?: {
+      terminalStepId?: string | null;
+      completedAt?: string | null;
+      lastUpdatedAt?: string | null;
+      failureSummary?: {
+        code?: string | null;
+        message?: string | null;
+      } | null;
+    } | null;
   };
 }
 

@@ -62,6 +62,12 @@ describe('http responses adapter', () => {
           runId: 'resp_create_1',
           runtimeProfile: 'default',
           service: 'gemini',
+          executionSummary: {
+            terminalStepId: 'resp_create_1:step:1',
+            completedAt: '2026-04-08T12:00:00.000Z',
+            lastUpdatedAt: '2026-04-08T12:00:00.000Z',
+            failureSummary: null,
+          },
         },
       });
 
@@ -213,6 +219,17 @@ describe('http responses adapter', () => {
         object: 'response',
         status: 'failed',
         model: 'gpt-5.2',
+        metadata: {
+          executionSummary: {
+            terminalStepId: 'resp_failure_1:step:1',
+            completedAt: '2026-04-08T12:10:00.000Z',
+            lastUpdatedAt: '2026-04-08T12:10:00.000Z',
+            failureSummary: {
+              code: 'runner_execution_failed',
+              message: 'runner failed',
+            },
+          },
+        },
       });
 
       const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/resp_failure_1`);
@@ -220,6 +237,15 @@ describe('http responses adapter', () => {
       expect(readPayload).toMatchObject({
         id: 'resp_failure_1',
         status: 'failed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: 'resp_failure_1:step:1',
+            failureSummary: {
+              code: 'runner_execution_failed',
+              message: 'runner failed',
+            },
+          },
+        },
       });
     } finally {
       await server.close();

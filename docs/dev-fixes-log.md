@@ -9894,3 +9894,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - bounded local runner invocation
   - stored-response readback mapping
   Then let `responsesServer.ts` stay a thin adapter over that service.
+- 2026-04-08: The smallest safe execution readback polish for the bounded
+  `responses` surface is metadata-only. Put terminal execution summary on
+  `response.metadata.executionSummary`, not in `output` and not as new
+  top-level protocol fields. The current bounded fields are:
+  - `terminalStepId`
+  - `completedAt`
+  - `lastUpdatedAt`
+  - `failureSummary`

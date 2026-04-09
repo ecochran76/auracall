@@ -62,6 +62,12 @@ export function createExecutionResponseFromRunRecord(
   input: ExecutionResponseFromRunRecordInput,
 ): ExecutionResponse {
   const parsed = ExecutionResponseFromRunRecordInputSchema.parse(input);
+  const terminalStep =
+    parsed.runRecord.steps.find((step) => step.status === 'failed') ??
+    parsed.runRecord.steps
+      .slice()
+      .sort((left, right) => right.order - left.order)
+      .find((step) => step.status === 'succeeded' || step.status === 'cancelled');
   return createExecutionResponse({
     id: parsed.responseId,
     object: 'response',
@@ -72,6 +78,18 @@ export function createExecutionResponseFromRunRecord(
       runId: parsed.runRecord.run.id,
       runtimeProfile: parsed.runtimeProfile ?? null,
       service: parsed.service ?? null,
+      executionSummary: {
+        terminalStepId: terminalStep?.id ?? null,
+        completedAt: terminalStep?.completedAt ?? null,
+        lastUpdatedAt: parsed.runRecord.run.updatedAt ?? parsed.runRecord.sharedState.lastUpdatedAt ?? null,
+        failureSummary:
+          terminalStep?.failure
+            ? {
+                code: terminalStep.failure.code ?? null,
+                message: terminalStep.failure.message ?? null,
+              }
+            : null,
+      },
     },
   });
 }
