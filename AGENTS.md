@@ -109,3 +109,30 @@ Avoid using plain `profile` when the meaning is ambiguous.
   - `docs/wsl-chatgpt-runbook.md`
 - Windows-specific work:
   - `docs/windows-work.md`
+
+## End-of-turn agent policy
+
+Every end-of-turn update must include all of the following sections:
+
+- Status + Verification
+  - What changed in the turn.
+  - Test and command evidence with pass/fail outcomes.
+  - Any doc/behavior changes and why they matter.
+- Best Recommendation (Primary)
+  - Exactly one best recommendation, stated decisively with rationale.
+  - Include a clear next action.
+- Ranked Alternatives
+  - Present close alternatives when relevant, using the ordering:
+    - Best (recommended) + rationale
+    - second-best + tradeoff
+    - alternative + tradeoff
+  - Keep this short and concrete; include what is deferred or delayed.
+- Plan + Audit
+  - Next slice with explicit acceptance criteria.
+  - Audit checklist for what still needs validation before the next step.
+- Roadmap/Reassessment check
+  - Explicit statement of whether slice scope remains on roadmap.
+  - If the phase is nearing completion, explicitly decide whether to continue
+    to the next checkpoint or pause for a roadmap reassessment.
+- Risks/Blockers
+  - Top residual blockers with the exact unblocker needed.
