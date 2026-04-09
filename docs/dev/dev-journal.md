@@ -10149,3 +10149,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - explicit handoff execution semantics remain deferred
   - no operator-facing team execution surface is required in the first bridge
     slice
+
+## 2026-04-09 - Started the first thin team-runtime bridge slice
+
+- Focus:
+  - begin the first internal bridge from `src/teams/*` planning onto the
+    current runtime/service substrate
+- Progress:
+  - identified the intended thin bridge shape:
+    - `TeamRunServicePlan`
+    - `createExecutionRunRecordBundleFromTeamRun(...)`
+    - `ExecutionRuntimeControlContract.createRun(...)`
+    - `ExecutionServiceHost.drainRunsOnce(...)`
+  - started implementation under:
+    - `src/teams/runtimeBridge.ts`
+  - started focused proof coverage for:
+    - sequential success
+    - fail-fast first-step failure
+    - blocked unresolved team members
+- Issues:
+  - richer explicit handoff execution remains deferred by design

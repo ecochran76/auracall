@@ -54,6 +54,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
   const control = deps.control ?? createExecutionRuntimeControl();
   const now = deps.now ?? (() => new Date().toISOString());
   const ownerId = deps.ownerId ?? 'host:local-service';
+  let leaseSequence = 0;
 
   return {
     async summarizeRecoveryState(options: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'> = {}) {
@@ -175,7 +176,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         const executed = await executeStoredExecutionRunOnce({
           runId: currentRecord.runId,
           ownerId,
-          leaseId: `${currentRecord.runId}:lease:${ownerId.replace(/[^a-z0-9:_-]+/gi, '-')}`,
+          leaseId: `${currentRecord.runId}:lease:${ownerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`,
           now,
           control,
           executeStep: deps.executeStoredRunStep,

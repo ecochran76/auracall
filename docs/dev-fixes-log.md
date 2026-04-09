@@ -9957,3 +9957,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - no new transport breadth
   Do not delay that bridge for more host micro-polish unless a real blocker
   appears.
+- 2026-04-09: The first team-execution implementation slice should stay thin.
+  Reuse:
+  - `createTeamRunServicePlan...`
+  - `createExecutionRunRecordBundleFromTeamRun(...)`
+  - the existing runtime control contract
+  - `ExecutionServiceHost.drainRunsOnce(...)`
+  Do not introduce a second team-only runner model or require new HTTP/MCP
+  surfaces for the initial bridge.

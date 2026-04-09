@@ -164,3 +164,18 @@ Only after the first team-to-runtime bridge is real should the repo consider:
 - broader background host automation if needed by real team execution
 - future parallel team phases
 
+## Current implementation target
+
+The first code slice under this plan should be:
+
+- one internal `src/teams/runtimeBridge.ts` module that:
+  - builds a `TeamRunServicePlan`
+  - projects it to one runtime execution bundle
+  - persists that run through the existing runtime control contract
+  - executes it through `ExecutionServiceHost.drainRunsOnce(...)`
+
+The first focused proof should cover:
+
+- sequential happy path
+- fail-fast first-step failure
+- blocked unresolved team members producing no runnable runtime work
