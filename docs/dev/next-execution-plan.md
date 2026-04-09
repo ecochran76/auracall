@@ -229,7 +229,7 @@ Post-checkpoint review result:
 - keep public team-execution API/MCP exposure deferred
   - internal team planning and runtime projection are already wired through a real internal runtime bridge
   - team `--config` + team-run execution now projects to persisted runtime runs and advances through existing host/service seams
-  - the next shared-substrate work is still host recovery and operator-facing inspection (recovery/restart semantics)
+  - the shared-substrate host recovery is now exposed in operator-facing status and still needs broader background semantics
 - make the next active lane:
   - service-host / runner orchestration
 
@@ -257,7 +257,9 @@ Recommended next bounded slice:
   introspection on top of the existing runtime/seams:
   - periodic/background drain semantics (or explicit CLI command hooks)
   - bounded restart recovery behavior for runnable stranded/pending work
-  - explicit recovery summary surfaced in a single operator/debug surface
+  - explicit recovery summary is now present on `/status` for direct and team-run
+    filtering, so this lane now focuses on background drain/retry and richer
+    operator visibility around active behavior
   - no new transport protocol breadth while this is incomplete
 
 That slice is now captured by:

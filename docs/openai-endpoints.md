@@ -40,6 +40,14 @@ Current limits:
 - tune startup recovery scan cap with `--recover-runs-on-start-max <count>`
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
+  - when called with `?recovery=1` (or `?recovery=true`) it also returns:
+    - `recoverySummary.totalRuns`
+    - reclaimable run IDs in `recoverySummary.reclaimableRunIds`
+    - busy active-lease IDs in `recoverySummary.activeLeaseRunIds`
+    - stranded-running-without-lease IDs in `recoverySummary.strandedRunIds`
+    - idle/terminal IDs in `recoverySummary.idleRunIds`
+    - optional `sourceKind` filter (`direct` or `team-run`), defaulting to
+      `direct`
 - optional `X-AuraCall-*` headers for execution hints:
   - `X-AuraCall-Runtime-Profile`
   - `X-AuraCall-Agent`

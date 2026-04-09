@@ -180,5 +180,6 @@ Current bounded recovery behavior now also distinguishes:
 - stranded running work with no active lease
 
 The service-host seam now also has one internal recovery summary helper for
-those categories, still without adding routes or transport-facing inspection
-surfaces.
+those categories, and `GET /status?recovery=true` exposes a narrow
+operator/debug surface for those same buckets with optional
+`sourceKind=direct|team-run` filtering.

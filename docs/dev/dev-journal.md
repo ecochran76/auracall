@@ -10211,3 +10211,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - blocked unresolved team members
 - Issues:
   - richer explicit handoff execution remains deferred by design
+
+## 2026-04-09 - Operator-facing status recovery surfaced
+
+- Focus:
+  - expose a lightweight operator visibility path for service-host recovery state
+- Progress:
+  - added optional status query support in
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts):
+    - `GET /status?recovery=true` (or `1`) to request the current recovery
+      summary
+    - optional `sourceKind=direct|team-run` filtering (defaults to `direct`)
+  - added focused test coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    for:
+    - default direct recovery summary
+    - filtered team recovery summary
+    - invalid query combinations
+  - updated user docs:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+- Issues:
+  - no operator-facing background drain/retry loop is yet exposed, only on-demand status summary

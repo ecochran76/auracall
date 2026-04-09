@@ -31,14 +31,15 @@ describe('http responses adapter', () => {
     runId: string,
     createdAt: string,
     prompt: string,
+    sourceKind: 'direct' | 'team-run' = 'direct',
   ) => {
     const stepId = `${runId}:step:1`;
     await control.createRun(
       createExecutionRunRecordBundle({
         run: createExecutionRun({
           id: runId,
-          sourceKind: 'direct',
-          sourceId: null,
+          sourceKind,
+          sourceId: sourceKind === 'team-run' ? `${runId}:team` : null,
           status: 'planned',
           createdAt,
           updatedAt: createdAt,
@@ -197,6 +198,65 @@ describe('http responses adapter', () => {
         'X-AuraCall-Team',
         'X-AuraCall-Service',
       ]);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns recovery summary from status when requested', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_recovery_direct', '2026-04-08T16:00:00.000Z', 'Recover direct');
+    await seedPlannedDirectRun(control, 'status_recovery_team', '2026-04-08T16:01:00.000Z', 'Recover team', 'team-run');
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=1`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        recoverySummary: {
+          totalRuns: 1,
+          reclaimableRunIds: ['status_recovery_direct'],
+          activeLeaseRunIds: [],
+          strandedRunIds: [],
+          idleRunIds: [],
+        },
+      });
+
+      const teamResponse = await fetch(
+        `http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=team-run`,
+      );
+      expect(teamResponse.status).toBe(200);
+      const teamPayload = (await teamResponse.json()) as Record<string, unknown>;
+      expect(teamPayload).toMatchObject({
+        recoverySummary: {
+          totalRuns: 1,
+          reclaimableRunIds: ['status_recovery_team'],
+          activeLeaseRunIds: [],
+          strandedRunIds: [],
+          idleRunIds: [],
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects status recovery query misuse', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/status?sourceKind=team-run&recovery=0`,
+      );
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: { message: string } };
+      expect(payload.error.message).toContain('sourceKind can only be used with recovery=true');
     } finally {
       await server.close();
     }

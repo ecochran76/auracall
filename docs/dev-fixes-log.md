@@ -21,6 +21,25 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-04-09
+- Area: Operator-facing recovery summary on status endpoint
+- Symptom:
+  - Operators could only infer restart/recovery state from startup logs and had no machine-readable surface to classify run recovery buckets for direct vs team-run recovery.
+- Root cause:
+  - `GET /status` returned a fixed compatibility posture and omitted host recovery classification by design in the first service-host checkpoint.
+- Fix:
+  - Added query parsing and validation for `/status` recovery mode in
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts):
+    - `recovery=1|true` enables recovery summary
+    - `sourceKind=direct|team-run` optional filter (defaults to `direct`)
+  - Added `/status?recovery=...` tests covering direct summary output, team-run
+    filtering, and bad query combinations.
+  - Updated user-facing docs in [README.md](/home/ecochran76/workspace.local/oracle/README.md) and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md).
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+- Follow-ups:
+  - Add a background host-run visibility endpoint if periodic operator polling becomes a hard requirement.
+
+- Date: 2026-04-09
 - Area: Stranded running step recovery on service-host drains
 - Symptom:
   - When a run remained in `running` step state without an active lease, `drainRunsOnce` could not reclaim progress because dispatch planning blocked on `running` steps.

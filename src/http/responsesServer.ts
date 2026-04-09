@@ -17,9 +17,11 @@ import {
 } from '../runtime/responsesService.js';
 import {
   createExecutionServiceHost,
+  type ExecutionServiceHostRecoverySummary,
   type DrainStoredExecutionRunsUntilIdleResult,
   type ExecutionServiceHost,
 } from '../runtime/serviceHost.js';
+import type { ExecutionRunSourceKind } from '../runtime/types.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -88,6 +90,7 @@ interface HttpStatusResponse {
     streaming: false;
     auth: false;
   };
+  recoverySummary?: ExecutionServiceHostRecoverySummary;
   executionHints: {
     headerNames: string[];
     bodyObject: 'auracall';
@@ -129,11 +132,22 @@ export async function createResponsesHttpServer(
   server.on('request', async (req, res) => {
     try {
       const url = new URL(req.url ?? '/', 'http://127.0.0.1');
+      const statusQuery = parseStatusQuery(url.searchParams);
 
       if (req.method === 'GET' && url.pathname === '/status') {
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
-        sendJson(res, 200, createHttpStatusResponse({ host: boundHost, port: boundPort }));
+        const statusResponseRecoverySummary = statusQuery.recovery
+          ? await host.summarizeRecoveryState({
+              sourceKind: statusQuery.sourceKindSummary ?? 'direct',
+            })
+          : undefined;
+        const statusResponse = await createHttpStatusResponse({
+          host: boundHost,
+          port: boundPort,
+          recoverySummary: statusResponseRecoverySummary,
+        });
+        sendJson(res, 200, statusResponse);
         return;
       }
 
@@ -286,7 +300,11 @@ function createHttpModelListResponse(): HttpModelListResponse {
   };
 }
 
-function createHttpStatusResponse(input: { host: string; port: number }): HttpStatusResponse {
+function createHttpStatusResponse(input: {
+  host: string;
+  port: number;
+  recoverySummary?: ExecutionServiceHostRecoverySummary;
+}): HttpStatusResponse {
   return {
     object: 'status',
     ok: true,
@@ -310,6 +328,7 @@ function createHttpStatusResponse(input: { host: string; port: number }): HttpSt
       streaming: false,
       auth: false,
     },
+    recoverySummary: input.recoverySummary,
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -357,6 +376,38 @@ function createStartupRecoveryLog(
   }
 
   return parts.join(' ');
+}
+
+interface ParsedStatusQuery {
+  recovery: boolean;
+  sourceKindSummary?: ExecutionRunSourceKind;
+}
+
+function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
+  const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
+  const parsed = z
+    .object({
+      recovery: z
+        .enum(['0', '1', 'true', 'false'])
+        .transform((value) => value === '1' || value.toLowerCase() === 'true')
+        .optional(),
+      sourceKind: z.enum(['direct', 'team-run']).optional(),
+    })
+    .superRefine((value, ctx) => {
+      if (!value.recovery && value.sourceKind !== undefined) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'sourceKind can only be used with recovery=true',
+          path: ['sourceKind'],
+        });
+      }
+    })
+    .parse(raw);
+
+  return {
+    recovery: parsed.recovery ?? false,
+    sourceKindSummary: parsed.sourceKind,
+  };
 }
 
 function localProbeHost(host: string): string {
