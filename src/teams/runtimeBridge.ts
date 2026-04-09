@@ -32,7 +32,7 @@ export interface TeamRuntimeBridgeResult {
   createdRuntimeRecord: ExecutionRunStoredRecord;
   finalRuntimeRecord: ExecutionRunStoredRecord;
   executionSummary: TeamRuntimeExecutionSummary;
-  hostDrainResults: Array<Awaited<ReturnType<ExecutionServiceHost['drainRunsOnce']>>>;
+  hostDrainResults: Array<Awaited<ReturnType<ExecutionServiceHost['drainRunsUntilIdle']>>>;
 }
 
 export interface TeamRuntimeExecutionStepSummary {
@@ -119,29 +119,12 @@ async function executeTeamRuntimePlan(input: {
   });
 
   const createdRuntimeRecord = await input.control.createRun(runtimeBundle);
-  const hostDrainResults: Array<Awaited<ReturnType<ExecutionServiceHost['drainRunsOnce']>>> = [];
-  let finalRuntimeRecord = createdRuntimeRecord;
-
-  while (true) {
-    const hostDrainResult = await input.host.drainRunsOnce({
-      runId: runtimeBundle.run.id,
-      maxRuns: 1,
-    });
-    hostDrainResults.push(hostDrainResult);
-    finalRuntimeRecord = hostDrainResult.drained[0]?.record ?? finalRuntimeRecord;
-
-    if (
-      finalRuntimeRecord.bundle.run.status === 'succeeded' ||
-      finalRuntimeRecord.bundle.run.status === 'failed' ||
-      finalRuntimeRecord.bundle.run.status === 'cancelled'
-    ) {
-      break;
-    }
-
-    if (hostDrainResult.executedRunIds.length === 0) {
-      break;
-    }
-  }
+  const hostDrainResult = await input.host.drainRunsUntilIdle({
+    runId: runtimeBundle.run.id,
+    maxRuns: 100,
+  });
+  const finalRuntimeRecord = hostDrainResult.drained.at(-1)?.record ?? createdRuntimeRecord;
+  const hostDrainResults = [hostDrainResult];
 
   return {
     teamPlan: input.teamPlan,

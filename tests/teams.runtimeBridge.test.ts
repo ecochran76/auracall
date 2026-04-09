@@ -49,8 +49,7 @@ describe('team runtime bridge', () => {
     expect(result.teamPlan.teamRun.teamId).toBe('ops');
     expect(result.createdRuntimeRecord.bundle.run.sourceKind).toBe('team-run');
     expect(result.hostDrainResults.map((entry) => entry.executedRunIds)).toEqual([
-      ['team_bridge_success'],
-      ['team_bridge_success'],
+      ['team_bridge_success', 'team_bridge_success'],
     ]);
     expect(result.executionSummary).toMatchObject({
       teamRunId: 'team_bridge_success',

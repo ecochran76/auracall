@@ -38,6 +38,14 @@ export interface DrainStoredExecutionRunsOnceResult {
   drained: DrainedStoredExecutionRunResult[];
 }
 
+export interface DrainStoredExecutionRunsUntilIdleOptions extends DrainStoredExecutionRunsOnceOptions {
+  maxPasses?: number;
+}
+
+export interface DrainStoredExecutionRunsUntilIdleResult extends DrainStoredExecutionRunsOnceResult {
+  iterations: number;
+}
+
 export interface ExecutionServiceHostDeps {
   control?: ExecutionRuntimeControlContract;
   now?: () => string;
@@ -47,6 +55,9 @@ export interface ExecutionServiceHostDeps {
 
 export interface ExecutionServiceHost {
   drainRunsOnce(options?: DrainStoredExecutionRunsOnceOptions): Promise<DrainStoredExecutionRunsOnceResult>;
+  drainRunsUntilIdle(
+    options?: DrainStoredExecutionRunsUntilIdleOptions,
+  ): Promise<DrainStoredExecutionRunsUntilIdleResult>;
   summarizeRecoveryState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostRecoverySummary>;
 }
 
@@ -195,6 +206,47 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         expiredLeaseRunIds,
         executedRunIds,
         drained,
+      };
+    },
+
+    async drainRunsUntilIdle(options: DrainStoredExecutionRunsUntilIdleOptions = {}) {
+      const maxRuns = options.maxRuns ?? 100;
+      const maxPasses = Math.max(1, options.maxPasses ?? 8);
+      let remainingRuns = maxRuns;
+      let iterations = 0;
+      const drained: DrainedStoredExecutionRunResult[] = [];
+      const expiredLeaseRunIds: string[] = [];
+      const executedRunIds: string[] = [];
+
+      while (iterations < maxPasses && remainingRuns > 0) {
+        const result = await this.drainRunsOnce({
+          runId: options.runId,
+          sourceKind: options.sourceKind,
+          maxRuns: remainingRuns,
+        });
+        iterations += 1;
+        expiredLeaseRunIds.push(...result.expiredLeaseRunIds);
+        executedRunIds.push(...result.executedRunIds);
+        drained.push(...result.drained);
+        remainingRuns = Math.max(0, remainingRuns - result.executedRunIds.length);
+        if (options.runId) {
+          const currentRecord = await control.readRun(options.runId);
+          const status = currentRecord?.bundle.run.status;
+          if (status === 'succeeded' || status === 'failed' || status === 'cancelled' || currentRecord === null) {
+            break;
+          }
+        }
+        if (result.executedRunIds.length === 0) {
+          break;
+        }
+      }
+
+      return {
+        ownerId,
+        expiredLeaseRunIds,
+        executedRunIds,
+        drained,
+        iterations,
       };
     },
   };

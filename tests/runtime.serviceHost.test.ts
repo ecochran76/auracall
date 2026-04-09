@@ -78,6 +78,59 @@ function createDirectBundle(runId: string, createdAt: string, status: 'planned' 
   });
 }
 
+function createTwoStepBundle(runId: string, createdAt: string, status: 'planned' | 'running' = 'planned') {
+  const bundle = createDirectBundle(runId, createdAt, status);
+  const stepOne = bundle.steps[0];
+  if (!stepOne) throw new Error(`Could not create first step for ${runId}`);
+
+  const stepTwoId = `${runId}:step:2`;
+  bundle.run.stepIds = [stepOne.id, stepTwoId];
+  bundle.steps = [
+    {
+      ...stepOne,
+      status: 'runnable',
+      id: stepOne.id,
+    },
+    createExecutionRunStep({
+      id: stepTwoId,
+      runId,
+      agentId: 'api-responses',
+      runtimeProfileId: 'default',
+      browserProfileId: null,
+      service: 'chatgpt',
+      kind: 'prompt',
+      status: 'planned',
+      order: 2,
+      dependsOnStepIds: [stepOne.id],
+      input: {
+        prompt: 'Second step.',
+        handoffIds: [],
+        artifacts: [],
+        structuredData: {},
+        notes: [],
+      },
+    }),
+  ];
+  bundle.sharedState = {
+    ...bundle.sharedState,
+    history: [
+      ...bundle.sharedState.history,
+      createExecutionRunEvent({
+        id: `${runId}:event:${stepTwoId}:runnable`,
+        runId,
+        stepId: stepTwoId,
+        type: 'step-runnable',
+        createdAt,
+        note: 'second step is waiting on first step',
+        payload: {
+          order: 2,
+        },
+      }),
+    ],
+  };
+  return bundle;
+}
+
 function createRunningWithoutLeaseBundle(runId: string, createdAt: string) {
   const stepId = `${runId}:step:1`;
   return createExecutionRunRecordBundle({
@@ -318,5 +371,41 @@ describe('runtime service host', () => {
       strandedRunIds: ['run_stranded'],
       idleRunIds: ['run_idle'],
     });
+  });
+
+  it('drains multiple runnable steps on one run across passes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createTwoStepBundle('run_multi', '2026-04-08T15:00:00.000Z'));
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:01:00.000Z',
+    });
+
+    const result = await host.drainRunsUntilIdle({
+      runId: 'run_multi',
+      sourceKind: 'direct',
+      maxRuns: 5,
+    });
+
+    expect(result.iterations).toBe(2);
+    expect(result.executedRunIds).toEqual(['run_multi', 'run_multi']);
+    expect(result.drained[0]).toMatchObject({
+      runId: 'run_multi',
+      result: 'executed',
+    });
+    expect(result.drained[1]).toMatchObject({
+      runId: 'run_multi',
+      result: 'executed',
+    });
+    const final = result.drained.at(-1)?.record;
+    expect(final?.bundle.run.status).toBe('succeeded');
+    expect(final?.bundle.steps[0]?.status).toBe('succeeded');
+    expect(final?.bundle.steps[1]?.status).toBe('succeeded');
   });
 });

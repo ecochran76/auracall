@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Extend service-host to drain multi-step runs through a bounded local pass loop.
+- Progress: Added `drainRunsUntilIdle(...)` to `src/runtime/serviceHost.ts` with bounded pass and run execution controls, plus regression coverage for a two-step run advancing across passes in `tests/runtime.serviceHost.test.ts`. Consolidated team runtime bridge execution by using the new host loop in `src/teams/runtimeBridge.ts` so projected team runs advance through all local runnable steps in one bounded call.
+- Issues: No remaining host-seam regressions in local runtime tests, but recovery semantics are still request-scoped until a real background worker/service daemon is introduced.
+- Next: Decide whether next slice should add a dedicated background service host launcher/process and operator restart hook, or keep host-liveness recovery to API-triggered calls for now.
+
+- Date: 2026-04-09
 - Focus: Add execution-summary visibility to the internal team-runtime bridge.
 - Progress: Extended `src/teams/runtimeBridge.ts` to return a bounded `executionSummary` alongside persisted runtime records. The summary maps each planned team step to its runtime counterpart and includes terminal count plus current runtime status and per-step status/failure details. Updated `tests/teams.runtimeBridge.test.ts` to lock this behavior for success, fail-fast, and blocked-unrunnable cases.
 - Issues: Team step states in the bridge payload are now derived from runtime execution status rather than plan-time `TeamRunStep` states; transport/API-facing surfaces remain untouched.
