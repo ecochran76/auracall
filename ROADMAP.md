@@ -156,7 +156,7 @@ Browser reliability maintenance note:
   blocker is demonstrated
 
 ### Service Mode And Runner Orchestration
-Status: planned
+Status: in progress
 
 Aura-Call now has enough team planning structure that the next major
 architecture question is not config shape. It is the service/runtime layer
@@ -175,15 +175,21 @@ Current checkpoint:
   - `step`
   - `handoff`
   - `sharedState`
-- one non-executing service-ready seam now exists for:
+- one bounded host-backed service-ready seam now exists for:
   - step indexing
   - runnable/waiting/blocked classification
-  - missing dependency reporting
+  - direct-run execution through one bounded local pass
+  - request-scoped recovery/reclamation
+  - team-runtime bridge dispatch through the same host
+- an internal team-runtime bridge now projects team plans to persisted runtime
+  records and executes local runnable steps through one bounded host pass
+- `auracall api serve` now recovers stale runs at startup and reports bounded
+  recovery counts
 
 Sequencing rule:
-- do not introduce real runner behavior until the durable state and account
-  model are explicit enough to support replay, postmortem, and multi-runner
-  coordination
+- do not expand this layer into multi-runner/background worker service mode until the
+  durable state and account model are explicit enough to support replay,
+  postmortem, and multi-process coordination
 
 ### Durable State And Account Mirroring
 Status: planned

@@ -226,9 +226,10 @@ Post-checkpoint review result:
 - keep `chat/completions` deferred
   - there is no concrete repo-internal pressure for it yet
   - `responses` remains the authoritative rich surface
-- keep team-execution bridge deferred
-  - team planning and runtime projection are already far enough along
-  - the missing shared substrate is real runner/service execution behavior
+- keep public team-execution API/MCP exposure deferred
+  - internal team planning and runtime projection are already wired through a real internal runtime bridge
+  - team `--config` + team-run execution now projects to persisted runtime runs and advances through existing host/service seams
+  - the next shared-substrate work is still host recovery and operator-facing inspection (recovery/restart semantics)
 - make the next active lane:
   - service-host / runner orchestration
 
@@ -239,32 +240,29 @@ Why this lane wins:
   drain/restart behavior
 - future MCP adoption and future teams both need the same runner-owned
   execution substrate
-- building team execution first would risk inventing team-specific execution
-  semantics before the shared runtime layer can actually advance steps
+- building public team execution first would still risk inventing team-specific
+  execution semantics before the shared runtime layer has robust host-owned
+  recovery and visibility
 
 Recommended immediate rule:
 
 - do not widen protocol breadth while the runtime host still lacks broader
   host-owned recovery behavior
-- do not start team execution until the runtime host can advance a direct run
-  through step-state transitions on its own
+- do not expose team execution in new public API/MCP surfaces until host recovery
+  and operator visibility are in place
 
 Recommended next bounded slice:
 
-- the next active lane should now move upward from substrate refinement to the
-  first team-to-runtime execution bridge:
-  - sequential only
-  - fail-fast
-  - one team run projected to one runtime run
-  - one team step projected to one runtime step
-  - execution through the existing runtime control + service-host seams
-  - no new HTTP or MCP surface
-  - no `chat/completions`
-  - no speculative parallelism
+- the next active lane should now be broader host-owned recovery and operator
+  introspection on top of the existing runtime/seams:
+  - periodic/background drain semantics (or explicit CLI command hooks)
+  - bounded restart recovery behavior for runnable stranded/pending work
+  - explicit recovery summary surfaced in a single operator/debug surface
+  - no new transport protocol breadth while this is incomplete
 
-That slice is now captured in:
+That slice is now captured by:
 
-- [team-runtime-bridge-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-runtime-bridge-plan.md)
+- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
 
 ChatGPT hardening is also in a better checkpoint than before:
 
@@ -298,16 +296,18 @@ maintenance/proof-planning mode:
 
 The team/service line is now also in a good checkpoint:
 
-- read-only team planning is explicit in docs and code
-- inspection/doctor both show the same planned team-run bundle
-- one service-ready, still non-executing seam now exists for:
-  - `stepsById`
-  - runnable/waiting/blocked classification
-  - missing dependency reporting
+- internal team planning is explicit in docs and code
+- `src/teams/runtimeBridge.ts` now executes projected team runs on the shared
+  runtime host
+- `teamRun` -> `ExecutionRun` projection is now validated through focused
+  tests for:
+  - success end-to-end
+  - fail-fast first-step failure
+  - blocked unresolved members
 
 That means the next move should not be more blind team-helper growth. It
-should be a deliberate roadmap expansion around the future service/runtime
-layer that will sit underneath those plans.
+should be a deliberate roadmap expansion around the service-host recovery and
+operator visibility layer that now sits underneath those plans.
 
 Gemini is also at a better checkpoint now:
 

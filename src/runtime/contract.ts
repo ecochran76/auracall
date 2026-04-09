@@ -41,6 +41,12 @@ export interface ListStoredExecutionRunsInput {
   sourceKind?: ExecutionRunSourceKind;
 }
 
+export interface PersistStoredExecutionRunRecordInput {
+  runId: string;
+  bundle: ExecutionRunRecordBundle;
+  expectedRevision?: number | null;
+}
+
 export interface ExecutionRuntimeControlContract {
   createRun(bundle: ExecutionRunRecordBundle): Promise<ExecutionRunStoredRecord>;
   readRun(runId: string): Promise<ExecutionRunStoredRecord | null>;
@@ -50,6 +56,7 @@ export interface ExecutionRuntimeControlContract {
   heartbeatLease(input: HeartbeatStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
   releaseLease(input: ReleaseStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
   expireLeases(input: ExpireStoredExecutionRunLeasesInput): Promise<ExecutionRunStoredRecord | null>;
+  persistRun(input: PersistStoredExecutionRunRecordInput): Promise<ExecutionRunStoredRecord>;
 }
 
 export function getActiveExecutionRunLease(record: ExecutionRunStoredRecord): ExecutionRunLease | null {

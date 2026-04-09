@@ -290,7 +290,7 @@ describe('runtime service host', () => {
     ]);
   });
 
-  it('reports stranded running work without an active lease separately from no-runnable-step cases', async () => {
+  it('recovers stranded running work without an active lease by rewinding to runnable', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -308,14 +308,17 @@ describe('runtime service host', () => {
       runId: 'run_stranded',
     });
 
-    expect(result.executedRunIds).toEqual([]);
+    expect(result.executedRunIds).toEqual(['run_stranded']);
     expect(result.drained).toEqual([
       expect.objectContaining({
         runId: 'run_stranded',
-        result: 'skipped',
-        reason: 'stranded-running-no-lease',
+        result: 'executed',
       }),
     ]);
+
+    const finalRecord = result.drained.at(-1)?.record;
+    expect(finalRecord?.bundle.steps[0]?.status).toBe('succeeded');
+    expect(finalRecord?.bundle.events.some((event) => event.type === 'step-succeeded')).toBe(true);
   });
 
   it('summarizes reclaimable, busy, stranded, and idle recovery states', async () => {

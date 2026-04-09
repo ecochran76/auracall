@@ -21,6 +21,23 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-04-09
+- Area: Stranded running step recovery on service-host drains
+- Symptom:
+  - When a run remained in `running` step state without an active lease, `drainRunsOnce` could not reclaim progress because dispatch planning blocked on `running` steps.
+- Root cause:
+  - The runtime host only handled stale lease expiry and `nextRunnableStepId` discovery; it did not have a mutation path to convert stranded running steps back to runnable state.
+- Fix:
+  - Added `persistRun(...)` seam to the runtime control contract for host-owned record rewrites.
+  - Added `recoverStrandedRunningExecutionRun(...)` in `src/runtime/runner.ts` to rewound stranded running steps to runnable, clear timestamps/failures, and add recovery note events.
+  - Wired host drain flow (`src/runtime/serviceHost.ts`) to attempt stranded recovery before deciding `no-runnable-step`, then execute rewound steps in the same pass.
+  - Added regression coverage in `tests/runtime.control.test.ts` and `tests/runtime.serviceHost.test.ts`.
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.serviceHost.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Confirm duplicate side effects are acceptable for non-idempotent providers before generalizing beyond local `chatgpt`/`api-responses` runners.
+
+- Date: 2026-04-09
 - Area: Response HTTP serve startup recovery
 - Symptom:
   - Persisted direct runs created while `auracall api serve` was down remained `in_progress` and required manual intervention to complete after restart.

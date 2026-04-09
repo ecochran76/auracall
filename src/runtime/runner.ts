@@ -25,6 +25,11 @@ export interface ExecuteStoredRunOnceOptions {
   executeStep?: (context: ExecuteStoredRunStepContext) => Promise<ExecuteStoredRunStepResult | void>;
 }
 
+export interface RecoveredExecutionRun {
+  bundle: ExecutionRunRecordBundle;
+  recoveredStepIds: string[];
+}
+
 export async function executeStoredExecutionRunOnce(
   options: ExecuteStoredRunOnceOptions,
 ): Promise<ExecutionRunStoredRecord> {
@@ -117,6 +122,73 @@ export async function executeStoredExecutionRunOnce(
     throw new Error(`Execution run ${options.runId} did not produce a final stored record`);
   }
   return finalRecord;
+}
+
+export function recoverStrandedRunningExecutionRun(input: {
+  record: ExecutionRunStoredRecord;
+  now?: () => string;
+}): RecoveredExecutionRun | null {
+  const record = input.record;
+  const now = input.now ?? (() => new Date().toISOString());
+  const dispatchPlan = createExecutionRunDispatchPlan(record.bundle);
+  if (dispatchPlan.runningStepIds.length === 0) {
+    return null;
+  }
+
+  const recoveredStepIds: string[] = [];
+  let currentBundle = record.bundle;
+
+  for (const stepId of dispatchPlan.runningStepIds) {
+    let wasRecovered = false;
+    const recoveryTimestamp = now();
+    const recoveredBundle = applyBundleMutation({
+      bundle: currentBundle,
+      updatedAt: recoveryTimestamp,
+      event: createExecutionRunEvent({
+        id: `${record.runId}:event:${stepId}:recovered-no-lease:${recoveryTimestamp}`,
+        runId: record.runId,
+        type: 'note-added',
+        createdAt: recoveryTimestamp,
+        stepId,
+        note: 'recovered stranded running step for host replay',
+        payload: {
+          stepId,
+          fromStatus: 'running',
+          toStatus: 'runnable',
+          source: 'service-host',
+        },
+      }),
+      runStatus: 'running',
+      sharedStateStatus: 'active',
+      stepUpdater: (candidate) => {
+        if (candidate.id !== stepId || candidate.status !== 'running') {
+          return candidate;
+        }
+        wasRecovered = true;
+        return {
+          ...candidate,
+          status: 'runnable',
+          startedAt: null,
+          completedAt: null,
+          failure: null,
+        };
+      },
+    });
+
+    if (wasRecovered) {
+      recoveredStepIds.push(stepId);
+      currentBundle = recoveredBundle;
+    }
+  }
+
+  if (recoveredStepIds.length === 0) {
+    return null;
+  }
+
+  return {
+    bundle: currentBundle,
+    recoveredStepIds,
+  };
 }
 
 export function startExecutionRunStep(input: {

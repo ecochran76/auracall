@@ -14,6 +14,7 @@ import type { ExecutionRunRecordBundle } from './types.js';
 import type {
   AcquireStoredExecutionRunLeaseInput,
   ExecutionRuntimeControlContract,
+  PersistStoredExecutionRunRecordInput,
   ExpireStoredExecutionRunLeasesInput,
   HeartbeatStoredExecutionRunLeaseInput,
   ListStoredExecutionRunsInput,
@@ -92,6 +93,17 @@ export function createExecutionRuntimeControl(
       });
       if (result.expiredLeaseIds.length === 0) return record;
       return store.writeRecord(result.bundle, { expectedRevision: record.revision });
+    },
+
+    async persistRun(input: PersistStoredExecutionRunRecordInput) {
+      if (input.bundle.run.id !== input.runId) {
+        throw new Error(
+          `Execution run ${input.bundle.run.id} does not match persisted bundle identity ${input.runId}`,
+        );
+      }
+      return store.writeRecord(input.bundle, {
+        expectedRevision: input.expectedRevision,
+      });
     },
   };
 }

@@ -127,4 +127,37 @@ describe('runtime control module', () => {
     const listed = await control.listRuns({ limit: 10 });
     expect(listed.map((record) => record.runId).sort()).toEqual(['team_run_alpha', 'team_run_beta']);
   });
+
+  it('persists patched run bundles via the control persist route', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const created = await control.createRun(createBundle('team_run_persist'));
+
+    const patchedBundle = {
+      ...created.bundle,
+      run: {
+        ...created.bundle.run,
+        status: 'failed' as const,
+      },
+    };
+
+    const persisted = await control.persistRun({
+      runId: 'team_run_persist',
+      bundle: patchedBundle,
+      expectedRevision: created.revision,
+    });
+    expect(persisted.revision).toBe(2);
+    expect(persisted.bundle.run.status).toBe('failed');
+
+    await expect(
+      control.persistRun({
+        runId: 'team_run_persist',
+        bundle: patchedBundle,
+        expectedRevision: 1,
+      }),
+    ).rejects.toThrow();
+  });
 });

@@ -1,6 +1,11 @@
 import { getActiveExecutionRunLease, type ExecutionRuntimeControlContract } from './contract.js';
 import { createExecutionRuntimeControl } from './control.js';
-import { executeStoredExecutionRunOnce, type ExecuteStoredRunStepResult } from './runner.js';
+import {
+  executeStoredExecutionRunOnce,
+  recoverStrandedRunningExecutionRun,
+  type RecoveredExecutionRun,
+  type ExecuteStoredRunStepResult,
+} from './runner.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { ExecuteStoredRunStepContext } from './runner.js';
 import type { ExecutionRunSourceKind } from './types.js';
@@ -144,7 +149,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           currentRecord = expired ?? currentRecord;
         }
 
-        const inspection = await control.inspectRun(currentRecord.runId);
+        let inspection = await control.inspectRun(currentRecord.runId);
         if (!inspection) {
           drained.push({
             runId: currentRecord.runId,
@@ -162,6 +167,24 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             record: inspection.record,
           });
           continue;
+        }
+
+        if (inspection.dispatchPlan.runningStepIds.length > 0) {
+          const recovered = await tryRecoverStrandedRun(inspection.record, control, now);
+          if (recovered) {
+            const repaired = await control.inspectRun(currentRecord.runId);
+            if (repaired) {
+              inspection = repaired;
+            }
+          } else {
+            drained.push({
+              runId: currentRecord.runId,
+              result: 'skipped',
+              reason: 'stranded-running-no-lease',
+              record: inspection.record,
+            });
+            continue;
+          }
         }
 
         if (inspection.dispatchPlan.runningStepIds.length > 0) {
@@ -250,6 +273,40 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       };
     },
   };
+}
+
+function tryRecoverStrandedRun(
+  record: ExecutionRunStoredRecord,
+  control: ExecutionRuntimeControlContract,
+  now: () => string,
+): Promise<boolean> {
+  const recovered = recoverStrandedRunningExecutionRun({
+    record,
+    now,
+  });
+
+  if (!recovered || recovered.recoveredStepIds.length === 0) {
+    return Promise.resolve(false);
+  }
+
+  return persistRecoveredRun(control, record, recovered);
+}
+
+async function persistRecoveredRun(
+  control: ExecutionRuntimeControlContract,
+  originalRecord: ExecutionRunStoredRecord,
+  recovered: RecoveredExecutionRun,
+): Promise<boolean> {
+  try {
+    await control.persistRun({
+      runId: originalRecord.runId,
+      bundle: recovered.bundle,
+      expectedRevision: originalRecord.revision,
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function listCandidateRuns(

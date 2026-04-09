@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Complete and document the internal service-host + team-runtime bridge checkpoint.
+- Progress: Confirmed and documented that the internal execution stack has crossed the first real service-host boundary: persisted runtime runs now advance through `ExecutionServiceHost` via bounded local drain passes, startup recovery is recover-on-launch via `createResponsesHttpServer`, and internal team planning is projected and executed through `src/teams/runtimeBridge.ts` on the shared host seam with status summaries returned to callers. This was validated with focused coverage in `tests/runtime.serviceHost.test.ts`, `tests/runtime.responsesService.test.ts`, `tests/teams.runtimeBridge.test.ts`, and `tests/http.responsesServer.test.ts`.
+- Issues: The host layer remains request-scoped for recovery and lacks a dedicated background daemon/service supervisor.
+- Next: Keep the next active lane as host-owned recovery and operator inspection, then move to explicit checkpointing around background runner liveness and recovery restart behavior before opening additional API/protocol surfaces.
+
+- Date: 2026-04-09
 - Focus: Expose startup recovery controls on the `api serve` command surface.
 - Progress: Added recovery control flags to `auracall api serve` in [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts): `--no-recover-runs-on-start` and `--recover-runs-on-start-max <count>`. The defaults remain `recover` enabled with cap 100. Updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so operators can intentionally tune or disable startup recovery.
 - Issues: No daemon behavior is introduced; this stays a startup-only bounded hook.
