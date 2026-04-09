@@ -423,6 +423,156 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('logs startup recovery summary when enabled', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-logs-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const executableRunId = 'resp_log_recover_1';
+    const completedRunId = 'resp_log_norun_1';
+    const executableStepId = `${executableRunId}:step:1`;
+    const completedStepId = `${completedRunId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: executableRunId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'planned',
+          createdAt: '2026-04-08T13:20:00.000Z',
+          updatedAt: '2026-04-08T13:20:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Run and recover this',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${executableRunId}:state`,
+          stepIds: [executableStepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: executableStepId,
+            runId: executableRunId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Run and recover this',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${executableRunId}:state`,
+          runId: executableRunId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-08T13:20:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: completedRunId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'succeeded',
+          createdAt: '2026-04-08T13:21:00.000Z',
+          updatedAt: '2026-04-08T13:21:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Already complete',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${completedRunId}:state`,
+          stepIds: [completedStepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: completedStepId,
+            runId: completedRunId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Already complete',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-08T13:21:00.000Z',
+            completedAt: '2026-04-08T13:21:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${completedRunId}:state`,
+          runId: completedRunId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-08T13:21:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const logs: string[] = [];
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+        logger: (message) => {
+          logs.push(message);
+        },
+      },
+      {
+        control,
+      },
+    );
+
+    try {
+      expect(logs.some((entry) => entry.includes('Startup recovery (direct) completed'))).toBe(true);
+      expect(logs.some((entry) => entry.includes(`executed=${executableRunId}`))).toBe(true);
+      expect(logs.some((entry) => entry.includes('skips=no-runnable-step:3'))).toBe(true);
+      expect(logs.some((entry) => entry.includes('scanned 4 candidate run(s)'))).toBe(true);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('preserves structured mixed output when a stored run exposes response.output', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
     cleanup.push(homeDir);

@@ -15,7 +15,11 @@ import {
   createExecutionRequestFromRecord,
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
-import { createExecutionServiceHost, type ExecutionServiceHost } from '../runtime/serviceHost.js';
+import {
+  createExecutionServiceHost,
+  type DrainStoredExecutionRunsUntilIdleResult,
+  type ExecutionServiceHost,
+} from '../runtime/serviceHost.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -195,10 +199,16 @@ export async function createResponsesHttpServer(
   });
 
   if (recoverRunsOnStart) {
-    await host.drainRunsUntilIdle({
+    const recoveryResult = await host.drainRunsUntilIdle({
       sourceKind: 'direct',
       maxRuns: recoverRunsOnStartMaxRuns,
     });
+    logger(
+      createStartupRecoveryLog(recoveryResult, {
+        sourceKind: 'direct',
+        maxRuns: recoverRunsOnStartMaxRuns,
+      }),
+    );
   }
 
   const address = server.address();
@@ -310,6 +320,43 @@ function createHttpStatusResponse(input: { host: string; port: number }): HttpSt
       bodyObject: 'auracall',
     },
   };
+}
+
+function createStartupRecoveryLog(
+  result: DrainStoredExecutionRunsUntilIdleResult,
+  options: { sourceKind: string; maxRuns: number },
+): string {
+  const skipCounts: Record<string, number> = {};
+  for (const entry of result.drained) {
+    if (entry.result === 'skipped' && entry.reason) {
+      skipCounts[entry.reason] = (skipCounts[entry.reason] ?? 0) + 1;
+    }
+  }
+
+  const skipSummary = Object.entries(skipCounts)
+    .map(([reason, count]) => `${reason}:${count}`)
+    .join(', ');
+
+  const parts: string[] = [
+    `Startup recovery (${options.sourceKind}) completed in ${result.iterations} iteration(s).`,
+    `scanned ${result.drained.length} candidate run(s),`,
+    `${result.executedRunIds.length} executed,`,
+    `${result.expiredLeaseRunIds.length} expired lease(s) reclaimed.`,
+  ];
+
+  if (skipSummary.length > 0) {
+    parts.push(`skips=${skipSummary}`);
+  }
+
+  if (result.executedRunIds.length > 0) {
+    parts.push(`executed=${result.executedRunIds.slice(0, 5).join(',')}`);
+  }
+
+  if (result.drained.length > options.maxRuns) {
+    parts.push(`cap=${options.maxRuns} hits reached`);
+  }
+
+  return parts.join(' ');
 }
 
 function localProbeHost(host: string): string {
