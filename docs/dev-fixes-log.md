@@ -21,6 +21,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 ## Entries
 
 - Date: 2026-04-09
+- Area: Response HTTP serve startup recovery
+- Symptom:
+  - Persisted direct runs created while `auracall api serve` was down remained `in_progress` and required manual intervention to complete after restart.
+- Root cause:
+  - The `responses` HTTP host could create and read direct runs but did not run recovery on startup, and host recovery used a different timestamping path than injected request-time control in tests.
+- Fix:
+  - Added startup recovery hooks in [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) to optionally call `executionHost.drainRunsUntilIdle(...)` after listen startup, with conservative pass/run limits and direct-run filtering.
+  - Added a direct persisted-run recovery test path and preserved deterministic request-time control by passing injected `now` into the host instance used for both foreground and recovery execution.
+  - Exported request reconstruction in [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) so host-level recovery can reuse the same execution invocation path as normal create/readback flows.
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Decide whether startup recovery should stay bounded to `createResponsesHttpServer` or be generalized as a separate long-running operator service.
+
+- Date: 2026-04-09
 - Area: Team runtime bridge execution summary
 - Symptom:
   - Initial team bridge summaries were returning only projected team step states, which are write-once planning values and did not reflect runtime execution state.

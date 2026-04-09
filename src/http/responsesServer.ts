@@ -10,12 +10,19 @@ import type {
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
-import { createExecutionResponsesService, type ExecutionResponsesServiceDeps } from '../runtime/responsesService.js';
+import {
+  createExecutionResponsesService,
+  createExecutionRequestFromRecord,
+  type ExecutionResponsesServiceDeps,
+} from '../runtime/responsesService.js';
+import { createExecutionServiceHost, type ExecutionServiceHost } from '../runtime/serviceHost.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
   port?: number;
   logger?: (message: string) => void;
+  recoverRunsOnStart?: boolean;
+  recoverRunsOnStartMaxRuns?: number;
 }
 
 export interface ResponsesHttpServerDeps {
@@ -23,6 +30,7 @@ export interface ResponsesHttpServerDeps {
   now?: () => Date;
   generateResponseId?: () => string;
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
+  executionHost?: ExecutionServiceHost;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -88,11 +96,28 @@ export async function createResponsesHttpServer(
 ): Promise<ResponsesHttpServerInstance> {
   const logger = options.logger ?? (() => {});
   const control = deps.control ?? createExecutionRuntimeControl();
+  const now = deps.now ?? (() => new Date());
   const boundHost = options.host ?? '127.0.0.1';
+  const recoverRunsOnStart = options.recoverRunsOnStart ?? false;
+  const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
+  const host =
+    deps.executionHost ??
+    createExecutionServiceHost({
+      control,
+      now: () => now().toISOString(),
+      ownerId: 'host:http-responses',
+      executeStoredRunStep: deps.executeStoredRunStep
+        ? async (context) => {
+            const request = createExecutionRequestFromRecord(context.record);
+            return deps.executeStoredRunStep?.(request, context);
+          }
+        : undefined,
+    });
   const responsesService = createExecutionResponsesService({
     control,
-    now: deps.now,
+    now,
     generateResponseId: deps.generateResponseId,
+    executionHost: host,
     executeStoredRunStep: deps.executeStoredRunStep,
   });
   const server = http.createServer();
@@ -169,6 +194,13 @@ export async function createResponsesHttpServer(
     server.listen(options.port ?? 0, boundHost, () => resolve());
   });
 
+  if (recoverRunsOnStart) {
+    await host.drainRunsUntilIdle({
+      sourceKind: 'direct',
+      maxRuns: recoverRunsOnStartMaxRuns,
+    });
+  }
+
   const address = server.address();
   if (!address || typeof address === 'string') {
     throw new Error('Unable to determine server address');
@@ -187,7 +219,16 @@ export async function createResponsesHttpServer(
 export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}): Promise<void> {
   assertResponsesHostAllowed(options.host, options.listenPublic ?? false);
   const logger = options.logger ?? console.log;
-  const server = await createResponsesHttpServer(options, { now: () => new Date() });
+  const { listenPublic: _unusedListenPublic, ...serverOptions } = options;
+  const server = await createResponsesHttpServer(
+    {
+      ...serverOptions,
+      recoverRunsOnStart: true,
+    },
+    {
+      now: () => new Date(),
+    },
+  );
   const host = options.host ?? '127.0.0.1';
   const bindAddress = `${host}:${server.port}`;
   const probeUrl = `http://${localProbeHost(host)}:${server.port}`;

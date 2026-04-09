@@ -261,7 +261,7 @@ function normalizeExecutionPrompt(input: ExecutionRequest['input']): string {
   return input.map((message) => `${message.role}: ${message.content}`).join('\n');
 }
 
-function createExecutionRequestFromRecord(record: ExecutionRunStoredRecord): ExecutionRequest {
+export function createExecutionRequestFromRecord(record: ExecutionRunStoredRecord): ExecutionRequest {
   const initialInputs = record.bundle.run.initialInputs as Record<string, unknown>;
 
   const requestInput = initialInputs.requestInput ?? initialInputs.input ?? '';

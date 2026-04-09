@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Add startup run recovery to `serve` without changing route shape.
+- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `serveResponsesHttp` starts with `recoverRunsOnStart: true`, and `createResponsesHttpServer` can now invoke `executionHost.drainRunsUntilIdle(...)` for stale persisted direct runs before serving readback. Added host reuse options (`recoverRunsOnStart`, `recoverRunsOnStartMaxRuns`) and optional injectable `executionHost`, and ensured recovered runs use the same injected `now`/runner wiring as foreground execution. Exported `createExecutionRequestFromRecord` from [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) so server-level host recovery can reconstruct requests with the same normalization path used by request-driven execution.
+- Issues: This recovery remains bounded and direct-run only. We intentionally avoid introducing a background scheduler; startup recovery is a recovery-on-launch hook.
+- Next: Reassess whether recovery should remain startup-only or move to a dedicated recovery daemon before widening beyond the `responses` API.
+
+- Date: 2026-04-09
 - Focus: Harden the responses service seam by reusing a single host and preserving stored-run context.
 - Progress: Updated [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) to accept an injected runtime host, reuse one `ExecutionServiceHost`, and reconstruct a full `ExecutionRequest` from persisted run records before invoking the runner callback. The callback now receives both `(request, context)` so downstream executors can use run/step details without additional store lookups. Added/updated targeted regression coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) to assert callback reconstruction behavior.
 - Issues: Existing record-to-request reconstruction currently trusts normalized legacy shapes and backfills defaults, so it is intentionally conservative and aligned to the direct-run request shape currently emitted by `createDirectExecutionBundle`.
