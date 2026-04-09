@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Harden the responses service seam by reusing a single host and preserving stored-run context.
+- Progress: Updated [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts) to accept an injected runtime host, reuse one `ExecutionServiceHost`, and reconstruct a full `ExecutionRequest` from persisted run records before invoking the runner callback. The callback now receives both `(request, context)` so downstream executors can use run/step details without additional store lookups. Added/updated targeted regression coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) to assert callback reconstruction behavior.
+- Issues: Existing record-to-request reconstruction currently trusts normalized legacy shapes and backfills defaults, so it is intentionally conservative and aligned to the direct-run request shape currently emitted by `createDirectExecutionBundle`.
+- Next: Decide whether we should extend this seam to a dedicated background polling host for API serve or keep this bounded synchronous callback path as the runtime/API checkpoint and shift to the broader roadmap review.
+
+- Date: 2026-04-09
 - Focus: Extend service-host to drain multi-step runs through a bounded local pass loop.
 - Progress: Added `drainRunsUntilIdle(...)` to `src/runtime/serviceHost.ts` with bounded pass and run execution controls, plus regression coverage for a two-step run advancing across passes in `tests/runtime.serviceHost.test.ts`. Consolidated team runtime bridge execution by using the new host loop in `src/teams/runtimeBridge.ts` so projected team runs advance through all local runnable steps in one bounded call.
 - Issues: No remaining host-seam regressions in local runtime tests, but recovery semantics are still request-scoped until a real background worker/service daemon is introduced.

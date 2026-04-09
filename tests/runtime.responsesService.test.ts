@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
+import type { ExecutionRequest } from '../src/runtime/apiTypes.js';
 import { createExecutionResponsesService } from '../src/runtime/responsesService.js';
 
 describe('runtime responses service', () => {
@@ -91,5 +92,59 @@ describe('runtime responses service', () => {
         },
       },
     });
+  });
+
+  it('reconstructs the execution request and step context when executing stored direct runs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let capturedRequest: ExecutionRequest | null = null;
+    let capturedStepId: string | null = null;
+
+    const service = createExecutionResponsesService({
+      now: () => new Date('2026-04-08T14:10:00.000Z'),
+      generateResponseId: () => 'resp_service_ctx_1',
+      executeStoredRunStep: async (request, context) => {
+        capturedRequest = request;
+        capturedStepId = context.step.id;
+      },
+    });
+
+    const created = await service.createResponse({
+      model: 'gpt-5.2',
+      input: 'Run once.',
+      instructions: 'Use structured output.',
+      auracall: {
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+        agent: 'planner',
+      },
+    });
+
+    expect(created).toMatchObject({
+      id: 'resp_service_ctx_1',
+      status: 'completed',
+      metadata: {
+        runId: 'resp_service_ctx_1',
+        executionSummary: {
+          terminalStepId: 'resp_service_ctx_1:step:1',
+        },
+      },
+    });
+    expect(capturedRequest).toEqual({
+      model: 'gpt-5.2',
+      input: 'Run once.',
+      metadata: {},
+      instructions: 'Use structured output.',
+      tools: [],
+      attachments: [],
+      auracall: {
+        runtimeProfile: 'default',
+        agent: 'planner',
+        service: 'chatgpt',
+      },
+    });
+    expect(capturedStepId).toBe('resp_service_ctx_1:step:1');
   });
 });

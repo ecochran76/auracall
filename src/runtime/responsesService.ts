@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../teams/types.js';
+import type { ExecutionRunStep } from './types.js';
 import {
   createExecutionRequest,
   createExecutionResponseArtifact,
@@ -9,11 +10,13 @@ import { ExecutionResponseOutputItemSchema } from './apiSchema.js';
 import type {
   ExecutionRequest,
   ExecutionResponse,
+  ExecutionTransport,
   ExecutionResponseArtifactType,
   ExecutionResponseOutputItem,
 } from './apiTypes.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
 import { createExecutionRuntimeControl } from './control.js';
+import type { ExecutionRunStoredRecord } from './store.js';
 import {
   createExecutionRun,
   createExecutionRunEvent,
@@ -23,6 +26,7 @@ import {
 } from './model.js';
 import type { ExecuteStoredRunStepResult } from './runner.js';
 import { createExecutionServiceHost } from './serviceHost.js';
+import type { ExecutionServiceHost } from './serviceHost.js';
 import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from './types.js';
 
 const StructuredResponseOutputSchema = ExecutionResponseOutputItemSchema.array();
@@ -31,7 +35,14 @@ export interface ExecutionResponsesServiceDeps {
   control?: ExecutionRuntimeControlContract;
   now?: () => Date;
   generateResponseId?: () => string;
-  executeStoredRunStep?: (request: ExecutionRequest) => Promise<ExecuteStoredRunStepResult | void>;
+  executionHost?: ExecutionServiceHost;
+  executeStoredRunStep?: (
+    request: ExecutionRequest,
+    context: {
+      record: ExecutionRunStoredRecord;
+      step: ExecutionRunStep;
+    },
+  ) => Promise<ExecuteStoredRunStepResult | void>;
 }
 
 export interface ExecutionResponsesService {
@@ -45,6 +56,18 @@ export function createExecutionResponsesService(
   const control = deps.control ?? createExecutionRuntimeControl();
   const now = deps.now ?? (() => new Date());
   const generateResponseId = deps.generateResponseId ?? (() => `resp_${randomUUID().replace(/-/g, '')}`);
+  const host =
+    deps.executionHost ??
+    createExecutionServiceHost({
+      control,
+      now: () => now().toISOString(),
+      ownerId: 'host:http-responses',
+      executeStoredRunStep: async (context) => {
+        if (!deps.executeStoredRunStep) return;
+        const request = createExecutionRequestFromRecord(context.record);
+        return deps.executeStoredRunStep(request, context);
+      },
+    });
 
   return {
     async createResponse(requestInput) {
@@ -57,12 +80,6 @@ export function createExecutionResponsesService(
         createdAt,
       });
       await control.createRun(bundle);
-      const host = createExecutionServiceHost({
-        control,
-        now: () => now().toISOString(),
-        ownerId: 'host:http-responses',
-        executeStoredRunStep: async () => deps.executeStoredRunStep?.(request),
-      });
       const drained = await host.drainRunsOnce({
         runId: responseId,
         maxRuns: 1,
@@ -242,6 +259,80 @@ function getStoredService(bundle: ExecutionRunRecordBundle): ExecutionRunService
 function normalizeExecutionPrompt(input: ExecutionRequest['input']): string {
   if (typeof input === 'string') return input;
   return input.map((message) => `${message.role}: ${message.content}`).join('\n');
+}
+
+function createExecutionRequestFromRecord(record: ExecutionRunStoredRecord): ExecutionRequest {
+  const initialInputs = record.bundle.run.initialInputs as Record<string, unknown>;
+
+  const requestInput = initialInputs.requestInput ?? initialInputs.input ?? '';
+  const input =
+    typeof requestInput === 'string' || Array.isArray(requestInput) ? requestInput : requestInput === '' ? '' : '';
+
+  const request: ExecutionRequest = {
+    model:
+      typeof initialInputs.model === 'string'
+        ? initialInputs.model
+        : typeof record.bundle.steps[0]?.input?.prompt === 'string'
+          ? record.bundle.steps[0].input.prompt
+          : '',
+    input,
+    metadata: isObject(initialInputs.metadata) ? initialInputs.metadata : {},
+  };
+
+  if (typeof initialInputs.instructions === 'string' || initialInputs.instructions === null) {
+    request.instructions = initialInputs.instructions;
+  }
+  if (Array.isArray(initialInputs.tools)) {
+    request.tools = initialInputs.tools as ExecutionRequest['tools'];
+  }
+  if (Array.isArray(initialInputs.attachments)) {
+    request.attachments = initialInputs.attachments as ExecutionRequest['attachments'];
+  }
+
+  const auracall = normalizeAuracallFromRecord(initialInputs.auracall);
+  if (Object.keys(auracall).length > 0) {
+    request.auracall = auracall;
+  }
+
+  return createExecutionRequest(request);
+}
+
+function normalizeAuracallFromRecord(input: unknown): NonNullable<ExecutionRequest['auracall']> {
+  const next: NonNullable<ExecutionRequest['auracall']> = {};
+  if (!isObject(input)) {
+    return next;
+  }
+
+  const runtimeProfile = normalizeNullableString(input.runtimeProfile);
+  if (runtimeProfile !== null) next.runtimeProfile = runtimeProfile;
+
+  const agent = normalizeNullableString(input.agent);
+  if (agent !== null) next.agent = agent;
+
+  const team = normalizeNullableString(input.team);
+  if (team !== null) next.team = team;
+
+  const service = normalizeExecutionServiceId(input.service);
+  if (service !== null) next.service = service;
+
+  const transport = normalizeExecutionTransport(input.transport);
+  if (transport !== null) next.transport = transport;
+
+  return next;
+}
+
+function normalizeExecutionTransport(value: unknown): ExecutionTransport | null {
+  if (value === 'api' || value === 'browser' || value === 'auto') return value;
+  return null;
+}
+
+function normalizeNullableString(value: unknown): string | null {
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  return null;
+}
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === 'object' && !Array.isArray(value);
 }
 
 function normalizeExecutionServiceId(value: unknown): ExecutionRunServiceId {
