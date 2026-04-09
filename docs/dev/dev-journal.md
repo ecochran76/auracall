@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Pull bounded direct-run orchestration back out of HTTP so the host stays a thin adapter.
+- Progress: Added `src/runtime/responsesService.ts` as the runtime-backed application seam for direct `responses` work. That module now owns direct-run bundle construction, bounded local runner invocation, and response readback mapping. `src/http/responsesServer.ts` now delegates to that service instead of building bundles and invoking `executeStoredExecutionRunOnce(...)` itself. Added focused coverage in `tests/runtime.responsesService.test.ts`.
+- Issues: The host is thinner now, but response readback is still intentionally minimal. Failed runs surface `status: failed`, but there is still room for a later bounded execution-summary polish on the same routes if we need more operator detail.
+- Next: Decide whether the next bounded host follow-up should be response readback polish on the existing routes or a broader local service-host seam above `responsesService`, without reopening `chat/completions`, auth, or streaming.
+
+- Date: 2026-04-08
 - Focus: Land the first bounded local runner behavior under the existing `responses` host.
 - Progress: Added `src/runtime/runner.ts` as the first real runner/service execution seam. It uses the existing runtime control, lease, dispatcher, and persisted record layers to execute one sequential direct-run step with fail-fast behavior and persisted `step-started` / `step-succeeded` / `step-failed` transitions. Wired `src/http/responsesServer.ts` so `POST /v1/responses` now creates a direct run and immediately performs one bounded local runner pass before returning. Added focused coverage in `tests/runtime.runner.test.ts` and updated `tests/http.responsesServer.test.ts` to prove completed and failed direct-run states through the same bounded surface.
 - Issues: This is still not a broader service host or a real provider execution engine. The host remains dev-only, non-streaming, unauthenticated, and `responses`-only, and the current direct-run pass still does not produce rich assistant text unless a future executor supplies it.

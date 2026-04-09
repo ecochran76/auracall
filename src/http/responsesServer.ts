@@ -1,33 +1,16 @@
 import http from 'node:http';
-import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
-import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../teams/types.js';
 import { getCliVersion } from '../version.js';
-import {
-  createExecutionRequest,
-  createExecutionResponseArtifact,
-  createExecutionResponseFromRunRecord,
-} from '../runtime/apiModel.js';
-import { executeStoredExecutionRunOnce, type ExecuteStoredRunStepResult } from '../runtime/runner.js';
-import { ExecutionResponseOutputItemSchema } from '../runtime/apiSchema.js';
 import type {
   ExecutionRequest,
   ExecutionRequestExtensionHints,
   ExecutionResponse,
-  ExecutionResponseArtifactType,
-  ExecutionResponseOutputItem,
 } from '../runtime/apiTypes.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
-import {
-  createExecutionRun,
-  createExecutionRunEvent,
-  createExecutionRunRecordBundle,
-  createExecutionRunSharedState,
-  createExecutionRunStep,
-} from '../runtime/model.js';
-import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from '../runtime/types.js';
+import { createExecutionRequest } from '../runtime/apiModel.js';
+import { createExecutionResponsesService, type ExecutionResponsesServiceDeps } from '../runtime/responsesService.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -39,7 +22,7 @@ export interface ResponsesHttpServerDeps {
   control?: ExecutionRuntimeControlContract;
   now?: () => Date;
   generateResponseId?: () => string;
-  executeStoredRunStep?: (request: ExecutionRequest) => Promise<ExecuteStoredRunStepResult | void>;
+  executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
 }
 
 export interface ResponsesHttpServerInstance {
@@ -99,18 +82,19 @@ interface HttpStatusResponse {
   };
 }
 
-const StructuredResponseOutputSchema = z.array(ExecutionResponseOutputItemSchema);
-
 export async function createResponsesHttpServer(
   options: ResponsesHttpServerOptions = {},
   deps: ResponsesHttpServerDeps = {},
 ): Promise<ResponsesHttpServerInstance> {
   const logger = options.logger ?? (() => {});
   const control = deps.control ?? createExecutionRuntimeControl();
-  const now = deps.now ?? (() => new Date());
-  const generateResponseId =
-    deps.generateResponseId ?? (() => `resp_${randomUUID().replace(/-/g, '')}`);
   const boundHost = options.host ?? '127.0.0.1';
+  const responsesService = createExecutionResponsesService({
+    control,
+    now: deps.now,
+    generateResponseId: deps.generateResponseId,
+    executeStoredRunStep: deps.executeStoredRunStep,
+  });
   const server = http.createServer();
 
   server.on('request', async (req, res) => {
@@ -133,21 +117,15 @@ export async function createResponsesHttpServer(
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
         const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
-        const response = await createStoredExecutionResponse({
-          control,
-          request,
-          now,
-          generateResponseId,
-          executeStoredRunStep: deps.executeStoredRunStep,
-        });
+        const response = await responsesService.createResponse(request);
         sendJson(res, 200, response);
         return;
       }
 
       const responseId = matchResponseRoute(url.pathname);
       if (req.method === 'GET' && responseId) {
-        const record = await control.readRun(responseId);
-        if (!record) {
+        const response = await responsesService.readResponse(responseId);
+        if (!response) {
           sendJson(res, 404, {
             error: {
               message: `Response ${responseId} was not found`,
@@ -156,7 +134,7 @@ export async function createResponsesHttpServer(
           } satisfies HttpErrorPayload);
           return;
         }
-        sendJson(res, 200, createExecutionResponseForStoredRecord(record.bundle));
+        sendJson(res, 200, response);
         return;
       }
 
@@ -245,148 +223,6 @@ export function assertResponsesHostAllowed(host: string | undefined, listenPubli
   );
 }
 
-export function createExecutionResponseForStoredRecord(bundle: ExecutionRunRecordBundle): ExecutionResponse {
-  return createExecutionResponseFromRunRecord({
-    responseId: bundle.run.id,
-    runRecord: bundle,
-    model: getStoredModel(bundle),
-    output: getStoredResponseOutput(bundle),
-    runtimeProfile: getStoredRuntimeProfile(bundle),
-    service: getStoredService(bundle),
-  });
-}
-
-async function createStoredExecutionResponse(input: {
-  control: ExecutionRuntimeControlContract;
-  request: ExecutionRequest;
-  now: () => Date;
-  generateResponseId: () => string;
-  executeStoredRunStep?: (request: ExecutionRequest) => Promise<ExecuteStoredRunStepResult | void>;
-}): Promise<ExecutionResponse> {
-  const createdAt = input.now().toISOString();
-  const responseId = input.generateResponseId();
-  const bundle = createDirectExecutionBundle({
-    responseId,
-    request: input.request,
-    createdAt,
-  });
-  await input.control.createRun(bundle);
-  const executed = await executeStoredExecutionRunOnce({
-    runId: responseId,
-    ownerId: 'runner:http-responses',
-    now: () => input.now().toISOString(),
-    control: input.control,
-    executeStep: async () => input.executeStoredRunStep?.(input.request),
-  });
-  return createExecutionResponseForStoredRecord(executed.bundle);
-}
-
-function createDirectExecutionBundle(input: {
-  responseId: string;
-  request: ExecutionRequest;
-  createdAt: string;
-}): ExecutionRunRecordBundle {
-  const sharedStateId = `${input.responseId}:shared-state`;
-  const stepId = `${input.responseId}:step:1`;
-  const runtimeProfile = input.request.auracall?.runtimeProfile ?? null;
-  const service = normalizeExecutionServiceId(input.request.auracall?.service);
-  const prompt = normalizeExecutionPrompt(input.request.input);
-
-  const run = createExecutionRun({
-    id: input.responseId,
-    sourceKind: 'direct',
-    sourceId: null,
-    status: 'planned',
-    createdAt: input.createdAt,
-    updatedAt: input.createdAt,
-    trigger: 'api',
-    requestedBy: null,
-    entryPrompt: prompt,
-    initialInputs: {
-      model: input.request.model,
-      instructions: input.request.instructions ?? null,
-      metadata: input.request.metadata ?? {},
-      tools: input.request.tools ?? [],
-      attachments: input.request.attachments ?? [],
-      auracall: input.request.auracall ?? null,
-      requestInput: input.request.input,
-      runtimeProfile,
-      service,
-      agent: input.request.auracall?.agent ?? null,
-      team: input.request.auracall?.team ?? null,
-    },
-    sharedStateId,
-    stepIds: [stepId],
-    policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
-  });
-
-  const step = createExecutionRunStep({
-    id: stepId,
-    runId: input.responseId,
-    agentId: input.request.auracall?.agent ?? 'api-responses',
-    runtimeProfileId: runtimeProfile,
-    browserProfileId: null,
-    service,
-    kind: 'prompt',
-    status: 'runnable',
-    order: 1,
-    dependsOnStepIds: [],
-    input: {
-      prompt,
-      handoffIds: [],
-      artifacts: [],
-      structuredData: {
-        requestInput: input.request.input,
-        metadata: input.request.metadata ?? {},
-        tools: input.request.tools ?? [],
-      },
-      notes: input.request.instructions ? [input.request.instructions] : [],
-    },
-  });
-
-  const events = [
-    createExecutionRunEvent({
-      id: `${input.responseId}:event:run-created`,
-      runId: input.responseId,
-      type: 'run-created',
-      createdAt: input.createdAt,
-      note: 'created from HTTP responses adapter request',
-      payload: {
-        model: input.request.model,
-      },
-    }),
-    createExecutionRunEvent({
-      id: `${input.responseId}:event:${stepId}:runnable`,
-      runId: input.responseId,
-      stepId,
-      type: 'step-runnable',
-      createdAt: input.createdAt,
-      note: 'initial direct prompt step is runnable',
-      payload: {
-        order: 1,
-      },
-    }),
-  ];
-
-  const sharedState = createExecutionRunSharedState({
-    id: sharedStateId,
-    runId: input.responseId,
-    status: 'active',
-    artifacts: [],
-    structuredOutputs: [],
-    notes: [],
-    history: events,
-    lastUpdatedAt: input.createdAt,
-  });
-
-  return createExecutionRunRecordBundle({
-    run,
-    steps: [step],
-    sharedState,
-    events,
-  });
-}
-
 function createHttpModelListResponse(): HttpModelListResponse {
   return {
     object: 'list',
@@ -439,55 +275,6 @@ function localProbeHost(host: string): string {
   return isLoopbackHost(host) ? host : '127.0.0.1';
 }
 
-function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {
-  const structured = bundle.sharedState.structuredOutputs.find((entry) => entry.key === 'response.output');
-  if (structured) {
-    const parsed = StructuredResponseOutputSchema.safeParse(structured.value);
-    if (parsed.success) return parsed.data;
-  }
-
-  return bundle.sharedState.artifacts.map((artifact) =>
-    createExecutionResponseArtifact({
-      type: 'artifact',
-      id: artifact.id,
-      artifact_type: normalizeResponseArtifactType(artifact.kind),
-      title: artifact.title ?? null,
-      mime_type: null,
-      uri: artifact.uri ?? artifact.path ?? null,
-      disposition: artifact.path ? 'attachment' : 'inline',
-      metadata: null,
-    }),
-  );
-}
-
-function getStoredModel(bundle: ExecutionRunRecordBundle): string | null {
-  const model = bundle.run.initialInputs.model;
-  return typeof model === 'string' ? model : null;
-}
-
-function getStoredRuntimeProfile(bundle: ExecutionRunRecordBundle): string | null {
-  const runtimeProfile = bundle.run.initialInputs.runtimeProfile;
-  if (typeof runtimeProfile === 'string') return runtimeProfile;
-  return bundle.steps.find((step) => typeof step.runtimeProfileId === 'string')?.runtimeProfileId ?? null;
-}
-
-function getStoredService(bundle: ExecutionRunRecordBundle): ExecutionRunServiceId {
-  return (
-    normalizeExecutionServiceId(bundle.run.initialInputs.service) ??
-    bundle.steps.find((step) => step.service !== null)?.service ??
-    null
-  );
-}
-
-function normalizeExecutionPrompt(input: ExecutionRequest['input']): string {
-  if (typeof input === 'string') return input;
-  return input.map((message) => `${message.role}: ${message.content}`).join('\n');
-}
-
-function normalizeExecutionServiceId(value: unknown): ExecutionRunServiceId {
-  return value === 'chatgpt' || value === 'gemini' || value === 'grok' ? value : null;
-}
-
 function mergeExecutionRequestHints(
   request: ExecutionRequest,
   headers: http.IncomingHttpHeaders,
@@ -536,21 +323,6 @@ function normalizeTransportHeader(value: string | null): ExecutionRequestExtensi
 function isLoopbackHost(host: string): boolean {
   const normalized = host.trim().toLowerCase();
   return normalized === '127.0.0.1' || normalized === 'localhost' || normalized === '::1';
-}
-
-function normalizeResponseArtifactType(kind: string): ExecutionResponseArtifactType {
-  switch (kind) {
-    case 'file':
-    case 'image':
-    case 'music':
-    case 'video':
-    case 'canvas':
-    case 'document':
-    case 'generated':
-      return kind;
-    default:
-      return 'generated';
-  }
 }
 
 function matchResponseRoute(pathname: string): string | null {

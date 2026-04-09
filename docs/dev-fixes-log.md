@@ -9887,3 +9887,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `step-started`, `step-succeeded`, or `step-failed` events before the lease is
   released, while the `responses` host stays on the same routes and avoids
   streaming/auth/team behavior.
+- 2026-04-08: Once the bounded local runner pass exists, keep HTTP from
+  becoming the execution orchestrator. The cleaner seam is a runtime-backed
+  direct-response application service that owns:
+  - direct-run bundle construction
+  - bounded local runner invocation
+  - stored-response readback mapping
+  Then let `responsesServer.ts` stay a thin adapter over that service.
