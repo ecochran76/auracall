@@ -871,12 +871,19 @@ program
   .option('--host <address>', 'Interface to bind (default 127.0.0.1; non-loopback remains unauthenticated).')
   .option('--port <number>', 'Port to listen on (default random).', parseIntOption)
   .option('--listen-public', 'Allow binding the unauthenticated development server to a non-loopback interface.')
+  .option(
+    '--no-recover-runs-on-start',
+    'Disable startup recovery of persisted direct runs before serving readback (defaults to enabled).',
+  )
+  .option('--recover-runs-on-start-max <count>', 'Max persisted direct runs to recover on startup.', parseIntOption, 100)
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
     await serveResponsesHttp({
       host: commandOptions.host,
       port: commandOptions.port,
       listenPublic: Boolean(commandOptions.listenPublic),
+      recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
+      recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
     });
   });
 

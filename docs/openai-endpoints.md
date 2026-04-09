@@ -35,6 +35,9 @@ Current limits:
 - loopback by default; non-loopback requires `--listen-public`
 - runtime-backed create/read with one bounded local execution pass for direct
   runs
+- startup recovery can re-run bounded stale persisted direct runs before readback; keep
+  this enabled by default, or disable with `--no-recover-runs-on-start`
+- tune startup recovery scan cap with `--recover-runs-on-start-max <count>`
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
 - optional `X-AuraCall-*` headers for execution hints:

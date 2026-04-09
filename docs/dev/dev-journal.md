@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-09
+- Focus: Expose startup recovery controls on the `api serve` command surface.
+- Progress: Added recovery control flags to `auracall api serve` in [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts): `--no-recover-runs-on-start` and `--recover-runs-on-start-max <count>`. The defaults remain `recover` enabled with cap 100. Updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so operators can intentionally tune or disable startup recovery.
+- Issues: No daemon behavior is introduced; this stays a startup-only bounded hook.
+- Next: Validate CLI defaults in one smoke run and decide whether a dedicated recovery daemon is still needed for multi-process restart scenarios.
+
+- Date: 2026-04-09
 - Focus: Harden startup recovery observability for bounded host recovery.
 - Progress: Added coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for startup-recovery cap saturation (`recoverRunsOnStartMaxRuns`) so bounded recovery logs include a `cap=<n> hits reached` marker plus skip-reason accounting when candidates exceed the run cap.
 - Issues: None.
