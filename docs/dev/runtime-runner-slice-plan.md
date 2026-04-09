@@ -193,3 +193,19 @@ Current explicit limits remain:
 - no `chat/completions`
 - no broader service-host integration yet
 - no team-specific execution semantics yet
+
+## Next step after this slice
+
+The next active lane is now broader service-host / runner orchestration, not
+more adapter polish.
+
+Why:
+
+- the bounded local runner pass is already real
+- the remaining missing behavior is host-owned execution and recovery
+- the `responses` host still executes work in a request-scoped way rather than
+  through a broader local host loop
+
+That next slice is now captured in:
+
+- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)

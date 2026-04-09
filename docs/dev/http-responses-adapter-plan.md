@@ -175,14 +175,15 @@ Current implemented behavior:
 
 Current explicit limits:
 
-- no broad runner/service host yet
+- no broad service-host loop yet
 - no streaming
 - no auth
 - local dev-only CLI exposure now exists through:
   - `auracall api serve`
 - loopback is the default bind posture
 - non-loopback now requires explicit `--listen-public`
-- still no broader service-host integration yet
+- direct-run execution is still request-scoped through the local adapter path
+- broader local host-owned drain/recovery behavior is still deferred
 - no `chat/completions` adapter yet
 - execution readback remains intentionally bounded:
   - no streaming progress frames
@@ -193,7 +194,8 @@ Current explicit limits:
 
 Only after the bounded `responses` adapter is clean should the repo consider:
 
-- whether and how to expose this HTTP server beyond the local dev server
+- the local service-host / runner orchestration seam above the current direct
+  request path
 - `GET /v1/models` polish if needed
 - `POST /v1/chat/completions` as a compatibility adapter
 - MCP runtime-native adoption on the same control contract

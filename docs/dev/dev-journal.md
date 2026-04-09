@@ -10058,3 +10058,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - no blocking host/runtime defect remains in this bounded slice
   - the remaining work is broader service-host / runner orchestration, which
     should stay a distinct next lane rather than more adapter micro-refactors
+## 2026-04-08 - Service-host / runner orchestration is the next lane
+
+- Focus:
+  - reset the runtime/API roadmap after the bounded local runner pass landed
+- Progress:
+  - audited the current runtime and host seams:
+    - `responsesServer.ts`
+    - `responsesService.ts`
+    - `runner.ts`
+    - `control.ts`
+  - confirmed the current host is coherent enough to pause:
+    - direct runs now execute through one bounded local sequential pass
+    - terminal readback now carries bounded execution summary metadata
+    - the remaining gap is not more adapter splitting; it is broader
+      local service-host ownership of execution and recovery
+  - added:
+    - `docs/dev/runtime-service-host-plan.md`
+  - updated the active plans so they no longer describe the runtime host as
+    pre-runner
+- Issues:
+  - the current direct-run path is still request-scoped
+  - restart recovery, stale-lease reclaim, and broader local drain ownership
+    are still deferred into the new service-host lane

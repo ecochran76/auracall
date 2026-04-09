@@ -287,6 +287,21 @@ That slice is now detailed in:
 
 - [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
 
+Updated checkpoint after the first runner slice:
+
+- the bounded runner acceptance bar is now met in code:
+  - `src/runtime/runner.ts`
+  - `src/runtime/responsesService.ts`
+  - `src/http/responsesServer.ts`
+- one direct run can now advance through one bounded local execution pass and
+  read back terminal summary metadata through the local `responses` host
+- the next missing shared substrate is no longer step-state mutation itself;
+  it is broader local service-host ownership of execution and recovery
+
+That next slice is now detailed in:
+
+- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+
 ### Slice 5: Team execution bridge
 
 Goal:
@@ -328,62 +343,39 @@ Do not mix these into the first execution/service implementation track:
 
 ## Recommended next concrete coding slice
 
-The best next code-facing slice is:
+The best next code-facing slice is now:
 
-- define the durable execution record contract and persistence boundary
+- one local service-host module above the existing control/runner seams
 
 That should likely produce:
 
-- one new plan or schema document
-- one small runtime module for shared execution types
-- no real background runner behavior yet
-
-The immediate goal is to make future implementation harder to fragment, not to
-ship service mode in one jump.
+- one `src/runtime/serviceHost.ts`-style module
+- one bounded drain-once operation over persisted runs
+- stale-lease expiry before reclaiming local work
+- no auth, streaming, or new route breadth
 
 ## Current checkpoint
 
-The repo has now crossed the first half of Slice 1:
+The foundational runtime/service milestones from this plan are now in place:
 
-- runtime execution vocabulary exists under:
-  - `src/runtime/types.ts`
-  - `src/runtime/schema.ts`
-  - `src/runtime/model.ts`
-- deterministic projection from team-run planning data into runtime execution
-  records also exists
+- runtime execution vocabulary and projection
+- persisted record storage with revisioned writes
+- dispatcher inspection
+- lease transitions
+- local runtime control contract
+- bounded HTTP `responses` adapter
+- bounded local runner pass for direct runs
 
-This is within the intended scope of this plan.
+The current stop line is now different:
 
-The repo has also added a small route-neutral API scaffolding seam under:
+- do not widen protocol breadth by inertia
+- do not jump to team execution before the host/runner substrate is broader
+- do not treat the bounded request-scoped direct-run pass as a finished service
+  host
 
-- `src/runtime/apiTypes.ts`
-- `src/runtime/apiSchema.ts`
-- `src/runtime/apiModel.ts`
+The next active implementation target remains within this plan:
 
-Treat that API seam as provisional scaffolding only.
-
-Current stop line:
-
-- do not extend the API seam into:
-  - HTTP handlers
-  - `responses` routes
-  - `chat/completions` adapters
-  - streaming contracts
-- do not let the provisional API files become the de facto architecture by
-  continued expansion before the persistence boundary is settled
-
-That means the next active implementation target returns to this plan, not the
-API plan:
-
-- execution-record persistence boundary first
-- dispatcher/lease work later
-- transport surfaces after the runtime core is more explicit
-
-The next concrete code slice after this checkpoint is:
-
-- JSON-first execution-record persistence under the AuraCall home dir
-- read/write/list helpers only
-- no queue/dispatcher semantics yet
+- local service-host / runner orchestration over the existing seams
 
 ## Definition of done for this planning seam
 

@@ -185,11 +185,20 @@ Current HTTP adapter checkpoint:
 - local dev-only exposure now exists through:
   - `auracall api serve`
 - it still intentionally stops before:
-  - real execution/runner behavior
   - streaming
   - auth
   - `chat/completions`
   - broader service-host integration
+
+Current runner checkpoint:
+
+- real bounded execution/runner behavior now exists for direct runs
+- `POST /v1/responses` creates a direct runtime run and advances it through one
+  bounded local sequential pass
+- readback now includes bounded terminal execution details under
+  `metadata.executionSummary`
+- the remaining missing substrate is broader local service-host ownership of
+  execution and recovery
 
 That means runtime/API phase 1 is now complete enough for a checkpoint pause.
 The next move is a decision boundary, not another automatic checklist item.
@@ -224,11 +233,12 @@ Recommended immediate rule:
 
 Recommended next bounded slice:
 
-- add sequential local runner behavior on top of the runtime control seam:
+- add a local service-host / runner orchestration seam above the current
+  request-scoped direct-run path:
   - single active owner
-  - fail-fast
+  - sequential drain-once behavior
+  - stale-lease expiry before reclaim
   - local-first
-  - explicit step-state transitions
   - no auth
   - no streaming
   - no `chat/completions`
@@ -236,7 +246,7 @@ Recommended next bounded slice:
 
 That slice is now captured in:
 
-- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
+- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
 
 ChatGPT hardening is also in a better checkpoint than before:
 

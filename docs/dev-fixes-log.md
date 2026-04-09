@@ -9908,3 +9908,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `X-AuraCall-Transport` in the adapter. Hidden compatibility inputs create
   drift between `/status`, docs, tests, and actual behavior without adding
   enough value to justify the ambiguity.
+- 2026-04-08: Once the bounded local runner pass is real, stop describing the
+  `responses` host as pre-runner. The next missing substrate is broader local
+  service-host ownership of execution and recovery:
+  - draining persisted eligible runs
+  - expiring stale leases before reclaim
+  - restart recovery under one local host identity
+  Do not spend the next slice on more adapter micro-refactors instead.
