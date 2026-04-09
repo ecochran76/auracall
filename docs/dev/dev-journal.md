@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Resolve the post-runtime-checkpoint lane choice instead of letting API breadth or team work drift forward.
+- Progress: Audited the two plausible next lanes in parallel. The outcome is now explicit in the planning docs: `chat/completions` stays deferred because there is no concrete repo-internal pressure for it, and the team-execution bridge also stays deferred because the runtime/service layer still lacks the first real runner behavior. The next active lane is now documented as service-host / runner orchestration on top of the existing runtime control seam.
+- Issues: The next implementation slice is no longer about missing planning. It is about adding the first actual execution behavior without widening transport breadth or inventing team-specific execution semantics too early.
+- Next: Plan the first bounded sequential local runner slice: single-owner, fail-fast, local-first execution that can advance a stored direct run through step-state transitions for the existing `responses` host.
+
+- Date: 2026-04-08
 - Focus: Reassess the roadmap at the runtime/API phase-1 checkpoint instead of continuing by inertia.
 - Progress: Updated the active planning docs so they no longer describe runtime/API as an upcoming lane. `docs/dev/next-execution-plan.md` and `docs/dev/api-compatibility-plan.md` now reflect that the first runtime/API milestone is already in place: runtime core, bounded `responses` adapter, and local dev-only `auracall api serve`. The next step is now documented as a deliberate choice point between service-host/runner work, API phase 2, or the team-execution bridge.
 - Issues: The implementation question is no longer “what is the next missing primitive?” It is “which post-checkpoint lane matters most?” That choice should be explicit before more API surface lands.

@@ -41,6 +41,20 @@ What does not exist yet is the service/runtime layer that would:
 - manage leases/runners
 - expose the same execution state to CLI, API, and MCP
 
+Current phase-1 checkpoint now reached:
+
+- runtime vocabulary exists
+- runtime persistence exists
+- dispatcher classification exists
+- lease transitions exist
+- revisioned mutation discipline exists
+- local control contract exists
+- bounded `responses` HTTP create/read inspection exists
+- local dev-only exposure exists through `auracall api serve`
+
+What is still missing is the first real runner/service behavior that can
+advance a stored run beyond a durable placeholder state.
+
 ## Problem statement
 
 Aura-Call now has enough lower-layer structure that the next risk is
@@ -241,11 +255,33 @@ Current checkpoint for this slice:
 - one bounded HTTP adapter now exists in:
   - `src/http/responsesServer.ts`
 - still intentionally deferred:
-  - public server exposure
+- public server exposure
+- auth
+- streaming
+- `chat/completions`
+- MCP runtime-native adoption
+
+Checkpoint result after slices 1-4:
+
+- the first external control surface now exists in bounded local form
+- the next active lane should therefore move back downward to runner/service
+  execution behavior, not upward to broader transport breadth
+
+Current recommended next slice:
+
+- sequential local runner/service execution over the existing runtime control
+  seam
+- explicitly in scope:
+  - single-owner execution
+  - fail-fast step progression
+  - persisted run/step/event/shared-state transitions
+  - bounded consumption by the existing `responses` host
+- still out of scope:
   - auth
   - streaming
   - `chat/completions`
-  - MCP runtime-native adoption
+  - team-specific execution semantics
+  - distributed scheduling
 
 ### Slice 5: Team execution bridge
 
@@ -258,6 +294,13 @@ Deliverables:
   - `step`
   - `handoff`
   - `sharedState`
+
+Current recommendation:
+
+- keep this slice deferred until the runtime/service layer can advance direct
+  runs through real runner behavior
+- teams should consume that shared execution substrate later rather than force
+  the first real execution semantics into the team layer
   into the runtime execution model
 - explicit note that initial team execution remains:
   - sequential

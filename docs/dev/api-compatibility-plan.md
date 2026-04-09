@@ -61,6 +61,14 @@ The next implementation work should keep the `responses` surface bounded and
 avoid widening into transport breadth until the post-checkpoint adapter
 decision is explicit.
 
+Post-checkpoint decision:
+
+- do not make `POST /v1/chat/completions` the next active lane
+- there is not yet concrete repo-internal pressure for inbound chat
+  completions on the local AuraCall server
+- the next active implementation lane should instead be runner/service
+  behavior underneath the existing `responses` host
+
 Current adapter choice:
 
 - HTTP is the first external adapter to target once the runtime control

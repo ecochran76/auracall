@@ -9867,3 +9867,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - API compatibility phase 2
   - team-execution bridge
   Do not keep extending the API by checklist inertia.
+- 2026-04-08: After the post-checkpoint review, keep `chat/completions`
+  deferred until there is concrete client pressure for inbound compatibility on
+  AuraCall's local server. The stronger next lane is the first real
+  runner/service execution slice under the existing `responses` host, because
+  future API, MCP, and team execution all depend on that substrate.

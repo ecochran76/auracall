@@ -193,20 +193,44 @@ Current HTTP adapter checkpoint:
 That means runtime/API phase 1 is now complete enough for a checkpoint pause.
 The next move is a decision boundary, not another automatic checklist item.
 
-Recommended next-step review:
+Post-checkpoint review result:
 
-- decide whether the next active lane is:
+- keep `chat/completions` deferred
+  - there is no concrete repo-internal pressure for it yet
+  - `responses` remains the authoritative rich surface
+- keep team-execution bridge deferred
+  - team planning and runtime projection are already far enough along
+  - the missing shared substrate is real runner/service execution behavior
+- make the next active lane:
   - service-host / runner orchestration
-  - API compatibility phase 2
-  - team-execution bridge
-- keep browser/provider-heavy lanes in maintenance unless a concrete
-  regression appears
+
+Why this lane wins:
+
+- the current bounded HTTP host still creates durable `in_progress` runs
+  without a real execution path
+- future MCP adoption and future teams both need the same runner-owned
+  execution substrate
+- building team execution first would risk inventing team-specific execution
+  semantics before the shared runtime layer can actually advance steps
 
 Recommended immediate rule:
 
-- do not widen protocol breadth until one explicit post-checkpoint choice is
-  made
-- if API work resumes, reassess `chat/completions` before auth or streaming
+- do not widen protocol breadth while the runtime host still lacks real
+  runner behavior
+- do not start team execution until the runtime host can advance a direct run
+  through step-state transitions on its own
+
+Recommended next bounded slice:
+
+- add sequential local runner behavior on top of the runtime control seam:
+  - single active owner
+  - fail-fast
+  - local-first
+  - explicit step-state transitions
+  - no auth
+  - no streaming
+  - no `chat/completions`
+  - no team-specific execution semantics yet
 
 ChatGPT hardening is also in a better checkpoint than before:
 
