@@ -3,6 +3,9 @@
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
 - Local `api serve` smoke:
   - terminal 1: `pnpm tsx bin/auracall.ts api serve --port 8080`
+  - optional startup-recovery tuning:
+    - disable startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --no-recover-runs-on-start`
+    - cap startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-max 25`
   - terminal 2: `curl http://127.0.0.1:8080/status`
   - create bounded response:
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
