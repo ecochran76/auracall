@@ -9938,3 +9938,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - idle runs
   That lets later operator or transport surfaces reuse one classification seam
   instead of recomputing recovery categories independently.
+- 2026-04-08: Once the first local service-host seam is implemented, update
+  the top-level roadmap immediately. Do not leave `next-execution-plan.md`
+  saying “next: add the first service-host seam” after the code already has:
+  - `serviceHost.ts`
+  - request-path delegation through it
+  - bounded recovery classification
+  At that point the right next step is a decision boundary about broader host
+  behavior, not another stale checklist item.

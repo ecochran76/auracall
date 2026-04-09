@@ -197,8 +197,26 @@ Current runner checkpoint:
   bounded local sequential pass
 - readback now includes bounded terminal execution details under
   `metadata.executionSummary`
-- the remaining missing substrate is broader local service-host ownership of
-  execution and recovery
+- the remaining missing substrate is broader host-owned execution and recovery
+
+Current service-host checkpoint:
+
+- one bounded local service-host seam now exists in:
+  - `src/runtime/serviceHost.ts`
+- direct-run execution now delegates through that seam from:
+  - `src/runtime/responsesService.ts`
+- the current host seam now provides:
+  - sequential `drainRunsOnce(...)`
+  - stale-lease expiry before reclaim
+  - deterministic oldest-first candidate ordering
+  - recovery distinction among:
+    - reclaimable runs
+    - active-lease busy runs
+    - stranded running-without-lease runs
+    - idle runs
+- the remaining gap is no longer the first host seam itself; it is any broader
+  background drain/restart behavior or operator-facing inspection built on top
+  of that seam
 
 That means runtime/API phase 1 is now complete enough for a checkpoint pause.
 The next move is a decision boundary, not another automatic checklist item.
@@ -217,8 +235,8 @@ Post-checkpoint review result:
 Why this lane wins:
 
 - the current bounded HTTP host now has one real bounded local execution path,
-  but still lacks a broader runner/service host beyond that single direct-run
-  pass
+  and now one bounded service-host seam, but still lacks broader background
+  drain/restart behavior
 - future MCP adoption and future teams both need the same runner-owned
   execution substrate
 - building team execution first would risk inventing team-specific execution
@@ -226,25 +244,20 @@ Why this lane wins:
 
 Recommended immediate rule:
 
-- do not widen protocol breadth while the runtime host still lacks real
-  runner behavior
+- do not widen protocol breadth while the runtime host still lacks broader
+  host-owned recovery behavior
 - do not start team execution until the runtime host can advance a direct run
   through step-state transitions on its own
 
 Recommended next bounded slice:
 
-- add a local service-host / runner orchestration seam above the current
-  request-scoped direct-run path:
-  - single active owner
-  - sequential drain-once behavior
-  - stale-lease expiry before reclaim
-  - local-first
-  - no auth
-  - no streaming
-  - no `chat/completions`
-  - no team-specific execution semantics yet
+- pause and choose deliberately among the next host-layer options:
+  - background/local host drain semantics
+  - restart recovery/watch behavior
+  - operator inspection over the current recovery summary
+  - or a stop line on this lane if there is no concrete pressure yet
 
-That slice is now captured in:
+The current host seam is captured in:
 
 - [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
 

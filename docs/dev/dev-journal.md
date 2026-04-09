@@ -10111,3 +10111,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Issues:
   - execution is still triggered from the request path
   - no broader background drain/recovery loop exists yet
+
+## 2026-04-08 - Runtime roadmap reset after service-host checkpoint
+
+- Focus:
+  - align the top-level roadmap with the service-host work already on `main`
+- Progress:
+  - confirmed the repo is one slice ahead of the old top-level plan:
+    - the bounded local service-host seam is already implemented
+    - direct-run execution already delegates through it
+  - updated `docs/dev/next-execution-plan.md` so it no longer describes
+    adding the first service-host seam as the next coding slice
+  - reframed the next decision as a pause line between:
+    - broader background drain/restart behavior
+    - operator inspection over current recovery state
+    - or stopping the lane here until concrete pressure appears
+- Issues:
+  - the roadmap was slightly behind the code, but the mismatch is now limited
+    to planning language rather than product behavior
