@@ -49,15 +49,17 @@ Current implementation line:
     - `POST /v1/responses`
     - `GET /v1/responses/{response_id}`
     - `GET /v1/models`
+  - local dev-only CLI exposure through:
+    - `auracall api serve`
 - still deferred:
   - `POST /v1/chat/completions`
   - streaming/SSE contracts
   - auth and request-routing behavior
-  - public CLI/service exposure of the new HTTP adapter
+  - broader service-host integration beyond the local dev server
 
 The next implementation work should keep the `responses` surface bounded and
-avoid widening into transport breadth until the first adapter checkpoint is
-explicitly accepted.
+avoid widening into transport breadth until the post-checkpoint adapter
+decision is explicit.
 
 Current adapter choice:
 

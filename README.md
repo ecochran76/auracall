@@ -59,6 +59,9 @@ auracall features diff --target gemini --json
 # Local dev-only OpenAI-compatible responses server
 auracall api serve --port 8080
 
+# Probe the local dev server posture
+curl http://127.0.0.1:8080/status
+
 # Explicitly allow a non-loopback bind only when you mean it
 auracall api serve --host 0.0.0.0 --listen-public --port 8080
 
@@ -99,12 +102,12 @@ Terminology note:
   - `GET /status`
   - `GET /v1/models`
   - `POST /v1/responses`
-  - `GET /v1/responses/{id}`
+  - `GET /v1/responses/{response_id}`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read only
   - `/status` now reports explicit development posture, route surface, and
-    unauthenticated/local-only state
+    unauthenticated/local-only state, including the current AuraCall version
   - optional `X-AuraCall-*` execution headers for:
     - `X-AuraCall-Runtime-Profile`
     - `X-AuraCall-Agent`

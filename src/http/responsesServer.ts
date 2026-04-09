@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../teams/types.js';
+import { getCliVersion } from '../version.js';
 import {
   createExecutionRequest,
   createExecutionResponseArtifact,
@@ -70,6 +71,7 @@ interface HttpModelListResponse {
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
+  version: string;
   mode: 'development';
   binding: {
     host: string;
@@ -201,15 +203,17 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   const logger = options.logger ?? console.log;
   const server = await createResponsesHttpServer(options, { now: () => new Date() });
   const host = options.host ?? '127.0.0.1';
-  const url = `http://${host}:${server.port}`;
+  const bindAddress = `${host}:${server.port}`;
+  const probeUrl = `http://${localProbeHost(host)}:${server.port}`;
   const localOnly = isLoopbackHost(host);
-  logger(`AuraCall responses server listening at ${url}`);
+  logger(`AuraCall responses server bound on ${bindAddress}`);
   if (localOnly) {
     logger('Posture: local development only; bound to loopback and intentionally unauthenticated.');
   } else {
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
-  logger('Endpoints: GET /status, GET /v1/models, POST /v1/responses, GET /v1/responses/{id}');
+  logger('Endpoints: GET /status, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}');
+  logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
 
   await new Promise<void>((resolve, reject) => {
@@ -383,6 +387,7 @@ function createHttpStatusResponse(input: { host: string; port: number }): HttpSt
   return {
     object: 'status',
     ok: true,
+    version: getCliVersion(),
     mode: 'development',
     binding: {
       host: input.host,
@@ -412,6 +417,10 @@ function createHttpStatusResponse(input: { host: string; port: number }): HttpSt
       bodyObject: 'auracall',
     },
   };
+}
+
+function localProbeHost(host: string): string {
+  return isLoopbackHost(host) ? host : '127.0.0.1';
 }
 
 function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {

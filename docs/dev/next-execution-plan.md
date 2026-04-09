@@ -154,49 +154,12 @@ Current execution/service checkpoint:
 
 - the runtime execution vocabulary/projection seam is now in place under
   `src/runtime/*`
+- persisted runtime storage, dispatcher classification, lease transitions,
+  revisioned writes, and the local runtime control seam are now in place
 - a small route-neutral API vocabulary seam also exists under
   `src/runtime/api*`
-- that API seam should be treated as frozen provisional scaffolding for now,
-  not as an instruction to start handlers or adapters
-
-The next active implementation target is therefore:
-
-- persistence boundary for execution records
-
-Recommended immediate shape:
-
-- JSON-first runtime store under `~/.auracall/runtime/runs/<id>/`
-- durable `bundle.json` write/read/list helpers
-- no dispatcher or transport behavior in the same slice
-
-Recommended next slice after persistence:
-
-- sequential dispatcher contract only
-  - classify one next runnable step
-  - report deferred runnable work under sequential mode
-  - report fail-fast blocked work
-  - no runner behavior yet
-
-Recommended next slice after dispatcher:
-
-- lease ownership contract only
-  - one active lease at a time
-  - heartbeat/release/expire state transitions
-  - no worker loop yet
-
-Recommended next slice after lease ownership:
-
-- storage-level mutation discipline
-  - revisioned JSON record writes
-  - compare-and-swap update semantics
-  - no daemon/distributed locking yet
-
-Recommended next slice after mutation discipline:
-
-- local runtime control module
-  - inspect persisted runs
-  - compose dispatcher + lease helpers
-  - still no external transport surface
+- that API seam should still be treated as provisional shared scaffolding, not
+  as a reason to widen the transport surface casually
 
 Adapter choice is now explicit:
 
@@ -218,20 +181,32 @@ Current HTTP adapter checkpoint:
 - it creates and reads persisted direct runtime runs
 - it preserves ordered mixed output when runtime shared state exposes
   `structuredOutputs` keyed as `response.output`
+- local dev-only exposure now exists through:
+  - `auracall api serve`
 - it still intentionally stops before:
   - real execution/runner behavior
   - streaming
   - auth
   - `chat/completions`
-  - any public CLI/service exposure
+  - broader service-host integration
 
-Recommended next slice after this checkpoint:
+That means runtime/API phase 1 is now complete enough for a checkpoint pause.
+The next move is a decision boundary, not another automatic checklist item.
 
-- local dev-only exposure is now in place through:
-  - `auracall api serve`
-- keep the next decision bounded to:
-  - whether a service-integrated host is needed
-- do not widen protocol breadth until that exposure decision is explicit
+Recommended next-step review:
+
+- decide whether the next active lane is:
+  - service-host / runner orchestration
+  - API compatibility phase 2
+  - team-execution bridge
+- keep browser/provider-heavy lanes in maintenance unless a concrete
+  regression appears
+
+Recommended immediate rule:
+
+- do not widen protocol breadth until one explicit post-checkpoint choice is
+  made
+- if API work resumes, reassess `chat/completions` before auth or streaming
 
 ChatGPT hardening is also in a better checkpoint than before:
 

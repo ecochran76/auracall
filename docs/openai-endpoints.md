@@ -28,14 +28,14 @@ Current endpoints:
 - `GET /status`
 - `GET /v1/models`
 - `POST /v1/responses`
-- `GET /v1/responses/{id}`
+- `GET /v1/responses/{response_id}`
 
 Current limits:
 
 - loopback by default; non-loopback requires `--listen-public`
 - runtime-backed create/read only
 - `/status` reports explicit development posture, route surface, and
-  unauthenticated/local-only state
+  unauthenticated/local-only state, including the current AuraCall version
 - optional `X-AuraCall-*` headers for execution hints:
   - `X-AuraCall-Runtime-Profile`
   - `X-AuraCall-Agent`
@@ -48,6 +48,22 @@ Current limits:
 
 This server is intended as the first local compatibility surface, not yet a
 full production API layer.
+
+Minimal local smoke:
+
+```bash
+# terminal 1
+auracall api serve --port 8080
+
+# terminal 2
+curl http://127.0.0.1:8080/status
+
+curl -s http://127.0.0.1:8080/v1/responses \
+  -H 'Content-Type: application/json' \
+  -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'
+
+curl http://127.0.0.1:8080/v1/responses/<response_id>
+```
 
 ## Azure OpenAI
 

@@ -13,6 +13,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Reassess the roadmap at the runtime/API phase-1 checkpoint instead of continuing by inertia.
+- Progress: Updated the active planning docs so they no longer describe runtime/API as an upcoming lane. `docs/dev/next-execution-plan.md` and `docs/dev/api-compatibility-plan.md` now reflect that the first runtime/API milestone is already in place: runtime core, bounded `responses` adapter, and local dev-only `auracall api serve`. The next step is now documented as a deliberate choice point between service-host/runner work, API phase 2, or the team-execution bridge.
+- Issues: The implementation question is no longer “what is the next missing primitive?” It is “which post-checkpoint lane matters most?” That choice should be explicit before more API surface lands.
+- Next: Commit the tiny `api serve` ergonomics slice plus this roadmap correction, then do one bounded roadmap review for service-host vs `chat/completions` vs team bridge before more implementation.
+
+- Date: 2026-04-08
+- Focus: Finish the bounded `api serve` host ergonomics slice without widening the route surface.
+- Progress: Tightened the local responses host operator UX in `src/http/responsesServer.ts` by adding the AuraCall version to `/status`, standardizing the route template on `/v1/responses/{response_id}`, and changing startup guidance to print a real local probe command instead of echoing a non-probe bind URL such as `0.0.0.0`. Added a first-run local smoke sequence to `docs/testing.md`, plus matching user-facing examples in `README.md` and `docs/openai-endpoints.md`.
+- Issues: This is still a tiny host-UX pass only. The surface remains dev-only, unauthenticated, non-streaming, and `responses`-only.
+- Next: Pause again unless concrete client pressure appears; if more API work resumes, reassess `chat/completions` before auth or streaming.
+
+- Date: 2026-04-08
 - Focus: Pin the first bounded HTTP adapter slice so implementation stays narrow.
 - Progress: Added `docs/dev/http-responses-adapter-plan.md` to define the first HTTP work as `responses` create/read/inspect only, with `chat/completions`, streaming, image routes, and MCP changes explicitly deferred. Linked that plan from the active execution plan so the next implementation step is scoped before any route code lands.
 - Issues: This is still a planning checkpoint. No HTTP implementation started in this slice.

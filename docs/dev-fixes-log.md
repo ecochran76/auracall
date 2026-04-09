@@ -9853,3 +9853,17 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   A richer `/status` payload and a startup warning for non-loopback binding are
   low-risk ways to make “dev-only and unauthenticated” operationally obvious
   without widening the protocol surface.
+- 2026-04-08: For a dev-only local API host, startup guidance should print a
+  real probe command, not just the bind address. If the server binds to
+  `0.0.0.0`, log the bind address separately and point operators at a loopback
+  probe such as `curl http://127.0.0.1:<port>/status`. Keep route templates
+  consistent across `/status`, startup logs, and docs; `response_id` is the
+  current canonical placeholder.
+- 2026-04-08: Once the bounded runtime/API slice is live on `main`, stop
+  treating it as the “next upcoming lane” in the roadmap. The right checkpoint
+  after runtime core + bounded `responses` + local `api serve` is a deliberate
+  post-milestone choice among:
+  - service-host / runner orchestration
+  - API compatibility phase 2
+  - team-execution bridge
+  Do not keep extending the API by checklist inertia.

@@ -89,6 +89,7 @@ describe('http responses adapter', () => {
       expect(payload).toMatchObject({
         object: 'status',
         ok: true,
+        version: expect.any(String),
         mode: 'development',
         binding: {
           host: '127.0.0.1',
@@ -101,6 +102,9 @@ describe('http responses adapter', () => {
           chatCompletions: false,
           streaming: false,
           auth: false,
+        },
+        routes: {
+          responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
           bodyObject: 'auracall',
