@@ -283,6 +283,10 @@ Current recommended next slice:
   - team-specific execution semantics
   - distributed scheduling
 
+That slice is now detailed in:
+
+- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
+
 ### Slice 5: Team execution bridge
 
 Goal:

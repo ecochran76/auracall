@@ -149,6 +149,7 @@ That next seam is now captured in:
 - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
 - [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
 - [runtime-control-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-control-surface-plan.md)
+- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
 
 Current execution/service checkpoint:
 
@@ -231,6 +232,10 @@ Recommended next bounded slice:
   - no streaming
   - no `chat/completions`
   - no team-specific execution semantics yet
+
+That slice is now captured in:
+
+- [runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
 
 ChatGPT hardening is also in a better checkpoint than before:
 

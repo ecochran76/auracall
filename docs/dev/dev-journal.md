@@ -13,6 +13,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 ## Entries
 
 - Date: 2026-04-08
+- Focus: Turn the new active lane choice into an implementation-ready runner plan.
+- Progress: Added `docs/dev/runtime-runner-slice-plan.md` to define the first real runtime execution slice after the bounded `responses` checkpoint. The plan keeps scope tight: sequential local runner behavior only, single owner, fail-fast, persisted run/step/event/shared-state transitions, and bounded readback through the existing `responses` host. Linked that plan from the top-level execution/runtime docs so the next coding step is explicit.
+- Issues: Subagent parallelism was requested and attempted, but the current thread limit blocked new spawns during this turn. The underlying audit still converged locally: no pressure for `chat/completions`, and the stronger next lane is runner/service behavior before team execution.
+- Next: Implement the runner slice conservatively, starting with one internal runtime runner module and the minimum step-state transition helpers needed for one direct run to progress.
+
+- Date: 2026-04-08
 - Focus: Resolve the post-runtime-checkpoint lane choice instead of letting API breadth or team work drift forward.
 - Progress: Audited the two plausible next lanes in parallel. The outcome is now explicit in the planning docs: `chat/completions` stays deferred because there is no concrete repo-internal pressure for it, and the team-execution bridge also stays deferred because the runtime/service layer still lacks the first real runner behavior. The next active lane is now documented as service-host / runner orchestration on top of the existing runtime control seam.
 - Issues: The next implementation slice is no longer about missing planning. It is about adding the first actual execution behavior without widening transport breadth or inventing team-specific execution semantics too early.

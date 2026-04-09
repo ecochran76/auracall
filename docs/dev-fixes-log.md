@@ -9872,3 +9872,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   AuraCall's local server. The stronger next lane is the first real
   runner/service execution slice under the existing `responses` host, because
   future API, MCP, and team execution all depend on that substrate.
+- 2026-04-08: Once the repo chooses runner/service execution as the next lane,
+  capture that slice explicitly before coding. The first runner plan should be:
+  - sequential
+  - single-owner
+  - fail-fast
+  - local-first
+  - persisted run/step/event/shared-state transitions
+  It should not widen into `chat/completions`, streaming, auth, or team
+  execution in the same step.
