@@ -9946,3 +9946,14 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - bounded recovery classification
   At that point the right next step is a decision boundary about broader host
   behavior, not another stale checklist item.
+- 2026-04-09: Once the runtime/service-host substrate is strong enough to run
+  bounded direct work, stop optimizing that substrate in isolation. The next
+  high-yield lane is the first thin bridge from `src/teams/*` planning onto
+  the existing runtime execution core:
+  - one `teamRun` -> one runtime run
+  - one team step -> one runtime step
+  - sequential
+  - fail-fast
+  - no new transport breadth
+  Do not delay that bridge for more host micro-polish unless a real blocker
+  appears.

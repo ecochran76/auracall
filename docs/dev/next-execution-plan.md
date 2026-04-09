@@ -251,15 +251,20 @@ Recommended immediate rule:
 
 Recommended next bounded slice:
 
-- pause and choose deliberately among the next host-layer options:
-  - background/local host drain semantics
-  - restart recovery/watch behavior
-  - operator inspection over the current recovery summary
-  - or a stop line on this lane if there is no concrete pressure yet
+- the next active lane should now move upward from substrate refinement to the
+  first team-to-runtime execution bridge:
+  - sequential only
+  - fail-fast
+  - one team run projected to one runtime run
+  - one team step projected to one runtime step
+  - execution through the existing runtime control + service-host seams
+  - no new HTTP or MCP surface
+  - no `chat/completions`
+  - no speculative parallelism
 
-The current host seam is captured in:
+That slice is now captured in:
 
-- [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+- [team-runtime-bridge-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-runtime-bridge-plan.md)
 
 ChatGPT hardening is also in a better checkpoint than before:
 

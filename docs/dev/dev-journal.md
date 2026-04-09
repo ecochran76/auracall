@@ -10129,3 +10129,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Issues:
   - the roadmap was slightly behind the code, but the mismatch is now limited
     to planning language rather than product behavior
+## 2026-04-09 - Team execution bridge is the next active lane
+
+- Focus:
+  - move the active roadmap upward from runtime-host refinement to the first
+    team-to-runtime execution bridge
+- Progress:
+  - audited the existing `src/teams/*` and `src/runtime/*` seams together
+  - confirmed the current runtime/service substrate is now strong enough that
+    more host micro-polish is lower leverage than the first real team bridge
+  - added:
+    - `docs/dev/team-runtime-bridge-plan.md`
+  - updated the top-level roadmap so the next bounded slice is now:
+    - one thin internal bridge from `teamRun` planning to one runtime run
+    - sequential first
+    - fail-fast
+    - no new transport breadth
+- Issues:
+  - explicit handoff execution semantics remain deferred
+  - no operator-facing team execution surface is required in the first bridge
+    slice
