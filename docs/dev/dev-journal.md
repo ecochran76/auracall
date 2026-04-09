@@ -12,6 +12,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 ## Entries
 
+- Date: 2026-04-09
+- Focus: Add execution-summary visibility to the internal team-runtime bridge.
+- Progress: Extended `src/teams/runtimeBridge.ts` to return a bounded `executionSummary` alongside persisted runtime records. The summary maps each planned team step to its runtime counterpart and includes terminal count plus current runtime status and per-step status/failure details. Updated `tests/teams.runtimeBridge.test.ts` to lock this behavior for success, fail-fast, and blocked-unrunnable cases.
+- Issues: Team step states in the bridge payload are now derived from runtime execution status rather than plan-time `TeamRunStep` states; transport/API-facing surfaces remain untouched.
+- Next: Decide whether this same summary shape should be reused by any future team execution API path, and add dedicated readback if/when a team execution operator surface is added.
+
 - Date: 2026-04-08
 - Focus: Add bounded execution readback on the existing `responses` routes without widening the protocol.
 - Progress: Extended the runtime/API response model so runtime-backed direct responses now surface a small `metadata.executionSummary` object. The current fields are `terminalStepId`, `completedAt`, `lastUpdatedAt`, and `failureSummary`. Added focused coverage in `tests/runtime.api.test.ts`, `tests/runtime.responsesService.test.ts`, and `tests/http.responsesServer.test.ts`, and updated the user/runtime docs so the new readback is documented as a bounded metadata extension on the existing routes.

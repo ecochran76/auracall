@@ -20,6 +20,26 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 ## Entries
 
+- Date: 2026-04-09
+- Area: Team runtime bridge execution summary
+- Symptom:
+  - Initial team bridge summaries were returning only projected team step states, which are write-once planning values and did not reflect runtime execution state.
+- Root cause:
+  - `TeamRuntimeExecutionSummary.teamStepStatus` and related step details were wired to `teamPlan` state without looking up the executed runtime run record.
+- Fix:
+  - Added runtime-derived mapping for step status in
+    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts) so each `executionSummary.stepSummary` now carries both:
+    - `teamStepStatus` derived from runtime execution state,
+    - `runtimeStepStatus` from the runtime step record,
+    - runtime source and run state,
+    - per-step failure text where present.
+  - Updated focused coverage in [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts) for success/fail-fast/blocked behaviors.
+- Verification:
+  - `pnpm vitest run tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Reuse the same bridge summary shape in any future operator-facing team execution surface so team and runtime progress can be inspected without introducing separate status endpoints.
+
 - Date: 2026-03-31
 - Area: Final pure-declarative Grok route cleanup
 - Symptom:

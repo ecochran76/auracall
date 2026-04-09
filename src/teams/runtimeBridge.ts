@@ -5,7 +5,8 @@ import { createExecutionRunRecordBundleFromTeamRun } from '../runtime/model.js';
 import { createExecutionServiceHost, type ExecutionServiceHost, type ExecutionServiceHostDeps } from '../runtime/serviceHost.js';
 import type { ExecutionRunStoredRecord } from '../runtime/store.js';
 import { createTeamRunServicePlanFromConfig, createTeamRunServicePlanFromResolvedTeam, type TeamRunServicePlan } from './service.js';
-import type { TeamRun } from './types.js';
+import type { ExecutionRunStepStatus, ExecutionRunStatus, ExecutionRunSourceKind } from '../runtime/types.js';
+import type { TeamRun, TeamRunStep } from './types.js';
 
 export interface ExecuteTeamRunBridgeInput {
   runId: string;
@@ -30,7 +31,27 @@ export interface TeamRuntimeBridgeResult {
   teamPlan: TeamRunServicePlan;
   createdRuntimeRecord: ExecutionRunStoredRecord;
   finalRuntimeRecord: ExecutionRunStoredRecord;
+  executionSummary: TeamRuntimeExecutionSummary;
   hostDrainResults: Array<Awaited<ReturnType<ExecutionServiceHost['drainRunsOnce']>>>;
+}
+
+export interface TeamRuntimeExecutionStepSummary {
+  teamStepId: string;
+  teamStepOrder: number;
+  teamStepStatus: TeamRunStep['status'];
+  runtimeStepId: string | null;
+  runtimeStepStatus: ExecutionRunStepStatus | null;
+  runtimeStepFailure: string | null;
+}
+
+export interface TeamRuntimeExecutionSummary {
+  teamRunId: string;
+  runtimeRunId: string;
+  runtimeSourceKind: ExecutionRunSourceKind;
+  runtimeRunStatus: ExecutionRunStatus;
+  runtimeUpdatedAt: string;
+  terminalStepCount: number;
+  stepSummaries: TeamRuntimeExecutionStepSummary[];
 }
 
 export interface TeamRuntimeBridgeDeps {
@@ -126,6 +147,51 @@ async function executeTeamRuntimePlan(input: {
     teamPlan: input.teamPlan,
     createdRuntimeRecord,
     finalRuntimeRecord,
+    executionSummary: summarizeTeamRuntimeExecution({
+      teamPlan: input.teamPlan,
+      runtimeRecord: finalRuntimeRecord,
+    }),
     hostDrainResults,
   };
+}
+
+function summarizeTeamRuntimeExecution(input: {
+  teamPlan: TeamRunServicePlan;
+  runtimeRecord: ExecutionRunStoredRecord;
+}): TeamRuntimeExecutionSummary {
+  const runtimeStepsByTeamStepId = new Map(
+    input.runtimeRecord.bundle.steps.map((step) => [step.sourceStepId, step]),
+  );
+
+  const stepSummaries: TeamRuntimeExecutionStepSummary[] = input.teamPlan.steps.map((teamStep) => {
+    const runtimeStep = runtimeStepsByTeamStepId.get(teamStep.id);
+    return {
+      teamStepId: teamStep.id,
+      teamStepOrder: teamStep.order,
+      teamStepStatus: runtimeStep ? mapRuntimeStepStatusToTeamStatus(runtimeStep.status) : teamStep.status,
+      runtimeStepId: runtimeStep?.id ?? null,
+      runtimeStepStatus: runtimeStep?.status ?? null,
+      runtimeStepFailure: runtimeStep?.failure?.message ?? null,
+    };
+  });
+
+  return {
+    teamRunId: input.teamPlan.teamRun.id,
+    runtimeRunId: input.runtimeRecord.bundle.run.id,
+    runtimeSourceKind: input.runtimeRecord.bundle.run.sourceKind,
+    runtimeRunStatus: input.runtimeRecord.bundle.run.status,
+    runtimeUpdatedAt: input.runtimeRecord.bundle.run.updatedAt,
+    terminalStepCount: input.teamPlan.terminalStepIds.length,
+    stepSummaries,
+  };
+}
+
+function mapRuntimeStepStatusToTeamStatus(
+  runtimeStatus: ExecutionRunStepStatus,
+): TeamRunStep['status'] {
+  if (runtimeStatus === 'runnable') {
+    return 'ready';
+  }
+
+  return runtimeStatus;
 }

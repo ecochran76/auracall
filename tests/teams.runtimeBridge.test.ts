@@ -52,6 +52,30 @@ describe('team runtime bridge', () => {
       ['team_bridge_success'],
       ['team_bridge_success'],
     ]);
+    expect(result.executionSummary).toMatchObject({
+      teamRunId: 'team_bridge_success',
+      runtimeRunId: 'team_bridge_success',
+      runtimeSourceKind: 'team-run',
+      runtimeRunStatus: 'succeeded',
+      stepSummaries: [
+        {
+          teamStepId: 'team_bridge_success:step:1',
+          teamStepOrder: 1,
+          teamStepStatus: 'succeeded',
+          runtimeStepId: 'team_bridge_success:step:1',
+          runtimeStepStatus: 'succeeded',
+          runtimeStepFailure: null,
+        },
+        {
+          teamStepId: 'team_bridge_success:step:2',
+          teamStepOrder: 2,
+          teamStepStatus: 'succeeded',
+          runtimeStepId: 'team_bridge_success:step:2',
+          runtimeStepStatus: 'succeeded',
+          runtimeStepFailure: null,
+        },
+      ],
+    });
     expect(result.finalRuntimeRecord.bundle.run.status).toBe('succeeded');
     expect(result.finalRuntimeRecord.bundle.steps[0]?.status).toBe('succeeded');
     expect(result.finalRuntimeRecord.bundle.steps[1]?.status).toBe('succeeded');
@@ -93,6 +117,30 @@ describe('team runtime bridge', () => {
     });
 
     expect(result.hostDrainResults.map((entry) => entry.executedRunIds)).toEqual([['team_bridge_failure']]);
+    expect(result.executionSummary).toMatchObject({
+      teamRunId: 'team_bridge_failure',
+      runtimeRunId: 'team_bridge_failure',
+      runtimeSourceKind: 'team-run',
+      runtimeRunStatus: 'failed',
+      stepSummaries: [
+        {
+          teamStepId: 'team_bridge_failure:step:1',
+          teamStepOrder: 1,
+          teamStepStatus: 'failed',
+          runtimeStepId: 'team_bridge_failure:step:1',
+          runtimeStepStatus: 'failed',
+          runtimeStepFailure: 'team step exploded',
+        },
+        {
+          teamStepId: 'team_bridge_failure:step:2',
+          teamStepOrder: 2,
+          teamStepStatus: 'planned',
+          runtimeStepId: 'team_bridge_failure:step:2',
+          runtimeStepStatus: 'planned',
+          runtimeStepFailure: null,
+        },
+      ],
+    });
     expect(result.finalRuntimeRecord.bundle.run.status).toBe('failed');
     expect(result.finalRuntimeRecord.bundle.steps[0]?.status).toBe('failed');
     expect(result.finalRuntimeRecord.bundle.steps[1]?.status).toBe('planned');
@@ -139,6 +187,22 @@ describe('team runtime bridge', () => {
         reason: 'no-runnable-step',
       }),
     ]);
+    expect(result.executionSummary).toMatchObject({
+      teamRunId: 'team_bridge_blocked',
+      runtimeRunId: 'team_bridge_blocked',
+      runtimeSourceKind: 'team-run',
+      runtimeRunStatus: 'planned',
+      stepSummaries: [
+        {
+          teamStepId: 'team_bridge_blocked:step:1',
+          teamStepOrder: 1,
+          teamStepStatus: 'blocked',
+          runtimeStepId: 'team_bridge_blocked:step:1',
+          runtimeStepStatus: 'blocked',
+          runtimeStepFailure: null,
+        },
+      ],
+    });
     expect(result.finalRuntimeRecord.bundle.steps[0]?.status).toBe('blocked');
   });
 });
