@@ -9923,3 +9923,18 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - stale-lease expiry before reclaim
   - sequential drain-once behavior
   Keep background loops, auth, streaming, and new routes deferred.
+- 2026-04-08: For local runtime recovery, do not collapse every non-executable
+  run into `no-runnable-step`. The first service-host seam should distinguish:
+  - active-lease runs that are still busy
+  - stranded `running` runs with no active lease
+  - truly idle runs with no runnable step
+  That keeps future restart recovery and operator inspection from losing the
+  most important failure mode.
+- 2026-04-08: Before adding any new recovery route or host UI, give the local
+  service-host seam one internal recovery summary that reports:
+  - reclaimable runs
+  - active-lease busy runs
+  - stranded running-without-lease runs
+  - idle runs
+  That lets later operator or transport surfaces reuse one classification seam
+  instead of recomputing recovery categories independently.

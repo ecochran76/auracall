@@ -172,3 +172,13 @@ Current explicit limits remain:
 - no streaming
 - no auth
 - no `chat/completions`
+
+Current bounded recovery behavior now also distinguishes:
+
+- reclaimable runnable work
+- still-busy runs with an active lease
+- stranded running work with no active lease
+
+The service-host seam now also has one internal recovery summary helper for
+those categories, still without adding routes or transport-facing inspection
+surfaces.

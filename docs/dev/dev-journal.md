@@ -10093,6 +10093,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - deterministic candidate selection
     - stale-lease expiry before reclaim
     - sequential bounded drain-once execution over persisted runs
+    - explicit distinction between:
+      - still-busy active-lease runs
+      - stranded running-without-lease runs
+    - one internal recovery summary over:
+      - reclaimable runs
+      - busy leased runs
+      - stranded runs
+      - idle runs
   - `src/runtime/responsesService.ts` now delegates direct-run execution
     through the service-host seam instead of calling the runner directly
   - added focused coverage in:

@@ -14,8 +14,21 @@ export interface DrainStoredExecutionRunsOnceOptions {
 export interface DrainedStoredExecutionRunResult {
   runId: string;
   result: 'executed' | 'skipped';
-  reason?: 'not-found' | 'active-lease' | 'no-runnable-step' | 'limit-reached';
+  reason?:
+    | 'not-found'
+    | 'active-lease'
+    | 'no-runnable-step'
+    | 'stranded-running-no-lease'
+    | 'limit-reached';
   record?: ExecutionRunStoredRecord;
+}
+
+export interface ExecutionServiceHostRecoverySummary {
+  totalRuns: number;
+  reclaimableRunIds: string[];
+  activeLeaseRunIds: string[];
+  strandedRunIds: string[];
+  idleRunIds: string[];
 }
 
 export interface DrainStoredExecutionRunsOnceResult {
@@ -34,6 +47,7 @@ export interface ExecutionServiceHostDeps {
 
 export interface ExecutionServiceHost {
   drainRunsOnce(options?: DrainStoredExecutionRunsOnceOptions): Promise<DrainStoredExecutionRunsOnceResult>;
+  summarizeRecoveryState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostRecoverySummary>;
 }
 
 export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}): ExecutionServiceHost {
@@ -42,6 +56,51 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
   const ownerId = deps.ownerId ?? 'host:local-service';
 
   return {
+    async summarizeRecoveryState(options: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'> = {}) {
+      const summary: ExecutionServiceHostRecoverySummary = {
+        totalRuns: 0,
+        reclaimableRunIds: [],
+        activeLeaseRunIds: [],
+        strandedRunIds: [],
+        idleRunIds: [],
+      };
+
+      for (const candidate of await listCandidateRuns(control, options)) {
+        summary.totalRuns += 1;
+        let currentRecord = candidate;
+        const activeLease = getActiveExecutionRunLease(currentRecord);
+        if (activeLease && activeLease.expiresAt <= now()) {
+          const expired = await control.expireLeases({
+            runId: currentRecord.runId,
+            now: now(),
+          });
+          currentRecord = expired ?? currentRecord;
+        }
+
+        const inspection = await control.inspectRun(currentRecord.runId);
+        if (!inspection) continue;
+
+        if (getActiveExecutionRunLease(inspection.record)) {
+          summary.activeLeaseRunIds.push(currentRecord.runId);
+          continue;
+        }
+
+        if (inspection.dispatchPlan.runningStepIds.length > 0) {
+          summary.strandedRunIds.push(currentRecord.runId);
+          continue;
+        }
+
+        if (inspection.dispatchPlan.nextRunnableStepId) {
+          summary.reclaimableRunIds.push(currentRecord.runId);
+          continue;
+        }
+
+        summary.idleRunIds.push(currentRecord.runId);
+      }
+
+      return summary;
+    },
+
     async drainRunsOnce(options: DrainStoredExecutionRunsOnceOptions = {}) {
       const maxRuns = Math.max(0, options.maxRuns ?? 1);
       const drained: DrainedStoredExecutionRunResult[] = [];
@@ -88,6 +147,16 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             runId: currentRecord.runId,
             result: 'skipped',
             reason: 'active-lease',
+            record: inspection.record,
+          });
+          continue;
+        }
+
+        if (inspection.dispatchPlan.runningStepIds.length > 0) {
+          drained.push({
+            runId: currentRecord.runId,
+            result: 'skipped',
+            reason: 'stranded-running-no-lease',
             record: inspection.record,
           });
           continue;

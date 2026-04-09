@@ -78,6 +78,78 @@ function createDirectBundle(runId: string, createdAt: string, status: 'planned' 
   });
 }
 
+function createRunningWithoutLeaseBundle(runId: string, createdAt: string) {
+  const stepId = `${runId}:step:1`;
+  return createExecutionRunRecordBundle({
+    run: createExecutionRun({
+      id: runId,
+      sourceKind: 'direct',
+      sourceId: null,
+      status: 'running',
+      createdAt,
+      updatedAt: createdAt,
+      trigger: 'api',
+      requestedBy: null,
+      entryPrompt: 'Recover me.',
+      initialInputs: {
+        model: 'gpt-5.2',
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+      },
+      sharedStateId: `${runId}:state`,
+      stepIds: [stepId],
+      policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+    }),
+    steps: [
+      createExecutionRunStep({
+        id: stepId,
+        runId,
+        agentId: 'api-responses',
+        runtimeProfileId: 'default',
+        browserProfileId: null,
+        service: 'chatgpt',
+        kind: 'prompt',
+        status: 'running',
+        order: 1,
+        dependsOnStepIds: [],
+        input: {
+          prompt: 'Recover me.',
+          handoffIds: [],
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+        startedAt: createdAt,
+      }),
+    ],
+    sharedState: createExecutionRunSharedState({
+      id: `${runId}:state`,
+      runId,
+      status: 'active',
+      artifacts: [],
+      structuredOutputs: [],
+      notes: [],
+      history: [],
+      lastUpdatedAt: createdAt,
+    }),
+    events: [
+      createExecutionRunEvent({
+        id: `${runId}:event:run-created`,
+        runId,
+        type: 'run-created',
+        createdAt,
+      }),
+      createExecutionRunEvent({
+        id: `${runId}:event:${stepId}:started`,
+        runId,
+        stepId,
+        type: 'step-started',
+        createdAt,
+      }),
+    ],
+  });
+}
+
 describe('runtime service host', () => {
   const cleanup: string[] = [];
 
@@ -163,5 +235,88 @@ describe('runtime service host', () => {
         reason: 'active-lease',
       }),
     ]);
+  });
+
+  it('reports stranded running work without an active lease separately from no-runnable-step cases', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createRunningWithoutLeaseBundle('run_stranded', '2026-04-08T15:04:00.000Z'));
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.drainRunsOnce({
+      runId: 'run_stranded',
+    });
+
+    expect(result.executedRunIds).toEqual([]);
+    expect(result.drained).toEqual([
+      expect.objectContaining({
+        runId: 'run_stranded',
+        result: 'skipped',
+        reason: 'stranded-running-no-lease',
+      }),
+    ]);
+  });
+
+  it('summarizes reclaimable, busy, stranded, and idle recovery states', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_reclaimable', '2026-04-08T15:00:00.000Z'));
+    await control.createRun(createRunningWithoutLeaseBundle('run_stranded', '2026-04-08T15:01:00.000Z'));
+
+    const idle = createDirectBundle('run_idle', '2026-04-08T15:02:00.000Z');
+    idle.run.status = 'succeeded';
+    idle.steps[0] = {
+      ...idle.steps[0]!,
+      status: 'succeeded',
+      startedAt: '2026-04-08T15:02:00.000Z',
+      completedAt: '2026-04-08T15:02:00.000Z',
+      output: {
+        summary: 'done',
+        artifacts: [],
+        structuredData: {},
+        notes: [],
+      },
+    };
+    idle.sharedState.status = 'succeeded';
+    await control.createRun(idle);
+
+    await control.createRun(createDirectBundle('run_busy', '2026-04-08T15:03:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_busy',
+      leaseId: 'run_busy:lease:busy',
+      ownerId: 'host:busy',
+      acquiredAt: '2026-04-08T15:03:00.000Z',
+      heartbeatAt: '2026-04-08T15:03:00.000Z',
+      expiresAt: '2026-04-08T15:10:00.000Z',
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const summary = await host.summarizeRecoveryState({
+      sourceKind: 'direct',
+    });
+
+    expect(summary).toEqual({
+      totalRuns: 4,
+      reclaimableRunIds: ['run_reclaimable'],
+      activeLeaseRunIds: ['run_busy'],
+      strandedRunIds: ['run_stranded'],
+      idleRunIds: ['run_idle'],
+    });
   });
 });
