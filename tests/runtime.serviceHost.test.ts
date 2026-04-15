@@ -15,8 +15,19 @@ import {
 } from '../src/runtime/model.js';
 import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
 import { cancelExecutionRun } from '../src/runtime/runner.js';
+import { createConfiguredExecutionRunAffinity } from '../src/runtime/configuredAffinity.js';
 import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+
+const CHATGPT_ACCOUNT_AFFINITY_CONFIG = {
+  services: {
+    chatgpt: {
+      identity: {
+        email: 'operator@example.com',
+      },
+    },
+  },
+};
 
 function createDirectBundle(runId: string, createdAt: string, status: 'planned' | 'running' = 'planned') {
   const stepId = `${runId}:step:1`;
@@ -2220,6 +2231,168 @@ describe('runtime service host', () => {
         unavailableCount: 1,
       },
     });
+  });
+
+  it('blocks local claim when configured service account affinity is missing from the runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_local_claim_account_blocked', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:missing-account',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:missing-account',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+    });
+
+    const summary = await host.summarizeLocalClaimState({
+      sourceKind: 'direct',
+    });
+
+    expect(summary).toEqual({
+      sourceKind: 'direct',
+      runnerId: 'runner:missing-account',
+      selectedRunIds: [],
+      blockedRunIds: ['run_local_claim_account_blocked'],
+      notReadyRunIds: [],
+      unavailableRunIds: [],
+      statusByRunId: {
+        run_local_claim_account_blocked: 'blocked-affinity',
+      },
+      reasonsByRunId: {
+        run_local_claim_account_blocked:
+          'runner runner:missing-account does not expose service account service-account:chatgpt:operator@example.com',
+      },
+      metrics: {
+        selectedCount: 0,
+        blockedCount: 1,
+        notReadyCount: 0,
+        unavailableCount: 0,
+      },
+    });
+  });
+
+  it('selects local claim when configured service account affinity matches the runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_local_claim_account_selected', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:matching-account',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:matching-account',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+    });
+
+    const summary = await host.summarizeLocalClaimState({
+      sourceKind: 'direct',
+    });
+
+    expect(summary).toEqual({
+      sourceKind: 'direct',
+      runnerId: 'runner:matching-account',
+      selectedRunIds: ['run_local_claim_account_selected'],
+      blockedRunIds: [],
+      notReadyRunIds: [],
+      unavailableRunIds: [],
+      statusByRunId: {
+        run_local_claim_account_selected: 'eligible',
+      },
+      reasonsByRunId: {},
+      metrics: {
+        selectedCount: 1,
+        blockedCount: 0,
+        notReadyCount: 0,
+        unavailableCount: 0,
+      },
+    });
+  });
+
+  it('preserves configured service account mismatch details on targeted drain skip', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_targeted_drain_account_blocked', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:targeted-missing-account',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:targeted-missing-account',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+    });
+
+    const result = await host.drainRunsOnce({
+      runId: 'run_targeted_drain_account_blocked',
+    });
+
+    expect(result.executedRunIds).toEqual([]);
+    expect(result.drained).toEqual([
+      expect.objectContaining({
+        runId: 'run_targeted_drain_account_blocked',
+        result: 'skipped',
+        reason: 'claim-owner-unavailable',
+        detailReason:
+          'runner runner:targeted-missing-account does not expose service account service-account:chatgpt:operator@example.com',
+      }),
+    ]);
+
+    const reread = await control.readRun('run_targeted_drain_account_blocked');
+    expect(reread?.bundle.leases).toEqual([]);
+    expect(reread?.bundle.run.status).toBe('planned');
   });
 
   it('surfaces bounded handoff-transfer summary on recovery detail for stored team-run-backed runs', async () => {

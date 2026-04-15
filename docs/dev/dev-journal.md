@@ -16058,6 +16058,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Examined the dirty worktree for safe cleanup. Removed the recurring stray repo-root `undefined:/` lighthouse scratch tree and added `.gitignore` coverage for `undefined:/` so future temp-path resolution bugs do not keep dirtying the repo. Left the remaining dirt intact because it is substantive in-flight code/doc work, not safe throwaway output.
 - 2026-04-15: Tightened `api serve` local-runner registration so persisted runner records derive runtime/browser capability metadata from the existing AuraCall config model when config is available. The slice stays internal-only: no route contract changed, but runner affinity data is now less misleading than the previous hardcoded `default` runtime-profile registration.
 - 2026-04-15: Tightened targeted-drain operator readback so skipped drains keep the bounded `skipReason = claim-owner-unavailable` enum but preserve the specific local-claim explanation in free-form `reason` and the persisted note. This improves diagnostics for missing/stale/affinity-blocked local runners without widening the coarse skip taxonomy.
+
+## 2026-04-15 - Configured account-affinity local-claim proof
+
+- Completed the focused service-host proof for configured service-account
+  affinity:
+  - added direct local-claim coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    proving a runner without the configured
+    `service-account:<service>:<identity-key>` id is `blocked-affinity`
+  - added the matching positive case proving the same configured id makes the
+    run locally claimable
+  - added targeted-drain coverage proving account-affinity skips preserve the
+    coarse `claim-owner-unavailable` result while keeping the actionable
+    missing-account reason in `detailReason`
+  - why this matters:
+    - the configured account-affinity lane is now covered at the service-host
+      claim boundary, not only through HTTP/runtime-inspection readback.
 ## 2026-04-15 - Targeted drain skipped-note contract cleanup
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:

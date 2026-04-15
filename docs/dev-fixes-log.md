@@ -12373,3 +12373,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
     - `resumedStepId`
   - This keeps `/status` operator actions self-describing without widening the
     broader response-readback summaries.
+- 2026-04-15: When run-side service-account affinity is derived from config,
+  prove it at the local-claim boundary as well as the public inspection
+  boundary. Service-host tests should cover both missing-account
+  `blocked-affinity` summaries and targeted-drain skips that preserve the
+  actionable missing-account detail under the stable
+  `claim-owner-unavailable` skip taxonomy.
