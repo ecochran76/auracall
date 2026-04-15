@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ExecutionRunAffinityRecordSchema,
   ExecutionRunEventSchema,
   ExecutionRunLeaseSchema,
   ExecutionRunRecordBundleSchema,
+  ExecutionRunnerRecordSchema,
   ExecutionRunSchema,
   ExecutionRunSharedStateSchema,
   ExecutionRunStepSchema,
@@ -15,6 +17,7 @@ describe('runtime execution schemas', () => {
       id: 'run_1',
       sourceKind: 'team-run',
       sourceId: 'team-run_1',
+      taskRunSpecId: 'task_spec_1',
       status: 'planned',
       createdAt: '2026-04-07T00:00:00.000Z',
       updatedAt: '2026-04-07T00:00:00.000Z',
@@ -79,6 +82,34 @@ describe('runtime execution schemas', () => {
       releaseReason: null,
     });
 
+    const affinity = ExecutionRunAffinityRecordSchema.parse({
+      service: 'chatgpt',
+      serviceAccountId: 'acct_chatgpt_default',
+      browserRequired: true,
+      runtimeProfileId: 'default',
+      browserProfileId: 'wsl-chrome-2',
+      hostRequirement: 'same-host',
+      requiredHostId: 'host:wsl-dev-1',
+      eligibilityNote: 'requires the signed-in WSL ChatGPT browser-bearing account',
+    });
+
+    const runner = ExecutionRunnerRecordSchema.parse({
+      id: 'runner:wsl-local-1',
+      hostId: 'host:wsl-dev-1',
+      status: 'active',
+      startedAt: '2026-04-07T00:00:00.000Z',
+      lastHeartbeatAt: '2026-04-07T00:00:20.000Z',
+      expiresAt: '2026-04-07T00:01:20.000Z',
+      lastActivityAt: null,
+      lastClaimedRunId: null,
+      serviceIds: ['chatgpt', 'gemini'],
+      runtimeProfileIds: ['default'],
+      browserProfileIds: ['wsl-chrome-2'],
+      serviceAccountIds: ['acct_chatgpt_default'],
+      browserCapable: true,
+      eligibilityNote: 'WSL Chrome runner with the default ChatGPT account',
+    });
+
     const sharedState = ExecutionRunSharedStateSchema.parse({
       id: run.sharedStateId,
       runId: run.id,
@@ -93,14 +124,45 @@ describe('runtime execution schemas', () => {
     const bundle = ExecutionRunRecordBundleSchema.parse({
       run,
       steps: [step],
+      handoffs: [],
+      localActionRequests: [],
       sharedState,
       events: [event],
       leases: [lease],
     });
 
     expect(bundle.run.sourceKind).toBe('team-run');
+    expect(bundle.run.taskRunSpecId).toBe('task_spec_1');
     expect(bundle.steps[0]?.status).toBe('runnable');
+    expect(bundle.handoffs).toEqual([]);
+    expect(bundle.localActionRequests).toEqual([]);
     expect(bundle.events[0]?.type).toBe('run-created');
     expect(bundle.leases[0]?.status).toBe('active');
+    expect(affinity.hostRequirement).toBe('same-host');
+    expect(affinity.requiredHostId).toBe('host:wsl-dev-1');
+    expect(runner.serviceIds).toContain('chatgpt');
+    expect(runner.browserCapable).toBe(true);
+  });
+
+  it('parses handoff-consumed execution history events', () => {
+    const event = ExecutionRunEventSchema.parse({
+      id: 'run_1:event:handoff_1:consumed',
+      runId: 'run_1',
+      type: 'handoff-consumed',
+      createdAt: '2026-04-07T00:01:00.000Z',
+      stepId: 'run_1:step:2',
+      leaseId: null,
+      note: 'handoff consumed from run_1:step:1 by run_1:step:2',
+      payload: {
+        handoffId: 'handoff_1',
+        fromStepId: 'run_1:step:1',
+      },
+    });
+
+    expect(event.type).toBe('handoff-consumed');
+    expect(event.payload).toMatchObject({
+      handoffId: 'handoff_1',
+      fromStepId: 'run_1:step:1',
+    });
   });
 });

@@ -47,6 +47,19 @@ export interface PersistStoredExecutionRunRecordInput {
   expectedRevision?: number | null;
 }
 
+export interface ResumeHumanEscalationExecutionRunInput {
+  runId: string;
+  resumedAt: string;
+  note?: string | null;
+  guidance?: Record<string, unknown> | null;
+  override?: ResumeHumanEscalationOverride | null;
+}
+
+export interface ResumeHumanEscalationOverride {
+  promptAppend?: string | null;
+  structuredContext?: Record<string, unknown> | null;
+}
+
 export interface ExecutionRuntimeControlContract {
   createRun(bundle: ExecutionRunRecordBundle): Promise<ExecutionRunStoredRecord>;
   readRun(runId: string): Promise<ExecutionRunStoredRecord | null>;
@@ -57,6 +70,7 @@ export interface ExecutionRuntimeControlContract {
   releaseLease(input: ReleaseStoredExecutionRunLeaseInput): Promise<ExecutionRunStoredRecord>;
   expireLeases(input: ExpireStoredExecutionRunLeasesInput): Promise<ExecutionRunStoredRecord | null>;
   persistRun(input: PersistStoredExecutionRunRecordInput): Promise<ExecutionRunStoredRecord>;
+  resumeHumanEscalation(input: ResumeHumanEscalationExecutionRunInput): Promise<ExecutionRunStoredRecord>;
 }
 
 export function getActiveExecutionRunLease(record: ExecutionRunStoredRecord): ExecutionRunLease | null {

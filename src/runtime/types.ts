@@ -2,6 +2,8 @@ import type {
   TeamRunArtifactRef,
   TeamRunExecutionPolicy,
   TeamRunFailure,
+  TeamRunHandoff,
+  TeamRunLocalActionRequest,
   TeamRunStepInput,
   TeamRunStepKind,
   TeamRunStepOutput,
@@ -30,6 +32,7 @@ export type ExecutionRunEventType =
   | 'step-started'
   | 'step-succeeded'
   | 'step-failed'
+  | 'handoff-consumed'
   | 'lease-acquired'
   | 'lease-released'
   | 'note-added';
@@ -37,11 +40,16 @@ export type ExecutionRunEventType =
 export type ExecutionRunLeaseStatus = 'active' | 'released' | 'expired';
 
 export type ExecutionRunServiceId = 'chatgpt' | 'gemini' | 'grok' | null;
+export type ExecutionRunnerServiceId = Exclude<ExecutionRunServiceId, null>;
+
+export type ExecutionRunAffinityHostRequirement = 'any' | 'same-host';
+export type ExecutionRunnerStatus = 'active' | 'stale';
 
 export interface ExecutionRun {
   id: string;
   sourceKind: ExecutionRunSourceKind;
   sourceId: string | null;
+  taskRunSpecId?: string | null;
   status: ExecutionRunStatus;
   createdAt: string;
   updatedAt: string;
@@ -96,6 +104,34 @@ export interface ExecutionRunLease {
   releaseReason?: string | null;
 }
 
+export interface ExecutionRunAffinityRecord {
+  service: ExecutionRunServiceId;
+  serviceAccountId: string | null;
+  browserRequired: boolean;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  hostRequirement: ExecutionRunAffinityHostRequirement;
+  requiredHostId: string | null;
+  eligibilityNote: string | null;
+}
+
+export interface ExecutionRunnerRecord {
+  id: string;
+  hostId: string;
+  status: ExecutionRunnerStatus;
+  startedAt: string;
+  lastHeartbeatAt: string;
+  expiresAt: string;
+  lastActivityAt: string | null;
+  lastClaimedRunId: string | null;
+  serviceIds: ExecutionRunnerServiceId[];
+  runtimeProfileIds: string[];
+  browserProfileIds: string[];
+  serviceAccountIds: string[];
+  browserCapable: boolean;
+  eligibilityNote: string | null;
+}
+
 export interface ExecutionRunSharedState {
   id: string;
   runId: string;
@@ -110,6 +146,8 @@ export interface ExecutionRunSharedState {
 export interface ExecutionRunRecordBundle {
   run: ExecutionRun;
   steps: ExecutionRunStep[];
+  handoffs: TeamRunHandoff[];
+  localActionRequests: TeamRunLocalActionRequest[];
   sharedState: ExecutionRunSharedState;
   events: ExecutionRunEvent[];
   leases: ExecutionRunLease[];

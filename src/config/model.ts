@@ -1,4 +1,5 @@
 import type { OracleConfig } from './schema.js';
+import type { LocalActionExecutionPolicy } from '../runtime/localActions.js';
 
 type MutableRecord = Record<string, unknown>;
 type MutableBrowserProfile = Record<string, unknown>;
@@ -266,6 +267,46 @@ export function getTeam(
   if (!name) return null;
   const teams = getTeams(config);
   return isRecord(teams[name]) ? teams[name] : null;
+}
+
+export function resolveHostLocalActionExecutionPolicy(
+  config: OracleConfig | MutableRecord,
+): Partial<LocalActionExecutionPolicy> {
+  const runtime = isRecord((config as MutableRecord).runtime)
+    ? ((config as MutableRecord).runtime as MutableRecord)
+    : null;
+  const localActions = runtime && isRecord(runtime.localActions) ? (runtime.localActions as MutableRecord) : null;
+  const shell = localActions && isRecord(localActions.shell) ? (localActions.shell as MutableRecord) : null;
+  if (!shell) {
+    return {};
+  }
+
+  return {
+    complexityStage:
+      shell.complexityStage === 'bounded-command' ||
+      shell.complexityStage === 'repo-automation' ||
+      shell.complexityStage === 'extended'
+        ? shell.complexityStage
+        : undefined,
+    allowedShellCommands: Array.isArray(shell.allowedCommands)
+      ? shell.allowedCommands.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : undefined,
+    allowedCwdRoots: Array.isArray(shell.allowedCwdRoots)
+      ? shell.allowedCwdRoots.filter((value): value is string => typeof value === 'string' && value.length > 0)
+      : undefined,
+    defaultShellActionTimeoutMs:
+      typeof shell.defaultShellActionTimeoutMs === 'number' && Number.isFinite(shell.defaultShellActionTimeoutMs)
+        ? shell.defaultShellActionTimeoutMs
+        : undefined,
+    maxShellActionTimeoutMs:
+      typeof shell.maxShellActionTimeoutMs === 'number' && Number.isFinite(shell.maxShellActionTimeoutMs)
+        ? shell.maxShellActionTimeoutMs
+        : undefined,
+    maxCaptureChars:
+      typeof shell.maxCaptureChars === 'number' && Number.isFinite(shell.maxCaptureChars)
+        ? Math.trunc(shell.maxCaptureChars)
+        : undefined,
+  };
 }
 
 export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {

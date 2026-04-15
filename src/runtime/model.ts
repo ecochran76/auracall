@@ -1,18 +1,28 @@
 import {
+  ExecutionRunAffinityRecordSchema,
   ExecutionRunEventSchema,
   ExecutionRunRecordBundleSchema,
+  ExecutionRunnerRecordSchema,
   ExecutionRunSchema,
   ExecutionRunSharedStateSchema,
   ExecutionRunStepSchema,
 } from './schema.js';
 import type {
+  ExecutionRunAffinityRecord,
+  ExecutionRunnerRecord,
   ExecutionRun,
   ExecutionRunEvent,
   ExecutionRunRecordBundle,
   ExecutionRunSharedState,
   ExecutionRunStep,
 } from './types.js';
-import type { TeamRun, TeamRunSharedState, TeamRunStep } from '../teams/types.js';
+import type {
+  TeamRun,
+  TeamRunHandoff,
+  TeamRunLocalActionRequest,
+  TeamRunSharedState,
+  TeamRunStep,
+} from '../teams/types.js';
 
 function mapTeamRunStatusToExecutionStatus(status: TeamRun['status']): ExecutionRun['status'] {
   return status;
@@ -27,6 +37,7 @@ export function createExecutionRun(input: {
   id: string;
   sourceKind?: ExecutionRun['sourceKind'];
   sourceId?: string | null;
+  taskRunSpecId?: string | null;
   status?: ExecutionRun['status'];
   createdAt: string;
   updatedAt?: string;
@@ -42,6 +53,7 @@ export function createExecutionRun(input: {
     id: input.id,
     sourceKind: input.sourceKind ?? 'direct',
     sourceId: input.sourceId ?? null,
+    taskRunSpecId: input.taskRunSpecId ?? null,
     status: input.status ?? 'planned',
     createdAt: input.createdAt,
     updatedAt: input.updatedAt ?? input.createdAt,
@@ -115,6 +127,62 @@ export function createExecutionRunEvent(input: {
   });
 }
 
+export function createExecutionRunAffinityRecord(input: {
+  service?: ExecutionRunAffinityRecord['service'];
+  serviceAccountId?: string | null;
+  browserRequired?: boolean;
+  runtimeProfileId?: string | null;
+  browserProfileId?: string | null;
+  hostRequirement?: ExecutionRunAffinityRecord['hostRequirement'];
+  requiredHostId?: string | null;
+  eligibilityNote?: string | null;
+}): ExecutionRunAffinityRecord {
+  return ExecutionRunAffinityRecordSchema.parse({
+    service: input.service ?? null,
+    serviceAccountId: input.serviceAccountId ?? null,
+    browserRequired: input.browserRequired ?? false,
+    runtimeProfileId: input.runtimeProfileId ?? null,
+    browserProfileId: input.browserProfileId ?? null,
+    hostRequirement: input.hostRequirement ?? 'any',
+    requiredHostId: input.requiredHostId ?? null,
+    eligibilityNote: input.eligibilityNote ?? null,
+  });
+}
+
+export function createExecutionRunnerRecord(input: {
+  id: string;
+  hostId: string;
+  status?: ExecutionRunnerRecord['status'];
+  startedAt: string;
+  lastHeartbeatAt?: string;
+  expiresAt: string;
+  lastActivityAt?: string | null;
+  lastClaimedRunId?: string | null;
+  serviceIds?: ExecutionRunnerRecord['serviceIds'];
+  runtimeProfileIds?: string[];
+  browserProfileIds?: string[];
+  serviceAccountIds?: string[];
+  browserCapable?: boolean;
+  eligibilityNote?: string | null;
+}): ExecutionRunnerRecord {
+  return ExecutionRunnerRecordSchema.parse({
+    id: input.id,
+    hostId: input.hostId,
+    status: input.status ?? 'active',
+    startedAt: input.startedAt,
+    lastHeartbeatAt: input.lastHeartbeatAt ?? input.startedAt,
+    expiresAt: input.expiresAt,
+    lastActivityAt: input.lastActivityAt ?? null,
+    lastClaimedRunId: input.lastClaimedRunId ?? null,
+    serviceIds: input.serviceIds ?? [],
+    runtimeProfileIds: input.runtimeProfileIds ?? [],
+    browserProfileIds: input.browserProfileIds ?? [],
+    serviceAccountIds: input.serviceAccountIds ?? [],
+    browserCapable: input.browserCapable ?? false,
+    eligibilityNote: input.eligibilityNote ?? null,
+  });
+}
+
 export function createExecutionRunSharedState(input: {
   id: string;
   runId: string;
@@ -140,12 +208,16 @@ export function createExecutionRunSharedState(input: {
 export function createExecutionRunRecordBundle(input: {
   run: ExecutionRun;
   steps: ExecutionRunStep[];
+  handoffs?: TeamRunHandoff[];
+  localActionRequests?: TeamRunLocalActionRequest[];
   sharedState: ExecutionRunSharedState;
   events?: ExecutionRunEvent[];
 }): ExecutionRunRecordBundle {
   return ExecutionRunRecordBundleSchema.parse({
     run: input.run,
     steps: input.steps.slice().sort((left, right) => left.order - right.order),
+    handoffs: input.handoffs ?? [],
+    localActionRequests: input.localActionRequests ?? [],
     sharedState: input.sharedState,
     events: input.events ?? [],
     leases: [],
@@ -155,6 +227,8 @@ export function createExecutionRunRecordBundle(input: {
 export function createExecutionRunRecordBundleFromTeamRun(input: {
   teamRun: TeamRun;
   steps: TeamRunStep[];
+  handoffs?: TeamRunHandoff[];
+  localActionRequests?: TeamRunLocalActionRequest[];
   sharedState: TeamRunSharedState;
 }): ExecutionRunRecordBundle {
   const steps = input.steps
@@ -226,7 +300,7 @@ export function createExecutionRunRecordBundleFromTeamRun(input: {
         createExecutionRunEvent({
           id: event.id,
           runId: input.teamRun.id,
-          type: event.type === 'handoff-consumed' ? 'note-added' : mapTeamHistoryEventType(event.type),
+          type: mapTeamHistoryEventType(event.type),
           createdAt: event.createdAt,
           stepId: event.stepId ?? null,
           note: event.note ?? null,
@@ -241,6 +315,7 @@ export function createExecutionRunRecordBundleFromTeamRun(input: {
     id: input.teamRun.id,
     sourceKind: 'team-run',
     sourceId: input.teamRun.id,
+    taskRunSpecId: input.teamRun.taskRunSpecId ?? null,
     status: mapTeamRunStatusToExecutionStatus(input.teamRun.status),
     createdAt: input.teamRun.createdAt,
     updatedAt: input.teamRun.updatedAt,
@@ -256,6 +331,8 @@ export function createExecutionRunRecordBundleFromTeamRun(input: {
   return createExecutionRunRecordBundle({
     run,
     steps,
+    handoffs: input.handoffs ?? [],
+    localActionRequests: input.localActionRequests ?? [],
     sharedState,
     events,
   });
@@ -274,7 +351,7 @@ function mapTeamHistoryEventType(type: TeamRunSharedState['history'][number]['ty
     case 'handoff-created':
       return 'note-added';
     case 'handoff-consumed':
-      return 'note-added';
+      return 'handoff-consumed';
     case 'artifact-added':
       return 'note-added';
     case 'note-added':

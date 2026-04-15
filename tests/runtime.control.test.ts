@@ -160,4 +160,128 @@ describe('runtime control module', () => {
       }),
     ).rejects.toThrow();
   });
+
+  it('resumes a cancelled human-escalation run through the control seam', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const created = await control.createRun(createBundle('team_run_resume'));
+    const pausedBundle = {
+      ...created.bundle,
+      run: {
+        ...created.bundle.run,
+        status: 'cancelled' as const,
+        updatedAt: '2026-04-10T14:00:00.000Z',
+      },
+      steps: created.bundle.steps.map((step, index) =>
+        index === 1
+          ? {
+              ...step,
+              status: 'cancelled' as const,
+              completedAt: '2026-04-10T14:00:00.000Z',
+              output: {
+                summary: 'paused for human escalation',
+                artifacts: [],
+                structuredData: {
+                  humanEscalation: {
+                    requestedAt: '2026-04-10T14:00:00.000Z',
+                    guidance: { action: 'escalate' },
+                  },
+                },
+                notes: ['dependency host-action guidance escalated; runner paused for human input'],
+              },
+              failure: null,
+            }
+          : step,
+      ),
+      sharedState: {
+        ...created.bundle.sharedState,
+        status: 'cancelled' as const,
+        structuredOutputs: [
+          ...created.bundle.sharedState.structuredOutputs,
+          {
+            key: 'human.escalation.team_run_resume:step:2',
+            value: {
+              stepId: 'team_run_resume:step:2',
+              requestedAt: '2026-04-10T14:00:00.000Z',
+              reason: 'dependency-local-action-escalate',
+              guidance: { action: 'escalate' },
+            },
+          },
+        ],
+        notes: [...created.bundle.sharedState.notes, 'run paused for human escalation'],
+        lastUpdatedAt: '2026-04-10T14:00:00.000Z',
+      },
+    };
+    const paused = await control.persistRun({
+      runId: 'team_run_resume',
+      bundle: pausedBundle,
+      expectedRevision: created.revision,
+    });
+
+    const resumed = await control.resumeHumanEscalation({
+      runId: 'team_run_resume',
+      resumedAt: '2026-04-10T14:05:00.000Z',
+      note: 'human approved resume',
+      guidance: {
+        action: 'retry-with-guidance',
+        instruction: 'use the approved repo path and continue',
+      },
+      override: {
+        promptAppend: 'Retry the same step with the approved repo path.',
+        structuredContext: {
+          approvedPath: '/repo/approved',
+          reviewerDecision: 'continue',
+        },
+      },
+    });
+
+    expect(resumed.revision).toBe(paused.revision + 1);
+    expect(resumed.bundle.run.status).toBe('running');
+    expect(resumed.bundle.sharedState.status).toBe('active');
+    expect(resumed.bundle.steps[1]).toMatchObject({
+      id: 'team_run_resume:step:2',
+      status: 'runnable',
+      completedAt: null,
+      output: null,
+      failure: null,
+    });
+    expect(resumed.bundle.sharedState.structuredOutputs).toContainEqual({
+      key: 'human.resume.team_run_resume:step:2',
+      value: {
+        stepId: 'team_run_resume:step:2',
+        resumedAt: '2026-04-10T14:05:00.000Z',
+        note: 'human approved resume',
+        guidance: {
+          action: 'retry-with-guidance',
+          instruction: 'use the approved repo path and continue',
+        },
+        override: {
+          promptAppend: 'Retry the same step with the approved repo path.',
+          structuredContext: {
+            approvedPath: '/repo/approved',
+            reviewerDecision: 'continue',
+          },
+        },
+      },
+    });
+    expect(resumed.bundle.sharedState.notes).toContain('human approved resume');
+    expect(resumed.bundle.steps[1]?.input.structuredData.humanEscalationResume).toEqual({
+      resumedAt: '2026-04-10T14:05:00.000Z',
+      note: 'human approved resume',
+      guidance: {
+        action: 'retry-with-guidance',
+        instruction: 'use the approved repo path and continue',
+      },
+      override: {
+        promptAppend: 'Retry the same step with the approved repo path.',
+        structuredContext: {
+          approvedPath: '/repo/approved',
+          reviewerDecision: 'continue',
+        },
+      },
+    });
+  });
 });

@@ -1,0 +1,392 @@
+import { describe, expect, it } from 'vitest';
+import { executeBuiltInLocalActionRequest } from '../src/runtime/localActions.js';
+
+describe('runtime local action executor', () => {
+  it('executes one bounded shell action with stdout capture', async () => {
+    const result = await executeBuiltInLocalActionRequest({
+      record: {
+        runId: 'run_1',
+        revision: 1,
+        persistedAt: '2026-04-09T00:00:00.000Z',
+        bundle: {
+          run: {
+            id: 'run_1',
+            sourceKind: 'direct',
+            sourceId: null,
+            status: 'running',
+            createdAt: '2026-04-09T00:00:00.000Z',
+            updatedAt: '2026-04-09T00:00:00.000Z',
+            trigger: 'service',
+            requestedBy: null,
+            entryPrompt: null,
+            initialInputs: {},
+            sharedStateId: 'run_1:state',
+            stepIds: ['run_1:step:1'],
+            policy: {
+              executionMode: 'sequential',
+              failPolicy: 'fail-fast',
+              parallelismMode: 'disabled',
+              handoffRequirement: 'explicit',
+            },
+          },
+          steps: [],
+          handoffs: [],
+          localActionRequests: [],
+          sharedState: {
+            id: 'run_1:state',
+            runId: 'run_1',
+            status: 'active',
+            artifacts: [],
+            structuredOutputs: [],
+            notes: [],
+            history: [],
+            lastUpdatedAt: '2026-04-09T00:00:00.000Z',
+          },
+          events: [],
+          leases: [],
+        },
+      },
+      step: {
+        id: 'run_1:step:1',
+        runId: 'run_1',
+        sourceStepId: 'run_1:step:1',
+        agentId: 'engineer',
+        runtimeProfileId: 'default',
+        browserProfileId: null,
+        service: 'chatgpt',
+        kind: 'prompt',
+        status: 'running',
+        order: 1,
+        dependsOnStepIds: [],
+        input: {
+          prompt: null,
+          handoffIds: [],
+          artifacts: [],
+          structuredData: {
+            localActionPolicy: {
+              allowedCommands: [process.execPath],
+              allowedCwdRoots: [process.cwd()],
+            },
+          },
+          notes: [],
+        },
+        output: null,
+        startedAt: null,
+        completedAt: null,
+        failure: null,
+      },
+      request: {
+        id: 'action_1',
+        teamRunId: 'run_1',
+        ownerStepId: 'run_1:step:1',
+        kind: 'shell',
+        summary: 'Run one bounded node command.',
+        command: process.execPath,
+        args: ['-e', 'process.stdout.write("local-ok")'],
+        structuredPayload: {
+          cwd: process.cwd(),
+        },
+        notes: [],
+        status: 'requested',
+        createdAt: '2026-04-09T00:00:00.000Z',
+        approvedAt: null,
+        completedAt: null,
+        resultSummary: null,
+        resultPayload: null,
+      },
+    });
+
+    expect(result.status).toBe('executed');
+    expect(result.payload).toMatchObject({
+      exitCode: 0,
+      stdout: 'local-ok',
+      stderr: '',
+      stdoutTruncated: false,
+      stderrTruncated: false,
+    });
+  });
+
+  it('rejects unsupported local action kinds', async () => {
+    const result = await executeBuiltInLocalActionRequest({
+      record: {
+        runId: 'run_1',
+        revision: 1,
+        persistedAt: '2026-04-09T00:00:00.000Z',
+        bundle: {
+          run: {
+            id: 'run_1',
+            sourceKind: 'direct',
+            sourceId: null,
+            status: 'running',
+            createdAt: '2026-04-09T00:00:00.000Z',
+            updatedAt: '2026-04-09T00:00:00.000Z',
+            trigger: 'service',
+            requestedBy: null,
+            entryPrompt: null,
+            initialInputs: {},
+            sharedStateId: 'run_1:state',
+            stepIds: ['run_1:step:1'],
+            policy: {
+              executionMode: 'sequential',
+              failPolicy: 'fail-fast',
+              parallelismMode: 'disabled',
+              handoffRequirement: 'explicit',
+            },
+          },
+          steps: [],
+          handoffs: [],
+          localActionRequests: [],
+          sharedState: {
+            id: 'run_1:state',
+            runId: 'run_1',
+            status: 'active',
+            artifacts: [],
+            structuredOutputs: [],
+            notes: [],
+            history: [],
+            lastUpdatedAt: '2026-04-09T00:00:00.000Z',
+          },
+          events: [],
+          leases: [],
+        },
+      },
+      step: {
+        id: 'run_1:step:1',
+        runId: 'run_1',
+        sourceStepId: 'run_1:step:1',
+        agentId: 'engineer',
+        runtimeProfileId: 'default',
+        browserProfileId: null,
+        service: 'chatgpt',
+        kind: 'prompt',
+        status: 'running',
+        order: 1,
+        dependsOnStepIds: [],
+        input: {
+          prompt: null,
+          handoffIds: [],
+          artifacts: [],
+          structuredData: {
+            localActionPolicy: {
+              allowedCommands: [process.execPath],
+            },
+          },
+          notes: [],
+        },
+        output: null,
+        startedAt: null,
+        completedAt: null,
+        failure: null,
+      },
+      request: {
+        id: 'action_2',
+        teamRunId: 'run_1',
+        ownerStepId: 'run_1:step:1',
+        kind: 'patch',
+        summary: 'Unsupported local action.',
+        command: null,
+        args: [],
+        structuredPayload: {},
+        notes: [],
+        status: 'requested',
+        createdAt: '2026-04-09T00:00:00.000Z',
+        approvedAt: null,
+        completedAt: null,
+        resultSummary: null,
+        resultPayload: null,
+      },
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.summary).toContain('does not support');
+  });
+
+  it('rejects shell commands outside the default allowlist', async () => {
+    const result = await executeBuiltInLocalActionRequest({
+      record: {
+        runId: 'run_1',
+        revision: 1,
+        persistedAt: '2026-04-09T00:00:00.000Z',
+        bundle: {
+          run: {
+            id: 'run_1',
+            sourceKind: 'direct',
+            sourceId: null,
+            status: 'running',
+            createdAt: '2026-04-09T00:00:00.000Z',
+            updatedAt: '2026-04-09T00:00:00.000Z',
+            trigger: 'service',
+            requestedBy: null,
+            entryPrompt: null,
+            initialInputs: {},
+            sharedStateId: 'run_1:state',
+            stepIds: ['run_1:step:1'],
+            policy: {
+              executionMode: 'sequential',
+              failPolicy: 'fail-fast',
+              parallelismMode: 'disabled',
+              handoffRequirement: 'explicit',
+            },
+          },
+          steps: [],
+          handoffs: [],
+          localActionRequests: [],
+          sharedState: {
+            id: 'run_1:state',
+            runId: 'run_1',
+            status: 'active',
+            artifacts: [],
+            structuredOutputs: [],
+            notes: [],
+            history: [],
+            lastUpdatedAt: '2026-04-09T00:00:00.000Z',
+          },
+          events: [],
+          leases: [],
+        },
+      },
+      step: {
+        id: 'run_1:step:1',
+        runId: 'run_1',
+        sourceStepId: 'run_1:step:1',
+        agentId: 'engineer',
+        runtimeProfileId: 'default',
+        browserProfileId: null,
+        service: 'chatgpt',
+        kind: 'prompt',
+        status: 'running',
+        order: 1,
+        dependsOnStepIds: [],
+        input: {
+          prompt: null,
+          handoffIds: [],
+          artifacts: [],
+          structuredData: {
+            localActionPolicy: {
+              allowedCommands: [process.execPath],
+              allowedCwdRoots: [process.cwd()],
+            },
+          },
+          notes: [],
+        },
+        output: null,
+        startedAt: null,
+        completedAt: null,
+        failure: null,
+      },
+      request: {
+        id: 'action_3',
+        teamRunId: 'run_1',
+        ownerStepId: 'run_1:step:1',
+        kind: 'shell',
+        summary: 'Disallowed shell command.',
+        command: 'python3',
+        args: ['-V'],
+        structuredPayload: {},
+        notes: [],
+        status: 'requested',
+        createdAt: '2026-04-09T00:00:00.000Z',
+        approvedAt: null,
+        completedAt: null,
+        resultSummary: null,
+        resultPayload: null,
+      },
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.summary).toContain('command is not allowed');
+  });
+
+  it('rejects shell cwd values outside allowed roots', async () => {
+    const result = await executeBuiltInLocalActionRequest({
+      record: {
+        runId: 'run_1',
+        revision: 1,
+        persistedAt: '2026-04-09T00:00:00.000Z',
+        bundle: {
+          run: {
+            id: 'run_1',
+            sourceKind: 'direct',
+            sourceId: null,
+            status: 'running',
+            createdAt: '2026-04-09T00:00:00.000Z',
+            updatedAt: '2026-04-09T00:00:00.000Z',
+            trigger: 'service',
+            requestedBy: null,
+            entryPrompt: null,
+            initialInputs: {},
+            sharedStateId: 'run_1:state',
+            stepIds: ['run_1:step:1'],
+            policy: {
+              executionMode: 'sequential',
+              failPolicy: 'fail-fast',
+              parallelismMode: 'disabled',
+              handoffRequirement: 'explicit',
+            },
+          },
+          steps: [],
+          handoffs: [],
+          localActionRequests: [],
+          sharedState: {
+            id: 'run_1:state',
+            runId: 'run_1',
+            status: 'active',
+            artifacts: [],
+            structuredOutputs: [],
+            notes: [],
+            history: [],
+            lastUpdatedAt: '2026-04-09T00:00:00.000Z',
+          },
+          events: [],
+          leases: [],
+        },
+      },
+      step: {
+        id: 'run_1:step:1',
+        runId: 'run_1',
+        sourceStepId: 'run_1:step:1',
+        agentId: 'engineer',
+        runtimeProfileId: 'default',
+        browserProfileId: null,
+        service: 'chatgpt',
+        kind: 'prompt',
+        status: 'running',
+        order: 1,
+        dependsOnStepIds: [],
+        input: {
+          prompt: null,
+          handoffIds: [],
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+        output: null,
+        startedAt: null,
+        completedAt: null,
+        failure: null,
+      },
+      request: {
+        id: 'action_4',
+        teamRunId: 'run_1',
+        ownerStepId: 'run_1:step:1',
+        kind: 'shell',
+        summary: 'Disallowed cwd.',
+        command: process.execPath,
+        args: ['-e', 'process.stdout.write("x")'],
+        structuredPayload: {
+          cwd: '/tmp',
+        },
+        notes: [],
+        status: 'requested',
+        createdAt: '2026-04-09T00:00:00.000Z',
+        approvedAt: null,
+        completedAt: null,
+        resultSummary: null,
+        resultPayload: null,
+      },
+    });
+
+    expect(result.status).toBe('rejected');
+    expect(result.summary).toContain('outside allowed roots');
+  });
+});

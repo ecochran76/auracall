@@ -2,6 +2,13 @@ import http from 'node:http';
 import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
+import { loadUserConfig } from '../config.js';
+import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
+import {
+  inspectTeamRunLinkage,
+  TeamRunInspectionError,
+  type TeamRunInspectionPayload,
+} from '../teams/inspection.js';
 import type {
   ExecutionRequest,
   ExecutionRequestExtensionHints,
@@ -15,13 +22,26 @@ import {
   createExecutionRequestFromRecord,
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
+import { createExecutionRunnerRecord } from '../runtime/model.js';
+import {
+  createExecutionRunnerControl,
+  type ExecutionRunnerControlContract,
+} from '../runtime/runnersControl.js';
 import {
   createExecutionServiceHost,
+  type ExecutionServiceHostCancelActionResult,
+  type ExecutionServiceHostDrainActionResult,
+  type ExecutionServiceHostLocalActionResolveResult,
+  type ExecutionServiceHostResumeHumanEscalationResult,
+  type ExecutionServiceHostRecoveryDetail,
   type ExecutionServiceHostRecoverySummary,
+  type ExecutionServiceHostLocalClaimSummary,
+  type ExecutionServiceHostStaleHeartbeatActionResult,
   type DrainStoredExecutionRunsUntilIdleResult,
   type ExecutionServiceHost,
+  type ExecutionServiceHostDeps,
 } from '../runtime/serviceHost.js';
-import type { ExecutionRunSourceKind } from '../runtime/types.js';
+import type { ExecutionRunSourceKind, ExecutionRunnerStatus } from '../runtime/types.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -30,19 +50,28 @@ export interface ResponsesHttpServerOptions {
   recoverRunsOnStart?: boolean;
   recoverRunsOnStartMaxRuns?: number;
   recoverRunsOnStartSourceKind?: ExecutionRunSourceKind | 'all';
+  backgroundDrainIntervalMs?: number;
 }
 
 export interface ResponsesHttpServerDeps {
   control?: ExecutionRuntimeControlContract;
+  runnersControl?: ExecutionRunnerControlContract;
   now?: () => Date;
   generateResponseId?: () => string;
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
   executionHost?: ExecutionServiceHost;
+  localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
 }
 
 export interface ResponsesHttpServerInstance {
   port: number;
   close(): Promise<void>;
+}
+
+interface ServerOwnedDrainOptions {
+  runId?: string;
+  sourceKind?: ExecutionRunSourceKind;
+  maxRuns?: number;
 }
 
 export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
@@ -68,6 +97,16 @@ interface HttpModelListResponse {
   data: HttpModelDescriptor[];
 }
 
+interface HttpRecoveryDetailResponse {
+  object: 'recovery_detail';
+  detail: ExecutionServiceHostRecoveryDetail;
+}
+
+interface HttpTeamRunInspectionResponse {
+  object: 'team_run_inspection';
+  inspection: TeamRunInspectionPayload;
+}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -81,6 +120,8 @@ interface HttpStatusResponse {
   };
   routes: {
     status: string;
+    recoveryDetailTemplate: string;
+    teamRunInspection: string;
     models: string;
     responsesCreate: string;
     responsesGetTemplate: string;
@@ -92,10 +133,47 @@ interface HttpStatusResponse {
     auth: false;
   };
   recoverySummary?: ExecutionServiceHostRecoverySummary;
+  localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+  runner: {
+    id: string | null;
+    hostId: string | null;
+    status: ExecutionRunnerStatus | 'inactive' | 'registering';
+    lastHeartbeatAt: string | null;
+    expiresAt: string | null;
+    lastActivityAt: string | null;
+    lastClaimedRunId: string | null;
+  };
+  backgroundDrain: {
+    enabled: boolean;
+    intervalMs: number | null;
+    state: 'disabled' | 'idle' | 'scheduled' | 'running' | 'paused';
+    paused: boolean;
+    lastTrigger: 'startup-recovery' | 'request-create' | 'background-timer' | null;
+    lastStartedAt: string | null;
+    lastCompletedAt: string | null;
+  };
   executionHints: {
     headerNames: string[];
     bodyObject: 'auracall';
   };
+  controlResult?:
+    | {
+        kind: 'background-drain';
+        action: 'pause' | 'resume';
+      }
+    | ({
+        kind: 'local-action-control';
+      } & ExecutionServiceHostLocalActionResolveResult)
+    | ({
+        kind: 'run-control';
+      } & (
+        | ExecutionServiceHostCancelActionResult
+        | ExecutionServiceHostResumeHumanEscalationResult
+        | ExecutionServiceHostDrainActionResult
+      ))
+    | ({
+        kind: 'lease-repair';
+      } & ExecutionServiceHostStaleHeartbeatActionResult);
 }
 
 export async function createResponsesHttpServer(
@@ -104,31 +182,99 @@ export async function createResponsesHttpServer(
 ): Promise<ResponsesHttpServerInstance> {
   const logger = options.logger ?? (() => {});
   const control = deps.control ?? createExecutionRuntimeControl();
+  const runnersControl = deps.runnersControl ?? createExecutionRunnerControl();
   const now = deps.now ?? (() => new Date());
   const boundHost = options.host ?? '127.0.0.1';
   const recoverRunsOnStart = options.recoverRunsOnStart ?? false;
   const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
-  const host =
-    deps.executionHost ??
-    createExecutionServiceHost({
-      control,
-      now: () => now().toISOString(),
-      ownerId: 'host:http-responses',
-      executeStoredRunStep: deps.executeStoredRunStep
-        ? async (context) => {
-            const request = createExecutionRequestFromRecord(context.record);
-            return deps.executeStoredRunStep?.(request, context);
-          }
-        : undefined,
+  const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
+  const runnerHeartbeatIntervalMs = 5_000;
+  const runnerHeartbeatTtlMs = 15_000;
+  let host: ExecutionServiceHost;
+  let responsesService: ReturnType<typeof createExecutionResponsesService>;
+  let drainQueue = Promise.resolve<DrainStoredExecutionRunsUntilIdleResult | null>(null);
+  const runnerState: HttpStatusResponse['runner'] = {
+    id: null,
+    hostId: null,
+    status: 'inactive',
+    lastHeartbeatAt: null,
+    expiresAt: null,
+    lastActivityAt: null,
+    lastClaimedRunId: null,
+  };
+  const backgroundDrainState: HttpStatusResponse['backgroundDrain'] = {
+    enabled: backgroundDrainIntervalMs > 0,
+    intervalMs: backgroundDrainIntervalMs > 0 ? backgroundDrainIntervalMs : null,
+    state: backgroundDrainIntervalMs > 0 ? 'idle' : 'disabled',
+    paused: false,
+    lastTrigger: null,
+    lastStartedAt: null,
+    lastCompletedAt: null,
+  };
+  let backgroundDrainPaused = false;
+  let runnerHeartbeatTimer: NodeJS.Timeout | null = null;
+  let closed = false;
+  const drainThroughServerHost = (
+    drainOptions: ServerOwnedDrainOptions & { trigger?: HttpStatusResponse['backgroundDrain']['lastTrigger'] } = {},
+  ) => {
+    if (backgroundDrainState.state !== 'disabled') {
+      backgroundDrainState.state = 'scheduled';
+    }
+    const nextDrain = drainQueue.catch(() => null).then(async () => {
+      if (backgroundDrainState.state !== 'disabled') {
+        backgroundDrainState.state = 'running';
+        backgroundDrainState.lastTrigger = drainOptions.trigger ?? null;
+        backgroundDrainState.lastStartedAt = now().toISOString();
+      }
+      try {
+        return await host.drainRunsUntilIdle({
+          runId: drainOptions.runId,
+          sourceKind: drainOptions.sourceKind,
+          maxRuns: drainOptions.maxRuns,
+        });
+      } finally {
+        if (backgroundDrainState.state !== 'disabled') {
+          backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
+          backgroundDrainState.lastCompletedAt = now().toISOString();
+        }
+      }
     });
-  const responsesService = createExecutionResponsesService({
-    control,
-    now,
-    generateResponseId: deps.generateResponseId,
-    executionHost: host,
-    executeStoredRunStep: deps.executeStoredRunStep,
-  });
+    drainQueue = nextDrain.then((result) => result, () => null);
+    return nextDrain;
+  };
+  let backgroundDrainTimer: NodeJS.Timeout | null = null;
+  let backgroundDrainScheduled = false;
+  const scheduleBackgroundDrain = (delayMs = backgroundDrainIntervalMs) => {
+    if (closed || backgroundDrainIntervalMs <= 0 || backgroundDrainPaused || backgroundDrainScheduled) {
+      if (closed || backgroundDrainIntervalMs <= 0 || backgroundDrainPaused) {
+        return;
+      }
+      if (backgroundDrainScheduled && delayMs === 0 && backgroundDrainTimer) {
+        clearTimeout(backgroundDrainTimer);
+        backgroundDrainTimer = null;
+        backgroundDrainScheduled = false;
+      } else {
+        return;
+      }
+    }
+    backgroundDrainScheduled = true;
+    backgroundDrainTimer = setTimeout(async () => {
+      backgroundDrainScheduled = false;
+      backgroundDrainTimer = null;
+      if (closed) {
+        return;
+      }
+      await drainThroughServerHost({
+        maxRuns: 1,
+        trigger: 'background-timer',
+      }).catch((error) => {
+        logger(error instanceof Error ? error.message : String(error));
+        return null;
+      });
+      scheduleBackgroundDrain(backgroundDrainIntervalMs);
+    }, delayMs);
+  };
   const server = http.createServer();
 
   server.on('request', async (req, res) => {
@@ -137,6 +283,7 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'GET' && url.pathname === '/status') {
         const statusQuery = parseStatusQuery(url.searchParams);
+        await syncRunnerStateFromStore();
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
         const statusSourceKind = statusQuery.sourceKindSummary === 'all'
@@ -147,10 +294,181 @@ export async function createResponsesHttpServer(
               sourceKind: statusSourceKind,
             })
           : undefined;
+        const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
+          sourceKind: 'direct',
+        });
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
           recoverySummary: statusResponseRecoverySummary,
+          localClaimSummary: statusResponseLocalClaimSummary,
+          runner: runnerState,
+          backgroundDrain: backgroundDrainState,
+        });
+        sendJson(res, 200, statusResponse);
+        return;
+      }
+
+      const recoveryDetailRunId = matchStatusRecoveryDetailRoute(url.pathname);
+      if (req.method === 'GET' && recoveryDetailRunId) {
+        const detail = await host.readRecoveryDetail(recoveryDetailRunId);
+        if (!detail) {
+          sendJson(res, 404, {
+            error: {
+              message: `Recovery detail for run ${recoveryDetailRunId} was not found`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, {
+          object: 'recovery_detail',
+          detail,
+        } satisfies HttpRecoveryDetailResponse);
+        return;
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/team-runs/inspect') {
+        try {
+          const inspection = await inspectTeamRunLinkage({
+            taskRunSpecId: url.searchParams.get('taskRunSpecId'),
+            runtimeRunId: url.searchParams.get('runtimeRunId'),
+            control,
+          });
+          sendJson(res, 200, {
+            object: 'team_run_inspection',
+            inspection,
+          } satisfies HttpTeamRunInspectionResponse);
+          return;
+        } catch (error) {
+          if (error instanceof TeamRunInspectionError) {
+            sendJson(res, error.status === 'not-found' ? 404 : 400, {
+              error: {
+                message: error.message,
+                type: error.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (req.method === 'POST' && url.pathname === '/status') {
+        const body = await readRequestBody(req);
+        const payload = StatusControlRequestSchema.parse(JSON.parse(body || '{}'));
+        let controlResult: HttpStatusResponse['controlResult'];
+        if ('backgroundDrain' in payload) {
+          const action = payload.backgroundDrain.action;
+          if (backgroundDrainIntervalMs <= 0) {
+            sendJson(res, 409, {
+              error: {
+                message: 'background drain is not enabled for this server',
+                type: 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          if (action === 'pause') {
+            backgroundDrainPaused = true;
+            backgroundDrainState.paused = true;
+            if (backgroundDrainTimer) {
+              clearTimeout(backgroundDrainTimer);
+              backgroundDrainTimer = null;
+            }
+            backgroundDrainScheduled = false;
+            if (backgroundDrainState.state !== 'running') {
+              backgroundDrainState.state = 'paused';
+            }
+          } else {
+            backgroundDrainPaused = false;
+            backgroundDrainState.paused = false;
+            if (backgroundDrainState.state !== 'running') {
+              backgroundDrainState.state = 'idle';
+            }
+            scheduleBackgroundDrain(0);
+          }
+          controlResult = {
+            kind: 'background-drain',
+            action,
+          };
+        } else {
+          if ('leaseRepair' in payload) {
+            const result = await host.repairStaleHeartbeatLease(payload.leaseRepair.runId);
+            if (result.status !== 'repaired') {
+              sendJson(res, result.status === 'not-found' ? 404 : 409, {
+                error: {
+                  message: result.reason,
+                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+            controlResult = {
+              kind: 'lease-repair',
+              ...result,
+            };
+          } else if ('localActionControl' in payload) {
+            const result = await host.resolveLocalActionRequest(
+              payload.localActionControl.runId,
+              payload.localActionControl.requestId,
+              payload.localActionControl.resolution,
+              payload.localActionControl.note ?? null,
+            );
+            if (result.status !== 'resolved') {
+              sendJson(res, result.status === 'not-found' ? 404 : 409, {
+                error: {
+                  message: result.reason,
+                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+            controlResult = {
+              kind: 'local-action-control',
+              ...result,
+            };
+          } else {
+            const result =
+              payload.runControl.action === 'resume-human-escalation'
+                ? await host.resumeHumanEscalation(payload.runControl.runId, {
+                    note: payload.runControl.note ?? null,
+                    guidance: payload.runControl.guidance ?? null,
+                    override: payload.runControl.override ?? null,
+                  })
+                : payload.runControl.action === 'drain-run'
+                  ? await host.drainRun(payload.runControl.runId)
+                : await host.cancelOwnedRun(payload.runControl.runId, payload.runControl.note ?? null);
+            if (
+              !(
+                (result.action === 'cancel-run' && result.status === 'cancelled') ||
+                (result.action === 'resume-human-escalation' && result.status === 'resumed') ||
+                (result.action === 'drain-run' && result.status === 'executed')
+              )
+            ) {
+              sendJson(res, result.status === 'not-found' ? 404 : 409, {
+                error: {
+                  message: result.reason,
+                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+                },
+              } satisfies HttpErrorPayload);
+              return;
+            }
+            controlResult = {
+              kind: 'run-control',
+              ...result,
+            };
+          }
+        }
+        const address = server.address();
+        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        const statusResponse = await createHttpStatusResponse({
+          host: boundHost,
+          port: boundPort,
+          localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: 'direct' }),
+          runner: runnerState,
+          backgroundDrain: backgroundDrainState,
+          controlResult,
         });
         sendJson(res, 200, statusResponse);
         return;
@@ -165,8 +483,19 @@ export async function createResponsesHttpServer(
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
         const request = createExecutionRequest(mergeExecutionRequestHints(parsedBody, req.headers));
-        const response = await responsesService.createResponse(request);
-        sendJson(res, 200, response);
+        const createdResponse = await responsesService.createResponse(request);
+        if (backgroundDrainIntervalMs > 0) {
+          scheduleBackgroundDrain(0);
+          sendJson(res, 200, createdResponse);
+        } else {
+          await drainThroughServerHost({
+            runId: createdResponse.id,
+            maxRuns: 1,
+            trigger: 'request-create',
+          });
+          const drainedResponse = await responsesService.readResponse(createdResponse.id);
+          sendJson(res, 200, drainedResponse ?? createdResponse);
+        }
         return;
       }
 
@@ -217,28 +546,214 @@ export async function createResponsesHttpServer(
     server.listen(options.port ?? 0, boundHost, () => resolve());
   });
 
-  if (recoverRunsOnStart) {
-    const sourceKind = recoverRunsOnStartSourceKind === 'all' ? undefined : recoverRunsOnStartSourceKind;
-    const recoveryResult = await host.drainRunsUntilIdle({
-      sourceKind,
-      maxRuns: recoverRunsOnStartMaxRuns,
-    });
-    logger(
-      createStartupRecoveryLog(recoveryResult, {
-        sourceKind: recoverRunsOnStartSourceKind,
-        maxRuns: recoverRunsOnStartMaxRuns,
-      }),
-    );
-  }
-
   const address = server.address();
   if (!address || typeof address === 'string') {
     throw new Error('Unable to determine server address');
   }
 
+  const localRunnerId = `runner:http-responses:${boundHost}:${address.port}`;
+  const localRunnerHostId = `host:http-responses:${boundHost}:${address.port}`;
+  const updateRunnerState = (
+    runner: {
+      id: string;
+      hostId: string;
+      status: HttpStatusResponse['runner']['status'];
+      lastHeartbeatAt: string;
+      expiresAt: string;
+      lastActivityAt: string | null;
+      lastClaimedRunId: string | null;
+    },
+  ) => {
+    runnerState.id = runner.id;
+    runnerState.hostId = runner.hostId;
+    runnerState.status = runner.status;
+    runnerState.lastHeartbeatAt = runner.lastHeartbeatAt;
+    runnerState.expiresAt = runner.expiresAt;
+    runnerState.lastActivityAt = runner.lastActivityAt;
+    runnerState.lastClaimedRunId = runner.lastClaimedRunId;
+  };
+  const syncRunnerStateFromStore = async () => {
+    if (!runnerState.id) return;
+    const storedRunner = await runnersControl.readRunner(runnerState.id);
+    if (!storedRunner) return;
+    updateRunnerState({
+      id: storedRunner.runner.id,
+      hostId: storedRunner.runner.hostId,
+      status: storedRunner.runner.status,
+      lastHeartbeatAt: storedRunner.runner.lastHeartbeatAt,
+      expiresAt: storedRunner.runner.expiresAt,
+      lastActivityAt: storedRunner.runner.lastActivityAt,
+      lastClaimedRunId: storedRunner.runner.lastClaimedRunId,
+    });
+  };
+  const registerLocalRunner = async () => {
+    const heartbeatAt = now().toISOString();
+    const expiresAt = new Date(now().getTime() + runnerHeartbeatTtlMs).toISOString();
+    runnerState.id = localRunnerId;
+    runnerState.hostId = localRunnerHostId;
+    runnerState.status = 'registering';
+    runnerState.lastHeartbeatAt = heartbeatAt;
+    runnerState.expiresAt = expiresAt;
+    const existingRunner = await runnersControl.readRunner(localRunnerId);
+    if (existingRunner) {
+      const heartbeatedRunner = await runnersControl.heartbeatRunner({
+        runnerId: localRunnerId,
+        heartbeatAt,
+        expiresAt,
+        eligibilityNote: 'api serve local runner',
+      });
+      updateRunnerState({
+        id: heartbeatedRunner.runner.id,
+        hostId: heartbeatedRunner.runner.hostId,
+        status: heartbeatedRunner.runner.status,
+        lastHeartbeatAt: heartbeatedRunner.runner.lastHeartbeatAt,
+        expiresAt: heartbeatedRunner.runner.expiresAt,
+        lastActivityAt: heartbeatedRunner.runner.lastActivityAt,
+        lastClaimedRunId: heartbeatedRunner.runner.lastClaimedRunId,
+      });
+    } else {
+      const registeredRunner = await runnersControl.registerRunner({
+        runner: createExecutionRunnerRecord({
+          id: localRunnerId,
+          hostId: localRunnerHostId,
+          startedAt: heartbeatAt,
+          lastHeartbeatAt: heartbeatAt,
+          expiresAt,
+          serviceIds: ['chatgpt', 'gemini', 'grok'],
+          runtimeProfileIds: ['default'],
+          browserCapable: true,
+          eligibilityNote: 'api serve local runner',
+        }),
+      });
+      updateRunnerState({
+        id: registeredRunner.runner.id,
+        hostId: registeredRunner.runner.hostId,
+        status: registeredRunner.runner.status,
+        lastHeartbeatAt: registeredRunner.runner.lastHeartbeatAt,
+        expiresAt: registeredRunner.runner.expiresAt,
+        lastActivityAt: registeredRunner.runner.lastActivityAt,
+        lastClaimedRunId: registeredRunner.runner.lastClaimedRunId,
+      });
+    }
+  };
+  const heartbeatLocalRunner = async () => {
+    if (closed || !runnerState.id) return;
+    const heartbeatAt = now().toISOString();
+    const expiresAt = new Date(now().getTime() + runnerHeartbeatTtlMs).toISOString();
+    const heartbeatedRunner = await runnersControl.heartbeatRunner({
+      runnerId: localRunnerId,
+      heartbeatAt,
+      expiresAt,
+      eligibilityNote: 'api serve runner heartbeat',
+    });
+    updateRunnerState({
+      id: heartbeatedRunner.runner.id,
+      hostId: heartbeatedRunner.runner.hostId,
+      status: heartbeatedRunner.runner.status,
+      lastHeartbeatAt: heartbeatedRunner.runner.lastHeartbeatAt,
+      expiresAt: heartbeatedRunner.runner.expiresAt,
+      lastActivityAt: heartbeatedRunner.runner.lastActivityAt,
+      lastClaimedRunId: heartbeatedRunner.runner.lastClaimedRunId,
+    });
+  };
+  const scheduleRunnerHeartbeat = () => {
+    if (closed) return;
+    runnerHeartbeatTimer = setTimeout(async () => {
+      runnerHeartbeatTimer = null;
+      try {
+        await heartbeatLocalRunner();
+      } catch (error) {
+        logger(error instanceof Error ? error.message : String(error));
+      } finally {
+        scheduleRunnerHeartbeat();
+      }
+    }, runnerHeartbeatIntervalMs);
+  };
+
+  host =
+    deps.executionHost ??
+    createExecutionServiceHost({
+      control,
+      runnersControl,
+      now: () => now().toISOString(),
+      ownerId: localRunnerId,
+      runnerId: localRunnerId,
+      localActionExecutionPolicy: deps.localActionExecutionPolicy,
+      executeStoredRunStep: deps.executeStoredRunStep
+        ? async (context) => {
+            const request = createExecutionRequestFromRecord(context.record);
+            return deps.executeStoredRunStep?.(request, context);
+          }
+        : undefined,
+    });
+  responsesService = createExecutionResponsesService({
+    control,
+    now,
+    generateResponseId: deps.generateResponseId,
+    executionHost: host,
+    drainAfterCreate: false,
+    executeStoredRunStep: deps.executeStoredRunStep,
+  });
+
+  if (!deps.executionHost) {
+    await registerLocalRunner();
+    scheduleRunnerHeartbeat();
+  }
+
+  if (recoverRunsOnStart) {
+    const sourceKind = recoverRunsOnStartSourceKind === 'all' ? undefined : recoverRunsOnStartSourceKind;
+    const recoveryResult = await drainThroughServerHost({
+      sourceKind,
+      maxRuns: recoverRunsOnStartMaxRuns,
+      trigger: 'startup-recovery',
+    });
+    const recoverySummary = await host.summarizeRecoveryState({
+      sourceKind,
+    });
+    logger(
+      createStartupRecoveryLog(recoveryResult, {
+        sourceKind: recoverRunsOnStartSourceKind,
+        maxRuns: recoverRunsOnStartMaxRuns,
+        staleHeartbeatInspectOnlyCount:
+          recoverySummary.attention.metrics.staleHeartbeatInspectOnlyCount,
+      }),
+    );
+  }
+  scheduleBackgroundDrain();
+
   return {
     port: address.port,
     async close() {
+      closed = true;
+      if (runnerHeartbeatTimer) {
+        clearTimeout(runnerHeartbeatTimer);
+        runnerHeartbeatTimer = null;
+      }
+      if (backgroundDrainTimer) {
+        clearTimeout(backgroundDrainTimer);
+        backgroundDrainTimer = null;
+      }
+      backgroundDrainPaused = false;
+      backgroundDrainState.paused = false;
+      backgroundDrainState.state = 'disabled';
+      await drainQueue.catch(() => null);
+      if (!deps.executionHost && runnerState.id) {
+        const staleAt = now().toISOString();
+        const staleRunner = await runnersControl.markRunnerStale({
+          runnerId: localRunnerId,
+          staleAt,
+          eligibilityNote: 'api serve shutdown',
+        });
+        updateRunnerState({
+          id: staleRunner.runner.id,
+          hostId: staleRunner.runner.hostId,
+          status: staleRunner.runner.status,
+          lastHeartbeatAt: staleRunner.runner.lastHeartbeatAt,
+          expiresAt: staleRunner.runner.expiresAt,
+          lastActivityAt: staleRunner.runner.lastActivityAt,
+          lastClaimedRunId: staleRunner.runner.lastClaimedRunId,
+        });
+      }
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
       });
@@ -250,14 +765,19 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   assertResponsesHostAllowed(options.host, options.listenPublic ?? false);
   const logger = options.logger ?? console.log;
   const { listenPublic: _unusedListenPublic, ...serverOptions } = options;
+  const loadedConfig = await loadUserConfig(process.cwd());
   const server = await createResponsesHttpServer(
     {
       ...serverOptions,
       recoverRunsOnStart: serverOptions.recoverRunsOnStart ?? true,
       recoverRunsOnStartSourceKind: serverOptions.recoverRunsOnStartSourceKind,
+      backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? 250,
     },
     {
       now: () => new Date(),
+      localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
+        loadedConfig.config as Record<string, unknown>,
+      ),
     },
   );
   const host = options.host ?? '127.0.0.1';
@@ -270,7 +790,9 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   } else {
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
-  logger('Endpoints: GET /status, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}');
+  logger(
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, GET /v1/team-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
+  );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
 
@@ -311,6 +833,10 @@ function createHttpStatusResponse(input: {
   host: string;
   port: number;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
+  localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+  runner: HttpStatusResponse['runner'];
+  backgroundDrain: HttpStatusResponse['backgroundDrain'];
+  controlResult?: HttpStatusResponse['controlResult'];
 }): HttpStatusResponse {
   return {
     object: 'status',
@@ -325,6 +851,8 @@ function createHttpStatusResponse(input: {
     },
     routes: {
       status: '/status',
+      recoveryDetailTemplate: '/status/recovery/{run_id}',
+      teamRunInspection: '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
@@ -336,6 +864,9 @@ function createHttpStatusResponse(input: {
       auth: false,
     },
     recoverySummary: input.recoverySummary,
+    localClaimSummary: input.localClaimSummary,
+    runner: input.runner,
+    backgroundDrain: input.backgroundDrain,
     executionHints: {
       headerNames: [
         'X-AuraCall-Runtime-Profile',
@@ -345,12 +876,13 @@ function createHttpStatusResponse(input: {
       ],
       bodyObject: 'auracall',
     },
+    controlResult: input.controlResult,
   };
 }
 
 function createStartupRecoveryLog(
   result: DrainStoredExecutionRunsUntilIdleResult,
-  options: { sourceKind: string; maxRuns: number },
+  options: { sourceKind: string; maxRuns: number; staleHeartbeatInspectOnlyCount?: number },
 ): string {
   const skipCounts: Record<string, number> = {};
   for (const entry of result.drained) {
@@ -374,8 +906,21 @@ function createStartupRecoveryLog(
     parts.push(`skips=${skipSummary}`);
   }
 
+  const deferredByBudget = skipCounts['limit-reached'] ?? 0;
+  const activeLeaseCount = skipCounts['active-lease'] ?? 0;
+  const staleHeartbeatCount = skipCounts['stale-heartbeat'] ?? 0;
+  const strandedCount = skipCounts['stranded-running-no-lease'] ?? 0;
+  const idleCount = skipCounts['no-runnable-step'] ?? 0;
+  parts.push(
+    `metrics=deferred-by-budget:${deferredByBudget}, active-lease:${activeLeaseCount}, stale-heartbeat:${staleHeartbeatCount}, stranded:${strandedCount}, idle:${idleCount}`,
+  );
+
   if (result.executedRunIds.length > 0) {
     parts.push(`executed=${result.executedRunIds.slice(0, 5).join(',')}`);
+  }
+
+  if ((options.staleHeartbeatInspectOnlyCount ?? 0) > 0) {
+    parts.push(`attention=stale-heartbeat-inspect-only:${options.staleHeartbeatInspectOnlyCount}`);
   }
 
   if (result.drained.length > options.maxRuns) {
@@ -384,6 +929,55 @@ function createStartupRecoveryLog(
 
   return parts.join(' ');
 }
+
+const StatusControlRequestSchema = z.union([
+  z.object({
+    backgroundDrain: z.object({
+      action: z.enum(['pause', 'resume']),
+    }),
+  }),
+  z.object({
+    localActionControl: z.object({
+      action: z.literal('resolve-request'),
+      runId: z.string().min(1),
+      requestId: z.string().min(1),
+      resolution: z.enum(['approved', 'rejected', 'cancelled']),
+      note: z.string().min(1).nullable().optional(),
+    }),
+  }),
+  z.object({
+    runControl: z.union([
+      z.object({
+        action: z.literal('cancel-run'),
+        runId: z.string().min(1),
+        note: z.string().min(1).nullable().optional(),
+      }),
+      z.object({
+        action: z.literal('drain-run'),
+        runId: z.string().min(1),
+      }),
+      z.object({
+        action: z.literal('resume-human-escalation'),
+        runId: z.string().min(1),
+        note: z.string().min(1).nullable().optional(),
+        guidance: z.record(z.string(), z.unknown()).nullable().optional(),
+        override: z
+          .object({
+            promptAppend: z.string().min(1).nullable().optional(),
+            structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
+          })
+          .nullable()
+          .optional(),
+      }),
+    ]),
+  }),
+  z.object({
+    leaseRepair: z.object({
+      action: z.literal('repair-stale-heartbeat'),
+      runId: z.string().min(1),
+    }),
+  }),
+]);
 
 interface ParsedStatusQuery {
   recovery: boolean;
@@ -467,6 +1061,11 @@ function isLoopbackHost(host: string): boolean {
 
 function matchResponseRoute(pathname: string): string | null {
   const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchStatusRecoveryDetailRoute(pathname: string): string | null {
+  const match = /^\/status\/recovery\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
 }
 

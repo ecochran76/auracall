@@ -3,6 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { loadUserConfig, scaffoldDefaultConfigFile } from '../src/config.js';
+import { resolveHostLocalActionExecutionPolicy } from '../src/config/model.js';
 import { ComposedConfigSchema } from '../src/config/schema.js';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 
@@ -87,6 +88,56 @@ describe('loadUserConfig', () => {
     expect(result.config.profiles?.default?.defaultService).toBe('chatgpt');
   });
 
+  it('parses optional team role metadata for future task-aware planning', async () => {
+    const configPath = path.join(tempDir, 'config.json');
+    await fs.writeFile(
+      configPath,
+      `{
+        agents: {
+          orchestrator: { runtimeProfile: "default" },
+          engineer: { runtimeProfile: "default" }
+        },
+        teams: {
+          vibeCode: {
+            agents: ["orchestrator", "engineer"],
+            instructions: "Use unattended multi-turn automation carefully.",
+            roles: {
+              orchestrator: {
+                agent: "orchestrator",
+                order: 1,
+                instructions: "Frame the work and steer the engineer.",
+                stepKind: "analysis",
+                handoffToRole: "engineer"
+              },
+              engineer: {
+                agent: "engineer",
+                order: 2,
+                instructions: "Produce the work-product bundle.",
+                stepKind: "synthesis",
+                responseShape: {
+                  format: "json",
+                  artifact: "zip"
+                }
+              }
+            }
+          }
+        }
+      }`,
+      'utf8',
+    );
+
+    const result = await loadUserConfig(tempDir);
+    expect(result.loaded).toBe(true);
+    expect(result.config.teams?.vibeCode?.instructions).toBe(
+      'Use unattended multi-turn automation carefully.',
+    );
+    expect(result.config.teams?.vibeCode?.roles?.orchestrator?.agent).toBe('orchestrator');
+    expect(result.config.teams?.vibeCode?.roles?.engineer?.responseShape).toEqual({
+      format: 'json',
+      artifact: 'zip',
+    });
+  });
+
   it('supports top-level remoteHost/remoteToken aliases', async () => {
     const configPath = path.join(tempDir, 'config.json');
     await fs.writeFile(
@@ -154,6 +205,40 @@ describe('loadUserConfig', () => {
     expect(parsed.defaultRuntimeProfile).toBe('consulting');
     expect(parsed.browserProfiles?.consulting?.chromePath).toBe('/usr/bin/google-chrome');
     expect(parsed.runtimeProfiles?.consulting?.browserProfile).toBe('consulting');
+  });
+
+  it('accepts and resolves host runtime local-action shell policy config', () => {
+    const parsed = ComposedConfigSchema.parse({
+      runtime: {
+        localActions: {
+          shell: {
+            complexityStage: 'repo-automation',
+            allowedCommands: ['node', 'git'],
+            allowedCwdRoots: ['/repo', '/repo/tmp'],
+            defaultShellActionTimeoutMs: '30s',
+            maxShellActionTimeoutMs: 120000,
+            maxCaptureChars: 12000,
+          },
+        },
+      },
+    });
+
+    expect(parsed.runtime?.localActions?.shell).toEqual({
+      complexityStage: 'repo-automation',
+      allowedCommands: ['node', 'git'],
+      allowedCwdRoots: ['/repo', '/repo/tmp'],
+      defaultShellActionTimeoutMs: 30000,
+      maxShellActionTimeoutMs: 120000,
+      maxCaptureChars: 12000,
+    });
+    expect(resolveHostLocalActionExecutionPolicy(parsed as Record<string, unknown>)).toEqual({
+      complexityStage: 'repo-automation',
+      allowedShellCommands: ['node', 'git'],
+      allowedCwdRoots: ['/repo', '/repo/tmp'],
+      defaultShellActionTimeoutMs: 30000,
+      maxShellActionTimeoutMs: 120000,
+      maxCaptureChars: 12000,
+    });
   });
 
   it('scaffolds target-shape config output by default', async () => {

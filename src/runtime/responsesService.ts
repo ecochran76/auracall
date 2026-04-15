@@ -1,5 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../teams/types.js';
+import {
+  createTaskRunSpecRecordStore,
+  type TaskRunSpecInspectionSummary,
+  type TaskRunSpecRecordStore,
+  summarizeTaskRunSpecStoredRecord,
+} from '../teams/store.js';
 import type { ExecutionRunStep } from './types.js';
 import {
   createExecutionRequest,
@@ -27,15 +33,19 @@ import {
 import type { ExecuteStoredRunStepResult } from './runner.js';
 import { createExecutionServiceHost } from './serviceHost.js';
 import type { ExecutionServiceHost } from './serviceHost.js';
+import type { LocalActionExecutionPolicy } from './localActions.js';
 import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from './types.js';
 
 const StructuredResponseOutputSchema = ExecutionResponseOutputItemSchema.array();
 
 export interface ExecutionResponsesServiceDeps {
   control?: ExecutionRuntimeControlContract;
+  taskRunSpecStore?: TaskRunSpecRecordStore;
   now?: () => Date;
   generateResponseId?: () => string;
   executionHost?: ExecutionServiceHost;
+  drainAfterCreate?: boolean;
+  localActionExecutionPolicy?: Partial<LocalActionExecutionPolicy>;
   executeStoredRunStep?: (
     request: ExecutionRequest,
     context: {
@@ -54,14 +64,17 @@ export function createExecutionResponsesService(
   deps: ExecutionResponsesServiceDeps = {},
 ): ExecutionResponsesService {
   const control = deps.control ?? createExecutionRuntimeControl();
+  const taskRunSpecStore = deps.taskRunSpecStore ?? createTaskRunSpecRecordStore();
   const now = deps.now ?? (() => new Date());
   const generateResponseId = deps.generateResponseId ?? (() => `resp_${randomUUID().replace(/-/g, '')}`);
+  const drainAfterCreate = deps.drainAfterCreate ?? true;
   const host =
     deps.executionHost ??
     createExecutionServiceHost({
       control,
       now: () => now().toISOString(),
       ownerId: 'host:http-responses',
+      localActionExecutionPolicy: deps.localActionExecutionPolicy,
       executeStoredRunStep: async (context) => {
         if (!deps.executeStoredRunStep) return;
         const request = createExecutionRequestFromRecord(context.record);
@@ -79,7 +92,10 @@ export function createExecutionResponsesService(
         request,
         createdAt,
       });
-      await control.createRun(bundle);
+      const createdRecord = await control.createRun(bundle);
+      if (!drainAfterCreate) {
+        return createExecutionResponseForStoredRecord(createdRecord.bundle, taskRunSpecStore);
+      }
       const drained = await host.drainRunsOnce({
         runId: responseId,
         maxRuns: 1,
@@ -88,18 +104,22 @@ export function createExecutionResponsesService(
       if (!executed) {
         throw new Error(`Execution response ${responseId} was not drained after creation`);
       }
-      return createExecutionResponseForStoredRecord(executed.bundle);
+      return createExecutionResponseForStoredRecord(executed.bundle, taskRunSpecStore);
     },
 
     async readResponse(responseId) {
       const record = await control.readRun(responseId);
       if (!record) return null;
-      return createExecutionResponseForStoredRecord(record.bundle);
+      return createExecutionResponseForStoredRecord(record.bundle, taskRunSpecStore);
     },
   };
 }
 
-export function createExecutionResponseForStoredRecord(bundle: ExecutionRunRecordBundle): ExecutionResponse {
+export async function createExecutionResponseForStoredRecord(
+  bundle: ExecutionRunRecordBundle,
+  taskRunSpecStore: TaskRunSpecRecordStore = createTaskRunSpecRecordStore(),
+): Promise<ExecutionResponse> {
+  const taskRunSpecSummary = await readStoredTaskRunSpecSummary(taskRunSpecStore, bundle.run.taskRunSpecId ?? null);
   return createExecutionResponseFromRunRecord({
     responseId: bundle.run.id,
     runRecord: bundle,
@@ -107,7 +127,17 @@ export function createExecutionResponseForStoredRecord(bundle: ExecutionRunRecor
     output: getStoredResponseOutput(bundle),
     runtimeProfile: getStoredRuntimeProfile(bundle),
     service: getStoredService(bundle),
+    taskRunSpecSummary,
   });
+}
+
+async function readStoredTaskRunSpecSummary(
+  store: TaskRunSpecRecordStore,
+  taskRunSpecId: string | null,
+): Promise<TaskRunSpecInspectionSummary | null> {
+  if (!taskRunSpecId) return null;
+  const record = await store.readRecord(taskRunSpecId);
+  return record ? summarizeTaskRunSpecStoredRecord(record) : null;
 }
 
 function createDirectExecutionBundle(input: {

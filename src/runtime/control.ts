@@ -10,6 +10,7 @@ import {
   type ExecutionRunRecordStore,
   type ExecutionRunStoredRecord,
 } from './store.js';
+import { resumeExecutionRunAfterHumanEscalation } from './runner.js';
 import type { ExecutionRunRecordBundle } from './types.js';
 import type {
   AcquireStoredExecutionRunLeaseInput,
@@ -103,6 +104,20 @@ export function createExecutionRuntimeControl(
       }
       return store.writeRecord(input.bundle, {
         expectedRevision: input.expectedRevision,
+      });
+    },
+
+    async resumeHumanEscalation(input) {
+      const record = await requireStoredRecord(store, input.runId);
+      const resumedBundle = resumeExecutionRunAfterHumanEscalation({
+        bundle: record.bundle,
+        resumedAt: input.resumedAt,
+        note: input.note ?? null,
+        guidance: input.guidance ?? null,
+        override: input.override ?? null,
+      });
+      return store.writeRecord(resumedBundle, {
+        expectedRevision: record.revision,
       });
     },
   };

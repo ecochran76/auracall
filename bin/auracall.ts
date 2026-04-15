@@ -83,6 +83,13 @@ import {
   formatRuntimeProfileBridgeSummary,
   resolveConfigDoctorExitCode,
 } from '../src/cli/configCommand.js';
+import {
+  executeConfiguredTeamRun,
+  formatTeamRunCliExecutionPayload,
+  formatTeamRunCliInspectionPayload,
+  inspectConfiguredTeamRun,
+  type TeamRunCliResponseFormat,
+} from '../src/cli/teamRunCommand.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -133,6 +140,11 @@ import { LlmService, createLlmService } from '../src/browser/llmService/index.js
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
 import type { BrowserAttachment, BrowserLogger, BrowserRunOptions } from '../src/browser/types.js';
+
+function collectTrimmedString(value: string, previous: string[] = []): string[] {
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? [...previous, trimmed] : previous;
+}
 import type { ProviderCacheContext } from '../src/browser/providers/cache.js';
 import { createCacheStore, type CacheStoreKind } from '../src/browser/llmService/cache/store.js';
 import {
@@ -265,6 +277,12 @@ interface CliOptions extends OptionValues {
   retainHours?: number;
   writeOutput?: string;
   writeOutputPath?: string;
+  title?: string;
+  objective?: string;
+  promptAppend?: string;
+  structuredContextJson?: string;
+  responseFormat?: TeamRunCliResponseFormat;
+  maxTurns?: number;
 }
 
 interface BrowserDoctorReportLike {
@@ -7792,6 +7810,148 @@ configCommand
       return;
     }
     console.log(formatConfigDoctorReport(report));
+  });
+
+const teamsCommand = program
+  .command('teams')
+  .description('Inspect and execute bounded team workflows.');
+
+teamsCommand
+  .command('inspect')
+  .description('Inspect persisted task assignment and linked runtime state.')
+  .option('--task-run-spec-id <id>', 'Inspect one persisted task run spec and its latest linked runtime run.')
+  .option('--runtime-run-id <id>', 'Inspect one runtime run and its linked persisted task run spec.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const payload = await inspectConfiguredTeamRun({
+      taskRunSpecId:
+        typeof commandOptions.taskRunSpecId === 'string' && commandOptions.taskRunSpecId.trim().length > 0
+          ? commandOptions.taskRunSpecId.trim()
+          : null,
+      runtimeRunId:
+        typeof commandOptions.runtimeRunId === 'string' && commandOptions.runtimeRunId.trim().length > 0
+          ? commandOptions.runtimeRunId.trim()
+          : null,
+    });
+
+    if (commandOptions.json) {
+      console.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+
+    console.log(formatTeamRunCliInspectionPayload(payload));
+  });
+
+teamsCommand
+  .command('run <teamId>')
+  .description('Execute one bounded team run through the internal runtime bridge.')
+  .argument('<objective>', 'Assignment objective for this team run.')
+  .option('--title <text>', 'Optional assignment title.')
+  .option('--prompt-append <text>', 'Optional task-level prompt appendix for the planned team step prompt.')
+  .option('--structured-context-json <json>', 'Optional JSON object to pass as task structured context.')
+  .option('--response-format <text|markdown|json>', 'Requested final-response format.', 'markdown')
+  .option('--max-turns <count>', 'Optional task turn limit.', parseIntOption)
+  .option(
+    '--allow-local-shell-command <command>',
+    'Allow one or more bounded local shell commands for this run.',
+    collectTrimmedString,
+    [],
+  )
+  .option(
+    '--allow-local-cwd-root <path>',
+    'Allow one or more absolute cwd roots for bounded local shell actions.',
+    collectTrimmedString,
+    [],
+  )
+  .option(
+    '--require-local-action-approval',
+    'Require operator approval/cancellation for bounded local shell actions instead of auto-executing them.',
+    false,
+  )
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (teamId, objective, commandOptions) => {
+    const parentOptions = teamsCommand.opts?.() ?? {};
+    const userConfig = await resolveConfig(
+      { ...(program.opts?.() ?? {}), ...parentOptions, ...commandOptions },
+      process.cwd(),
+      process.env,
+    );
+
+    const structuredContextRaw =
+      typeof commandOptions.structuredContextJson === 'string' && commandOptions.structuredContextJson.trim().length > 0
+        ? commandOptions.structuredContextJson.trim()
+        : null;
+    let structuredContext: Record<string, unknown> | null = null;
+    if (structuredContextRaw) {
+      const parsed = JSON5.parse(structuredContextRaw);
+      if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('--structured-context-json must decode to a JSON object.');
+      }
+      structuredContext = parsed as Record<string, unknown>;
+    }
+
+    const responseFormatRaw =
+      typeof commandOptions.responseFormat === 'string' ? commandOptions.responseFormat.trim() : 'markdown';
+    if (responseFormatRaw !== 'text' && responseFormatRaw !== 'markdown' && responseFormatRaw !== 'json') {
+      throw new Error('--response-format must be text, markdown, or json.');
+    }
+
+    const allowedLocalShellCommands = Array.isArray(commandOptions.allowLocalShellCommand)
+      ? commandOptions.allowLocalShellCommand.filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
+      : [];
+    const allowedLocalCwdRoots = Array.isArray(commandOptions.allowLocalCwdRoot)
+      ? commandOptions.allowLocalCwdRoot.filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)
+      : [];
+    if (allowedLocalCwdRoots.length > 0 && allowedLocalShellCommands.length === 0) {
+      throw new Error('--allow-local-cwd-root requires at least one --allow-local-shell-command.');
+    }
+    if (commandOptions.requireLocalActionApproval && allowedLocalShellCommands.length === 0) {
+      throw new Error('--require-local-action-approval requires at least one --allow-local-shell-command.');
+    }
+
+    const result = await executeConfiguredTeamRun({
+      config: userConfig as unknown as Record<string, unknown>,
+      teamId: String(teamId),
+      objective: String(objective),
+      title:
+        typeof commandOptions.title === 'string' && commandOptions.title.trim().length > 0
+          ? commandOptions.title.trim()
+          : null,
+      promptAppend:
+        typeof commandOptions.promptAppend === 'string' && commandOptions.promptAppend.trim().length > 0
+          ? commandOptions.promptAppend.trim()
+          : null,
+      structuredContext,
+      responseFormat: responseFormatRaw,
+      maxTurns:
+        typeof commandOptions.maxTurns === 'number' && Number.isFinite(commandOptions.maxTurns)
+          ? commandOptions.maxTurns
+          : null,
+      localActionPolicy:
+        allowedLocalShellCommands.length > 0
+          ? {
+              mode: commandOptions.requireLocalActionApproval ? 'approval-required' : 'allowed',
+              allowedShellCommands: allowedLocalShellCommands,
+              allowedCwdRoots: allowedLocalCwdRoots.length > 0 ? allowedLocalCwdRoots : [process.cwd()],
+            }
+          : null,
+    });
+
+    if (commandOptions.json) {
+      console.log(
+        JSON.stringify(
+          {
+            taskRunSpec: result.taskRunSpec,
+            execution: result.payload,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
+
+    console.log(formatTeamRunCliExecutionPayload(result.payload));
   });
 
 configCommand

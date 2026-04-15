@@ -1,12 +1,26 @@
-import type { ResolvedTeamRuntimeSelections } from '../config/model.js';
+import {
+  resolveHostLocalActionExecutionPolicy,
+  type ResolvedTeamRuntimeSelections,
+} from '../config/model.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createExecutionRunRecordBundleFromTeamRun } from '../runtime/model.js';
 import { createExecutionServiceHost, type ExecutionServiceHost, type ExecutionServiceHostDeps } from '../runtime/serviceHost.js';
 import type { ExecutionRunStoredRecord } from '../runtime/store.js';
-import { createTeamRunServicePlanFromConfig, createTeamRunServicePlanFromResolvedTeam, type TeamRunServicePlan } from './service.js';
+import {
+  createTeamRunServicePlanFromConfig,
+  createTeamRunServicePlanFromConfigTaskRunSpec,
+  createTeamRunServicePlanFromResolvedTeam,
+  createTeamRunServicePlanFromResolvedTeamTaskRunSpec,
+  type TeamRunServicePlan,
+} from './service.js';
 import type { ExecutionRunStepStatus, ExecutionRunStatus, ExecutionRunSourceKind } from '../runtime/types.js';
-import type { TeamRun, TeamRunStep } from './types.js';
+import type { TaskRunSpec, TeamRun, TeamRunStep } from './types.js';
+import {
+  createTaskRunSpecRecordStore,
+  type TaskRunSpecRecordStore,
+  type TaskRunSpecStoredRecord,
+} from './store.js';
 
 export interface ExecuteTeamRunBridgeInput {
   runId: string;
@@ -23,12 +37,24 @@ export interface ExecuteTeamRunFromConfigInput extends ExecuteTeamRunBridgeInput
   teamId: string;
 }
 
+export interface ExecuteTeamRunTaskRunSpecFromConfigInput extends ExecuteTeamRunBridgeInput {
+  config: Record<string, unknown>;
+  teamId: string;
+  taskRunSpec: TaskRunSpec;
+}
+
 export interface ExecuteTeamRunFromResolvedTeamInput extends ExecuteTeamRunBridgeInput {
   team: ResolvedTeamRuntimeSelections;
 }
 
+export interface ExecuteTeamRunTaskRunSpecFromResolvedTeamInput extends ExecuteTeamRunBridgeInput {
+  team: ResolvedTeamRuntimeSelections;
+  taskRunSpec: TaskRunSpec;
+}
+
 export interface TeamRuntimeBridgeResult {
   teamPlan: TeamRunServicePlan;
+  persistedTaskRunSpecRecord?: TaskRunSpecStoredRecord | null;
   createdRuntimeRecord: ExecutionRunStoredRecord;
   finalRuntimeRecord: ExecutionRunStoredRecord;
   executionSummary: TeamRuntimeExecutionSummary;
@@ -42,10 +68,14 @@ export interface TeamRuntimeExecutionStepSummary {
   runtimeStepId: string | null;
   runtimeStepStatus: ExecutionRunStepStatus | null;
   runtimeStepFailure: string | null;
+  runtimeProfileId: string | null;
+  browserProfileId: string | null;
+  service: TeamRunStep['service'];
 }
 
 export interface TeamRuntimeExecutionSummary {
   teamRunId: string;
+  taskRunSpecId: string | null;
   runtimeRunId: string;
   runtimeSourceKind: ExecutionRunSourceKind;
   runtimeRunStatus: ExecutionRunStatus;
@@ -56,23 +86,31 @@ export interface TeamRuntimeExecutionSummary {
 
 export interface TeamRuntimeBridgeDeps {
   control?: ExecutionRuntimeControlContract;
+  taskRunSpecStore?: TaskRunSpecRecordStore;
   now?: () => string;
   ownerId?: string;
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
+  executeLocalActionRequest?: ExecutionServiceHostDeps['executeLocalActionRequest'];
 }
 
 export interface TeamRuntimeBridge {
   executeFromConfig(input: ExecuteTeamRunFromConfigInput): Promise<TeamRuntimeBridgeResult>;
+  executeFromConfigTaskRunSpec(input: ExecuteTeamRunTaskRunSpecFromConfigInput): Promise<TeamRuntimeBridgeResult>;
   executeFromResolvedTeam(input: ExecuteTeamRunFromResolvedTeamInput): Promise<TeamRuntimeBridgeResult>;
+  executeFromResolvedTeamTaskRunSpec(
+    input: ExecuteTeamRunTaskRunSpecFromResolvedTeamInput,
+  ): Promise<TeamRuntimeBridgeResult>;
 }
 
 export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamRuntimeBridge {
   const control = deps.control ?? createExecutionRuntimeControl();
-  const host = createExecutionServiceHost({
+  const taskRunSpecStore = deps.taskRunSpecStore ?? createTaskRunSpecRecordStore();
+  const defaultHost = createExecutionServiceHost({
     control,
     now: deps.now,
     ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
     executeStoredRunStep: deps.executeStoredRunStep,
+    executeLocalActionRequest: deps.executeLocalActionRequest,
   });
 
   return {
@@ -88,7 +126,37 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         entryPrompt: input.entryPrompt,
         initialInputs: input.initialInputs,
       });
-      return executeTeamRuntimePlan({ control, host, teamPlan });
+      const host = createExecutionServiceHost({
+        control,
+        now: deps.now,
+        ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
+        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
+        executeStoredRunStep: deps.executeStoredRunStep,
+        executeLocalActionRequest: deps.executeLocalActionRequest,
+      });
+      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
+    },
+
+    async executeFromConfigTaskRunSpec(input) {
+      const teamPlan = createTeamRunServicePlanFromConfigTaskRunSpec({
+        config: input.config,
+        teamId: input.teamId,
+        runId: input.runId,
+        createdAt: input.createdAt,
+        taskRunSpec: input.taskRunSpec,
+        updatedAt: input.updatedAt,
+        trigger: input.trigger,
+        requestedBy: input.requestedBy,
+      });
+      const host = createExecutionServiceHost({
+        control,
+        now: deps.now,
+        ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
+        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
+        executeStoredRunStep: deps.executeStoredRunStep,
+        executeLocalActionRequest: deps.executeLocalActionRequest,
+      });
+      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
     },
 
     async executeFromResolvedTeam(input) {
@@ -102,7 +170,20 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         entryPrompt: input.entryPrompt,
         initialInputs: input.initialInputs,
       });
-      return executeTeamRuntimePlan({ control, host, teamPlan });
+      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore });
+    },
+
+    async executeFromResolvedTeamTaskRunSpec(input) {
+      const teamPlan = createTeamRunServicePlanFromResolvedTeamTaskRunSpec({
+        runId: input.runId,
+        createdAt: input.createdAt,
+        team: input.team,
+        taskRunSpec: input.taskRunSpec,
+        updatedAt: input.updatedAt,
+        trigger: input.trigger,
+        requestedBy: input.requestedBy,
+      });
+      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore });
     },
   };
 }
@@ -111,10 +192,17 @@ async function executeTeamRuntimePlan(input: {
   control: ExecutionRuntimeControlContract;
   host: ExecutionServiceHost;
   teamPlan: TeamRunServicePlan;
+  taskRunSpecStore: TaskRunSpecRecordStore;
 }): Promise<TeamRuntimeBridgeResult> {
+  const persistedTaskRunSpecRecord = input.teamPlan.taskRunSpec
+    ? await persistTaskRunSpec({ store: input.taskRunSpecStore, taskRunSpec: input.teamPlan.taskRunSpec })
+    : null;
+
   const runtimeBundle = createExecutionRunRecordBundleFromTeamRun({
     teamRun: input.teamPlan.teamRun,
     steps: input.teamPlan.steps,
+    handoffs: input.teamPlan.handoffs,
+    localActionRequests: input.teamPlan.localActionRequests,
     sharedState: input.teamPlan.sharedState,
   });
 
@@ -128,6 +216,7 @@ async function executeTeamRuntimePlan(input: {
 
   return {
     teamPlan: input.teamPlan,
+    persistedTaskRunSpecRecord,
     createdRuntimeRecord,
     finalRuntimeRecord,
     executionSummary: summarizeTeamRuntimeExecution({
@@ -155,11 +244,15 @@ function summarizeTeamRuntimeExecution(input: {
       runtimeStepId: runtimeStep?.id ?? null,
       runtimeStepStatus: runtimeStep?.status ?? null,
       runtimeStepFailure: runtimeStep?.failure?.message ?? null,
+      runtimeProfileId: runtimeStep?.runtimeProfileId ?? teamStep.runtimeProfileId,
+      browserProfileId: runtimeStep?.browserProfileId ?? teamStep.browserProfileId,
+      service: runtimeStep?.service ?? teamStep.service,
     };
   });
 
   return {
     teamRunId: input.teamPlan.teamRun.id,
+    taskRunSpecId: input.teamPlan.teamRun.taskRunSpecId ?? input.runtimeRecord.bundle.run.taskRunSpecId ?? null,
     runtimeRunId: input.runtimeRecord.bundle.run.id,
     runtimeSourceKind: input.runtimeRecord.bundle.run.sourceKind,
     runtimeRunStatus: input.runtimeRecord.bundle.run.status,
@@ -167,6 +260,17 @@ function summarizeTeamRuntimeExecution(input: {
     terminalStepCount: input.teamPlan.terminalStepIds.length,
     stepSummaries,
   };
+}
+
+async function persistTaskRunSpec(input: {
+  store: TaskRunSpecRecordStore;
+  taskRunSpec: TaskRunSpec;
+}): Promise<TaskRunSpecStoredRecord> {
+  await input.store.ensureStorage();
+  const existing = await input.store.readRecord(input.taskRunSpec.id);
+  return input.store.writeRecord(input.taskRunSpec, {
+    expectedRevision: existing?.revision ?? 0,
+  });
 }
 
 function mapRuntimeStepStatusToTeamStatus(

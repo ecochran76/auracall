@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
@@ -9,7 +10,11 @@ import {
   serveResponsesHttp,
 } from '../src/http/responsesServer.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
+import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
+import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
+import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
 import {
+  createExecutionRunnerRecord,
   createExecutionRun,
   createExecutionRunEvent,
   createExecutionRunRecordBundle,
@@ -91,6 +96,292 @@ describe('http responses adapter', () => {
     );
   };
 
+  const seedRequestedLocalActionDirectRun = async (
+    control: ReturnType<typeof createExecutionRuntimeControl>,
+    runId: string,
+    createdAt: string,
+    sourceKind: 'direct' | 'team-run' = 'direct',
+  ) => {
+    const stepId = `${runId}:step:1`;
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind,
+          sourceId: sourceKind === 'team-run' ? `${runId}:team` : null,
+          status: 'succeeded',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Review one local action request.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Review one local action request.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'queued one local action for later review',
+              artifacts: [],
+              structuredData: {
+                localActionRequests: [
+                  {
+                    kind: 'shell',
+                    summary: 'Run bounded host verification later',
+                    command: 'pnpm',
+                    args: ['vitest', 'run'],
+                  },
+                ],
+              },
+              notes: [],
+            },
+            completedAt: createdAt,
+          }),
+        ],
+        localActionRequests: [
+          {
+            id: `${runId}:action:${stepId}:1`,
+            teamRunId: runId,
+            ownerStepId: stepId,
+            kind: 'shell',
+            summary: 'Run bounded host verification later',
+            command: 'pnpm',
+            args: ['vitest', 'run'],
+            structuredPayload: {},
+            notes: [],
+            status: 'requested',
+            createdAt,
+            approvedAt: null,
+            completedAt: null,
+            resultSummary: null,
+            resultPayload: null,
+          },
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `step.localActionOutcomes.${stepId}`,
+              value: {
+                ownerStepId: stepId,
+                generatedAt: createdAt,
+                total: 1,
+                counts: {
+                  requested: 1,
+                  approved: 0,
+                  rejected: 0,
+                  executed: 0,
+                  failed: 0,
+                  cancelled: 0,
+                },
+                items: [
+                  {
+                    requestId: `${runId}:action:${stepId}:1`,
+                    kind: 'shell',
+                    status: 'requested',
+                    summary: 'Run bounded host verification later',
+                    command: 'pnpm',
+                    args: ['vitest', 'run'],
+                    resultSummary: null,
+                  },
+                ],
+              },
+            },
+          ],
+          notes: ['local action outcomes for requested run: requested=1'],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt,
+          }),
+          createExecutionRunEvent({
+            id: `${runId}:event:${runId}:action:${stepId}:1:requested`,
+            runId,
+            stepId,
+            type: 'note-added',
+            createdAt,
+            note: 'local action requested: shell',
+            payload: {
+              requestId: `${runId}:action:${stepId}:1`,
+              requestStatus: 'requested',
+            },
+          }),
+        ],
+      }),
+    );
+  };
+
+  const seedPausedHumanEscalationDirectRun = async (
+    control: ReturnType<typeof createExecutionRuntimeControl>,
+    runId: string,
+    createdAt: string,
+    pausedAt: string,
+    sourceKind: 'direct' | 'team-run' = 'direct',
+  ) => {
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind,
+          sourceId: sourceKind === 'team-run' ? `${runId}:team` : null,
+          status: 'cancelled',
+          createdAt,
+          updatedAt: pausedAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Resume me.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'First step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'first step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+            completedAt: createdAt,
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'cancelled',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Second step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'paused for human escalation',
+              artifacts: [],
+              structuredData: {
+                humanEscalation: {
+                  requestedAt: pausedAt,
+                  guidance: {
+                    action: 'escalate',
+                  },
+                },
+              },
+              notes: ['dependency host-action guidance escalated; runner paused for human input'],
+            },
+            startedAt: pausedAt,
+            completedAt: pausedAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'cancelled',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `human.escalation.${stepTwoId}`,
+              value: {
+                stepId: stepTwoId,
+                requestedAt: pausedAt,
+                reason: 'dependency-local-action-escalate',
+                guidance: {
+                  action: 'escalate',
+                },
+              },
+            },
+          ],
+          notes: ['run paused for human escalation'],
+          history: [],
+          lastUpdatedAt: pausedAt,
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt,
+          }),
+          createExecutionRunEvent({
+            id: `${runId}:event:${stepTwoId}:human-escalation:${pausedAt}`,
+            runId,
+            stepId: stepTwoId,
+            type: 'note-added',
+            createdAt: pausedAt,
+            note: 'step paused for human escalation after dependency host-action guidance escalated',
+            payload: {
+              guidance: {
+                action: 'escalate',
+              },
+            },
+          }),
+        ],
+      }),
+    );
+  };
+
   const terminateServeResponsesHttp = async (options: Parameters<typeof serveResponsesHttp>[0]) => {
     const servePromise = serveResponsesHttp(options);
     await new Promise((resolve) => setTimeout(resolve, 250));
@@ -142,6 +433,25 @@ describe('http responses adapter', () => {
             terminalStepId: 'resp_create_1:step:1',
             completedAt: '2026-04-08T12:00:00.000Z',
             lastUpdatedAt: '2026-04-08T12:00:00.000Z',
+            orchestrationTimelineSummary: {
+              total: 2,
+              items: [
+                {
+                  type: 'step-started',
+                  createdAt: '2026-04-08T12:00:00.000Z',
+                  stepId: 'resp_create_1:step:1',
+                  note: 'step started by local runner',
+                  handoffId: null,
+                },
+                {
+                  type: 'step-succeeded',
+                  createdAt: '2026-04-08T12:00:00.000Z',
+                  stepId: 'resp_create_1:step:1',
+                  note: 'step completed by local runner',
+                  handoffId: null,
+                },
+              ],
+            },
             failureSummary: null,
           },
         },
@@ -159,6 +469,438 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('records last runner activity for direct execution on /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-activity-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-11T14:10:00.000Z'),
+        generateResponseId: () => 'resp_runner_activity_1',
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Advance one direct run.',
+          auracall: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        }),
+      });
+
+      expect(createResponse.status).toBe(200);
+
+      const statusResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(statusResponse.status).toBe(200);
+      const statusPayload = (await statusResponse.json()) as Record<string, any>;
+      expect(statusPayload).toMatchObject({
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastActivityAt: '2026-04-11T14:10:00.000Z',
+          lastClaimedRunId: 'resp_runner_activity_1',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns in-progress on create and completes later through background drain when enabled', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-bg-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
+      {
+        now: () => new Date('2026-04-08T12:02:00.000Z'),
+        generateResponseId: () => 'resp_create_bg_1',
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Create through background drain.',
+          auracall: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        }),
+      });
+
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as Record<string, unknown>;
+      expect(created).toMatchObject({
+        id: 'resp_create_bg_1',
+        object: 'response',
+        status: 'in_progress',
+      });
+
+      await delay(100);
+      const readResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses/resp_create_bg_1`);
+      expect(readResponse.status).toBe(200);
+      const reread = (await readResponse.json()) as Record<string, unknown>;
+      expect(reread).toMatchObject({
+        id: 'resp_create_bg_1',
+        object: 'response',
+        status: 'completed',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('serializes server-owned drain calls across concurrent response creates', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const drainRunIds: string[] = [];
+    let inFlight = 0;
+    let maxInFlight = 0;
+    let responseSequence = 0;
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-08T12:05:00.000Z'),
+        generateResponseId: () => `resp_serial_${++responseSequence}`,
+        executionHost: {
+          async drainRunsOnce() {
+            throw new Error('unexpected direct drain call');
+          },
+          async repairStaleHeartbeatLease(runId) {
+            return {
+              action: 'repair-stale-heartbeat' as const,
+              runId,
+              status: 'not-found' as const,
+              repaired: false,
+              reason: `run ${runId} was not found`,
+              leaseHealthStatus: null,
+              repairPosture: null,
+            };
+          },
+          async cancelOwnedRun(runId) {
+            return {
+              action: 'cancel-run' as const,
+              runId,
+              status: 'not-found' as const,
+              cancelled: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async resumeHumanEscalation(runId) {
+            return {
+              action: 'resume-human-escalation' as const,
+              runId,
+              status: 'not-found' as const,
+              resumed: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async drainRun(runId) {
+            return {
+              action: 'drain-run' as const,
+              runId,
+              status: 'not-found' as const,
+              drained: false,
+              reason: `run ${runId} was not found`,
+              skipReason: null,
+            };
+          },
+          async resolveLocalActionRequest(runId, requestId, resolution) {
+            return {
+              action: 'resolve-local-action-request' as const,
+              runId,
+              requestId,
+              resolution,
+              status: 'not-found' as const,
+              resolved: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async readRecoveryDetail() {
+            return null;
+          },
+          async summarizeLocalClaimState() {
+            return null;
+          },
+          async summarizeRecoveryState() {
+            return {
+              totalRuns: 0,
+              reclaimableRunIds: [],
+              activeLeaseRunIds: [],
+              recoverableStrandedRunIds: [],
+              strandedRunIds: [],
+              cancelledRunIds: [],
+              idleRunIds: [],
+              localClaim: null,
+              activeLeaseHealth: {
+                freshRunIds: [],
+                staleHeartbeatRunIds: [],
+                suspiciousIdleRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  freshCount: 0,
+                  staleHeartbeatCount: 0,
+                  suspiciousIdleCount: 0,
+                },
+              },
+              leaseRepair: {
+                locallyReclaimableRunIds: [],
+                inspectOnlyRunIds: [],
+                notReclaimableRunIds: [],
+                repairedRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  locallyReclaimableCount: 0,
+                  inspectOnlyCount: 0,
+                  notReclaimableCount: 0,
+                  repairedCount: 0,
+                },
+              },
+              attention: {
+                staleHeartbeatInspectOnlyRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  staleHeartbeatInspectOnlyCount: 0,
+                },
+              },
+              cancellation: {
+                reasonsByRunId: {},
+                metrics: {
+                  cancelledCount: 0,
+                },
+              },
+              metrics: {
+                reclaimableCount: 0,
+                activeLeaseCount: 0,
+                recoverableStrandedCount: 0,
+                strandedCount: 0,
+                cancelledCount: 0,
+                idleCount: 0,
+                actionableCount: 0,
+                nonExecutableCount: 0,
+              },
+            };
+          },
+          async drainRunsUntilIdle(options = {}) {
+            inFlight += 1;
+            maxInFlight = Math.max(maxInFlight, inFlight);
+            if (options.runId) {
+              drainRunIds.push(options.runId);
+            }
+            await delay(25);
+            inFlight -= 1;
+            return {
+              ownerId: 'host:test-serialized-drain',
+              expiredLeaseRunIds: [],
+              executedRunIds: [],
+              drained: [],
+              iterations: 1,
+            };
+          },
+        },
+      },
+    );
+
+    try {
+      const [firstResponse, secondResponse] = await Promise.all([
+        fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-5.2',
+            input: 'First request.',
+          }),
+        }),
+        fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model: 'gpt-5.2',
+            input: 'Second request.',
+          }),
+        }),
+      ]);
+
+      expect(firstResponse.status).toBe(200);
+      expect(secondResponse.status).toBe(200);
+      expect(maxInFlight).toBe(1);
+      expect([...drainRunIds].sort()).toEqual(['resp_serial_1', 'resp_serial_2']);
+
+      const firstPayload = (await firstResponse.json()) as Record<string, unknown>;
+      const secondPayload = (await secondResponse.json()) as Record<string, unknown>;
+      expect([firstPayload.id, secondPayload.id].sort()).toEqual(['resp_serial_1', 'resp_serial_2']);
+      expect(firstPayload.status).toBe('in_progress');
+      expect(secondPayload.status).toBe('in_progress');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('stops scheduling background drain after server close', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-bg-close-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let drainCalls = 0;
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
+      {
+        executionHost: {
+          async drainRunsOnce() {
+            throw new Error('unexpected direct drain call');
+          },
+          async repairStaleHeartbeatLease(runId) {
+            return {
+              action: 'repair-stale-heartbeat' as const,
+              runId,
+              status: 'not-found' as const,
+              repaired: false,
+              reason: `run ${runId} was not found`,
+              leaseHealthStatus: null,
+              repairPosture: null,
+            };
+          },
+          async cancelOwnedRun(runId) {
+            return {
+              action: 'cancel-run' as const,
+              runId,
+              status: 'not-found' as const,
+              cancelled: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async resumeHumanEscalation(runId) {
+            return {
+              action: 'resume-human-escalation' as const,
+              runId,
+              status: 'not-found' as const,
+              resumed: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async drainRun(runId) {
+            return {
+              action: 'drain-run' as const,
+              runId,
+              status: 'not-found' as const,
+              drained: false,
+              reason: `run ${runId} was not found`,
+              skipReason: null,
+            };
+          },
+          async resolveLocalActionRequest(runId, requestId, resolution) {
+            return {
+              action: 'resolve-local-action-request' as const,
+              runId,
+              requestId,
+              resolution,
+              status: 'not-found' as const,
+              resolved: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async readRecoveryDetail() {
+            return null;
+          },
+          async summarizeLocalClaimState() {
+            return null;
+          },
+          async summarizeRecoveryState() {
+            return {
+              totalRuns: 0,
+              reclaimableRunIds: [],
+              activeLeaseRunIds: [],
+              recoverableStrandedRunIds: [],
+              strandedRunIds: [],
+              cancelledRunIds: [],
+              idleRunIds: [],
+              localClaim: null,
+              activeLeaseHealth: {
+                freshRunIds: [],
+                staleHeartbeatRunIds: [],
+                suspiciousIdleRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  freshCount: 0,
+                  staleHeartbeatCount: 0,
+                  suspiciousIdleCount: 0,
+                },
+              },
+              leaseRepair: {
+                locallyReclaimableRunIds: [],
+                inspectOnlyRunIds: [],
+                notReclaimableRunIds: [],
+                repairedRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  locallyReclaimableCount: 0,
+                  inspectOnlyCount: 0,
+                  notReclaimableCount: 0,
+                  repairedCount: 0,
+                },
+              },
+              attention: {
+                staleHeartbeatInspectOnlyRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  staleHeartbeatInspectOnlyCount: 0,
+                },
+              },
+              cancellation: {
+                reasonsByRunId: {},
+                metrics: {
+                  cancelledCount: 0,
+                },
+              },
+              metrics: {
+                reclaimableCount: 0,
+                activeLeaseCount: 0,
+                recoverableStrandedCount: 0,
+                strandedCount: 0,
+                cancelledCount: 0,
+                idleCount: 0,
+                actionableCount: 0,
+                nonExecutableCount: 0,
+              },
+            };
+          },
+          async drainRunsUntilIdle() {
+            drainCalls += 1;
+            return {
+              ownerId: 'host:test-background-close',
+              expiredLeaseRunIds: [],
+              executedRunIds: [],
+              drained: [],
+              iterations: 1,
+            };
+          },
+        },
+      },
+    );
+
+    await delay(80);
+    await server.close();
+    const callsAtClose = drainCalls;
+    await delay(80);
+    expect(drainCalls).toBeGreaterThan(0);
+    expect(drainCalls).toBe(callsAtClose);
   });
 
   it('reports explicit development posture through /status', async () => {
@@ -185,7 +927,41 @@ describe('http responses adapter', () => {
           streaming: false,
           auth: false,
         },
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+          selectedRunIds: [],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: [],
+          reasonsByRunId: {},
+          metrics: {
+            selectedCount: 0,
+            blockedCount: 0,
+            notReadyCount: 0,
+            unavailableCount: 0,
+          },
+        },
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastHeartbeatAt: expect.any(String),
+          expiresAt: expect.any(String),
+          lastActivityAt: null,
+          lastClaimedRunId: null,
+        },
+        backgroundDrain: {
+          enabled: false,
+          intervalMs: null,
+          state: 'disabled',
+          paused: false,
+          lastTrigger: null,
+          lastStartedAt: null,
+          lastCompletedAt: null,
+        },
         routes: {
+          recoveryDetailTemplate: '/status/recovery/{run_id}',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -203,6 +979,848 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('registers and reports a live persisted runner for api serve status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let nowValue = new Date('2026-04-11T14:00:00.000Z');
+    const runnersControl = createExecutionRunnerControl();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => nowValue,
+        runnersControl,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      expect(payload).toMatchObject({
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastHeartbeatAt: '2026-04-11T14:00:00.000Z',
+          expiresAt: '2026-04-11T14:00:15.000Z',
+          lastActivityAt: null,
+          lastClaimedRunId: null,
+        },
+      });
+
+      const storedRunner = await runnersControl.readRunner(`runner:http-responses:127.0.0.1:${server.port}`);
+      expect(storedRunner).not.toBeNull();
+      expect(storedRunner).toMatchObject({
+        runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+        },
+      });
+    } finally {
+      nowValue = new Date('2026-04-11T14:00:30.000Z');
+      await server.close();
+    }
+  });
+
+  it('marks the persisted api serve runner stale on close', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-close-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let nowValue = new Date('2026-04-11T14:05:00.000Z');
+    const runnersControl = createExecutionRunnerControl();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => nowValue,
+        runnersControl,
+      },
+    );
+
+    const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+    nowValue = new Date('2026-04-11T14:05:45.000Z');
+    await server.close();
+
+    const storedRunner = await runnersControl.readRunner(runnerId);
+    expect(storedRunner).not.toBeNull();
+    expect(storedRunner).toMatchObject({
+      runnerId,
+      runner: {
+        id: runnerId,
+        status: 'stale',
+        lastHeartbeatAt: '2026-04-11T14:05:00.000Z',
+        expiresAt: '2026-04-11T14:05:45.000Z',
+        lastActivityAt: null,
+        lastClaimedRunId: null,
+        eligibilityNote: 'api serve shutdown',
+      },
+    });
+  });
+
+  it('reports live background drain state through /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-drain-state-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let drainCalls = 0;
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
+      {
+        executionHost: {
+          async drainRunsOnce() {
+            throw new Error('unexpected direct drain call');
+          },
+          async repairStaleHeartbeatLease(runId) {
+            return {
+              action: 'repair-stale-heartbeat' as const,
+              runId,
+              status: 'not-found' as const,
+              repaired: false,
+              reason: `run ${runId} was not found`,
+              leaseHealthStatus: null,
+              repairPosture: null,
+            };
+          },
+          async cancelOwnedRun(runId) {
+            return {
+              action: 'cancel-run' as const,
+              runId,
+              status: 'not-found' as const,
+              cancelled: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async resumeHumanEscalation(runId) {
+            return {
+              action: 'resume-human-escalation' as const,
+              runId,
+              status: 'not-found' as const,
+              resumed: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async drainRun(runId) {
+            return {
+              action: 'drain-run' as const,
+              runId,
+              status: 'not-found' as const,
+              drained: false,
+              reason: `run ${runId} was not found`,
+              skipReason: null,
+            };
+          },
+          async resolveLocalActionRequest(runId, requestId, resolution) {
+            return {
+              action: 'resolve-local-action-request' as const,
+              runId,
+              requestId,
+              resolution,
+              status: 'not-found' as const,
+              resolved: false,
+              reason: `run ${runId} was not found`,
+            };
+          },
+          async readRecoveryDetail() {
+            return null;
+          },
+          async summarizeLocalClaimState() {
+            return null;
+          },
+          async summarizeRecoveryState() {
+            return {
+              totalRuns: 0,
+              reclaimableRunIds: [],
+              activeLeaseRunIds: [],
+              recoverableStrandedRunIds: [],
+              strandedRunIds: [],
+              cancelledRunIds: [],
+              idleRunIds: [],
+              localClaim: null,
+              activeLeaseHealth: {
+                freshRunIds: [],
+                staleHeartbeatRunIds: [],
+                suspiciousIdleRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  freshCount: 0,
+                  staleHeartbeatCount: 0,
+                  suspiciousIdleCount: 0,
+                },
+              },
+              leaseRepair: {
+                locallyReclaimableRunIds: [],
+                inspectOnlyRunIds: [],
+                notReclaimableRunIds: [],
+                repairedRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  locallyReclaimableCount: 0,
+                  inspectOnlyCount: 0,
+                  notReclaimableCount: 0,
+                  repairedCount: 0,
+                },
+              },
+              attention: {
+                staleHeartbeatInspectOnlyRunIds: [],
+                reasonsByRunId: {},
+                metrics: {
+                  staleHeartbeatInspectOnlyCount: 0,
+                },
+              },
+              cancellation: {
+                reasonsByRunId: {},
+                metrics: {
+                  cancelledCount: 0,
+                },
+              },
+              metrics: {
+                reclaimableCount: 0,
+                activeLeaseCount: 0,
+                recoverableStrandedCount: 0,
+                strandedCount: 0,
+                cancelledCount: 0,
+                idleCount: 0,
+                actionableCount: 0,
+                nonExecutableCount: 0,
+              },
+            };
+          },
+          async drainRunsUntilIdle() {
+            drainCalls += 1;
+            await delay(75);
+            return {
+              ownerId: 'host:test-status-drain',
+              expiredLeaseRunIds: [],
+              executedRunIds: [],
+              drained: [],
+              iterations: 1,
+            };
+          },
+        },
+      },
+    );
+
+    try {
+      await delay(35);
+      const runningResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(runningResponse.status).toBe(200);
+      const runningPayload = (await runningResponse.json()) as Record<string, any>;
+      expect(runningPayload).toMatchObject({
+        backgroundDrain: {
+          enabled: true,
+          intervalMs: 25,
+          state: 'running',
+          paused: false,
+          lastTrigger: 'background-timer',
+          lastStartedAt: expect.any(String),
+        },
+      });
+
+      await delay(90);
+      const idleResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(idleResponse.status).toBe(200);
+      const idlePayload = (await idleResponse.json()) as Record<string, any>;
+      expect(idlePayload).toMatchObject({
+        backgroundDrain: {
+          enabled: true,
+          intervalMs: 25,
+          paused: false,
+          lastTrigger: 'background-timer',
+          lastStartedAt: expect.any(String),
+          lastCompletedAt: expect.any(String),
+        },
+      });
+      expect(['idle', 'scheduled', 'running']).toContain(idlePayload.backgroundDrain.state);
+      expect(drainCalls).toBeGreaterThan(0);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('pauses and resumes background drain through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-drain-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_pause_resume_run', '2026-04-08T16:10:00.000Z', 'Pause then resume.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, recoverRunsOnStart: false, backgroundDrainIntervalMs: 25 },
+      { control },
+    );
+
+    try {
+      const pauseResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          backgroundDrain: { action: 'pause' },
+        }),
+      });
+      expect(pauseResponse.status).toBe(200);
+      const pausedPayload = (await pauseResponse.json()) as Record<string, any>;
+      expect(pausedPayload).toMatchObject({
+        backgroundDrain: {
+          enabled: true,
+          intervalMs: 25,
+          state: 'paused',
+          paused: true,
+        },
+      });
+
+      await delay(100);
+      const pausedRead = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_pause_resume_run`);
+      expect(pausedRead.status).toBe(200);
+      const pausedReadPayload = (await pausedRead.json()) as Record<string, unknown>;
+      expect(pausedReadPayload).toMatchObject({
+        id: 'status_pause_resume_run',
+        status: 'in_progress',
+      });
+
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          backgroundDrain: { action: 'resume' },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+      const resumedPayload = (await resumeResponse.json()) as Record<string, any>;
+      expect(resumedPayload).toMatchObject({
+        backgroundDrain: {
+          enabled: true,
+          intervalMs: 25,
+          paused: false,
+        },
+      });
+
+      await delay(100);
+      const resumedRead = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_pause_resume_run`);
+      expect(resumedRead.status).toBe(200);
+      const resumedReadPayload = (await resumedRead.json()) as Record<string, unknown>;
+      expect(resumedReadPayload).toMatchObject({
+        id: 'status_pause_resume_run',
+        status: 'completed',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('repairs only stale-heartbeat leases through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-stale-heartbeat-repair-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_repair_stale', '2026-04-08T16:10:00.000Z', 'Repair stale heartbeat.');
+    await control.acquireLease({
+      runId: 'status_repair_stale',
+      leaseId: 'status_repair_stale:lease:1',
+      ownerId: 'runner:missing-stale',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:10:10.000Z',
+      expiresAt: '2026-04-08T16:11:00.000Z',
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const repairResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leaseRepair: {
+            action: 'repair-stale-heartbeat',
+            runId: 'status_repair_stale',
+          },
+        }),
+      });
+      expect(repairResponse.status).toBe(200);
+      const repairPayload = (await repairResponse.json()) as Record<string, any>;
+      expect(repairPayload).toMatchObject({
+        controlResult: {
+          kind: 'lease-repair',
+          action: 'repair-stale-heartbeat',
+          runId: 'status_repair_stale',
+          status: 'repaired',
+          repaired: true,
+          leaseHealthStatus: 'stale-heartbeat',
+          repairPosture: 'locally-reclaimable',
+        },
+      });
+
+      const repairedRecord = await control.readRun('status_repair_stale');
+      expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
+      expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects suspiciously idle leases on POST /status stale-heartbeat repair', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-stale-heartbeat-repair-reject-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(control, 'status_repair_idle', '2026-04-08T16:10:00.000Z', 'Do not repair idle.');
+    await control.acquireLease({
+      runId: 'status_repair_idle',
+      leaseId: 'status_repair_idle:lease:1',
+      ownerId: 'runner:idle-http',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:14:55.000Z',
+      expiresAt: '2026-04-08T16:20:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:idle-http',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T16:00:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:14:55.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+        lastActivityAt: '2026-04-08T16:09:00.000Z',
+        lastClaimedRunId: 'older_run',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const repairResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leaseRepair: {
+            action: 'repair-stale-heartbeat',
+            runId: 'status_repair_idle',
+          },
+        }),
+      });
+      expect(repairResponse.status).toBe(409);
+      const repairPayload = (await repairResponse.json()) as Record<string, any>;
+      expect(repairPayload).toMatchObject({
+        error: {
+          type: 'invalid_request_error',
+          message: 'active lease has no observed runner activity since it was acquired',
+        },
+      });
+
+      const storedRecord = await control.readRun('status_repair_idle');
+      expect(storedRecord?.bundle.leases[0]?.status).toBe('active');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('cancels an active local runner-owned run through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-run-cancel-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_cancel_run', '2026-04-08T16:10:00.000Z', 'Cancel me.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+      const stepId = 'status_cancel_run:step:1';
+      const record = await control.readRun('status_cancel_run');
+      await control.persistRun({
+        runId: 'status_cancel_run',
+        expectedRevision: record!.revision,
+        bundle: {
+          ...record!.bundle,
+          run: {
+            ...record!.bundle.run,
+            status: 'running',
+            updatedAt: '2026-04-08T16:12:00.000Z',
+          },
+          steps: record!.bundle.steps.map((step) =>
+            step.id === stepId
+              ? {
+                  ...step,
+                  status: 'running',
+                  startedAt: '2026-04-08T16:12:00.000Z',
+                }
+              : step,
+          ),
+        },
+      });
+      await control.acquireLease({
+        runId: 'status_cancel_run',
+        leaseId: 'status_cancel_run:lease:runner',
+        ownerId: runnerId,
+        acquiredAt: '2026-04-08T16:12:00.000Z',
+        heartbeatAt: '2026-04-08T16:12:00.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+      });
+
+      const cancelResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'cancel-run',
+            runId: 'status_cancel_run',
+          },
+        }),
+      });
+      expect(cancelResponse.status).toBe(200);
+      const cancelPayload = (await cancelResponse.json()) as Record<string, any>;
+      expect(cancelPayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'cancel-run',
+          runId: 'status_cancel_run',
+          status: 'cancelled',
+          cancelled: true,
+        },
+      });
+
+      const storedRecord = await control.readRun('status_cancel_run');
+      expect(storedRecord?.bundle.run.status).toBe('cancelled');
+      expect(storedRecord?.bundle.sharedState.status).toBe('cancelled');
+      expect(storedRecord?.bundle.steps[0]?.status).toBe('cancelled');
+      expect(storedRecord?.bundle.leases[0]?.status).toBe('released');
+      expect(storedRecord?.bundle.leases[0]?.releaseReason).toBe('cancelled');
+
+      const rereadResponse = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_cancel_run`);
+      expect(rereadResponse.status).toBe(200);
+      const rereadPayload = (await rereadResponse.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_cancel_run',
+        status: 'cancelled',
+        metadata: {
+          executionSummary: {
+            terminalStepId: 'status_cancel_run:step:1',
+            completedAt: '2026-04-08T16:12:00.000Z',
+            lastUpdatedAt: '2026-04-08T16:12:00.000Z',
+            cancellationSummary: {
+              cancelledAt: '2026-04-08T16:12:00.000Z',
+              source: 'operator',
+              reason: 'run cancelled by service host operator control',
+            },
+            failureSummary: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces cancelled runs through recovery summary and per-run detail after local cancel', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-run-cancel-recovery-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_cancel_recovery', '2026-04-08T16:10:00.000Z', 'Cancel me too.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+      const stepId = 'status_cancel_recovery:step:1';
+      const record = await control.readRun('status_cancel_recovery');
+      await control.persistRun({
+        runId: 'status_cancel_recovery',
+        expectedRevision: record!.revision,
+        bundle: {
+          ...record!.bundle,
+          run: {
+            ...record!.bundle.run,
+            status: 'running',
+            updatedAt: '2026-04-08T16:12:00.000Z',
+          },
+          steps: record!.bundle.steps.map((step) =>
+            step.id === stepId
+              ? {
+                  ...step,
+                  status: 'running',
+                  startedAt: '2026-04-08T16:12:00.000Z',
+                }
+              : step,
+          ),
+        },
+      });
+      await control.acquireLease({
+        runId: 'status_cancel_recovery',
+        leaseId: 'status_cancel_recovery:lease:runner',
+        ownerId: runnerId,
+        acquiredAt: '2026-04-08T16:12:00.000Z',
+        heartbeatAt: '2026-04-08T16:12:00.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+      });
+
+      const cancelResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'cancel-run',
+            runId: 'status_cancel_recovery',
+          },
+        }),
+      });
+      expect(cancelResponse.status).toBe(200);
+
+      const summaryResponse = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true`);
+      expect(summaryResponse.status).toBe(200);
+      const summaryPayload = (await summaryResponse.json()) as Record<string, any>;
+      expect(summaryPayload).toMatchObject({
+        recoverySummary: {
+          cancelledRunIds: ['status_cancel_recovery'],
+          cancellation: {
+            reasonsByRunId: {
+              status_cancel_recovery: 'run cancelled by service host operator control',
+            },
+            metrics: {
+              cancelledCount: 1,
+            },
+          },
+          metrics: {
+            cancelledCount: 1,
+          },
+        },
+      });
+
+      const detailResponse = await fetch(
+        `http://127.0.0.1:${server.port}/status/recovery/status_cancel_recovery`,
+      );
+      expect(detailResponse.status).toBe(200);
+      const detailPayload = (await detailResponse.json()) as Record<string, any>;
+      expect(detailPayload).toMatchObject({
+        detail: {
+          runId: 'status_cancel_recovery',
+          hostState: 'cancelled',
+          cancellation: {
+            cancelledAt: '2026-04-08T16:12:00.000Z',
+            source: 'operator',
+            reason: 'run cancelled by service host operator control',
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('falls back to run timestamps when HTTP recovery detail has no cancellation note event', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-run-cancel-fallback-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_cancel_recovery_fallback';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'cancelled',
+          createdAt: '2026-04-08T16:10:00.000Z',
+          updatedAt: '2026-04-08T16:13:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Read cancelled fallback detail.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'cancelled',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Read cancelled fallback detail.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-08T16:11:00.000Z',
+            completedAt: '2026-04-08T16:13:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'cancelled',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-08T16:13:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-08T16:10:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const detailResponse = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
+      expect(detailResponse.status).toBe(200);
+      const detailPayload = (await detailResponse.json()) as Record<string, any>;
+      expect(detailPayload).toMatchObject({
+        detail: {
+          runId,
+          hostState: 'cancelled',
+          cancellation: {
+            cancelledAt: '2026-04-08T16:13:00.000Z',
+            source: null,
+            reason: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects cancelling a run not owned by the local runner through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-run-cancel-reject-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_cancel_other_owner', '2026-04-08T16:10:00.000Z', 'Do not cancel.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const stepId = 'status_cancel_other_owner:step:1';
+      const record = await control.readRun('status_cancel_other_owner');
+      await control.persistRun({
+        runId: 'status_cancel_other_owner',
+        expectedRevision: record!.revision,
+        bundle: {
+          ...record!.bundle,
+          run: {
+            ...record!.bundle.run,
+            status: 'running',
+            updatedAt: '2026-04-08T16:12:00.000Z',
+          },
+          steps: record!.bundle.steps.map((step) =>
+            step.id === stepId
+              ? {
+                  ...step,
+                  status: 'running',
+                  startedAt: '2026-04-08T16:12:00.000Z',
+                }
+              : step,
+          ),
+        },
+      });
+      await control.acquireLease({
+        runId: 'status_cancel_other_owner',
+        leaseId: 'status_cancel_other_owner:lease:runner',
+        ownerId: 'runner:someone-else',
+        acquiredAt: '2026-04-08T16:12:00.000Z',
+        heartbeatAt: '2026-04-08T16:12:00.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+      });
+
+      const cancelResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'cancel-run',
+            runId: 'status_cancel_other_owner',
+          },
+        }),
+      });
+      expect(cancelResponse.status).toBe(409);
+      const cancelPayload = (await cancelResponse.json()) as Record<string, any>;
+      expect(cancelPayload).toMatchObject({
+        error: {
+          type: 'invalid_request_error',
+          message: expect.stringContaining('active lease is owned by runner:someone-else'),
+        },
+      });
+
+      const storedRecord = await control.readRun('status_cancel_other_owner');
+      expect(storedRecord?.bundle.run.status).toBe('running');
+      expect(storedRecord?.bundle.steps[0]?.status).toBe('running');
+      expect(storedRecord?.bundle.leases[0]?.status).toBe('active');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('returns recovery summary from status when requested', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-'));
     cleanup.push(homeDir);
@@ -211,22 +1829,120 @@ describe('http responses adapter', () => {
     const control = createExecutionRuntimeControl();
     await seedPlannedDirectRun(control, 'status_recovery_direct', '2026-04-08T16:00:00.000Z', 'Recover direct');
     await seedPlannedDirectRun(control, 'status_recovery_team', '2026-04-08T16:01:00.000Z', 'Recover team', 'team-run');
+    await seedPlannedDirectRun(control, 'status_busy_direct', '2026-04-08T16:02:00.000Z', 'Busy direct');
+    await control.acquireLease({
+      runId: 'status_busy_direct',
+      leaseId: 'status_busy_direct:lease:busy',
+      ownerId: 'runner:missing',
+      acquiredAt: '2026-04-08T16:02:00.000Z',
+      heartbeatAt: '2026-04-08T16:02:00.000Z',
+      expiresAt: '2026-04-08T16:10:00.000Z',
+    });
 
-    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
 
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=1`);
       expect(response.status).toBe(200);
       const payload = (await response.json()) as Record<string, unknown>;
       expect(payload).toMatchObject({
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastHeartbeatAt: expect.any(String),
+          expiresAt: expect.any(String),
+          lastActivityAt: null,
+          lastClaimedRunId: null,
+        },
+        backgroundDrain: {
+          enabled: false,
+          intervalMs: null,
+          state: 'disabled',
+          paused: false,
+          lastTrigger: null,
+          lastStartedAt: null,
+          lastCompletedAt: null,
+        },
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+          selectedRunIds: ['status_recovery_direct', 'status_busy_direct'],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: [],
+          reasonsByRunId: {},
+          metrics: {
+            selectedCount: 2,
+            blockedCount: 0,
+            notReadyCount: 0,
+            unavailableCount: 0,
+          },
+        },
         recoverySummary: {
-          totalRuns: 1,
-          reclaimableRunIds: ['status_recovery_direct'],
+          totalRuns: 2,
+          reclaimableRunIds: ['status_recovery_direct', 'status_busy_direct'],
           activeLeaseRunIds: [],
+          recoverableStrandedRunIds: [],
           strandedRunIds: [],
           idleRunIds: [],
+          localClaim: {
+            runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+            selectedRunIds: ['status_recovery_direct', 'status_busy_direct'],
+            blockedRunIds: [],
+            notReadyRunIds: [],
+            unavailableRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              selectedCount: 2,
+              blockedCount: 0,
+              notReadyCount: 0,
+              unavailableCount: 0,
+            },
+          },
+          leaseRepair: {
+            locallyReclaimableRunIds: ['status_busy_direct'],
+            inspectOnlyRunIds: [],
+            notReclaimableRunIds: [],
+            repairedRunIds: ['status_busy_direct'],
+            reasonsByRunId: {
+              status_busy_direct: 'active lease owner is unavailable and the lease is expired',
+            },
+            metrics: {
+              locallyReclaimableCount: 1,
+              inspectOnlyCount: 0,
+              notReclaimableCount: 0,
+              repairedCount: 1,
+            },
+          },
+          attention: {
+            staleHeartbeatInspectOnlyRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              staleHeartbeatInspectOnlyCount: 0,
+            },
+          },
+          metrics: {
+            reclaimableCount: 2,
+            activeLeaseCount: 0,
+            recoverableStrandedCount: 0,
+            strandedCount: 0,
+            idleCount: 0,
+            actionableCount: 2,
+            nonExecutableCount: 0,
+          },
         },
       });
+      expect(payload).not.toHaveProperty('recoverySummary.taskRunSpecId');
+      expect(payload).not.toHaveProperty('recoverySummary.orchestrationTimelineSummary');
+      expect(payload).not.toHaveProperty('recoverySummary.handoffTransferSummary');
+      expect(payload).not.toHaveProperty('recoverySummary.leaseHealth');
 
       const teamResponse = await fetch(
         `http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=team-run`,
@@ -234,27 +1950,1344 @@ describe('http responses adapter', () => {
       expect(teamResponse.status).toBe(200);
       const teamPayload = (await teamResponse.json()) as Record<string, unknown>;
       expect(teamPayload).toMatchObject({
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastHeartbeatAt: expect.any(String),
+          expiresAt: expect.any(String),
+          lastActivityAt: null,
+          lastClaimedRunId: null,
+        },
+        backgroundDrain: {
+          enabled: false,
+          intervalMs: null,
+          state: 'disabled',
+          paused: false,
+          lastTrigger: null,
+          lastStartedAt: null,
+          lastCompletedAt: null,
+        },
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+          selectedRunIds: ['status_recovery_direct', 'status_busy_direct'],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: [],
+          reasonsByRunId: {},
+          metrics: {
+            selectedCount: 2,
+            blockedCount: 0,
+            notReadyCount: 0,
+            unavailableCount: 0,
+          },
+        },
         recoverySummary: {
           totalRuns: 1,
           reclaimableRunIds: ['status_recovery_team'],
           activeLeaseRunIds: [],
+          recoverableStrandedRunIds: [],
           strandedRunIds: [],
           idleRunIds: [],
+          localClaim: {
+            runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+            selectedRunIds: ['status_recovery_team'],
+            blockedRunIds: [],
+            notReadyRunIds: [],
+            unavailableRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              selectedCount: 1,
+              blockedCount: 0,
+              notReadyCount: 0,
+              unavailableCount: 0,
+            },
+          },
+          leaseRepair: {
+            locallyReclaimableRunIds: [],
+            inspectOnlyRunIds: [],
+            notReclaimableRunIds: [],
+            repairedRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              locallyReclaimableCount: 0,
+              inspectOnlyCount: 0,
+              notReclaimableCount: 0,
+              repairedCount: 0,
+            },
+          },
+          attention: {
+            staleHeartbeatInspectOnlyRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              staleHeartbeatInspectOnlyCount: 0,
+            },
+          },
+          metrics: {
+            reclaimableCount: 1,
+            activeLeaseCount: 0,
+            recoverableStrandedCount: 0,
+            strandedCount: 0,
+            idleCount: 0,
+            actionableCount: 1,
+            nonExecutableCount: 0,
+          },
         },
       });
+      expect(teamPayload).not.toHaveProperty('recoverySummary.taskRunSpecId');
+      expect(teamPayload).not.toHaveProperty('recoverySummary.orchestrationTimelineSummary');
+      expect(teamPayload).not.toHaveProperty('recoverySummary.handoffTransferSummary');
+      expect(teamPayload).not.toHaveProperty('recoverySummary.leaseHealth');
 
       const allResponse = await fetch(`http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=all`);
       expect(allResponse.status).toBe(200);
       const allPayload = (await allResponse.json()) as Record<string, unknown>;
       expect(allPayload).toMatchObject({
+        runner: {
+          id: `runner:http-responses:127.0.0.1:${server.port}`,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+          lastHeartbeatAt: expect.any(String),
+          expiresAt: expect.any(String),
+          lastActivityAt: null,
+          lastClaimedRunId: null,
+        },
+        backgroundDrain: {
+          enabled: false,
+          intervalMs: null,
+          state: 'disabled',
+          paused: false,
+          lastTrigger: null,
+          lastStartedAt: null,
+          lastCompletedAt: null,
+        },
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+          selectedRunIds: ['status_recovery_direct', 'status_busy_direct'],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: [],
+          reasonsByRunId: {},
+          metrics: {
+            selectedCount: 2,
+            blockedCount: 0,
+            notReadyCount: 0,
+            unavailableCount: 0,
+          },
+        },
         recoverySummary: {
-          totalRuns: 2,
-          reclaimableRunIds: ['status_recovery_direct', 'status_recovery_team'],
+          totalRuns: 3,
+          reclaimableRunIds: ['status_recovery_direct', 'status_recovery_team', 'status_busy_direct'],
           activeLeaseRunIds: [],
+          recoverableStrandedRunIds: [],
           strandedRunIds: [],
           idleRunIds: [],
+          localClaim: {
+            runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+            selectedRunIds: ['status_recovery_direct', 'status_recovery_team', 'status_busy_direct'],
+            blockedRunIds: [],
+            notReadyRunIds: [],
+            unavailableRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              selectedCount: 3,
+              blockedCount: 0,
+              notReadyCount: 0,
+              unavailableCount: 0,
+            },
+          },
+          leaseRepair: {
+            locallyReclaimableRunIds: [],
+            inspectOnlyRunIds: [],
+            notReclaimableRunIds: [],
+            repairedRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              locallyReclaimableCount: 0,
+              inspectOnlyCount: 0,
+              notReclaimableCount: 0,
+              repairedCount: 0,
+            },
+          },
+          attention: {
+            staleHeartbeatInspectOnlyRunIds: [],
+            reasonsByRunId: {},
+            metrics: {
+              staleHeartbeatInspectOnlyCount: 0,
+            },
+          },
+          metrics: {
+            reclaimableCount: 3,
+            activeLeaseCount: 0,
+            recoverableStrandedCount: 0,
+            strandedCount: 0,
+            idleCount: 0,
+            actionableCount: 3,
+            nonExecutableCount: 0,
+          },
         },
       });
+      expect(allPayload).not.toHaveProperty('recoverySummary.taskRunSpecId');
+      expect(allPayload).not.toHaveProperty('recoverySummary.orchestrationTimelineSummary');
+      expect(allPayload).not.toHaveProperty('recoverySummary.handoffTransferSummary');
+      expect(allPayload).not.toHaveProperty('recoverySummary.leaseHealth');
+      expect(allPayload).not.toHaveProperty('localClaimSummary.taskRunSpecId');
+      expect(allPayload).not.toHaveProperty('localClaimSummary.orchestrationTimelineSummary');
+      expect(allPayload).not.toHaveProperty('localClaimSummary.handoffTransferSummary');
+      expect(allPayload).not.toHaveProperty('localClaimSummary.leaseHealth');
+      expect(allPayload).not.toHaveProperty('runner.taskRunSpecId');
+      expect(allPayload).not.toHaveProperty('runner.orchestrationTimelineSummary');
+      expect(allPayload).not.toHaveProperty('backgroundDrain.taskRunSpecId');
+      expect(allPayload).not.toHaveProperty('backgroundDrain.orchestrationTimelineSummary');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports compact active-lease health aggregates through the recovery summary surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-active-lease-health-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_active_stale', '2026-04-08T16:10:00.000Z', 'Inspect active lease');
+    await control.acquireLease({
+      runId: 'status_active_stale',
+      leaseId: 'status_active_stale:lease:busy',
+      ownerId: 'runner:missing',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:10:00.000Z',
+      expiresAt: '2026-04-08T16:20:00.000Z',
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch('http://127.0.0.1:' + server.port + '/status?recovery=true');
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        recoverySummary: {
+          totalRuns: 1,
+          reclaimableRunIds: [],
+          activeLeaseRunIds: ['status_active_stale'],
+          recoverableStrandedRunIds: [],
+          strandedRunIds: [],
+          idleRunIds: [],
+          activeLeaseHealth: {
+            freshRunIds: [],
+            staleHeartbeatRunIds: ['status_active_stale'],
+            suspiciousIdleRunIds: [],
+            reasonsByRunId: {
+              status_active_stale: 'lease owner runner:missing has no persisted runner record',
+            },
+            metrics: {
+              freshCount: 0,
+              staleHeartbeatCount: 1,
+              suspiciousIdleCount: 0,
+            },
+          },
+          leaseRepair: {
+            locallyReclaimableRunIds: [],
+            inspectOnlyRunIds: ['status_active_stale'],
+            notReclaimableRunIds: [],
+            repairedRunIds: [],
+            reasonsByRunId: {
+              status_active_stale: 'active lease owner is unavailable but the lease has not expired yet',
+            },
+            metrics: {
+              locallyReclaimableCount: 0,
+              inspectOnlyCount: 1,
+              notReclaimableCount: 0,
+              repairedCount: 0,
+            },
+          },
+          attention: {
+            staleHeartbeatInspectOnlyRunIds: ['status_active_stale'],
+            reasonsByRunId: {
+              status_active_stale: 'active lease owner is unavailable but the lease has not expired yet',
+            },
+            metrics: {
+              staleHeartbeatInspectOnlyCount: 1,
+            },
+          },
+          metrics: {
+            reclaimableCount: 0,
+            activeLeaseCount: 1,
+            recoverableStrandedCount: 0,
+            strandedCount: 0,
+            idleCount: 0,
+            actionableCount: 0,
+            nonExecutableCount: 1,
+          },
+        },
+      });
+      expect(payload).not.toHaveProperty('recoverySummary.taskRunSpecId');
+      expect(payload).not.toHaveProperty('recoverySummary.orchestrationTimelineSummary');
+      expect(payload).not.toHaveProperty('recoverySummary.handoffTransferSummary');
+      expect(payload).not.toHaveProperty('recoverySummary.leaseHealth');
+    } finally {
+      await server.close();
+    }
+  });
+  it('returns bounded recovery detail for one run through a separate status route', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_detail_busy', '2026-04-08T16:10:00.000Z', 'Inspect busy');
+    await control.acquireLease({
+      runId: 'status_detail_busy',
+      leaseId: 'status_detail_busy:lease:busy',
+      ownerId: 'runner:missing',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:10:00.000Z',
+      expiresAt: '2026-04-08T16:20:00.000Z',
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_detail_busy`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId: 'status_detail_busy',
+          sourceKind: 'direct',
+          taskRunSpecId: null,
+          hostState: 'active-lease',
+          activeLease: {
+            leaseId: 'status_detail_busy:lease:busy',
+            ownerId: 'runner:missing',
+            expiresAt: '2026-04-08T16:20:00.000Z',
+          },
+          dispatch: {
+            nextRunnableStepId: 'status_detail_busy:step:1',
+            runningStepIds: [],
+          },
+          repair: {
+            posture: 'inspect-only',
+            reason: 'active lease owner is unavailable but the lease has not expired yet',
+            reconciliationStatus: 'missing-runner',
+            reconciliationReason: 'lease owner runner:missing has no persisted runner record',
+            leaseOwnerId: 'runner:missing',
+            leaseExpiresAt: '2026-04-08T16:20:00.000Z',
+          },
+          leaseHealth: {
+            status: 'stale-heartbeat',
+            reason: 'lease owner runner:missing has no persisted runner record',
+            leaseHeartbeatAt: '2026-04-08T16:10:00.000Z',
+            leaseExpiresAt: '2026-04-08T16:20:00.000Z',
+            runnerLastHeartbeatAt: null,
+            runnerLastActivityAt: null,
+          },
+          attention: {
+            needed: true,
+            kind: 'stale-heartbeat-inspect-only',
+            reason: 'active lease owner is unavailable but the lease has not expired yet',
+          },
+          localClaim: {
+            runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+            hostId: `host:http-responses:127.0.0.1:${server.port}`,
+            status: 'not-ready',
+            selected: false,
+            reason: 'run is held-by-lease',
+            queueState: 'active-lease',
+            claimState: 'held-by-lease',
+            affinityStatus: 'eligible',
+            affinityReason: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded team-run inspection by task run spec id over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-task-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const createdAt = '2026-04-14T16:00:00.000Z';
+    const runId = 'teamrun_http_inspect_task_1';
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_http_inspect_1',
+      teamId: 'auracall-solo',
+      title: 'Inspect HTTP task',
+      objective: 'Reply exactly with OK.',
+      successCriteria: ['Reply exactly with OK.'],
+      requestedOutputs: [
+        {
+          kind: 'final-response',
+          label: 'final-response',
+          format: 'markdown',
+          required: true,
+          destination: 'response-body',
+        },
+      ],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt,
+    });
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: runId,
+          taskRunSpecId: 'task_spec_http_inspect_1',
+          status: 'running',
+          createdAt,
+          updatedAt: '2026-04-14T16:05:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'auracall teams run',
+          entryPrompt: 'Inspect this team run.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: `${runId}:step:1`,
+            agentId: 'auracall-solo:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect this team run.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T16:01:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T16:05:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+    await control.acquireLease({
+      runId,
+      leaseId: `${runId}:lease:1`,
+      ownerId: 'host:http-inspect',
+      acquiredAt: '2026-04-14T16:01:00.000Z',
+      heartbeatAt: '2026-04-14T16:05:00.000Z',
+      expiresAt: '2026-04-14T16:10:00.000Z',
+    });
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?taskRunSpecId=task_spec_http_inspect_1`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        inspection: {
+          resolvedBy: string;
+          taskRunSpecSummary: { id: string; teamId: string };
+          runtime: { runtimeRunId: string; runtimeRunStatus: string; activeLeaseOwnerId: string | null };
+        };
+      };
+      expect(payload).toMatchObject({
+        object: 'team_run_inspection',
+        inspection: {
+          resolvedBy: 'task-run-spec-id',
+          taskRunSpecSummary: {
+            id: 'task_spec_http_inspect_1',
+            teamId: 'auracall-solo',
+          },
+          runtime: {
+            runtimeRunId: runId,
+            runtimeRunStatus: 'running',
+            activeLeaseOwnerId: 'host:http-inspect',
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded team-run inspection by runtime run id over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-runtime-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const createdAt = '2026-04-14T16:00:00.000Z';
+    const runId = 'teamrun_http_inspect_runtime_1';
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_http_inspect_runtime_1',
+      teamId: 'auracall-two-step',
+      title: 'Inspect HTTP runtime',
+      objective: 'Finish both steps.',
+      successCriteria: ['Finish both steps.'],
+      requestedOutputs: [
+        {
+          kind: 'final-response',
+          label: 'final-response',
+          format: 'markdown',
+          required: true,
+          destination: 'response-body',
+        },
+      ],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt,
+    });
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: runId,
+          taskRunSpecId: 'task_spec_http_inspect_runtime_1',
+          status: 'succeeded',
+          createdAt,
+          updatedAt: '2026-04-14T16:06:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'auracall teams run',
+          entryPrompt: 'Inspect runtime run.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: `${runId}:step:1`,
+            agentId: 'auracall-two-step:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect runtime run.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            completedAt: '2026-04-14T16:06:00.000Z',
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T16:06:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?runtimeRunId=${runId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          taskRunSpecSummary: { id: string };
+          runtime: { runtimeRunId: string; runtimeRunStatus: string; sharedStateStatus: string };
+        };
+      };
+      expect(payload.inspection).toMatchObject({
+        resolvedBy: 'runtime-run-id',
+        queryId: runId,
+        taskRunSpecSummary: {
+          id: 'task_spec_http_inspect_runtime_1',
+        },
+        runtime: {
+          runtimeRunId: runId,
+          runtimeRunStatus: 'succeeded',
+          sharedStateStatus: 'succeeded',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects invalid team-run inspection query shape over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-invalid-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs/inspect`);
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: { type: string; message: string } };
+      expect(payload.error.type).toBe('invalid_request_error');
+      expect(payload.error.message).toContain('--task-run-spec-id or --runtime-run-id');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces taskRunSpecId on recovery detail for stored team-run-backed runs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_detail_taskrun_1';
+    const stepId = `${runId}:step:1`;
+
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_detail_1',
+      teamId: 'team_template_detail_1',
+      title: 'Inspect persisted recovery task spec',
+      objective: 'Verify recovery detail can surface persisted task spec linkage.',
+      successCriteria: [],
+      requestedOutputs: [
+        {
+          kind: 'final-response',
+          label: 'final answer',
+          format: 'markdown',
+          required: true,
+          destination: 'response-body',
+        },
+      ],
+      inputArtifacts: [
+        {
+          id: 'artifact_detail_1',
+          kind: 'file',
+          title: 'Recovery spec',
+          path: '/repo/recovery.md',
+          uri: null,
+          mediaType: null,
+          notes: [],
+          required: true,
+        },
+      ],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt: '2026-04-11T18:59:00.000Z',
+    });
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_recovery_task_1',
+          taskRunSpecId: 'task_spec_detail_1',
+          status: 'planned',
+          createdAt: '2026-04-11T19:00:00.000Z',
+          updatedAt: '2026-04-11T19:00:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Inspect task-aware recovery detail.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            sourceStepId: 'team_run_recovery_task_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect task-aware recovery detail.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: null,
+            startedAt: null,
+            completedAt: null,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T19:00:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T19:00:00.000Z',
+            note: 'projected from task-aware team-run bundle',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T19:05:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId,
+          sourceKind: 'team-run',
+          taskRunSpecId: 'task_spec_detail_1',
+          taskRunSpecSummary: {
+            id: 'task_spec_detail_1',
+            teamId: 'team_template_detail_1',
+            title: 'Inspect persisted recovery task spec',
+            objective: 'Verify recovery detail can surface persisted task spec linkage.',
+            createdAt: '2026-04-11T18:59:00.000Z',
+            persistedAt: '2026-04-11T18:59:00.000Z',
+            requestedOutputCount: 1,
+            inputArtifactCount: 1,
+          },
+          handoffTransferSummary: null,
+          hostState: 'runnable',
+          dispatch: {
+            nextRunnableStepId: `${runId}:step:1`,
+            runningStepIds: [],
+          },
+        },
+      });
+      const detail = (payload as { detail: Record<string, unknown> }).detail;
+      expect(detail).not.toHaveProperty('runtimeProfile');
+      expect(detail).not.toHaveProperty('service');
+      expect(detail).not.toHaveProperty('stepSummaries');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded handoff-transfer summary on recovery detail for stored team-run-backed runs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_detail_handoff_transfer_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_recovery_handoff_http_1',
+          taskRunSpecId: 'task_spec_detail_handoff_1',
+          status: 'planned',
+          createdAt: '2026-04-12T17:10:00.000Z',
+          updatedAt: '2026-04-12T17:10:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Inspect task-aware recovery detail.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: 'team_run_recovery_handoff_http_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Prepare the transfer.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'prepared',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T17:10:10.000Z',
+            completedAt: '2026-04-12T17:10:30.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: 'team_run_recovery_handoff_http_1:step:2',
+            agentId: 'engineer',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'runnable',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Consume the transfer.',
+              handoffIds: [`${runId}:handoff:${stepTwoId}:1`],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: null,
+            startedAt: null,
+            completedAt: null,
+          }),
+        ],
+        handoffs: [
+          {
+            id: `${runId}:handoff:${stepTwoId}:1`,
+            teamRunId: runId,
+            fromStepId: stepOneId,
+            toStepId: stepTwoId,
+            fromAgentId: 'orchestrator',
+            toAgentId: 'engineer',
+            summary: `Planned handoff for ${runId}`,
+            artifacts: [],
+            structuredData: {
+              taskRunSpecId: 'task_spec_detail_handoff_1',
+              toRoleId: null,
+              taskTransfer: {
+                title: 'Drive dependency handoff transfer',
+                objective: 'Ensure the next step gets bounded transfer context.',
+                successCriteria: ['transfer consumed'],
+                requestedOutputs: [
+                  {
+                    label: 'handoff brief',
+                    kind: 'structured-report',
+                    destination: 'handoff',
+                    required: true,
+                  },
+                ],
+                inputArtifacts: [
+                  {
+                    id: 'artifact-spec',
+                    kind: 'file',
+                    title: 'Spec',
+                    path: '/repo/spec.md',
+                    uri: null,
+                  },
+                ],
+              },
+            },
+            notes: ['planned handoff derived from team step dependencies'],
+            status: 'prepared',
+            createdAt: '2026-04-12T17:10:30.000Z',
+          },
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `step.consumedTaskTransfers.${stepTwoId}`,
+              value: {
+                ownerStepId: stepTwoId,
+                generatedAt: '2026-04-12T17:10:00.000Z',
+                total: 1,
+                items: [
+                  {
+                    handoffId: `${runId}:handoff:${stepTwoId}:1`,
+                    fromStepId: stepOneId,
+                    fromAgentId: 'orchestrator',
+                    title: 'Stored HTTP recovery transfer title',
+                    objective: 'Stored consumed state should drive HTTP recovery-detail readback.',
+                    requestedOutputCount: 6,
+                    inputArtifactCount: 2,
+                  },
+                ],
+              },
+            },
+          ],
+          notes: [],
+          history: [
+            createExecutionRunEvent({
+              id: `${runId}:event:${stepOneId}:started`,
+              runId,
+              stepId: stepOneId,
+              type: 'step-started',
+              createdAt: '2026-04-12T17:10:05.000Z',
+              note: 'http source step started',
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:${stepOneId}:completed`,
+              runId,
+              stepId: stepOneId,
+              type: 'step-succeeded',
+              createdAt: '2026-04-12T17:10:30.000Z',
+              note: 'http source step completed',
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:${stepTwoId}:handoff-consumed`,
+              runId,
+              stepId: stepTwoId,
+              type: 'handoff-consumed',
+              createdAt: '2026-04-12T17:10:45.000Z',
+              note: 'http handoff consumed by downstream step',
+              payload: {
+                handoffId: `${runId}:handoff:${stepTwoId}:1`,
+              },
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:operator-note`,
+              runId,
+              type: 'note-added',
+              createdAt: '2026-04-12T17:11:00.000Z',
+              note: 'http targeted drain note',
+              payload: {
+                source: 'operator',
+                action: 'drain-run',
+              },
+            }),
+          ],
+          lastUpdatedAt: '2026-04-12T17:10:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T17:10:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T17:15:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId,
+          sourceKind: 'team-run',
+          taskRunSpecId: 'task_spec_detail_handoff_1',
+          orchestrationTimelineSummary: {
+            total: 4,
+            items: [
+              {
+                type: 'step-started',
+                createdAt: '2026-04-12T17:10:05.000Z',
+                stepId: stepOneId,
+                note: 'http source step started',
+                handoffId: null,
+              },
+              {
+                type: 'step-succeeded',
+                createdAt: '2026-04-12T17:10:30.000Z',
+                stepId: stepOneId,
+                note: 'http source step completed',
+                handoffId: null,
+              },
+              {
+                type: 'handoff-consumed',
+                createdAt: '2026-04-12T17:10:45.000Z',
+                stepId: stepTwoId,
+                note: 'http handoff consumed by downstream step',
+                handoffId: `${runId}:handoff:${stepTwoId}:1`,
+              },
+              {
+                type: 'note-added',
+                createdAt: '2026-04-12T17:11:00.000Z',
+                stepId: null,
+                note: 'http targeted drain note',
+                handoffId: null,
+              },
+            ],
+          },
+          handoffTransferSummary: {
+            total: 1,
+            items: [
+              {
+                handoffId: `${runId}:handoff:${stepTwoId}:1`,
+                fromStepId: stepOneId,
+                fromAgentId: 'orchestrator',
+                title: 'Stored HTTP recovery transfer title',
+                objective: 'Stored consumed state should drive HTTP recovery-detail readback.',
+                requestedOutputCount: 6,
+                inputArtifactCount: 2,
+              },
+            ],
+          },
+          hostState: 'runnable',
+          dispatch: {
+            nextRunnableStepId: stepTwoId,
+            runningStepIds: [],
+          },
+        },
+      });
+      const detail = (payload as { detail: Record<string, unknown> }).detail;
+      expect(detail).not.toHaveProperty('runtimeProfile');
+      expect(detail).not.toHaveProperty('service');
+      expect(detail).not.toHaveProperty('stepSummaries');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('falls back to planned handoff transfer data on HTTP recovery detail when no stored consumed summary exists', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_detail_handoff_transfer_fallback_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_recovery_handoff_http_fallback_1',
+          taskRunSpecId: 'task_spec_detail_handoff_fallback_1',
+          status: 'planned',
+          createdAt: '2026-04-14T08:30:00.000Z',
+          updatedAt: '2026-04-14T08:30:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Inspect planned handoff fallback HTTP recovery detail.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: 'team_run_recovery_handoff_http_fallback_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Prepare the transfer.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'prepared',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T08:30:10.000Z',
+            completedAt: '2026-04-14T08:30:30.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: 'team_run_recovery_handoff_http_fallback_1:step:2',
+            agentId: 'engineer',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'runnable',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Consume the fallback transfer.',
+              handoffIds: [`${runId}:handoff:${stepTwoId}:1`],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: null,
+            startedAt: null,
+            completedAt: null,
+          }),
+        ],
+        handoffs: [
+          {
+            id: `${runId}:handoff:${stepTwoId}:1`,
+            teamRunId: runId,
+            fromStepId: stepOneId,
+            toStepId: stepTwoId,
+            fromAgentId: 'orchestrator',
+            toAgentId: 'engineer',
+            summary: `Planned HTTP fallback handoff for ${runId}`,
+            artifacts: [],
+            structuredData: {
+              taskRunSpecId: 'task_spec_detail_handoff_fallback_1',
+              toRoleId: null,
+              taskTransfer: {
+                title: 'Planned HTTP recovery fallback transfer title',
+                objective: 'Use planned transfer data when no stored consumed summary exists.',
+                successCriteria: ['fallback transfer available'],
+                requestedOutputs: [
+                  {
+                    label: 'planned http handoff brief',
+                    kind: 'structured-report',
+                    destination: 'handoff',
+                    required: true,
+                  },
+                ],
+                inputArtifacts: [
+                  {
+                    id: 'artifact-http-planned',
+                    kind: 'file',
+                    title: 'Planned HTTP Spec',
+                    path: '/repo/http-planned-spec.md',
+                    uri: null,
+                  },
+                ],
+              },
+            },
+            notes: ['planned handoff derived from team step dependencies'],
+            status: 'prepared',
+            createdAt: '2026-04-14T08:30:30.000Z',
+          },
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T08:30:30.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-14T08:30:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-14T08:35:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId,
+          sourceKind: 'team-run',
+          handoffTransferSummary: {
+            total: 1,
+            items: [
+              {
+                handoffId: `${runId}:handoff:${stepTwoId}:1`,
+                fromStepId: stepOneId,
+                fromAgentId: 'orchestrator',
+                title: 'Planned HTTP recovery fallback transfer title',
+                objective: 'Use planned transfer data when no stored consumed summary exists.',
+                requestedOutputCount: 1,
+                inputArtifactCount: 1,
+              },
+            ],
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns 404 for missing recovery detail', async () => {
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/missing_run`);
+      expect(response.status).toBe(404);
+      const payload = (await response.json()) as { error: { message: string } };
+      expect(payload.error.message).toContain('Recovery detail for run missing_run was not found');
     } finally {
       await server.close();
     }
@@ -319,14 +3352,1117 @@ describe('http responses adapter', () => {
         },
       });
 
+      await delay(100);
       const readBack = await fetch(`http://127.0.0.1:${server.port}/v1/responses/resp_headers_1`);
       const reread = (await readBack.json()) as Record<string, unknown>;
       expect(reread).toMatchObject({
         id: 'resp_headers_1',
-        status: 'completed',
         metadata: {
           runtimeProfile: 'review',
           service: 'grok',
+        },
+      });
+      expect(['in_progress', 'completed', 'failed']).toContain(reread.status);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces taskRunSpecId on HTTP response readback for stored team-run-backed records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_team_task_1';
+    const stepId = `${runId}:step:1`;
+
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_http_1',
+      teamId: 'team_template_http_1',
+      title: 'Inspect persisted HTTP task spec',
+      objective: 'Verify HTTP response readback can surface persisted task spec linkage.',
+      successCriteria: [],
+      requestedOutputs: [],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt: '2026-04-11T18:09:00.000Z',
+    });
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_task_1',
+          taskRunSpecId: 'task_spec_http_1',
+          status: 'succeeded',
+          createdAt: '2026-04-11T18:10:00.000Z',
+          updatedAt: '2026-04-11T18:11:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Complete the task-aware team run.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            sourceStepId: 'team_run_http_task_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Complete the task-aware team run.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T18:10:10.000Z',
+            completedAt: '2026-04-11T18:11:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T18:11:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T18:10:00.000Z',
+            note: 'projected from task-aware team-run bundle',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T18:12:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          runId,
+          taskRunSpecId: 'task_spec_http_1',
+          taskRunSpecSummary: {
+            id: 'task_spec_http_1',
+            teamId: 'team_template_http_1',
+            title: 'Inspect persisted HTTP task spec',
+            objective: 'Verify HTTP response readback can surface persisted task spec linkage.',
+            createdAt: '2026-04-11T18:09:00.000Z',
+            persistedAt: '2026-04-11T18:09:00.000Z',
+            requestedOutputCount: 0,
+            inputArtifactCount: 0,
+          },
+          runtimeProfile: 'default',
+          service: 'chatgpt',
+          executionSummary: {
+            stepSummaries: [
+              {
+                stepId,
+                order: 1,
+                agentId: 'orchestrator',
+                status: 'succeeded',
+                runtimeProfileId: 'default',
+                browserProfileId: null,
+                service: 'chatgpt',
+              },
+            ],
+          },
+        },
+      });
+      expect(payload).not.toHaveProperty('metadata.executionSummary.activeLease');
+      expect(payload).not.toHaveProperty('metadata.executionSummary.dispatch');
+      expect(payload).not.toHaveProperty('metadata.executionSummary.repair');
+      expect(payload).not.toHaveProperty('metadata.executionSummary.leaseHealth');
+      expect(payload).not.toHaveProperty('metadata.executionSummary.localClaim');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded per-step routing summary on HTTP response readback for mixed-provider team-run-backed records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_step_summary_1';
+    const plannerStepId = `${runId}:step:1`;
+    const finisherStepId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_step_summary_1',
+          taskRunSpecId: 'task_spec_http_step_summary_1',
+          status: 'succeeded',
+          createdAt: '2026-04-13T20:20:00.000Z',
+          updatedAt: '2026-04-13T20:21:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Route planner to finisher.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'wsl-chrome-2',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [plannerStepId, finisherStepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: plannerStepId,
+            runId,
+            sourceStepId: 'team_run_http_step_summary_1:step:1',
+            agentId: 'planner',
+            runtimeProfileId: 'wsl-chrome-2',
+            browserProfileId: 'wsl-chrome-2',
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Plan.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'planned',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-13T20:20:05.000Z',
+            completedAt: '2026-04-13T20:20:20.000Z',
+          }),
+          createExecutionRunStep({
+            id: finisherStepId,
+            runId,
+            sourceStepId: 'team_run_http_step_summary_1:step:2',
+            agentId: 'finisher',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [plannerStepId],
+            input: {
+              prompt: 'Finish.',
+              handoffIds: ['handoff:1'],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'finished',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-13T20:20:25.000Z',
+            completedAt: '2026-04-13T20:21:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-13T20:21:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-13T20:21:30.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          runId,
+          taskRunSpecId: 'task_spec_http_step_summary_1',
+          runtimeProfile: 'wsl-chrome-2',
+          service: 'chatgpt',
+          executionSummary: {
+            stepSummaries: [
+              {
+                stepId: plannerStepId,
+                order: 1,
+                agentId: 'planner',
+                status: 'succeeded',
+                runtimeProfileId: 'wsl-chrome-2',
+                browserProfileId: 'wsl-chrome-2',
+                service: 'chatgpt',
+              },
+              {
+                stepId: finisherStepId,
+                order: 2,
+                agentId: 'finisher',
+                status: 'succeeded',
+                runtimeProfileId: 'auracall-grok-auto',
+                browserProfileId: 'default',
+                service: 'grok',
+              },
+            ],
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded input-artifact summary on HTTP response readback for stored team-run-backed records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_input_artifacts_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_input_artifacts_1',
+          taskRunSpecId: 'task_spec_http_input_artifacts_1',
+          status: 'succeeded',
+          createdAt: '2026-04-12T15:10:00.000Z',
+          updatedAt: '2026-04-12T15:11:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Use the supplied assignment artifacts.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            sourceStepId: 'team_run_http_input_artifacts_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Use the supplied assignment artifacts.',
+              handoffIds: [],
+              artifacts: [
+                {
+                  id: 'artifact-readme',
+                  kind: 'file',
+                  path: '/repo/README.md',
+                  title: 'README',
+                },
+                {
+                  id: 'artifact-spec',
+                  kind: 'url',
+                  uri: 'https://example.test/spec',
+                  title: 'Spec',
+                },
+              ],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T15:10:10.000Z',
+            completedAt: '2026-04-12T15:11:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-12T15:11:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T15:10:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T15:12:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            inputArtifactSummary: {
+              total: 2,
+              items: [
+                {
+                  id: 'artifact-readme',
+                  kind: 'file',
+                  title: 'README',
+                  path: '/repo/README.md',
+                  uri: null,
+                },
+                {
+                  id: 'artifact-spec',
+                  kind: 'url',
+                  title: 'Spec',
+                  path: null,
+                  uri: 'https://example.test/spec',
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers a failed step as the terminal HTTP readback step over later succeeded steps', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_terminal_failure_precedence_1';
+    const failedStepId = `${runId}:step:1`;
+    const laterSucceededStepId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_terminal_failure_precedence_1',
+          taskRunSpecId: 'task_spec_http_terminal_failure_precedence_1',
+          status: 'failed',
+          createdAt: '2026-04-14T07:55:00.000Z',
+          updatedAt: '2026-04-14T07:56:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Prefer the failed step as terminal readback state.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [failedStepId, laterSucceededStepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: failedStepId,
+            runId,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'failed',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'This step failed.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'planner failed',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            failure: {
+              code: 'planner_failed',
+              message: 'planner failed first',
+            },
+            startedAt: '2026-04-14T07:55:05.000Z',
+            completedAt: '2026-04-14T07:55:20.000Z',
+          }),
+          createExecutionRunStep({
+            id: laterSucceededStepId,
+            runId,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [failedStepId],
+            input: {
+              prompt: 'This step finished later.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'finisher succeeded later',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T07:55:30.000Z',
+            completedAt: '2026-04-14T07:56:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'failed',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T07:56:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-14T07:56:30.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'failed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: failedStepId,
+            completedAt: '2026-04-14T07:55:20.000Z',
+            failureSummary: {
+              code: 'planner_failed',
+              message: 'planner failed first',
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers the terminal step input-artifact summary on HTTP response readback', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_input_artifacts_terminal_precedence_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_input_artifacts_terminal_precedence_1',
+          taskRunSpecId: 'task_spec_http_input_artifacts_terminal_precedence_1',
+          status: 'succeeded',
+          createdAt: '2026-04-12T15:25:00.000Z',
+          updatedAt: '2026-04-12T15:26:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Use the terminal step artifacts.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Older step artifacts.',
+              handoffIds: [],
+              artifacts: [
+                {
+                  id: 'artifact-older',
+                  kind: 'file',
+                  path: '/repo/older.md',
+                  title: 'Older Artifact',
+                },
+              ],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'older step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T15:25:10.000Z',
+            completedAt: '2026-04-12T15:25:25.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Terminal step artifacts.',
+              handoffIds: [],
+              artifacts: [
+                {
+                  id: 'artifact-terminal',
+                  kind: 'url',
+                  uri: 'https://example.test/terminal',
+                  title: 'Terminal Artifact',
+                },
+              ],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'terminal step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T15:25:30.000Z',
+            completedAt: '2026-04-12T15:26:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-12T15:26:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T15:25:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T15:26:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: stepTwoId,
+            inputArtifactSummary: {
+              total: 1,
+              items: [
+                {
+                  id: 'artifact-terminal',
+                  kind: 'url',
+                  title: 'Terminal Artifact',
+                  path: null,
+                  uri: 'https://example.test/terminal',
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('falls back to the latest earlier step with input artifacts on HTTP response readback when the terminal step has none', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_input_artifacts_fallback_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_input_artifacts_fallback_1',
+          taskRunSpecId: 'task_spec_http_input_artifacts_fallback_1',
+          status: 'succeeded',
+          createdAt: '2026-04-14T08:15:00.000Z',
+          updatedAt: '2026-04-14T08:16:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Fall back to earlier input artifacts when terminal step has none.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Earlier step with artifacts.',
+              handoffIds: [],
+              artifacts: [
+                {
+                  id: 'artifact-fallback',
+                  kind: 'file',
+                  path: '/repo/fallback.md',
+                  title: 'Fallback Artifact',
+                },
+              ],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'earlier step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T08:15:10.000Z',
+            completedAt: '2026-04-14T08:15:25.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Terminal step with no artifacts.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'terminal step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T08:15:30.000Z',
+            completedAt: '2026-04-14T08:16:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T08:16:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-14T08:16:30.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: stepTwoId,
+            inputArtifactSummary: {
+              total: 1,
+              items: [
+                {
+                  id: 'artifact-fallback',
+                  kind: 'file',
+                  title: 'Fallback Artifact',
+                  path: '/repo/fallback.md',
+                  uri: null,
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded handoff-transfer summary on HTTP response readback for stored team-run-backed records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_http_handoff_transfer_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_http_handoff_transfer_1',
+          taskRunSpecId: 'task_spec_http_handoff_transfer_1',
+          status: 'succeeded',
+          createdAt: '2026-04-12T16:10:00.000Z',
+          updatedAt: '2026-04-12T16:11:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Consume the incoming handoff transfer.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: 'team_run_http_handoff_transfer_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Prepare the transfer.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'prepared',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T16:10:10.000Z',
+            completedAt: '2026-04-12T16:10:30.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: 'team_run_http_handoff_transfer_1:step:2',
+            agentId: 'engineer',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Consume the incoming handoff transfer.',
+              handoffIds: [`${runId}:handoff:${stepTwoId}:1`],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'consumed handoff transfer',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T16:10:40.000Z',
+            completedAt: '2026-04-12T16:11:00.000Z',
+          }),
+        ],
+        handoffs: [
+          {
+            id: `${runId}:handoff:${stepTwoId}:1`,
+            teamRunId: runId,
+            fromStepId: stepOneId,
+            toStepId: stepTwoId,
+            fromAgentId: 'orchestrator',
+            toAgentId: 'engineer',
+            summary: `Planned handoff for ${runId}`,
+            artifacts: [],
+            structuredData: {
+              taskRunSpecId: 'task_spec_http_handoff_transfer_1',
+              toRoleId: null,
+              taskTransfer: {
+                title: 'Drive dependency handoff transfer',
+                objective: 'Ensure the next step gets bounded transfer context.',
+                successCriteria: ['transfer consumed'],
+                requestedOutputs: [
+                  {
+                    label: 'handoff brief',
+                    kind: 'structured-report',
+                    destination: 'handoff',
+                    required: true,
+                  },
+                ],
+                inputArtifacts: [
+                  {
+                    id: 'artifact-spec',
+                    kind: 'file',
+                    title: 'Spec',
+                    path: '/repo/spec.md',
+                    uri: null,
+                  },
+                ],
+              },
+            },
+            notes: ['planned handoff derived from team step dependencies'],
+            status: 'prepared',
+            createdAt: '2026-04-12T16:10:30.000Z',
+          },
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-12T16:11:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T16:10:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            handoffTransferSummary: {
+              total: 1,
+              items: [
+                {
+                  handoffId: `${runId}:handoff:${stepTwoId}:1`,
+                  fromStepId: stepOneId,
+                  fromAgentId: 'orchestrator',
+                  title: 'Drive dependency handoff transfer',
+                  objective: 'Ensure the next step gets bounded transfer context.',
+                  requestedOutputCount: 1,
+                  inputArtifactCount: 1,
+                },
+              ],
+            },
+          },
         },
       });
     } finally {
@@ -413,6 +4549,2596 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('resolves a requested local action through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-local-action-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedRequestedLocalActionDirectRun(control, 'status_local_action_control', '2026-04-11T18:20:00.000Z');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T18:25:00.000Z'),
+      },
+    );
+
+    try {
+      const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localActionControl: {
+            action: 'resolve-request',
+            runId: 'status_local_action_control',
+            requestId: 'status_local_action_control:action:status_local_action_control:step:1:1',
+            resolution: 'approved',
+          },
+        }),
+      });
+      expect(resolveResponse.status).toBe(200);
+      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      expect(resolvePayload).toMatchObject({
+        controlResult: {
+          kind: 'local-action-control',
+          action: 'resolve-local-action-request',
+          runId: 'status_local_action_control',
+          requestId: 'status_local_action_control:action:status_local_action_control:step:1:1',
+          resolution: 'approved',
+          status: 'resolved',
+          resolved: true,
+          reason: 'local action approved by service host operator control',
+        },
+      });
+
+      const storedRecord = await control.readRun('status_local_action_control');
+      expect(storedRecord?.bundle.localActionRequests[0]).toMatchObject({
+        status: 'approved',
+        approvedAt: '2026-04-11T18:25:00.000Z',
+        completedAt: null,
+        resultSummary: 'local action approved by service host operator control',
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_local_action_control`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_local_action_control',
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            localActionSummary: {
+              ownerStepId: 'status_local_action_control:step:1',
+              generatedAt: '2026-04-11T18:25:00.000Z',
+              total: 1,
+              counts: {
+                requested: 0,
+                approved: 1,
+                rejected: 0,
+                executed: 0,
+                failed: 0,
+                cancelled: 0,
+              },
+              items: [
+                {
+                  requestId: 'status_local_action_control:action:status_local_action_control:step:1:1',
+                  kind: 'shell',
+                  status: 'approved',
+                  summary: 'Run bounded host verification later',
+                  command: 'pnpm',
+                  args: ['vitest', 'run'],
+                  resultSummary: 'local action approved by service host operator control',
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('resolves a requested team-run local action through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-team-local-action-control-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedRequestedLocalActionDirectRun(
+      control,
+      'status_team_local_action_control',
+      '2026-04-11T18:26:00.000Z',
+      'team-run',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T18:27:00.000Z'),
+      },
+    );
+
+    try {
+      const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localActionControl: {
+            action: 'resolve-request',
+            runId: 'status_team_local_action_control',
+            requestId: 'status_team_local_action_control:action:status_team_local_action_control:step:1:1',
+            resolution: 'rejected',
+          },
+        }),
+      });
+      expect(resolveResponse.status).toBe(200);
+      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      expect(resolvePayload).toMatchObject({
+        controlResult: {
+          kind: 'local-action-control',
+          action: 'resolve-local-action-request',
+          runId: 'status_team_local_action_control',
+          requestId: 'status_team_local_action_control:action:status_team_local_action_control:step:1:1',
+          resolution: 'rejected',
+          status: 'resolved',
+          resolved: true,
+          reason: 'local action rejected by service host operator control',
+        },
+      });
+
+      const storedRecord = await control.readRun('status_team_local_action_control');
+      expect(storedRecord?.bundle.run.sourceKind).toBe('team-run');
+      expect(storedRecord?.bundle.localActionRequests[0]).toMatchObject({
+        status: 'rejected',
+        approvedAt: null,
+        completedAt: '2026-04-11T18:27:00.000Z',
+        resultSummary: 'local action rejected by service host operator control',
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_team_local_action_control`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_team_local_action_control',
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            localActionSummary: {
+              ownerStepId: 'status_team_local_action_control:step:1',
+              generatedAt: '2026-04-11T18:27:00.000Z',
+              total: 1,
+              counts: {
+                requested: 0,
+                approved: 0,
+                rejected: 1,
+                executed: 0,
+                failed: 0,
+                cancelled: 0,
+              },
+              items: [
+                {
+                  requestId: 'status_team_local_action_control:action:status_team_local_action_control:step:1:1',
+                  kind: 'shell',
+                  status: 'rejected',
+                  summary: 'Run bounded host verification later',
+                  command: 'pnpm',
+                  args: ['vitest', 'run'],
+                  resultSummary: 'local action rejected by service host operator control',
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects resolving a local action request that is already resolved through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-local-action-control-reject-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedRequestedLocalActionDirectRun(control, 'status_local_action_control_reject', '2026-04-11T18:30:00.000Z');
+    const record = await control.readRun('status_local_action_control_reject');
+    await control.persistRun({
+      runId: 'status_local_action_control_reject',
+      expectedRevision: record!.revision,
+      bundle: {
+        ...record!.bundle,
+        run: {
+          ...record!.bundle.run,
+          updatedAt: '2026-04-11T18:31:00.000Z',
+        },
+        localActionRequests: [
+          {
+            ...record!.bundle.localActionRequests[0]!,
+            status: 'approved',
+            approvedAt: '2026-04-11T18:31:00.000Z',
+            resultSummary: 'approved shell for later execution',
+            resultPayload: { queued: true },
+          },
+        ],
+        sharedState: {
+          ...record!.bundle.sharedState,
+          structuredOutputs: [
+            {
+              key: 'step.localActionOutcomes.status_local_action_control_reject:step:1',
+              value: {
+                ownerStepId: 'status_local_action_control_reject:step:1',
+                generatedAt: '2026-04-11T18:31:00.000Z',
+                total: 1,
+                counts: {
+                  requested: 0,
+                  approved: 1,
+                  rejected: 0,
+                  executed: 0,
+                  failed: 0,
+                  cancelled: 0,
+                },
+                items: [
+                  {
+                    requestId: 'status_local_action_control_reject:action:status_local_action_control_reject:step:1:1',
+                    kind: 'shell',
+                    status: 'approved',
+                    summary: 'Run bounded host verification later',
+                    command: 'pnpm',
+                    args: ['vitest', 'run'],
+                    resultSummary: 'approved shell for later execution',
+                  },
+                ],
+              },
+            },
+          ],
+          lastUpdatedAt: '2026-04-11T18:31:00.000Z',
+        },
+      },
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T18:32:00.000Z'),
+      },
+    );
+
+    try {
+      const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localActionControl: {
+            action: 'resolve-request',
+            runId: 'status_local_action_control_reject',
+            requestId: 'status_local_action_control_reject:action:status_local_action_control_reject:step:1:1',
+            resolution: 'rejected',
+          },
+        }),
+      });
+      expect(resolveResponse.status).toBe(409);
+      const resolvePayload = (await resolveResponse.json()) as Record<string, any>;
+      expect(resolvePayload).toMatchObject({
+        error: {
+          type: 'invalid_request_error',
+          message: expect.stringContaining('is already approved'),
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('resumes a paused human-escalation run through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-human-resume-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      'status_resume_human',
+      '2026-04-11T19:20:00.000Z',
+      '2026-04-11T19:25:00.000Z',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T19:30:00.000Z'),
+      },
+    );
+
+    try {
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId: 'status_resume_human',
+            note: 'human approved resume',
+            guidance: {
+              action: 'retry-with-guidance',
+              instruction: 'continue with the approved path',
+            },
+            override: {
+              promptAppend: 'Retry the resumed step with the approved path.',
+              structuredContext: {
+                approvedPath: '/repo/approved',
+              },
+            },
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      expect(resumePayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'resume-human-escalation',
+          runId: 'status_resume_human',
+          status: 'resumed',
+          resumed: true,
+          reason: 'human approved resume',
+        },
+      });
+
+      const storedRecord = await control.readRun('status_resume_human');
+      expect(storedRecord?.bundle.run.status).toBe('running');
+      expect(storedRecord?.bundle.sharedState.status).toBe('active');
+      expect(storedRecord?.bundle.steps[1]).toMatchObject({
+        id: 'status_resume_human:step:2',
+        status: 'runnable',
+        completedAt: null,
+        output: null,
+        failure: null,
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_resume_human`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_resume_human',
+        status: 'in_progress',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects resuming a run without paused human escalation through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-human-resume-reject-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'status_resume_human_reject', '2026-04-11T19:35:00.000Z', 'Not paused.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T19:36:00.000Z'),
+      },
+    );
+
+    try {
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId: 'status_resume_human_reject',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(409);
+      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      expect(resumePayload).toMatchObject({
+        error: {
+          type: 'invalid_request_error',
+          message: expect.stringContaining('has no cancelled human-escalation step to resume'),
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('drains one resumed direct run through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-drain-run-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      'status_drain_run',
+      '2026-04-11T19:40:00.000Z',
+      '2026-04-11T19:45:00.000Z',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T19:50:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'resumed step completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId: 'status_drain_run',
+            note: 'human approved resume',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+
+      const drainResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'drain-run',
+            runId: 'status_drain_run',
+          },
+        }),
+      });
+      expect(drainResponse.status).toBe(200);
+      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      expect(drainPayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'drain-run',
+          runId: 'status_drain_run',
+          status: 'executed',
+          drained: true,
+          reason: 'run executed through targeted host drain',
+          skipReason: null,
+        },
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_drain_run`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_drain_run',
+        status: 'completed',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('resumes and drains one paused team run through the same POST /status controls', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-team-drain-run-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      'status_team_drain_run',
+      '2026-04-12T22:30:00.000Z',
+      '2026-04-12T22:35:00.000Z',
+      'team-run',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T22:40:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'resumed team step completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId: 'status_team_drain_run',
+            note: 'human approved team resume',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+      const resumePayload = (await resumeResponse.json()) as Record<string, any>;
+      expect(resumePayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'resume-human-escalation',
+          runId: 'status_team_drain_run',
+          status: 'resumed',
+          resumed: true,
+          reason: 'human approved team resume',
+        },
+      });
+
+      const drainResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'drain-run',
+            runId: 'status_team_drain_run',
+          },
+        }),
+      });
+      expect(drainResponse.status).toBe(200);
+      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      expect(drainPayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'drain-run',
+          runId: 'status_team_drain_run',
+          status: 'executed',
+          drained: true,
+          reason: 'run executed through targeted host drain',
+          skipReason: null,
+        },
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_team_drain_run`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_team_drain_run',
+        status: 'completed',
+        metadata: {
+          runId: 'status_team_drain_run',
+          executionSummary: {
+            operatorControlSummary: {
+              humanEscalationResume: {
+                resumedAt: '2026-04-12T22:40:00.000Z',
+                note: 'human approved team resume',
+              },
+              targetedDrain: {
+                requestedAt: '2026-04-12T22:40:00.000Z',
+                status: 'executed',
+                reason: 'run executed through targeted host drain',
+                skipReason: null,
+              },
+            },
+          },
+        },
+      });
+
+      const recoveryResponse = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_team_drain_run`);
+      expect(recoveryResponse.status).toBe(200);
+      const recoveryPayload = (await recoveryResponse.json()) as Record<string, any>;
+      expect(recoveryPayload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId: 'status_team_drain_run',
+          sourceKind: 'team-run',
+          orchestrationTimelineSummary: {
+            total: 4,
+          },
+        },
+      });
+      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'human approved team resume',
+            stepId: 'status_team_drain_run:step:2',
+          }),
+          expect.objectContaining({
+            type: 'step-started',
+            note: 'step started by local runner',
+            stepId: 'status_team_drain_run:step:2',
+          }),
+          expect.objectContaining({
+            type: 'step-succeeded',
+            note: 'step completed by local runner',
+            stepId: 'status_team_drain_run:step:2',
+          }),
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'run executed through targeted host drain',
+            stepId: null,
+          }),
+        ]),
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded operator control summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-summary-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      'status_operator_summary',
+      '2026-04-11T20:00:00.000Z',
+      '2026-04-11T20:05:00.000Z',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T20:10:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'resumed step completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId: 'status_operator_summary',
+            note: 'human approved resume',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+
+      const drainResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'drain-run',
+            runId: 'status_operator_summary',
+          },
+        }),
+      });
+      expect(drainResponse.status).toBe(200);
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_operator_summary`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_operator_summary',
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            operatorControlSummary: {
+              humanEscalationResume: {
+                resumedAt: '2026-04-11T20:10:00.000Z',
+                note: 'human approved resume',
+              },
+              targetedDrain: {
+                requestedAt: '2026-04-11T20:10:00.000Z',
+                status: 'executed',
+                reason: 'run executed through targeted host drain',
+                skipReason: null,
+              },
+            },
+          },
+        },
+      });
+
+      const recoveryRead = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_operator_summary`);
+      expect(recoveryRead.status).toBe(200);
+      const recoveryPayload = (await recoveryRead.json()) as Record<string, any>;
+      expect(recoveryPayload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId: 'status_operator_summary',
+          sourceKind: 'direct',
+          orchestrationTimelineSummary: {
+            total: expect.any(Number),
+          },
+        },
+      });
+      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'human approved resume',
+          }),
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'run executed through targeted host drain',
+          }),
+        ]),
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded skipped targeted-drain summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-summary-skipped-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_operator_summary_skipped';
+    const stepId = `${runId}:step:1`;
+    const skippedAt = '2026-04-11T20:15:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'planned',
+          createdAt: '2026-04-11T20:14:00.000Z',
+          updatedAt: skippedAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Read back skipped operator control.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Read back skipped operator control.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `human.resume.${stepId}`,
+              value: {
+                stepId,
+                resumedAt: '2026-04-11T20:14:45.000Z',
+                note: 'human approved retry',
+                guidance: {
+                  action: 'retry-with-guidance',
+                },
+                override: null,
+              },
+            },
+          ],
+          notes: ['run resumed but targeted drain could not claim it'],
+          history: [
+            createExecutionRunEvent({
+              id: `${runId}:event:resume-note`,
+              runId,
+              stepId,
+              type: 'note-added',
+              createdAt: '2026-04-11T20:14:45.000Z',
+              note: 'human approved retry',
+              payload: {
+                source: 'operator',
+                action: 'resume-human-escalation',
+              },
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:drain-run:skipped:${skippedAt}`,
+              runId,
+              type: 'note-added',
+              createdAt: skippedAt,
+              note: 'claim-owner-unavailable',
+              payload: {
+                source: 'operator',
+                action: 'drain-run',
+                status: 'skipped',
+                skipReason: 'claim-owner-unavailable',
+              },
+            }),
+          ],
+          lastUpdatedAt: skippedAt,
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T20:14:00.000Z',
+          }),
+          createExecutionRunEvent({
+            id: `${runId}:event:drain-run:skipped:${skippedAt}`,
+            runId,
+            type: 'note-added',
+            createdAt: skippedAt,
+            note: 'claim-owner-unavailable',
+            payload: {
+              source: 'operator',
+              action: 'drain-run',
+              status: 'skipped',
+              skipReason: 'claim-owner-unavailable',
+            },
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T20:16:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'in_progress',
+        metadata: {
+          executionSummary: {
+            operatorControlSummary: {
+              humanEscalationResume: {
+                resumedAt: '2026-04-11T20:14:45.000Z',
+                note: 'human approved retry',
+              },
+              targetedDrain: {
+                requestedAt: skippedAt,
+                status: 'skipped',
+                reason: 'claim-owner-unavailable',
+                skipReason: 'claim-owner-unavailable',
+              },
+            },
+          },
+        },
+      });
+
+      const recoveryRead = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
+      expect(recoveryRead.status).toBe(200);
+      const recoveryPayload = (await recoveryRead.json()) as Record<string, any>;
+      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'human approved retry',
+            stepId: stepId,
+          }),
+          expect.objectContaining({
+            type: 'note-added',
+            note: 'claim-owner-unavailable',
+            stepId: null,
+          }),
+        ]),
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers the latest operator-control summaries through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-summary-precedence-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'status_operator_summary_precedence';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: `${runId}:team`,
+          status: 'succeeded',
+          createdAt: '2026-04-11T20:20:00.000Z',
+          updatedAt: '2026-04-11T20:25:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Read back latest operator control summary.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: `${runId}:source:1`,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Older paused step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'older step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T20:20:05.000Z',
+            completedAt: '2026-04-11T20:21:00.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: `${runId}:source:2`,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Later resumed step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'later step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T20:24:10.000Z',
+            completedAt: '2026-04-11T20:25:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `human.resume.${stepOneId}`,
+              value: {
+                stepId: stepOneId,
+                resumedAt: '2026-04-11T20:21:05.000Z',
+                note: 'older resume note',
+                guidance: {
+                  action: 'retry-with-guidance',
+                },
+                override: null,
+              },
+            },
+            {
+              key: `human.resume.${stepTwoId}`,
+              value: {
+                stepId: stepTwoId,
+                resumedAt: '2026-04-11T20:24:00.000Z',
+                note: 'latest resume note',
+                guidance: {
+                  action: 'retry-with-guidance',
+                },
+                override: null,
+              },
+            },
+          ],
+          notes: ['multiple operator interventions'],
+          history: [
+            createExecutionRunEvent({
+              id: `${runId}:event:resume-note-older`,
+              runId,
+              stepId: stepOneId,
+              type: 'note-added',
+              createdAt: '2026-04-11T20:21:05.000Z',
+              note: 'older resume note',
+              payload: {
+                source: 'operator',
+                action: 'resume-human-escalation',
+              },
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:resume-note-latest`,
+              runId,
+              stepId: stepTwoId,
+              type: 'note-added',
+              createdAt: '2026-04-11T20:24:00.000Z',
+              note: 'latest resume note',
+              payload: {
+                source: 'operator',
+                action: 'resume-human-escalation',
+              },
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:drain-run:skipped:2026-04-11T20:21:10.000Z`,
+              runId,
+              type: 'note-added',
+              createdAt: '2026-04-11T20:21:10.000Z',
+              note: 'claim-owner-unavailable',
+              payload: {
+                source: 'operator',
+                action: 'drain-run',
+                status: 'skipped',
+                skipReason: 'claim-owner-unavailable',
+              },
+            }),
+            createExecutionRunEvent({
+              id: `${runId}:event:drain-run:executed:2026-04-11T20:25:00.000Z`,
+              runId,
+              type: 'note-added',
+              createdAt: '2026-04-11T20:25:00.000Z',
+              note: 'run executed through targeted host drain',
+              payload: {
+                source: 'operator',
+                action: 'drain-run',
+                status: 'executed',
+                skipReason: null,
+              },
+            }),
+          ],
+          lastUpdatedAt: '2026-04-11T20:25:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T20:20:00.000Z',
+          }),
+          createExecutionRunEvent({
+            id: `${runId}:event:drain-run:skipped:2026-04-11T20:21:10.000Z`,
+            runId,
+            type: 'note-added',
+            createdAt: '2026-04-11T20:21:10.000Z',
+            note: 'claim-owner-unavailable',
+            payload: {
+              source: 'operator',
+              action: 'drain-run',
+              status: 'skipped',
+              skipReason: 'claim-owner-unavailable',
+            },
+          }),
+          createExecutionRunEvent({
+            id: `${runId}:event:drain-run:executed:2026-04-11T20:25:00.000Z`,
+            runId,
+            type: 'note-added',
+            createdAt: '2026-04-11T20:25:00.000Z',
+            note: 'run executed through targeted host drain',
+            payload: {
+              source: 'operator',
+              action: 'drain-run',
+              status: 'executed',
+              skipReason: null,
+            },
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T20:25:30.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            operatorControlSummary: {
+              humanEscalationResume: {
+                resumedAt: '2026-04-11T20:24:00.000Z',
+                note: 'latest resume note',
+              },
+              targetedDrain: {
+                requestedAt: '2026-04-11T20:25:00.000Z',
+                status: 'executed',
+                reason: 'run executed through targeted host drain',
+                skipReason: null,
+              },
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded local-action outcome summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const executionHost = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      now: () => '2026-04-08T12:15:00.000Z',
+      executeStoredRunStep: async () => ({
+        output: {
+          summary: 'request one shell action',
+          artifacts: [],
+          structuredData: {
+            localActionRequests: [
+              {
+                kind: 'shell',
+                summary: 'Run bounded host verification',
+                command: 'pnpm',
+                args: ['vitest', 'run'],
+              },
+            ],
+          },
+          notes: [],
+        },
+      }),
+      executeLocalActionRequest: async ({ request }) => ({
+        status: 'executed',
+        summary: `executed ${request.kind}`,
+        payload: { exitCode: 0 },
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T12:15:00.000Z'),
+        generateResponseId: () => 'resp_local_action_1',
+        executionHost,
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Run one bounded host action.',
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: 'resp_local_action_1',
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: 'resp_local_action_1:step:1',
+            localActionSummary: {
+              ownerStepId: 'resp_local_action_1:step:1',
+              generatedAt: '2026-04-08T12:15:00.000Z',
+              total: 1,
+              counts: {
+                requested: 0,
+                approved: 0,
+                rejected: 0,
+                executed: 1,
+                failed: 0,
+                cancelled: 0,
+              },
+              items: [
+                {
+                  requestId: 'resp_local_action_1:action:resp_local_action_1:step:1:1',
+                  kind: 'shell',
+                  status: 'executed',
+                  summary: 'Run bounded host verification',
+                  command: 'pnpm',
+                  args: ['vitest', 'run'],
+                  resultSummary: 'executed shell',
+                },
+              ],
+            },
+          },
+        },
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/resp_local_action_1`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: 'resp_local_action_1',
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            localActionSummary: {
+              total: 1,
+              counts: {
+                executed: 1,
+              },
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers the terminal step local-action summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-local-action-terminal-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_local_action_terminal_precedence_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: `${runId}:team`,
+          status: 'succeeded',
+          createdAt: '2026-04-08T14:26:00.000Z',
+          updatedAt: '2026-04-08T14:27:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Prefer the terminal step local action summary.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: `${runId}:source:1`,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Older local action step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'older step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-08T14:26:05.000Z',
+            completedAt: '2026-04-08T14:26:20.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: `${runId}:source:2`,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Terminal local action step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'terminal step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-08T14:26:25.000Z',
+            completedAt: '2026-04-08T14:27:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `step.localActionOutcomes.${stepOneId}`,
+              value: {
+                ownerStepId: stepOneId,
+                generatedAt: '2026-04-08T14:26:20.000Z',
+                total: 1,
+                counts: {
+                  requested: 0,
+                  approved: 0,
+                  rejected: 0,
+                  executed: 1,
+                  failed: 0,
+                  cancelled: 0,
+                },
+                items: [
+                  {
+                    requestId: `${runId}:action:${stepOneId}:1`,
+                    kind: 'shell',
+                    status: 'executed',
+                    summary: 'Older shell action.',
+                    command: 'pnpm',
+                    args: ['vitest', 'run'],
+                    resultSummary: 'older shell executed',
+                  },
+                ],
+              },
+            },
+            {
+              key: `step.localActionOutcomes.${stepTwoId}`,
+              value: {
+                ownerStepId: stepTwoId,
+                generatedAt: '2026-04-08T14:27:00.000Z',
+                total: 1,
+                counts: {
+                  requested: 0,
+                  approved: 0,
+                  rejected: 0,
+                  executed: 1,
+                  failed: 0,
+                  cancelled: 0,
+                },
+                items: [
+                  {
+                    requestId: `${runId}:action:${stepTwoId}:1`,
+                    kind: 'shell',
+                    status: 'executed',
+                    summary: 'Terminal shell action.',
+                    command: 'node',
+                    args: ['-e', "process.stdout.write('ok')"],
+                    resultSummary: 'terminal shell executed',
+                  },
+                ],
+              },
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-08T14:27:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-08T14:26:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T14:27:30.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: stepTwoId,
+            localActionSummary: {
+              ownerStepId: stepTwoId,
+              generatedAt: '2026-04-08T14:27:00.000Z',
+              total: 1,
+              counts: {
+                requested: 0,
+                approved: 0,
+                rejected: 0,
+                executed: 1,
+                failed: 0,
+                cancelled: 0,
+              },
+              items: [
+                {
+                  requestId: `${runId}:action:${stepTwoId}:1`,
+                  kind: 'shell',
+                  status: 'executed',
+                  summary: 'Terminal shell action.',
+                  command: 'node',
+                  args: ['-e', "process.stdout.write('ok')"],
+                  resultSummary: 'terminal shell executed',
+                },
+              ],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded requested-output fulfillment summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_requested_outputs_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_requested_outputs_1',
+          taskRunSpecId: 'task_spec_requested_outputs_1',
+          status: 'succeeded',
+          createdAt: '2026-04-11T23:15:00.000Z',
+          updatedAt: '2026-04-11T23:16:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Produce the requested outputs.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Produce the requested outputs.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'final-response',
+                    label: 'final answer',
+                    format: 'markdown',
+                    required: true,
+                    destination: 'response-body',
+                  },
+                  {
+                    kind: 'artifact-bundle',
+                    label: 'work bundle',
+                    format: 'bundle',
+                    required: true,
+                    destination: 'artifact-store',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T23:15:10.000Z',
+            completedAt: '2026-04-11T23:16:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [
+            {
+              id: 'artifact_bundle_1',
+              kind: 'bundle',
+              title: 'work bundle',
+              path: '/tmp/work.zip',
+              uri: null,
+            },
+          ],
+          structuredOutputs: [
+            {
+              key: 'response.output',
+              value: [
+                {
+                  type: 'message',
+                  role: 'assistant',
+                  content: [
+                    {
+                      type: 'output_text',
+                      text: 'Here is the final answer.',
+                    },
+                  ],
+                },
+                {
+                  type: 'artifact',
+                  id: 'artifact_bundle_1',
+                  artifact_type: 'file',
+                  title: 'work bundle',
+                  mime_type: 'application/zip',
+                  uri: 'file:///tmp/work.zip',
+                  disposition: 'attachment',
+                  metadata: null,
+                },
+              ],
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T23:16:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T23:15:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T23:16:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            requestedOutputSummary: {
+              total: 2,
+              fulfilledCount: 2,
+              missingRequiredCount: 0,
+              items: [
+                {
+                  label: 'final answer',
+                  kind: 'final-response',
+                  format: 'markdown',
+                  destination: 'response-body',
+                  required: true,
+                  fulfilled: true,
+                  evidence: 'message',
+                },
+                {
+                  label: 'work bundle',
+                  kind: 'artifact-bundle',
+                  format: 'bundle',
+                  destination: 'artifact-store',
+                  required: true,
+                  fulfilled: true,
+                  evidence: 'artifact',
+                },
+              ],
+            },
+            requestedOutputPolicy: {
+              status: 'satisfied',
+              message: 'all required requested outputs were fulfilled',
+              missingRequiredLabels: [],
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns failed response readback when required requested outputs are missing', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_requested_outputs_missing_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_requested_outputs_missing_1',
+          taskRunSpecId: 'task_spec_requested_outputs_missing_1',
+          status: 'succeeded',
+          createdAt: '2026-04-11T23:25:00.000Z',
+          updatedAt: '2026-04-11T23:26:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Produce the requested outputs.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Produce the requested outputs.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'final-response',
+                    label: 'final answer',
+                    format: 'markdown',
+                    required: true,
+                    destination: 'response-body',
+                  },
+                  {
+                    kind: 'artifact-bundle',
+                    label: 'work bundle',
+                    format: 'bundle',
+                    required: true,
+                    destination: 'artifact-store',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T23:25:10.000Z',
+            completedAt: '2026-04-11T23:26:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: 'response.output',
+              value: [
+                {
+                  type: 'message',
+                  role: 'assistant',
+                  content: [
+                    {
+                      type: 'output_text',
+                      text: 'Here is the final answer.',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T23:26:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T23:25:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T23:26:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'failed',
+        metadata: {
+          executionSummary: {
+            requestedOutputPolicy: {
+              status: 'missing-required',
+              message: 'missing required requested outputs: work bundle',
+              missingRequiredLabels: ['work bundle'],
+            },
+            failureSummary: {
+              code: 'requested_output_required_missing',
+              message: 'missing required requested outputs: work bundle',
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers terminal step failure over requested-output fallback through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_failure_precedence_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_failure_precedence_1',
+          taskRunSpecId: 'task_spec_failure_precedence_1',
+          status: 'failed',
+          createdAt: '2026-04-12T00:45:00.000Z',
+          updatedAt: '2026-04-12T00:46:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Prefer the explicit terminal failure.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'failed',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Produce the requested outputs.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'artifact-bundle',
+                    label: 'work bundle',
+                    format: 'bundle',
+                    required: true,
+                    destination: 'artifact-store',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'failed before producing outputs',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            failure: {
+              code: 'terminal_step_failed',
+              message: 'terminal step failed before fulfilling outputs',
+            },
+            startedAt: '2026-04-12T00:45:10.000Z',
+            completedAt: '2026-04-12T00:46:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'failed',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: 'response.output',
+              value: [
+                {
+                  type: 'message',
+                  role: 'assistant',
+                  content: [
+                    {
+                      type: 'output_text',
+                      text: 'Partial assistant output.',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-12T00:46:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T00:45:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T00:46:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'failed',
+        metadata: {
+          executionSummary: {
+            requestedOutputPolicy: {
+              status: 'missing-required',
+              message: 'missing required requested outputs: work bundle',
+              missingRequiredLabels: ['work bundle'],
+            },
+            failureSummary: {
+              code: 'terminal_step_failed',
+              message: 'terminal step failed before fulfilling outputs',
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers the terminal step requested-output contract through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_requested_outputs_terminal_precedence_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_requested_outputs_terminal_precedence_1',
+          taskRunSpecId: 'task_spec_requested_outputs_terminal_precedence_1',
+          status: 'succeeded',
+          createdAt: '2026-04-12T00:15:00.000Z',
+          updatedAt: '2026-04-12T00:16:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Use the terminal step request contract.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Older step requested an artifact bundle.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'artifact-bundle',
+                    label: 'older work bundle',
+                    format: 'bundle',
+                    required: true,
+                    destination: 'artifact-store',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'older step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T00:15:10.000Z',
+            completedAt: '2026-04-12T00:15:25.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Terminal step requested only the final response.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'final-response',
+                    label: 'terminal answer',
+                    format: 'markdown',
+                    required: true,
+                    destination: 'response-body',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'terminal step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-12T00:15:30.000Z',
+            completedAt: '2026-04-12T00:16:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: 'response.output',
+              value: [
+                {
+                  type: 'message',
+                  role: 'assistant',
+                  content: [
+                    {
+                      type: 'output_text',
+                      text: 'Here is the terminal answer.',
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-12T00:16:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-12T00:15:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T00:16:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: stepTwoId,
+            requestedOutputSummary: {
+              total: 1,
+              fulfilledCount: 1,
+              missingRequiredCount: 0,
+              items: [
+                {
+                  label: 'terminal answer',
+                  kind: 'final-response',
+                  format: 'markdown',
+                  destination: 'response-body',
+                  required: true,
+                  fulfilled: true,
+                  evidence: 'message',
+                },
+              ],
+            },
+            requestedOutputPolicy: {
+              status: 'satisfied',
+              message: 'all required requested outputs were fulfilled',
+              missingRequiredLabels: [],
+            },
+            failureSummary: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('does not treat internal structured outputs as fulfilling a required structured-report request through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_requested_outputs_internal_only_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'team_run_requested_outputs_internal_only_1',
+          taskRunSpecId: 'task_spec_requested_outputs_internal_only_1',
+          status: 'succeeded',
+          createdAt: '2026-04-11T23:35:00.000Z',
+          updatedAt: '2026-04-11T23:36:00.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Produce the structured report.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            sourceStepId: 'team_run_requested_outputs_internal_only_1:step:1',
+            agentId: 'orchestrator',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Produce the structured report.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {
+                requestedOutputs: [
+                  {
+                    kind: 'structured-report',
+                    label: 'report payload',
+                    format: 'json',
+                    required: true,
+                    destination: 'response-metadata',
+                  },
+                ],
+              },
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T23:35:10.000Z',
+            completedAt: '2026-04-11T23:36:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: 'response.output',
+              value: [
+                {
+                  type: 'artifact',
+                  id: 'artifact_only_output',
+                  artifact_type: 'file',
+                  title: 'internal-only artifact',
+                  mime_type: 'application/octet-stream',
+                  uri: 'file:///tmp/internal-only.bin',
+                  disposition: 'attachment',
+                  metadata: null,
+                },
+              ],
+            },
+            {
+              key: `human.resume.${stepId}`,
+              value: {
+                stepId,
+                resumedAt: '2026-04-11T23:35:30.000Z',
+                note: 'internal operator resume record',
+                guidance: {
+                  action: 'retry-with-guidance',
+                },
+                override: null,
+              },
+            },
+            {
+              key: `step.localActionOutcomes.${stepId}`,
+              value: {
+                ownerStepId: stepId,
+                generatedAt: '2026-04-11T23:35:45.000Z',
+                total: 1,
+                counts: {
+                  requested: 0,
+                  approved: 0,
+                  rejected: 0,
+                  executed: 1,
+                  failed: 0,
+                  cancelled: 0,
+                },
+                items: [
+                  {
+                    requestId: `${runId}:action:${stepId}:1`,
+                    kind: 'shell',
+                    status: 'executed',
+                    summary: 'Internal local-action record.',
+                    command: 'node',
+                    args: ['-e', "process.stdout.write('ok')"],
+                    resultSummary: 'internal shell executed',
+                  },
+                ],
+              },
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T23:36:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T23:35:00.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T23:36:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'failed',
+        metadata: {
+          executionSummary: {
+            requestedOutputSummary: {
+              total: 1,
+              fulfilledCount: 0,
+              missingRequiredCount: 1,
+              items: [
+                {
+                  label: 'report payload',
+                  kind: 'structured-report',
+                  format: 'json',
+                  destination: 'response-metadata',
+                  required: true,
+                  fulfilled: false,
+                  evidence: null,
+                },
+              ],
+            },
+            requestedOutputPolicy: {
+              status: 'missing-required',
+              message: 'missing required requested outputs: report payload',
+              missingRequiredLabels: ['report payload'],
+            },
+            failureSummary: {
+              code: 'requested_output_required_missing',
+              message: 'missing required requested outputs: report payload',
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded provider usage summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-11T23:27:00.000Z'),
+        executeStoredRunStep: async () => ({
+          usage: {
+            inputTokens: 70,
+            outputTokens: 20,
+            reasoningTokens: 3,
+            totalTokens: 93,
+          },
+          output: {
+            summary: 'usage recorded',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const created = await fetch(`http://127.0.0.1:${server.port}/v1/responses`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          model: 'gpt-5.2',
+          input: 'Run once.',
+          auracall: {
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+        }),
+      });
+      expect(created.status).toBe(200);
+      const createdPayload = (await created.json()) as Record<string, unknown>;
+      expect(createdPayload).toMatchObject({
+        metadata: {
+          executionSummary: {
+            providerUsageSummary: {
+              inputTokens: 70,
+              outputTokens: 20,
+              reasoningTokens: 3,
+              totalTokens: 93,
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('prefers the terminal step provider-usage summary through the same responses surface', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_usage_terminal_precedence_1';
+    const stepOneId = `${runId}:step:1`;
+    const stepTwoId = `${runId}:step:2`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: `${runId}:team`,
+          status: 'succeeded',
+          createdAt: '2026-04-11T23:27:30.000Z',
+          updatedAt: '2026-04-11T23:28:30.000Z',
+          trigger: 'service',
+          requestedBy: 'scheduler',
+          entryPrompt: 'Prefer the terminal usage summary.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepOneId, stepTwoId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepOneId,
+            runId,
+            sourceStepId: `${runId}:source:1`,
+            agentId: 'planner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'analysis',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Older usage step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'older step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T23:27:35.000Z',
+            completedAt: '2026-04-11T23:27:50.000Z',
+          }),
+          createExecutionRunStep({
+            id: stepTwoId,
+            runId,
+            sourceStepId: `${runId}:source:2`,
+            agentId: 'finisher',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'synthesis',
+            status: 'succeeded',
+            order: 2,
+            dependsOnStepIds: [stepOneId],
+            input: {
+              prompt: 'Terminal usage step.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'terminal step done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-11T23:28:00.000Z',
+            completedAt: '2026-04-11T23:28:30.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [
+            {
+              key: `step.providerUsage.${stepOneId}`,
+              value: {
+                ownerStepId: stepOneId,
+                generatedAt: '2026-04-11T23:27:50.000Z',
+                inputTokens: 30,
+                outputTokens: 8,
+                reasoningTokens: 1,
+                totalTokens: 39,
+              },
+            },
+            {
+              key: `step.providerUsage.${stepTwoId}`,
+              value: {
+                ownerStepId: stepTwoId,
+                generatedAt: '2026-04-11T23:28:30.000Z',
+                inputTokens: 70,
+                outputTokens: 20,
+                reasoningTokens: 3,
+                totalTokens: 93,
+              },
+            },
+          ],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-11T23:28:30.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-11T23:27:30.000Z',
+          }),
+        ],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-11T23:29:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, unknown>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            terminalStepId: stepTwoId,
+            providerUsageSummary: {
+              ownerStepId: stepTwoId,
+              generatedAt: '2026-04-11T23:28:30.000Z',
+              inputTokens: 70,
+              outputTokens: 20,
+              reasoningTokens: 3,
+              totalTokens: 93,
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('recovers a persisted runnable direct run when startup recovery is enabled', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-'));
     cleanup.push(homeDir);
@@ -489,6 +7215,97 @@ describe('http responses adapter', () => {
     );
 
     try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        object: 'response',
+        status: 'completed',
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('recovers a persisted runnable direct run through background drain when startup recovery is disabled', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-background-drain-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const createdAt = '2026-04-08T13:05:00.000Z';
+    const runId = 'resp_background_recover_1';
+    const stepId = `${runId}:step:1`;
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'planned',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Recover via background drain.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Recover via background drain.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: false,
+        backgroundDrainIntervalMs: 25,
+      },
+      { control },
+    );
+
+    try {
+      await delay(100);
       const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
       expect(response.status).toBe(200);
       const payload = (await response.json()) as Record<string, unknown>;
@@ -760,10 +7577,12 @@ describe('http responses adapter', () => {
     );
 
     try {
-      expect(logs.some((entry) => entry.includes('Startup recovery (direct) completed'))).toBe(true);
-      expect(logs.some((entry) => entry.includes(`executed=${executableRunId}`))).toBe(true);
-      expect(logs.some((entry) => entry.includes('skips=no-runnable-step:3'))).toBe(true);
-      expect(logs.some((entry) => entry.includes('scanned 4 candidate run(s)'))).toBe(true);
+      const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+      expect(startupLog).toBeDefined();
+      expect(startupLog).toContain(`executed=${executableRunId}`);
+      expect(startupLog).toContain('scanned 2 candidate run(s)');
+      expect(startupLog).toContain('skips=claim-owner-unavailable:1');
+      expect(startupLog).toContain('metrics=deferred-by-budget:0, active-lease:0, stale-heartbeat:0, stranded:0, idle:0');
     } finally {
       await server.close();
     }
@@ -858,7 +7677,50 @@ describe('http responses adapter', () => {
       expect(startupLog).toContain('cap=1 hits reached');
       expect(startupLog).toContain('scanned 2 candidate run(s)');
       expect(startupLog).toContain('limit-reached:1');
+      expect(startupLog).toContain('metrics=deferred-by-budget:1, active-lease:0, stale-heartbeat:0, stranded:0, idle:0');
       expect(startupLog).toContain('1 executed');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('logs bounded stale-heartbeat attention when startup recovery leaves inspect-only leases unrepaired', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-attention-log-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'resp_attention_stale', '2026-04-08T14:40:00.000Z', 'Inspect only stale heartbeat');
+    await control.acquireLease({
+      runId: 'resp_attention_stale',
+      leaseId: 'resp_attention_stale:lease:1',
+      ownerId: 'runner:missing-attention',
+      acquiredAt: '2026-04-08T14:40:00.000Z',
+      heartbeatAt: '2026-04-08T14:40:00.000Z',
+      expiresAt: '2026-04-08T14:50:00.000Z',
+    });
+
+    const logs: string[] = [];
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+        logger: (message) => {
+          logs.push(message);
+        },
+      },
+      {
+        control,
+        now: () => new Date('2026-04-08T14:45:00.000Z'),
+      },
+    );
+
+    try {
+      const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+      expect(startupLog).toBeDefined();
+      expect(startupLog).toContain('skips=stale-heartbeat:1');
+      expect(startupLog).toContain('attention=stale-heartbeat-inspect-only:1');
     } finally {
       await server.close();
     }
@@ -966,6 +7828,69 @@ describe('http responses adapter', () => {
     expect(startupLog).toBeDefined();
     expect(startupLog).toContain('executed=serve_team_filter_team');
     expect(startupLog).not.toContain('serve_team_filter_direct');
+  });
+
+  it('forwards all-source startup recovery filter to serveResponsesHttp', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-all-source-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'serve_all_filter_direct', '2026-04-08T15:40:00.000Z', 'Direct should recover');
+    await seedPlannedDirectRun(
+      control,
+      'serve_all_filter_team',
+      '2026-04-08T15:41:00.000Z',
+      'Team should also recover',
+      'team-run',
+    );
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStartSourceKind: 'all',
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (all) completed'));
+    expect(startupLog).toBeDefined();
+    expect(startupLog).toContain('executed=serve_all_filter_direct,serve_all_filter_team');
+    expect(startupLog).toContain('scanned 2 candidate run(s)');
+  });
+
+  it('applies startup recovery cap after widening serveResponsesHttp scope to all sources', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-all-cap-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(control, 'serve_all_cap_direct_1', '2026-04-08T15:50:00.000Z', 'Recover direct 1');
+    await seedPlannedDirectRun(
+      control,
+      'serve_all_cap_team_1',
+      '2026-04-08T15:51:00.000Z',
+      'Recover team 1',
+      'team-run',
+    );
+    await seedPlannedDirectRun(control, 'serve_all_cap_direct_2', '2026-04-08T15:52:00.000Z', 'Defer one by cap');
+
+    const logs: string[] = [];
+    await terminateServeResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      recoverRunsOnStartSourceKind: 'all',
+      recoverRunsOnStartMaxRuns: 2,
+      logger: (message) => logs.push(message),
+    });
+
+    const startupLog = logs.find((entry) => entry.includes('Startup recovery (all) completed'));
+    expect(startupLog).toBeDefined();
+    expect(startupLog).toContain('scanned 3 candidate run(s)');
+    expect(startupLog).toContain('cap=2 hits reached');
+    expect(startupLog).toContain('2 executed');
+    expect(startupLog).toContain('executed=serve_all_cap_direct_1,serve_all_cap_team_1');
+    expect(startupLog).toContain('limit-reached:1');
   });
 
   it('preserves structured mixed output when a stored run exposes response.output', async () => {
@@ -1099,6 +8024,11 @@ describe('http responses adapter', () => {
           disposition: 'inline',
         },
       ]);
+      expect(payload).not.toHaveProperty('output.0.executionSummary');
+      expect(payload).not.toHaveProperty('output.0.runtimeProfile');
+      expect(payload).not.toHaveProperty('output.0.service');
+      expect(payload).not.toHaveProperty('output.1.executionSummary');
+      expect(payload).not.toHaveProperty('output.1.taskRunSpecId');
     } finally {
       await server.close();
     }

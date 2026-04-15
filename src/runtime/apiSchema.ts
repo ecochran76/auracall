@@ -97,6 +97,20 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
   metadata: z
     .object({
       runId: z.string().nullable().optional(),
+      taskRunSpecId: z.string().nullable().optional(),
+      taskRunSpecSummary: z
+        .object({
+          id: z.string().nullable().optional(),
+          teamId: z.string().nullable().optional(),
+          title: z.string().nullable().optional(),
+          objective: z.string().nullable().optional(),
+          createdAt: z.string().nullable().optional(),
+          persistedAt: z.string().nullable().optional(),
+          requestedOutputCount: z.number().int().nonnegative().optional(),
+          inputArtifactCount: z.number().int().nonnegative().optional(),
+        })
+        .nullable()
+        .optional(),
       runtimeProfile: z.string().nullable().optional(),
       service: z.string().nullable().optional(),
       executionSummary: z
@@ -104,6 +118,177 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
           terminalStepId: z.string().nullable().optional(),
           completedAt: z.string().nullable().optional(),
           lastUpdatedAt: z.string().nullable().optional(),
+          stepSummaries: z
+            .array(
+              z.object({
+                stepId: z.string().nullable().optional(),
+                order: z.number().int().nonnegative().optional(),
+                agentId: z.string().nullable().optional(),
+                status: z.string().nullable().optional(),
+                runtimeProfileId: z.string().nullable().optional(),
+                browserProfileId: z.string().nullable().optional(),
+                service: z.string().nullable().optional(),
+              }),
+            )
+            .nullable()
+            .optional(),
+          localActionSummary: z
+            .object({
+              ownerStepId: z.string().nullable().optional(),
+              generatedAt: z.string().nullable().optional(),
+              total: z.number().int().nonnegative().optional(),
+              counts: z
+                .object({
+                  requested: z.number().int().nonnegative().optional(),
+                  approved: z.number().int().nonnegative().optional(),
+                  rejected: z.number().int().nonnegative().optional(),
+                  executed: z.number().int().nonnegative().optional(),
+                  failed: z.number().int().nonnegative().optional(),
+                  cancelled: z.number().int().nonnegative().optional(),
+                })
+                .nullable()
+                .optional(),
+              items: z
+                .array(
+                  z.object({
+                    requestId: z.string().nullable().optional(),
+                    kind: z.string().nullable().optional(),
+                    status: z.string().nullable().optional(),
+                    summary: z.string().nullable().optional(),
+                    command: z.string().nullable().optional(),
+                    args: z.array(z.string()).optional(),
+                    resultSummary: z.string().nullable().optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .nullable()
+            .optional(),
+          requestedOutputSummary: z
+            .object({
+              total: z.number().int().nonnegative().optional(),
+              fulfilledCount: z.number().int().nonnegative().optional(),
+              missingRequiredCount: z.number().int().nonnegative().optional(),
+              items: z
+                .array(
+                  z.object({
+                    label: z.string().nullable().optional(),
+                    kind: z.string().nullable().optional(),
+                    format: z.string().nullable().optional(),
+                    destination: z.string().nullable().optional(),
+                    required: z.boolean().optional(),
+                    fulfilled: z.boolean().optional(),
+                    evidence: z.enum(['message', 'artifact', 'structured-output']).nullable().optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .nullable()
+            .optional(),
+          requestedOutputPolicy: z
+            .object({
+              status: z.enum(['satisfied', 'missing-required']).nullable().optional(),
+              message: z.string().nullable().optional(),
+              missingRequiredLabels: z.array(z.string()).optional(),
+            })
+            .nullable()
+            .optional(),
+          inputArtifactSummary: z
+            .object({
+              total: z.number().int().nonnegative().optional(),
+              items: z
+                .array(
+                  z.object({
+                    id: z.string().nullable().optional(),
+                    kind: z.string().nullable().optional(),
+                    title: z.string().nullable().optional(),
+                    path: z.string().nullable().optional(),
+                    uri: z.string().nullable().optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .nullable()
+            .optional(),
+          handoffTransferSummary: z
+            .object({
+              total: z.number().int().nonnegative().optional(),
+              items: z
+                .array(
+                  z.object({
+                    handoffId: z.string().nullable().optional(),
+                    fromStepId: z.string().nullable().optional(),
+                    fromAgentId: z.string().nullable().optional(),
+                    title: z.string().nullable().optional(),
+                    objective: z.string().nullable().optional(),
+                    requestedOutputCount: z.number().int().nonnegative().optional(),
+                    inputArtifactCount: z.number().int().nonnegative().optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .nullable()
+            .optional(),
+          providerUsageSummary: z
+            .object({
+              ownerStepId: z.string().nullable().optional(),
+              generatedAt: z.string().nullable().optional(),
+              inputTokens: z.number().int().nonnegative().optional(),
+              outputTokens: z.number().int().nonnegative().optional(),
+              reasoningTokens: z.number().int().nonnegative().optional(),
+              totalTokens: z.number().int().nonnegative().optional(),
+            })
+            .nullable()
+            .optional(),
+          cancellationSummary: z
+            .object({
+              cancelledAt: z.string().nullable().optional(),
+              source: z.enum(['operator', 'service-host']).nullable().optional(),
+              reason: z.string().nullable().optional(),
+            })
+            .nullable()
+            .optional(),
+          operatorControlSummary: z
+            .object({
+              humanEscalationResume: z
+                .object({
+                  resumedAt: z.string().nullable().optional(),
+                  note: z.string().nullable().optional(),
+                })
+                .nullable()
+                .optional(),
+              targetedDrain: z
+                .object({
+                  requestedAt: z.string().nullable().optional(),
+                  status: z.enum(['executed', 'skipped']).nullable().optional(),
+                  reason: z.string().nullable().optional(),
+                  skipReason: z.string().nullable().optional(),
+                })
+                .nullable()
+                .optional(),
+            })
+            .nullable()
+            .optional(),
+          orchestrationTimelineSummary: z
+            .object({
+              total: z.number().int().nonnegative().optional(),
+              items: z
+                .array(
+                  z.object({
+                    type: z
+                      .enum(['step-started', 'step-succeeded', 'step-failed', 'handoff-consumed', 'note-added'])
+                      .nullable()
+                      .optional(),
+                    createdAt: z.string().nullable().optional(),
+                    stepId: z.string().nullable().optional(),
+                    note: z.string().nullable().optional(),
+                    handoffId: z.string().nullable().optional(),
+                  }),
+                )
+                .optional(),
+            })
+            .nullable()
+            .optional(),
           failureSummary: z
             .object({
               code: z.string().nullable().optional(),
@@ -125,4 +310,17 @@ export const ExecutionResponseFromRunRecordInputSchema: z.ZodType<ExecutionRespo
   output: z.array(ExecutionResponseOutputItemSchema),
   runtimeProfile: z.string().nullable().optional(),
   service: z.string().nullable().optional(),
+  taskRunSpecSummary: z
+    .object({
+      id: z.string().nullable().optional(),
+      teamId: z.string().nullable().optional(),
+      title: z.string().nullable().optional(),
+      objective: z.string().nullable().optional(),
+      createdAt: z.string().nullable().optional(),
+      persistedAt: z.string().nullable().optional(),
+      requestedOutputCount: z.number().int().nonnegative().optional(),
+      inputArtifactCount: z.number().int().nonnegative().optional(),
+    })
+    .nullable()
+    .optional(),
 });

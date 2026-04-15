@@ -297,15 +297,47 @@ export const AgentConfigSchema = z.object({
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const TeamRoleConfigSchema = z.object({
+  agent: z.string(),
+  order: z.number().int().positive().optional(),
+  instructions: z.string().optional(),
+  responseShape: z.record(z.string(), z.unknown()).optional(),
+  stepKind: z.enum(['prompt', 'analysis', 'handoff', 'review', 'synthesis']).optional(),
+  handoffToRole: z.string().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const TeamConfigSchema = z.object({
   agents: z.array(z.string()).optional(),
   description: z.string().optional(),
+  instructions: z.string().optional(),
+  roles: z.record(z.string(), TeamRoleConfigSchema).optional(),
   metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
 export const OracleDevConfigSchema = z.object({
   browserPortRange: z.tuple([z.number(), z.number()]).optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const OracleRuntimeLocalShellPolicySchema = z.object({
+  complexityStage: z.enum(['bounded-command', 'repo-automation', 'extended']).optional(),
+  allowedCommands: z.array(z.string()).optional(),
+  allowedCwdRoots: z.array(z.string()).optional(),
+  defaultShellActionTimeoutMs: DurationMs.optional(),
+  maxShellActionTimeoutMs: DurationMs.optional(),
+  maxCaptureChars: z.number().int().positive().optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const OracleRuntimeLocalActionsSchema = z.object({
+  shell: OracleRuntimeLocalShellPolicySchema.optional(),
+});
+
+// biome-ignore lint/style/useNamingConvention: schema naming is stable.
+export const OracleRuntimeConfigSchema = z.object({
+  localActions: OracleRuntimeLocalActionsSchema.optional(),
 });
 
 // biome-ignore lint/style/useNamingConvention: schema naming is stable.
@@ -375,6 +407,7 @@ export const ConfigSchema = z.object({
   agents: z.record(z.string(), AgentConfigSchema).optional(),
   teams: z.record(z.string(), TeamConfigSchema).optional(),
   dev: OracleDevConfigSchema.optional(),
+  runtime: OracleRuntimeConfigSchema.optional(),
 
   // Nested
   browser: BrowserConfigSchema.default({}),

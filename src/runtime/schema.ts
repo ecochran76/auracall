@@ -3,6 +3,8 @@ import {
   TeamRunArtifactRefSchema,
   TeamRunExecutionPolicySchema,
   TeamRunFailureSchema,
+  TeamRunHandoffSchema,
+  TeamRunLocalActionRequestSchema,
   TeamRunStepInputSchema,
   TeamRunStepKindSchema,
   TeamRunStepOutputSchema,
@@ -10,6 +12,8 @@ import {
   TeamRunTriggerSchema,
 } from '../teams/schema.js';
 import type {
+  ExecutionRunAffinityRecord,
+  ExecutionRunnerRecord,
   ExecutionRun,
   ExecutionRunEvent,
   ExecutionRunLease,
@@ -40,6 +44,7 @@ export const ExecutionRunEventTypeSchema = z.enum([
   'step-started',
   'step-succeeded',
   'step-failed',
+  'handoff-consumed',
   'lease-acquired',
   'lease-released',
   'note-added',
@@ -48,11 +53,16 @@ export const ExecutionRunEventTypeSchema = z.enum([
 export const ExecutionRunLeaseStatusSchema = z.enum(['active', 'released', 'expired']);
 
 export const ExecutionRunServiceIdSchema = z.enum(['chatgpt', 'gemini', 'grok']).nullable();
+export const ExecutionRunnerServiceIdSchema = z.enum(['chatgpt', 'gemini', 'grok']);
+
+export const ExecutionRunAffinityHostRequirementSchema = z.enum(['any', 'same-host']);
+export const ExecutionRunnerStatusSchema = z.enum(['active', 'stale']);
 
 export const ExecutionRunSchema: z.ZodType<ExecutionRun> = z.object({
   id: z.string(),
   sourceKind: ExecutionRunSourceKindSchema,
   sourceId: z.string().nullable(),
+  taskRunSpecId: z.string().nullable().optional(),
   status: ExecutionRunStatusSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
@@ -107,6 +117,34 @@ export const ExecutionRunLeaseSchema: z.ZodType<ExecutionRunLease> = z.object({
   releaseReason: z.string().nullable().optional(),
 });
 
+export const ExecutionRunAffinityRecordSchema: z.ZodType<ExecutionRunAffinityRecord> = z.object({
+  service: ExecutionRunServiceIdSchema,
+  serviceAccountId: z.string().nullable(),
+  browserRequired: z.boolean(),
+  runtimeProfileId: z.string().nullable(),
+  browserProfileId: z.string().nullable(),
+  hostRequirement: ExecutionRunAffinityHostRequirementSchema,
+  requiredHostId: z.string().nullable(),
+  eligibilityNote: z.string().nullable(),
+});
+
+export const ExecutionRunnerRecordSchema: z.ZodType<ExecutionRunnerRecord> = z.object({
+  id: z.string(),
+  hostId: z.string(),
+  status: ExecutionRunnerStatusSchema,
+  startedAt: z.string(),
+  lastHeartbeatAt: z.string(),
+  expiresAt: z.string(),
+  lastActivityAt: z.string().nullable().optional().transform((value) => value ?? null),
+  lastClaimedRunId: z.string().nullable().optional().transform((value) => value ?? null),
+  serviceIds: z.array(ExecutionRunnerServiceIdSchema),
+  runtimeProfileIds: z.array(z.string()),
+  browserProfileIds: z.array(z.string()),
+  serviceAccountIds: z.array(z.string()),
+  browserCapable: z.boolean(),
+  eligibilityNote: z.string().nullable(),
+});
+
 export const ExecutionRunSharedStateSchema: z.ZodType<ExecutionRunSharedState> = z.object({
   id: z.string(),
   runId: z.string(),
@@ -121,6 +159,8 @@ export const ExecutionRunSharedStateSchema: z.ZodType<ExecutionRunSharedState> =
 export const ExecutionRunRecordBundleSchema: z.ZodType<ExecutionRunRecordBundle> = z.object({
   run: ExecutionRunSchema,
   steps: z.array(ExecutionRunStepSchema),
+  handoffs: z.array(TeamRunHandoffSchema),
+  localActionRequests: z.array(TeamRunLocalActionRequestSchema),
   sharedState: ExecutionRunSharedStateSchema,
   events: z.array(ExecutionRunEventSchema),
   leases: z.array(ExecutionRunLeaseSchema),
