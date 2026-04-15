@@ -162,6 +162,9 @@
       it heartbeated while the server stays up
     - `GET /v1/runtime-runs/inspect` now exposes the bounded queue projection
       for one persisted runtime run:
+      - `resolvedBy`
+      - `queryId`
+      - `queryRunId`
       - `queueState`
       - `claimState`
       - `nextRunnableStepId`

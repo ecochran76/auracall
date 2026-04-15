@@ -129,6 +129,8 @@ describe('runtime inspection CLI helpers', () => {
     });
 
     expect(payload).toMatchObject({
+      resolvedBy: 'run-id',
+      queryId: runId,
       queryRunId: runId,
       runtime: {
         runId,
@@ -177,6 +179,8 @@ describe('runtime inspection CLI helpers', () => {
     });
 
     expect(payload).toMatchObject({
+      resolvedBy: 'team-run-id',
+      queryId: teamRunId,
       queryRunId: runId,
       runtime: {
         runId,
@@ -207,6 +211,8 @@ describe('runtime inspection CLI helpers', () => {
     });
 
     expect(payload).toMatchObject({
+      resolvedBy: 'runtime-run-id',
+      queryId: runId,
       queryRunId: runId,
       runtime: {
         runId,
@@ -239,6 +245,8 @@ describe('runtime inspection CLI helpers', () => {
     });
 
     expect(payload).toMatchObject({
+      resolvedBy: 'task-run-spec-id',
+      queryId: taskRunSpecId,
       queryRunId: runId,
       runtime: {
         runId,
@@ -275,6 +283,8 @@ describe('runtime inspection CLI helpers', () => {
 
   it('formats bounded runtime inspection payload for operators', () => {
     const rendered = formatRuntimeRunInspectionPayload({
+      resolvedBy: 'team-run-id',
+      queryId: 'teamrun_cli_inspect_2',
       queryRunId: 'runtime_cli_inspect_2',
       taskRunSpecSummary: null,
       runtime: {
@@ -320,6 +330,8 @@ describe('runtime inspection CLI helpers', () => {
     });
 
     expect(rendered).toContain('AuraCall runtime inspection');
+    expect(rendered).toContain('Resolved by: team-run-id');
+    expect(rendered).toContain('Query: teamrun_cli_inspect_2');
     expect(rendered).toContain('Queue state: active-lease');
     expect(rendered).toContain('Affinity status: not-evaluated');
   });

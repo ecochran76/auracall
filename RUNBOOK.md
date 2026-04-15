@@ -79,3 +79,20 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`
   - `pnpm plans:audit`
+
+## Turn 6 | 2026-04-15
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Goal: tighten runtime inspection readback so alias-based queries remain
+  operator-visible without widening execution semantics.
+- Completed:
+  - added alias provenance to runtime inspection payloads:
+    - `resolvedBy`
+    - `queryId`
+    - existing resolved `queryRunId`
+  - kept the runtime inspection surface read-only and did not add public write
+    behavior
+  - synchronized CLI formatting plus HTTP/CLI tests and operator docs with the
+    same bounded response contract
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`

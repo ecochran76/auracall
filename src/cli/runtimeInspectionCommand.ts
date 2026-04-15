@@ -11,6 +11,8 @@ export async function inspectConfiguredRuntimeRun(input: InspectRuntimeRunInput)
 export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionPayload): string {
   const lines: string[] = [
     'AuraCall runtime inspection',
+    `- Resolved by: ${payload.resolvedBy}`,
+    `- Query: ${payload.queryId}`,
     `- Query run id: ${payload.queryRunId}`,
     `- Runtime run: ${payload.runtime.runId}`,
     `- Source: ${payload.runtime.sourceKind}`,

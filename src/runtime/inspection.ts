@@ -47,6 +47,8 @@ export interface RuntimeRunInspectionRuntimeSummary {
 }
 
 export interface RuntimeRunInspectionPayload {
+  resolvedBy: 'run-id' | 'runtime-run-id' | 'team-run-id' | 'task-run-spec-id';
+  queryId: string;
   queryRunId: string;
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   runtime: RuntimeRunInspectionRuntimeSummary;
@@ -86,6 +88,23 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     throw new RuntimeRunInspectionError(
       'invalid-request',
       'Choose exactly one runtime lookup key: --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.',
+    );
+  }
+
+  const lookup = runId
+    ? { resolvedBy: 'run-id' as const, queryId: runId }
+    : runtimeRunId
+      ? { resolvedBy: 'runtime-run-id' as const, queryId: runtimeRunId }
+      : teamRunId
+        ? { resolvedBy: 'team-run-id' as const, queryId: teamRunId }
+        : taskRunSpecId
+          ? { resolvedBy: 'task-run-spec-id' as const, queryId: taskRunSpecId }
+          : null;
+
+  if (!lookup) {
+    throw new RuntimeRunInspectionError(
+      'invalid-request',
+      'Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.',
     );
   }
 
@@ -131,6 +150,8 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     : null;
 
   return {
+    resolvedBy: lookup.resolvedBy,
+    queryId: lookup.queryId,
     queryRunId: resolvedRunId,
     taskRunSpecSummary,
     runtime: {

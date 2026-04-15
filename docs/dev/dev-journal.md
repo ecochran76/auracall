@@ -1,3 +1,22 @@
+## 2026-04-15 - Runtime inspection alias provenance
+
+- Completed a bounded operator-readback refinement for runtime inspection:
+  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/inspection.ts)
+    so runtime inspection now preserves:
+    - `resolvedBy`
+    - `queryId`
+    - existing resolved `queryRunId`
+  - matched the CLI formatter and focused CLI/HTTP coverage so alias-based
+    runtime inspection no longer hides whether the operator queried by:
+    - `runId`
+    - `runtimeRunId`
+    - `teamRunId`
+    - `taskRunSpecId`
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    so the read-only runtime inspection response contract reflects the same
+    provenance fields.
+
 ## 2026-04-15 - Runtime inspection contract doc alignment
 
 - Completed cross-authority doc alignment for the public runtime inspection API:

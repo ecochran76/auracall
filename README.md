@@ -159,6 +159,9 @@ Terminology note:
     - optional query:
       - `runnerId`
     - returns:
+      - `resolvedBy`
+      - `queryId`
+      - `queryRunId`
       - bounded `taskRunSpecSummary` when the runtime run is task-backed
       - `runtime.queueProjection` with:
         - `queueState`

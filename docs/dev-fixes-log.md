@@ -1,3 +1,12 @@
+- 2026-04-15: When a read-only inspection surface accepts alias lookup keys, preserve the alias provenance in the payload instead of returning only the resolved canonical id.
+  - Runtime inspection now returns:
+    - `resolvedBy`
+    - `queryId`
+    - `queryRunId`
+  - This keeps alias-driven operator workflows inspectable when `teamRunId` or
+    `taskRunSpecId` resolves to the latest matching runtime run instead of a
+    directly queried runtime id.
+
 - 2026-04-15: Realigned runtime inspection contracts across route handler tests and operator docs after introducing additional runtime lookup aliases in the route template:
   - added `GET /v1/runtime-runs/inspect` coverage for `runId`, `runtimeRunId`,
     `teamRunId`, and `taskRunSpecId` in

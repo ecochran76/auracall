@@ -2877,6 +2877,8 @@ describe('http responses adapter', () => {
         const payload = (await response.json()) as {
           object: string;
           inspection: {
+            resolvedBy: string;
+            queryId: string;
             queryRunId: string;
             runtime: {
               runId: string;
@@ -2893,6 +2895,22 @@ describe('http responses adapter', () => {
         expect(payload).toMatchObject({
           object: 'runtime_run_inspection',
           inspection: {
+            resolvedBy:
+              testCase.label === 'runId'
+                ? 'run-id'
+                : testCase.label === 'runtimeRunId'
+                  ? 'runtime-run-id'
+                  : testCase.label === 'teamRunId'
+                    ? 'team-run-id'
+                    : 'task-run-spec-id',
+            queryId:
+              testCase.label === 'runId'
+                ? runId
+                : testCase.label === 'runtimeRunId'
+                  ? runtimeRunId
+                  : testCase.label === 'teamRunId'
+                    ? teamRunId
+                    : taskRunSpecId,
             queryRunId: runId,
             runtime: {
               runId,
@@ -2917,6 +2935,8 @@ describe('http responses adapter', () => {
       const runnerPayload = (await runnerResponse.json()) as {
         object: string;
         inspection: {
+          resolvedBy: string;
+          queryId: string;
           queryRunId: string;
           runtime: {
             runId: string;
@@ -2933,6 +2953,8 @@ describe('http responses adapter', () => {
       expect(runnerPayload).toMatchObject({
         object: 'runtime_run_inspection',
         inspection: {
+          resolvedBy: 'run-id',
+          queryId: runId,
           queryRunId: runId,
           runtime: {
             runId,
