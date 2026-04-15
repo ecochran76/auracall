@@ -15,6 +15,19 @@
       bounded attention kinds
   - kept this slice documentation-only; no runtime behavior changed.
 
+## 2026-04-15 - Api serve runner account-affinity caveat
+
+- Completed one bounded durable-runner truthfulness refinement:
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so persisted `api serve` runner notes now preserve when a browser-capable
+    runner still has no durable `serviceAccountIds`
+  - kept the runner schema and capability fields unchanged:
+    - no synthetic service-account ids were introduced
+    - no new runtime inspection fields were added
+  - synchronized focused HTTP coverage and operator docs so
+    `eligibilityNote` now carries the known account-affinity limitation
+    instead of implying full browser-bearing runner equivalence.
+
 ## 2026-04-15 - Runtime inspection queue projection rendering
 
 - Completed one bounded runtime-inspection operator-surface refinement:

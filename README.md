@@ -186,6 +186,9 @@ Terminology note:
       - bounded `runner` summary when:
         - `runnerId` is supplied, or
         - the active lease owner resolves to a persisted runner record
+        - when a browser-capable `api serve` runner still has no durable
+          `serviceAccountIds`, its `eligibilityNote` now preserves that caveat
+          instead of implying full browser-account affinity
     - this is still inspection-only; it does not create, claim, cancel, or run
       work
       - `requestedOutputCount`

@@ -194,6 +194,9 @@
     - if `runnerId` is supplied, the same inspection route should also include
       one bounded persisted runner summary and evaluate queue affinity against
       that runner
+      - when the persisted `api serve` runner is browser-capable but still has
+        no durable `serviceAccountIds`, expect `eligibilityNote` to preserve
+        that caveat
     - bounded local claims now use that live runner id as the lease owner
     - successful direct-run execution now also updates that persisted runner
       record with:

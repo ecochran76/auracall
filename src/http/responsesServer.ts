@@ -260,6 +260,25 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
   };
 }
 
+function createLocalRunnerEligibilityNote(input: {
+  phase: 'register' | 'heartbeat' | 'shutdown';
+  capabilitySummary: {
+    serviceAccountIds: string[];
+    browserCapable: boolean;
+  };
+}): string {
+  const base =
+    input.phase === 'register'
+      ? 'api serve local runner'
+      : input.phase === 'heartbeat'
+        ? 'api serve runner heartbeat'
+        : 'api serve shutdown';
+  if (!input.capabilitySummary.browserCapable || input.capabilitySummary.serviceAccountIds.length > 0) {
+    return base;
+  }
+  return `${base}; service-account affinity not projected`;
+}
+
 export async function createResponsesHttpServer(
   options: ResponsesHttpServerOptions = {},
   deps: ResponsesHttpServerDeps = {},
@@ -716,7 +735,10 @@ export async function createResponsesHttpServer(
         runnerId: localRunnerId,
         heartbeatAt,
         expiresAt,
-        eligibilityNote: 'api serve local runner',
+        eligibilityNote: createLocalRunnerEligibilityNote({
+          phase: 'register',
+          capabilitySummary: localRunnerCapabilitySummary,
+        }),
       });
       updateRunnerState({
         id: heartbeatedRunner.runner.id,
@@ -740,7 +762,10 @@ export async function createResponsesHttpServer(
           browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
           serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
           browserCapable: localRunnerCapabilitySummary.browserCapable,
-          eligibilityNote: 'api serve local runner',
+          eligibilityNote: createLocalRunnerEligibilityNote({
+            phase: 'register',
+            capabilitySummary: localRunnerCapabilitySummary,
+          }),
         }),
       });
       updateRunnerState({
@@ -762,7 +787,10 @@ export async function createResponsesHttpServer(
       runnerId: localRunnerId,
       heartbeatAt,
       expiresAt,
-      eligibilityNote: 'api serve runner heartbeat',
+      eligibilityNote: createLocalRunnerEligibilityNote({
+        phase: 'heartbeat',
+        capabilitySummary: localRunnerCapabilitySummary,
+      }),
     });
     updateRunnerState({
       id: heartbeatedRunner.runner.id,
@@ -861,7 +889,10 @@ export async function createResponsesHttpServer(
         const staleRunner = await runnersControl.markRunnerStale({
           runnerId: localRunnerId,
           staleAt,
-          eligibilityNote: 'api serve shutdown',
+          eligibilityNote: createLocalRunnerEligibilityNote({
+            phase: 'shutdown',
+            capabilitySummary: localRunnerCapabilitySummary,
+          }),
         });
         updateRunnerState({
           id: staleRunner.runner.id,

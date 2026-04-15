@@ -1077,6 +1077,7 @@ describe('http responses adapter', () => {
           browserProfileIds: ['default', 'wsl-chrome-2'],
           serviceAccountIds: [],
           browserCapable: true,
+          eligibilityNote: 'api serve local runner; service-account affinity not projected',
         },
       });
     } finally {
@@ -1115,7 +1116,7 @@ describe('http responses adapter', () => {
         expiresAt: '2026-04-11T14:05:45.000Z',
         lastActivityAt: null,
         lastClaimedRunId: null,
-        eligibilityNote: 'api serve shutdown',
+        eligibilityNote: 'api serve shutdown; service-account affinity not projected',
       },
     });
   });
