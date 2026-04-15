@@ -3274,6 +3274,172 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('evaluates configured service-account affinity on runtime inspection over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-account-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_http_inspect_account_1';
+    const createdAt = '2026-04-15T12:30:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'teamrun_http_runtime_inspect_account_1',
+          taskRunSpecId: 'task_spec_http_runtime_inspect_account_1',
+          status: 'planned',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect runtime account affinity.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: 'teamrun_http_runtime_inspect_account_1:step:1',
+            agentId: 'agent:inspect-account',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect runtime account affinity.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:http-runtime-account-missing',
+        hostId: 'host:http-runtime-account',
+        status: 'active',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-15T12:31:00.000Z',
+        expiresAt: '2026-04-15T12:35:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        serviceAccountIds: [],
+        browserCapable: true,
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:http-runtime-account-match',
+        hostId: 'host:http-runtime-account',
+        status: 'active',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-15T12:31:00.000Z',
+        expiresAt: '2026-04-15T12:35:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+        browserCapable: true,
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        config: {
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'operator@example.com',
+              },
+            },
+          },
+          runtimeProfiles: {
+            default: {
+              engine: 'browser',
+              defaultService: 'chatgpt',
+              browserProfile: 'default',
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const missingResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=runner:http-runtime-account-missing`,
+      );
+      expect(missingResponse.status).toBe(200);
+      const missingPayload = (await missingResponse.json()) as Record<string, unknown>;
+      expect(missingPayload).toMatchObject({
+        inspection: {
+          runtime: {
+            queueProjection: {
+              claimState: 'blocked-affinity',
+              affinity: {
+                status: 'blocked-mismatch',
+                requiredServiceAccountId: 'service-account:chatgpt:operator@example.com',
+                eligibilityNote: 'requires configured service account service-account:chatgpt:operator@example.com',
+                reason:
+                  'runner runner:http-runtime-account-missing does not expose service account service-account:chatgpt:operator@example.com',
+              },
+            },
+          },
+        },
+      });
+
+      const matchingResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=runner:http-runtime-account-match`,
+      );
+      expect(matchingResponse.status).toBe(200);
+      const matchingPayload = (await matchingResponse.json()) as Record<string, unknown>;
+      expect(matchingPayload).toMatchObject({
+        inspection: {
+          runtime: {
+            queueProjection: {
+              claimState: 'claimable',
+              affinity: {
+                status: 'eligible',
+                reason: null,
+                requiredServiceAccountId: 'service-account:chatgpt:operator@example.com',
+                eligibilityNote: 'requires configured service account service-account:chatgpt:operator@example.com',
+              },
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('reports bounded candidate matches for alias-based runtime inspection over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-matches-'));
     cleanup.push(tmp);

@@ -168,6 +168,9 @@ Current limits:
           - `requiredServiceAccountId`
           - `browserRequired`
           - `eligibilityNote`
+        - configured service identity for the active step service is projected
+          into `requiredServiceAccountId` using the same
+          `service-account:<service>:<identity-key>` shape as runner metadata
       - bounded `runner` summary when a runner is explicitly queried or the
         active lease owner resolves to a persisted runner record
         - `api serve` derives runner `serviceAccountIds` from configured

@@ -1,10 +1,15 @@
 import { createTaskRunSpecRecordStore, summarizeTaskRunSpecStoredRecord, type TaskRunSpecInspectionSummary, type TaskRunSpecRecordStore } from '../teams/store.js';
 import { createExecutionRuntimeControl } from './control.js';
-import type { ExecutionRuntimeControlContract } from './contract.js';
+import type { ExecutionRunInspection, ExecutionRuntimeControlContract } from './contract.js';
 import { getActiveExecutionRunLease } from './contract.js';
 import { createExecutionRunQueueProjection, type ExecutionRunQueueProjection } from './projection.js';
 import { createExecutionRunnerControl, type ExecutionRunnerControlContract } from './runnersControl.js';
-import type { ExecutionRunSourceKind, ExecutionRunStatus, ExecutionRunnerStatus } from './types.js';
+import type {
+  ExecutionRunAffinityRecord,
+  ExecutionRunSourceKind,
+  ExecutionRunStatus,
+  ExecutionRunnerStatus,
+} from './types.js';
 import type { ExecutionRunnerStoredRecord } from './runnersStore.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 
@@ -17,6 +22,7 @@ export interface InspectRuntimeRunInput {
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
+  createRunAffinity?: (inspection: ExecutionRunInspection) => ExecutionRunAffinityRecord | null;
 }
 
 export interface RuntimeRunInspectionRunnerSummary {
@@ -149,6 +155,7 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     runnersControl,
   });
   const queueProjection = createExecutionRunQueueProjection(runtimeInspection, {
+    affinity: input.createRunAffinity?.(runtimeInspection) ?? null,
     runner: selectedRunner?.runner.runner ?? null,
   });
   const taskRunSpecSummary = runtimeInspection.record.bundle.run.taskRunSpecId

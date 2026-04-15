@@ -9,6 +9,10 @@ import {
   resolveHostLocalActionExecutionPolicy,
 } from '../config/model.js';
 import {
+  createConfiguredServiceAccountId,
+  resolveConfiguredServiceAccountId,
+} from '../config/serviceAccountIdentity.js';
+import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
   type TeamRunInspectionPayload,
@@ -25,6 +29,7 @@ import {
 } from '../runtime/inspection.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
+import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
 import {
   createExecutionResponsesService,
@@ -200,27 +205,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
-function normalizeServiceAccountIdentityKey(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
-  return normalized.length > 0 ? normalized : null;
-}
-
-function createServiceAccountId(serviceId: RunnerServiceId, serviceConfig: unknown): string | null {
-  if (!isRecord(serviceConfig) || !isRecord(serviceConfig.identity)) return null;
-  const identityKey =
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.email) ??
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.handle) ??
-    normalizeServiceAccountIdentityKey(serviceConfig.identity.name);
-  return identityKey ? `service-account:${serviceId}:${identityKey}` : null;
-}
-
 function addConfiguredServiceAccountId(input: {
   accountIds: Set<string>;
   serviceId: RunnerServiceId;
   serviceConfig: unknown;
 }): void {
-  const serviceAccountId = createServiceAccountId(input.serviceId, input.serviceConfig);
+  const serviceAccountId = createConfiguredServiceAccountId(input.serviceId, input.serviceConfig);
   if (serviceAccountId) {
     input.accountIds.add(serviceAccountId);
   }
@@ -255,11 +245,13 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
   for (const runtimeProfile of projectedModel.runtimeProfiles) {
     if (runtimeProfile.defaultService) {
       serviceIds.add(runtimeProfile.defaultService);
-      addConfiguredServiceAccountId({
-        accountIds: serviceAccountIds,
+      const serviceAccountId = resolveConfiguredServiceAccountId(configRecord, {
         serviceId: runtimeProfile.defaultService,
-        serviceConfig: globalServices[runtimeProfile.defaultService],
+        runtimeProfileId: runtimeProfile.id,
       });
+      if (serviceAccountId) {
+        serviceAccountIds.add(serviceAccountId);
+      }
     }
     if (runtimeProfile.browserProfileId) {
       browserProfileIds.add(runtimeProfile.browserProfileId);
@@ -345,7 +337,12 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
-  const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(deps.config);
+  const configuredRuntimeConfig = deps.config;
+  const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
+  const createRunAffinity = configuredRuntimeConfig
+    ? (inspection: Parameters<typeof createConfiguredExecutionRunAffinity>[1]) =>
+        createConfiguredExecutionRunAffinity(configuredRuntimeConfig, inspection)
+    : undefined;
   const runnerHeartbeatIntervalMs = 5_000;
   const runnerHeartbeatTtlMs = 15_000;
   let host: ExecutionServiceHost;
@@ -522,6 +519,7 @@ export async function createResponsesHttpServer(
             runnerId: url.searchParams.get('runnerId'),
             control,
             runnersControl,
+            createRunAffinity,
           });
           sendJson(res, 200, {
             object: 'runtime_run_inspection',
@@ -878,6 +876,7 @@ export async function createResponsesHttpServer(
       ownerId: localRunnerId,
       runnerId: localRunnerId,
       localActionExecutionPolicy: deps.localActionExecutionPolicy,
+      createRunAffinity,
       executeStoredRunStep: deps.executeStoredRunStep
         ? async (context) => {
             const request = createExecutionRequestFromRecord(context.record);

@@ -191,6 +191,10 @@
         - `requiredServiceAccountId`
         - `browserRequired`
         - `eligibilityNote`
+      - when configured service identity exists for the active step service,
+        runtime inspection and local claim evaluation should require the same
+        `service-account:<service>:<identity-key>` id that `api serve` runner
+        records advertise
     - if `runnerId` is supplied, the same inspection route should also include
       one bounded persisted runner summary and evaluate queue affinity against
       that runner

@@ -1,4 +1,8 @@
-import { getActiveExecutionRunLease, type ExecutionRuntimeControlContract } from './contract.js';
+import {
+  getActiveExecutionRunLease,
+  type ExecutionRunInspection,
+  type ExecutionRuntimeControlContract,
+} from './contract.js';
 import { createExecutionRuntimeControl } from './control.js';
 import {
   DEFAULT_LOCAL_ACTION_EXECUTION_POLICY,
@@ -32,7 +36,7 @@ import {
 } from '../teams/store.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { ExecuteStoredRunStepContext } from './runner.js';
-import type { ExecutionRunSourceKind } from './types.js';
+import type { ExecutionRunAffinityRecord, ExecutionRunSourceKind } from './types.js';
 
 async function readStoredTaskRunSpecSummary(
   store: TaskRunSpecRecordStore,
@@ -315,6 +319,7 @@ export interface ExecutionServiceHostDeps {
   executeLocalActionRequest?: (
     context: ExecuteLocalActionRequestContext,
   ) => Promise<ExecuteLocalActionRequestResult | void>;
+  createRunAffinity?: (inspection: ExecutionRunInspection) => ExecutionRunAffinityRecord | null;
 }
 
 type HostDrainCandidateKind =
@@ -379,6 +384,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       shouldRequireOperatorApprovalForLocalAction(context)
         ? Promise.resolve(undefined)
         : executeBuiltInLocalActionRequest(context, localActionExecutionPolicy));
+  const createRunAffinity = deps.createRunAffinity ?? (() => null);
   let leaseSequence = 0;
 
   return {
@@ -519,6 +525,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               runId: currentRecord.runId,
               runnerId: summary.localClaim.runnerId,
               now: livenessSweepAt,
+              affinity: createRunAffinity(inspection),
             },
             {
               control,
@@ -672,6 +679,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             runId: candidate.runId,
             runnerId,
             now: livenessSweepAt,
+            affinity: createRunAffinity(inspection),
           },
           {
             control,
@@ -734,6 +742,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               runId,
               runnerId,
               now: detailAt,
+              affinity: createRunAffinity(inspection),
             },
             {
               control,
@@ -1236,6 +1245,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               runId: currentRecord.runId,
               runnerId,
               now: now(),
+              affinity: createRunAffinity(inspection),
             },
             {
               control,

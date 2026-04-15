@@ -183,6 +183,10 @@ Terminology note:
           - `requiredServiceAccountId`
           - `browserRequired`
           - `eligibilityNote`
+        - when configured service identity exists for the active step service,
+          `requiredServiceAccountId` uses the same
+          `service-account:<service>:<identity-key>` shape as runner
+          `serviceAccountIds`
       - bounded `runner` summary when:
         - `runnerId` is supplied, or
         - the active lease owner resolves to a persisted runner record

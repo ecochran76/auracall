@@ -31,6 +31,21 @@
     `eligibilityNote` now carries missing or partial account-affinity caveats
     instead of implying full browser-bearing runner equivalence.
 
+## 2026-04-15 - Configured account affinity on runtime inspection
+
+- Completed one bounded run-side affinity refinement:
+  - added [src/config/serviceAccountIdentity.ts](/home/ecochran76/workspace.local/oracle/src/config/serviceAccountIdentity.ts)
+    as the shared configured service-account id helper
+  - added [src/runtime/configuredAffinity.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredAffinity.ts)
+    so runtime inspection and service-host local claims can derive a
+    `requiredServiceAccountId` from configured service identity for the active
+    step service
+  - wired that helper through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    for the local `api serve` host without adding new public routes or live
+    browser probing
+  - locked the HTTP runtime inspection contract for both missing and matching
+    runner account ids.
+
 ## 2026-04-15 - Runtime inspection queue projection rendering
 
 - Completed one bounded runtime-inspection operator-surface refinement:
