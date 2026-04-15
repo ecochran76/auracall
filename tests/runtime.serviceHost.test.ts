@@ -3084,6 +3084,7 @@ describe('runtime service host', () => {
       reason: 'active lease owner is unavailable and the lease is expired',
       leaseHealthStatus: 'stale-heartbeat',
       repairPosture: 'locally-reclaimable',
+      reconciliationReason: 'lease owner runner:stale-repairable is stale',
     });
 
     const repairedRecord = await control.readRun('run_detail_repairable_stale');
@@ -3138,6 +3139,7 @@ describe('runtime service host', () => {
       reason: 'active lease has no observed runner activity since it was acquired',
       leaseHealthStatus: 'suspiciously-idle',
       repairPosture: 'not-reclaimable',
+      reconciliationReason: 'active lease has no observed runner activity since it was acquired',
     });
 
     const storedRecord = await control.readRun('run_detail_idle_repair');

@@ -766,6 +766,8 @@
       - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
       - it succeeds only when the run is currently `stale-heartbeat` and the
         durable repair posture is already `locally-reclaimable`
+      - successful action results should also include bounded
+        `reconciliationReason`
       - suspiciously-idle leases remain diagnostic-only and should return 409
     - recovery summary/detail now also surface bounded attention for
       unrepaired stale-heartbeat cases:

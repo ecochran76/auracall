@@ -235,6 +235,7 @@ export interface ExecutionServiceHostStaleHeartbeatActionResult {
   reason: string;
   leaseHealthStatus: ExecutionServiceHostActiveLeaseHealth['status'] | null;
   repairPosture: ExecutionRunRepairPosture | null;
+  reconciliationReason: string | null;
 }
 
 export interface ExecutionServiceHostCancelActionResult {
@@ -1467,6 +1468,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
         reason: `run ${input.runId} was not found`,
         leaseHealthStatus: null,
         repairPosture: null,
+        reconciliationReason: null,
       },
       repair: null,
     };
@@ -1483,6 +1485,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
         reason: 'run has no active lease',
         leaseHealthStatus: null,
         repairPosture: null,
+        reconciliationReason: null,
       },
       repair: null,
     };
@@ -1514,6 +1517,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
         reason: leaseHealth?.reason ?? 'active lease is not classified as stale-heartbeat',
         leaseHealthStatus: leaseHealth?.status ?? null,
         repairPosture: repair?.posture ?? null,
+        reconciliationReason: repair?.reconciliation.reason ?? leaseHealth?.reason ?? null,
       },
       repair,
     };
@@ -1529,6 +1533,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
         reason: repair?.reason ?? 'stale-heartbeat lease does not have a reclaimable repair posture',
         leaseHealthStatus: leaseHealth.status,
         repairPosture: repair?.posture ?? null,
+        reconciliationReason: repair?.reconciliation.reason ?? leaseHealth.reason ?? null,
       },
       repair,
     };
@@ -1554,6 +1559,7 @@ async function evaluateAndRepairStaleHeartbeatLease(input: {
       reason: repaired?.reason ?? repair.reason,
       leaseHealthStatus: leaseHealth.status,
       repairPosture: repaired?.posture ?? repair.posture,
+      reconciliationReason: repaired?.reconciliation.reason ?? repair.reconciliation.reason ?? null,
     },
     repair,
   };

@@ -12311,3 +12311,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-14: Treat repo-root `undefined:/` as disposable temp-path fallout, not source. Safe worktree cleanup is: remove the tree and ignore `undefined:/` in `.gitignore`. Do not sweep broader untracked/modified files in the same turn unless you have explicit intent for the in-flight feature/docs changes.
 - 2026-04-15: When `api serve` persists a local runner record, derive `serviceIds`, `runtimeProfileIds`, and `browserProfileIds` from the existing config projection model when config is available. Hardcoded runner capability metadata creates false affinity signals; keep a compatibility fallback only for no-config cases.
 - 2026-04-15: For targeted host-drain skips, keep the bounded skip enum stable but preserve the specific local-claim explanation separately. In this repo, `skipReason` should stay coarse (`claim-owner-unavailable`) while the free-form `reason`/persisted note carries the actionable detail such as a missing runner record or affinity mismatch.
+- 2026-04-15: When an operator action already computes a bounded reconciliation cause, preserve it in the action result instead of forcing callers to infer it from a broader repair posture.
+  - `repair-stale-heartbeat` now keeps:
+    - coarse `reason`
+    - bounded `leaseHealthStatus`
+    - bounded `repairPosture`
+    - actionable `reconciliationReason`
+  - This keeps the repair taxonomy stable while letting `/status` callers
+    distinguish missing-runner, stale-runner, and active-runner causes without
+    jumping to the separate recovery-detail route first.

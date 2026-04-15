@@ -1416,6 +1416,7 @@ describe('http responses adapter', () => {
           repaired: true,
           leaseHealthStatus: 'stale-heartbeat',
           repairPosture: 'locally-reclaimable',
+          reconciliationReason: 'lease owner runner:missing-stale has no persisted runner record',
         },
       });
 

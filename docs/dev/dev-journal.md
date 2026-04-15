@@ -15972,3 +15972,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - corrected the stale durable rule in
     [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/oracle/docs/dev-fixes-log.md)
     so targeted-drain ownership failures no longer imply `reason = skipReason`.
+## 2026-04-15 - Stale-heartbeat repair action reconciliation detail
+
+- Completed one bounded operator-action refinement for stale-heartbeat repair:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `repairStaleHeartbeatLease(...)` now preserves
+    `reconciliationReason` in the returned action result alongside:
+    - `reason`
+    - `leaseHealthStatus`
+    - `repairPosture`
+  - kept the coarse repair taxonomy unchanged while exposing the already-known
+    reconciliation detail that explains why the lease was stale or not
+    reclaimable.
+  - added focused host and HTTP coverage in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    so the `POST /status` lease-repair action documents the same bounded
+    detail field.

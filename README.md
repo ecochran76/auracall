@@ -208,6 +208,7 @@ Terminology note:
     - `POST /status` now also accepts one bounded stale-heartbeat operator action:
       - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
       - it only repairs runs currently classified as `stale-heartbeat` when the existing durable repair posture is already `locally-reclaimable`
+      - successful action results also preserve bounded reconciliation detail under `reconciliationReason`
       - `suspiciously-idle` remains read-only and is rejected by that action
     - `POST /status` now also accepts one bounded local run-cancel operator action:
       - `{"runControl":{"action":"cancel-run","runId":"..."}}`
