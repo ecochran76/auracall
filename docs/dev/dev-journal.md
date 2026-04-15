@@ -1,3 +1,2276 @@
+## 2026-04-13 - Live-suite consolidation tier map
+
+- Current focus:
+  - turn the roadmap reassessment into concrete operator-facing guidance for
+    which live suites should run routinely versus remain opt-in
+- Completed:
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    with a concrete tier map instead of only high-level posture language
+  - classified the current live suites as:
+    - stable baseline:
+      - `tests/live/team-grok-live.test.ts` default Grok baseline cases
+      - `tests/live/team-chatgpt-live.test.ts` single-provider ChatGPT
+        baseline
+    - extended matrix:
+      - `tests/live/team-gemini-live.test.ts`
+      - Grok/ChatGPT operator-control cases
+      - `tests/live/team-multiservice-live.test.ts`
+    - flaky-but-informative probes:
+      - provider/browser paths that still need bounded reruns or stronger
+        auth/cooldown preflight, especially some Gemini-resume situations
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    so the top-level testing pointer now reflects the tiered live-suite model
+  - added one routine baseline script in
+    [package.json](/home/ecochran76/workspace.local/oracle/package.json):
+    - `pnpm run test:live:team:baseline`
+    - current scope:
+      - Grok default team baseline cases
+      - ChatGPT single-provider team baseline
+  - added matching tier comments near the env-gate definitions in:
+    - [team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    - [team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    - [team-gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-gemini-live.test.ts)
+    - [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+- Verification:
+  - reviewed current live test inventory and gates:
+    - `tests/live/team-grok-live.test.ts`
+    - `tests/live/team-chatgpt-live.test.ts`
+    - `tests/live/team-gemini-live.test.ts`
+    - `tests/live/team-multiservice-live.test.ts`
+  - reviewed current roadmap closeout docs before patching:
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/dev-journal.md](/home/ecochran76/workspace.local/oracle/docs/dev/dev-journal.md)
+    - [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/oracle/docs/dev-fixes-log.md)
+- Why it matters:
+  - routine operators now have a smaller default live target
+  - the broader provider/operator matrix remains available without pretending
+    it belongs in every default run
+  - future consolidation slices can now focus on naming/gating cleanup instead
+    of more provider-order expansion
+
+## 2026-04-13 - Mixed-provider response readback step summaries
+
+- Current focus:
+  - reduce mixed-provider response readback ambiguity without changing runtime
+    execution behavior
+- Completed:
+  - added bounded `metadata.executionSummary.stepSummaries` projection to
+    response readback in:
+    - [apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
+    - [apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+  - added focused mixed-provider team-run coverage in:
+    - [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    so response readback guidance now points at `executionSummary.stepSummaries`
+    for mixed-provider routing proof
+  - tightened mixed-provider live assertions in
+    [team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    so the live suite now checks the full split explicitly:
+    - top-level response metadata stays compact
+    - `executionSummary.stepSummaries` carries route truth
+    - recovery detail remains the timeline surface
+  - tightened the model-level runtime assertion in
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    so the compact-versus-projected split is explicit:
+    - top-level `metadata.service` / `metadata.runtimeProfile` must remain on
+      the compact entry-side summary
+    - `executionSummary.stepSummaries` must carry the full mixed-provider route
+  - added explicit negative assertions in
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    so response `metadata.executionSummary` does not silently grow
+    recovery-only fields such as:
+    - `activeLease`
+    - `dispatch`
+    - `repair`
+    - `leaseHealth`
+    - `localClaim`
+  - added focused runtime + HTTP assertions that structured mixed
+    `response.output` stays the transport payload when shared state exposes
+    `structuredOutputs[key="response.output"]`, and does not silently absorb
+    `metadata.executionSummary` fields
+  - added explicit serve-wrapper coverage in
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    that `recoverRunsOnStartSourceKind = all` preserves the documented startup
+    recovery scope:
+    - default remains `direct`
+    - `team-run` recovers only team runs
+    - `all` recovers both direct and team runs
+  - added explicit serve-wrapper coverage in
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    that startup-recovery cap still applies after widening scope to `all`:
+    - mixed direct + team candidates are still bounded by
+      `recoverRunsOnStartMaxRuns`
+    - the startup log stays on `Startup recovery (all) completed`
+    - cap saturation still reports `limit-reached`
+  - added explicit targeted-drain host coverage in
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    that a team run keeps the operator-facing ownership failure explicit:
+    - `drainRun(...)` returns `status = skipped`
+    - `reason = skipReason = claim-owner-unavailable`
+    - the persisted run keeps `sourceKind = team-run`
+  - added explicit repeated-pass host accounting coverage in
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    so `drainRunsUntilIdle(...)` keeps:
+    - repeated executed passes for the same run
+    - one reclaimed stale-lease entry only once in `expiredLeaseRunIds`
+  - added explicit skipped targeted-drain readback coverage in
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts):
+    - `operatorControlSummary.targetedDrain.status = skipped`
+    - `reason = skipReason = claim-owner-unavailable`
+    - recovery detail timeline retains the persisted skipped drain note
+  - added explicit cancellation fallback readback coverage in
+    [runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts):
+    - when no cancellation `note-added` event exists, readback falls back to
+      the cancelled run's `updatedAt`
+    - `source = null`
+    - `reason = null`
+  - added explicit negative assertions in
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    that recovery detail does not grow routing fields such as:
+    - `runtimeProfile`
+    - `service`
+    - `stepSummaries`
+  - aligned the user-facing `/status` operator docs in
+    [README.md](/home/ecochran76/workspace.local/oracle/README.md) so
+    `localActionControl.resolve-request` matches the tested host/server scope:
+    - currently `requested` local action records on direct or team runs
+  - aligned the user-facing response-readback docs in
+    [README.md](/home/ecochran76/workspace.local/oracle/README.md) so the
+    mixed-provider routing contract is explicit there too:
+    - top-level `metadata.service` / `metadata.runtimeProfile` stay compact
+    - `metadata.executionSummary.stepSummaries` carries route truth
+    - recovery detail remains the lifecycle timeline surface
+  - completed one final bounded operator-doc audit across
+    [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    and did not find another comparably high-value stale statement on the same
+    seam
+  - added explicit negative assertions in
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    so `GET /status?recovery=true` stays a compact summary surface and does not
+    silently grow per-run detail fields such as:
+    - `taskRunSpecId`
+    - `orchestrationTimelineSummary`
+    - `handoffTransferSummary`
+    - `leaseHealth`
+  - tightened the `/status?recovery=true` test contract in
+    [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    so the local-claim split is explicit:
+    - top-level `localClaimSummary` stays the direct-run snapshot
+    - `recoverySummary.localClaim` follows the requested recovery source scope
+  - tightened the same `/status?recovery=true` contract so top-level server
+    posture stays explicit too:
+    - `runner` remains the server runner snapshot
+    - `backgroundDrain` remains the server drain-loop snapshot
+    - recovery/source filters do not reshape either surface
+    - that remains true even when `recoverySummary` is filtered to
+      `team-run` or `all`
+  - updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    so the recovery summary versus per-run detail split is explicit there too
+  - aligned [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    with the current tested `/status` operator scope so it no longer describes:
+    - `resume-human-escalation` as direct-run-only
+    - `drain-run` as direct-run-only
+    - `localActionControl.resolve-request` as direct-run-only
+- Why it matters:
+  - `GET /v1/responses/{response_id}` no longer forces mixed-provider callers
+    to infer route truth from one top-level `metadata.service` /
+    `metadata.runtimeProfile`
+  - stored step state is still the authority; the new field is a bounded
+    response projection of that same authority
+  - the operator-doc/readback alignment subphase is now materially complete
+    enough to stop here and move to a different bounded hardening target
+
+## 2026-04-13 - Second-provider cancelled local-action live proof
+
+- Current focus:
+  - confirm the truthful cancelled local-action operator path on a second
+    provider instead of leaving it Grok-only
+- Completed:
+  - extended
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    with one opt-in ChatGPT cancelled-local-action case gated behind:
+    - `AURACALL_CHATGPT_CANCELLATION_LIVE_TEST=1`
+  - reused the existing `auracall-chatgpt-tooling` team rather than adding a
+    new team/config variant
+  - proved the same truthful route on ChatGPT:
+    - bounded local shell action requested under
+      `--require-local-action-approval`
+    - operator resolves the pending request as `cancelled`
+    - existing `/status` resume + drain completes the same provider-backed run
+    - response readback shows bounded `localActionSummary.cancelled = 1`
+    - stored terminal step summary reaches:
+      - `AURACALL_CHATGPT_CANCELLATION_TEAM_LIVE_SMOKE_OK`
+  - bounded the cleanup helper’s per-delete subprocess timeout so slow exact-id
+    provider deletes cannot pin the live suite indefinitely
+- Verification:
+  - `pnpm vitest run tests/live/team-chatgpt-live.test.ts`
+    - pass in skipped mode
+  - `pnpm vitest run tests/live/liveConversationCleanup.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "cancels auracall-chatgpt-tooling local action"`
+    - pass
+- Why it matters:
+  - cancelled local-action is now live-proven on:
+    - Grok
+    - ChatGPT
+  - the next negative-path gap is no longer same-shape second-provider proof;
+    it is mixed-provider or Gemini-specific operator behavior
+
+## 2026-04-12 - Team-run cancelled local-action live proof
+
+- Current focus:
+  - finish the negative-path operator-control matrix with a truthful cancelled
+    local-action team workflow
+- Completed:
+  - widened the team CLI/task/runtime path so bounded local shell actions can
+    be marked `approval-required` instead of auto-executing:
+    - `auracall teams run ... --require-local-action-approval`
+  - updated the stored runner/service-host path so approval-required local
+    actions remain `requested` until operator resolution instead of being
+    auto-consumed
+  - updated dependency local-action guidance so:
+    - `requested`
+    - `cancelled`
+    now both escalate to human escalation
+  - added local regressions in:
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    with one opt-in cancelled-local-action case gated behind:
+    - `AURACALL_CANCELLATION_LIVE_TEST=1`
+  - fixed the new live-test cleanup path so it remains batched but cannot hang
+    a live suite turn by trying to delete too many old chats at once:
+    - threshold `6`
+    - retain newest `3`
+    - delete at most oldest `2` per enqueue
+- Verification:
+  - `pnpm vitest run tests/cli/teamRunCommand.test.ts`
+    - pass
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "approval|required|local action"`
+    - pass
+  - `pnpm vitest run tests/runtime.runner.test.ts -t "human escalation|approval|required|local action"`
+    - pass
+  - `pnpm vitest run tests/live/liveConversationCleanup.test.ts`
+    - pass
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass in skipped mode
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 AURACALL_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "cancels auracall-tooling local action"`
+    - pass
+- Why it matters:
+  - the repo now has the full Grok negative-path operator trio:
+    - approval/resume/drain
+    - runtime rejection + resume/drain
+    - operator cancellation + resume/drain
+  - the cancelled path is now truthful end to end:
+    - requested local action
+    - operator cancellation
+    - resume
+    - targeted drain
+    - terminal success with bounded response/recovery readback
+
+## 2026-04-12 - Team-run rejected local-action proof
+
+- Current focus:
+  - catch the negative-path operator/local-action behavior up to the now-broad
+    happy-path team coverage
+- Completed:
+  - widened the existing local-action control seam in
+    [serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `resolve-request` is no longer artificially direct-run-only
+  - added local regressions proving team-run local-action resolution through:
+    - [runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - extended
+    [team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    with one opt-in rejected-local-action case gated behind:
+    - `AURACALL_REJECTION_LIVE_TEST=1`
+  - proved the real negative path that the current runtime actually takes:
+    - initial forbidden local action is durably rejected by step policy
+    - the run pauses for human escalation
+    - existing `/status` resume + drain completes the same provider-backed run
+    - response readback shows bounded rejected `localActionSummary`
+    - stored terminal step summary reaches:
+      - `AURACALL_TEAM_REJECTION_LIVE_SMOKE_OK`
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "local action"`
+    - pass
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "local action"`
+    - pass
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass in skipped mode
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 AURACALL_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "rejects auracall-tooling local action"`
+    - pass
+- Why it matters:
+  - the repo now has one real negative-path team live proof, not just pause /
+    resume success paths
+  - the control/readback model now matches the actual runtime behavior:
+    - forbidden local actions can already be durably rejected before operator
+      resume
+
+## 2026-04-12 - Second-provider team approval/resume/drain live proof
+
+- Current focus:
+  - prove the existing `/status` operator-control seam on a second
+    provider-backed team path, not just Grok
+- Completed:
+  - added one ChatGPT approval live case in
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+  - reuses a new external-configured two-step ChatGPT team:
+    - `auracall-chatgpt-tooling`
+    - requester emits one intentionally forbidden bounded shell action
+    - finisher waits for resume guidance and then emits the exact final token
+  - proved the real provider-backed lifecycle:
+    - initial `auracall-chatgpt-tooling` run cancels with
+      `finalOutputSummary = "paused for human escalation"`
+    - existing `POST /status`:
+      - resumes the paused team run
+      - drains the resumed team run
+    - `GET /status/recovery/{run_id}` shows the bounded resumed execution
+      timeline
+    - `GET /v1/responses/{response_id}` shows bounded
+      `metadata.executionSummary.operatorControlSummary`
+    - stored terminal step summary reaches:
+      - `AURACALL_CHATGPT_APPROVAL_TEAM_LIVE_SMOKE_OK`
+- Verification:
+  - `pnpm vitest run tests/live/team-chatgpt-live.test.ts`
+    - pass in skipped mode
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "human escalation"`
+    - pass
+- Why it matters:
+  - provider-backed team approval/resume/drain is now live-proven on:
+    - Grok
+    - ChatGPT
+  - the existing operator-control seam is no longer effectively
+    Grok-specific
+
+## 2026-04-12 - Provider-backed Grok team approval/resume/drain live proof
+
+- Focus:
+  - close the remaining operator-control gap by proving a real paused team run
+    can be resumed and drained through the existing `/status` seam
+- Progress:
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    with one new opt-in approval case gated behind:
+    - `AURACALL_APPROVAL_LIVE_TEST=1`
+  - kept the live trigger narrow by reusing `auracall-tooling` rather than
+    adding another external team:
+    - step 1 still emits one bounded `localActionRequests` envelope
+    - the run is started without any allowed local shell policy, so the default
+      forbidden local-action posture rejects that request
+    - step 2 then pauses for human escalation on dependency guidance instead of
+      executing immediately
+  - the new live case now proves:
+    - initial provider-backed team run returns:
+      - `runtimeRunStatus = cancelled`
+      - `finalOutputSummary = paused for human escalation`
+    - `POST /status` resume-human-escalation succeeds on that same team run
+    - `POST /status` drain-run executes the resumed step through the real
+      provider-backed configured executor
+    - `GET /v1/responses/{response_id}` exposes bounded
+      `operatorControlSummary`
+    - `GET /status/recovery/{run_id}` exposes the bounded resumed execution
+      timeline
+    - stored terminal step summary reaches:
+      - `AURACALL_TEAM_APPROVAL_LIVE_SMOKE_OK`
+  - updated:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "human escalation"`
+    - pass
+- Issues:
+  - this approval proof is Grok-only so far
+  - local-action resolution itself remains a separate direct-run-only control
+    seam
+
+## 2026-04-12 - Team-run operator resume/drain exposure on existing status surface
+
+- Focus:
+  - remove the last direct-run-only operator-control gate now that team runs
+    can already pause for human escalation in the stored runtime
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so the existing host controls:
+    - `resume-human-escalation`
+    - `drain-run`
+    now apply to `team-run` records as well as `direct` records
+  - kept the slice narrow:
+    - no new route family
+    - no new control verb
+    - targeted drain still executes exactly one host-owned pass for the chosen
+      run
+  - updated
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    with a service-host proof that a paused team run can be resumed and then
+    drained through the same control seam
+  - updated
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    so `POST /status` now proves the same operator path on a `team-run`
+    record:
+    - resume paused team run
+    - targeted drain
+    - response readback carries bounded `operatorControlSummary`
+    - recovery detail carries the bounded resumed execution timeline
+  - updated:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts -t "human escalation|targeted host drain"`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "resume|drain|operator control summary"`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still server/runtime proof, not provider-backed live approval
+    behavior
+  - local-action operator control remains direct-run-only by design
+
+## 2026-04-12 - Cross-service team live proof on ChatGPT -> Gemini
+
+- Focus:
+  - extend the multi-service provider matrix beyond the first ChatGPT -> Grok
+    pairing without changing the workflow shape
+- Progress:
+  - added one new external live-config target in
+    `/home/ecochran76/.auracall/config.json`:
+    - `auracall-cross-service-gemini`
+  - reused the same narrow route:
+    - step 1:
+      - ChatGPT planner on `wsl-chrome-2`
+    - step 2:
+      - Gemini finisher on `auracall-gemini-pro`
+    - no tools
+    - exact final token
+  - extended
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    with a second provider pairing that proves:
+    - real `auracall teams run auracall-cross-service-gemini ... --json`
+    - durable host readback
+    - HTTP `GET /status/recovery/{run_id}`
+    - HTTP `GET /v1/responses/{response_id}`
+    - durable `handoff-consumed` timeline evidence
+  - added explicit Gemini exported-cookie preflight to that case:
+    - `~/.auracall/browser-profiles/default/gemini/cookies.json`
+    - requires:
+      - `__Secure-1PSID`
+      - `__Secure-1PSIDTS`
+  - updated:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-gemini`
+  - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - automated live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "ChatGPT-to-Gemini"`
+    - pass
+- Issues:
+  - mixed-provider response readback still does not expose a per-step
+    service/runtime matrix on `GET /v1/responses/{response_id}`
+  - for now, `execution.stepSummaries` remain the authoritative mixed-provider
+    proof surface
+
+## 2026-04-12 - Cross-service team live proof on ChatGPT -> Grok
+
+- Focus:
+  - prove one real cross-provider handoff on the stored-step team seam before
+    adding more provider combinations or multi-service tooling
+- Progress:
+  - added one new external live-config target in
+    `/home/ecochran76/.auracall/config.json`:
+    - `auracall-chatgpt-planner`
+    - `auracall-cross-service`
+  - the route is intentionally narrow:
+    - step 1:
+      - ChatGPT planner on `wsl-chrome-2`
+    - step 2:
+      - Grok finisher on `auracall-grok-auto`
+    - no tools
+    - exact final token
+  - added a dedicated opt-in live harness in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts)
+    that proves:
+    - real `auracall teams run auracall-cross-service ... --json`
+    - durable host readback
+    - HTTP `GET /status/recovery/{run_id}`
+    - HTTP `GET /v1/responses/{response_id}`
+    - durable `handoff-consumed` timeline evidence
+  - the live harness serializes against both browser families by taking:
+    - `chatgpt-browser`
+    - then `grok-browser`
+    locks in a fixed order
+  - updated:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-chatgpt-planner`
+  - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service`
+  - `pnpm vitest run tests/live/liveConversationCleanup.test.ts tests/live/team-multiservice-live.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - automated live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts`
+    - pass
+- Issues:
+  - this is only one provider pairing:
+    - ChatGPT -> Grok
+  - Gemini is not yet part of the multi-service matrix
+
+## 2026-04-12 - ChatGPT team baseline live proof on wsl-chrome-2
+
+- Focus:
+  - prove that the existing ChatGPT browser runtime on `wsl-chrome-2` also
+    works through the stored-step team seam before attempting any multi-service
+    team
+- Progress:
+  - added one new external live-config target in
+    `/home/ecochran76/.auracall/config.json`:
+    - `auracall-chatgpt-orchestrator`
+    - `auracall-chatgpt-solo`
+  - added a dedicated opt-in live harness in
+    [tests/live/team-chatgpt-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-chatgpt-live.test.ts)
+    that proves:
+    - real `auracall teams run auracall-chatgpt-solo ... --json`
+    - durable host readback through `serviceHost.readRecoveryDetail(...)`
+    - HTTP `GET /status/recovery/{run_id}`
+    - HTTP `GET /v1/responses/{response_id}`
+  - extended
+    [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.ts)
+    and
+    [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.test.ts)
+    so batched exact-id live cleanup now also supports `chatgpt`
+  - corrected the first live-test preflight assumption:
+    - source Chrome `Default` ChatGPT cookies are not the right authority for
+      this team path
+    - the real authority is the managed browser profile bound to runtime
+      profile `wsl-chrome-2`
+    - the live suite now probes the real provider-backed team path directly
+      instead of falsely skipping on source-cookie absence
+  - updated:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-chatgpt-orchestrator`
+  - `pnpm tsx bin/auracall.ts config show --team auracall-chatgpt-solo`
+  - `pnpm vitest run tests/live/liveConversationCleanup.test.ts tests/live/team-chatgpt-live.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - direct provider-backed CLI smoke:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-chatgpt-solo "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" --title "AuraCall ChatGPT team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
+    - pass
+    - returned:
+      - `runtimeRunStatus = succeeded`
+      - `runtimeProfileId = wsl-chrome-2`
+      - `browserProfileId = wsl-chrome-2`
+      - `service = chatgpt`
+      - `finalOutputSummary = AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK`
+  - automated live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts`
+    - pass
+- Issues:
+  - this is only the single-agent ChatGPT baseline
+  - multi-step ChatGPT teams and cross-service teams are still unproven
+
+## 2026-04-12 - Direct operator lifecycle proof tightened for human-escalation resume/drain
+
+- Focus:
+  - tighten the proof for the existing direct-run human-escalation operator
+    lifecycle without widening product surface
+- Progress:
+  - updated
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    so one cohesive regression now proves the full direct operator path:
+    - seed one paused direct run
+    - resume it through `POST /status`
+    - drain it through `POST /status`
+    - confirm `GET /v1/responses/{response_id}` exposes bounded
+      `operatorControlSummary`
+    - confirm `GET /status/recovery/{run_id}` exposes the bounded resumed/drain
+      timeline signals that surface is actually designed to retain:
+      - resume note
+      - targeted drain note
+  - updated
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    with the focused regression entrypoint:
+    - `pnpm vitest run tests/http.responsesServer.test.ts -t "operator control summary"`
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "operator control summary"`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still deterministic server/runtime proof, not provider-backed live
+    proof
+  - the team runtime path still does not expose these operator controls
+    publicly; they remain bounded to direct runs
+
+## 2026-04-12 - Batched live team conversation cleanup with Gemini exact-id parity
+
+- Focus:
+  - stop throwaway live-test chats from accumulating without deleting each one
+    immediately after every run
+  - make the cleanup path exact-id safe on both Grok and Gemini
+- Progress:
+  - patched
+    [src/gemini-web/executor.ts](/home/ecochran76/workspace.local/oracle/src/gemini-web/executor.ts)
+    so Gemini stored team steps now retain browser conversation identity:
+    - extracts conversation ids from Gemini metadata keys currently seen in the
+      repo/live path:
+      - `cid`
+      - `chat`
+      - nested `conversationId`
+    - falls back to `/app/<id>` URL extraction when needed
+    - preserves the intro conversation id across Gemini edit flows when the
+      second response omits it
+    - now returns both:
+      - `conversationId`
+      - canonical `tabUrl`
+  - added focused coverage in:
+    - [tests/gemini-web/executor.test.ts](/home/ecochran76/workspace.local/oracle/tests/gemini-web/executor.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+  - added a new exact-id live-test cleanup helper in:
+    - [tests/live/liveConversationCleanup.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.ts)
+    - [tests/live/liveConversationCleanup.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/liveConversationCleanup.test.ts)
+  - the cleanup policy is intentionally batched:
+    - enqueue successful provider conversation ids into:
+      - `~/.auracall/live-test-cleanup/grok-team-conversations.json`
+      - `~/.auracall/live-test-cleanup/gemini-team-conversations.json`
+    - only prune once a provider ledger exceeds `6`
+    - retain the newest `3`
+    - delete by exact id only through:
+      - `auracall delete <conversationId> --target <provider> --yes`
+  - wired the batched cleanup helper into:
+    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    - [tests/live/team-gemini-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-gemini-live.test.ts)
+    - cleanup runs only after successful assertions while the provider live-test
+      lock is still held
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm vitest run tests/gemini-web/executor.test.ts tests/runtime.configuredExecutor.test.ts tests/live/liveConversationCleanup.test.ts`
+  - `pnpm vitest run tests/live/team-grok-live.test.ts tests/live/team-gemini-live.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the batched cleanup path is now exact-id safe on both providers, but it is
+    only exercised by live tests after successful runs
+  - if Gemini changes its metadata shape again, the cleanup path will stay safe
+    but Gemini exact-id capture may need another narrow extractor update
+
+## 2026-04-12 - Provider-backed team run on Grok/Auto
+
+- Focus:
+  - make the new `auracall teams run` entrypoint execute through the real
+    browser/provider path and prove it against the live `auracall-solo`
+    Grok/Auto team
+- Progress:
+  - added
+    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+    as the provider-backed stored-step executor for browser-backed team runs
+  - wired
+    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+    to use that executor by default through the existing runtime bridge
+  - tightened managed browser-profile ownership for stored team steps:
+    - when a runtime profile resolves an explicit `manualLoginProfileDir`, the
+      executor now uses the runtime profile's browser family for managed-
+      profile ownership instead of the runtime profile id
+    - this keeps `auracall-grok-auto` on the existing logged-in managed browser
+      profile:
+      - `~/.auracall/browser-profiles/default/grok`
+    - and avoids minting a fresh empty profile under:
+      - `~/.auracall/browser-profiles/auracall-grok-auto/grok`
+  - fixed a fast-reply Grok completion bug:
+    - exported a Grok-specific assistant snapshot reader from
+      [src/browser/actions/grok.ts](/home/ecochran76/workspace.local/oracle/src/browser/actions/grok.ts)
+    - passed a pre-submit Grok assistant baseline through both Grok browser
+      execution paths in
+      [src/browser/index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    - this prevents the post-submit waiter from self-baselining on an already
+      completed answer and hanging until timeout
+  - added/updated focused coverage in:
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+    - [tests/browser/grokActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/grokActions.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+  - reran the canonical live team smoke:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
+  - live result now proves the full browser/provider seam:
+    - Grok navigated to:
+      - `https://grok.com/project/133ad4c5-b857-4a30-bf17-d951db57c33f?...`
+    - page state showed:
+      - project `AuraCall`
+      - the live team assignment prompt
+      - final provider answer `AURACALL_TEAM_SMOKE_OK`
+    - CLI exited cleanly with:
+      - `runtimeSourceKind = team-run`
+      - `runtimeRunStatus = succeeded`
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+      - `finalOutputSummary = AURACALL_TEAM_SMOKE_OK`
+- Verification:
+  - `git log --oneline -5`
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/runtime.configuredExecutor.test.ts tests/cli/teamRunCommand.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live smoke command above
+- Issues:
+  - the first real provider-backed team path now exists, but it still only has
+    an ad hoc manual smoke
+  - the next missing piece is one durable provider-scoped live test for this
+    exact `auracall-solo` path plus one post-run inspection/readback check
+
+## 2026-04-12 - First executable team CLI path
+
+- Focus:
+  - add one real bounded team execution entrypoint and prove what it actually
+    does against the current runtime substrate
+- Progress:
+  - added
+    [src/cli/teamRunCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+    with bounded CLI task-run-spec synthesis plus
+    `executeConfiguredTeamRun(...)`
+  - wired a new command in
+    [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts):
+    - `auracall teams run <teamId> <objective>`
+  - kept the first entrypoint narrow:
+    - config-backed team selection
+    - sequential/fail-fast through the existing team runtime bridge
+    - bounded task fields:
+      - title
+      - prompt appendix
+      - structured context
+      - response format
+      - max turns
+    - text or `--json` output for operator inspection
+  - added focused regression coverage in:
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+  - ran the first live smoke against the configured Grok-backed team:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
+  - live result:
+    - the command is real and returns:
+      - `taskRunSpec`
+      - `teamRunId`
+      - `runtimeRunId`
+      - `runtimeSourceKind = team-run`
+      - step runtime identity:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+    - but the actual execution still terminates through the bounded local
+      runner stub:
+      - `finalOutputSummary = bounded local runner pass completed`
+- Verification:
+  - `pnpm vitest run tests/cli/teamRunCommand.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts`
+  - `pnpm tsx bin/auracall.ts teams run --help`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - live smoke command above
+- Issues:
+  - the repo now has a real team execution entrypoint, but not yet real
+    provider-backed team execution
+  - the next blocker is narrower and more actionable:
+    - inject a provider-backed `executeStoredRunStep` path for stored team runs
+    - then rerun the same `auracall teams run auracall-solo ...` smoke
+
+## 2026-04-12 - First live team config bootstrap
+
+- Focus:
+  - create the first real 1-agent team config for later live team workflow
+    experiments without widening repo execution surfaces yet
+- Progress:
+  - created Grok project `AuraCall` through the existing CLI/browser surface:
+    - `pnpm tsx bin/auracall.ts --profile default projects create 'AuraCall' --target grok --model Auto --instructions-text 'AuraCall orchestration workspace. Prefer concise, execution-oriented outputs. Treat attached project files as default AuraCall knowledge for team-flow and runtime experiments.'`
+  - confirmed the created Grok project id:
+    - `133ad4c5-b857-4a30-bf17-d951db57c33f`
+  - updated
+    `/home/ecochran76/.auracall/config.json`
+    with a dedicated live-experiment stack:
+    - runtime profile `auracall-grok-auto`
+      - default service `grok`
+      - model `Auto`
+      - project `AuraCall`
+    - agent `auracall-orchestrator`
+    - team `auracall-solo`
+  - kept browser/account identity on the runtime-profile seam instead of the
+    agent/team seam
+  - seeded initial orchestration instructions at both:
+    - project instructions
+    - agent/team instructions
+  - kept the first team bounded:
+    - one agent
+    - one role
+    - no parallelism
+    - no handoff breadth beyond the existing single-agent plan
+- Verification:
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-orchestrator`
+  - `pnpm tsx bin/auracall.ts config show --team auracall-solo`
+  - confirmed `~/.auracall/cache/providers/grok/ez86944@gmail.com/projects.json`
+    contains:
+    - `AuraCall`
+    - id `133ad4c5-b857-4a30-bf17-d951db57c33f`
+  - confirmed cached project instructions for that project id
+- Issues:
+  - the team now exists in live config, but there is still no first-class team
+    execution entrypoint in the repo
+  - the next useful slice remains:
+    - one bounded executable team path
+    - then one bounded manual/live smoke for this exact team
+
+## 2026-04-12 - Team live-readiness audit
+
+- Focus:
+  - audit what is still foundationally missing before starting real live team
+    workflow experiments
+- Progress:
+  - reviewed the current executable seams and live-test posture across:
+    - [bin/auracall.ts](/home/ecochran76/workspace.local/oracle/bin/auracall.ts)
+    - [src/cli/configCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/configCommand.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    - [tests/live/openai-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/openai-live.test.ts)
+    - [tests/live/multi-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/multi-live.test.ts)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+    - [docs/dev/team-runtime-bridge-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-runtime-bridge-plan.md)
+  - audit result:
+    - the team runtime bridge is real and well covered in repo tests, but it is
+      still not a real operator or client execution entrypoint
+    - the current CLI `--team` path is still planning/inspection only
+    - the current `POST /v1/responses` path still creates direct runs rather
+      than team runs
+    - there is still no team/task-run-spec live test coverage under
+      [tests/live](/home/ecochran76/workspace.local/oracle/tests/live)
+    - there is still no team-run manual smoke in
+      [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+  - checkpoint decision:
+    - pause further team/task-run-spec API/readback/model growth
+    - before any live team experimentation, add:
+      - one real bounded team execution entrypoint
+      - one bounded manual smoke runbook for that path
+      - one bounded provider-scoped live smoke that proves the path end to end
+  - recommended first execution seam:
+    - prefer a bounded CLI/dev execution path over widening the public API
+      surface first
+    - reuse the existing
+      [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+      bridge directly
+    - keep the first liveable path:
+      - sequential only
+      - fail-fast only
+      - config-backed team selection
+      - config-backed or explicit `taskRunSpec` input
+      - no new scheduler or parallelism semantics
+- Verification:
+  - `git log --oneline -5`
+  - `rg -n "team|taskRunSpec|team-run" tests/live`
+  - `find tests/live -maxdepth 2 -type f | sort`
+  - reviewed the implementation/docs files listed above
+- Issues:
+  - starting live workflow experiments now would be premature because the repo
+    still lacks a real team execution entrypoint and bounded smoke harness
+  - the next slice should make one team path executable on purpose rather than
+    continuing to deepen internal model semantics
+
+## 2026-04-12 - Recovery-detail orchestration timeline summary
+
+- Focus:
+  - add the matching operator-side detailed reader for the new bounded
+    orchestration timeline summary instead of growing the response surface
+    further
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `GET /status/recovery/{run_id}` now includes bounded
+    `orchestrationTimelineSummary`
+  - current bounded fields:
+    - `total`
+    - bounded `items`
+      - `type`
+      - `createdAt`
+      - `stepId`
+      - `note`
+      - `handoffId`
+  - the summary is derived from the same bounded relevant durable
+    `sharedState.history` seam already used on response readback
+  - kept the operator follow-through narrow:
+    - no `/status?recovery=true` growth
+    - no raw history dump
+    - no new route family
+  - added focused proof in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated operator/user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the history-backed orchestration readback line now exists on both major
+    detailed surfaces, so more local timeline growth would likely be readback
+    sprawl
+  - the next move should be a checkpoint audit rather than another timeline
+    variant
+
+## 2026-04-12 - Response-side orchestration timeline summary
+
+- Focus:
+  - add the first bounded history-backed orchestration reader on the existing
+    detailed response surface instead of creating another raw-history or
+    operator-only view
+- Progress:
+  - updated:
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so `GET /v1/responses/{response_id}` now includes bounded
+    `metadata.executionSummary.orchestrationTimelineSummary`
+  - current bounded fields:
+    - `total`
+    - bounded `items`
+      - `type`
+      - `createdAt`
+      - `stepId`
+      - `note`
+      - `handoffId`
+  - the summary is derived from bounded relevant entries in durable
+    `sharedState.history`
+    - `step-started`
+    - `step-succeeded`
+    - `step-failed`
+    - `handoff-consumed`
+    - selected `note-added`
+  - kept the readback compact:
+    - latest 10 relevant entries only
+    - no raw history dump
+    - no new route family
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - response-side history-backed readback now exists, but the matching
+    operator-side recovery-detail reader still does not consume the same
+    bounded orchestration timeline summary
+  - the next slice should stay on that exact follow-through seam instead of
+    widening the response payload further
+
+## 2026-04-12 - Handoff transfer checkpoint audit
+
+- Focus:
+  - decide whether the next slice should keep extending handoff-transfer
+    readback after recovery-detail coverage landed
+- Progress:
+  - audited the current handoff-transfer line across:
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+  - checkpoint decision:
+    - the bounded handoff-transfer line is now coherent enough to pause:
+      - planner shaping exists
+      - bridge preservation exists
+      - downstream runtime/shared-state consumption exists
+      - detailed response readback exists
+      - per-run operator recovery-detail readback exists
+  - remaining gap assessment:
+    - the transfer contract is still not durably projected as consumed
+      orchestration state in shared state/history
+    - current execution context consumption is immediate and dependency-scoped,
+      but later orchestration readers cannot recover a compact consumed-transfer
+      record from shared state alone
+  - next active seam:
+    - stop expanding handoff-transfer readback by inertia
+    - move to one bounded shared-state/history projection for consumed
+      handoff transfer context
+    - rationale:
+      - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+        requires handoffs to be explicit, serializable, and storable for
+        postmortem/debug
+      - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+        defines shared state as the durable orchestration record with handoff
+        history
+      - that is a higher-leverage orchestration seam than another summary field
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed the implementation and planning files listed above
+- Issues:
+  - continuing this line through more response/operator readback would likely
+    become surface spread rather than orchestration value
+  - the next useful slice should make consumed transfer context durable in the
+    shared orchestration record
+
+## 2026-04-12 - Handoff transfer recovery-detail readback
+
+- Focus:
+  - add one bounded operator-side readback seam for the already-shaped and
+    runtime-consumed handoff transfer contract
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `readRecoveryDetail(...)` now returns bounded
+    `handoffTransferSummary`
+  - current bounded fields:
+    - `total`
+    - bounded `items`
+      - `handoffId`
+      - `fromStepId`
+      - `fromAgentId`
+      - `title`
+      - `objective`
+      - `requestedOutputCount`
+      - `inputArtifactCount`
+  - the summary is derived from incoming planned handoffs to the latest
+    dependent step on the current run; compact `/status?recovery=true` stayed
+    unchanged
+  - added focused proof in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - consumed handoff transfer context is now visible to both response readers
+    and operator recovery detail readers, but there is still no compact
+    execution-summary rollup for bridge/runtime reporting
+  - the next slice should be chosen by actual orchestration leverage, not by
+    continuing to spread the same summary across more surfaces
+
+## 2026-04-12 - Handoff transfer response readback
+
+- Focus:
+  - add one bounded detailed readback consumer for the now-runtime-consumed
+    handoff `taskTransfer` contract
+- Progress:
+  - updated:
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so `GET /v1/responses/{response_id}` now includes bounded
+    `metadata.executionSummary.handoffTransferSummary`
+  - current bounded fields:
+    - `total`
+    - bounded `items`
+      - `handoffId`
+      - `fromStepId`
+      - `fromAgentId`
+      - `title`
+      - `objective`
+      - `requestedOutputCount`
+      - `inputArtifactCount`
+  - the summary is derived from incoming planned handoffs to the
+    terminal-or-latest step; no second transfer store or payload mirror was
+    introduced
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - consumed transfer context is now readable on the main response surface, but
+    there is still no matching operator-side recovery/detail readback for team
+    run inspection
+  - the next slice should stay on one bounded follow-through seam rather than
+    widening compact summaries
+
+## 2026-04-12 - Task-transfer runtime consumption
+
+- Focus:
+  - consume the new bounded handoff `taskTransfer` contract on the existing
+    downstream runtime/shared-state seam instead of widening the handoff model
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so later-step execution now reads incoming dependency handoffs and projects
+    bounded task-transfer context into:
+    - `sharedStateContext.dependencyTaskTransfers`
+    - `sharedStateContext.dependencyTaskTransferPromptContext`
+    - prompt shaping under `Dependency task transfers:`
+  - kept the consumer read-only and derived from the existing handoff payload;
+    no new shared transfer store or orchestration vocabulary was introduced
+  - expanded focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    covering:
+    - direct-run downstream execution context
+    - team-runtime bridge downstream execution context
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the handoff contract is now consumed during execution, but there is still
+    no richer shared-state persistence or response-side readback for transfer
+    context
+  - the next slice should prefer one bounded readback or orchestration
+    follow-through seam rather than adding more transfer fields
+
+## 2026-04-12 - Task-aware handoff shaping
+
+- Focus:
+  - move upward from field-level task-run-spec consumption into one bounded
+    orchestration seam by shaping planned handoffs from the stabilized task
+    substrate
+- Progress:
+  - updated
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    so `createPlannedTeamRunHandoffs(...)` now derives one compact
+    `structuredData.taskTransfer` contract from the source step when that step
+    carries task-aware planning data
+  - current bounded `taskTransfer` fields:
+    - `title`
+    - `objective`
+    - `successCriteria`
+    - bounded `requestedOutputs`
+      - `label`
+      - `kind`
+      - `destination`
+      - `required`
+    - bounded `inputArtifacts`
+      - `id`
+      - `kind`
+      - `title`
+      - `path`
+      - `uri`
+  - kept the contract derived from existing source-step task fields and input
+    artifact refs; no second handoff model, artifact store, or evaluator
+    vocabulary was introduced
+  - added focused proof in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    covering:
+    - planner-side task-aware handoff shaping
+    - bridge preservation of the same bounded handoff contract through created
+      and final runtime records
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/teams.model.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - task-aware handoffs are now shaped at planning time, but there is still no
+    richer shared-state or downstream runtime consumer of that transfer
+    contract
+  - the next slice should stay bounded and consume the new contract rather than
+    growing more handoff fields by inertia
+
+## 2026-04-12 - Task run-spec consumer checkpoint audit
+
+- Focus:
+  - decide whether the next slice should keep extending field-by-field
+    `TaskRunSpec` consumption after the `inputArtifacts` line became coherent
+- Progress:
+  - audited the current task-run-spec consumer state across:
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - checkpoint decision:
+    - the bounded task-run-spec field-consumption line is now coherent enough
+      to pause:
+      - execution identity selection
+      - runtime/browser override consumption
+      - task context and structured context runtime input
+      - requested-output readback and enforcement
+      - provider-budget enforcement
+      - input-artifact runtime context
+      - input-artifact detailed response readback
+  - remaining field assessment:
+    - `successCriteria` is still too free-form for honest runtime/service
+      enforcement without a separate evaluator model
+    - `requestedBy` / `trigger` already have the bounded projection they need
+    - there is no other remaining field-level consumer that clearly beats a
+      checkpoint pause
+  - next active seam:
+    - stop field-by-field task-run-spec expansion by inertia
+    - move upward to bounded task-aware handoff shaping
+    - rationale:
+      - current planned handoffs still carry only thin assignment identity
+        (`taskRunSpecId`) plus later local-action overlays
+      - the next real orchestration gain is to shape handoff payloads from the
+        stabilized task substrate rather than adding another field-level
+        summary or pseudo-validator
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed the runtime/team plan and implementation files listed above
+- Issues:
+  - continuing this lane now is likely to push the repo toward fake
+    `successCriteria` semantics or low-value readback growth
+  - the next useful slice should consume the stabilized assignment layer at the
+    handoff boundary before widening to richer shared-state or parallel
+    orchestration semantics
+
+## 2026-04-12 - Task input artifact response readback
+
+- Focus:
+  - add one bounded detailed readback consumer for assignment artifact refs on
+    the existing `GET /v1/responses/{response_id}` surface
+- Progress:
+  - updated:
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so response readback now includes bounded
+    `metadata.executionSummary.inputArtifactSummary`
+  - current bounded fields:
+    - `total`
+    - bounded `items`
+      - `id`
+      - `kind`
+      - `title`
+      - `path`
+      - `uri`
+  - the summary is derived from existing step input artifact refs on the
+    terminal-or-latest artifact-bearing step; no second artifact store was
+    introduced
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - focused response/readback regression slice
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this first slice reads existing artifact refs only; it does not mirror
+    artifact payloads or infer artifact fulfillment semantics
+  - the summary intentionally stays on detailed response readback and does not
+    widen compact status surfaces
+
+## 2026-04-12 - Task input artifact runtime context
+
+- Focus:
+  - add the first bounded `inputArtifacts` runtime/service consumer without
+    inventing a second artifact model or fuzzy success evaluator
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so runtime execution now injects task input artifacts into the same
+    execution-time context seam already used for task context and structured
+    context
+  - the runner now adds:
+    - `sharedStateContext.taskInputArtifacts`
+    - `sharedStateContext.taskInputArtifactsPromptContext`
+  - prompt-driven execution now also gets one bounded `Task input artifacts:`
+    prompt block derived from existing step artifact refs
+  - this reuses existing `step.input.artifacts` transport instead of inventing
+    a second artifact store or a new request model
+  - added focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+  - updated docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - focused runtime/bridge regression slice
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this first slice changes runtime execution context only; it does not add a
+    new response/readback surface for assignment artifacts
+  - artifact contents remain external refs; the runner only carries bounded
+    identity/context derived from those refs
+
+## 2026-04-12 - Provider budget checkpoint audit
+
+- Focus:
+  - decide whether the next task-run-spec consumer should continue the
+    `providerBudget` lane or move to a different concrete assignment-content
+    seam
+- Progress:
+  - audited the current task-run-spec runtime signal across:
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+  - explicit checkpoint decision:
+    - the `providerBudget` sub-line is now coherent enough to pause:
+      - `maxRequests`
+      - durable usage ingestion
+      - `maxTokens`
+    - do not keep extending budget policy by inertia
+  - remaining field assessment:
+    - `successCriteria` is still mostly prompt-time guidance plus structured
+      data and is too free-form for honest runtime enforcement without a new
+      evaluation model
+    - `requestedBy` / `trigger` already have the bounded projection they need
+    - `inputArtifacts` is the next strongest concrete assignment-content seam
+      because it already has durable refs and planned step transport, but it
+      still lacks a stronger runtime/service consumer
+  - next active seam:
+    - bounded `inputArtifacts` runtime/service consumption
+    - prefer one read/transport rule over fuzzy task-quality evaluation
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed the runtime/team plan and implementation files listed above
+- Issues:
+  - `successCriteria` should not become a fake runtime validator just because
+    it is present on the contract
+  - `inputArtifacts` already exists as structured assignment data, but the next
+    slice still needs to choose the narrowest honest consumer
+
+## 2026-04-12 - Provider token budget enforcement
+
+- Focus:
+  - turn `constraints.providerBudget.maxTokens` into a real runtime rule using
+    only the stored usage signal that now exists
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the runner now sums durable `step.providerUsage.*.totalTokens` entries
+    before the next runnable step executes
+  - the first rule stays conservative:
+    - use cumulative stored provider usage only
+    - do not estimate tokens from prompt size or output text
+    - if stored usage is already above `maxTokens`, fail before executing the
+      next step
+    - bounded failure code:
+      `task_provider_token_limit_exceeded`
+  - added focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-provider-budget-max-tokens`
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - tmux session `oracle-provider-budget-max-tokens-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this first rule only blocks future work after stored usage is already over
+    budget; it does not predict whether the next step would itself exceed the
+    cap mid-flight
+  - response-side readback already surfaces stored usage, so no new readback
+    field was needed for this enforcement slice
+
+## 2026-04-12 - Runtime usage ingestion
+
+- Focus:
+  - add one bounded durable usage-ingestion seam on the current runtime/service
+    path so later token-budget work can use real stored usage instead of
+    estimates
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so `executeStoredRunStep(...)` may now return real usage alongside output
+  - the runner now persists that usage in durable shared state as one bounded
+    step-scoped structured output:
+    - `step.providerUsage.<stepId>`
+    - fields:
+      - `ownerStepId`
+      - `generatedAt`
+      - `inputTokens`
+      - `outputTokens`
+      - `reasoningTokens`
+      - `totalTokens`
+  - updated response readback in:
+    - [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts)
+    - [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so `GET /v1/responses/{response_id}` now returns bounded
+    `metadata.executionSummary.providerUsageSummary` from that same durable
+    structured output
+  - added focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-runtime-usage-ingestion`
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.responsesService.test.ts tests/teams.runtimeBridge.test.ts tests/http.responsesServer.test.ts tests/runtime.api.test.ts`
+  - tmux session `oracle-runtime-usage-ingestion-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this slice stores usage in shared state rather than widening the base
+    runtime record model
+  - `providerBudget.maxTokens` still remains unenforced until a later policy
+    slice consumes this stored signal
+
+## 2026-04-11 - Provider token budget audit
+
+- Focus:
+  - decide whether `constraints.providerBudget.maxTokens` can be enforced on
+    the current runtime/service substrate without inventing fake token
+    accounting
+- Progress:
+  - audited the current runtime and provider paths:
+    - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
+    - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/sessionManager.ts](/home/ecochran76/workspace.local/oracle/src/sessionManager.ts)
+    - [src/oracle/types.ts](/home/ecochran76/workspace.local/oracle/src/oracle/types.ts)
+    - [src/oracle/client.ts](/home/ecochran76/workspace.local/oracle/src/oracle/client.ts)
+  - confirmed the decisive split:
+    - provider/API usage exists in the session/oracle layer
+    - durable runtime/service execution records do not store usage or token
+      counters
+    - the current local runner path persists step output, shared state, and
+      events, but not provider token accounting
+  - explicit decision:
+    - keep `providerBudget.maxTokens` inert for now
+    - do not enforce it from prompt-length heuristics, char counts, or generic
+      token estimation
+    - the next required seam is bounded usage ingestion into runtime/service
+      records if token-budget enforcement is still wanted later
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed runtime schema/model and provider/session usage surfaces listed
+    above
+- Issues:
+  - there is no trustworthy stored token-usage signal on the current
+    single-runner runtime substrate
+  - `maxTokens` cannot be enforced honestly until usage ingestion exists
+
+## 2026-04-11 - Provider request budget enforcement
+
+- Focus:
+  - make the first bounded `constraints.providerBudget` field affect runtime
+    behavior instead of remaining task-run-spec metadata only
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the runner now reads
+    `step.input.structuredData.constraints.providerBudget.maxRequests`
+    before lease acquisition and step execution
+  - the first rule stays conservative and substrate-aligned:
+    - treat `maxRequests` as a cap on runnable step executions
+    - if the next runnable step order exceeds that bound, fail before
+      execution
+    - use bounded failure code `task_provider_request_limit_exceeded`
+  - added focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-provider-budget-max-requests`
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - tmux session `oracle-provider-budget-max-requests-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - `providerBudget.maxTokens` remains modeled but inert
+  - the first request-budget rule counts runnable step executions, not
+    provider-native token/accounting data
+
+## 2026-04-11 - Requested-output checkpoint audit
+
+- Focus:
+  - decide whether the requested-output line is coherent enough to pause and
+    choose the next task-run-spec runtime/service consumer by roadmap leverage
+- Progress:
+  - audited the current requested-output lane against:
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - confirmed the requested-output sub-line is now coherent enough to pause:
+    - fulfillment readback
+    - readback policy
+    - response-surface enforcement
+    - stored runtime/service enforcement
+  - checked remaining task-run-spec consumers in code:
+    - `humanInteractionPolicy` already has runtime consumption
+    - `localActionPolicy` already has runtime consumption
+    - `providerBudget` is still modeled but inert
+  - explicit next-seam decision:
+    - move to bounded `constraints.providerBudget` consumption next
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed:
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    - [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Issues:
+  - there is no immediate blocker on the requested-output lane
+  - the main risk now is continuing to deepen requested-output semantics
+    instead of moving to the next inert task-run-spec constraint
+
+## 2026-04-11 - Stored requested output enforcement
+
+- Focus:
+  - remove the split where response readback failed for missing required
+    outputs but stored runtime/service state could still remain `succeeded`
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the local runner now checks required requested-output fulfillment just
+    before persisting a would-be success bundle
+  - clearly missing required outputs now persist as failed runtime/service
+    terminal state with:
+    - `code = requested_output_required_missing`
+    - `details.missingRequiredLabels`
+  - kept the rule conservative:
+    - uses actual output/shared-state evidence only
+    - preserves produced output on the failed step
+    - does not introduce schema validation or a second output-contract model
+  - added focused proof in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-requested-output-stored-enforcement`
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-requested-output-stored-enforcement-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the first stored-state rule is still evidence-based and generic; there is
+    still no stricter per-format or per-destination validator
+
+## 2026-04-11 - Requested output enforcement on response readback
+
+- Focus:
+  - make clearly missing required requested outputs affect terminal response
+    behavior, not just readback policy text
+- Progress:
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so response creation now downgrades terminal readback from `completed` to
+    `failed` when:
+    - the stored run otherwise succeeded
+    - `requestedOutputPolicy.status = missing-required`
+  - missing-required terminal readback now also synthesizes bounded failure
+    summary:
+    - `code = requested_output_required_missing`
+    - `message = <policy message>`
+  - kept stored run history unchanged in this first enforcement slice:
+    - runtime run status is not rewritten
+    - enforcement stays on response-surface semantics only
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-requested-output-enforcement`
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-requested-output-enforcement-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - response-surface enforcement now exists, but stored runtime/service state
+    still remains `succeeded` for these cases
+
+## 2026-04-11 - Requested output policy escalation
+
+- Focus:
+  - add one stronger required-output policy seam on top of the new requested
+    output fulfillment evidence without changing runtime terminal status
+- Progress:
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts),
+    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so response readback now also includes bounded
+    `metadata.executionSummary.requestedOutputPolicy`
+  - current bounded policy statuses are:
+    - `satisfied`
+    - `missing-required`
+  - policy is derived from the same `requestedOutputSummary` evidence path
+    instead of inventing a second output-contract model
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-requested-output-policy`
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-requested-output-policy-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - required requested outputs now escalate clearly on readback, but there is
+    still no runtime failure or service-host enforcement path for missing
+    required outputs
+
+## 2026-04-11 - Requested output fulfillment readback
+
+- Focus:
+  - make `TaskRunSpec.requestedOutputs` affect runtime-backed response
+    readback instead of remaining planning-only metadata
+- Progress:
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts),
+    [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so `GET /v1/responses/{response_id}` now returns bounded
+    `metadata.executionSummary.requestedOutputSummary`
+  - the summary is derived conservatively from:
+    - requested outputs declared on the terminal step
+    - actual stored response messages
+    - actual stored response artifacts
+    - non-internal structured outputs
+  - added focused proof in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+- Verification:
+  - tmux session `oracle-requested-output-summary`
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-requested-output-summary-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - requested outputs now have one bounded runtime/readback consumer, but they
+    are still not used for hard runtime validation or artifact contract
+    enforcement
+
+## 2026-04-11 - Runtime consumption of task context
+
+- Focus:
+  - make `TaskRunSpec.context` a real runtime input instead of leaving it as
+    planning-only metadata
+- Progress:
+  - updated [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so
+    task-aware planning now carries `taskContext` into planned step
+    structured data
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so
+    runtime step execution now injects task context into:
+    - `sharedStateContext.taskContext`
+    - `sharedStateContext.taskContextPromptContext`
+    - the bounded prompt context passed to prompt-driven execution
+  - added focused proof in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-context`
+  - `pnpm vitest run tests/teams.model.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.service.test.ts`
+  - tmux session `oracle-taskrunspec-context-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - task assignment content now has two real runtime consumers:
+    - `overrides.structuredContext`
+    - `context`
+  - the next bounded content seam should now be `requestedOutputs`, not more
+    prompt-context expansion by inertia
+
+## 2026-04-11 - Task-aware team runtime bridge
+
+- Focus:
+  - make the team-runtime bridge the first real task-aware execution consumer
+    instead of leaving `TaskRunSpec` limited to planning, runtime storage, and
+    readback
+- Progress:
+  - updated [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts) with task-aware entrypoints:
+    - `executeFromConfigTaskRunSpec(...)`
+    - `executeFromResolvedTeamTaskRunSpec(...)`
+  - wired those entrypoints through the existing task-aware service-plan
+    builders instead of inventing a parallel execution path
+  - updated bridge execution summaries so they now carry `taskRunSpecId`
+  - added focused proof in
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    that a task-aware bridge run preserves `taskRunSpecId` on:
+    - planned `teamRun`
+    - created runtime run
+    - final runtime run
+    - bridge `executionSummary`
+- Verification:
+  - tmux session `oracle-taskrunspec-bridge`
+  - `pnpm vitest run tests/teams.runtimeBridge.test.ts tests/teams.service.test.ts tests/teams.model.test.ts tests/runtime.model.test.ts`
+  - pass: 4 files, 28 tests
+  - tmux session `oracle-taskrunspec-bridge-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - pass
+- Issues:
+  - the bridge is now task-aware, but the next higher-value task/run-spec seam
+    is still likely a richer downstream execution consumer, not more bridge
+    summary growth
+
+## 2026-04-11 - taskRunSpecId consumer audit checkpoint
+
+- Focus:
+  - decide whether any remaining status / recovery / readback consumer still
+    needs `taskRunSpecId`, or whether the current detailed-read surfaces are
+    sufficient
+- Progress:
+  - audited the current assignment-identity surfaces across runtime and HTTP
+    consumers
+  - confirmed the current bounded coverage is now:
+    - runtime record preservation on `ExecutionRun.taskRunSpecId`
+    - response readback on `GET /v1/responses/{response_id}`
+    - operator detail readback on `GET /status/recovery/{run_id}`
+  - confirmed the compact recovery summary remains intentionally unchanged:
+    - no `taskRunSpecId` on `/status?recovery=true`
+    - no additional plain `/status` assignment surface
+  - recorded the checkpoint decision:
+    - pause further `taskRunSpecId` exposure unless a concrete consumer appears
+- Verification:
+  - audit/docs-only checkpoint
+  - reviewed:
+    - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Issues:
+  - no current code blocker remains on assignment-identity exposure; the main
+    risk is expanding compact status surfaces without a demonstrated consumer
+
+## 2026-04-11 - Recovery detail taskRunSpecId follow-through
+
+- Focus:
+  - expose assignment identity on the bounded per-run recovery detail route
+    without bloating the compact recovery summary
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `readRecoveryDetail(...)` now returns `taskRunSpecId`
+  - kept the compact summary unchanged:
+    - no `taskRunSpecId` added to `/status?recovery=true`
+    - assignment identity stays on the per-run detail/readback surfaces
+  - added focused proof in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - tmux session `oracle-taskrunspec-recovery-detail`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.responsesService.test.ts`
+  - pass: 3 files, 90 tests
+  - tmux session `oracle-taskrunspec-recovery-detail-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - pass
+- Issues:
+  - assignment identity is now available on response readback and per-run
+    recovery detail, but the compact recovery summary still intentionally does
+    not expose it
+
+## 2026-04-11 - Response readback taskRunSpecId follow-through
+
+- Focus:
+  - carry the new runtime-side `taskRunSpecId` binding through one real
+    readback surface instead of leaving it as an internal-only field
+- Progress:
+  - updated [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts), and [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts) so `GET /v1/responses/{response_id}` now includes `metadata.taskRunSpecId`
+  - kept this slice bounded:
+    - top-level response metadata only
+    - no new execution summary variant
+    - no new status or recovery surface
+  - added focused proof in:
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated user-facing docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - tmux session `oracle-taskrunspec-readback-final`
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts tests/runtime.types.test.ts`
+  - tmux session `oracle-taskrunspec-readback-tsc`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the first response-side readback seam now exists, but broader operator /
+    recovery surfaces still do not expose assignment identity and may not need
+    to unless a concrete consumer appears
+
+## 2026-04-11 - Runtime taskRunSpecId propagation
+
+- Focus:
+  - finish the first runtime-side follow-through for the bounded
+    `TaskRunSpec` contract so runtime run records carry a first-class
+    `taskRunSpecId`
+- Progress:
+  - updated [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts) so `ExecutionRun` now carries `taskRunSpecId`
+  - updated the team-run projection seam so `teamRun.taskRunSpecId` is copied onto the runtime run record instead of surviving only inside step-scoped structured data
+  - expanded focused proof in:
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+  - kept this slice bounded:
+    - no new public execution surface
+    - no `TaskRunSpec` contract broadening
+    - no scheduler or runner-semantics changes
+- Verification:
+  - tmux session `oracle-taskrunspec-propagation-verify`: `pnpm vitest run tests/runtime.types.test.ts tests/runtime.schema.test.ts tests/runtime.model.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
+  - pass: 8 files, 35 tests
+  - tmux session `oracle-taskrunspec-propagation-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+  - pass
+- Issues:
+  - the first runtime run binding is now real, but broader downstream
+    service/readback consumers still do not use `taskRunSpecId` for anything
+    beyond preservation
+
+## 2026-04-11 - First code-facing TaskRunSpec schema/model
+
+- Focus:
+  - land the first bounded code-facing `TaskRunSpec` contract and prove the initial `teamRun.taskRunSpecId` binding through the existing team planning seam
+- Progress:
+  - tightened [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so `TaskRunSpec` now matches the bounded contract from [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md):
+    - explicit output kinds / formats / destinations
+    - explicit input-artifact kinds plus `required`
+    - explicit `constraints`
+    - explicit `overrides`
+    - structured `requestedBy`
+    - bounded `turnPolicy`, `humanInteractionPolicy`, and `localActionPolicy`
+  - kept the projection boundary explicit:
+    - `TaskRunSpec.requestedBy` remains structured assignment intent
+    - `TeamRun.requestedBy` remains the simpler execution-side operator label
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) now projects the former onto the latter at the team-run seam
+  - proved the first code-facing binding through the existing team planning/service/runtime path by updating:
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-verify`: `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
+  - tmux session `oracle-taskrunspec-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the first bounded `TaskRunSpec` model is now real, but the next code-facing seam is still missing:
+    - broader planning/use of `taskRunSpecId` across future team execution surfaces
+
+## 2026-04-11 - Concrete task / run-spec contract checkpoint
+
+- Focus:
+  - define one concrete bounded `taskRunSpec` contract before any code-facing team/runtime binding work starts
+- Progress:
+  - tightened [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md) from a broad field list into one concrete bounded contract with:
+    - explicit top-level `TaskRunSpec` shape
+    - bounded helper contracts for `requestedOutputs` and `inputArtifacts`
+    - one example object
+    - one explicit binding rule:
+      - one selected `team`
+      - one selected `taskRunSpec`
+      - one planned `teamRun`
+  - updated [team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md) so the first code-facing `teamRun` slice is expected to carry `taskRunSpecId`
+  - updated [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md) so the MVP contract explicitly rejects treating bare `team` config as the complete executable input once `taskRunSpec` exists
+  - updated [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) to point the next code slice at:
+    - first `TaskRunSpec` schema/model
+    - then `teamRun.taskRunSpecId` binding
+- Verification:
+  - docs/planning audit only
+  - no code-path tests were needed for this docs-only slice
+- Issues:
+  - the contract is now explicit enough to implement, but the repo still does not have the first code-facing `TaskRunSpec` schema/model in `src/*`
+
+## 2026-04-11 - Plan and audit checkpoint after operator lifecycle readback
+
+- Focus:
+  - decide the next bounded architecture seam now that the local-action / human-resume / targeted-drain line is coherent enough to pause
+- Progress:
+  - audited:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - recorded the current checkpoint explicitly:
+    - local-action request resolution exists
+    - human-escalation resume exists
+    - targeted drain exists
+    - bounded responses-side operator readback exists
+  - recorded the reassessment decision in [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md):
+    - pause further local runner/service lifecycle readback expansion here
+    - move the next active design seam upward to one concrete task / run-spec binding shape
+- Verification:
+  - roadmap/doc audit only
+  - no code-path tests were needed for this audit-only slice
+- Issues:
+  - the repo now has a coherent bounded local service lifecycle line, but the next architectural gap is no longer another local operator surface; it is the missing task / run-spec layer that should bind concrete work to the existing team/runtime substrate
+
+## 2026-04-11 - Operator lifecycle readback on responses surface
+
+- Focus:
+  - add one compact operator-visible outcome summary for the new local-action / resume / drain line on existing `GET /v1/responses/{response_id}` reads
+- Progress:
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `operatorControlSummary`
+  - kept the seam narrow:
+    - derive `humanEscalationResume` from persisted `human.resume.<stepId>` structured output
+    - derive `targetedDrain` from persisted operator `note-added` drain events
+    - no new route family
+    - no mutation during readback
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so targeted `drainRun(...)` persists a compact operator event that later responses readback can project
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-operator-control-summary-verify`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-operator-control-summary-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - operator readback is now coherent for resume/drain outcomes, but there is still no compact plain-status rollup for that lifecycle line outside response reads
+
+## 2026-04-11 - Targeted direct-run drain control on existing status surface
+
+- Focus:
+  - add one bounded post-resume follow-through seam for direct runs on the existing `POST /status` surface
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now run one targeted drain pass for a single direct run through `drainRun(...)`
+  - kept the seam narrow:
+    - only direct runs
+    - one host-owned pass for the requested run
+    - no new route family
+    - no reassignment or multi-runner scheduler behavior
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"drain-run","runId":"..."}}`
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-drain-run-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-drain-run-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - resumed direct runs can now be nudged into execution immediately, but there is still no broader operator rollup for resumed/drained outcome history beyond existing readback surfaces
+
+## 2026-04-11 - Human-escalation resume control on existing status surface
+
+- Focus:
+  - add one bounded post-resolution lifecycle seam for direct runs paused on human escalation
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now resume one direct run paused for human escalation through the existing runtime resume semantics
+  - kept the seam narrow:
+    - only direct runs
+    - only runs with a cancelled human-escalation step
+    - no new route family
+    - no reassignment or scheduler behavior
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"resume-human-escalation",...}}`
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-human-resume-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-human-resume-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - paused human-escalation runs can now resume, but there is still no later bounded lifecycle seam for operator handling of resumed work beyond the normal host drain path
+
+## 2026-04-11 - Local-action operator control on existing status surface
+
+- Focus:
+  - add one bounded local-action lifecycle control seam on the existing `POST /status` surface
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host can now resolve one persisted local-action request as `approved`, `rejected`, or `cancelled`
+  - kept the seam narrow:
+    - only direct runs
+    - only currently `requested` local action records
+    - no new route family
+    - no host-side execution or reassignment
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `localActionControl.resolve-request`
+  - kept readback coherent by updating the persisted `step.localActionOutcomes.*` structured output in the same mutation, so later `GET /v1/responses/{response_id}` reads show the resolved local-action state through the existing `metadata.executionSummary.localActionSummary`
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-local-action-control-verify`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-local-action-control-verify-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - local-action requests can now be resolved, but there is still no bounded follow-through for human-escalation resume or later execution of approved-only local action records
+
+## 2026-04-11 - Local-action terminal readback on responses surface
+
+- Focus:
+  - add one bounded local-action lifecycle readback seam on the existing `GET /v1/responses/{response_id}` surface
+- Progress:
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `localActionSummary`
+  - kept the seam narrow:
+    - reuse the already-persisted `step.localActionOutcomes.*` structured output
+    - no new route family
+    - no mutation during readback
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-local-action-readback`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-local-action-readback-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - local-action readback now exists on terminal responses, but there is still no dedicated local-action operator control or broader local-action recovery workflow
+
+## 2026-04-11 - Plan and audit checkpoint after bounded cancel line
+
+- Focus:
+  - decide the next bounded service-host / runner lifecycle seam now that the cancel line is coherent enough to pause
+- Progress:
+  - audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - confirmed the cancel sub-line is now coherent enough to pause:
+    - bounded local cancel control on `POST /status`
+    - late-completion protection
+    - recovery-side cancellation visibility
+    - responses-side cancelled terminal readback
+  - chose the next bounded live seam as local-action lifecycle follow-through instead of more cancel/reporting work
+  - rationale:
+    - local actions are the remaining host-owned execution path that still lacks the same lifecycle clarity around control/readback outcomes
+    - this stays inside the current single-runner / local-host execution lane
+    - it is higher leverage than more cancellation payload growth and still narrower than reassignment or multi-runner scheduling
+- Verification:
+  - roadmap/doc audit only
+- Issues:
+  - the local-action path exists, but it still lacks a similarly coherent lifecycle/control checkpoint compared with direct run cancellation
+
+## 2026-04-11 - Cancelled terminal readback on responses surface
+
+- Focus:
+  - add one bounded post-cancel lifecycle seam by exposing cancellation outcome through the existing `GET /v1/responses/{response_id}` readback
+- Progress:
+  - updated [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts), [src/runtime/apiTypes.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiTypes.ts), and [src/runtime/apiSchema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiSchema.ts) so `metadata.executionSummary` now includes bounded `cancellationSummary`
+  - kept the seam narrow:
+    - reuse the existing `cancelled` runtime vocabulary
+    - derive the summary from the stored cancellation note event
+    - no new route family and no mutation during readback
+  - added focused coverage in [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-cancelled-readback`: `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-cancelled-readback-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - cancelled readback now exists on responses and recovery surfaces, but there is still no broader post-cancel cleanup or retry policy
+
+## 2026-04-11 - Cancelled-run recovery visibility on existing status surfaces
+
+- Focus:
+  - add one bounded read-only cancelled-run visibility seam on the existing recovery summary/detail paths
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now separates `cancelledRunIds` from `idleRunIds` and returns bounded `cancellation.reasonsByRunId`
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so per-run recovery detail now returns `hostState: cancelled` plus a bounded `cancellation` block with `cancelledAt`, `source`, and `reason`
+  - kept the seam derived from the stored runtime bundle:
+    - no second stop vocabulary
+    - no new route family
+    - no mutation during readback
+  - added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - tmux session `oracle-cancel-visibility`: `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-cancel-visibility-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - cancelled-run visibility now exists on recovery surfaces, but plain `/status` still intentionally stays compact and does not summarize cancellation history
+
+## 2026-04-11 - Bounded cancel-run control for active local runner-owned execution
+
+- Focus:
+  - add one conservative stop/cancel seam for active runner-owned execution without widening into reassignment or multi-runner control
+- Progress:
+  - added [cancelExecutionRun(...) in src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so runtime-backed runs can be mutated into the existing `cancelled` vocabulary while preserving terminal steps and emitting a cancellation note event
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so delayed step completion now rereads the latest persisted record and preserves a winning external cancellation instead of overwriting it
+  - added [cancelOwnedRun(...) in src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts), bounded to active leases owned by the configured local runner/host
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now accepts `{"runControl":{"action":"cancel-run","runId":"..."}}` on the existing control surface
+  - kept the first control path narrow:
+    - active local ownership required
+    - inactive or not-owned runs are rejected cleanly
+    - successful cancellation releases the active lease with release reason `cancelled`
+- Verification:
+  - tmux session `oracle-run-cancel`: `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - tmux session `oracle-run-cancel-tsc`: `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still a local single-runner control seam only; there is still no broader cancellation orchestration, reassignment, or multi-runner stop semantics
+
+## 2026-04-11 - Plan and audit checkpoint after stale-heartbeat line
+
+- Focus:
+  - decide the next bounded live runner/service ownership seam instead of continuing local reporting work by inertia
+- Progress:
+  - audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+  - confirmed the stale-heartbeat sub-line is now coherent enough to pause:
+    - classification
+    - manual repair
+    - host-consumed repair
+    - recovery attention
+    - startup-log attention
+  - chose the next bounded live seam as explicit operator/host stop-cancel control for active runner-owned runs
+  - rationale:
+    - runtime models already carry `cancelled`
+    - service-host / runner execution now has enough ownership and observability to support one conservative stop path
+    - this is higher leverage than more stale-heartbeat reporting and still narrower than reassignment or multi-runner scheduling
+- Verification:
+  - roadmap/doc audit only
+- Issues:
+  - there is still no live bounded control path for stopping active runner-owned execution
+
+## 2026-04-11 - Startup recovery log now consumes stale-heartbeat attention
+
+- Focus:
+  - add one compact operator-facing consumer of the new `stale-heartbeat-inspect-only` attention signal
+- Progress:
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so startup recovery now reads the bounded recovery summary after the drain pass and emits `attention=stale-heartbeat-inspect-only:<count>` when unrepaired inspect-only stale-heartbeat cases remain
+  - kept the startup log compact and conditional; ordinary startup logs stay unchanged when there is no attention to surface
+  - added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still only a compact operator signal; there is still no broader escalation workflow beyond the existing repair and recovery surfaces
+
+## 2026-04-11 - Unrepaired stale-heartbeat now surfaces bounded attention
+
+- Focus:
+  - add one read-only escalation/attention seam for `stale-heartbeat` cases that remain `inspect-only`
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now includes bounded `attention` aggregates and per-run recovery detail now includes `attention` when a `stale-heartbeat` lease is still only inspectable
+  - kept the seam narrow:
+    - it only lights up for `stale-heartbeat` plus `inspect-only`
+    - it does not apply to `suspiciously-idle`
+    - it does not mutate leases or schedule work
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still a read-only attention signal; there is still no broader escalation workflow beyond the existing operator repair path
+
+## 2026-04-11 - Host recovery now consumes the stale-heartbeat repair seam
+
+- Focus:
+  - remove the parallel host-only reclaim path so bounded host recovery uses the same stale-heartbeat repair seam as the operator action
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so host recovery summary and host drain now route stale-heartbeat lease repair through the same evaluated repair path used by `repairStaleHeartbeatLease(...)`
+  - kept behavior conservative:
+    - reclaimable stale-heartbeat leases are still repaired
+    - `suspiciously-idle` remains read-only
+    - no reassignment or multi-runner scheduling was added
+  - verified the existing runtime and HTTP recovery expectations still hold without introducing a second repair vocabulary
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.repair.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host recovery and operator repair now share one seam, but there is still no broader automatic stale-heartbeat escalation or reassignment path
+
+## 2026-04-11 - Operator-facing stale-heartbeat repair action
+
+- Focus:
+  - add one bounded operator action for `stale-heartbeat` without broadening repair or scheduling behavior
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with `repairStaleHeartbeatLease(...)`, which only repairs runs currently classified as `stale-heartbeat` when the existing durable repair posture is already `locally-reclaimable`
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `POST /status` now also accepts `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}` on the existing operator-control surface
+  - kept `suspiciously-idle` diagnostic only; the new action explicitly rejects it instead of mutating the lease
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.repair.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still a conservative manual repair seam only; there is still no automatic stale-heartbeat reclaim or reassignment path
+
+## 2026-04-11 - Stale-heartbeat becomes a bounded host skip/log decision
+
+- Focus:
+  - use the new active-lease health classification in one conservative host decision without changing repair or reassignment behavior
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so active leases classified as `stale-heartbeat` now skip with that explicit reason during bounded host drain instead of falling back to generic `active-lease`
+  - kept `suspiciously-idle` diagnostic only; it still does not change host drain behavior
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so startup recovery logs now break out `stale-heartbeat` explicitly in metrics
+  - updated focused expectations in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still a bounded skip/log decision only; there is still no automatic stale-heartbeat repair or reassignment path
+## 2026-04-11 - Read-only stuck-run classification on active runner-owned leases
+
+- Focus:
+  - classify active runner-owned leases as fresh, stale-heartbeat, or suspiciously idle without changing repair or scheduling behavior
+- Progress:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so recovery summary now includes bounded `activeLeaseHealth` aggregates and per-run recovery detail now includes `leaseHealth`
+  - kept the seam read-only and derived from the current active lease, runner liveness, and persisted runner activity metadata
+  - expanded focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for fresh, stale-heartbeat, and suspiciously-idle cases and in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for recovery-surface propagation
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so the operator-facing recovery contract stays aligned
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still diagnosis only; no automatic stuck-run repair or reassignment behavior has been added
+## 2026-04-11 - Runner-owned lease heartbeat during active local execution
+
+- Focus:
+  - keep live runner-owned leases fresh while a delayed local execution step is still running
+- Progress:
+  - updated [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts) so bounded local execution now starts with a fresh lease expiry, runs a bounded lease-heartbeat loop during step execution, rereads the latest run record before final persist, and stops the heartbeat before release
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so the host seam can pass bounded lease-heartbeat settings through to the runner-owned execution path
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), and [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md) so operator-facing lease-freshness behavior stays explicit
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this is still one bounded local runner pass only; there is still no broader multi-runner lease ownership or reassignment behavior
+
+## 2026-04-11 - Live runner activity reflected in api serve status
+
+- Focus:
+  - make the persisted local runner record reflect real execution activity, not only heartbeat liveness
+- Progress:
+  - updated
+    [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts),
+    [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts),
+    and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    with bounded runner activity fields:
+    - `lastActivityAt`
+    - `lastClaimedRunId`
+  - updated [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts)
+    with one bounded `recordRunnerActivity(...)` control seam
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so successful local execution records runner activity after a run actually advances
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so plain `/status` refreshes and exposes:
+    - `runner.lastActivityAt`
+    - `runner.lastClaimedRunId`
+  - expanded focused coverage in:
+    - [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runnersControl.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts tests/runtime.types.test.ts tests/runtime.schema.test.ts tests/runtime.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - runner activity is still bounded to one local host; there is still no broader multi-runner claim or reassignment behavior
+
 # Dev Journal
 
 Log ongoing progress, current focus, and problems/solutions. Keep entries brief and ordered newest-first.
@@ -11,6 +2284,160 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next:
 
 ## Entries
+
+- Date: 2026-04-11
+- Focus: Mirror compact local-claim posture onto plain `/status` without making status reads repair state.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with a read-only `summarizeLocalClaimState(...)` helper that reuses the single-runner selection seam without invoking the broader repair/recovery summary path. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so plain `/status` now returns `localClaimSummary` for the configured local runner while `GET /status?recovery=true` keeps the fuller recovery-scoped `recoverySummary.localClaim` aggregate. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) and re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so plain-status vs recovery-status local-claim behavior is explicit.
+- Issues: Plain `/status` now exposes direct-run local claim posture only. Broader source filtering still belongs to the recovery-scoped surface.
+- Next: Move upward to the next live runner/service ownership seam rather than adding more status variants unless operators prove a concrete need.
+
+- Date: 2026-04-11
+- Focus: Add one compact local-claim summary/read surface on top of the single-runner selection seam.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `localClaim` aggregate when a host `runnerId` is configured. The summary reuses the existing [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) single-runner selection seam and reports `runnerId`, selected/blocked/not-ready/unavailable run IDs, and compact reasons. That same contract now flows through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) on `GET /status?recovery=true` without adding a new route family. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing summary contract stays accurate.
+- Issues: This is still intentionally compact and single-runner scoped. Exact per-run diagnosis remains on `/status/recovery/{run_id}`.
+- Next: Decide whether the next slice should expose this compact local-claim summary on plain `/status` as well, or move upward to the next live runner/service ownership seam instead.
+
+- Date: 2026-04-11
+- Focus: Add one bounded local runner-selection seam on top of the live single-runner claim model.
+- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) with `selectStoredExecutionRunLocalClaim(...)`, which wraps the existing single-runner local-claim evaluation and marks only `eligible` claims as `selected`. Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so both `drainRunsOnce(...)` and `readRecoveryDetail(...)` now consume that same selection seam instead of duplicating local-runner claim reasoning. `localClaim` detail now includes `selected`, and bounded host execution now blocks with `claim-owner-unavailable` whenever the configured local runner is present but not actually selectable. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts), [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts), and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing contract stays aligned.
+- Issues: This remains a bounded single-runner seam. It decides whether the configured local runner is selected, but it still does not rank or compete multiple runners.
+- Next: Add one bounded local runner-selection summary/read surface if operators need it; otherwise move upward to the next live runner/service ownership seam instead of inventing multi-runner scheduling early.
+
+- Date: 2026-04-11
+- Focus: Add one bounded local claim-read seam on top of the live runner-owned host model.
+- Progress: Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) with a read-only `evaluateStoredExecutionRunLocalClaim(...)` helper for one configured runner and threaded that through [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) as `readRecoveryDetail(...).localClaim`. The existing recovery-detail surface now reports the configured local runner's claim posture for the inspected run, including `runnerId`, `hostId`, status, queue/claim state, and affinity reasoning. Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) only indirectly by preserving the same `/status/recovery/{run_id}` route and letting it carry the richer detail payload. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for an eligible configured local runner and updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove the held-by-lease local-claim posture through the HTTP detail route. Re-verified [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts) beside the new seam. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator-facing detail contract stays accurate.
+- Issues: This is still read-only and single-runner scoped. It explains local claim posture, but it does not yet select among multiple runners or mutate claim ownership by itself.
+- Next: Add one bounded local runner-selection seam or compact claim-summary surface before considering any broader multi-runner scheduling.
+
+- Date: 2026-04-11
+- Focus: Make `serviceHost` consume the live persisted runner identity for bounded local claim ownership.
+- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so hosts configured with a persisted `runnerId` now claim work only through that runner when it is active and unexpired. The first bounded rule is conservative: if the configured runner is missing, stale, or expired, `serviceHost` now skips new runnable work with `claim-owner-unavailable` instead of silently claiming through a generic host string. When the runner is healthy, the lease owner is now the runner id itself. Wired [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) to pass the same live runner id into the host claim path. Added focused regressions in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for both the healthy-runner and missing-runner cases, then re-verified [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts). Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the ownership semantics are explicit.
+- Issues: The host now respects a live single-runner identity, but it still does not choose among multiple candidate runners or reassign work after a blocked claim. This remains single-runner ownership only.
+- Next: Add one bounded runner-aware local claim selection seam or local claim-read surface before considering broader multi-runner scheduling.
+
+- Date: 2026-04-11
+- Focus: Turn the durable runner model into live `api serve` ownership with self-registration and heartbeats.
+- Progress: Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so the local `api serve` host now owns one persisted runner record for its actual bound `host:port`, passes the same runner-control seam into `serviceHost`, heartbeats that runner while the server is alive, and marks it stale on shutdown. `/status` now reports the live runner posture under a bounded `runner` block instead of forcing operators to inspect runner JSON files directly. Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for active status reporting and stale-on-close behavior, then re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) to make sure the host seam still stays green beside the live-runner change. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator contract is explicit.
+- Issues: This is still single-host ownership only. The server now owns a real runner identity, but there is still no persisted claim loop that selects among multiple active runners or reassigns work between them.
+- Next: Add one bounded runner-aware host execution seam that consumes the persisted runner identity for claim/lease behavior instead of stopping at heartbeat-only ownership.
+
+- Date: 2026-04-11
+- Focus: Reassess the durable-state lane after the new recovery summary/detail checkpoints.
+- Progress: Audited [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md), [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md), and [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md). The conclusion is now explicit in the planning docs: this durable-state sub-lane is coherent enough to pause. The next higher-yield missing seam is no longer more durable vocabulary or more operator surface. It is live runner ownership: `api serve` / `serviceHost` still do not register themselves as persisted runners or heartbeat that identity while alive, so the durable runner model remains disconnected from the actual host loop.
+- Issues: The repo now has durable runner records, claim reasoning, reconciliation, repair, and operator inspection, but no live service path owns a persisted runner identity yet.
+- Next: Reopen the service-host / runner orchestration lane with one bounded runner self-registration + heartbeat seam for `api serve`.
+
+- Date: 2026-04-11
+- Focus: Add one separate detailed recovery read surface instead of growing the summary payload further.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) with `readRecoveryDetail(runId)` so the host can return one read-only per-run view containing current host classification, active lease snapshot, dispatch posture, and reconciliation / repair posture with reasons. Exposed that seam through [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) as `GET /status/recovery/{run_id}` and updated the status route metadata to advertise the new template. Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts), including the 404 path. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator surface is explicit.
+- Issues: The detailed read surface now exists, but it is still single-run only. There is still no bulk detail listing, which is intentional for now.
+- Next: Pause detailed recovery-surface expansion unless operators prove they need bulk detail or richer reconciliation payloads.
+
+- Date: 2026-04-11
+- Focus: Add per-run repair reasons on the existing recovery summary surface.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `recoverySummary.leaseRepair` now also includes `reasonsByRunId`, derived directly from the existing repair-classification reason strings. Kept the seam bounded and read-only: there is still one recovery surface and one repair vocabulary, just with a per-run reason map on top. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation. Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) so the operator contract is explicit.
+- Issues: Operators can now see per-run repair reasons, but the surface is still summary-shaped. There is still no deeper per-run reconciliation payload beyond the bounded reason map.
+- Next: If more depth is needed, add one bounded detailed reconciliation read surface that stays separate from the lightweight recovery summary.
+
+- Date: 2026-04-11
+- Focus: Expose reconciliation/repair posture through the existing recovery summary surface.
+- Progress: Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns a bounded `leaseRepair` block with `locallyReclaimableRunIds`, `inspectOnlyRunIds`, `notReclaimableRunIds`, `repairedRunIds`, and matching metrics. Kept the seam aligned with the existing repair vocabulary instead of inventing a second status model. Updated [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) to prove both the direct host summary and `/status?recovery=true` propagation, including the stateful case where an earlier recovery read repairs a locally reclaimable lease before a later summary call. Updated operator docs in [README.md](/home/ecochran76/workspace.local/oracle/README.md), [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md), and [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md).
+- Issues: Recovery reporting is now explicit, but it still only exposes aggregate repair posture. There is still no per-run detailed reconciliation reason on the operator surface.
+- Next: Add one bounded per-run reconciliation/repair reason seam if operators need deeper inspection, but keep it read-only and aligned with the current vocabulary.
+
+- Date: 2026-04-11
+- Focus: Thread the new conservative lease-repair seam into `serviceHost`.
+- Progress: Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so bounded host recovery now expires stale runner records before drain/recovery-summary passes and routes expired active-lease repair through `repairStoredExecutionRunLease(...)` instead of blanket-expiring every lease by timestamp alone. The current host rule is now explicit: stale or missing runner plus expired lease is locally reclaimable; active runner plus expired lease remains `active-lease`. Expanded [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) with focused regressions for both the conservative reclaim path and the read-only active-runner path. Updated [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md), [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) to record the new host-consumption checkpoint.
+- Issues: `serviceHost` now consumes the conservative repair seam, but reconciliation/repair posture is still not surfaced through operator status. Lease repair also remains limited to local expiry through the existing control path; there is still no reassignment policy.
+- Next: Add one bounded operator/reporting seam for reconciliation/repair posture before attempting broader automatic reclaim or reassignment behavior.
+
+- Date: 2026-04-11
+- Focus: Add the first conservative lease-repair action for locally reclaimable cases.
+- Progress: Extended [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts) with `repairStoredExecutionRunLease(...)`, gated strictly by the existing repair-posture seam. The current action mutates only `locally-reclaimable` cases and expires the active lease through the existing runtime control seam, while leaving `inspect-only` and `not-reclaimable` cases untouched. Expanded [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.repair.test.ts) to prove both the reclaimable mutation path and the read-only inspect-only path, then re-verified the adjacent repair/reconciliation/runner/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the first repair-action checkpoint is explicit.
+- Issues: The first repair action exists, but it is still a library/control seam only. The host layer does not yet consume reconciliation/repair posture automatically during bounded recovery or drain.
+- Next: Add one bounded service-host consumption seam so host recovery can inspect and optionally use the new repair classification/action instead of relying only on older lease/run heuristics.
+
+- Date: 2026-04-11
+- Focus: Add bounded repair/reclaim posture on top of lease/runner reconciliation.
+- Progress: Added [src/runtime/repair.ts](/home/ecochran76/workspace.local/oracle/src/runtime/repair.ts) as the first repair-classification seam for the durable-state lane. The new helper maps reconciliation outcomes into `inspect-only`, `locally-reclaimable`, or `not-reclaimable`, with one explicit conservative rule: stale or missing runner ownership is only locally reclaimable after the active lease itself is expired. Added focused coverage in [tests/runtime.repair.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.repair.test.ts), then re-verified the adjacent reconciliation, runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the repair-posture checkpoint is explicit.
+- Issues: Repair posture is now explicit, but it is still policy-only. There is still no bounded repair action that actually clears or expires a locally reclaimable lease.
+- Next: Add the first bounded lease-repair action for `locally-reclaimable` cases only, keeping all other postures read-only.
+
+- Date: 2026-04-11
+- Focus: Add diagnosis-first lease/runner reconciliation on top of persisted runner liveness.
+- Progress: Added [src/runtime/reconciliation.ts](/home/ecochran76/workspace.local/oracle/src/runtime/reconciliation.ts) as the first bounded lease/runner reconciliation seam. The helper compares active leases on persisted runs against persisted runner records and classifies them as `no-active-lease`, `active-runner`, `stale-runner`, or `missing-runner`. Added focused coverage in [tests/runtime.reconciliation.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.reconciliation.test.ts), then re-verified the adjacent runner-control, claims, runner-store, run-store, and runtime-control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the reconciliation checkpoint is explicit.
+- Issues: Reconciliation is now explicit, but it is still diagnosis-only. There is still no bounded repair policy for what to do with an active lease owned by a stale or missing runner.
+- Next: Add one bounded repair/reclaim posture seam that decides which stale/missing-runner lease situations are only inspectable versus locally reclaimable.
+
+- Date: 2026-04-11
+- Focus: Add bounded stale-runner expiry/reconciliation on the persisted runner-control seam.
+- Progress: Extended [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts) with `expireRunners(...)` so persisted runner records can be swept from `active` to `stale` when `expiresAt` has passed. Kept the behavior bounded: it only updates runner liveness metadata and does not mutate leases. Expanded focused coverage in [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts) for the sweep itself and in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts) to prove later claim-candidate evaluation reflects the stale posture. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the runner-liveness checkpoint is recorded explicitly.
+- Issues: Runner liveness cleanup is now explicit, but stale runners still are not reconciled against old active leases. There is still no bounded seam that explains whether a stale runner’s outstanding leases should be treated as reclaimable, merely inspectable, or immediately expired.
+- Next: Add one bounded lease/runner reconciliation seam that compares stale runner records against active leases and returns deterministic local repair posture without becoming a scheduler.
+
+- Date: 2026-04-11
+- Focus: Add a bounded persisted claim-candidate evaluation seam over runner records and queue posture.
+- Progress: Added [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) as the first persisted claim-candidate helper for the durable-state lane. The new seam combines persisted run inspection, the existing derived queue-ready projection, explicit affinity requirements, and persisted runner records to classify local candidates as `eligible`, `blocked-affinity`, `stale-runner`, or `not-ready`. Added focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts), then re-verified the adjacent runner/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the new checkpoint is recorded explicitly.
+- Issues: Candidate evaluation is now explicit, but stale-runner expiry/reconciliation is still manual. There is still no bounded sweep that marks expired active runners stale or reconciles runner liveness with old leases.
+- Next: Add one bounded stale-runner expiry/reconciliation seam so persisted runner records stop relying on purely external callers to flip `active` to `stale`.
+
+- Date: 2026-04-11
+- Focus: Add the first persisted runner-registry/store seam for durable ownership and liveness.
+- Progress: Added a revisioned local runner registry in [src/runtime/runnersStore.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersStore.ts) and a bounded control seam in [src/runtime/runnersControl.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runnersControl.ts). The current persisted operations are `register`, `read`, `list`, `heartbeat`, and `mark stale`, using the same local JSON record pattern as runtime run records. Added focused coverage in [tests/runtime.runnersStore.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersStore.test.ts) and [tests/runtime.runnersControl.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runnersControl.test.ts), then re-verified the adjacent runtime type/schema/model/projection/store/control suite. Updated [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the active durable-state lane now records the persisted runner-registry checkpoint explicitly.
+- Issues: Runner records are now durable, but they still are not tied into claim selection beyond direct projection evaluation. There is still no claim-candidate selection surface over persisted runner records, and no automatic stale-runner cleanup or lease/runner reconciliation logic.
+- Next: Add one bounded claim-candidate evaluation seam that reads persisted runner records plus the existing queue projection and returns eligible vs blocked local claim candidates without inventing a distributed scheduler.
+
+- Date: 2026-04-11
+- Focus: Add the first explicit runtime-local runner identity / heartbeat seam for durable claim ownership.
+- Progress: Added the first bounded runner record vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts). The current runner record covers `id`, `hostId`, `status`, `startedAt`, `lastHeartbeatAt`, `expiresAt`, `serviceIds`, `runtimeProfileIds`, `browserProfileIds`, `serviceAccountIds`, `browserCapable`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts) so the derived queue-ready projection can evaluate one bounded runner record directly against explicit affinity requirements, including active vs stale heartbeat posture. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
+- Issues: Runner ownership/liveness is now explicit enough for local claim reasoning, but it is still only a record/schema seam. There is still no durable runner registry, heartbeat persistence policy beyond local records, or multi-runner claim workflow.
+- Next: Define the next bounded durable-state seam for a real runner registry/store path or claim-candidate evaluation surface so leases stop being the only persisted ownership artifact.
+
+- Date: 2026-04-11
+- Focus: Add the first explicit runtime-local affinity seam for the durable-state lane.
+- Progress: Added the first bounded affinity vocabulary in [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts), [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts), and [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts). The current explicit affinity record covers `service`, `serviceAccountId`, `browserRequired`, `runtimeProfileId`, `browserProfileId`, `hostRequirement`, `requiredHostId`, and `eligibilityNote`. Updated [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts) so the derived queue-ready projection can consume that record directly while preserving the existing evaluation hook for future claim policy. Expanded focused coverage in [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts), [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts), [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), and [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts). Focused Vitest and repo typecheck both passed.
+- Issues: Affinity is now explicit enough for local durable claim reasoning, but it is still local-only. There is still no durable account-mirroring implementation, runner-heartbeat claim policy, or multi-runner affinity ownership model.
+- Next: Define the next bounded durable-state seam for runner identity / heartbeat ownership so future claim decisions stop depending only on the current local host posture.
+
+- Date: 2026-04-09
+- Focus: Add role-aware team planning inputs and explicit planned handoff entities.
+- Progress: Extended the internal planning seam so config teams can now carry optional `instructions` plus `roles` metadata with per-role agent binding, order, instructions, step kind, optional response-shape hints, and `handoffToRole`. Updated [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts) and [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts) for that config shape. Then extended [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) and [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts) so task-aware planning can consume those role definitions from config, generate richer role-specific prompts, and expose planned `handoffs[]` derived from the step graph. Focused coverage passed in [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts), [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts), with repo typecheck also green.
+- Issues: This is still a conservative internal planner. Role-aware planning currently comes from config-driven task-aware paths, while the fallback planner still uses ordered members when role metadata is absent. Planned handoffs exist at the service-plan layer only and are not yet persisted as part of the team-run bundle/runtime projection.
+- Next: Define whether planned handoffs should become first-class persisted team-run entities at bundle creation time, and decide whether local host-action requests need their own durable entity rather than living only in policy and future step-output payloads.
+
+- Date: 2026-04-09
+- Focus: Make planned team runs consume `taskRunSpec` explicitly instead of relying only on member-order defaults.
+- Progress: Extended the team planner/model seam so [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) now supports `createTeamRunBundleFromResolvedTeamTaskRunSpec(...)` and derives planned step prompts, artifacts, structured task metadata, and step kinds from `taskRunSpec` input. Added an explicit `taskRunSpecId` link on planned `teamRun` records in [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts) and [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), plus a service-level helper in [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts). Focused coverage now proves task-aware planning in [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts), [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts), and [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts). Focused Vitest and repo typecheck both passed.
+- Issues: The task-aware planner is still conservative. It remains sequential and still uses member order as the base dependency chain; the improvement is that assignment intent now shapes planned step input/kind instead of being absent from the planner.
+- Next: Decide whether the next planner slice should add explicit role-aware step derivation and handoff entity planning, or define the first local-action request entity so host actions stop living only as policy and future step-output data.
+
+- Date: 2026-04-09
+- Focus: Land the first code-facing assignment object for team execution planning.
+- Progress: Added the first `taskRunSpec` code seam under [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts), [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts), and [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts). The new shape now covers requested outputs, input artifacts, turn policy, human-interaction policy, and local-action policy, with conservative defaults plus `createTaskRunSpec(...)` as a bounded normalization helper. Added focused coverage in [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts), [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts), and [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts). Focused Vitest and repo typecheck both passed.
+- Issues: The new assignment object is not wired into the team planner yet. Current internal team planning still derives sequential prompt-like steps directly from resolved member order.
+- Next: Define the first planner mapping from `team + taskRunSpec` into planned `teamRun` steps without exposing a public `team run` surface yet.
+
+- Date: 2026-04-09
+- Focus: Define the first code-facing task/run-spec model before public team execution semantics.
+- Progress: Added [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md) as the first dedicated assignment-layer design note. It now separates `team`, `task / run spec`, and `run`; recommends `taskRunSpec` as the first bounded object name; defines the minimum assignment fields; and gives unattended multi-turn automation plus host-action requests a clear home. Linked that plan from [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), and [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md) so later execution work is gated on the assignment layer instead of inferring it from current team-run builder defaults.
+- Issues: This is still planning-only. No `src/*` schema or runtime mapping exists yet, and the existing internal team planner still derives sequential prompt-like steps directly from member order.
+- Next: Decide whether to implement the first code-facing assignment schema as `taskRunSpec` or `taskSpec`, then define how that object maps into planned `teamRun` steps and handoff contracts.
+
+- Date: 2026-04-09
+- Focus: Elevate team/task/run semantics into roadmap checkpoints instead of leaving them as planning narrative.
+- Progress: Updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the roadmap now explicitly gates future public team execution on three semantic checkpoints:
+  - `team` as reusable orchestration template
+  - `task` / `run spec` as the concrete assignment layer
+  - conservative `team run` execution only after that split is codified
+  The roadmap also now names the handoff/host-action checkpoint separately so unattended multi-turn teams and host-executed actions have an explicit home in sequencing instead of being inferred later.
+- Issues: The roadmap is now aligned, but the code-facing `task` / `run spec` shape still does not exist.
+- Next: Define the first bounded `task` / `run spec` schema and ownership rules before any public `team run` surface is added.
+
+- Date: 2026-04-09
+- Focus: Freeze the team concept before exposing any public team-execution surface.
+- Progress: Audited the current team boundary, service-execution, runtime-bridge, and CLI docs/code against the intended product model. Updated [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md), [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md), and [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the conceptual split is explicit: a `team` is a reusable orchestration template, a separate `task` / `run spec` carries the concrete assignment, and a `run` is the durable execution attempt. The docs now also warn that the current internal sequential member-to-step projection is an MVP execution strategy, not the canonical product meaning of team semantics.
+- Issues: The repo still has no final schema naming or transport shape for `task` / `run spec`, and the current internal `src/teams/model.ts` builder still projects raw member order to prompt-shaped sequential steps.
+- Next: Decide the first code-facing shape for `task` / `run spec` before adding any public `team run` CLI/API surface, and keep the current runtime bridge internal until that boundary is settled.
 
 - Date: 2026-04-09
 - Focus: Complete and document the internal service-host + team-runtime bridge checkpoint.
@@ -10264,3 +12691,3205 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm exec tsc -p tsconfig.json --noEmit`
 - Issues:
   - no blocking issues in this slice
+
+## 2026-04-09 - Team handoffs and local actions made durable
+
+- Focus:
+  - persist planned orchestration entities instead of deriving or dropping them
+    transiently
+- Progress:
+  - extended the team-run bundle shape in:
+    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    to carry:
+    - persisted `handoffs`
+    - persisted `localActionRequests`
+  - added a first explicit local host-action entity via
+    `createTeamRunLocalActionRequest(...)`
+  - updated
+    [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts)
+    to consume persisted handoffs/local action requests in the service plan
+    instead of recomputing handoffs inside the planner seam
+  - updated runtime projection in:
+    [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
+    [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
+    [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    so projected execution bundles retain both entity families
+  - added focused coverage in:
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - local action requests are now durable entities, but they are still empty by
+    default and not yet produced from step outputs or consumed by a host-action
+    executor
+
+## 2026-04-09 - Local action request lifecycle wired through runtime host
+
+- Focus:
+  - turn durable local action request entities into a real internal execution
+    lifecycle
+- Progress:
+  - updated
+    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    so `localActionRequest` records can carry:
+    - approval timestamp
+    - completion timestamp
+    - result summary
+    - result payload
+  - extended
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so a step output may emit `structuredData.localActionRequests[]`
+  - added bounded request derivation rules:
+    - respects step-level `localActionPolicy`
+    - rejects requests immediately when policy mode is `forbidden`
+    - rejects disallowed kinds when `allowedActionKinds` excludes them
+  - added optional host callback execution so a local host can mark requests as
+    `executed`, `failed`, `rejected`, or similar and persist result metadata in
+    the run bundle
+  - threaded that callback through:
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+  - added focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - updated bundle/entity expectation coverage in:
+      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host action execution is still callback-driven and internal only; there is
+    not yet one concrete built-in executor for shell/patch/etc
+
+## 2026-04-09 - Built-in bounded shell executor added for local actions
+
+- Focus:
+  - prove one concrete host-action executor against the new local action
+    lifecycle
+- Progress:
+  - added
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    with the first built-in local action executor:
+    - supports `kind: "shell"`
+    - uses `execFile` with explicit arg arrays
+    - clamps timeout bounds
+    - captures stdout/stderr with truncation
+    - records failure payloads without throwing the whole host layer
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    to use the built-in executor by default when no injected
+    `executeLocalActionRequest` callback is supplied
+  - added focused coverage in:
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+  - kept the lifecycle internal-only; no public CLI/API surface changed
+- Verification:
+  - `pnpm vitest run tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - only `shell` is implemented so far
+  - the built-in executor still trusts the request `command` path/name and does
+    not yet impose a higher-level allowlist beyond step policy and explicit arg
+    separation
+
+## 2026-04-10 - Shell policy hardened and staged complexity encoded
+
+- Focus:
+  - tighten built-in shell local actions and document the progressive
+    complexity path
+- Progress:
+  - extended task/run-spec local-action policy in:
+    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    with:
+    - `complexityStage`
+    - `allowedCommands`
+    - `allowedCwdRoots`
+  - hardened the built-in shell executor in
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    so it now:
+    - merges per-step `localActionPolicy` narrowing into host defaults
+    - rejects disallowed commands
+    - rejects cwd values outside allowed roots
+    - preserves explicit stage labeling (`bounded-command`, `repo-automation`,
+      `extended`) for result payloads and planning
+  - added focused regression coverage in:
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+      for:
+      - allowed command
+      - unsupported kind
+      - rejected command
+      - rejected cwd
+    - updated task policy default expectations in:
+      - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+      - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+  - aligned the planning docs:
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host shell policy is still code-owned; there is not yet one explicit config
+    seam for the host execution ceiling
+
+## 2026-04-10 - Host shell policy seam made explicit and duplicate path removed
+
+- Focus:
+  - finish the host-owned shell policy seam and remove stale parallel schema
+    paths
+- Progress:
+  - verified and kept the live host policy seam through:
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    - [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - confirmed `auracall api serve` now resolves host-owned shell policy from
+    runtime config via `resolveHostLocalActionExecutionPolicy(...)`
+  - removed the stale duplicate runtime local-action schema/helper path from:
+    - [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts)
+    - [src/config/model.ts](/home/ecochran76/workspace.local/oracle/src/config/model.ts)
+  - kept focused coverage green in:
+    - [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts)
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/runtime.localActions.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - no built-in non-shell local action kinds yet
+
+## 2026-04-10 - Shell local actions tightened around staged complexity
+
+- Focus:
+  - align shell local-action execution with an explicit staged-complexity plan
+    instead of letting command breadth drift ad hoc
+- Progress:
+  - extended task-level local-action policy in:
+    [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts)
+    [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts)
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    to support:
+    - `allowedCommands`
+    - `allowedCwdRoots`
+  - updated
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    so the built-in shell executor:
+    - still has one narrow host/runtime default ceiling
+    - allows task/step policy to narrow command and cwd scope further
+    - accepts allowlisted commands by exact path or basename
+  - strengthened focused coverage in:
+    - [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+  - updated planning docs so the staged rollout is durable:
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/runtime.localActions.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host/runtime still owns one hardcoded default shell ceiling; there is not
+    yet one user-configurable host policy seam for allowlist/cwd roots
+
+## 2026-04-10 - Local action outcomes projected into shared state
+
+- Focus:
+  - make durable `localActionRequest` outcomes visible to downstream
+    orchestrator logic without introducing a second source of truth
+- Progress:
+  - confirmed the canonical projection seam stays in
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts),
+    where request derivation and execution resolution already happen
+  - verified runtime shared-state summaries now publish one machine-readable
+    per-step structured output using the convention:
+    - `key: step.localActionOutcomes.<stepId>`
+    - `value.counts`
+    - `value.items[]`
+  - verified the same slice also emits a compact human-readable shared-state
+    note so orchestrators and operators can see outcome posture without
+    re-reading raw request entities
+  - extended the team-runtime bridge regression to prove that config-driven
+    team execution preserves those shared-state summaries when host policy
+    rejects a local action request:
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - orchestrators do not yet consume these summaries automatically when
+    building follow-up handoffs or next-step prompts
+
+## 2026-04-10 - Dependency-scoped local action outcome context wired into later steps
+
+- Focus:
+  - make downstream step execution consume the new shared-state
+    `step.localActionOutcomes.<stepId>` summaries instead of only persisting
+    them
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so `executeStoredRunStep` now receives an execution-context step whose
+    `input.structuredData.sharedStateContext` includes:
+    - `dependencyStepIds`
+    - `dependencyLocalActionOutcomes`
+    - `upstreamLocalActionOutcomes`
+  - kept the source of truth unchanged:
+    - durable `bundle.localActionRequests`
+    - derived shared-state `structuredOutputs`
+  - added focused regressions proving later steps can read dependency-scoped
+    outcome summaries in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - no planner/prompt shaping layer yet consumes these summaries automatically
+    for richer orchestrator instructions or handoff payloads
+
+## 2026-04-10 - Dependency-scoped host-action outcome prompt shaping
+
+- Focus:
+  - turn dependency-scoped local-action outcome summaries into execution-time
+    prompt guidance for later steps
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so execution-context step building now appends one bounded prompt block when
+    dependency-local-action outcomes exist:
+    - `Dependency local action outcomes:`
+    - one line per dependency step with status counts and latest summary
+  - kept the same data available structurally under
+    `sharedStateContext.dependencyLocalActionOutcomePromptContext`
+  - proved the behavior in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - handoff payloads still do not explicitly reference or embed the same
+    dependency-scoped summaries
+
+## 2026-04-10 - Handoff payloads now carry dependency-scoped host-action outcome context
+
+- Focus:
+  - make explicit handoff entities carry the same bounded host-action summary
+    context already used by shared state and prompt shaping
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so when a step completes with resolved local-action requests, handoffs whose
+    `fromStepId` matches that completed step now gain:
+    - `structuredData.localActionOutcomeSummaryKey`
+    - `structuredData.localActionOutcomeContext`
+  - updated
+    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    so projected runtime bundles retain planned handoffs instead of dropping
+    them before execution-time updates
+  - proved the new durable handoff shaping in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - no orchestrator-specific stop/continue/escalate decision layer yet consumes
+    the shaped handoff payloads
+
+## 2026-04-10 - Orchestrator decision guidance derived from host-action summaries
+
+- Focus:
+  - add one bounded orchestration-decision layer on top of the dependency-scoped
+    host-action summary vocabulary
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so execution-context steps now derive:
+    - `dependencyLocalActionDecisionGuidance`
+    - `dependencyLocalActionDecisionPromptContext`
+  - current deterministic guidance classes are:
+    - `continue`
+    - `steer`
+    - `escalate`
+  - current rule set is intentionally narrow:
+    - rejected/failed => `escalate`
+    - partial/pending/inconclusive => `steer`
+    - clean executed outcomes => `continue`
+  - propagated the same guidance into shaped handoff payloads so prompt context
+    and handoff context stay aligned
+  - added focused regression coverage for `continue`, `steer`, and `escalate`
+    in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - explicit human-escalation / stop behavior is now implemented for
+    `escalate`, but team-level runtime bridge coverage still only proves the
+    advisory `continue` path
+
+## 2026-04-10 - Escalate guidance now drives bounded control flow
+
+- Focus:
+  - turn `escalate` from advisory guidance into concrete runtime behavior using
+    the existing human-interaction policy seam
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so `escalate` now maps to:
+    - `defaultBehavior: continue` => advisory only
+    - `defaultBehavior: pause` + `allowHumanEscalation: true` => controlled
+      cancellation plus `human.escalation.<stepId>` shared-state marker
+    - `defaultBehavior: fail` or human escalation disallowed => deterministic
+      runner failure with `human_escalation_required`
+  - added focused coverage in
+    [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    for:
+    - advisory `continue`
+    - pause-for-human
+    - fail-on-escalate
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - bridge/runtime coverage is now in place for advisory, pause, and fail
+    variants; the next gap is richer team-level human-escalation semantics
+
+## 2026-04-10 - Team-runtime bridge now covers escalate control flow
+
+- Focus:
+  - prove the new `escalate` control-flow behavior through the team-runtime
+    bridge path, not only the direct runner path
+- Progress:
+  - extended
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    with bridge-path regressions for:
+    - pause-for-human using default bridge behavior
+    - fail-on-escalate using one wrapped-control mutation of the created runtime
+      bundle to set second-step `humanInteractionPolicy.defaultBehavior: fail`
+  - verified the bridge path now covers:
+    - advisory `continue`
+    - pause-for-human
+    - fail-on-escalate
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the bounded resume contract is now in place; the next gap is richer human
+    input semantics beyond “resume approved”
+
+## 2026-04-10 - Resume contract added for paused human-escalation runs
+
+- Focus:
+  - define and prove the first deterministic resume path after
+    `defaultBehavior: pause`
+- Progress:
+  - added
+    [resumeHumanEscalation(...)](/home/ecochran76/workspace.local/oracle/src/runtime/control.ts)
+    to the runtime control seam
+  - added
+    [resumeExecutionRunAfterHumanEscalation(...)](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so resume:
+    - reopens the cancelled human-escalated step as `runnable`
+    - restores run/shared-state to active
+    - writes `human.resume.<stepId>` into shared state
+    - adds a one-shot `humanEscalationResume` override on the reopened step so
+      it does not immediately re-pause on the same escalation signal
+  - proved the seam in:
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/runtime.serviceHost.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - resume currently captures only a bounded approval-style note; it does not
+    yet define richer human edits/overrides to the resumed step context
+## 2026-04-10 - Human escalation resume now carries bounded guidance
+
+- Focus:
+  - let human resume actions carry bounded machine-readable guidance into the
+    reopened step without inventing a second resume vocabulary
+- Progress:
+  - updated
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
+    and [src/runtime/control.ts](/home/ecochran76/workspace.local/oracle/src/runtime/control.ts)
+    so `resumeHumanEscalation(...)` now accepts optional `guidance`
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so resume now:
+    - writes `guidance` onto `human.resume.<stepId>`
+    - carries the same payload on the reopened step under
+      `input.structuredData.humanEscalationResume`
+    - exposes that payload in `sharedStateContext.humanEscalationResume`
+    - appends one bounded `Human resume guidance:` prompt block for the resumed
+      step
+  - proved the seam in:
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - resume guidance is still advisory context, not a typed mutation contract for
+    task policy, prompt shape, or host permissions
+
+## 2026-04-10 - Typed resume override narrowed to prompt append
+
+- Focus:
+  - tighten resume semantics by separating advisory guidance from one allowed
+    typed mutation path
+- Progress:
+  - updated
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
+    so `resumeHumanEscalation(...)` now also accepts a typed `override`
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the first allowed typed override is:
+    - `override.promptAppend`
+    and it is:
+    - persisted on `human.resume.<stepId>`
+    - mirrored onto `input.structuredData.humanEscalationResume`
+    - exposed in execution context as
+      `sharedStateContext.humanEscalationResumeOverride`
+    - rendered into the resumed step prompt under one bounded
+      `Human resume override:` block
+  - proved the seam in:
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - typed resume mutation is intentionally limited to prompt shaping; it does
+    not yet allow structured input or policy mutation
+
+## 2026-04-10 - Typed resume override now carries structured context
+
+- Focus:
+  - extend the typed resume contract one step further without widening into
+    policy mutation
+- Progress:
+  - updated
+    [src/runtime/contract.ts](/home/ecochran76/workspace.local/oracle/src/runtime/contract.ts)
+    so typed resume override now also accepts:
+    - `override.structuredContext`
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so resumed execution now exposes that typed context as:
+    - `sharedStateContext.humanEscalationResumeOverrideStructuredContext`
+    and appends one bounded prompt block:
+    - `Human resume structured context:`
+  - kept the mutation boundary narrow:
+    - persisted on the existing `human.resume.<stepId>` seam
+    - mirrored on `humanEscalationResume`
+    - used only for resumed step execution context and prompt shaping
+    - not allowed to mutate policy or host-permission seams
+  - proved the seam in:
+    - [tests/runtime.control.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.control.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - typed resume mutation still does not support safe policy-level edits, which
+    is intentional for this phase
+
+## 2026-04-10 - Typed steer contract now shapes downstream behavior
+
+- Focus:
+  - turn `steer` from an advisory decision label into a bounded downstream
+    behavior contract
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so dependency-scoped `steer` guidance now carries one typed contract:
+    - `kind: host-action-steer`
+    - `recommendedAction: continue-with-caution`
+    - `promptAppend`
+    - `structuredContext`
+  - exposed that contract at execution time as:
+    - `sharedStateContext.dependencyLocalActionSteerContract`
+    - `sharedStateContext.dependencyLocalActionSteerPromptContext`
+  - appended one bounded prompt block for downstream steps:
+    - `Dependency local action steer contract:`
+  - kept handoff shaping on the same vocabulary by carrying the contract inside
+    existing `localActionDecisionGuidance`
+  - proved the seam in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.control.test.ts tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the current `steer` contract is still generic; it does not yet distinguish
+    between retry-later, continue-with-partial-results, or request-human-clarification variants
+
+## 2026-04-10 - Roadmap reassessment after orchestration contract checkpoint
+
+- Focus:
+  - decide whether to keep deepening orchestration semantics or pivot to the
+    next higher-yield roadmap lane
+- Progress:
+  - audited:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - current decision:
+    - pause further orchestration-contract deepening
+    - keep public `team run` deferred
+    - make service-host / runner orchestration the next active lane
+  - rationale:
+    - team/task/run semantics are now coherent enough for an internal checkpoint
+    - the current missing value is underneath those semantics:
+      - broader host-owned recovery
+      - background/local drain behavior
+      - richer operator visibility
+    - future API/MCP and future public team execution both depend on that same
+      runner/service substrate
+- Verification:
+  - audit-only slice; no new test run beyond the latest green runtime/bridge
+    verification already recorded above
+- Issues:
+  - the service-host lane still needs one concrete next execution slice choice:
+    - background drain behavior
+    - restart recovery behavior
+    - or richer operator inspection/control surfaces
+
+## 2026-04-10 - `api serve` now owns bounded drain over the shared host seam
+
+- Focus:
+  - move direct response execution ownership out of the responses service shim
+    and into the HTTP server host layer
+- Progress:
+  - confirmed
+    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    already supports persistence-only creation through `drainAfterCreate: false`
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so the server now:
+    - constructs the responses service in persistence-only mode
+    - drains through one server-owned serialized scheduler on the shared
+      `serviceHost` seam
+    - reuses that same scheduler for startup recovery and per-request direct
+      response drain
+  - expanded focused coverage in:
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    including a new concurrent create regression that proves server-owned drain
+    calls do not overlap
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - `api serve` still awaits drain from the caller path; the next step is a
+    bounded autonomous background drain loop rather than more synchronous
+    request-path orchestration
+
+## 2026-04-10 - `api serve` background drain loop is now autonomous
+
+- Focus:
+  - stop making direct response execution caller-synchronous when the server
+    is already the execution owner
+- Progress:
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so background drain is now:
+    - single-flight
+    - timer-driven for `api serve`
+    - kicked immediately after create while still avoiding overlapping drains
+    - cancelled cleanly on server shutdown
+  - `POST /v1/responses` now:
+    - returns the persisted response in `in_progress` state when background
+      drain is enabled
+    - relies on the server-owned background loop to advance the run
+  - expanded focused coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    for:
+    - create returns `in_progress` and later converges through background drain
+    - background drain stops scheduling after server close
+  - updated user/operator docs:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - background drain cadence is still fixed and local-only; there is not yet an
+    operator-facing control or richer live status for the active drain loop
+
+## 2026-04-10 - `api serve` background drain loop is now live
+
+- Focus:
+  - add one bounded autonomous host-owned drain loop on top of the existing
+    server/serviceHost scheduler
+- Progress:
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so the server now:
+    - supports a bounded background drain cadence
+    - reuses the same serialized server-owned drain queue
+    - avoids overlapping startup recovery, request-triggered drain, and
+      background drain work
+    - clears the timer and awaits queued drain work during shutdown
+  - expanded focused coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    to prove a persisted runnable direct run can complete through background
+    drain even when startup recovery is disabled
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the next gap is not more host-loop mechanics; it is richer operator
+    visibility/control around active background drain behavior
+
+## 2026-04-10 - `/status` now exposes live background-drain state
+
+- Focus:
+  - add bounded operator visibility for the active `api serve` host drain loop
+    without widening the route family
+- Progress:
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so `/status` now reports:
+    - `backgroundDrain.enabled`
+    - `backgroundDrain.intervalMs`
+    - `backgroundDrain.state`
+    - `backgroundDrain.lastTrigger`
+    - `backgroundDrain.lastStartedAt`
+    - `backgroundDrain.lastCompletedAt`
+  - kept the state view bounded and server-local:
+    - no new control route
+    - no new scheduler path
+    - no protocol expansion
+  - expanded focused coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    to prove `/status` can observe live running/scheduled/idle background drain
+    behavior
+  - updated user/operator docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - operator visibility is now present, but there is still no explicit
+    operator control beyond process lifecycle and existing startup flags
+
+## 2026-04-10 - `/status` now also provides bounded pause/resume control
+
+- Focus:
+  - add one minimal operator control seam for the live `api serve` background
+    drain loop without introducing a new route family
+- Progress:
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so `POST /status` now accepts:
+    - `{"backgroundDrain":{"action":"pause"}}`
+    - `{"backgroundDrain":{"action":"resume"}}`
+  - pause behavior:
+    - stops future scheduling
+    - does not interrupt an in-flight drain pass
+    - reports `backgroundDrain.paused = true`
+  - resume behavior:
+    - clears paused state
+    - restarts the same server-owned scheduler path
+  - kept the contract bounded:
+    - no new route family
+    - no second scheduler
+    - no broader transport/control plane
+  - expanded focused coverage in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    to prove paused runs stay `in_progress` until resumed, then complete
+  - updated user/operator docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - operator control is now present, but richer recovery semantics for
+    stranded/pending work still remain the larger unfinished host-execution
+    behavior
+
+## 2026-04-10 - Stranded recovery now retries once after a persist race
+
+- Focus:
+  - improve bounded host recovery quality for stranded running work without
+    widening the control or transport surface
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so stranded run recovery now:
+    - attempts the normal rewind-to-runnable repair
+    - on one persist failure, rereads the latest record
+    - retries recovery once if the run is still lease-free and stranded
+  - kept the retry bounded:
+    - no unbounded recovery loop
+    - no multi-host coordination assumptions
+    - no change to active-lease behavior
+  - expanded focused coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    to prove one simulated persist race does not strand recovery permanently
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the remaining recovery work is now less about single-run repair races and
+    more about broader recovery/reporting policy for larger batches of
+    reclaimable vs stranded work
+
+## 2026-04-10 - Recovery summaries now distinguish recoverable stranded runs
+
+- Focus:
+  - tighten bounded operator recovery reporting so `/status?recovery=true`
+    distinguishes stranded runs the host can repair from ones it cannot
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so recovery summaries now classify lease-free running work into:
+    - `recoverableStrandedRunIds`
+    - `strandedRunIds`
+  - kept the classification aligned with the existing repair logic:
+    - use the same dry-run rewind-to-runnable test as real stranded recovery
+    - do not change active-lease behavior
+    - do not widen recovery beyond existing bounded repair semantics
+  - updated focused expectations in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated operator docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - recovery summaries are now more honest, but batch recovery policy is still
+    bounded to a single host pass and one repair retry per stranded run
+
+## 2026-04-10 - Batch drain summaries now collapse repeated skipped states
+
+- Focus:
+  - tighten mixed-batch host recovery reporting so repeated idle/terminal skips
+    do not swamp executed work in bounded multi-pass drain results
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `drainRunsUntilIdle(...)` now:
+    - preserves per-pass execution history
+    - collapses repeated skipped states to the latest unresolved skip per run
+    - suppresses follow-up terminal skip entries after a run already executed in
+      the same batch
+  - kept the change bounded:
+    - no scheduler change
+    - no recovery-policy widening
+    - no HTTP route expansion
+  - expanded focused coverage in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated operator/testing docs in:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - batch drain reporting is cleaner now, but mixed-batch recovery behavior is
+    still bounded to one host loop and does not yet surface richer per-class
+    aggregate counts beyond the existing skip reasons
+
+## 2026-04-10 - Capped batch recovery now preserves real skip posture
+
+- Focus:
+  - make capped mixed-batch recovery more honest by keeping real skip reasons
+    for non-executable runs after `maxRuns` is reached
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `drainRunsOnce(...)` now:
+    - still reports `limit-reached` for executable work blocked only by the cap
+    - preserves `active-lease` for busy runs after the cap
+    - preserves `no-runnable-step` for idle/terminal runs after the cap
+    - preserves `stranded-running-no-lease` for unrecoverable stranded runs
+      after the cap
+  - kept the change bounded:
+    - no scheduler change
+    - no new recovery classes
+    - no transport or route changes
+  - expanded focused coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    for one capped mixed batch with:
+    - executed work
+    - executable work deferred by cap
+    - idle work
+    - active-lease work
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - capped batch behavior is now more truthful, but actionable-work
+    prioritization across runnable vs recoverable-stranded classes is still the
+    main mixed-batch policy gap
+
+## 2026-04-10 - Mixed-batch host drain now prioritizes actionable work
+
+- Focus:
+  - improve bounded mixed-batch recovery behavior so the host spends capped
+    execution budget on the most actionable work first
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `drainRunsOnce(...)` now inspects and prioritizes candidates before
+    execution using this bounded order:
+    - runnable
+    - recoverable stranded
+    - active lease
+    - unrecoverable stranded
+    - idle
+  - kept ordering stable by `createdAt` within each class
+  - preserved the existing recovery/reporting rules:
+    - no new recovery classes
+    - no scheduler change
+    - no transport or route changes
+  - expanded focused coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    to prove:
+    - newer runnable work beats older recoverable-stranded work under `maxRuns: 1`
+    - capped mixed batches still preserve real skip posture for non-executable
+      work
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host drain prioritization is now bounded and explicit, but there is still
+    no per-class execution budgeting beyond one global `maxRuns` cap
+
+## 2026-04-10 - Within-class host scheduling is now explicitly oldest-first
+
+- Focus:
+  - freeze within-class host-drain ordering so scheduling semantics stop being
+    implicit
+- Progress:
+  - documented the policy directly in
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts):
+    - priority classes remain:
+      - runnable
+      - recoverable stranded
+      - active lease
+      - unrecoverable stranded
+      - idle
+    - within each class, scheduling is intentionally oldest-first by
+      `createdAt`
+  - expanded focused coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    to prove:
+    - oldest runnable work executes first within the runnable class
+    - oldest recoverable-stranded work executes first within the
+      recoverable-stranded class
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - scheduling semantics are now explicit, but there is still no class-aware
+    budgeting beyond one global `maxRuns` cap
+
+## 2026-04-10 - Host drain now uses bounded class-aware budgeting
+
+- Focus:
+  - add one bounded execution-budget rule on top of the now-settled mixed-batch
+    scheduling policy
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so when both actionable classes are present and `maxRuns > 1`:
+    - one slot is reserved for the oldest recoverable-stranded run
+    - remaining slots go to oldest runnable runs
+  - kept the budgeting rule bounded:
+    - no new classes
+    - no scheduler change
+    - no dynamic fairness loop
+  - expanded focused coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    to prove:
+    - a recoverable-stranded run still gets one execution slot in a mixed
+      actionable batch with `maxRuns: 2`
+    - a later runnable run is deferred with `limit-reached`
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - budgeting is now explicit, but it is still static; there is not yet any
+    adaptive policy based on queue composition or repeated host passes
+
+## 2026-04-10 - Recovery metrics now surface class totals and budget effects
+
+- Focus:
+  - improve operator visibility using the existing host classification and
+    budgeting model rather than adding more scheduling nuance
+- Progress:
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `summarizeRecoveryState(...)` now also returns aggregate
+    `metrics` for:
+    - `reclaimableCount`
+    - `recoverableStrandedCount`
+    - `activeLeaseCount`
+    - `strandedCount`
+    - `idleCount`
+    - `actionableCount`
+    - `nonExecutableCount`
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so startup recovery logs now emit aligned aggregate metrics for:
+    - `deferred-by-budget`
+    - `active-lease`
+    - `stranded`
+    - `idle`
+  - expanded focused coverage in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - operator visibility is richer now, but `/status?recovery=true` still
+    exposes only aggregate counts plus ID arrays; it does not yet expose more
+    compact per-class summaries for large queues
+
+## 2026-04-11 - Durable state and account mirroring planning checkpoint added
+
+- Focus:
+  - pause deeper local `serviceHost` tuning and define the next roadmap
+    substrate boundary explicitly
+- Progress:
+  - added
+    [durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md)
+    to define the first bounded design checkpoint for:
+    - durable queue/run/step/handoff ownership
+    - service-account/browser-affinity mirroring
+    - multi-runner lease/heartbeat ownership
+    - replay/postmortem guarantees
+  - linked that plan from:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - froze the decision boundary:
+    - current `api serve` / `serviceHost` recovery is coherent enough for an
+      internal checkpoint
+    - the next active lane is durable state / multi-runner ownership planning,
+      not more local host scheduling detail
+- Verification:
+  - roadmap/docs audit and readback only
+- Issues:
+  - the durable-state lane now has a design checkpoint, but there is still no
+    chosen first implementation seam among:
+    - durable queue-ready projection
+    - explicit affinity record/schema
+    - runner identity / heartbeat record
+
+## 2026-04-11 - First durable-state seam landed as a queue-ready projection
+
+- Focus:
+  - turn the new durable-state plan into one bounded runtime-local code seam
+    without widening service-mode breadth
+- Progress:
+  - added
+    [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
+    with the first derived queue-ready projection over the existing runtime
+    inspection model
+  - the projection now exposes:
+    - `queueState`
+    - `claimState`
+    - active lease owner/id
+    - step posture from the current dispatch plan
+    - one future-facing affinity evaluation seam that can report
+      `blocked-mismatch`
+  - kept the seam bounded:
+    - derived from the current run bundle + dispatch plan
+    - no second durable source of truth
+    - no new public route or worker behavior
+  - added focused coverage in
+    [tests/runtime.projection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.projection.test.ts)
+    for:
+    - claimable runnable work
+    - active-lease posture
+    - recoverable-stranded posture
+    - affinity-blocked claim posture
+  - updated planning docs in:
+    - [docs/dev/durable-state-account-mirroring-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/durable-state-account-mirroring-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.projection.test.ts tests/runtime.dispatcher.test.ts tests/runtime.control.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the queue-ready projection exists, but there is still no explicit durable
+    affinity record/schema yet
+
+## 2026-04-10 - Host-recovery lane reassessed against roadmap
+
+- Focus:
+  - decide whether the `api serve` / `serviceHost` recovery lane should
+    continue or yield to a higher-leverage substrate question
+- Progress:
+  - audited:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  - conclusion:
+    - the local host-recovery/operator-visibility lane is now coherent enough
+      for an internal checkpoint
+    - the strongest remaining gap is no longer local recovery policy detail
+    - the strongest remaining gap is the next substrate boundary from the
+      roadmap:
+      - durable state and account mirroring
+      - multi-process runner/service ownership
+      - explicit replay/postmortem-ready persistence beyond the current
+        single-process host
+  - updated
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    so the next active recommendation now shifts away from more `serviceHost`
+    tuning and toward that durable-state / runner-ownership planning seam
+- Verification:
+  - roadmap/docs audit only
+- Issues:
+  - there is still no concrete design slice yet for the durable
+    state/account-mirroring boundary that the roadmap now points to
+
+## 2026-04-10 - Mixed-batch host drain now proves actionable-work priority
+
+- Focus:
+  - prove and document the bounded actionable-work ordering for capped mixed
+    batches in `serviceHost`
+- Progress:
+  - confirmed the existing host-drain candidate classification in
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    now orders work as:
+    - `runnable`
+    - `recoverable-stranded`
+    - then non-executable classes
+  - added focused regression coverage in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    proving that, under `maxRuns: 1`, a newer runnable run is executed ahead of
+    an older recoverable stranded run, and the stranded run is reported as
+    `limit-reached`
+  - updated operator/testing guidance in
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - actionable-work priority is now proven, but recoverable stranded work is
+    still second behind runnable work by design and there is not yet a richer
+    starvation or fairness policy beyond created-at ordering within each class
+
+## 2026-04-10 - API serve now owns bounded host drain after create
+
+- Focus:
+  - move direct response execution ownership out of the service shim and onto
+    the server host seam
+- Progress:
+  - updated
+    [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+    so the service can now run in create-only mode via `drainAfterCreate: false`
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so `POST /v1/responses` now:
+    - persists the run through the responses service
+    - invokes bounded host-owned drain through
+      [serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    - rereads the persisted response for the HTTP payload
+  - kept the route surface unchanged:
+    - no streaming
+    - no auth
+    - no `chat/completions`
+  - added focused create-only coverage in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.responsesService.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - execution is still synchronous from the HTTP caller’s perspective; this
+    slice moved ownership to the host seam but did not yet add autonomous
+    background drain behavior
+
+## 2026-04-10 - Roadmap reassessment after orchestration checkpoint
+
+- Focus:
+  - audit whether the team/runtime orchestration contract lane should continue
+    or yield to a higher-value execution lane
+- Progress:
+  - reviewed:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - [service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+    - [runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [api-compatibility-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/api-compatibility-plan.md)
+    - [http-responses-adapter-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/http-responses-adapter-plan.md)
+  - conclusion:
+    - the orchestration semantics lane is now coherent enough for an internal
+      checkpoint:
+      - local-action durability
+      - outcome projection
+      - prompt/handoff shaping
+      - `continue` / `steer` / `escalate`
+      - pause/fail control
+      - resume with typed overrides
+    - the higher-yield unfinished lane is now host-owned service execution
+      under `api serve`, because the repo still remains request-scoped for the
+      existing local `responses` host
+  - selected next lane:
+    - bounded host-owned drain/recovery behavior for `api serve` over the
+      existing `serviceHost` seam, instead of more orchestration contract
+      variants
+- Verification:
+  - roadmap/docs audit only
+- Issues:
+  - no background/local host loop yet
+  - no daemon-style persistent recovery ownership yet
+  - direct-run execution is still largely request-scoped through the current
+    local adapter path
+
+## 2026-04-11 - Runtime consumption of task structured context
+
+- Focus:
+  - make `TaskRunSpec.overrides.structuredContext` a real runtime execution
+    input instead of planned-only metadata
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so runtime execution context now carries task structured context through:
+    - `step.input.structuredData.sharedStateContext.taskStructuredContext`
+    - `step.input.structuredData.sharedStateContext.taskStructuredContextPromptContext`
+    - appended prompt context for prompt-driven execution
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-structured-context-recheck`
+    - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
+  - tmux session `oracle-taskrunspec-structured-context-tsc-recheck`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - task structured context is now runtime-visible, but `requestedOutputs` and
+    task `context` still do not have equally direct execution-time consumers
+
+## 2026-04-11 - Task-run-spec runtime consumer audit checkpoint
+
+- Focus:
+  - reassess the task-aware runtime-policy lane after turn and runtime budget
+    enforcement so the next slice is chosen by leverage instead of continuing
+    scalar guardrails
+- Progress:
+  - audited the remaining `TaskRunSpec` surfaces against current runtime and
+    bridge behavior:
+    - planning identity selection is in place
+    - bridge execution identity evidence is in place
+    - `turnPolicy.maxTurns` is enforced at runtime
+    - `constraints.maxRuntimeMinutes` is enforced at runtime
+  - identified the next higher-yield gap as task assignment content at
+    runtime, not another constraint gate:
+    - `context`
+    - `overrides.structuredContext`
+    - `requestedOutputs`
+  - recorded the pause decision for further budget-policy expansion in
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+- Verification:
+  - docs/code audit only
+  - reviewed:
+    - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    - [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    - [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+- Issues:
+  - task assignment content is still mostly prompt-time metadata and structured
+    payload, not a first-class runtime/request consumer seam
+
+## 2026-04-11 - Runtime enforcement of task runtime budget
+
+- Focus:
+  - make `TaskRunSpec.constraints.maxRuntimeMinutes` affect post-planning
+    runtime behavior instead of remaining inert structured data
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the runner now fails before executing a step when elapsed run age from
+    `run.createdAt` exceeds
+    `step.input.structuredData.constraints.maxRuntimeMinutes`
+  - used one explicit failure code:
+    - `task_runtime_limit_exceeded`
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-runtime-budget`
+    - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
+  - tmux session `oracle-taskrunspec-runtime-budget-tsc`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - runtime budget is now enforced against elapsed run age, but there is still
+    no finer-grained per-step runtime budgeting or planning-time pruning
+
+## 2026-04-11 - Runtime enforcement of task turn budget
+
+- Focus:
+  - make `TaskRunSpec.turnPolicy.maxTurns` affect post-planning runtime
+    behavior instead of remaining inert structured data
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so the runner now fails before executing a step whose order exceeds the
+    task turn limit carried in `step.input.structuredData.turnPolicy.maxTurns`
+  - used one explicit failure code:
+    - `task_turn_limit_exceeded`
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - rechecked [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - rechecked [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-turn-budget`
+    - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
+  - tmux session `oracle-taskrunspec-turn-budget-tsc`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - turn budgeting is now enforced at runtime, but there is still no earlier
+    planning-time pruning or separate operator summary for budget-limited team
+    runs
+
+## 2026-04-11 - Bridge execution identity evidence for task-aware runs
+
+- Focus:
+  - make the post-planning runtime path explicitly report the runtime/browser
+    identities actually used per step in the team-runtime bridge summary
+- Progress:
+  - updated
+    [src/teams/runtimeBridge.ts](/home/ecochran76/workspace.local/oracle/src/teams/runtimeBridge.ts)
+    so each bridge step summary now carries:
+    - `runtimeProfileId`
+    - `browserProfileId`
+    - `service`
+  - expanded focused coverage in
+    [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    to prove a task-selected runtime override survives:
+    - planned team step
+    - created runtime step
+    - final runtime step
+    - bridge execution summary
+- Verification:
+  - tmux session `oracle-taskrunspec-bridge-identities`
+    - `pnpm vitest run tests/teams.runtimeBridge.test.ts tests/teams.model.test.ts tests/teams.service.test.ts`
+  - tmux session `oracle-taskrunspec-bridge-identities-tsc`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - this slice gives post-planning execution evidence, but it still does not
+    add any task-aware runtime policy beyond the already-selected execution
+    identity
+
+## 2026-04-11 - Task-aware runtime/browser override selection
+
+- Focus:
+  - make `TaskRunSpec` runtime/browser overrides affect planned execution
+    identity on the existing team planning path
+- Progress:
+  - updated
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    so task-aware planning now:
+    - re-resolves execution identity from `overrides.runtimeProfileId` during
+      config-driven planning
+    - treats `overrides.browserProfileId` as a compatibility requirement
+    - blocks incompatible resolved-team selections cleanly instead of silently
+      ignoring the override
+  - expanded focused coverage in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-runtime-override`
+    - `pnpm vitest run tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
+  - tmux session `oracle-taskrunspec-runtime-override-tsc`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - browser override currently validates compatibility; it does not yet search
+    for alternate compatible runtime profiles by itself
+  - runtime override still applies uniformly at the task level rather than per
+    role/step
+
+## 2026-04-11 - Task-aware planning overrides and constraints
+
+- Focus:
+  - make `TaskRunSpec` affect team planning behavior instead of only identity
+    propagation and bridge/readback surfaces
+- Progress:
+  - updated
+    [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts)
+    so task-aware planning now consumes:
+    - `overrides.agentIds` to filter planned team members/roles
+    - `overrides.promptAppend` to extend planned step prompts
+    - `overrides.structuredContext` to populate planned step structured data
+    - `constraints.allowedServices` / `constraints.blockedServices` to block
+      incompatible planned steps
+  - expanded focused coverage in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - tmux session `oracle-taskrunspec-planning-recheck`
+    - `pnpm vitest run tests/teams.model.test.ts tests/teams.service.test.ts tests/teams.runtimeBridge.test.ts`
+  - tmux session `oracle-taskrunspec-planning-tsc-recheck`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - task-aware planning still does not consume runtime/browser override
+    selection yet
+  - service constraints currently block incompatible steps rather than
+    selecting fallback services
+
+## 2026-04-10 - Shell local-action policy narrowed and staged
+
+- Focus:
+  - harden the first built-in shell executor and capture the staged complexity
+    plan for later expansion
+- Progress:
+  - updated
+    [src/runtime/localActions.ts](/home/ecochran76/workspace.local/oracle/src/runtime/localActions.ts)
+    to enforce:
+    - default shell command allowlist
+    - allowed cwd roots
+    - policy-owned timeout clamp
+    - policy-owned capture limits
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so the built-in executor is now parameterized by one explicit host-side
+    policy object
+  - expanded focused coverage in
+    [tests/runtime.localActions.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.localActions.test.ts)
+    for:
+    - allowed command
+    - unsupported action kind
+    - rejected disallowed command
+    - rejected disallowed cwd
+  - recorded the staged local-command rollout in
+    [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    with:
+    - `bounded-command`
+    - `repo-automation`
+    - `extended`
+- Verification:
+  - `pnpm vitest run tests/runtime.localActions.test.ts tests/runtime.serviceHost.test.ts tests/runtime.runner.test.ts tests/runtime.model.test.ts tests/runtime.schema.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - host-side policy is still code-owned rather than config-backed
+  - only the stage-1 narrow allowlist is implemented
+
+## 2026-04-10 - Local-action outcomes projected into shared state
+
+- Focus:
+  - make host-action execution results visible to downstream orchestrators
+    without inventing a second source of truth outside durable
+    `localActionRequests`
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so each step that emits local actions now also appends:
+    - one step-scoped shared-state structured output keyed as
+      `step.localActionOutcomes.<stepId>`
+    - one compact shared-state note with per-status counts
+  - kept the canonical source of truth on durable
+    `bundle.localActionRequests`; the shared-state projection is derived from
+    resolved request records, not from free-form output blobs
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.serviceHost.test.ts tests/runtime.responsesService.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - projected summaries are shared-state only for now; there is not yet a
+    first-class orchestrator handoff payload convention layered on top
+
+## 2026-04-12 - Consumed handoff transfer context projected into durable shared state
+
+- Focus:
+  - record consumed incoming `taskTransfer` context as durable orchestration
+    state instead of requiring later readers to reconstruct it from planned
+    handoffs plus current-step dependency shape
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so any step that executes with incoming dependency `taskTransfer` context
+    now also appends:
+    - one internal shared-state structured output keyed as
+      `step.consumedTaskTransfers.<stepId>`
+    - one compact shared-state note with the consumed-transfer count
+  - kept the projection derived from the already-shaped runtime execution
+    context under `sharedStateContext.dependencyTaskTransfers`; no second
+    transfer store or public route surface was introduced
+  - marked the projection internal for requested-output evidence so the new
+    orchestration state does not pollute required-output fulfillment
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - detailed readback still derives handoff-transfer summaries from incoming
+    planned handoffs rather than preferring the new durable consumed-transfer
+    projection
+
+## 2026-04-12 - Detailed readers switched to durable consumed-transfer projection
+
+- Focus:
+  - make existing detailed handoff-transfer readers prefer stored consumed
+    transfer state instead of re-deriving the same summary from planned
+    handoffs when both are present
+- Progress:
+  - updated
+    [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+    so `GET /v1/responses/{response_id}` now prefers
+    `step.consumedTaskTransfers.<stepId>` for
+    `metadata.executionSummary.handoffTransferSummary`
+  - updated
+    [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so `GET /status/recovery/{run_id}` now prefers the same stored consumed
+    transfer projection for `handoffTransferSummary`
+  - kept the public/output vocabulary unchanged and retained planned-handoff
+    fallback when stored consumed state is absent
+  - expanded focused coverage in:
+    - [tests/runtime.api.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.api.test.ts)
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.api.test.ts tests/runtime.responsesService.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the handoff-transfer line is now coherent enough for a checkpoint pause;
+    the next move should be chosen by audit rather than more local summary
+    growth
+
+## 2026-04-12 - Handoff-transfer checkpoint audit
+
+- Focus:
+  - decide the next broader orchestration/runtime seam after the now-coherent
+    handoff-transfer line
+- Progress:
+  - re-reviewed the current execution/docs stack:
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+    - [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    - [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    - [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+  - confirmed the handoff-transfer line is coherent enough to pause:
+    - planner shaping
+    - runtime consumption
+    - durable shared-state projection
+    - detailed response readback
+    - detailed recovery-detail readback
+  - explicit audit result:
+    - the next higher-yield seam is durable handoff lifecycle follow-through
+      rather than more transfer payload/readback growth
+    - reason: the data model already expects handoff statuses such as
+      `prepared`, `delivered`, and `consumed`, but current runtime behavior
+      still leaves consumed handoffs mostly as payload plus summary, not as a
+      progressed orchestration record
+- Verification:
+  - audit/docs-only checkpoint
+  - rechecked current repo/docs state with:
+    - `git log --oneline -5`
+    - `README.md`
+    - `docs/testing.md`
+    - `docs/dev-fixes-log.md`
+- Issues:
+  - consumed transfer context is durable, but handoff lifecycle state itself is
+    still under-modeled relative to the execution/data-model plans
+
+## 2026-04-12 - Handoff lifecycle follow-through
+
+- Focus:
+  - make durable handoff state and history truthful once downstream execution
+    actually consumes an incoming task-transfer handoff
+- Progress:
+  - updated
+    [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+    so a succeeded step with incoming dependency `taskTransfer` handoffs now:
+    - advances those handoffs from `prepared` to `consumed`
+    - appends `handoff consumed by <stepId>` to the handoff notes
+    - appends one explicit `handoff-consumed` execution history event on the
+      existing durable shared-state/history seam
+  - updated runtime event vocabulary in:
+    - [src/runtime/types.ts](/home/ecochran76/workspace.local/oracle/src/runtime/types.ts)
+    - [src/runtime/schema.ts](/home/ecochran76/workspace.local/oracle/src/runtime/schema.ts)
+    - [src/runtime/model.ts](/home/ecochran76/workspace.local/oracle/src/runtime/model.ts)
+    so handoff consumption is a first-class execution event instead of being
+    collapsed into generic notes
+  - kept the lifecycle rule narrow:
+    - only incoming handoffs with real `taskTransfer` dependency consumption
+      advance to `consumed`
+    - local-action-only guidance handoffs remain unchanged
+  - expanded focused coverage in:
+    - [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+    - [tests/teams.runtimeBridge.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.runtimeBridge.test.ts)
+    - [tests/runtime.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.types.test.ts)
+    - [tests/runtime.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.schema.test.ts)
+- Verification:
+  - `pnpm vitest run tests/runtime.runner.test.ts tests/teams.runtimeBridge.test.ts tests/runtime.types.test.ts tests/runtime.schema.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Issues:
+  - the handoff line is now coherent enough for another checkpoint pause; the
+    next move should be chosen by audit rather than more local handoff detail
+
+## 2026-04-12 - Post-handoff checkpoint audit
+
+- Focus:
+  - choose the next broader orchestration/runtime seam now that the handoff
+    line is coherent enough to pause
+- Progress:
+  - re-reviewed the broader runtime/service plans:
+    - [docs/dev/service-runtime-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-runtime-execution-plan.md)
+    - [docs/dev/runtime-service-host-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-service-host-plan.md)
+    - [docs/dev/runtime-runner-slice-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/runtime-runner-slice-plan.md)
+    - [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+  - confirmed the handoff line is coherent enough to pause:
+    - planner shaping
+    - runtime consumption
+    - durable shared-state projection
+    - detailed response readback
+    - detailed recovery-detail readback
+    - durable lifecycle progression
+  - explicit audit result:
+    - the next higher-yield seam is bounded history-backed orchestration
+      readback on existing detailed surfaces
+    - reason: the repo now has meaningful durable execution history
+      (`step-*`, `handoff-consumed`, operator notes, local-action notes), but
+      current readers still rely mostly on point summaries rather than the
+      append-only orchestration record the data model expects to support
+- Verification:
+  - audit/docs-only checkpoint
+  - rechecked current repo/docs state with:
+    - `git log --oneline -5`
+    - `README.md`
+    - `docs/testing.md`
+    - `docs/dev-fixes-log.md`
+- Issues:
+  - the durable history seam is now strong enough to consume, but there is not
+    yet a bounded orchestration timeline/readback projection on existing
+    detailed surfaces
+
+## 2026-04-12 - Project create duplicate-preflight hardening
+
+- Focus:
+  - verify the duplicate `AuraCall` Grok project report and harden project
+    creation against exact-name duplicates
+- Progress:
+  - confirmed the live symptom with:
+    - `pnpm tsx bin/auracall.ts projects --target grok`
+  - verified Grok currently has two exact-name `AuraCall` projects:
+    - `133ad4c5-b857-4a30-bf17-d951db57c33f`
+    - `1b1b691b-5872-4b8a-b0f8-de48e0343fe1`
+  - traced the root cause to create semantics, not the resolver path:
+    - `resolveProjectIdByName(...)` already exists
+    - exact-name matching already exists
+    - `createProject(...)` did not preflight duplicates before provider create
+  - hardened [src/browser/llmService/llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts):
+    - exact-name duplicate now throws before provider creation
+    - ambiguous multi-candidate matches now also throw before creation
+  - added focused regression coverage in:
+    - [tests/browser/llmServiceFiles.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceFiles.test.ts)
+  - updated operator docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/browser/llmServiceFiles.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - exact-name duplicate creation is now blocked, but the live duplicate still
+    needed a deliberate cleanup decision
+
+## 2026-04-12 - Grok AuraCall project duplicate cleanup
+
+- Focus:
+  - clean up the live duplicate `AuraCall` Grok project now that
+    exact-name duplicate creation is blocked
+- Progress:
+  - inspected live Grok project inventory with:
+    - `pnpm tsx bin/auracall.ts projects --target grok`
+  - confirmed the canonical configured project remained:
+    - `133ad4c5-b857-4a30-bf17-d951db57c33f`
+  - confirmed runtime/team config already points at that canonical id:
+    - `/home/ecochran76/.auracall/config.json`
+    - `auracall-orchestrator`
+    - `auracall-solo`
+  - inspected the two duplicate candidates:
+    - canonical project `133ad4c5-b857-4a30-bf17-d951db57c33f`
+      - live instructions read succeeded
+      - project-scoped conversations present
+      - no attached files
+    - duplicate project `1b1b691b-5872-4b8a-b0f8-de48e0343fe1`
+      - no project-scoped conversations
+      - no attached files
+      - direct instructions read failed to navigate to a valid project page
+  - removed the empty duplicate:
+    - `pnpm tsx bin/auracall.ts projects remove 1b1b691b-5872-4b8a-b0f8-de48e0343fe1 --target grok`
+  - re-verified the live inventory now contains a single `AuraCall` Grok
+    project:
+    - `133ad4c5-b857-4a30-bf17-d951db57c33f`
+- Verification:
+  - `pnpm tsx bin/auracall.ts projects instructions get 133ad4c5-b857-4a30-bf17-d951db57c33f --target grok`
+    - pass
+  - `pnpm tsx bin/auracall.ts conversations --target grok --project-id 133ad4c5-b857-4a30-bf17-d951db57c33f`
+    - pass
+  - `pnpm tsx bin/auracall.ts conversations --target grok --project-id 1b1b691b-5872-4b8a-b0f8-de48e0343fe1`
+    - pass, returned `[]`
+  - `pnpm tsx bin/auracall.ts projects files list 133ad4c5-b857-4a30-bf17-d951db57c33f --target grok`
+    - pass, no files
+  - `pnpm tsx bin/auracall.ts projects files list 1b1b691b-5872-4b8a-b0f8-de48e0343fe1 --target grok`
+    - pass, no files
+  - `pnpm tsx bin/auracall.ts projects remove 1b1b691b-5872-4b8a-b0f8-de48e0343fe1 --target grok`
+    - pass
+  - `pnpm tsx bin/auracall.ts projects --target grok`
+    - pass, single `AuraCall` remains
+- Issues:
+  - the canonical project now exists as a single live Grok target again, but
+    the first team live path still needs automated live test coverage
+
+## 2026-04-12 - First opt-in Grok team live test
+
+- Focus:
+  - add automated live coverage for the working `auracall-solo` Grok team path
+- Progress:
+  - added the first opt-in live test in:
+    - [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+  - kept the scope narrow:
+    - real CLI path only
+    - `auracall-solo` only
+    - Grok only
+    - deterministic exact-token smoke only
+  - test runs the actual command:
+    - `auracall teams run auracall-solo "Reply exactly with: AURACALL_TEAM_LIVE_SMOKE_OK" --title "AuraCall team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
+  - verified the real JSON contract shape is:
+    - top-level `taskRunSpec`
+    - top-level `execution`
+    - not a flat payload
+  - updated operator docs in:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass as skipped when `AURACALL_LIVE_TEST` is unset
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+  - live assertions proved:
+    - `taskRunSpec.teamId = auracall-solo`
+    - `execution.teamId = auracall-solo`
+    - `execution.taskRunSpecId = taskRunSpec.id`
+    - `execution.runtimeSourceKind = team-run`
+    - `execution.runtimeRunStatus = succeeded`
+    - `execution.stepSummaries[0].runtimeProfileId = auracall-grok-auto`
+    - `execution.stepSummaries[0].browserProfileId = default`
+    - `execution.stepSummaries[0].service = grok`
+    - `execution.finalOutputSummary = AURACALL_TEAM_LIVE_SMOKE_OK`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - the first live team path now has direct automated execution coverage, but
+    it still needed an automated post-run inspection/readback assertion on the
+    stored runtime/service surfaces for that same live run
+
+## 2026-04-12 - Grok team live readback follow-through
+
+- Focus:
+  - prove that the same live `auracall-solo` Grok run also lands correctly on
+    the durable runtime/operator readback seam
+- Progress:
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    to use the returned `execution.runtimeRunId`
+  - after the real CLI run completes, the test now:
+    - creates `createExecutionRuntimeControl()`
+    - creates `createExecutionServiceHost(...)`
+    - calls `readRecoveryDetail(runtimeRunId)`
+  - live readback assertions now prove:
+    - `runId = execution.runtimeRunId`
+    - `sourceKind = team-run`
+    - `taskRunSpecId = taskRunSpec.id`
+    - non-empty `orchestrationTimelineSummary`
+    - at least one `step-succeeded` item in the durable timeline
+  - updated operator docs in:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass as skipped when `AURACALL_LIVE_TEST` is unset
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - the single-agent Grok team path now has execution-plus-readback live proof,
+    but it still lacked equivalent automated proof on the existing HTTP
+    read surface
+
+## 2026-04-12 - Grok team live HTTP readback follow-through
+
+- Focus:
+  - prove the same live `auracall-solo` Grok run through the existing HTTP
+    operator read surface
+- Progress:
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    again after the CLI run completes
+  - the live test now:
+    - creates `createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control })`
+      against the same durable runtime store
+    - reads:
+      - `GET /status/recovery/{run_id}`
+      - where `run_id = execution.runtimeRunId`
+  - HTTP assertions now prove:
+    - `object = recovery_detail`
+    - `detail.runId = execution.runtimeRunId`
+    - `detail.sourceKind = team-run`
+    - `detail.taskRunSpecId = taskRunSpec.id`
+    - non-empty `detail.orchestrationTimelineSummary`
+    - at least one durable `step-succeeded` timeline item
+  - updated operator docs in:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass as skipped when `AURACALL_LIVE_TEST` is unset
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - the single-agent Grok path now has CLI, durable host, and HTTP recovery
+    readback live proof, but it still lacked automated live proof for
+    `/v1/responses/{response_id}` on a team-backed run
+
+## 2026-04-12 - Grok team live response readback follow-through
+
+- Focus:
+  - prove the same live `auracall-solo` Grok run on the client-facing
+    `GET /v1/responses/{response_id}` seam
+- Progress:
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    to reuse the same bounded local responses server started against the live
+    runtime store
+  - the live test now reads:
+    - `GET /v1/responses/{response_id}`
+    - where `response_id = execution.runtimeRunId`
+  - response assertions now prove:
+    - `object = response`
+    - `id = execution.runtimeRunId`
+    - `status = completed`
+    - `metadata.runId = execution.runtimeRunId`
+    - `metadata.taskRunSpecId = taskRunSpec.id`
+    - `metadata.service = grok`
+    - `metadata.runtimeProfile = auracall-grok-auto`
+    - non-empty
+      `metadata.executionSummary.orchestrationTimelineSummary`
+    - at least one durable `step-succeeded` timeline item
+  - updated operator docs in:
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+- Verification:
+  - `pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass as skipped when `AURACALL_LIVE_TEST` is unset
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - the single-agent Grok path now has live proof across:
+    - CLI execution
+    - durable host recovery detail
+    - HTTP recovery detail
+    - HTTP response readback
+  - the next uncovered live boundary is now a broader multi-step or multi-agent
+    team workflow rather than another read surface on this same single-step path
+
+## 2026-04-12 - Grok two-step team live workflow
+
+- Focus:
+  - prove one broader deterministic Grok workflow beyond the trivial
+    single-step `auracall-solo` path without widening the transport surface
+- Progress:
+  - added a second live Grok agent alias plus a bounded two-step team in the
+    operator config:
+    - `auracall-finisher`
+    - `auracall-two-step`
+  - backed up the operator config before the edit at:
+    - `/home/ecochran76/.auracall/config.json.bak-2026-04-12-two-step-team-live`
+  - confirmed the new team resolves as two ordered runnable members through:
+    - `pnpm tsx bin/auracall.ts config show --agent auracall-finisher`
+    - `pnpm tsx bin/auracall.ts config show --team auracall-two-step`
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    to add one broader-workflow live case for:
+    - `auracall-two-step`
+    - `AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK`
+    - `--max-turns 2`
+  - the live test now proves for the same broader run:
+    - two ordered succeeded steps on `auracall-grok-auto`
+    - durable consumed-transfer evidence in `sharedStateNotes`
+    - durable host readback
+    - HTTP recovery detail
+    - HTTP response readback
+    - at least one `handoff-consumed` durable timeline item
+  - updated operator/user docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-finisher`
+    - pass
+  - `pnpm tsx bin/auracall.ts config show --team auracall-two-step`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+    - `2 tests`
+    - `auracall-solo`
+    - `auracall-two-step`
+- Issues:
+  - the broader live workflow proof is now real for a multi-step single-service
+    team, but the repo still lacks live proof for:
+    - multi-agent / mixed-agent routing
+    - tool-calling inside a team workflow
+    - approval / human-escalation / local-action team paths
+
+## 2026-04-12 - Bounded Grok live-test guard
+
+- Focus:
+  - add basic guardrails so repeated Grok browser/team testing does not hammer
+    the service
+- Progress:
+  - added a shared simple provider guard helper in
+    [simpleProviderGuard.ts](/home/ecochran76/workspace.local/oracle/src/browser/simpleProviderGuard.ts)
+    for persisted per-provider cooldown state keyed by browser profile
+  - extended
+    [llmService.ts](/home/ecochran76/workspace.local/oracle/src/browser/llmService/llmService.ts)
+    so Grok now uses the same simple guard model already used by Gemini:
+    - persisted cooldown on clear Grok rate-limit errors
+    - bounded write spacing across separate service instances
+  - extended
+    [index.ts](/home/ecochran76/workspace.local/oracle/src/browser/index.ts)
+    so browser-backed Grok runs now:
+    - enforce a persisted per-managed-browser-profile cooldown/spacing record
+      before execution
+    - note successful Grok browser mutations
+    - persist a cooldown on clear rate-limit failures
+  - added focused coverage in:
+    - [simpleProviderGuard.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/simpleProviderGuard.test.ts)
+    - [llmServiceRateLimit.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/llmServiceRateLimit.test.ts)
+  - updated operator/user docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `pnpm vitest run tests/browser/simpleProviderGuard.test.ts tests/browser/llmServiceRateLimit.test.ts tests/browser/browserModeExports.test.ts`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+- Issues:
+  - this is intentionally a basic guard:
+    - persisted cooldown
+    - persisted write spacing
+  - it does not yet classify a live Grok DOM throttle surface the way ChatGPT
+    does, so only clear rate-limit errors currently seed the cooldown path
+
+## 2026-04-12 - Grok guard live validation checkpoint
+
+- Focus:
+  - verify the new bounded Grok guard does not regress the current live
+    team-run path and that the persisted per-profile state is actually written
+- Progress:
+  - reran the existing live Grok team suite:
+    - `auracall-solo`
+    - `auracall-two-step`
+  - confirmed both still succeed under the new guard on the canonical managed
+    browser profile:
+    - browser profile `default`
+    - service `grok`
+    - AuraCall runtime profile `auracall-grok-auto`
+  - confirmed the guard file now exists at:
+    - `~/.auracall/cache/providers/grok/__runtime__/rate-limit-default.json`
+  - confirmed the persisted state is currently the intended simple success-path
+    spacing record:
+    - `provider`
+    - `profile`
+    - `updatedAt`
+    - `lastMutationAt`
+- Verification:
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+    - `2 tests`
+    - `auracall-solo`
+    - `auracall-two-step`
+  - `cat ~/.auracall/cache/providers/grok/__runtime__/rate-limit-default.json`
+    - pass
+- Issues:
+  - the guard is proven safe enough for the current baseline live team smokes
+  - the remaining unproven risk is not spacing/cooldown regression on the
+    single-profile path
+  - the next higher-yield live checkpoint is still:
+    - bounded multi-agent routing
+    - then bounded tool-calling / local-action behavior
+
+## 2026-04-12 - Bounded multi-agent Grok live workflow
+
+- Focus:
+  - prove real multi-agent routing on the existing Grok team path without
+    adding tool noise or new transport surfaces
+- Progress:
+  - added a new configured Grok agent in
+    `/home/ecochran76/.auracall/config.json`:
+    - `auracall-planner`
+  - added a new configured Grok team in the same config:
+    - `auracall-multi-agent`
+    - ordered members:
+      - `auracall-planner`
+      - `auracall-finisher`
+  - backed up the prior operator config before the edit at:
+    - `/home/ecochran76/.auracall/config.json.bak-2026-04-12-multi-agent-team-live`
+  - corrected the new team to use the existing allowed `stepKind` vocabulary:
+    - `handoff`
+    - `synthesis`
+  - extended
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    to add one real multi-agent live case for:
+    - `auracall-multi-agent`
+    - `AURACALL_MULTI_AGENT_LIVE_SMOKE_OK`
+    - `--max-turns 2`
+  - the live test now proves for the same multi-agent run:
+    - two ordered succeeded steps on `auracall-grok-auto`
+    - managed browser profile reuse on `default`
+    - durable consumed-transfer evidence in `sharedStateNotes`
+    - durable host readback
+    - HTTP recovery detail
+    - HTTP response readback
+    - at least one durable `handoff-consumed` timeline item
+  - updated operator/user docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-planner`
+    - pass
+  - `pnpm tsx bin/auracall.ts config show --team auracall-multi-agent`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - pass
+    - `3 tests`
+    - `auracall-solo`
+    - `auracall-two-step`
+    - `auracall-multi-agent`
+- Issues:
+  - multi-agent routing is now live-proven on the same Grok/browser baseline
+  - the next uncovered higher-risk team seam is no longer routing
+  - it is:
+    - bounded tool-calling inside a team workflow
+    - or bounded local-action / approval / human-escalation team behavior
+
+## 2026-04-12 - Bounded tooling team workflow
+
+- Focus:
+  - prove one higher-risk team behavior beyond pure routing:
+    - one bounded local-action workflow on the existing Grok team path
+- Progress:
+  - extended `auracall teams run` to accept bounded local shell policy inputs:
+    - `--allow-local-shell-command <command>`
+    - `--allow-local-cwd-root <path>`
+  - `buildCliTaskRunSpec(...)` now projects that CLI input into bounded
+    `taskRunSpec.localActionPolicy`:
+    - `mode = allowed`
+    - `complexityStage = bounded-command`
+    - `allowedActionKinds = ['shell']`
+    - explicit command / cwd-root narrowing
+  - added bounded local-action-envelope parsing to the configured
+    browser-backed stored-step executor:
+    - accepts a top-level `localActionRequests` JSON envelope
+    - currently supports bounded shell actions only
+    - tolerates `kind`, `actionType`, or `type` when the value is `shell`
+  - added focused regression coverage in:
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+    - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+  - added one new live-configured team outside repo code:
+    - `auracall-tool-requester`
+    - `auracall-tooling`
+  - manual provider-backed CLI smoke is now green for that tooling path:
+    - first Grok step emits one bounded `localActionRequests` envelope
+    - the bounded `node` local shell action executes under the declared repo
+      cwd root
+    - second Grok step emits the exact final token
+  - updated operator/user docs in:
+    - [README.md](/home/ecochran76/workspace.local/oracle/README.md)
+    - [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    - [docs/manual-tests.md](/home/ecochran76/workspace.local/oracle/docs/manual-tests.md)
+- Verification:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/cli/teamRunCommand.test.ts`
+    - pass
+  - `pnpm tsx bin/auracall.ts config show --agent auracall-tool-requester`
+    - pass
+  - `pnpm tsx bin/auracall.ts config show --team auracall-tooling`
+    - pass
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+    - pass
+  - manual tooling smoke:
+    - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Use actionType \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+    - pass
+    - returned:
+      - `runtimeRunStatus = succeeded`
+      - `finalOutputSummary = AURACALL_TOOL_TEAM_LIVE_SMOKE_OK`
+      - shared state note `local shell action executed: node`
+- Issues:
+  - the tooling path is real, but Grok tool-envelope generation is not yet
+    deterministic enough for the stable baseline live suite
+  - targeted tooling-live rerun exposed a provider throttle instead of a local
+    transport bug:
+    - visible toast:
+      - `Query limit reached for Auto`
+      - `Try again in 4 minutes`
+  - patched the Grok browser path so that visible toast is now treated as a
+    first-class rate-limit signal:
+    - the Grok response wait loop now fails fast on that toast text
+    - Grok browser cooldown now honors provider-declared retry windows when
+      present
+    - matching `llmService` Grok guard logic now recognizes the same message
+      family for persisted cooldown state
+  - the matching live Vitest case exists in
+    [tests/live/team-grok-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-grok-live.test.ts)
+    and is intentionally gated behind:
+    - `AURACALL_TOOLING_LIVE_TEST=1`
+  - stable baseline Grok live coverage remains:
+    - `auracall-solo`
+    - `auracall-two-step`
+    - `auracall-multi-agent`
+  - focused post-toast verification:
+    - `pnpm vitest run tests/browser/grokActions.test.ts tests/browser/llmServiceRateLimit.test.ts tests/runtime.configuredExecutor.test.ts tests/cli/teamRunCommand.test.ts`
+      - pass
+  - post-cooldown targeted tooling-live rerun:
+    - `AURACALL_LIVE_TEST=1 AURACALL_TOOLING_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "auracall-tooling"`
+      - pass
+      - `1 passed | 3 skipped`
+- 2026-04-12: Gemini-bound team experiments were initially dead on arrival for
+  two separate reasons on the stored-step execution seam:
+  - bug 1:
+    - `src/runtime/configuredExecutor.ts` dispatched every non-Grok browser
+      team step through the generic ChatGPT browser runner
+    - fixed by routing `service = gemini` through
+      `createGeminiWebExecutor({})`
+  - bug 2:
+    - the stored-step executor forwarded only top-level `browser.*` fields and
+      skipped the selected browser-family source-cookie settings plus Gemini's
+      scoped exported-cookie fallback
+    - fixed by forwarding the resolved browser-profile source-cookie fields and
+      by loading inline cookies from:
+      - `AURACALL_BROWSER_COOKIES_FILE`
+      - `AURACALL_BROWSER_COOKIES_JSON`
+      - `~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
+      - `~/.auracall/cookies.json`
+  - machine-specific evidence:
+    - direct WSL Chrome cookie reads currently return:
+      - `Failed to read Linux keyring via secret-tool; v11 cookies may be unavailable.`
+      - zero Google auth cookies
+    - so Gemini-bound team execution on this pairing depends on exported
+      cookie fallback, not raw cookie DB reads
+  - verification:
+    - `pnpm vitest run tests/runtime.configuredExecutor.test.ts`
+      - pass
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - live Gemini tooling team smoke:
+      - `ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+      - pass
+      - returned:
+        - `runtimeRunStatus = succeeded`
+        - `finalOutputSummary = AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK`
+        - shared state note `local shell action executed: node`
+  - automated live regression for that exact Gemini team path is now also green:
+    - added:
+      - `tests/live/team-gemini-live.test.ts`
+    - gate:
+      - `AURACALL_LIVE_TEST=1`
+      - `AURACALL_GEMINI_TEAM_LIVE_TEST=1`
+    - verification:
+      - `pnpm vitest run tests/live/team-gemini-live.test.ts`
+        - pass in skipped mode when live env vars are unset
+      - `AURACALL_LIVE_TEST=1 AURACALL_GEMINI_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-gemini-live.test.ts`
+        - pass
+        - proves:
+          - real `auracall teams run auracall-gemini-tooling ... --json`
+          - durable host recovery-detail readback
+          - HTTP `GET /status/recovery/{run_id}`
+          - HTTP `GET /v1/responses/{response_id}`
+- 2026-04-13: Mixed-provider negative-path team behavior is now live-proven on
+  the existing `/status` operator-control seam:
+  - added team:
+    - `auracall-cross-service-tooling`
+    - step 1:
+      - `auracall-chatgpt-tool-requester`
+      - `wsl-chrome-2`
+      - `chatgpt`
+    - step 2:
+      - `auracall-finisher`
+      - `auracall-grok-auto`
+      - `grok`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_CANCELLATION_LIVE_TEST=1`
+  - verification:
+    - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-tooling`
+      - pass
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-cross-service-tooling local action"`
+      - pass
+  - durable proof now covers:
+    - initial cross-service team run pauses for human escalation after one
+      bounded requested local shell action
+    - `POST /status` resolves that request as `cancelled`
+    - `POST /status` resumes the same team run
+    - `POST /status` drains the same team run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same cancelled-action summary
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_CANCELLATION_LIVE_SMOKE_OK`
+  - why this matters:
+    - same-provider negative-path operator control is no longer the live
+      boundary
+    - cancellation semantics now survive a real ChatGPT-to-Grok handoff on the
+      stored-step team runtime
+- 2026-04-13: Mixed-provider rejection is now live-proven on the same
+  ChatGPT-to-Grok tooling team and the same existing `/status`
+  operator-control seam:
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REJECTION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-cross-service-tooling local action"`
+      - pass
+  - durable proof now covers:
+    - initial cross-service team run pauses for human escalation after one
+      bounded requested local shell action
+    - `POST /status` resolves that request as `rejected`
+    - `POST /status` resumes the same team run
+    - `POST /status` drains the same team run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same rejected-action summary
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_REJECTION_LIVE_SMOKE_OK`
+  - why this matters:
+    - the remaining mixed-provider operator gap is no longer rejection
+    - the next real semantic gap is mixed-provider approval
+- 2026-04-13: Mixed-provider approval is now live-proven on the same
+  ChatGPT-to-Grok tooling team and the same existing `/status`
+  operator-control seam:
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_APPROVAL_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-cross-service-tooling human escalation"`
+      - pass
+  - durable proof now covers:
+    - initial cross-service team run pauses for human escalation after one
+      policy-blocked local shell action
+    - `POST /status` resumes the same team run with explicit approval guidance
+    - `POST /status` drains the same team run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same approved-resume lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_APPROVAL_LIVE_SMOKE_OK`
+  - important semantic boundary:
+    - this path proves operator approval to continue after a blocked action
+    - it does not mutate the local-action record to `approved`
+    - the blocked local-action record remains provider/runtime evidence of the
+      original policy stop
+  - why this matters:
+    - the mixed-provider operator matrix on `chatgpt -> grok` is now
+      materially caught up:
+      - approval
+      - rejection
+      - cancellation
+- 2026-04-13: The same approval-path operator control is now live-proven on
+  `chatgpt -> gemini` using a dedicated tooling team:
+  - added external team:
+    - `auracall-cross-service-gemini-tooling`
+    - step 1:
+      - `auracall-chatgpt-tool-requester`
+      - `wsl-chrome-2`
+      - `chatgpt`
+    - step 2:
+      - `auracall-gemini-finisher`
+      - `auracall-gemini-pro`
+      - `gemini`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_APPROVAL_LIVE_TEST=1`
+  - verification:
+    - `pnpm tsx bin/auracall.ts config show --team auracall-cross-service-gemini-tooling`
+      - pass
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-cross-service-gemini-tooling human escalation"`
+      - pass
+  - durable proof now covers:
+    - initial cross-service Gemini run pauses for human escalation after one
+      policy-blocked local shell action
+    - `POST /status` resumes the same run with explicit approval guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same approved-resume lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_GEMINI_APPROVAL_LIVE_SMOKE_OK`
+  - important semantic boundary:
+    - this path proves operator approval to continue after a blocked action
+    - it does not mutate the local-action record to `approved`
+  - why this matters:
+    - mixed-provider operator control is no longer Grok-only or single-pairing
+    - Gemini is now inside the live operator-control matrix
+- 2026-04-13: Mixed-provider rejection is now also live-proven on
+  `chatgpt -> gemini` using the same existing `/status` operator-control seam:
+  - reused external team:
+    - `auracall-cross-service-gemini-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_REJECTION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - first live attempt:
+      - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-cross-service-gemini-tooling local action"`
+      - failed once with resumed Gemini step failure:
+        - `failure.message = fetch failed`
+    - bounded rerun:
+      - same command
+      - pass
+  - durable proof now covers:
+    - initial cross-service Gemini run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `rejected`
+    - `POST /status` resumes the same run with explicit rejection guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same rejected-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_GEMINI_REJECTION_LIVE_SMOKE_OK`
+  - why this matters:
+    - the `chatgpt -> gemini` operator matrix is no longer approval-only
+    - the next Gemini mixed-provider semantic gap is no longer rejection
+- 2026-04-13: Mixed-provider cancellation is now also live-proven on
+  `chatgpt -> gemini` using the same existing `/status` operator-control seam:
+  - reused external team:
+    - `auracall-cross-service-gemini-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_CANCELLATION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-cross-service-gemini-tooling local action"`
+      - pass
+  - durable proof now covers:
+    - initial cross-service Gemini run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `cancelled`
+    - `POST /status` resumes the same run with explicit cancellation guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same cancelled-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_CROSS_SERVICE_GEMINI_CANCELLATION_LIVE_SMOKE_OK`
+  - operational note:
+    - the test still carries the same post-pass cleanup tail on the ChatGPT
+      delete subprocess, so wall-clock duration is longer than the actual
+      provider-runtime proof window
+  - why this matters:
+    - the `chatgpt -> gemini` operator matrix is no longer missing
+      cancellation
+    - the current provider-order semantic set is now materially complete
+- 2026-04-13: Reverse-order mixed-provider approval is now live-proven on
+  `grok -> chatgpt` using a dedicated tooling team:
+  - added external team:
+    - `auracall-reverse-cross-service-tooling`
+    - step 1:
+      - `auracall-tool-requester`
+      - `auracall-grok-auto`
+      - `grok`
+    - step 2:
+      - `auracall-chatgpt-finisher`
+      - `wsl-chrome-2`
+      - `chatgpt`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_APPROVAL_LIVE_TEST=1`
+  - verification:
+    - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-tooling`
+      - pass
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - first live attempt:
+      - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-tooling human escalation"`
+      - failed
+      - stored run finished `succeeded` instead of pausing because the Grok
+        requester emitted a malformed payload that nested `toolEnvelope` and
+        `finalToken` inside one `localActionRequests` item
+    - tightened reverse-order requester contract:
+      - requester must emit exactly
+        `{"localActionRequests":[toolEnvelope]}`
+      - no sibling `finalToken` fields inside the request item
+    - bounded rerun:
+      - same command
+      - pass
+  - durable proof now covers:
+    - initial reverse-order run pauses for human escalation after one
+      policy-blocked local shell action
+    - `POST /status` resumes the same run with explicit approval guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same approved-resume lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_APPROVAL_LIVE_SMOKE_OK`
+  - important semantic boundary:
+    - this path proves operator approval to continue after a blocked action
+    - it does not mutate the local-action record to `approved`
+    - the blocked local-action record remains `rejected` as evidence of the
+      original policy stop
+  - why this matters:
+    - reverse-order mixed-provider operator control is now no longer unproven
+    - the next matrix gap is no longer first reverse-order approval
+- 2026-04-13: Reverse-order mixed-provider cancellation is now also live-proven
+  on `grok -> chatgpt` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_CANCELLATION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-tooling local action"`
+      - pass
+  - durable proof now covers:
+    - initial reverse-order run pauses for human escalation after one bounded
+      local shell request
+    - `POST /status` resolves the pending local action as `cancelled`
+    - `POST /status` resumes the same run with explicit cancellation guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same cancelled-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_CANCELLATION_LIVE_SMOKE_OK`
+  - why this matters:
+    - reverse-order mixed-provider operator control is no longer approval-only
+    - the next reverse-order semantic gap is no longer cancellation
+- 2026-04-13: Reverse-order mixed-provider rejection is now also live-proven on
+  `grok -> chatgpt` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_REJECTION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-tooling local action"`
+      - pass
+  - durable proof now covers:
+    - initial reverse-order run pauses for human escalation after one bounded
+      local shell request
+    - `POST /status` resolves the pending local action as `rejected`
+    - `POST /status` resumes the same run with explicit rejection guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same rejected-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_REJECTION_LIVE_SMOKE_OK`
+  - why this matters:
+    - reverse-order mixed-provider operator control is no longer missing
+      rejection
+    - the current `grok -> chatgpt` semantic set is now materially complete
+- 2026-04-13: Reverse-order mixed-provider approval is now also live-proven on
+  `grok -> gemini` using a dedicated tooling team:
+  - added external team:
+    - `auracall-reverse-cross-service-gemini-tooling`
+  - config backup written:
+    - `/home/ecochran76/.auracall/config.json.bak-2026-04-13-144923-reverse-cross-service-gemini-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_GEMINI_APPROVAL_LIVE_TEST=1`
+  - verification:
+    - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-gemini-tooling`
+      - pass
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-gemini-tooling human escalation"`
+      - pass
+  - durable proof now covers:
+    - initial reverse-order Gemini run pauses for human escalation after one
+      policy-blocked local shell action
+    - `POST /status` resumes the same run with explicit approval guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same approved-resume lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_APPROVAL_LIVE_SMOKE_OK`
+  - important semantic boundary:
+    - this path proves operator approval to continue after a blocked action
+    - it does not mutate the local-action record to `approved`
+    - the blocked local-action record remains `rejected` as evidence of the
+      original policy stop
+  - why this matters:
+    - reverse-order provider breadth is no longer limited to ChatGPT as the
+      finisher
+    - the next reverse-order Gemini semantic gap is no longer first approval
+- 2026-04-13: Reverse-order mixed-provider cancellation is now also live-proven
+  on `grok -> gemini` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-gemini-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_GEMINI_CANCELLATION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-gemini-tooling local action"`
+      - pass
+      - `1 passed | 12 skipped`
+  - durable proof now covers:
+    - initial reverse-order Gemini run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `cancelled`
+    - `POST /status` resumes the same run with explicit cancellation guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same cancelled-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_CANCELLATION_LIVE_SMOKE_OK`
+  - why this matters:
+    - reverse-order `grok -> gemini` is no longer approval-only
+    - the next reverse-order Gemini semantic gap is no longer cancellation
+- 2026-04-13: Reverse-order mixed-provider rejection is now also live-proven on
+  `grok -> gemini` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-gemini-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_REVERSE_GEMINI_REJECTION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-gemini-tooling local action"`
+      - pass
+      - `1 passed | 13 skipped`
+  - durable proof now covers:
+    - initial reverse-order Gemini run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `rejected`
+    - `POST /status` resumes the same run with explicit rejection guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same rejected-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_REJECTION_LIVE_SMOKE_OK`
+  - why this matters:
+    - reverse-order `grok -> gemini` now has approval, cancellation, and rejection
+    - the current reverse-order Gemini semantic set is materially complete
+- 2026-04-13: Reverse-order mixed-provider approval is now also live-proven on
+  `gemini -> chatgpt` using a dedicated tooling team:
+  - added external team:
+    - `auracall-reverse-cross-service-chatgpt-tooling`
+  - config backup written:
+    - `/home/ecochran76/.auracall/config.json.bak-2026-04-13-gemini-chatgpt-reverse-approval`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_APPROVAL_LIVE_TEST=1`
+  - verification:
+    - `pnpm tsx bin/auracall.ts config show --team auracall-reverse-cross-service-chatgpt-tooling`
+      - pass
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-chatgpt-tooling human escalation"`
+      - pass
+      - `1 passed | 14 skipped`
+  - durable proof now covers:
+    - initial Gemini-to-ChatGPT run pauses for human escalation after one
+      policy-blocked local shell action
+    - `POST /status` resumes the same run with explicit approval guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same approved-resume lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_GEMINI_TO_CHATGPT_APPROVAL_LIVE_SMOKE_OK`
+  - important semantic boundary:
+    - this path proves operator approval to continue after a blocked action
+    - it does not mutate the local-action record to `approved`
+    - the blocked local-action record remains `rejected` as evidence of the
+      original policy stop
+  - why this matters:
+    - reverse-order provider breadth is no longer limited to Grok or ChatGPT
+      as the requester
+    - the next Gemini-to-ChatGPT semantic gap is no longer first approval
+- 2026-04-13: Reverse-order mixed-provider cancellation is now also live-proven
+  on `gemini -> chatgpt` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-chatgpt-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - direct bounded team run for failure-surface inspection:
+      - `auracall teams run auracall-reverse-cross-service-chatgpt-tooling ... --require-local-action-approval --json`
+      - pass
+      - initial result confirmed expected paused posture:
+        - `runtimeRunStatus = cancelled`
+        - `finalOutputSummary = paused for human escalation`
+    - first gated live attempt returned an initial `failed` status instead of
+      the expected paused state
+    - bounded rerun of the exact same gated live case:
+      - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-chatgpt-tooling local action"`
+      - pass
+      - `1 passed | 15 skipped`
+  - durable proof now covers:
+    - initial Gemini-to-ChatGPT run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `cancelled`
+    - `POST /status` resumes the same run with explicit cancellation guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same cancelled-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_SMOKE_OK`
+  - why this matters:
+    - the new `gemini -> chatgpt` reverse-order lane is no longer approval-only
+    - the bounded rerun rule remains the right response when the direct team
+      run already shows the expected paused control posture
+- 2026-04-13: Reverse-order mixed-provider rejection is now also live-proven on
+  `gemini -> chatgpt` using the same dedicated tooling team:
+  - reused external team:
+    - `auracall-reverse-cross-service-chatgpt-tooling`
+  - added gated live case in
+    [tests/live/team-multiservice-live.test.ts](/home/ecochran76/workspace.local/oracle/tests/live/team-multiservice-live.test.ts):
+    - `AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_REJECTION_LIVE_TEST=1`
+  - verification:
+    - `pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - pass in skipped mode
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+      - pass
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-chatgpt-tooling local action"`
+      - pass
+      - `1 passed | 16 skipped`
+  - durable proof now covers:
+    - initial Gemini-to-ChatGPT run pauses for human escalation after one
+      bounded local shell request
+    - `POST /status` resolves the pending local action as `rejected`
+    - `POST /status` resumes the same run with explicit rejection guidance
+    - `POST /status` drains the same run
+    - durable host readback, HTTP recovery detail, and HTTP response readback
+      converge on the same rejected-action lifecycle
+    - final stored terminal step summary matches:
+      - `AURACALL_GEMINI_TO_CHATGPT_REJECTION_LIVE_SMOKE_OK`
+  - why this matters:
+    - `gemini -> chatgpt` now has approval, cancellation, and rejection
+    - the current Gemini-to-ChatGPT semantic set is materially complete
+- 2026-04-13: Roadmap reassessment for the mixed-provider/operator-control live
+  phase:
+  - current live-proven provider-order matrix is now materially sufficient:
+    - forward:
+      - `chatgpt -> grok`
+      - `chatgpt -> gemini`
+    - reverse:
+      - `grok -> chatgpt`
+      - `grok -> gemini`
+      - `gemini -> chatgpt`
+  - each of those now has live proof for:
+    - approval
+    - cancellation
+    - rejection
+  - decision:
+    - stop adding provider-order permutations by default
+    - end the current provider-matrix expansion phase
+    - move to the next phase:
+      - live-suite consolidation plus readback/runtime hardening
+  - why this is the right cutoff:
+    - marginal value from more pair permutations is now lower than:
+      - live-suite cost
+      - wall-clock duration
+      - provider/browser flake exposure
+    - the unresolved risks are now more about operability and readback clarity
+      than about whether the existing `/status` seam works across providers
+  - next planned checkpoint:
+    - classify the current live coverage into:
+      - stable baseline
+      - extended matrix
+      - flaky-but-informative probes
+    - keep the current matrix available, but stop treating more pair expansion
+      as the default next step
+- 2026-04-13: Response local-action readback now has explicit terminal-step
+  precedence coverage across both runtime and HTTP surfaces:
+  - added the missing HTTP regression in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    to match the existing runtime regression in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+  - seeded a two-step team run with:
+    - one older `step.localActionOutcomes.<stepOneId>` summary
+    - one terminal `step.localActionOutcomes.<stepTwoId>` summary
+  - confirmed `GET /v1/responses/{response_id}` reads back the terminal step's
+    `localActionSummary` instead of the older step-local action summary
+  - why this matters:
+    - response readback now has an explicit precedence rule when multiple
+      persisted local-action summaries exist on one run
+    - operators should not infer that the most recent array position or older
+      planner-step summary is authoritative once a later terminal step exists
+- 2026-04-13: Cancellation no-note fallback is now explicit on the HTTP
+  recovery-detail surface too:
+  - added a focused regression in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+    for `GET /status/recovery/{run_id}` when the cancelled run has no
+    cancellation `note-added` event
+  - locked the same fallback already covered in runtime response readback and
+    host recovery detail:
+    - `cancelledAt = run.updatedAt`
+    - `source = null`
+    - `reason = null`
+  - why this matters:
+    - operators now get the same bounded cancellation fallback through the
+      HTTP recovery-detail surface instead of only through lower-level runtime
+      readers
+- 2026-04-13: Operator-control summary precedence is now explicit across
+  runtime and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded runs with:
+    - multiple persisted `human.resume.<stepId>` summaries
+    - multiple persisted operator `drain-run` note events
+  - confirmed `metadata.executionSummary.operatorControlSummary` prefers:
+    - the latest resume summary
+    - the latest targeted-drain note
+  - why this matters:
+    - operator readback now has an explicit precedence rule instead of relying
+      on an implicit reverse-scan implementation detail
+- 2026-04-13: Requested-output fulfillment now has an explicit internal-output
+  exclusion rule across runtime and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded runs whose shared state only exposed internal structured outputs:
+    - `response.output`
+    - `human.resume.<stepId>`
+    - `step.localActionOutcomes.<stepId>`
+  - confirmed those internal entries do not satisfy a required
+    `structured-report` / `json` requested output by themselves
+  - why this matters:
+    - requested-output policy now has an explicit boundary between operator/
+      transport metadata and real user-facing structured output fulfillment
+- 2026-04-13: Orchestration timeline windowing is now explicit across response
+  readback and recovery detail:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+  - seeded `12` relevant orchestration events and confirmed both surfaces keep:
+    - `total = 12`
+    - only the newest `10` items
+  - why this matters:
+    - operators now have an explicit bounded-window contract instead of relying
+      on the current `slice(-10)` implementation detail
+- 2026-04-13: Handoff-transfer summary precedence is now explicit across
+  response readback and recovery detail:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+  - seeded runs where both existed:
+    - planned handoff fallback data
+    - stored `step.consumedTaskTransfers.<stepId>` summary
+  - confirmed both readers prefer the stored consumed transfer summary over
+    the planned fallback transfer data
+  - why this matters:
+    - operators now have an explicit precedence rule for transfer readback
+      instead of relying on the current stored-summary-first implementation
+- 2026-04-13: Provider-usage summary precedence is now explicit across runtime
+  and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded succeeded multi-step runs with:
+    - an older `step.providerUsage.<stepId>` summary
+    - a terminal-step `step.providerUsage.<stepId>` summary
+  - confirmed `metadata.executionSummary.providerUsageSummary` prefers:
+    - the terminal step's stored usage summary
+    - not an older step summary from the same run
+  - why this matters:
+    - provider-usage readback now has an explicit precedence rule instead of
+      relying on the current terminal-step-first implementation detail
+- 2026-04-14: Requested-output contract precedence is now explicit across
+  runtime and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded succeeded multi-step runs where:
+    - an older step required an artifact bundle
+    - the terminal step required only a final response
+  - confirmed `metadata.executionSummary.requestedOutputSummary` and
+    `requestedOutputPolicy` prefer:
+    - the terminal step's requested-output contract
+    - not an older unmet requested-output contract from the same run
+  - why this matters:
+    - requested-output readback now has an explicit precedence rule instead of
+      relying on the current terminal-step-only implementation detail
+- 2026-04-14: Failure-summary precedence is now explicit across runtime and
+  HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded failed runs where both existed at terminal readback:
+    - an explicit terminal step failure
+    - a missing required requested output
+  - confirmed `metadata.executionSummary.failureSummary` prefers:
+    - the explicit terminal step failure
+    - not the derived `requested_output_required_missing` fallback
+  - why this matters:
+    - terminal failure readback now has an explicit precedence rule instead of
+      relying on the current failure-first implementation detail
+- 2026-04-14: Input-artifact summary precedence is now explicit across runtime
+  and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded succeeded multi-step runs where:
+    - an older step carried one artifact
+    - the terminal step carried a different artifact
+  - confirmed `metadata.executionSummary.inputArtifactSummary` prefers:
+    - the terminal step's artifact set
+    - not an older step's artifacts from the same run
+  - why this matters:
+    - input-artifact readback now has an explicit precedence rule instead of
+      relying on the current terminal-step-first implementation detail
+- 2026-04-14: Recovery-detail handoff-transfer fallback is now explicit across
+  host and HTTP recovery-detail readback:
+  - added focused regressions in
+    [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded planned team runs where:
+    - the selected dependent step had a planned handoff with `taskTransfer`
+    - no stored `step.consumedTaskTransfers.<stepId>` summary existed
+  - confirmed recovery detail falls back to:
+    - the planned handoff transfer data
+  - why this matters:
+    - recovery-detail handoff readback now has an explicit fallback rule
+      instead of relying on the current planned-handoff fallback path
+- 2026-04-14: Roadmap checkpoint after the initial readback/runtime hardening
+  run:
+  - reviewed:
+    - `docs/dev/next-execution-plan.md`
+    - `docs/dev/dev-journal.md`
+    - `docs/dev-fixes-log.md`
+    - current worktree state
+  - decision:
+    - the current readback/runtime hardening subphase is materially
+      sufficient
+    - stop defaulting to another micro precedence/fallback slice
+    - move to contract/docs consolidation before choosing the next broader
+      runtime seam
+  - concrete next checkpoint:
+    - deduplicate the active roadmap, journal, fixes log, and testing notes
+    - keep one compact summary of the hardening coverage already proved
+  - why this matters:
+    - the phase now has enough evidence and is starting to lose signal to
+      duplication and prioritization drift
+- 2026-04-14: Contract/docs consolidation pass for the current hardening
+  checkpoint:
+  - compressed the active `docs/testing.md` readback section into one compact
+    contract summary
+  - kept the historical fix/journal entries as evidence, but stopped using the
+    operator-facing testing notes as a running changelog
+  - why this matters:
+    - the active docs now summarize the phase instead of replaying every
+      micro-slice
+- 2026-04-14: Repo policy adoption slice:
+  - installed canonical shared policy files under `docs/dev/policies/`
+  - rewired `AGENTS.md` to use a thinner policy entry with scope-based
+    re-read guidance instead of listing every module inline
+  - established `docs/dev/plans/` as the canonical bounded-plan directory
+  - remaining migration gaps are still explicit:
+    - `ROADMAP.md` lane headings do not yet match the stricter planning audit
+    - `RUNBOOK.md` does not yet use the stricter dated turn-log shape
+    - loose plan files under `docs/dev/` still need migration/reconciliation
+  - why this matters:
+    - the repo now has a real canonical policy location and plan location
+      without forcing a broad planning rewrite in the same turn
+- 2026-04-14: Added a deterministic plan-library migration audit helper:
+  - added [audit-plan-library.ts](/home/ecochran76/workspace.local/oracle/scripts/audit-plan-library.ts)
+  - added `pnpm run plans:audit`
+  - the helper ranks loose plan candidates from:
+    - canonical path
+    - file time attributes
+    - `ROADMAP.md` / `RUNBOOK.md` / `AGENTS.md` references
+    - lightweight content signals
+  - first report outcome:
+    - `keep = 1`
+    - `merge = 12`
+    - `retire = 24`
+  - highest-priority merge candidate is now explicit:
+    - [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    - proposed canonical target:
+      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+  - why this matters:
+    - planning migration can now be triaged deterministically instead of by
+      ad hoc memory or manual browsing
+- 2026-04-14: Migrated the active execution board into the canonical plans
+  directory:
+  - added
+    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    as the active bounded execution plan
+  - rewired active entrypoints in:
+    - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    - [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
+    - [AGENTS.md](/home/ecochran76/workspace.local/oracle/AGENTS.md)
+  - demoted
+    [next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md)
+    to a historical pointer instead of deleting it
+  - why this matters:
+    - the repo now has one canonical active execution plan path while keeping
+      historical links stable during migration
+- 2026-04-14: Tightened the first planning-compliance normalization pass:
+  - moved the informational plans index out of `docs/dev/plans/` to
+    [plan-index.md](/home/ecochran76/workspace.local/oracle/docs/dev/plan-index.md)
+    so the stricter plan audit no longer treats it as a plan artifact
+  - added deterministic execution-lane metadata:
+    - `Lane: P01` on
+      [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    - matching `Lane: P01` and `Current State` note in
+      [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - why this matters:
+    - the canonical execution plan now has a stable authority key and the
+      strict audit surface has less repo-local noise
+- 2026-04-14: Normalized canonical roadmap/runbook heading shapes for the
+  strict planning audit:
+  - converted top-level roadmap headings to the audited `## P## | Title` form
+  - converted runbook top-level headings to the audited
+    `## Turn N | YYYY-MM-DD` form
+  - kept existing content and execution meaning intact; this slice only changed
+    heading structure
+  - why this matters:
+    - the remaining planning-contract failures were structural, not semantic,
+      and are now removed without broad roadmap rewrites
+- 2026-04-14: Migrated the task / run-spec plan into the canonical plans
+  directory:
+  - added
+    [0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+    as the canonical task / run-spec plan
+  - rewired the roadmap and the adjacent team-run data-model plan to the new
+    canonical path
+  - demoted
+    [task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md)
+    to a historical pointer instead of deleting it
+  - why this matters:
+    - the first post-framework loose-plan migration is now real and preserves
+      stable history while moving active authority into `docs/dev/plans/`
+- 2026-04-14: Migrated the team-run data-model plan into the canonical plans
+  directory:
+  - added
+    [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+    as the canonical team-run data-model plan
+  - rewired the roadmap, runbook, and adjacent canonical task / run-spec plan
+    to the new canonical path
+  - demoted
+    [team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+    to a historical pointer instead of deleting it
+  - why this matters:
+    - the second loose-plan migration is now complete without reopening the
+      planning-compliance framework work
+- 2026-04-14: Completed a full review pass over the remaining loose legacy
+  plans instead of continuing by pure adjacency:
+  - reviewed inventory outcome:
+    - `keep = 3`
+    - `merge = 10`
+    - `retire = 26`
+  - separated the remaining loose set into:
+    - legacy pointers
+    - team/service foundation migrations
+    - browser/config architecture migrations
+    - older browser/provider backlog
+    - retire candidates
+  - next reviewed migration batch is now explicit:
+    - `docs/dev/team-service-execution-plan.md`
+    - `docs/dev/team-config-boundary-plan.md`
+    - `docs/dev/durable-state-account-mirroring-plan.md`
+  - why this matters:
+    - migration order is now driven by reviewed dependency clusters instead of
+      whichever file happens to be nearest to the last migrated plan
+- 2026-04-14: Migrated the team service-execution plan into the canonical
+  plans directory:
+  - added
+    [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+    as the canonical team service-execution plan
+  - rewired the roadmap, runbook, and adjacent canonical task/data-model plans
+    to the new canonical path
+  - demoted
+    [team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
+    to a historical pointer instead of deleting it
+  - why this matters:
+    - the reviewed migration batch is now advancing in dependency order instead
+      of local adjacency alone
+- 2026-04-14: Terminal-step selection precedence is now explicit across
+  runtime and HTTP response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded failed runs where both existed:
+    - an earlier failed step
+    - a later succeeded step
+  - confirmed terminal readback prefers the failed step for:
+    - `terminalStepId`
+    - `completedAt`
+    - `failureSummary`
+  - why this matters:
+    - terminal-step readback now has an explicit failure-dominates rule
+      instead of relying on the current failure-first selection detail
+- 2026-04-14: Input-artifact fallback is now explicit across runtime and HTTP
+  response readback:
+  - added focused regressions in
+    [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    and
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - seeded succeeded multi-step runs where:
+    - the terminal step had no input artifacts
+    - the latest earlier step did
+  - confirmed `metadata.executionSummary.inputArtifactSummary` falls back to:
+    - the latest earlier step with artifacts
+  - why this matters:
+    - input-artifact readback now has an explicit fallback rule instead of
+      relying on the current reverse-scan implementation detail
+- 2026-04-14: Shifted legacy-plan cleanup from broad migration to selective
+  archival:
+  - updated `scripts/audit-plan-library.ts` so `docs/dev/plans/legacy-archive/`
+    is excluded from canonical plan scoring
+  - archived the low-signal pointer/history set under
+    `docs/dev/plans/legacy-archive/` using serial + ctime datestamp names:
+    - `0001-2026-04-08-upstream-sync-plan.md`
+    - `0002-2026-04-14-next-execution-plan.md`
+    - `0003-2026-04-14-task-run-spec-plan.md`
+    - `0004-2026-04-14-team-run-data-model-plan.md`
+    - `0005-2026-04-14-team-service-execution-plan.md`
+  - rewired active authority docs to the canonical execution/task/team plan set
+    instead of the archived loose paths
+  - why this matters:
+    - the repo now keeps a minimal authoritative plan set while preserving
+      searchable legacy context without paying for full-library migration
+- 2026-04-14: Archived the closed runtime/cache legacy cluster instead of
+  continuing piecemeal migration:
+  - added archive batch entries under `docs/dev/plans/legacy-archive/`:
+    - `0006-2026-04-08-browser-service-registry-plan.md`
+    - `0007-2026-04-08-cache-architecture-plan.md`
+    - `0008-2026-04-08-cache-artifact-projection-plan.md`
+    - `0009-2026-04-08-cache-db-migration-plan.md`
+    - `0010-2026-04-08-cache-remaining-todos-plan.md`
+    - `0011-2026-04-08-cache-sql-file-catalog-plan.md`
+    - `0012-2026-04-08-runtime-control-surface-plan.md`
+    - `0013-2026-04-08-http-responses-adapter-plan.md`
+    - `0014-2026-04-14-team-runtime-bridge-plan.md`
+    - `0015-2026-04-14-runtime-runner-slice-plan.md`
+    - `0016-2026-04-14-api-compatibility-plan.md`
+    - `0017-2026-04-14-runtime-service-host-plan.md`
+    - `0018-2026-04-14-service-runtime-execution-plan.md`
+  - rewired the still-live durable-state and cache-adjacent docs to archive
+    paths where those historical plans are still useful as background
+  - why this matters:
+    - the active plan surface is now much smaller, and the remaining loose
+      plan set is mostly genuine future-signal work rather than stale runtime
+      design history
+- 2026-04-14: Archived the historical browser backlog cluster after rewiring
+  the live smoke/testing docs:
+  - added archive batch entries:
+    - `0019-2026-04-08-chatgpt-conversation-surface-plan.md`
+    - `0020-2026-04-08-chatgpt-hardening-plan.md`
+    - `0021-2026-04-08-chatgpt-polish-plan.md`
+    - `0022-2026-04-08-chatgpt-project-surface-plan.md`
+    - `0023-2026-04-08-gemini-conversation-gem-cache-plan.md`
+    - `0024-2026-04-08-grok-remaining-crud-plan.md`
+    - `0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md`
+  - rewired `docs/testing.md`, `docs/dev/smoke-tests.md`, and the still-live
+    adjacent browser plans to archived history paths
+  - why this matters:
+    - the remaining loose-plan set is now almost entirely future-facing work,
+      not completed browser/backlog history
+- 2026-04-14: Migrated the durable-state ownership plan into canonical
+  authority:
+  - added
+    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+    as the canonical durable-state ownership plan
+  - rewired roadmap and runbook authority to the canonical path
+  - archived the old loose file as searchable history instead of leaving it as
+    a second live authority path
+  - recorded the legacy move in
+    [docs/dev/plans/legacy-archive/INDEX.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/INDEX.md)
+    so the canonical-vs-archived split stays explicit
+  - why this matters:
+    - the highest-signal remaining runtime/service design lane now lives under
+      the canonical planning contract
+- 2026-04-14: Migrated the team boundary into canonical authority:
+  - added
+    [0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+    as the canonical team boundary plan
+  - rewired roadmap, runbook, and adjacent canonical team/task plans to the
+    canonical path
+  - archived the old loose file as
+    [0027-2026-04-09-team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0027-2026-04-09-team-config-boundary-plan.md)
+    and recorded it in the legacy archive index
+  - why this matters:
+    - the team/task/service foundation cluster now carries its main boundary
+      docs under the canonical planning contract instead of split loose paths
+- 2026-04-14: Migrated the config-model umbrella into canonical authority:
+  - added
+    [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
+    as the canonical repo-wide config architecture plan
+  - rewired roadmap, runbook, and the live browser/config cross-links to the
+    canonical path
+  - archived the old loose file as
+    [0028-2026-04-08-config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0028-2026-04-08-config-model-refactor-plan.md)
+    and recorded it in the legacy archive index
+  - why this matters:
+    - the remaining config/boundary cluster now has one canonical umbrella
+      authority instead of depending on a loose roadmap-linked plan
+- 2026-04-14: Migrated the browser-profile family refactor plan into canonical
+  authority:
+  - added
+    [0008-2026-04-14-browser-profile-family-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
+    as the canonical browser-profile subtrack plan
+  - rewired roadmap, runbook, `AGENTS.md`, and the active execution board to
+    the canonical path
+  - archived the old loose file as
+    [0029-2026-04-08-browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0029-2026-04-08-browser-profile-family-refactor-plan.md)
+    and recorded it in the legacy archive index
+  - why this matters:
+    - the most active browser/config subtrack is now canonical instead of
+      remaining a loose special-case authority path
+- 2026-04-14: Migrated the agent boundary into canonical authority:
+  - added
+    [0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+    as the canonical agent-boundary plan
+  - rewired roadmap, runbook, and the canonical config execution docs to the
+    canonical path
+  - archived the old loose file as
+    [0030-2026-04-08-agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0030-2026-04-08-agent-config-boundary-plan.md)
+    and recorded it in the legacy archive index
+  - why this matters:
+    - the config cluster now carries both umbrella and boundary authority under
+      canonical plan paths instead of loose roadmap-linked docs
+- 2026-04-14: Archived the alias-policy holdover and promoted the next two live
+  browser/service plans into canonical authority:
+  - archived the superseded alias-policy doc as
+    [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
+  - added
+    [0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
+    as the canonical ChatGPT service-volatility pilot
+  - added
+    [0011-2026-04-14-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md)
+    as the canonical browser-service roadmap
+  - archived the old loose files as
+    [0032-2026-04-08-service-volatility-chatgpt-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0032-2026-04-08-service-volatility-chatgpt-plan.md)
+    and
+    [0033-2026-03-18-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0033-2026-03-18-browser-service-refactor-roadmap.md)
+  - why this matters:
+    - the active browser/service planning surface is now concentrated in the
+      canonical plan directory, and the stale alias-policy doc is no longer a
+      loose authority path
+
+- 2026-04-14: Closed the remaining live loose-plan backlog in one bounded planning slice: canonicalized `0012-2026-04-14-service-volatility-refactor.md`, `0013-2026-04-14-gemini-completion.md`, and `0014-2026-04-14-browser-service-reattach-reliability.md`; archived the old loose paths as `0034`, `0035`, and `0036`; rewired roadmap/runbook/testing/backlog links so `plans:audit` now reports `keep=14`, `merge=0`, `retire=0`.
+
+- 2026-04-14: Reviewed the roadmap after the canonicalization wave and found the execution owner doc still described already-completed migration work. Refreshed `docs/dev/plans/0001-2026-04-14-execution.md` to match the real post-migration state (`keep=14`, `merge=0`, `retire=0`) and set the next lane explicitly to task/run-spec definition instead of more planning churn.
+
+- 2026-04-14: Tightened the canonical task/run-spec plan from directional guidance into a concrete v1 authoring contract. The new contract fixes the assignment boundary around `id`, `version`, `teamId`, `assignment`, `inputs`, `execution`, `output`, and `provenance`, includes an explicit JSON example, and sets the next product step to align `teamRun` around a single `taskRunSpecId` instead of starting service/runtime code early.
+
+- 2026-04-14: Checked git-policy compliance before the next planning slice: the worktree is broadly dirty, so the follow-on stayed narrow, non-destructive, and doc-only. Then tightened `0003-2026-04-14-team-run-data-model.md` into a concrete v1 execution contract for `teamRun`, `step`, `handoff`, and `sharedState`, with explicit rules that assignment intent stays on `taskRunSpec` and runner metadata stays out of the logical execution model.
+
+- 2026-04-14: Turned the next service/runtime recommendation into a bounded implementation plan in `0004-2026-04-14-team-service-execution.md`. The first slice is now explicit: persist one `taskRunSpec`, resolve one team, project one sequential `teamRun`, create initial `step` and `sharedState` records, and stop before public team execution or multi-runner work.
+
+- 2026-04-14: Executed the first internal team-service implementation slice instead of reopening planning. The missing seam was not projection; that chain already existed. The actual gap was durable `taskRunSpec` persistence. Added `src/teams/store.ts`, wired `createTeamRuntimeBridge` to persist validated task specs before runtime run creation, added focused `teams.store` coverage, and extended bridge tests to prove the persisted spec survives the `taskRunSpec -> teamRun -> runtime` path.
+
+- 2026-04-14: Added the bounded internal inspection/readback seam for persisted `taskRunSpec -> teamRun` linkage. Existing response readback now surfaces `metadata.taskRunSpecSummary`, and existing recovery detail now surfaces `taskRunSpecSummary`, both with bounded identity/count fields only. This kept the slice internal-facing and avoided inventing a new command surface before the linkage was observable.
+
+- 2026-04-14: Added `auracall teams inspect` as the bounded internal debug surface for persisted `taskRunSpec -> teamRun -> runtime` linkage. It resolves either `--task-run-spec-id` or `--runtime-run-id`, reads the persisted task summary, and reports the linked runtime dispatch/lease state without widening public team execution.
+
+- 2026-04-14: Added `GET /v1/team-runs/inspect` as the first bounded public read-only team execution surface. It reuses the same persisted `taskRunSpec -> teamRun -> runtime` linkage model as `auracall teams inspect` and stays inspection-only.
+
+- 2026-04-14: Examined the dirty worktree for safe cleanup. Removed the recurring stray repo-root `undefined:/` lighthouse scratch tree and added `.gitignore` coverage for `undefined:/` so future temp-path resolution bugs do not keep dirtying the repo. Left the remaining dirt intact because it is substantive in-flight code/doc work, not safe throwaway output.
