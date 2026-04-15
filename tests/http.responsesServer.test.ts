@@ -962,6 +962,7 @@ describe('http responses adapter', () => {
         },
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
+          runtimeRunInspection: '/v1/runtime-runs/inspect?runId={run_id}[&runnerId={runner_id}]',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -2763,6 +2764,132 @@ describe('http responses adapter', () => {
       const payload = (await response.json()) as { error: { type: string; message: string } };
       expect(payload.error.type).toBe('invalid_request_error');
       expect(payload.error.message).toContain('--task-run-spec-id, --team-run-id, or --runtime-run-id');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded runtime queue projection and runner evaluation over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_http_inspect_1';
+    const createdAt = '2026-04-15T12:00:00.000Z';
+    const runnerId = 'runner:http-runtime-inspect';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'teamrun_http_runtime_inspect_1',
+          taskRunSpecId: null,
+          status: 'planned',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect runtime queue projection.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: 'teamrun_http_runtime_inspect_1:step:1',
+            agentId: 'agent:inspect',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect runtime queue projection.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: runnerId,
+        hostId: 'host:http-runtime',
+        status: 'active',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-15T12:01:00.000Z',
+        expiresAt: '2026-04-15T12:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control, runnersControl });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=${runnerId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        inspection: {
+          queryRunId: string;
+          runtime: {
+            runId: string;
+            teamRunId: string | null;
+            queueProjection: {
+              queueState: string;
+              claimState: string;
+              affinity: { status: string };
+            };
+          };
+          runner: { runnerId: string; selectedBy: string; status: string };
+        };
+      };
+      expect(payload).toMatchObject({
+        object: 'runtime_run_inspection',
+        inspection: {
+          queryRunId: runId,
+          runtime: {
+            runId,
+            teamRunId: 'teamrun_http_runtime_inspect_1',
+            queueProjection: {
+              queueState: 'runnable',
+              claimState: 'claimable',
+              affinity: {
+                status: 'eligible',
+              },
+            },
+          },
+          runner: {
+            runnerId,
+            selectedBy: 'query-runner-id',
+            status: 'active',
+          },
+        },
+      });
     } finally {
       await server.close();
     }

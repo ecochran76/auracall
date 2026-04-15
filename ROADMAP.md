@@ -160,7 +160,12 @@ Next recommendation:
     - `taskRunSpecId`
     - `teamRunId`
     - `runtimeRunId`
-- next, decide whether a public write/create team-execution surface is justified
+- the first bounded public read-only runtime queue surface is now live as `GET /v1/runtime-runs/inspect`
+  - required lookup key:
+    - `runId`
+  - optional runner evaluation:
+    - `runnerId`
+- next, keep public team execution writes paused and only widen read-only runtime inspection if a concrete operator gap remains
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it

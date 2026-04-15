@@ -102,6 +102,7 @@ Terminology note:
   - `GET /status`
   - `GET /status/recovery/{run_id}`
   - `GET /v1/team-runs/inspect`
+  - `GET /v1/runtime-runs/inspect`
   - `GET /v1/models`
   - `POST /v1/responses`
   - `GET /v1/responses/{response_id}`
@@ -148,6 +149,25 @@ Terminology note:
       - `objective`
       - `createdAt`
       - `persistedAt`
+  - `GET /v1/runtime-runs/inspect` returns one bounded read-only runtime
+    queue/runner view:
+    - required query:
+      - `runId`
+    - optional query:
+      - `runnerId`
+    - returns:
+      - bounded `taskRunSpecSummary` when the runtime run is task-backed
+      - `runtime.queueProjection` with:
+        - `queueState`
+        - `claimState`
+        - `nextRunnableStepId`
+        - active/waiting/running/deferred/terminal step ids
+        - bounded affinity evaluation
+      - bounded `runner` summary when:
+        - `runnerId` is supplied, or
+        - the active lease owner resolves to a persisted runner record
+    - this is still inspection-only; it does not create, claim, cancel, or run
+      work
       - `requestedOutputCount`
       - `inputArtifactCount`
     - bounded `orchestrationTimelineSummary` from relevant durable

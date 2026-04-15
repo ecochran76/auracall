@@ -90,6 +90,10 @@ import {
   inspectConfiguredTeamRun,
   type TeamRunCliResponseFormat,
 } from '../src/cli/teamRunCommand.js';
+import {
+  formatRuntimeRunInspectionPayload,
+  inspectConfiguredRuntimeRun,
+} from '../src/cli/runtimeInspectionCommand.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -881,9 +885,11 @@ program
     });
   });
 
-program
+const apiCommand = program
   .command('api')
-  .description('Run bounded local AuraCall API surfaces for development.')
+  .description('Run bounded local AuraCall API surfaces for development.');
+
+apiCommand
   .command('serve')
   .description('Run the bounded local OpenAI-compatible responses adapter.')
   .option('--host <address>', 'Interface to bind (default 127.0.0.1; non-loopback remains unauthenticated).')
@@ -920,6 +926,29 @@ program
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,
       recoverRunsOnStartSourceKind: commandOptions.recoverRunsOnStartSource,
     });
+  });
+
+apiCommand
+  .command('inspect-run')
+  .description('Inspect one persisted runtime run and its bounded queue/runner posture.')
+  .requiredOption('--run-id <id>', 'Inspect one persisted runtime run id.')
+  .option('--runner-id <id>', 'Optionally evaluate claim affinity against one persisted runner id.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const payload = await inspectConfiguredRuntimeRun({
+      runId: commandOptions.runId,
+      runnerId:
+        typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
+          ? commandOptions.runnerId.trim()
+          : null,
+    });
+
+    if (commandOptions.json) {
+      console.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+
+    console.log(formatRuntimeRunInspectionPayload(payload));
   });
 
 const projectsCommand = program

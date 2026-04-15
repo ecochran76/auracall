@@ -15894,4 +15894,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - 2026-04-14: Extended the bounded inspection surface to accept `teamRunId` as a first-class lookup key on both `auracall teams inspect` and `GET /v1/team-runs/inspect`. This keeps the next slice on the read-only path and addresses the natural operator lookup id before deciding whether any public write/create team surface is warranted.
 
+- 2026-04-15: Added the first bounded public read-only runtime queue inspection surface instead of widening into public team-execution writes. `auracall api inspect-run --run-id <id> [--runner-id <id>]` and `GET /v1/runtime-runs/inspect` now expose one persisted runtime run's queue projection plus optional runner-affinity evaluation, which closes the durable-state visibility gap without introducing create/claim/cancel semantics.
+
 - 2026-04-14: Examined the dirty worktree for safe cleanup. Removed the recurring stray repo-root `undefined:/` lighthouse scratch tree and added `.gitignore` coverage for `undefined:/` so future temp-path resolution bugs do not keep dirtying the repo. Left the remaining dirt intact because it is substantive in-flight code/doc work, not safe throwaway output.

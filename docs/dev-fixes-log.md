@@ -12275,4 +12275,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 - 2026-04-14: Once read-only team inspection is live, add the operator-natural lookup ids before considering any public write surface. In this repo, `teamRunId` was the missing first-class key; adding it to the shared inspection helper, CLI, and HTTP route increased utility without widening execution semantics.
 
+- 2026-04-15: Do not answer durable-state visibility gaps by jumping to public execution writes. In this repo, the correct next seam after `teamRun` inspection was one projection-first runtime inspection surface (`runId` with optional `runnerId` evaluation), which exposed queue state and affinity without hardening public create/run semantics too early.
+
 - 2026-04-14: Treat repo-root `undefined:/` as disposable temp-path fallout, not source. Safe worktree cleanup is: remove the tree and ignore `undefined:/` in `.gitignore`. Do not sweep broader untracked/modified files in the same turn unless you have explicit intent for the in-flight feature/docs changes.

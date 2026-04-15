@@ -143,6 +143,8 @@
         - `GET /v1/responses/{response_id}`
     - `GET /v1/team-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/team-runs/inspect?teamRunId=<team_run_id>`
+    - `GET /v1/runtime-runs/inspect?runId=<run_id>`
+    - `GET /v1/runtime-runs/inspect?runId=<run_id>&runnerId=<runner_id>`
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:
       - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
@@ -155,6 +157,16 @@
       drain advances it
     - `api serve` now also persists one bounded local runner record and keeps
       it heartbeated while the server stays up
+    - `GET /v1/runtime-runs/inspect` now exposes the bounded queue projection
+      for one persisted runtime run:
+      - `queueState`
+      - `claimState`
+      - `nextRunnableStepId`
+      - step-id buckets for running/waiting/deferred/terminal posture
+      - bounded affinity posture
+    - if `runnerId` is supplied, the same inspection route should also include
+      one bounded persisted runner summary and evaluate queue affinity against
+      that runner
     - bounded local claims now use that live runner id as the lease owner
     - successful direct-run execution now also updates that persisted runner
       record with:

@@ -14,6 +14,11 @@ import type {
   ExecutionRequestExtensionHints,
   ExecutionResponse,
 } from '../runtime/apiTypes.js';
+import {
+  inspectRuntimeRun,
+  RuntimeRunInspectionError,
+  type RuntimeRunInspectionPayload,
+} from '../runtime/inspection.js';
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
@@ -107,6 +112,11 @@ interface HttpTeamRunInspectionResponse {
   inspection: TeamRunInspectionPayload;
 }
 
+interface HttpRuntimeRunInspectionResponse {
+  object: 'runtime_run_inspection';
+  inspection: RuntimeRunInspectionPayload;
+}
+
 interface HttpStatusResponse {
   object: 'status';
   ok: true;
@@ -122,6 +132,7 @@ interface HttpStatusResponse {
     status: string;
     recoveryDetailTemplate: string;
     teamRunInspection: string;
+    runtimeRunInspection: string;
     models: string;
     responsesCreate: string;
     responsesGetTemplate: string;
@@ -343,6 +354,33 @@ export async function createResponsesHttpServer(
           return;
         } catch (error) {
           if (error instanceof TeamRunInspectionError) {
+            sendJson(res, error.status === 'not-found' ? 404 : 400, {
+              error: {
+                message: error.message,
+                type: error.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
+          }
+          throw error;
+        }
+      }
+
+      if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/inspect') {
+        try {
+          const inspection = await inspectRuntimeRun({
+            runId: url.searchParams.get('runId'),
+            runnerId: url.searchParams.get('runnerId'),
+            control,
+            runnersControl,
+          });
+          sendJson(res, 200, {
+            object: 'runtime_run_inspection',
+            inspection,
+          } satisfies HttpRuntimeRunInspectionResponse);
+          return;
+        } catch (error) {
+          if (error instanceof RuntimeRunInspectionError) {
             sendJson(res, error.status === 'not-found' ? 404 : 400, {
               error: {
                 message: error.message,
@@ -792,7 +830,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, GET /v1/team-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -855,6 +893,7 @@ function createHttpStatusResponse(input: {
       recoveryDetailTemplate: '/status/recovery/{run_id}',
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
+      runtimeRunInspection: '/v1/runtime-runs/inspect?runId={run_id}[&runnerId={runner_id}]',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
