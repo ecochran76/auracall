@@ -13,3 +13,5 @@ vendor/oracle-notifier/OracleIcon.icns
 vendor/oracle-notifier/OracleIcon.iconset
 /.claude
 /.codex
+# Stray Windows/Lighthouse scratch root created by misresolved temp paths
+undefined:/

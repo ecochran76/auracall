@@ -100,20 +100,198 @@ Terminology note:
 - A bounded local OpenAI-compatible responses adapter is available for
   development through `auracall api serve`. Current endpoints are:
   - `GET /status`
+  - `GET /status/recovery/{run_id}`
+  - `GET /v1/team-runs/inspect`
   - `GET /v1/models`
   - `POST /v1/responses`
   - `GET /v1/responses/{response_id}`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
+    - `POST /v1/responses` may now initially return `in_progress` while the
+      server-owned local background drain advances work
+    - poll `GET /v1/responses/{response_id}` for terminal readback
   - startup recovery default source can be tuned with
     `--recover-runs-on-start-source <direct|team-run|all>`
     (`direct` by default)
   - `GET /status?recovery=true` (or `1`) returns optional recovery state:
     - defaults to `sourceKind=direct`
     - optionally filters with `sourceKind=direct|team-run|all`
-    - includes `totalRuns`, plus `reclaimableRunIds`, `activeLeaseRunIds`,
-      `strandedRunIds`, and `idleRunIds`
+    - includes `totalRuns`, plus `reclaimableRunIds`,
+      `recoverableStrandedRunIds`, `activeLeaseRunIds`, `strandedRunIds`, and
+      `idleRunIds`
+    - also includes bounded local-claim summary under `localClaim` when a local runner is configured:
+      - `runnerId`
+      - `selectedRunIds`
+      - `blockedRunIds`
+      - `notReadyRunIds`
+      - `unavailableRunIds`
+      - `reasonsByRunId`
+    - also includes bounded active-lease health under `activeLeaseHealth`:
+      - `freshRunIds`
+      - `staleHeartbeatRunIds`
+      - `suspiciousIdleRunIds`
+      - `reasonsByRunId`
+    - also includes bounded lease-repair posture under `leaseRepair`:
+      - `locallyReclaimableRunIds`
+      - `inspectOnlyRunIds`
+      - `notReclaimableRunIds`
+      - `repairedRunIds`
+      - `reasonsByRunId`
+  - `GET /status/recovery/{run_id}` returns one bounded per-run recovery
+    detail view with:
+    - `taskRunSpecId`
+    - bounded persisted `taskRunSpecSummary`:
+      - `id`
+      - `teamId`
+      - `title`
+      - `objective`
+      - `createdAt`
+      - `persistedAt`
+      - `requestedOutputCount`
+      - `inputArtifactCount`
+    - bounded `orchestrationTimelineSummary` from relevant durable
+      `sharedState.history` entries:
+      - `total`
+      - bounded `items`
+        - `type`
+        - `createdAt`
+        - `stepId`
+        - `note`
+        - `handoffId`
+    - bounded `handoffTransferSummary` when incoming planned handoffs for the
+      current dependent step carry task-aware transfer context:
+      - `total`
+      - bounded `items`
+        - `handoffId`
+        - `fromStepId`
+        - `fromAgentId`
+        - `title`
+        - `objective`
+        - `requestedOutputCount`
+        - `inputArtifactCount`
+    - current host classification
+    - active lease snapshot
+    - dispatch posture
+    - reconciliation / repair posture and reasons
+    - active-lease health under `leaseHealth`, including whether the lease looks fresh, stale-heartbeat, or suspiciously idle
+    - bounded host drain now also treats `stale-heartbeat` as its own skip posture; `suspiciously-idle` remains diagnostic only
+    - `POST /status` now also accepts one bounded stale-heartbeat operator action:
+      - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
+      - it only repairs runs currently classified as `stale-heartbeat` when the existing durable repair posture is already `locally-reclaimable`
+      - `suspiciously-idle` remains read-only and is rejected by that action
+    - `POST /status` now also accepts one bounded local run-cancel operator action:
+      - `{"runControl":{"action":"cancel-run","runId":"..."}}`
+      - it only cancels runs that currently hold an active lease owned by the local configured runner/host
+      - it releases that active lease with release reason `cancelled`
+      - inactive or not-owned runs are rejected cleanly instead of being force-cancelled
+    - `POST /status` now also accepts one bounded human-escalation resume action:
+      - `{"runControl":{"action":"resume-human-escalation","runId":"...","note":"...","guidance":{...},"override":{"promptAppend":"...","structuredContext":{...}}}}`
+      - it applies to direct or team runs currently paused for human escalation
+      - it resumes the cancelled human-escalation step back to `runnable`
+      - runs without a paused human-escalation step are rejected cleanly
+    - `POST /status` now also accepts one bounded targeted drain action:
+      - `{"runControl":{"action":"drain-run","runId":"..."}}`
+      - it applies to direct or team runs
+      - it triggers one targeted host drain pass for that run
+      - it is the intended post-resume follow-through path when operators want immediate execution instead of waiting for the ordinary background drain
+    - `POST /status` now also accepts one bounded local-action request resolution action:
+      - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
+      - it only applies to currently `requested` local action records on direct or team runs
+      - it updates the persisted local-action outcome summary used by `GET /v1/responses/{response_id}`
+      - already-resolved requests are rejected cleanly instead of being overwritten
+    - recovery summary/detail now also surface bounded attention for unrepaired stale-heartbeat cases:
+      - `recoverySummary.attention.staleHeartbeatInspectOnlyRunIds`
+      - per-run `attention.kind = stale-heartbeat-inspect-only`
+    - recovery summary/detail now also surface bounded cancellation readback:
+      - `recoverySummary.cancelledRunIds`
+      - `recoverySummary.cancellation.reasonsByRunId`
+      - per-run `cancellation.cancelledAt`
+      - per-run `cancellation.source`
+      - per-run `cancellation.reason`
+    - startup recovery logs now also emit:
+      - `attention=stale-heartbeat-inspect-only:<count>`
+    - configured local runner claim posture under `localClaim`, including whether the current local runner is actually selected
+  - `GET /v1/team-runs/inspect` returns one bounded read-only team linkage view:
+    - query by `taskRunSpecId=<task_run_spec_id>` or `runtimeRunId=<runtime_run_id>`
+    - returns:
+      - `resolvedBy`
+      - `queryId`
+      - bounded `taskRunSpecSummary`
+      - `matchingRuntimeRunCount`
+      - bounded `matchingRuntimeRunIds`
+      - bounded `runtime` summary:
+        - `runtimeRunId`
+        - `teamRunId`
+        - `taskRunSpecId`
+        - `runtimeSourceKind`
+        - `runtimeRunStatus`
+        - `runtimeUpdatedAt`
+        - `sharedStateStatus`
+        - `stepCount`
+        - `handoffCount`
+        - `localActionRequestCount`
+        - `nextRunnableStepId`
+        - bounded runnable/deferred/waiting/running/blocked/terminal step ids
+        - `activeLeaseOwnerId`
+    - this is inspection-only and does not create or mutate team execution
+  - `/status` also reports bounded background-drain state:
+    - `enabled`
+    - `intervalMs`
+    - `state = disabled|idle|scheduled|running`
+    - `paused`
+    - `lastTrigger`
+    - `lastStartedAt`
+    - `lastCompletedAt`
+  - `/status` now also reports the live persisted local runner identity for
+    `api serve` under `runner`:
+    - `id`
+    - `hostId`
+    - `status`
+    - `lastHeartbeatAt`
+    - `expiresAt`
+    - `lastActivityAt`
+    - `lastClaimedRunId`
+  - plain `/status` now also reports a compact direct-run local claim snapshot
+    under `localClaimSummary` when a local runner is configured:
+    - `sourceKind`
+    - `runnerId`
+    - `selectedRunIds`
+    - `blockedRunIds`
+    - `notReadyRunIds`
+    - `unavailableRunIds`
+    - `reasonsByRunId`
+  - bounded local claims now use that live runner id as the lease owner
+    instead of a generic host-only owner string
+  - successful bounded direct-run execution now also updates that persisted
+    runner record with:
+    - `lastActivityAt`
+    - `lastClaimedRunId`
+  - if a run is cancelled while a delayed local step is still finishing, the
+    final persisted state now stays `cancelled` instead of being overwritten by
+    the later step completion
+  - bounded local execution now refreshes the active lease heartbeat while a
+    step is still running so live runner-owned claims do not start stale and do
+    not rely on one-shot lease freshness
+  - `POST /status` provides one bounded operator control seam for the same
+    background drain loop:
+    - `{"backgroundDrain":{"action":"pause"}}`
+    - `{"backgroundDrain":{"action":"resume"}}`
+    - and one bounded stale-heartbeat lease repair action:
+      - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
+    - and one bounded local run-cancel action:
+      - `{"runControl":{"action":"cancel-run","runId":"..."}}`
+      - cancellation is single-runner scoped and only applies to active locally
+        owned runs
+    - and one bounded human-escalation resume action:
+      - `{"runControl":{"action":"resume-human-escalation","runId":"...","note":"...","guidance":{...},"override":{"promptAppend":"...","structuredContext":{...}}}}`
+      - resume is limited to direct or team runs currently paused for human escalation
+    - and one bounded targeted drain action:
+      - `{"runControl":{"action":"drain-run","runId":"..."}}`
+      - targeted drain is limited to direct or team runs and performs one host-owned pass for that run
+    - and one bounded local-action request resolution action:
+      - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
+      - resolution is limited to currently `requested` direct-run or team-run local action records
   - `/status` now reports explicit development posture, route surface, and
     unauthenticated/local-only state, including the current AuraCall version
   - optional `X-AuraCall-*` execution headers for:
@@ -124,9 +302,143 @@ Terminology note:
   - no auth
   - no streaming
   - no `chat/completions` adapter yet
-  - no broader service-host integration yet
+  - runner self-registration + heartbeat now exist for the local `api serve`
+    host, but there is still no broader multi-runner claim/reassignment mode
   - direct-run responses now include bounded execution readback under
     `metadata.executionSummary`
+  - if runtime shared state exposes `structuredOutputs[key="response.output"]`,
+    preserve that structured mixed payload on top-level `response.output`
+    instead of flattening it into metadata
+  - runtime-backed response readback now also includes bounded assignment
+    identity under top-level response metadata:
+    - `metadata.taskRunSpecId`
+  - task-backed runtime execution now also injects bounded assignment context
+    directly into step execution:
+    - `taskContext`
+    - `taskStructuredContext`
+    - `taskInputArtifacts`
+    - dependency-scoped `taskTransfer` from incoming planned handoffs
+  - task-backed team planning now also shapes bounded inter-step handoffs with
+    compact transfer context under handoff `structuredData.taskTransfer`:
+    - `title`
+    - `objective`
+    - `successCriteria`
+    - bounded `requestedOutputs`
+    - bounded `inputArtifacts`
+  - runtime-backed detailed response readback now also includes bounded task
+    assignment artifact refs under:
+    - `metadata.executionSummary.inputArtifactSummary`
+    - `total`
+    - bounded `items`
+      - `id`
+      - `kind`
+      - `title`
+      - `path`
+      - `uri`
+    - runtime-backed detailed response readback now also includes bounded
+      consumed handoff transfer context under:
+      - `metadata.executionSummary.handoffTransferSummary`
+      - `total`
+      - bounded `items`
+        - `handoffId`
+        - `fromStepId`
+        - `fromAgentId`
+        - `title`
+        - `objective`
+        - `requestedOutputCount`
+        - `inputArtifactCount`
+  - runtime-backed detailed response readback now also includes bounded
+      orchestration timeline summary derived from durable shared-state history
+      under:
+      - `metadata.executionSummary.orchestrationTimelineSummary`
+      - `total`
+      - bounded `items`
+        - `type`
+        - `createdAt`
+        - `stepId`
+        - `note`
+        - `handoffId`
+    - mixed-provider response readback now also includes bounded per-step
+      routing projection under:
+      - `metadata.executionSummary.stepSummaries`
+      - use this field when you need routing proof from response readback
+        itself
+      - contract split:
+        - top-level `metadata.service` / `metadata.runtimeProfile` remain the
+          compact response summary
+        - top-level `response.output` remains the transport payload
+        - `metadata.executionSummary.stepSummaries` is the per-step routing
+          projection
+        - execution-summary fields should not leak into individual `output`
+          items
+        - `GET /status/recovery/{run_id}` remains the orchestration timeline
+          surface and should not grow routing fields like:
+          - `runtimeProfile`
+          - `service`
+          - `stepSummaries`
+    - requested-output fulfillment reads now also include
+      `metadata.executionSummary.requestedOutputSummary` with:
+        - `total`
+      - `fulfilledCount`
+      - `missingRequiredCount`
+      - bounded per-item `label`
+      - bounded per-item `kind`
+      - bounded per-item `format`
+      - bounded per-item `destination`
+      - bounded per-item `required`
+      - bounded per-item `fulfilled`
+      - bounded per-item `evidence`
+    - required requested-output policy reads now also include
+      `metadata.executionSummary.requestedOutputPolicy` with:
+      - `status = satisfied|missing-required`
+      - `message`
+      - `missingRequiredLabels`
+      - when required outputs are still missing, response readback now returns
+        `status = failed` with bounded failure code
+        `requested_output_required_missing`
+      - stored runtime/service terminal state now also converges to `failed`
+        for those same clearly missing-required cases
+      - task-run-spec provider request budget now also has one bounded runtime
+        enforcement seam:
+        - when the next runnable step order would exceed
+          `constraints.providerBudget.maxRequests`, runtime/service state fails
+          before execution with bounded failure code
+          `task_provider_request_limit_exceeded`
+      - task-run-spec provider token budget now also has one bounded runtime
+        enforcement seam:
+        - when cumulative stored provider usage already exceeds
+          `constraints.providerBudget.maxTokens`, runtime/service state fails
+          before the next step executes with bounded failure code
+          `task_provider_token_limit_exceeded`
+    - runtime-backed response readback now also includes bounded provider
+      usage when the stored execution path reports real usage:
+      - `metadata.executionSummary.providerUsageSummary`
+      - `ownerStepId`
+      - `generatedAt`
+      - `inputTokens`
+      - `outputTokens`
+      - `reasoningTokens`
+      - `totalTokens`
+    - resumed/drained operator lifecycle reads now also include
+      `metadata.executionSummary.operatorControlSummary` with:
+      - `humanEscalationResume.resumedAt`
+      - `humanEscalationResume.note`
+      - `targetedDrain.requestedAt`
+      - `targetedDrain.status`
+      - `targetedDrain.reason`
+      - `targetedDrain.skipReason`
+    - cancelled terminal reads now also include
+      `metadata.executionSummary.cancellationSummary` with:
+      - `cancelledAt`
+      - `source`
+      - `reason`
+    - local-action terminal reads now also include
+      `metadata.executionSummary.localActionSummary` with:
+      - `ownerStepId`
+      - `generatedAt`
+      - `counts`
+      - bounded `items`
+      - operator resolution of pending local-action requests now updates this same summary
   - non-loopback `--host` bindings are allowed but still warned as unsafe for
     anything beyond local development
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).
@@ -259,6 +571,16 @@ auracall --profile review --engine browser --project-name "Sprint Review Notes" 
 auracall --profile review --engine browser --project-id g-p-abcdef123456789 -p "Review this branch"
 ```
 
+Project-name rule
+
+- `--project-name` resolves and reuses an existing exact-name project when one
+  is already visible from the provider list.
+- `auracall projects create '<name>' --target <provider>` now refuses
+  exact-name duplicates instead of creating a second project with the same
+  display name.
+- If you mean "create if missing", list or resolve first, then create only when
+  no exact-name match exists.
+
 Advanced flags
 
 | Area | Flags |
@@ -284,12 +606,176 @@ Session management
 auracall status --clear --hours 168
 ```
 
+Team execution (bounded internal bridge)
+```bash
+# Execute one configured team through the internal runtime bridge
+auracall teams run auracall-solo "Draft a concise runtime note"
+
+# Machine-readable payload for inspection
+auracall teams run auracall-solo "Reply exactly with: OK" --max-turns 1 --json
+
+# Bounded two-step workflow on the same Grok project/runtime profile
+auracall teams run auracall-two-step "Reply exactly with: OK" --max-turns 2 --json
+
+# Bounded multi-agent planner-to-finisher workflow on the same Grok project/runtime profile
+auracall teams run auracall-multi-agent "Reply exactly with: OK" --max-turns 2 --json
+
+# Bounded tooling workflow with one allowed local shell action
+auracall teams run auracall-tooling "Run one bounded node local shell action, then reply exactly with: OK" \
+  --max-turns 2 \
+  --allow-local-shell-command node \
+  --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+  --json
+
+# Require operator approval/cancellation before the bounded local action can proceed
+auracall teams run auracall-tooling "Request one bounded node local shell action, then wait for operator approval/cancellation" \
+  --max-turns 2 \
+  --allow-local-shell-command node \
+  --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+  --require-local-action-approval \
+  --json
+
+# Bounded ChatGPT team baseline on the managed wsl-chrome-2 browser profile
+auracall teams run auracall-chatgpt-solo "Reply exactly with: OK" --max-turns 1 --json
+
+# Bounded cross-service workflow: ChatGPT planner -> Grok finisher
+auracall teams run auracall-cross-service "Reply exactly with: OK" --max-turns 2 --json
+
+# Bounded cross-service workflow: ChatGPT planner -> Gemini finisher
+auracall teams run auracall-cross-service-gemini "Reply exactly with: OK" --max-turns 2 --json
+
+# Inspect persisted task assignment and linked runtime state
+auracall teams inspect --task-run-spec-id taskrun_auracall-solo_abc123 --json
+auracall teams inspect --runtime-run-id teamrun_auracall-solo_abc123
+```
+
+Current boundary:
+- `auracall teams run` is a real CLI execution entrypoint and returns
+  `taskRunSpecId`, `teamRunId`, `runtimeRunId`, step summaries, and shared
+  state.
+- `auracall teams inspect` is a bounded internal debug surface for persisted
+  `taskRunSpec -> teamRun -> runtime` linkage. It reads one persisted task
+  assignment plus the latest linked runtime dispatch state without widening
+  public team execution semantics.
+- Browser-backed team execution is now provider-backed on the stored-step seam.
+- The current live smoke target is:
+  - `auracall teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
+- The current ChatGPT team baseline target is:
+  - `auracall teams run auracall-chatgpt-solo "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" --title "AuraCall ChatGPT team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
+- The current cross-service live target is:
+  - `auracall teams run auracall-cross-service "Reply exactly with: AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK" --title "AuraCall cross-service team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+- The current cross-service Gemini live target is:
+  - `auracall teams run auracall-cross-service-gemini "Reply exactly with: AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK" --title "AuraCall cross-service Gemini team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+- The current broader-workflow live target is:
+  - `auracall teams run auracall-two-step "Reply exactly with: AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK" --title "AuraCall two-step team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+- The current multi-agent live target is:
+  - `auracall teams run auracall-multi-agent "Reply exactly with: AURACALL_MULTI_AGENT_LIVE_SMOKE_OK" --title "AuraCall multi-agent team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_MULTI_AGENT_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+- The current bounded tooling live target is:
+  - `auracall teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+- Gemini-bound team experimentation is now also live on the same stored-step seam:
+  - `auracall teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - on this WSL Chrome pairing, stored Gemini team execution may need exported cookies first:
+    - `pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies`
+  - stored Gemini team execution now reuses the same scoped/home exported-cookie fallback as direct Gemini browser mode when Linux keyring cookie reads return no Google auth cookies
+- Current expected live result:
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+  - `runtimeProfileId = "auracall-grok-auto"`
+  - `browserProfileId = "default"`
+  - `service = "grok"`
+  - `finalOutputSummary = "AURACALL_TEAM_SMOKE_OK"`
+- Current expected broader-workflow result:
+  - two ordered steps succeed on the same Grok runtime profile
+  - durable shared state records consumed-transfer evidence for step 2
+  - `finalOutputSummary = "AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK"`
+- Current expected ChatGPT team baseline result:
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+  - `runtimeProfileId = "wsl-chrome-2"`
+  - `browserProfileId = "wsl-chrome-2"`
+  - `service = "chatgpt"`
+  - `finalOutputSummary = "AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK"`
+- Current expected cross-service result:
+  - two ordered steps succeed across different providers
+  - step 1 resolves to:
+    - `runtimeProfileId = "wsl-chrome-2"`
+    - `browserProfileId = "wsl-chrome-2"`
+    - `service = "chatgpt"`
+  - step 2 resolves to:
+    - `runtimeProfileId = "auracall-grok-auto"`
+    - `browserProfileId = "default"`
+    - `service = "grok"`
+  - durable recovery/response readback both show:
+    - non-empty orchestration timeline
+    - at least one `handoff-consumed` item
+  - `finalOutputSummary = "AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK"`
+- Current expected cross-service Gemini result:
+  - two ordered steps succeed across different providers
+  - step 1 resolves to:
+    - `runtimeProfileId = "wsl-chrome-2"`
+    - `browserProfileId = "wsl-chrome-2"`
+    - `service = "chatgpt"`
+  - step 2 resolves to:
+    - `runtimeProfileId = "auracall-gemini-pro"`
+    - `browserProfileId = "default"`
+    - `service = "gemini"`
+  - durable recovery/response readback both show:
+    - non-empty orchestration timeline
+    - at least one `handoff-consumed` item
+  - `finalOutputSummary = "AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK"`
+- Current expected multi-agent result:
+  - two ordered steps succeed on the same Grok runtime profile
+  - the planner step hands off to the finisher step
+  - durable shared state records consumed-transfer evidence for step 2
+  - `finalOutputSummary = "AURACALL_MULTI_AGENT_LIVE_SMOKE_OK"`
+- Current expected tooling result:
+  - two ordered steps succeed on the same Grok runtime profile
+  - the first step emits only a bounded `localActionRequests` JSON envelope
+  - the allowed `node` local shell action executes under the declared cwd root
+  - shared state records:
+    - `local shell action executed: node`
+    - local action outcome summary for the tool step
+  - `finalOutputSummary = "AURACALL_TOOL_TEAM_LIVE_SMOKE_OK"`
+- Current tooling-test boundary:
+  - manual provider-backed CLI proof is green
+  - the automated tooling live case remains separately gated behind
+    `AURACALL_TOOLING_LIVE_TEST=1`
+  - keep the stable Grok baseline on `AURACALL_LIVE_TEST=1` only until the
+    Grok tool-envelope path is deterministic enough to stop flaking
+- Important browser-profile rule:
+  - when a runtime profile points at an existing managed browser profile via
+    `manualLoginProfileDir`, Aura-Call now follows the owning browser family
+    for managed-profile resolution instead of minting a fresh runtime-profile-
+    namespaced browser directory.
+- Important Grok testing guard:
+  - Grok browser-backed runs now persist one bounded per-managed-browser-profile
+    cooldown/spacing record under `~/.auracall/cache/providers/grok/__runtime__`
+  - repeated Grok test runs may now:
+    - auto-wait briefly
+    - or fail fast with a visible `Grok rate limit cooldown active until ...`
+      / `Grok write spacing active until ...` message
+  - visible provider toasts such as:
+    - `Query limit reached for Auto`
+    - `Try again in 4 minutes`
+    are now treated as real Grok cooldown signals instead of timing out as
+    generic browser failures
+  - this is intentional and is meant to reduce self-inflicted live-test churn
+    during repeated browser/team runs
+
 ## More docs
 - Browser mode & forks: [docs/browser-mode.md](docs/browser-mode.md) (includes `auracall serve` remote service), [docs/chromium-forks.md](docs/chromium-forks.md), [docs/linux.md](docs/linux.md)
 - MCP: [docs/mcp.md](docs/mcp.md)
 - OpenAI/Azure/OpenRouter endpoints: [docs/openai-endpoints.md](docs/openai-endpoints.md), [docs/openrouter.md](docs/openrouter.md)
 - Manual smokes: [docs/manual-tests.md](docs/manual-tests.md)
 - Testing: [docs/testing.md](docs/testing.md)
+  - the live suite is intentionally tiered into:
+    - stable baseline
+    - extended matrix
+    - flaky-but-informative probes
+  - use the stable baseline for routine confidence and keep the broader
+    provider/operator matrix opt-in
+  - current routine baseline command:
+    - `pnpm run test:live:team:baseline`
 
 If you’re looking for an even more powerful context-management tool, check out https://repoprompt.com  
 Name inspired by: https://ampcode.com/news/oracle

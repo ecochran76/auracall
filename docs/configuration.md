@@ -188,8 +188,19 @@ Target-model note:
   - usually `version: 2`
   - `auracallProfile` as the compatibility runtime-profile selector
   - `browserFamilies` as the browser-profile bridge
-  - `profiles` as the AuraCall runtime-profile bridge
+- `profiles` as the AuraCall runtime-profile bridge
 - use `--bridge-shape` when you intentionally want compatibility bridge output
+
+Runtime host policy note:
+- `runtime.localActions.shell` defines the host/runtime execution ceiling for
+  built-in shell local actions
+- task/team policy may narrow that ceiling, but should not widen it
+- current staged values are:
+  - `bounded-command`
+  - `repo-automation`
+  - `extended`
+- this currently affects internal local-action execution paths rather than
+  adding a new public CLI surface
 
 Version policy:
 - `version: 3` means the file is written in the primary target shape
@@ -216,6 +227,20 @@ Version policy:
     chatgpt: { url: "https://chatgpt.com/" },
     gemini: { url: "https://gemini.google.com/app" },
     grok: { url: "https://grok.com/" },
+  },
+
+  // Optional host-owned runtime execution policy defaults
+  runtime: {
+    localActions: {
+      shell: {
+        complexityStage: "bounded-command",
+        allowedCommands: ["node", "npm", "pnpm", "git"],
+        allowedCwdRoots: ["/home/you/workspace.local/oracle"],
+        defaultShellActionTimeoutMs: "15s",
+        maxShellActionTimeoutMs: "120s",
+        maxCaptureChars: 8000,
+      },
+    },
   },
 
   // Optional named browser profiles

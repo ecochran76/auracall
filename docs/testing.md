@@ -1,6 +1,72 @@
 # Testing quickstart
 
 - Unit/type tests: `pnpm test` (Vitest) and `pnpm run check` (typecheck).
+- Live-suite posture:
+  - stable baseline:
+    - keep small, repeatable, and operationally useful
+    - prefer one-provider baselines plus the few highest-value matrix checks
+  - extended matrix:
+    - keep the broader mixed-provider/operator-control proofs opt-in
+    - use for periodic confidence, not every routine pass
+  - flaky-but-informative probes:
+    - keep separately gated
+    - do not promote into the stable baseline until they stop needing special
+      handling
+- Current live-suite tier map:
+  - stable baseline:
+    - `tests/live/team-grok-live.test.ts`
+      - default `AURACALL_LIVE_TEST=1` cases only:
+        - `auracall-solo`
+        - `auracall-two-step`
+        - `auracall-multi-agent`
+    - `tests/live/team-chatgpt-live.test.ts`
+      - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_TEAM_LIVE_TEST=1`
+      - single-provider ChatGPT baseline only
+  - extended matrix:
+    - `tests/live/team-gemini-live.test.ts`
+      - `AURACALL_LIVE_TEST=1 AURACALL_GEMINI_TEAM_LIVE_TEST=1`
+      - keep opt-in because Gemini still depends on exported-cookie preflight
+        and stricter browser/session conditions on this machine
+    - `tests/live/team-grok-live.test.ts`
+      - `AURACALL_TOOLING_LIVE_TEST=1`
+      - `AURACALL_APPROVAL_LIVE_TEST=1`
+      - `AURACALL_REJECTION_LIVE_TEST=1`
+      - `AURACALL_CANCELLATION_LIVE_TEST=1`
+    - `tests/live/team-chatgpt-live.test.ts`
+      - `AURACALL_CHATGPT_APPROVAL_LIVE_TEST=1`
+      - `AURACALL_CHATGPT_CANCELLATION_LIVE_TEST=1`
+    - `tests/live/team-multiservice-live.test.ts`
+      - all mixed-provider happy-path and operator-control gates stay here by
+        default
+  - flaky-but-informative probes:
+    - provider/browser cases that still need bounded reruns or stricter
+      preflight, especially Gemini-resume cases that can intermittently fail
+      with transient fetch/browser instability
+    - do not promote those probes into the stable baseline until they stop
+      needing:
+        - exported-cookie or manual-auth preflight beyond the normal path
+        - one bounded rerun to distinguish provider noise from product
+          regressions
+        - provider-specific cooldown/captcha handling
+- Routine live commands:
+  - stable baseline:
+    - `pnpm run test:live:team:baseline`
+    - current scope:
+      - `tests/live/team-grok-live.test.ts` default Grok baseline cases
+      - `tests/live/team-chatgpt-live.test.ts` single-provider ChatGPT
+        baseline
+    - the test files themselves now carry matching tier comments near the
+      env-gate definitions so operators can see baseline versus matrix intent
+      without leaving the suite
+  - extended matrix:
+    - run file-level suites with explicit opt-in gates, for example:
+      - `AURACALL_LIVE_TEST=1 AURACALL_GEMINI_TEAM_LIVE_TEST=1 pnpm vitest run tests/live/team-gemini-live.test.ts`
+      - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_TEAM_LIVE_TEST=1 pnpm vitest run tests/live/team-multiservice-live.test.ts`
+      - `AURACALL_LIVE_TEST=1 AURACALL_APPROVAL_LIVE_TEST=1 pnpm vitest run tests/live/team-grok-live.test.ts -t "human escalation"`
+  - do not use `pnpm test:live` as the routine baseline command for this phase:
+    - it still sweeps a much broader live surface than the current team
+      baseline
+    - keep it for wider opt-in live coverage, not for the small default target
 - Local `api serve` smoke:
   - terminal 1: `pnpm tsx bin/auracall.ts api serve --port 8080`
   - optional startup-recovery tuning:
@@ -8,18 +74,723 @@
     - cap startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-max 25`
     - recover only team source runs: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source team-run`
     - recover both sources: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-source all`
+    - wrapper contract:
+      - default startup recovery scope remains `direct`
+      - `team-run` recovers only team runs
+      - `all` recovers both direct and team runs
+      - the startup cap still applies after widening scope to `all`
   - terminal 2: `curl http://127.0.0.1:8080/status`
+    - current expected status includes bounded background-drain visibility:
+      - `backgroundDrain.enabled`
+      - `backgroundDrain.intervalMs`
+      - `backgroundDrain.state`
+      - `backgroundDrain.paused`
+      - `backgroundDrain.lastTrigger`
+    - current expected status also includes the live local runner heartbeat:
+      - `runner.id`
+      - `runner.hostId`
+      - `runner.status = active`
+      - `runner.lastHeartbeatAt`
+      - `runner.expiresAt`
+      - `runner.lastActivityAt`
+      - `runner.lastClaimedRunId`
+    - plain `/status` also includes a compact direct-run local claim snapshot:
+      - `localClaimSummary.sourceKind = direct`
+      - `localClaimSummary.runnerId`
+      - `localClaimSummary.selectedRunIds`
+      - `localClaimSummary.blockedRunIds`
+      - `localClaimSummary.notReadyRunIds`
+      - `localClaimSummary.unavailableRunIds`
+  - optional operator control on the same surface:
+    - pause: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"backgroundDrain":{"action":"pause"}}'`
+    - resume: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"backgroundDrain":{"action":"resume"}}'`
+    - cancel one active local run:
+      - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"runControl":{"action":"cancel-run","runId":"<response_id>"}}'`
+    - resume one paused human-escalation direct or team run:
+      - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"runControl":{"action":"resume-human-escalation","runId":"<response_id>","note":"human approved resume","guidance":{"action":"retry-with-guidance"},"override":{"promptAppend":"Retry the resumed step.","structuredContext":{"approvedPath":"/repo/approved"}}}}'`
+    - trigger one targeted drain pass for a direct or team run:
+      - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"runControl":{"action":"drain-run","runId":"<response_id>"}}'`
+      - if the local configured runner cannot safely claim that run, targeted
+        drain should return `status = skipped` with
+        `skipReason = claim-owner-unavailable`
+      - for bounded multi-pass drain accounting:
+        - preserve repeated executions for the same run across passes
+        - but count one reclaimed stale lease only once in
+          `expiredLeaseRunIds`
+    - response/readback should preserve both targeted-drain outcomes:
+      - `operatorControlSummary.targetedDrain.status = executed|skipped`
+      - skipped targeted drain keeps `reason = skipReason`
+      - recovery detail timeline retains the persisted skipped drain note
+    - when multiple resume/drain operator-control entries exist on one run,
+      response readback should prefer the latest persisted resume summary and
+      the latest persisted targeted-drain note
+    - required structured-report / JSON requested outputs should not be
+      satisfied by internal structured outputs alone:
+      - `response.output`
+      - `human.resume.<stepId>`
+      - `step.localActionOutcomes.<stepId>`
+    - orchestration timeline summaries stay bounded:
+      - keep full `total`
+      - but limit `items` to the newest `10` entries on both response readback
+        and recovery detail
+    - handoff-transfer summaries should prefer stored consumed transfer state
+      over planned handoff fallback when both exist
+    - cancellation readback should also preserve the no-note fallback:
+      - if no cancellation `note-added` event exists, fall back to the
+        cancelled run's `updatedAt`
+      - read back `source = null` and `reason = null`
+      - keep that fallback explicit on both:
+        - `GET /v1/responses/{response_id}`
+    - `GET /v1/team-runs/inspect?taskRunSpecId=<task_run_spec_id>`
+        - `GET /status/recovery/{run_id}`
+    - resolve one pending local-action request on a direct or team run:
+      - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
   - create bounded response:
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
   - current expected posture:
-    - one bounded sequential local runner pass executes for a direct run
-    - the returned response should normally be `completed` or `failed`, not
-      just a durable placeholder
+    - `POST /v1/responses` persists the run and the server-owned background
+      drain advances it
+    - `api serve` now also persists one bounded local runner record and keeps
+      it heartbeated while the server stays up
+    - bounded local claims now use that live runner id as the lease owner
+    - successful direct-run execution now also updates that persisted runner
+      record with:
+      - `lastActivityAt`
+      - `lastClaimedRunId`
+    - while a direct-run step is still executing, the active lease should now
+      also be refreshed under the live runner owner instead of relying on the
+      initial claim timestamp alone
+    - if that configured runner owner is missing or stale, new local claims
+      should be skipped instead of silently falling back to a generic host id
+    - `POST /status` run cancellation is now bounded to active locally owned
+      runs:
+      - active local runner-owned run => cancelled + lease released with
+        `cancelled`
+      - inactive or not-owned run => 409
+    - `POST /status` human-escalation resume is now bounded to direct or
+      team runs currently paused for human escalation:
+      - paused human-escalation run => resumed to `running` / resumed step
+        returned to `runnable`
+      - any other run => 409
+    - `POST /status` targeted drain is now bounded to direct or team runs:
+      - runnable or resumed run => one targeted host drain pass and
+        immediate execution if claimable
+      - skipped or non-runnable run => 409
+    - `POST /status` local-action resolution is now bounded to currently
+      `requested` direct or team local action records:
+      - requested request => approved/rejected/cancelled and reflected in later
+        `metadata.executionSummary.localActionSummary`
+      - already-resolved request => 409
+    - when multiple persisted `step.localActionOutcomes.<stepId>` summaries
+      exist on the same run, response readback should prefer the terminal
+      step's summary instead of older step-local action summaries
+    - if a running step finishes after an external/local cancellation wins the
+      persist race, the final stored run must remain `cancelled`
+    - the create response may initially be `in_progress`
+    - `GET /v1/responses/<response_id>` should converge to `completed`,
+      `failed`, or `cancelled`
     - terminal direct-run readback now also includes bounded execution details
       under `metadata.executionSummary`
-- Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-refactor-plan.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
+    - when one run contains both:
+      - a failed step
+      - a later succeeded or cancelled step
+      terminal readback should still prefer the failed step for:
+      - `terminalStepId`
+      - `completedAt`
+      - `failureSummary`
+    - if stored shared-state exposes `structuredOutputs[key="response.output"]`,
+      preserve that structured mixed output on `response.output`
+    - keep the split explicit:
+      - `response.output` is the transport payload
+      - runtime/readback summaries stay under `metadata.executionSummary`
+      - do not leak execution-summary fields into individual `output` items
+    - runtime-backed readback now also includes bounded assignment identity:
+      - `metadata.taskRunSpecId`
+      - task-backed runtime execution now also injects bounded assignment
+        context into step execution:
+        - `taskContext`
+        - `taskStructuredContext`
+        - `taskInputArtifacts`
+        - dependency-scoped `taskTransfer` from incoming planned handoffs
+      - task-backed team planning now also shapes bounded inter-step handoffs
+        under handoff `structuredData.taskTransfer`:
+        - `title`
+        - `objective`
+        - `successCriteria`
+        - bounded `requestedOutputs`
+        - bounded `inputArtifacts`
+      - runtime-backed response/recovery readback now also includes bounded
+        persisted task assignment identity when a stored `taskRunSpec` exists:
+        - response: `metadata.taskRunSpecSummary`
+        - recovery detail: `taskRunSpecSummary`
+        - public team inspection: `inspection.taskRunSpecSummary`
+        - fields:
+          - `id`
+          - `teamId`
+          - `title`
+          - `objective`
+          - `createdAt`
+          - `persistedAt`
+          - `requestedOutputCount`
+          - `inputArtifactCount`
+      - runtime-backed detailed response readback now also includes bounded
+        task assignment artifact refs:
+        - `metadata.executionSummary.inputArtifactSummary.total`
+        - `metadata.executionSummary.inputArtifactSummary.items[*].id`
+        - `metadata.executionSummary.inputArtifactSummary.items[*].kind`
+        - `metadata.executionSummary.inputArtifactSummary.items[*].title`
+        - `metadata.executionSummary.inputArtifactSummary.items[*].path`
+        - `metadata.executionSummary.inputArtifactSummary.items[*].uri`
+        - terminal readback should use the terminal step's artifact set when
+          present, otherwise the latest earlier step with artifacts
+      - runtime-backed detailed response readback now also includes bounded
+        consumed handoff transfer context:
+        - `metadata.executionSummary.handoffTransferSummary.total`
+        - `metadata.executionSummary.handoffTransferSummary.items[*].handoffId`
+        - `metadata.executionSummary.handoffTransferSummary.items[*].fromStepId`
+        - `metadata.executionSummary.handoffTransferSummary.items[*].fromAgentId`
+      - `metadata.executionSummary.handoffTransferSummary.items[*].title`
+      - `metadata.executionSummary.handoffTransferSummary.items[*].objective`
+      - `metadata.executionSummary.handoffTransferSummary.items[*].requestedOutputCount`
+      - `metadata.executionSummary.handoffTransferSummary.items[*].inputArtifactCount`
+      - response readback prefers stored consumed transfer state when present;
+        recovery detail falls back to planned handoff transfer data when no
+        stored consumed summary exists
+      - runtime-backed detailed response readback now also includes bounded
+        orchestration timeline summary from durable shared-state history:
+        - `metadata.executionSummary.orchestrationTimelineSummary.total`
+        - `metadata.executionSummary.orchestrationTimelineSummary.items[*].type`
+        - `metadata.executionSummary.orchestrationTimelineSummary.items[*].createdAt`
+        - `metadata.executionSummary.orchestrationTimelineSummary.items[*].stepId`
+        - `metadata.executionSummary.orchestrationTimelineSummary.items[*].note`
+        - `metadata.executionSummary.orchestrationTimelineSummary.items[*].handoffId`
+      - requested-output fulfillment reads now also include
+        `metadata.executionSummary.requestedOutputSummary`
+        - `total`
+        - `fulfilledCount`
+        - `missingRequiredCount`
+        - bounded per-item `label`
+        - bounded per-item `kind`
+        - bounded per-item `format`
+        - bounded per-item `destination`
+        - bounded per-item `required`
+        - bounded per-item `fulfilled`
+        - bounded per-item `evidence`
+      - required requested-output policy reads now also include
+        `metadata.executionSummary.requestedOutputPolicy`
+        - `status`
+        - `message`
+        - `missingRequiredLabels`
+      - terminal readback uses the terminal step's requested-output contract,
+        not older step requests
+      - if required requested outputs are still missing at terminal readback,
+        the response now reads back as:
+        - `status = failed`
+        - `metadata.executionSummary.failureSummary.code = requested_output_required_missing`
+        - stored runtime/service terminal state should also already be `failed`
+          for those same clearly missing-required cases
+      - explicit terminal step failure still wins over the derived
+        `requested_output_required_missing` fallback
+      - if the next runnable step would exceed
+        `constraints.providerBudget.maxRequests`, stored runtime/service state
+        should fail before execution with:
+        - `failure.code = task_provider_request_limit_exceeded`
+      - if cumulative stored provider usage already exceeds
+        `constraints.providerBudget.maxTokens`, stored runtime/service state
+        should fail before the next step executes with:
+        - `failure.code = task_provider_token_limit_exceeded`
+      - when the stored execution callback reports real usage, response
+        readback now also includes:
+        - `metadata.executionSummary.providerUsageSummary.ownerStepId`
+        - `metadata.executionSummary.providerUsageSummary.generatedAt`
+        - `metadata.executionSummary.providerUsageSummary.inputTokens`
+        - `metadata.executionSummary.providerUsageSummary.outputTokens`
+        - `metadata.executionSummary.providerUsageSummary.reasoningTokens`
+        - `metadata.executionSummary.providerUsageSummary.totalTokens`
+      - terminal step provider-usage summary wins over older step summaries
+      - resumed/drained operator lifecycle reads now also include
+        `metadata.executionSummary.operatorControlSummary`
+        - `humanEscalationResume.resumedAt`
+        - `humanEscalationResume.note`
+        - `targetedDrain.requestedAt`
+        - `targetedDrain.status`
+        - `targetedDrain.reason`
+        - `targetedDrain.skipReason`
+      - local-action terminal reads now also include
+        `metadata.executionSummary.localActionSummary`
+      - cancelled terminal reads now also include
+        `metadata.executionSummary.cancellationSummary`
+      - current hardening checkpoint summary:
+        - response metadata stays compact and `stepSummaries` carry per-step
+          routing
+        - recovery detail stays the lifecycle/timeline surface
+        - targeted drain, cancellation fallback, requested-output policy,
+          failure precedence, provider-usage precedence, input-artifact
+          precedence/fallback, and transfer precedence/fallback are all now
+          explicit and test-backed
+  - mixed-provider cancelled local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-cross-service-tooling local action"`
+    - current expected posture:
+      - initial `auracall-cross-service-tooling` run is `cancelled` with
+        `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Grok after requesting one bounded local shell action:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = cancelled`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.cancelled = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_CROSS_SERVICE_CANCELLATION_LIVE_SMOKE_OK`
+  - mixed-provider rejected local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-cross-service-tooling local action"`
+    - current expected posture:
+      - initial `auracall-cross-service-tooling` run is `cancelled` with
+        `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Grok after requesting one bounded local shell action:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = rejected`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.rejected = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+          `AURACALL_CROSS_SERVICE_REJECTION_LIVE_SMOKE_OK`
+  - mixed-provider approval live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-cross-service-tooling human escalation"`
+    - current expected posture:
+      - initial `auracall-cross-service-tooling` run is `cancelled` with
+        `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Grok after one policy-blocked local shell action
+      - existing `POST /status` `resume-human-escalation`, then `drain-run`,
+        completes the same team run
+      - this is operator approval to continue after a blocked action, not a
+        `localActionControl.resolve-request` `approved` mutation
+      - final stored/readback state includes:
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+          `AURACALL_CROSS_SERVICE_APPROVAL_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider approval live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-tooling human escalation"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-tooling` run is `cancelled`
+        with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on ChatGPT after one policy-blocked local shell action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - existing `POST /status` `resume-human-escalation`, then `drain-run`,
+        completes the same team run
+      - this is operator approval to continue after a blocked action, not a
+        `localActionControl.resolve-request` `approved` mutation
+      - final stored/readback state includes:
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+        - stored local action remains `rejected` as evidence of the original
+          policy stop
+      - final terminal step summary
+          `AURACALL_REVERSE_CROSS_SERVICE_APPROVAL_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider cancelled local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-tooling` run is `cancelled`
+        with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on ChatGPT after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = cancelled`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.cancelled = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_REVERSE_CROSS_SERVICE_CANCELLATION_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider rejected local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-tooling` run is `cancelled`
+        with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on ChatGPT after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = rejected`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.rejected = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_REVERSE_CROSS_SERVICE_REJECTION_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini approval live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-gemini-tooling human escalation"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-gemini-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on Gemini after one policy-blocked local shell action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - existing `POST /status` `resume-human-escalation`, then `drain-run`,
+        completes the same team run
+      - this is operator approval to continue after a blocked action, not a
+        `localActionControl.resolve-request` `approved` mutation
+      - final stored/readback state includes:
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+        - stored local action remains `rejected` as evidence of the original
+          policy stop
+      - final terminal step summary
+        `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_APPROVAL_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini cancelled local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-gemini-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-gemini-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on Gemini after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = cancelled`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.cancelled = 1`
+        - bounded `operatorControlSummary`
+      - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_CANCELLATION_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini rejected local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_REVERSE_GEMINI_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-gemini-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-gemini-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Grok:
+        - `runtimeProfileId = auracall-grok-auto`
+        - `service = grok`
+      - step 2 pauses on Gemini after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = rejected`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.rejected = 1`
+        - bounded `operatorControlSummary`
+      - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_REVERSE_CROSS_SERVICE_GEMINI_REJECTION_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini-to-ChatGPT approval live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-reverse-cross-service-chatgpt-tooling human escalation"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-chatgpt-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Gemini:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - step 2 pauses on ChatGPT after one policy-blocked local shell action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - existing `POST /status` `resume-human-escalation`, then `drain-run`,
+        completes the same team run
+      - this is operator approval to continue after a blocked action, not a
+        `localActionControl.resolve-request` `approved` mutation
+      - final stored/readback state includes:
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - stored local action remains `rejected` as evidence of the original
+          policy stop
+      - final terminal step summary
+        `AURACALL_GEMINI_TO_CHATGPT_APPROVAL_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini-to-ChatGPT cancelled local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-reverse-cross-service-chatgpt-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-chatgpt-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Gemini:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - step 2 pauses on ChatGPT after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = cancelled`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.cancelled = 1`
+        - bounded `operatorControlSummary`
+      - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_GEMINI_TO_CHATGPT_CANCELLATION_LIVE_SMOKE_OK`
+  - reverse-order mixed-provider Gemini-to-ChatGPT rejected local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_TO_CHATGPT_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-reverse-cross-service-chatgpt-tooling local action"`
+    - current expected posture:
+      - initial `auracall-reverse-cross-service-chatgpt-tooling` run is
+        `cancelled` with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on Gemini:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - step 2 pauses on ChatGPT after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = rejected`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.rejected = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_GEMINI_TO_CHATGPT_REJECTION_LIVE_SMOKE_OK`
+  - mixed-provider Gemini approval live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "approves auracall-cross-service-gemini-tooling human escalation"`
+    - current expected posture:
+      - initial `auracall-cross-service-gemini-tooling` run is `cancelled` with
+        `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Gemini after one policy-blocked local shell action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - existing `POST /status` `resume-human-escalation`, then `drain-run`,
+        completes the same team run
+      - this is operator approval to continue after a blocked action, not a
+        `localActionControl.resolve-request` `approved` mutation
+      - final stored/readback state includes:
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+  - mixed-provider Gemini rejected local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "rejects auracall-cross-service-gemini-tooling local action"`
+    - current expected posture:
+      - initial `auracall-cross-service-gemini-tooling` run is `cancelled`
+        with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Gemini after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = rejected`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.rejected = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_CROSS_SERVICE_GEMINI_REJECTION_LIVE_SMOKE_OK`
+  - mixed-provider Gemini cancelled local-action live proof:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_GEMINI_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts -t "cancels auracall-cross-service-gemini-tooling local action"`
+    - current expected posture:
+      - initial `auracall-cross-service-gemini-tooling` run is `cancelled`
+        with `finalOutputSummary = paused for human escalation`
+      - step 1 succeeds on ChatGPT:
+        - `runtimeProfileId = wsl-chrome-2`
+        - `service = chatgpt`
+      - step 2 pauses on Gemini after requesting one bounded local shell
+        action:
+        - `runtimeProfileId = auracall-gemini-pro`
+        - `service = gemini`
+      - `POST /status` `localActionControl.resolve-request` with
+        `resolution = cancelled`, then `resume-human-escalation`, then
+        `drain-run` completes the same team run
+      - final stored/readback state includes:
+        - `metadata.executionSummary.localActionSummary.counts.cancelled = 1`
+        - bounded `operatorControlSummary`
+        - bounded resumed execution timeline on
+          `GET /status/recovery/<run_id>`
+      - final terminal step summary
+        `AURACALL_CROSS_SERVICE_GEMINI_CANCELLATION_LIVE_SMOKE_OK`
+  - optional recovery summary:
+    - `curl http://127.0.0.1:8080/status?recovery=true`
+    - optional per-run detail:
+      - `curl http://127.0.0.1:8080/status/recovery/<run_id>`
+    - current expected recovery fields include:
+      - `reclaimableRunIds`
+      - `recoverableStrandedRunIds`
+      - `activeLeaseRunIds`
+      - `strandedRunIds`
+      - `cancelledRunIds`
+      - `idleRunIds`
+      - `activeLeaseHealth.freshRunIds`
+      - `activeLeaseHealth.staleHeartbeatRunIds`
+      - `activeLeaseHealth.suspiciousIdleRunIds`
+      - `activeLeaseHealth.reasonsByRunId`
+      - `leaseRepair.locallyReclaimableRunIds`
+      - `leaseRepair.inspectOnlyRunIds`
+      - `leaseRepair.notReclaimableRunIds`
+      - `leaseRepair.repairedRunIds`
+      - `leaseRepair.reasonsByRunId`
+      - `metrics.reclaimableCount`
+      - `metrics.recoverableStrandedCount`
+      - `metrics.activeLeaseCount`
+      - `metrics.strandedCount`
+      - `metrics.idleCount`
+      - `metrics.actionableCount`
+      - `metrics.nonExecutableCount`
+      - `localClaim.runnerId`
+      - `localClaim.selectedRunIds`
+      - `localClaim.blockedRunIds`
+      - `localClaim.notReadyRunIds`
+      - `localClaim.unavailableRunIds`
+      - `localClaim.reasonsByRunId`
+    - startup recovery/batch-drain reporting now collapses repeated skipped
+      states per run and suppresses follow-up terminal `no-runnable-step`
+      entries after a run already executed in the same bounded batch
+    - `GET /status/recovery/<run_id>` stays a separate read-only detail surface
+      so `/status?recovery=true` can stay compact
+    - compact summary contract:
+      - `GET /status?recovery=true` should not grow per-run detail fields such
+        as:
+        - `taskRunSpecId`
+        - `orchestrationTimelineSummary`
+        - `handoffTransferSummary`
+        - `leaseHealth`
+    - compact local-claim contract:
+      - top-level `/status.localClaimSummary` stays the direct-run local-claim
+        snapshot
+      - `recoverySummary.localClaim` is the recovery-filtered aggregate that
+        follows `sourceKind=direct|team-run|all`
+    - compact server-posture contract:
+      - top-level `/status.runner` and `/status.backgroundDrain` stay the
+        server posture snapshot
+      - recovery/source filters do not reshape them into recovery-scoped
+        fields
+      - they continue to describe the current server process even when
+        `recoverySummary` is filtered to `team-run` or `all`
+    - the per-run detail surface now also includes bounded assignment identity:
+      - `taskRunSpecId`
+    - the per-run detail surface now also includes bounded orchestration
+      timeline summary from durable shared-state history:
+      - `orchestrationTimelineSummary.total`
+      - `orchestrationTimelineSummary.items[*].type`
+      - `orchestrationTimelineSummary.items[*].createdAt`
+      - `orchestrationTimelineSummary.items[*].stepId`
+      - `orchestrationTimelineSummary.items[*].note`
+      - `orchestrationTimelineSummary.items[*].handoffId`
+    - the per-run detail surface now also includes bounded consumed handoff
+      transfer context when incoming planned handoffs carry task-aware transfer
+      data:
+      - `handoffTransferSummary.total`
+      - `handoffTransferSummary.items[*].handoffId`
+      - `handoffTransferSummary.items[*].fromStepId`
+      - `handoffTransferSummary.items[*].fromAgentId`
+      - `handoffTransferSummary.items[*].title`
+      - `handoffTransferSummary.items[*].objective`
+      - `handoffTransferSummary.items[*].requestedOutputCount`
+      - `handoffTransferSummary.items[*].inputArtifactCount`
+    - the per-run detail surface now also reports active-lease health under
+      `leaseHealth`, including whether the lease looks fresh, stale-heartbeat,
+      or suspiciously idle
+    - bounded host drain and startup recovery logs now also break out
+      `stale-heartbeat` separately; `suspiciously-idle` remains read-only
+    - `POST /status` now also supports one bounded stale-heartbeat repair
+      action:
+      - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
+      - it succeeds only when the run is currently `stale-heartbeat` and the
+        durable repair posture is already `locally-reclaimable`
+      - suspiciously-idle leases remain diagnostic-only and should return 409
+    - recovery summary/detail now also surface bounded attention for
+      unrepaired stale-heartbeat cases:
+      - `recoverySummary.attention.staleHeartbeatInspectOnlyRunIds`
+      - `recoverySummary.attention.reasonsByRunId`
+      - per-run `attention.kind = stale-heartbeat-inspect-only`
+    - recovery summary/detail now also surface bounded cancellation readback:
+      - `recoverySummary.cancelledRunIds`
+      - `recoverySummary.cancellation.reasonsByRunId`
+      - per-run `cancellation.cancelledAt`
+      - per-run `cancellation.source`
+      - per-run `cancellation.reason`
+    - startup recovery logs now also emit bounded stale-heartbeat attention
+      when unrepaired inspect-only cases remain:
+      - `attention=stale-heartbeat-inspect-only:<count>`
+    - the per-run detail surface now also reports the configured local runner's
+      claim posture under `localClaim`, including whether it is currently
+      selected for local claiming
+    - host recovery no longer treats every expired active lease as
+      automatically reclaimable
+    - bounded host lease repair now first consults persisted runner liveness:
+      - stale or missing runner + expired lease => locally reclaimable
+      - active runner + expired lease => still reported as `active-lease`
+    - when startup recovery is capped, only still-executable work should report
+      `limit-reached`; idle and active-lease runs should keep their real skip
+      reasons
+    - mixed-batch host drain now prioritizes actionable work in this order:
+      - runnable
+      - recoverable stranded
+      - then non-executable classes
+    - within each class, scheduling is intentionally oldest-first by
+      `createdAt`
+    - when both actionable classes are present and `maxRuns > 1`, one slot is
+      reserved for the oldest recoverable-stranded run and the remaining slots
+      go to oldest runnable runs
+    - startup recovery logs now also emit aggregate metrics aligned with the
+      same vocabulary; runner-aware startup skips may now also surface
+      `claim-owner-unavailable` when the local runner cannot safely claim work:
+      - `deferred-by-budget`
+      - `active-lease`
+      - `stale-heartbeat`
+      - `stranded`
+      - `idle`
+    - current mixed-batch priority is:
+      - runnable
+      - recoverable stranded
+      - then non-executable classes
+- Service-volatility refactor rule: do not treat this as a pure config shuffle. Every extraction phase must keep a named regression set green and every service slice must declare its own acceptance bar before implementation starts. See [service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md) and [service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md).
 - Gemini unit/regression: `pnpm vitest run tests/gemini.test.ts tests/gemini-web`.
 - Gemini support matrix checkpoint:
   - API:
@@ -136,7 +907,7 @@
 - Browser smokes: `pnpm test:browser` (builds, checks DevTools port 45871 or `AURACALL_BROWSER_PORT`, then runs headful browser smokes with GPT-5.2 for most cases and GPT-5.2 Pro for the reattach + markdown checks). Requires a signed-in Chrome profile; runs headful but now starts Chrome with `browser.hideWindow` as a best-effort minimized/no-focus-steal launch. On the current WSL/X11 stack, the active window stays unchanged even though DevTools may still report `windowState: normal`.
 - Grok browser smoke: `pnpm test:grok-smoke` (requires an active Grok session; uses the Aura-Call browser registry or `AURACALL_BROWSER_PORT`).
 - Grok acceptance bar: run `DISPLAY=:0.0 pnpm test:grok-acceptance` on the authenticated WSL Grok profile before calling Grok browser support "fully functional." The script executes the canonical WSL-primary checklist from `docs/dev/smoke-tests.md` and covers project CRUD, instructions/files CRUD, project-knowledge cache freshness, account-wide `/files` CRUD plus `account-files` cache freshness, project conversation CRUD, root/non-project conversation-file parity, append-only `conversations files add`, markdown capture, the medium-file guard, and cleanup. If Grok's root conversation list lags after a browser-file prompt, the runner now logs that and falls back to the fresh browser session `conversationId` so the rest of the CRUD path still gets validated on the real new conversation.
-- ChatGPT project lifecycle + project-management CRUD is green on the authenticated managed WSL Chrome path: list/create/rename/delete, create-time `--memory-mode global|project`, `projects files add|list|remove --target chatgpt`, and `projects instructions get|set --target chatgpt`. Source add/remove now verify success against a fresh `Sources` reload rather than trusting only the first immediate post-picker row, and instructions writes verify by reopening the project settings sheet and confirming the persisted textarea value. The project surface is effectively complete for current native UI purposes; clone stays out of scope unless ChatGPT later exposes a real clone action. The next active ChatGPT browser work is tracked in `docs/dev/chatgpt-conversation-surface-plan.md`.
+- ChatGPT project lifecycle + project-management CRUD is green on the authenticated managed WSL Chrome path: list/create/rename/delete, create-time `--memory-mode global|project`, `projects files add|list|remove --target chatgpt`, and `projects instructions get|set --target chatgpt`. Source add/remove now verify success against a fresh `Sources` reload rather than trusting only the first immediate post-picker row, and instructions writes verify by reopening the project settings sheet and confirming the persisted textarea value. The project surface is effectively complete for current native UI purposes; clone stays out of scope unless ChatGPT later exposes a real clone action. Historical closure notes now live in `docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md`.
 - ChatGPT root conversation list/read/rename/delete are green on the authenticated managed WSL Chrome path, and the conversation context surface now includes more than sent user-turn file tiles. `auracall conversations files list <conversationId> --target chatgpt` still returns stable synthetic refs for real sent uploads, but `auracall conversations context get <conversationId> --target chatgpt --json-only` now also enriches ChatGPT context with `sources[]` from assistant citation/content-reference metadata plus `artifacts[]` for downloadable `sandbox:/...` outputs, generated `image_asset_pointer` artifacts, `ada_visualizations` table/spreadsheet artifacts, spreadsheet-like `.csv` / `.xlsx` markdown downloads, DOM-only assistant-turn `button.behavior-btn` artifacts, and canvas/textdoc blocks. Live proof on `69c3e6d0-3550-8325-b10e-79d946e31562` returns file-backed `sources[]` plus downloadable artifacts such as `updated skill.zip`, `combined JSON extraction`, and `combined BibTeX extraction`; live proof on image chat `69bc77cf-be28-8326-8f07-88521224abeb` returns four `image` artifacts with `sediment://...` asset pointers plus size/dimensions and generation metadata; live proof on CSV/table chat `bc626d18-8b2e-4121-9c4a-93abb9daed4b` returns two `spreadsheet` artifacts backed by ChatGPT `file_id`s; live proof on spreadsheet-download chat `69ca9d71-1a04-8332-abe1-830d327b2a65` returns `parabola_trendline_demo.xlsx` as a `spreadsheet` artifact; live proof on the DOCX + canvas chat `69caa22d-1e2c-8329-904f-808fb33a4a56` now fills `canvas.metadata.contentText` from the visible textdoc DOM; and live proof on the “vibe coding” chat `69bded7e-4a88-8332-910f-cab6be0daf9b` now returns `artifactCount = 86` from the assistant-turn button surface. The important implementation nuance is that direct in-page `fetch('/backend-api/conversation/<id>')` can return a JSON 404 even on a page that visibly hydrates correctly, so the adapter now falls back to CDP `Network.responseReceived` + `Network.loadingFinished` + `getResponseBody` on a reload of the already-open conversation route. Another important artifact nuance is that many inline binary download buttons do not use fetch/XHR at all; a native click programmatically triggers an anchor click to a signed `backend-api/estuary/content?id=file_...` URL. The root rename repair still matters because ChatGPT's current header `Open conversation options` menu is not a rename surface; rename must come from the sidebar-row `Open conversation options for ...` menu on the home/list page, the edit field that appears there is just a plain visible `input[type=\"text\"]`, and the authoritative completion signal is that the same conversation id reappears as the top root-list row with the new title after a short lag. Root delete now uses that same list-first row surface with header delete only as fallback, standalone `auracall delete <conversationId> --target chatgpt` accepts a raw fresh ChatGPT conversation id directly, and the full guarded `scripts/chatgpt-acceptance.ts` runner is now green end to end even when this account hits real ChatGPT cooldowns during rename/delete cleanup. For project chats, keep the project page conversation list as the authoritative surface; the abbreviated sidebar subset shown while a project is selected is not the full catalog. For real small-text upload validation, force native uploads with `--browser-attachments always`; under `auto`, ChatGPT can inline the file content into the prompt and never create a real attachment tile. Treat those conversation files as read-only after send: users can remove them from the composer before sending, but durable delete belongs to ChatGPT project `Sources`, not post-send conversation history.
 - ChatGPT now has an opt-in artifact materialization path: `auracall conversations artifacts fetch <conversationId> --target chatgpt`. On the current managed WSL Chrome profile, serialized live runs materialize generated images into `conversation-attachments/<conversationId>/files/.../*.png`, inline `ada_visualizations` table artifacts into CSVs in the same cache tree, visible textdoc/canvas blocks into text files when `contentText` is present or can be filled from the DOM, and signed anchor-backed binary downloads into real files by capturing the generated `backend-api/estuary/content?id=file_...` URL and fetching it directly. Each run also writes a sidecar `conversation-attachments/<conversationId>/artifact-fetch-manifest.json` so operators can inspect per-artifact `materialized|skipped|error` results without changing the existing attachment manifest shape. Live proof:
   - `69bc77cf-be28-8326-8f07-88521224abeb` -> `artifactCount = 4`, `materializedCount = 4`
@@ -158,7 +929,7 @@
 - ChatGPT existing-conversation tool state is now an inspected runtime surface, not just a click side effect: browser runs persist the actual selected add-on in session metadata as `browser.runtime.composerTool` (for example `web search`), and final ChatGPT browser session metadata now also persists the normalized `conversationId` alongside `tabUrl`, which makes prompt-matched acceptance/debug lookups reliable.
 - ChatGPT live browser work now carries a persisted profile-scoped guard under `~/.auracall/cache/providers/chatgpt/__runtime__/rate-limit-<profile>.json`: mutating ChatGPT llmservice CRUD operations are spaced apart automatically, ChatGPT browser-mode prompt runs consult the same guard before sending another live write, and both paths now also enforce a rolling per-profile write budget before ChatGPT has a chance to surface a visible `Too many requests` dialog. If the live UI still does expose a `Too many requests` / `...too quickly` failure, later ChatGPT live CRUD or browser-mode calls fail fast on that cooldown instead of continuing to hammer the account from fresh CLI processes.
 - ChatGPT context/artifact read paths now also have local dialog recovery inside the provider adapter itself: if ChatGPT throws a visible rate-limit modal during `conversations context get` or `conversations artifacts fetch`, Aura-Call dismisses that modal, pauses briefly, and retries once before letting the higher-level persisted guard take over.
-- Remaining Grok breadth work after the acceptance bar is tracked in `docs/dev/grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity is now live for both project and non-project conversations via `auracall conversations files list <conversationId> --target grok [--project-id <id>]`; the next in-progress slice is mutation support for existing conversations.
+- Remaining Grok breadth work after the acceptance bar is archived in `docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md`. Conversation-scoped file read/list/cache parity is now live for both project and non-project conversations via `auracall conversations files list <conversationId> --target grok [--project-id <id>]`; any resumed mutation follow-up should treat that archive note as background only.
 - Interactive browser onboarding: `pnpm tsx bin/auracall.ts wizard` (preferred first-run path; detects candidate browser/profile sources, writes a browser-profile-backed `~/.auracall/config.json` entry using `browserFamilies.<name>` + `profiles.<name>.browserFamily`, then hands off to the normal setup/login/verification flow). On WSL, prefer the WSL Chrome choice first and keep that primary setup on the Aura-Call `default` profile; treat Windows Chrome as an advanced/manual-debug path in a separate named profile until a live DevTools endpoint is proven.
 - Browser profile/setup inspection: `pnpm tsx bin/auracall.ts doctor --target grok --local-only --prune-browser-state` (reports the managed profile path, inferred source profile, Chrome-level Google-account state from the managed profile `Local State` plus `Default/Preferences`, and dead/legacy `~/.auracall/browser-state.json` entries without attaching to Chrome). Omit `--local-only` to also probe the live signed-in account on managed ChatGPT/Grok sessions. Add `--json` for a machine-readable `auracall.browser-doctor` contract; non-`--local-only` JSON reports embed the stable `browser-tools.doctor-report` contract when a managed browser instance is alive.
 - Scriptable browser onboarding: `pnpm tsx bin/auracall.ts setup --target grok` (inspects the managed profile, opens the managed login profile if needed, refreshes it from the source Chrome profile when the source cookies are newer, then sends a real verification prompt through that same profile). The setup report now includes the detected signed-in account for managed ChatGPT/Grok sessions. Add `--force-reseed-managed-profile` if you want to rebuild the managed profile from the source profile before login. Add `--json` for a machine-readable `auracall.browser-setup` contract; it embeds the before/after `auracall.browser-doctor` reports plus explicit login/verification step status.
@@ -205,8 +976,437 @@
 - Live API smokes: `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:live` (excludes OpenAI pro), `AURACALL_LIVE_TEST=1 OPENAI_API_KEY=… pnpm test:pro` (OpenAI pro live). Expect real usage/cost.
 - Gemini API live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-live.test.ts`
 - Gemini web (cookie) live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/gemini-web-live.test.ts` (requires a signed-in Chrome profile at `gemini.google.com`).
+- Gemini team live smoke: `AURACALL_LIVE_TEST=1 AURACALL_GEMINI_TEAM_LIVE_TEST=1 pnpm vitest run tests/live/team-gemini-live.test.ts`
+- ChatGPT team live smoke: `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_TEAM_LIVE_TEST=1 pnpm vitest run tests/live/team-chatgpt-live.test.ts`
+- ChatGPT approval/resume/drain team live smoke:
+  - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "human escalation"`
+  - current acceptance bar:
+    - initial `auracall-chatgpt-tooling` run returns:
+      - `runtimeRunStatus = cancelled`
+      - `finalOutputSummary = "paused for human escalation"`
+    - `POST /status` then:
+      - resumes the paused team run
+      - drains the resumed team run through the real provider-backed path
+    - final readback confirms:
+      - `metadata.executionSummary.operatorControlSummary`
+      - resumed execution timeline on `GET /status/recovery/{run_id}`
+      - stored terminal step summary
+        `= "AURACALL_CHATGPT_APPROVAL_TEAM_LIVE_SMOKE_OK"`
+- ChatGPT cancelled-local-action team live smoke:
+  - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "cancels auracall-chatgpt-tooling local action"`
+  - current acceptance bar:
+    - initial `auracall-chatgpt-tooling` run uses:
+      - `--allow-local-shell-command node`
+      - `--allow-local-cwd-root /home/ecochran76/workspace.local/oracle`
+      - `--require-local-action-approval`
+    - initial run returns:
+      - `runtimeRunStatus = cancelled`
+      - `finalOutputSummary = "paused for human escalation"`
+    - the stored local action is durable before operator follow-through:
+      - `status = requested`
+    - `POST /status` then:
+      - resolves the pending request as `cancelled`
+      - resumes the paused team run
+      - drains the resumed team run through the real provider-backed path
+    - final readback confirms:
+      - bounded `metadata.executionSummary.localActionSummary` with
+        `cancelled = 1`
+      - bounded `metadata.executionSummary.operatorControlSummary`
+      - resumed execution timeline on `GET /status/recovery/{run_id}`
+      - stored terminal step summary
+        `= "AURACALL_CHATGPT_CANCELLATION_TEAM_LIVE_SMOKE_OK"`
+- Cross-service team live smoke: `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_TEAM_LIVE_TEST=1 pnpm vitest run tests/live/team-multiservice-live.test.ts`
+- Grok team live smoke: `AURACALL_LIVE_TEST=1 pnpm vitest run tests/live/team-grok-live.test.ts`
+  - opt-in provider-backed approval/resume/drain case:
+    - `AURACALL_LIVE_TEST=1 AURACALL_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "human escalation"`
+    - current acceptance bar:
+      - initial `auracall-tooling` run returns:
+        - `runtimeRunStatus = cancelled`
+        - `finalOutputSummary = "paused for human escalation"`
+      - `POST /status` then:
+        - resumes the paused team run
+        - drains the resumed team run through the real provider-backed path
+      - final readback confirms:
+        - `metadata.executionSummary.operatorControlSummary`
+        - resumed execution timeline on `GET /status/recovery/{run_id}`
+        - stored terminal step summary
+          `= "AURACALL_TEAM_APPROVAL_LIVE_SMOKE_OK"`
+  - opt-in provider-backed rejected-local-action case:
+    - `AURACALL_LIVE_TEST=1 AURACALL_REJECTION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "rejects auracall-tooling local action"`
+    - current acceptance bar:
+      - initial `auracall-tooling` run returns:
+        - `runtimeRunStatus = cancelled`
+        - `finalOutputSummary = "paused for human escalation"`
+      - the stored rejected local action is durable before resume:
+        - `status = rejected`
+        - `resultSummary = "local action rejected because step policy forbids host actions"`
+      - `POST /status` then:
+        - resumes the paused team run
+        - drains the resumed team run through the real provider-backed path
+      - final readback confirms:
+        - bounded `metadata.executionSummary.localActionSummary` with
+          `rejected = 1`
+        - bounded `metadata.executionSummary.operatorControlSummary`
+        - resumed execution timeline on `GET /status/recovery/{run_id}`
+        - stored terminal step summary
+          `= "AURACALL_TEAM_REJECTION_LIVE_SMOKE_OK"`
+  - opt-in provider-backed cancelled-local-action case:
+    - `AURACALL_LIVE_TEST=1 AURACALL_CANCELLATION_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts -t "cancels auracall-tooling local action"`
+    - current acceptance bar:
+      - initial `auracall-tooling` run uses:
+        - `--allow-local-shell-command node`
+        - `--allow-local-cwd-root /home/ecochran76/workspace.local/oracle`
+        - `--require-local-action-approval`
+      - initial run returns:
+        - `runtimeRunStatus = cancelled`
+        - `finalOutputSummary = "paused for human escalation"`
+      - the stored local action is durable before operator follow-through:
+        - `status = requested`
+      - `POST /status` then:
+        - resolves the pending request as `cancelled`
+        - resumes the paused team run
+        - drains the resumed team run through the real provider-backed path
+      - final readback confirms:
+        - bounded `metadata.executionSummary.localActionSummary` with
+          `cancelled = 1`
+        - bounded `metadata.executionSummary.operatorControlSummary`
+        - resumed execution timeline on `GET /status/recovery/{run_id}`
+        - stored terminal step summary
+          `= "AURACALL_TEAM_CANCELLATION_LIVE_SMOKE_OK"`
+  - live team chat hygiene now uses exact-id batched cleanup instead of
+    immediate deletion:
+    - successful ChatGPT, Grok, and Gemini team live tests enqueue disposable
+      conversations into:
+      - `~/.auracall/live-test-cleanup/chatgpt-team-conversations.json`
+      - `~/.auracall/live-test-cleanup/grok-team-conversations.json`
+      - `~/.auracall/live-test-cleanup/gemini-team-conversations.json`
+    - once a provider ledger grows past `6` stored conversations, Aura-Call
+      prunes toward the newest `3`
+    - each enqueue now deletes at most the oldest `2` conversations so cleanup
+      cannot dominate one live test turn
+    - deletion stays exact-id only through:
+      - `auracall delete <conversationId> --target <provider> --yes`
+    - no fuzzy title matching is used for this cleanup path
+ - Direct operator lifecycle regression:
+   - `pnpm vitest run tests/http.responsesServer.test.ts -t "resume|drain|operator control summary"`
+   - current acceptance bar:
+     - seed one paused direct run
+     - resume it through `POST /status`
+     - drain it through `POST /status`
+     - confirm `GET /v1/responses/{response_id}` exposes bounded
+       `operatorControlSummary`
+     - confirm `GET /status/recovery/{run_id}` timeline includes:
+       - pause note
+       - resume note
+       - targeted drain note
+  - optional bounded tooling case:
+    - `AURACALL_LIVE_TEST=1 AURACALL_TOOLING_LIVE_TEST=1 pnpm vitest run tests/live/team-grok-live.test.ts`
+    - keep this separate from the stable Grok baseline until the live
+      tool-envelope path is consistently deterministic
+  - current Grok guard posture:
+    - browser-backed Grok runs now persist one bounded cooldown/spacing record
+      per managed browser profile under:
+      - `~/.auracall/cache/providers/grok/__runtime__/rate-limit-<browser profile>.json`
+    - repeated live Grok runs may now briefly auto-wait before execution
+    - if the remaining wait is larger than the bounded auto-wait window, the
+      run should fail fast with:
+      - `Grok rate limit cooldown active until ...`
+      - or `Grok write spacing active until ...`
+    - visible provider toasts such as:
+      - `Query limit reached for Auto`
+      - `Try again in 4 minutes`
+      now count as Grok rate-limit signals and should seed that same cooldown
+      instead of ending as a generic timeout
+  - current baseline expected result:
+    - `teamId = auracall-solo`
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - first step resolves to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+    - `finalOutputSummary = "AURACALL_TEAM_LIVE_SMOKE_OK"`
+  - current live follow-through:
+    - uses returned `execution.runtimeRunId` to read the durable operator
+      detail seam through `serviceHost.readRecoveryDetail(...)`
+    - expected readback:
+      - `runId = execution.runtimeRunId`
+      - `sourceKind = team-run`
+      - `taskRunSpecId = taskRunSpec.id`
+      - non-empty `orchestrationTimelineSummary`
+      - at least one `step-succeeded` timeline item
+  - current HTTP follow-through:
+    - starts a bounded local responses server against the same durable store
+    - reads `GET /status/recovery/{run_id}` for the returned
+      `execution.runtimeRunId`
+    - expected HTTP payload:
+      - `object = recovery_detail`
+      - `detail.runId = execution.runtimeRunId`
+      - `detail.sourceKind = team-run`
+      - `detail.taskRunSpecId = taskRunSpec.id`
+      - non-empty `detail.orchestrationTimelineSummary`
+      - at least one `step-succeeded` timeline item
+  - current response readback follow-through:
+    - reads `GET /v1/responses/{response_id}` where
+      `response_id = execution.runtimeRunId`
+    - expected HTTP payload:
+      - `object = response`
+      - `id = execution.runtimeRunId`
+      - `status = completed`
+      - `metadata.runId = execution.runtimeRunId`
+      - `metadata.taskRunSpecId = taskRunSpec.id`
+      - `metadata.service = grok`
+      - `metadata.runtimeProfile = auracall-grok-auto`
+      - `metadata.executionSummary.stepSummaries`
+        - bounded per-step routing projection from stored step state
+        - use this when you need mixed-provider routing proof from response
+          readback itself
+      - contract split:
+        - top-level `metadata.service` / `metadata.runtimeProfile` remain the
+          compact response summary
+        - `metadata.executionSummary.stepSummaries` is the mixed-provider
+          routing projection
+        - response `metadata.executionSummary` should not grow recovery-only
+          status fields such as:
+          - `activeLease`
+          - `dispatch`
+          - `repair`
+          - `leaseHealth`
+          - `localClaim`
+        - recovery detail remains the orchestration timeline surface
+        - recovery detail should not grow routing fields such as:
+          - `runtimeProfile`
+          - `service`
+          - `stepSummaries`
+      - non-empty `metadata.executionSummary.orchestrationTimelineSummary`
+      - at least one `step-succeeded` timeline item
+  - current broader-workflow expected result:
+    - `teamId = auracall-two-step`
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - `stepSummaries.length = 2`
+    - both steps resolve to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+      - `teamStepStatus = succeeded`
+      - `runtimeStepStatus = succeeded`
+    - `finalOutputSummary = "AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK"`
+    - `sharedStateNotes` includes consumed-transfer evidence
+    - durable host, HTTP recovery detail, and HTTP response readback each show:
+      - at least two `step-succeeded` timeline items
+      - at least one `handoff-consumed` timeline item
+  - current multi-agent expected result:
+    - `teamId = auracall-multi-agent`
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - `stepSummaries.length = 2`
+    - both steps resolve to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+      - `teamStepStatus = succeeded`
+      - `runtimeStepStatus = succeeded`
+    - `finalOutputSummary = "AURACALL_MULTI_AGENT_LIVE_SMOKE_OK"`
+    - `sharedStateNotes` includes consumed-transfer evidence
+    - durable host, HTTP recovery detail, and HTTP response readback each show:
+      - at least two `step-succeeded` timeline items
+      - at least one `handoff-consumed` timeline item
+  - current bounded tooling expected result:
+    - `teamId = auracall-tooling`
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - `stepSummaries.length = 2`
+    - both steps resolve to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+      - `teamStepStatus = succeeded`
+      - `runtimeStepStatus = succeeded`
+    - `sharedStateNotes` includes:
+      - `local shell action executed: node`
+      - local action outcome summary for the executed step
+    - `finalOutputSummary = "AURACALL_TOOL_TEAM_LIVE_SMOKE_OK"`
+    - current automation posture:
+      - manual provider-backed CLI proof is green
+      - the automated live case is still gated behind
+        `AURACALL_TOOLING_LIVE_TEST=1`
+      - do not fold it into the stable `AURACALL_LIVE_TEST=1` baseline until
+        Grok reliably emits the expected local-action envelope shape
 - Gemini local browser-profile doctor: `pnpm tsx bin/auracall.ts doctor --target gemini --local-only --json`
 - Full live Gemini selector diagnosis is not implemented under `auracall doctor` yet; use the dedicated Gemini live smokes instead.
+- Team CLI bridge smoke:
+  - `pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
+  - inspect the persisted linkage from that payload:
+    - `pnpm tsx bin/auracall.ts teams inspect --task-run-spec-id <taskRunSpecId> --json`
+    - `pnpm tsx bin/auracall.ts teams inspect --runtime-run-id <runtimeRunId> --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - single step resolves to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+    - `finalOutputSummary = "AURACALL_TEAM_SMOKE_OK"`
+  - `pnpm tsx bin/auracall.ts teams run auracall-chatgpt-solo "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" --title "AuraCall ChatGPT team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - single step resolves to:
+      - `runtimeProfileId = wsl-chrome-2`
+      - `browserProfileId = wsl-chrome-2`
+      - `service = chatgpt`
+    - `finalOutputSummary = "AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK"`
+  - automated live coverage now exists:
+    - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts`
+    - current expected result:
+      - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - recovery detail and `GET /v1/responses/{response_id}` both read back the same run cleanly
+    - response readback shows:
+      - `metadata.service = chatgpt`
+      - `metadata.runtimeProfile = wsl-chrome-2`
+  - current inspect posture:
+    - `teams inspect` should read back the same persisted `taskRunSpecSummary`
+      and linked runtime run identity without creating a new execution surface
+  - automated provider-backed approval/resume/drain coverage now also exists:
+    - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "human escalation"`
+    - current expected result:
+      - initial `auracall-chatgpt-tooling` run is cancelled with
+        `finalOutputSummary = "paused for human escalation"`
+      - `POST /status` resumes the paused team run
+      - `POST /status` drains the resumed team run through the real
+        provider-backed path
+      - final stored terminal step summary
+        `= "AURACALL_CHATGPT_APPROVAL_TEAM_LIVE_SMOKE_OK"`
+      - response readback shows bounded
+        `metadata.executionSummary.operatorControlSummary`
+  - `pnpm tsx bin/auracall.ts teams run auracall-cross-service "Reply exactly with: AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK" --title "AuraCall cross-service team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order across different providers
+    - step 1 resolves to:
+      - `runtimeProfileId = wsl-chrome-2`
+      - `browserProfileId = wsl-chrome-2`
+      - `service = chatgpt`
+    - step 2 resolves to:
+      - `runtimeProfileId = auracall-grok-auto`
+      - `browserProfileId = default`
+      - `service = grok`
+    - durable host, HTTP recovery-detail, and HTTP response readback all show:
+      - non-empty orchestration timeline
+      - at least one `handoff-consumed` timeline item
+    - `finalOutputSummary = "AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK"`
+  - `pnpm tsx bin/auracall.ts teams run auracall-cross-service-gemini "Reply exactly with: AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK" --title "AuraCall cross-service Gemini team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order across different providers
+    - step 1 resolves to:
+      - `runtimeProfileId = wsl-chrome-2`
+      - `browserProfileId = wsl-chrome-2`
+      - `service = chatgpt`
+    - step 2 resolves to:
+      - `runtimeProfileId = auracall-gemini-pro`
+      - `browserProfileId = default`
+      - `service = gemini`
+    - durable host, HTTP recovery-detail, and HTTP response readback all show:
+      - non-empty orchestration timeline
+      - at least one `handoff-consumed` timeline item
+    - `finalOutputSummary = "AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK"`
+  - automated live coverage now exists:
+    - `AURACALL_LIVE_TEST=1 AURACALL_MULTISERVICE_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-multiservice-live.test.ts`
+  - mixed-provider readback nuance:
+    - `execution.stepSummaries` are the authoritative per-step provider/runtime
+      proof
+    - `GET /v1/responses/{response_id}` metadata service/runtime fields are
+      still shaped from the stored run response model and should not be treated
+      as a per-step provider matrix
+  - current live browser-profile rule:
+    - if the runtime profile is bound to an existing managed browser profile
+      through `manualLoginProfileDir`, the executor should reuse that browser-
+      family-owned directory instead of launching a fresh runtime-profile-
+      namespaced managed browser profile
+  - current regression tell:
+    - if Chrome launches on
+      `~/.auracall/browser-profiles/auracall-grok-auto/grok` instead of
+      `~/.auracall/browser-profiles/default/grok`, managed-profile ownership
+      regressed and Grok project navigation may fall back to `issue finding id`
+    - if the Grok page visibly renders `AURACALL_TEAM_SMOKE_OK` but the CLI
+      does not exit promptly, Grok response completion detection regressed
+    - if repeated Grok smokes now pause briefly or fail fast on a cooldown/
+      spacing message, that is expected guard behavior rather than a prompt/
+      transport regression
+  - bounded broader-workflow smoke:
+    - `pnpm tsx bin/auracall.ts teams run auracall-two-step "Reply exactly with: AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK" --title "AuraCall two-step team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order on the same Grok runtime profile
+    - `sharedStateNotes` includes consumed-transfer evidence for step 2
+    - `finalOutputSummary = "AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK"`
+  - bounded multi-agent smoke:
+    - `pnpm tsx bin/auracall.ts teams run auracall-multi-agent "Reply exactly with: AURACALL_MULTI_AGENT_LIVE_SMOKE_OK" --title "AuraCall multi-agent team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_MULTI_AGENT_LIVE_SMOKE_OK and nothing else." --max-turns 2 --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order on the same Grok runtime profile
+    - `sharedStateNotes` includes consumed-transfer evidence for step 2
+    - `finalOutputSummary = "AURACALL_MULTI_AGENT_LIVE_SMOKE_OK"`
+  - bounded tooling smoke:
+    - `pnpm tsx bin/auracall.ts teams run auracall-tooling "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" --title "AuraCall tooling team live smoke" --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - current expected result:
+    - real `taskRunSpec` payload
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order on the same Grok runtime profile
+    - shared state includes `local shell action executed: node`
+    - the stored local action outcome for the tool step shows `command = node`
+      and executed stdout for the bounded smoke
+    - `finalOutputSummary = "AURACALL_TOOL_TEAM_LIVE_SMOKE_OK"`
+  - current automation boundary:
+    - the manual CLI smoke above is the authoritative proof right now
+    - the matching live Vitest case exists, but remains gated behind
+      `AURACALL_TOOLING_LIVE_TEST=1`
+    - if Grok shows a visible Auto quota toast during that tooling case, treat
+      it as provider throttling, not as a local-action transport regression
+    - do not treat occasional Grok envelope drift as a transport regression on
+      the stable baseline team suite
+- Gemini bounded tooling team smoke on 2026-04-12:
+  - `pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." --title "AuraCall Gemini tooling team live smoke" --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' --max-turns 2 --allow-local-shell-command node --allow-local-cwd-root /home/ecochran76/workspace.local/oracle --json`
+  - expected result:
+    - `runtimeSourceKind = team-run`
+    - `runtimeRunStatus = succeeded`
+    - two steps succeed in order on `auracall-gemini-pro`
+    - shared state includes `local shell action executed: node`
+    - `finalOutputSummary = "AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"`
+  - machine-specific prerequisite on this WSL pairing:
+    - raw Chrome cookie reads currently return zero Google auth cookies plus
+      `Failed to read Linux keyring via secret-tool; v11 cookies may be unavailable.`
+    - export cookies first:
+      - `pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies`
+    - stored team execution now reuses:
+      - `~/.auracall/browser-profiles/default/gemini/cookies.json`
+      - then `~/.auracall/cookies.json`
+      when Gemini browser auth cookies are not available from Chrome directly
+  - automated live coverage now exists:
+    - `AURACALL_LIVE_TEST=1 AURACALL_GEMINI_TEAM_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-gemini-live.test.ts`
+    - current expected result:
+      - `runtimeSourceKind = team-run`
+      - `runtimeRunStatus = succeeded`
+      - two steps succeed in order on `auracall-gemini-pro`
+      - recovery detail and `GET /v1/responses/{response_id}` both read back the same run cleanly
+      - response readback shows:
+        - `metadata.service = gemini`
+        - `metadata.runtimeProfile = auracall-gemini-pro`
+        - executed local action summary for `node`
 - Gemini login/export now treats a visible Gemini `Sign in` page state as a real login failure instead of waiting indefinitely for cookie export.
 - Gemini web live-proof target surfaces:
   - text
@@ -433,6 +1633,11 @@
       names during list scraping
     - treat that as a later Gemini list-quality fix, not a blocker on the
       first create-path proof
+  - operator safety rule:
+    - `projects create <name>` should be treated as create-only, not
+      create-or-reuse by side effect
+    - AuraCall now blocks exact-name duplicates before provider creation; if a
+      project might already exist, resolve/list first and reuse the existing id
 - Until that matrix is re-proven in one fresh pass, treat Gemini as supported with inherited coverage, not as a freshly re-certified browser provider.
 - ChatGPT guarded browser acceptance: `DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx scripts/chatgpt-acceptance.ts`.
   - The runner now aborts if the persisted ChatGPT cooldown is still materially active instead of sleeping for minutes and resuming later.
@@ -457,8 +1662,8 @@
     - `root-followups` green
     - `cleanup` green
   - Existing-conversation browser runs now reject reused assistant turns when a visible ChatGPT rate-limit modal blocks the new send, instead of returning the previous assistant answer as false success.
-  - Post-MVP polish work is tracked in [chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-polish-plan.md).
-  - Broader hostile-state hardening work is tracked in [chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-hardening-plan.md).
+  - Post-MVP polish history is archived in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
+  - Broader hostile-state hardening history is archived in [0020-2026-04-08-chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0020-2026-04-08-chatgpt-hardening-plan.md).
 - MCP focused: `pnpm test:mcp` (builds then stdio smoke via mcporter).
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.

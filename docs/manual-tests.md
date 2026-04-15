@@ -273,6 +273,209 @@ Use this when you need to inspect the live ChatGPT composer (DOM state, markdown
 
 > **Tip:** Running `npx chrome-devtools-mcp@latest --help` lists additional switches (custom Chrome binary, headless, viewport, etc.).
 
+## Team CLI Smoke
+
+Use this before claiming live team readiness changes:
+
+1. Confirm the configured live targets exist:
+   ```bash
+   pnpm tsx bin/auracall.ts config show --team auracall-solo
+   pnpm tsx bin/auracall.ts config show --team auracall-chatgpt-solo
+   pnpm tsx bin/auracall.ts config show --team auracall-cross-service
+   pnpm tsx bin/auracall.ts config show --team auracall-cross-service-gemini
+   pnpm tsx bin/auracall.ts config show --team auracall-two-step
+   pnpm tsx bin/auracall.ts config show --team auracall-multi-agent
+   pnpm tsx bin/auracall.ts config show --team auracall-tooling
+   pnpm tsx bin/auracall.ts config show --team auracall-gemini-tooling
+   ```
+2. Run the bounded team execution smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-solo \
+     "Reply exactly with: AURACALL_TEAM_SMOKE_OK" \
+     --title "AuraCall team smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." \
+     --max-turns 1 \
+     --json
+   ```
+3. Run the bounded ChatGPT baseline smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-chatgpt-solo \
+     "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" \
+     --title "AuraCall ChatGPT team live smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." \
+     --max-turns 1 \
+     --json
+   ```
+4. Run the bounded two-step workflow smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-two-step \
+     "Reply exactly with: AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK" \
+     --title "AuraCall two-step team live smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK and nothing else." \
+     --max-turns 2 \
+     --json
+   ```
+5. Run the bounded cross-service workflow smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-cross-service \
+     "Reply exactly with: AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK" \
+     --title "AuraCall cross-service team live smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK and nothing else." \
+     --max-turns 2 \
+     --json
+   ```
+6. Run the bounded multi-agent workflow smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-multi-agent \
+     "Reply exactly with: AURACALL_MULTI_AGENT_LIVE_SMOKE_OK" \
+     --title "AuraCall multi-agent team live smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_MULTI_AGENT_LIVE_SMOKE_OK and nothing else." \
+     --max-turns 2 \
+     --json
+   ```
+7. Run the bounded cross-service Gemini workflow smoke:
+   ```bash
+   pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies
+
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-cross-service-gemini \
+     "Reply exactly with: AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK" \
+     --title "AuraCall cross-service Gemini team live smoke" \
+     --prompt-append "Do not use tools. Reply with exactly AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK and nothing else." \
+     --max-turns 2 \
+     --json
+   ```
+8. Run the bounded tooling workflow smoke:
+   ```bash
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-tooling \
+     "Run one bounded node local shell action that emits AURACALL_TOOL_ACTION_OK, then reply exactly with: AURACALL_TOOL_TEAM_LIVE_SMOKE_OK" \
+     --title "AuraCall tooling team live smoke" \
+     --prompt-append "For the tool envelope, use a top-level localActionRequests array with exactly one shell action. Preserve the provided toolEnvelope unchanged. Use kind \"shell\" and command \"node\". Use args [\"-e\",\"process.stdout.write('AURACALL_TOOL_ACTION_OK')\"]. Use structuredPayload {\"cwd\":\"/home/ecochran76/workspace.local/oracle\"}. After the local action succeeds, the final answer must be exactly AURACALL_TOOL_TEAM_LIVE_SMOKE_OK." \
+     --max-turns 2 \
+     --allow-local-shell-command node \
+     --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+     --json
+   ```
+9. Run the bounded Gemini tooling workflow smoke when validating Gemini-bound
+   team execution:
+   ```bash
+   pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies
+
+   ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 DISPLAY=:0.0 \
+     pnpm tsx bin/auracall.ts teams run auracall-gemini-tooling \
+     "Use the provided toolEnvelope structured context to request one bounded shell action, then use the resulting tool outcome to return the provided finalToken exactly." \
+     --title "AuraCall Gemini tooling team live smoke" \
+     --prompt-append "Requester must emit exactly one JSON object with top-level localActionRequests containing the provided toolEnvelope unchanged. Do not rename fields, add markdown fences, or add prose. Finisher must output only the final token after a successful executed tool outcome." \
+     --structured-context-json '{"toolEnvelope":{"kind":"shell","summary":"Run one bounded deterministic node command","command":"node","args":["-e","process.stdout.write('\''AURACALL_TOOL_ACTION_OK'\'')"],"structuredPayload":{"cwd":"/home/ecochran76/workspace.local/oracle"}},"finalToken":"AURACALL_GEMINI_TOOL_TEAM_SMOKE_OK"}' \
+     --max-turns 2 \
+     --allow-local-shell-command node \
+     --allow-local-cwd-root /home/ecochran76/workspace.local/oracle \
+     --json
+   ```
+10. Current expected baseline result:
+  - command succeeds
+  - payload includes `taskRunSpec`, `teamRunId`, `runtimeRunId`
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+   - the single step resolves to:
+     - `runtimeProfileId = "auracall-grok-auto"`
+     - `browserProfileId = "default"`
+    - `service = "grok"`
+  - `finalOutputSummary = "AURACALL_TEAM_SMOKE_OK"`
+11. Current expected ChatGPT baseline result:
+  - command succeeds
+  - payload includes `taskRunSpec`, `teamRunId`, `runtimeRunId`
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+  - the single step resolves to:
+    - `runtimeProfileId = "wsl-chrome-2"`
+    - `browserProfileId = "wsl-chrome-2"`
+    - `service = "chatgpt"`
+  - `finalOutputSummary = "AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK"`
+12. Current expected cross-service result:
+  - command succeeds
+  - payload includes `taskRunSpec`, `teamRunId`, `runtimeRunId`
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+  - two steps succeed in order across different providers
+  - the first step resolves to:
+    - `runtimeProfileId = "wsl-chrome-2"`
+    - `browserProfileId = "wsl-chrome-2"`
+    - `service = "chatgpt"`
+  - the second step resolves to:
+    - `runtimeProfileId = "auracall-grok-auto"`
+    - `browserProfileId = "default"`
+    - `service = "grok"`
+  - `finalOutputSummary = "AURACALL_CROSS_SERVICE_LIVE_SMOKE_OK"`
+13. Current expected cross-service Gemini result:
+  - command succeeds
+  - payload includes `taskRunSpec`, `teamRunId`, `runtimeRunId`
+  - `runtimeSourceKind = "team-run"`
+  - `runtimeRunStatus = "succeeded"`
+  - two steps succeed in order across different providers
+  - the first step resolves to:
+    - `runtimeProfileId = "wsl-chrome-2"`
+    - `browserProfileId = "wsl-chrome-2"`
+    - `service = "chatgpt"`
+  - the second step resolves to:
+    - `runtimeProfileId = "auracall-gemini-pro"`
+    - `browserProfileId = "default"`
+    - `service = "gemini"`
+  - `finalOutputSummary = "AURACALL_CROSS_SERVICE_GEMINI_LIVE_SMOKE_OK"`
+14. Current expected broader-workflow result:
+   - command succeeds
+   - `runtimeRunStatus = "succeeded"`
+   - two steps succeed in order on `auracall-grok-auto`
+   - `sharedStateNotes` includes consumed-transfer evidence for step 2
+   - `finalOutputSummary = "AURACALL_TEAM_TWO_STEP_LIVE_SMOKE_OK"`
+8. Current expected multi-agent result:
+   - command succeeds
+   - `runtimeRunStatus = "succeeded"`
+   - two distinct configured agents succeed in order on `auracall-grok-auto`
+   - `sharedStateNotes` includes consumed-transfer evidence for step 2
+   - `finalOutputSummary = "AURACALL_MULTI_AGENT_LIVE_SMOKE_OK"`
+9. Current expected tooling result:
+   - command succeeds
+   - `runtimeRunStatus = "succeeded"`
+   - two steps succeed in order on `auracall-grok-auto`
+   - `sharedStateNotes` includes:
+     - `local shell action executed: node`
+     - local action outcome summary for the tool step
+   - the stored local action request for the tool step reaches
+     `status = executed`
+   - `finalOutputSummary = "AURACALL_TOOL_TEAM_LIVE_SMOKE_OK"`
+10. Current browser-profile validation:
+   - Chrome should reuse:
+     - `~/.auracall/browser-profiles/default/grok`
+   - Chrome should not mint:
+     - `~/.auracall/browser-profiles/auracall-grok-auto/grok`
+11. Current tooling automation boundary:
+   - the bounded tooling CLI smoke above is the current authoritative proof
+   - the matching live Vitest case exists, but stays separately gated behind:
+     - `AURACALL_TOOLING_LIVE_TEST=1`
+   - do not block the stable `AURACALL_LIVE_TEST=1` Grok baseline on Grok
+     tool-envelope drift until that case is consistently deterministic
+12. Current stop conditions:
+   - if `finalOutputSummary` is `bounded local runner pass completed`, the
+     provider-backed stored-step seam regressed
+   - if Grok visibly answers but the CLI keeps running, Grok fast-reply
+     completion detection regressed
+   - if Grok shows:
+     - `Query limit reached for Auto`
+     - `Try again in <n> minutes`
+     treat that as a provider quota stop, wait for the declared cooldown, and
+     do not keep hammering the same managed browser profile
+   - if the command pauses briefly or exits with:
+     - `Grok rate limit cooldown active until ...`
+     - `Grok write spacing active until ...`
+     that is the new bounded Grok live-test guard, not a prompt/transport bug
+
 ## Responses API Live Smoke Tests
 
 These Vitest cases hit the real OpenAI API to exercise both transports:

@@ -1,3 +1,868 @@
+- 2026-04-13: A roadmap reassessment is not operational until it names the
+  concrete live suites that belong in each tier. The durable live-suite split
+  for the current phase is:
+  - stable baseline:
+    - `tests/live/team-grok-live.test.ts` default Grok baseline cases
+    - `tests/live/team-chatgpt-live.test.ts` single-provider ChatGPT baseline
+  - extended matrix:
+    - `tests/live/team-gemini-live.test.ts`
+    - Grok/ChatGPT operator-control team cases
+    - `tests/live/team-multiservice-live.test.ts`
+  - flaky-but-informative probes:
+    - provider/browser cases that still need bounded reruns or stronger
+      auth/cooldown preflight, especially some Gemini-resume situations
+  Keep routine operator guidance anchored to that concrete split instead of
+  leaving "baseline vs matrix" as an abstract idea.
+- 2026-04-13: After defining the live-suite tiers, add one explicit routine
+  baseline command instead of expecting operators to reconstruct the right env
+  gates from docs. The current bounded routine entrypoint is:
+  - `pnpm run test:live:team:baseline`
+  and it intentionally covers only:
+  - Grok default team baseline cases
+  - ChatGPT single-provider team baseline
+  Keep broader Gemini/operator/multiservice coverage as explicit opt-in matrix
+  commands rather than folding them into the routine baseline.
+- 2026-04-13: Once the docs define baseline versus matrix tiers, mirror that
+  split directly in the live test files near the env-gate definitions. A small
+  tier comment at the top of each live suite is enough to prevent the suite
+  intent from drifting back into tribal knowledge.
+- 2026-04-13: Mixed-provider response readback should expose a bounded
+  per-step routing projection instead of forcing callers to interpret one
+  top-level `metadata.service` / `metadata.runtimeProfile` pair as the full
+  route. The durable rule is:
+  - keep the top-level response metadata fields for the existing compact
+    summary
+  - add `metadata.executionSummary.stepSummaries` as the bounded projection of
+    stored step state
+  - use that field for mixed-provider routing proof in response readback
+    instead of treating the top-level fields as a per-step matrix
+  - keep recovery detail separate:
+    - response readback answers "what route executed?"
+    - recovery detail answers "what orchestration lifecycle happened?"
+  - lock the split with an explicit model-level assertion:
+    - top-level response metadata must stay compact
+    - `executionSummary.stepSummaries` must carry the full mixed-provider route
+  - also lock the negative side:
+    - recovery detail must not silently grow routing fields like
+      `runtimeProfile`, `service`, or `stepSummaries`
+  - keep response `metadata.executionSummary` bounded to response-readback
+    summaries only:
+    - do not let it silently absorb recovery-only status fields like
+      `activeLease`, `dispatch`, `repair`, `leaseHealth`, or `localClaim`
+  - keep top-level `response.output` as the transport payload when runtime
+    shared state exposes `structuredOutputs[key="response.output"]`:
+    - preserve ordered mixed text + artifact output there
+    - keep execution summaries in `metadata.executionSummary`
+    - do not leak summary fields into individual `output` items
+  - keep user-facing `/status` operator docs aligned with the same tested
+    control seam:
+    - `localActionControl.resolve-request` applies to currently `requested`
+      local action records on direct or team runs
+  - keep user-facing response docs aligned with the same readback split:
+    - top-level `metadata.service` / `metadata.runtimeProfile` stay compact
+    - `metadata.executionSummary.stepSummaries` is the per-step routing
+      projection
+    - recovery detail stays the lifecycle timeline surface
+  - once README plus testing docs both reflect the current control/readback
+    contract and a final audit finds no similarly important stale statement,
+    stop the doc/readback wording pass and move to a different hardening seam
+- 2026-04-13: Keep `GET /status?recovery=true` compact. The durable rule is:
+  - recovery summary stays the aggregate surface
+  - per-run detail fields stay on `GET /status/recovery/{run_id}`
+  - lock the negative side with explicit tests so recovery summary does not
+    silently grow:
+    - `taskRunSpecId`
+    - `orchestrationTimelineSummary`
+    - `handoffTransferSummary`
+    - `leaseHealth`
+  - keep the local-claim split explicit too:
+    - top-level `/status.localClaimSummary` stays the direct-run snapshot
+    - `recoverySummary.localClaim` is the recovery-filtered aggregate
+  - keep server posture explicit too:
+    - top-level `/status.runner` remains the server runner snapshot
+    - top-level `/status.backgroundDrain` remains the server drain-loop snapshot
+    - recovery/source filters do not convert either into recovery-scoped data
+    - this remains true even when `recoverySummary` is filtered to
+      `team-run` or `all`
+- 2026-04-13: Keep adjacent endpoint docs aligned with the tested `/status`
+  operator scope:
+  - `docs/openai-endpoints.md` must not describe
+    `resume-human-escalation`, `drain-run`, or
+    `localActionControl.resolve-request` as direct-run-only after the
+    host/server path and regressions already prove team-run support
+- 2026-04-13: Keep startup-recovery source scoping explicit at the serve
+  wrapper:
+  - default startup recovery scope remains `direct`
+  - `recoverRunsOnStartSourceKind = team-run` recovers only team runs
+  - `recoverRunsOnStartSourceKind = all` recovers both direct and team runs
+  - lock the `all` case at the serve-wrapper test layer, not just in docs
+  - keep the startup cap behavior unchanged after widening scope to `all`:
+    - `recoverRunsOnStartMaxRuns` still bounds mixed direct + team candidates
+    - startup logs should still report cap saturation and `limit-reached`
+- 2026-04-13: Keep targeted `drain-run` ownership failures explicit:
+  - if the local configured runner cannot safely claim the targeted run,
+    `drainRun(...)` should return:
+    - `status = skipped`
+    - `reason = claim-owner-unavailable`
+    - `skipReason = claim-owner-unavailable`
+  - keep the persisted run's own `sourceKind` unchanged while reporting that
+    ownership failure
+- 2026-04-13: Keep repeated-pass drain accounting honest:
+  - `drainRunsUntilIdle(...)` should preserve repeated executed passes for the
+    same run
+  - but one reclaimed stale lease should only appear once in
+    `expiredLeaseRunIds`, even if the same run executes again on later passes
+- 2026-04-13: Keep targeted-drain readback symmetric across outcomes:
+  - `operatorControlSummary.targetedDrain` must preserve both:
+    - `status = executed`
+    - `status = skipped`
+  - for skipped targeted drain:
+    - `reason` and `skipReason` should both carry the persisted skip posture
+    - recovery detail timeline should retain the persisted skipped drain note
+- 2026-04-13: Keep cancellation readback stable even when older data lacks a
+  cancellation note event:
+  - response and recovery-detail fallback should use the cancelled run's
+    `updatedAt`
+  - fallback readback should keep:
+    - `source = null`
+    - `reason = null`
+- 2026-04-13: Once a cancelled local-action operator path is live-proven on one
+  provider, the next highest-value confirmation is the same exact path on a
+  second provider, not another same-provider variant. Reuse the same route:
+  - approval-required local action starts as `requested`
+  - operator resolves it as `cancelled`
+  - existing `/status`:
+    - `resume-human-escalation`
+    - `drain-run`
+  - final readback confirms bounded `localActionSummary.cancelled = 1`
+  This is now proven on:
+  - Grok
+  - ChatGPT
+- 2026-04-13: Exact-id chat cleanup subprocesses need their own bounded timeout.
+  Even with incremental deletion count, one slow provider delete can still pin
+  a live suite turn if the delete subprocess is allowed to wait too long. Keep
+  the delete subprocess timeout bounded (current helper timeout: `30s`) and let
+  failed/timeout deletes remain in the ledger for later retry.
+- 2026-04-12: Approval-required local actions should stay `requested` until
+  operator control resolves them. The durable rule is:
+  - `auracall teams run ... --require-local-action-approval` should map to
+    task policy `localActionPolicy.mode = approval-required`
+  - the default service-host callback should not auto-execute those requests
+  - stored runtime resolution should preserve `requested` local actions when no
+    operator decision exists yet
+  - dependency local-action guidance should escalate on:
+    - `requested`
+    - `cancelled`
+    instead of treating them as safe-to-continue
+  This creates one truthful cancelled-path operator flow:
+  - request local action
+  - pause for human escalation
+  - operator resolves request as `cancelled`
+  - operator resumes + drains the same run
+  - final readback shows bounded `localActionSummary.cancelled = 1`
+- 2026-04-12: Batched live-test chat cleanup should stay incremental. Deleting
+  every oldest disposable conversation needed to reach the retain window in one
+  enqueue can dominate or stall a single live test turn. Keep the policy:
+  - threshold `6`
+  - retain newest `3`
+  - delete exact ids only
+  - delete at most oldest `2` per enqueue
+  This still prevents provider chat buildup while keeping live suites bounded.
+- 2026-04-12: The team-run local-action control seam should not stay
+  artificially direct-run-only once the same local-action records already live
+  on stored team runs. The durable rule is:
+  - `POST /status` `localActionControl.resolve-request` may apply to currently
+    `requested` direct or team local-action records
+  - keep the same bounded behavior:
+    - resolve only pending requests
+    - update stored request status/result summary
+    - refresh bounded `step.localActionOutcomes.<stepId>`
+    - surface the result later through
+      `metadata.executionSummary.localActionSummary`
+  The first live negative-path proof also showed an important runtime detail:
+  - a forbidden local action on the current tooling team is already rejected by
+    step policy before operator intervention
+  - the honest live rejection proof is therefore:
+    - assert the stored rejected request first
+    - then resume + drain the paused run
+    - then assert rejected outcome readback plus final terminal success
+- 2026-04-12: Before calling the provider-backed team operator-control seam
+  generally live-ready, repeat the same approval/resume/drain proof on a
+  second provider instead of assuming Grok generalizes. The clean second-
+  provider pattern is:
+  - reuse the same forbidden local-action pause trigger
+  - start the tooling-style team run without any local shell allowlist
+  - assert the initial provider-backed run cancels with
+    `finalOutputSummary = "paused for human escalation"`
+  - then reuse only the existing `/status` actions:
+    - `resume-human-escalation`
+    - `drain-run`
+  - assert final success from the stored terminal step summary rather than a
+    convenience transport field
+  This proved the seam cleanly on ChatGPT with:
+  - `auracall-chatgpt-tooling`
+  - terminal stored step summary
+    `= "AURACALL_CHATGPT_APPROVAL_TEAM_LIVE_SMOKE_OK"`
+- 2026-04-12: The first provider-backed approval proof does not need a new
+  team shape if an existing tooling team can deterministically trigger the
+  same pause semantics. The durable pattern is:
+  - start a tooling-style team run without any allowed local shell policy so
+    the default forbidden local-action policy rejects the emitted shell request
+  - let dependency guidance escalate and pause the downstream step for human
+    escalation
+  - use the existing `POST /status`:
+    - `resume-human-escalation`
+    - `drain-run`
+    controls to finish the same provider-backed run
+  - assert final success from the stored terminal step summary rather than
+    assuming an extra `output_text` convenience field on response readback
+  This proves the live operator seam with the minimum added surface area.
+- 2026-04-12: Team runs should not stay artificially excluded from the bounded
+  operator resume/drain seam once the runtime already supports human-
+  escalation pause/resume internally. The durable rule is:
+  - `resume-human-escalation` should key off "has a cancelled human-
+    escalation step" rather than `sourceKind = direct`
+  - targeted `drain-run` should use the persisted run's own `sourceKind`
+    instead of hardcoding `direct`
+  - response readback and recovery-detail readback still keep different
+    bounded shapes:
+    - response readback carries structured `operatorControlSummary`
+    - recovery detail carries the bounded resumed execution timeline
+  This keeps operator control consistent across direct and team runs without
+  inventing a second team-only control surface.
+- 2026-04-12: Mixed-provider response readback still should not be treated as a
+  per-step provider matrix. In the `ChatGPT -> Gemini` live proof, the run
+  succeeded end to end and `stepSummaries` correctly showed:
+  - step 1 `chatgpt` / `wsl-chrome-2`
+  - step 2 `gemini` / `auracall-gemini-pro`
+  but `GET /v1/responses/{response_id}` metadata service/runtime still read
+  back as the entry-side provider/runtime. The durable rule for now is:
+  - use `execution.stepSummaries` as the authoritative mixed-provider proof
+  - use recovery/response orchestration timeline for lifecycle confirmation
+  - do not assert response metadata service/runtime as though it were terminal-
+    step aware until the response model is intentionally widened
+- 2026-04-12: The first multi-service team proof should stay tool-free and use
+  one fixed lock order across provider browser families. A cross-provider team
+  test that touches both ChatGPT and Grok should:
+  - prove the provider handoff with `stepSummaries`, not by overloading the
+    single response metadata service/runtime fields
+  - lock `chatgpt-browser` first and `grok-browser` second to avoid deadlocks
+    with provider-specific live suites
+  - reuse exact-id cleanup per provider after successful assertions instead of
+    inventing a merged cleanup surface
+- 2026-04-12: ChatGPT team live proof should trust the managed browser profile
+  bound to the runtime profile, not the source Chrome cookie jar. The first
+  `auracall-chatgpt-solo` live attempt falsely skipped because it checked for a
+  ChatGPT session token in source Chrome `Default`, while the real team path
+  runs on the managed `wsl-chrome-2/chatgpt` profile. The durable rule is:
+  - use source-cookie preflight only when the runtime actually depends on source
+    cookies
+  - for managed-profile team baselines, the honest proof is the real provider-
+    backed team command itself
+  - if that real command succeeds, remove the false preflight rather than
+    preserving a misleading skip
+- 2026-04-12: Exact-id live-test cleanup is not just a Grok/Gemini concern.
+  Once ChatGPT team live tests exist, the same delayed cleanup ledger should
+  include `chatgpt` so throwaway baseline chats do not accumulate on that
+  provider either. Keep the same policy:
+  - enqueue only after successful assertions
+  - threshold `6`
+  - retain newest `3`
+  - delete by exact conversation id only
+- 2026-04-12: For bounded direct-run human-escalation operator flows, do not
+  treat response readback and recovery-detail readback as interchangeable.
+  The durable split is:
+  - `GET /v1/responses/{response_id}` carries bounded
+    `operatorControlSummary` for:
+    - `humanEscalationResume`
+    - `targetedDrain`
+  - `GET /status/recovery/{run_id}` carries the bounded orchestration timeline
+    slice for the resumed terminal lifecycle, not a raw full-history dump
+  So the cohesive proof should assert:
+  - response readback has the structured operator summary
+  - recovery detail has the resume/drain notes it is designed to retain
+  Avoid requiring the earlier pause note on the bounded recovery timeline if
+  that surface intentionally narrows to the later resumed lifecycle.
+- 2026-04-12: If live team smokes are going to create lots of throwaway chats,
+  do not delete them immediately after every run and do not rely on fuzzy
+  title matching. The durable hygiene pattern is:
+  - persist exact browser conversation ids in stored team step output
+    (`browserRun.conversationId`, `browserRun.tabUrl`) for each provider
+  - enqueue successful live-test conversations into a provider-scoped cleanup
+    ledger under `~/.auracall/live-test-cleanup/`
+  - only prune when the ledger crosses a small threshold (current shape:
+    threshold `6`, retain newest `3`)
+  - delete by exact id through `auracall delete <conversationId> --target ...`
+  This keeps enough recent chats around for debugging while preventing
+  long-running live testing from polluting provider workspaces.
+- 2026-04-12: Gemini stored team runs must persist browser conversation
+  identity just like Grok. The Gemini web executor was returning answer text
+  but dropping conversation metadata from `runGeminiWebWithFallback(...)`,
+  which left `browserRun.conversationId = null` in stored team steps and
+  blocked exact-id cleanup. The durable rule is:
+  - extract Gemini conversation id from response metadata (including current
+    `cid`, `chat`, and nested `conversationId` shapes, plus `/app/<id>` URL
+    fallbacks)
+  - preserve intro-metadata conversation identity across Gemini edit flows when
+    the second response omits it
+  - return both `conversationId` and canonical `tabUrl` from
+    `createGeminiWebExecutor(...)`
+  Without that, Gemini live-test cleanup and post-run inspection both stay
+  weaker than Grok.
+- 2026-04-12: For provider-backed team runs on browser services, do not let
+  the AuraCall runtime profile id override an explicit managed browser profile
+  directory. If a stored team step resolves a concrete `manualLoginProfileDir`
+  and the runtime profile also points at a browser family (for example
+  `browserFamily = default`), managed-profile ownership must follow that
+  browser family. Otherwise Aura-Call can mint a fresh runtime-profile-
+  namespaced managed browser profile, lose the live login/project session, and
+  Grok project navigation falls back to `issue finding id`.
+- 2026-04-12: Grok team/browser waits need a pre-submit assistant baseline.
+  Fast Grok replies can land before the post-submit waiter takes its baseline
+  snapshot; when that happens, naive "new content since baseline" logic waits
+  the full timeout even though the final answer is already on screen. Capture
+  the Grok assistant baseline before submit and pass it into
+  `waitForGrokAssistantResult(...)` so the run can complete promptly.
+- 2026-04-12: The first public-ish team execution seam should be a bounded CLI
+  bridge over the existing runtime bridge, not a new HTTP/MCP surface. Make it
+  return inspectable ids and step/runtime identity, then immediately run one
+  live smoke on the exact command. If that smoke returns
+  `finalOutputSummary = bounded local runner pass completed`, treat it as proof
+  that the entrypoint is real but the execution substrate is still stubbed. Do
+  not claim live team readiness until a provider-backed
+  `executeStoredRunStep` path is wired behind the same command.
+- 2026-04-12: For the first live team experiments, keep browser/project/model
+  identity anchored on a dedicated AuraCall runtime profile, not on the
+  agent/team object itself. The practical pattern is:
+  - create one dedicated runtime profile for the experiment
+  - bind the provider model and live project/workspace there
+  - let the agent reference that runtime profile
+  - let the team reference the agent
+  This keeps browser/account-bearing state on the existing runtime-profile seam
+  while still allowing rapid iteration on agent/team instructions, output
+  shape, and project knowledge.
+- 2026-04-12: After response-side orchestration timeline readback exists, the
+  matching operator-side follow-through should stay on the existing per-run
+  recovery detail route:
+  - add bounded `orchestrationTimelineSummary` to
+    `GET /status/recovery/{run_id}`
+  - derive it from the same selected relevant `sharedState.history` entries
+  - keep `/status?recovery=true` unchanged
+  - keep the item shape aligned with the response reader
+  This gives operators the same bounded orchestration timeline signal without
+  bloating the compact recovery summary surface.
+- 2026-04-12: When durable execution history becomes rich enough to read, the
+  first history-backed reader should stay bounded and ride an existing detailed
+  surface:
+  - expose one compact `metadata.executionSummary.orchestrationTimelineSummary`
+    on `GET /v1/responses/{response_id}`
+  - derive it from selected relevant `sharedState.history` entries only
+  - cap it to a small recent slice instead of dumping raw history
+  - keep the item shape compact: `type`, `createdAt`, `stepId`, `note`,
+    `handoffId`
+  This turns durable history into usable orchestration readback without
+  inventing a second history model or bloating the response surface.
+- 2026-04-12: Once handoff `taskTransfer` is shaped and consumed at runtime,
+  the next durable projection should stay on existing shared-state primitives:
+  - append one internal structured output keyed as
+    `step.consumedTaskTransfers.<stepId>`
+  - append one compact shared-state note with the consumed-transfer count
+  - derive both from runtime `sharedStateContext.dependencyTaskTransfers`
+  - treat the key as internal so requested-output fulfillment does not mistake
+    orchestration state for a user-facing structured result
+  This records consumed transfer context durably without inventing a second
+  transfer store or expanding public route surfaces in the same slice.
+- 2026-04-12: After durable consumed-transfer state exists, detailed readers
+  should prefer that stored projection over planned-handoff re-derivation:
+  - `GET /v1/responses/{response_id}`
+  - `GET /status/recovery/{run_id}`
+  - keep the public summary vocabulary unchanged
+  - keep planned-handoff fallback only for runs that do not yet have stored
+    consumed-transfer state
+  This removes avoidable reader re-derivation while preserving the same client
+  and operator payload shapes.
+- 2026-04-12: Once the handoff-transfer line is coherent enough to pause, the
+  next broader orchestration seam should be handoff lifecycle follow-through,
+  not more transfer payload or readback growth:
+  - advance durable handoff state beyond `prepared` when downstream execution
+    actually consumes the handoff
+  - append explicit handoff-consumption history on the existing durable
+    shared-state/history seam
+  - keep the first slice bounded to lifecycle/state progression rather than a
+    richer transfer schema
+  This aligns runtime behavior with the existing team-run data model, which
+  already expects handoff status and append-only history to be meaningful
+  orchestration records.
+- 2026-04-12: When implementing the first handoff lifecycle slice, keep the
+  mutation rule narrow and evidence-based:
+  - only a succeeded downstream step with incoming dependency `taskTransfer`
+    handoffs may advance those handoffs to `consumed`
+  - append one explicit `handoff-consumed` event on the existing execution
+    history seam
+  - do not broaden the same slice to local-action-only guidance handoffs or a
+    richer handoff schema
+  This keeps lifecycle progression truthful without inventing a second handoff
+  state machine.
+- 2026-04-12: Once the handoff line is coherent enough to pause, the next
+  broader seam should be history-backed orchestration readback, not more
+  handoff-local growth:
+  - consume the existing append-only `sharedState.history`
+  - stay on existing detailed surfaces first
+  - expose one bounded orchestration timeline/summary rather than the raw
+    history blob
+  - prefer cross-cutting lifecycle signal (`step-*`, `handoff-consumed`,
+    operator/runtime notes) over another handoff-specific payload expansion
+  This uses the durable execution record the data model already requires,
+  instead of continuing to grow isolated point summaries.
+- 2026-04-12: Once the bounded handoff-transfer line has:
+  - planner shaping
+  - bridge preservation
+  - downstream runtime/shared-state consumption
+  - detailed response readback
+  - per-run operator recovery-detail readback
+  stop extending it with more read surfaces by inertia.
+  The next higher-yield seam is durable shared-state/history projection of
+  consumed transfer context so later orchestration readers can recover that
+  state without re-deriving it from planned handoffs plus current step shape.
+  This keeps the line moving toward orchestration value instead of readback
+  sprawl.
+- 2026-04-12: After response-side handoff-transfer readback exists, the first
+  operator-side readback seam should stay on per-run recovery detail:
+  - add bounded `handoffTransferSummary` to `GET /status/recovery/{run_id}`
+  - derive it from incoming planned handoffs for the latest dependent step
+  - keep `/status?recovery=true` unchanged
+  - keep the fields compact: transfer identity plus bounded counts only
+  This gives operators precise inspection without bloating the compact recovery
+  summary surface.
+- 2026-04-12: After handoff `taskTransfer` is consumed at runtime, the first
+  readback seam should stay on an existing detailed response surface:
+  - expose one compact `metadata.executionSummary.handoffTransferSummary`
+  - derive it from incoming planned handoffs to the terminal-or-latest step
+  - include only transfer identity plus bounded counts, not the full payload
+  - do not widen `/status` or invent a second transfer store in the same slice
+  This keeps handoff-transfer visibility aligned with the same contract the
+  runner already consumes, without bloating compact operator surfaces.
+- 2026-04-12: After bounded handoff `taskTransfer` exists, the first
+  downstream consumer should stay on the existing execution-context seam:
+  - read incoming dependency handoffs for the current step
+  - project them into one bounded shared-state context view such as
+    `dependencyTaskTransfers`
+  - add one compact prompt context block derived from the same handoff payload
+  - do not introduce a second transfer store or new orchestration vocabulary in
+    the same slice
+  This makes handoff shaping operational without letting the transfer contract
+  split across planning and runtime models.
+- 2026-04-12: When task-aware handoffs need richer transfer context, keep the
+  first slice on the existing handoff `structuredData` seam:
+  - derive one compact `taskTransfer` block from the source planned step
+  - include only assignment summary and ref identity:
+    - `title`
+    - `objective`
+    - `successCriteria`
+    - bounded `requestedOutputs`
+    - bounded `inputArtifacts`
+  - do not introduce a second handoff model, artifact payload mirror, or
+    evaluator vocabulary in the same slice
+  This keeps handoff shaping aligned with the stabilized task-run-spec
+  substrate without letting orchestration payloads sprawl.
+- 2026-04-12: Once the bounded task-run-spec consumer line covers:
+  - execution identity selection
+  - runtime/browser override consumption
+  - task context and structured context runtime input
+  - requested-output readback and enforcement
+  - provider-budget enforcement
+  - input-artifact runtime context
+  - input-artifact detailed response readback
+  stop extending field-level task-run-spec semantics by inertia.
+  Current audit result:
+  - `successCriteria` is still too free-form for honest runtime/service
+    enforcement without a separate evaluator model
+  - `requestedBy` / `trigger` already have the bounded projection they need
+  - there is no remaining field-level consumer that clearly beats a checkpoint
+    pause
+  - the next higher-yield seam is bounded task-aware handoff shaping because
+    current handoffs still carry mostly identity plus later local-action
+    overlays rather than a fuller task-aware transfer contract
+  This keeps the repo from inventing fake assignment semantics after the
+  bounded task-run-spec line is already coherent enough to pause.
+- 2026-04-12: After task input artifacts become a real runtime execution
+  input, the first readback seam should stay on existing detailed response
+  reads:
+  - expose one bounded `metadata.executionSummary.inputArtifactSummary`
+  - derive it from existing step input artifact refs on the
+    terminal-or-latest artifact-bearing step
+  - include only compact ref identity fields such as `id`, `kind`, `title`,
+    `path`, and `uri`
+  - do not add a second artifact store, payload mirror, or compact status
+    rollup in the same slice
+  This keeps assignment-artifact visibility aligned with the existing runtime
+  transport and detailed read surfaces.
+- 2026-04-12: After the `providerBudget` lane is coherent enough to pause, the
+  first `inputArtifacts` consumer should stay on the existing execution-context
+  seam:
+  - reuse `step.input.artifacts` as the single durable transport
+  - inject one bounded `taskInputArtifacts` view into `sharedStateContext`
+  - add one bounded prompt context block derived from artifact refs
+  - do not invent a second artifact store, artifact payload mirror, or fuzzy
+    success evaluator in the same slice
+  This makes assignment artifacts real at runtime with the narrowest honest
+  execution consumer.
+- 2026-04-12: Once `constraints.providerBudget` has:
+  - `maxRequests`
+  - durable usage ingestion
+  - `maxTokens`
+  stop extending that lane by inertia. Reassess the remaining task-run-spec
+  consumers and prefer the next concrete assignment-content seam over a richer
+  budget variant.
+  Current audit result:
+  - `successCriteria` is too free-form for honest runtime enforcement without a
+    new evaluator model
+  - `requestedBy` / `trigger` already have the bounded projection they need
+  - `inputArtifacts` is the next strongest concrete runtime/service seam
+  This keeps the task-run-spec lane grounded in fields with real execution
+  substrate instead of inventing fake policy depth.
+- 2026-04-12: After durable provider usage exists, the first
+  `constraints.providerBudget.maxTokens` rule should consume only that stored
+  signal:
+  - sum durable `step.providerUsage.*.totalTokens`
+  - if the stored total is already above budget, fail before the next step
+    executes
+  - use one explicit failure code such as
+    `task_provider_token_limit_exceeded`
+  - do not predict mid-step token spend in the first slice
+  This keeps token-budget enforcement evidence-based and conservative.
+- 2026-04-12: When durable runtime/service usage is missing, ingest it at the
+  execution callback seam before adding token-budget policy:
+  - extend `ExecuteStoredRunStepResult` to carry real provider usage
+  - persist it as one bounded step-scoped structured output such as
+    `step.providerUsage.<stepId>`
+  - project readback from that same durable record instead of inventing a
+    parallel usage store
+  This creates the minimum honest substrate for later `providerBudget.maxTokens`
+  work.
+- 2026-04-11: Do not enforce `constraints.providerBudget.maxTokens` until
+  provider usage is part of durable runtime/service state:
+  - current token usage exists in the API/session layer, not on
+    `ExecutionRun` / `ExecutionRunStep` / shared runtime state
+  - do not substitute prompt-length heuristics or generic token estimates for
+    real provider usage in runtime enforcement
+  - the next honest seam is usage ingestion, then token-budget policy
+  This prevents fake budget semantics on the task-run-spec runtime path.
+- 2026-04-11: Start `constraints.providerBudget` with `maxRequests`, not
+  `maxTokens`:
+  - enforce it at the same pre-execution runner gate used for
+    `turnPolicy.maxTurns` and `constraints.maxRuntimeMinutes`
+  - in the current sequential runtime, count the next runnable step order as
+    the bounded proxy for request count
+  - fail before execution with one explicit code such as
+    `task_provider_request_limit_exceeded`
+  - do not invent provider-native token accounting or a second budget model in
+    the first slice
+  This makes `providerBudget` real with the narrowest defensible rule before
+  any harder token-budget work.
+- 2026-04-11: Once the requested-output line has:
+  - fulfillment readback
+  - readback policy
+  - response-surface enforcement
+  - stored runtime/service enforcement
+  stop extending it by inertia. Reassess the remaining task-run-spec runtime
+  consumers and pick the next inert field, not the locally richest one.
+  Current audit result:
+  - `humanInteractionPolicy` already has runtime consumption
+  - `localActionPolicy` already has runtime consumption
+  - `providerBudget` is the next clearly inert bounded constraint
+  This keeps the task-run-spec lane moving by roadmap leverage instead of
+  overfitting one sub-line.
+- 2026-04-11: After response-surface enforcement for missing required outputs
+  exists, remove the split with stored runtime state at the runner boundary:
+  - evaluate required requested outputs immediately before persisting a
+    would-be success bundle
+  - if clearly missing, persist failed runtime/service terminal state with
+    `requested_output_required_missing`
+  - preserve produced output and evidence on the failed step
+  - do not broaden into per-format schema validation in the same slice
+  This keeps terminal semantics aligned between storage and readback without
+  inventing a second validator model.
+- 2026-04-11: After required requested outputs escalate on readback, the first
+  enforcement seam can stay on response semantics before touching stored run
+  state:
+  - if a run otherwise reads back as `completed` but
+    `requestedOutputPolicy.status = missing-required`, downgrade response
+    readback to `failed`
+  - synthesize bounded failure summary with
+    `requested_output_required_missing`
+  - do not rewrite persisted runtime run history in the same slice
+  This creates real observable enforcement while keeping the first mutation
+  boundary narrow.
+- 2026-04-11: After requested-output fulfillment evidence exists, the first
+  stronger policy seam should be readback escalation, not runtime failure:
+  - add one compact `requestedOutputPolicy`
+  - derive it from the same `requestedOutputSummary` evidence path
+  - use bounded statuses such as `satisfied` and `missing-required`
+  - keep runtime terminal status unchanged in the first slice
+  This makes missing required outputs explicit to clients before adding harder
+  service/runtime enforcement semantics.
+- 2026-04-11: After `context` and `structuredContext` are real runtime inputs,
+  the next bounded `requestedOutputs` seam should be fulfillment readback, not
+  hard validation:
+  - derive one compact `requestedOutputSummary` from requested outputs plus
+    actual stored response messages, artifacts, and non-internal structured
+    outputs
+  - report fulfillment evidence and missing required outputs
+  - keep the first slice read-only and bounded on `GET /v1/responses/{response_id}`
+  - do not introduce a second output-contract model or runtime failure path yet
+  This proves `requestedOutputs` has real runtime/readback value before adding
+  stricter enforcement semantics.
+- 2026-04-11: After `overrides.structuredContext` becomes a real runtime
+  consumer, the next bounded task assignment content seam should be
+  `TaskRunSpec.context`, not another prompt-shaping variant:
+  - carry `taskContext` through planned step structured data
+  - inject it into runtime `sharedStateContext`
+  - add one bounded prompt context so prompt-driven execution sees the same
+    assignment content
+  - do not invent a second task-content transport or a separate request model
+  Once both `structuredContext` and `context` are real runtime inputs, pause
+  further context expansion and move to the next content consumer such as
+  `requestedOutputs`.
+- 2026-04-11: After the budget/policy lane reaches a checkpoint pause, the
+  next higher-yield runtime consumer should be task assignment content rather
+  than another scalar guard. The first good seam is
+  `overrides.structuredContext`:
+  - carry `taskOverrideStructuredContext` into actual runtime step execution context
+  - include it in `sharedStateContext` for the runner/bridge callback
+  - add bounded prompt context so the same content is visible to prompt-driven execution too
+  - do not invent a second task-context transport model
+  This turns task assignment content into real execution input without adding
+  a new route family or executor path.
+- 2026-04-11: Once task-aware runtime policy covers:
+  - planning identity selection
+  - bridge execution identity evidence
+  - `turnPolicy.maxTurns`
+  - `constraints.maxRuntimeMinutes`
+  stop extending the budget/policy lane by inertia. The next higher-yield
+  consumer should be task assignment content at runtime, not another scalar
+  guard:
+  - prefer one bounded runtime/request seam that consumes assignment context,
+    structured context, or requested outputs
+  - avoid adding more constraint gates unless they clearly beat that content
+    seam
+  This keeps the next slice focused on what the task is asking for, not just
+  what it forbids.
+- 2026-04-11: After `turnPolicy.maxTurns` is enforced at runtime, the next
+  bounded task constraint can use the same conservative runner gate:
+  - read `step.input.structuredData.constraints.maxRuntimeMinutes`
+  - compare it to elapsed run age from `run.createdAt`
+  - if the budget is already exceeded, fail before step execution
+  - use one explicit failure code such as `task_runtime_limit_exceeded`
+  This turns task runtime budget into real post-planning behavior without
+  introducing queue-time scheduling or a second timeout model.
+- 2026-04-11: After task-aware planning and bridge execution identity are
+  coherent, the next runtime behavior seam can stay narrow by enforcing the
+  already-modeled task turn budget:
+  - read `step.input.structuredData.turnPolicy.maxTurns` at runner time
+  - if the next runnable step order exceeds that bound, fail before step execution
+  - use one explicit runtime failure code such as `task_turn_limit_exceeded`
+  - do not invent a second planning-only budget model
+  This turns `turnPolicy.maxTurns` into real post-planning runtime behavior
+  without widening scheduler semantics.
+- 2026-04-11: Once task-aware runtime/browser overrides affect planning,
+  expose the downstream runtime consumption on the existing bridge summary
+  before adding more planning policy:
+  - include per-step runtime profile, browser profile, and service on
+    `TeamRuntimeExecutionSummary`
+  - derive them from the actual runtime step when available, otherwise from
+    the planned team step
+  - prove that a task-selected runtime override survives:
+    - planned team step
+    - created runtime step
+    - final runtime step
+    - bridge execution summary
+  This keeps the next slice on post-planning execution evidence instead of
+  more metadata-only propagation.
+- 2026-04-11: After task-aware planning consumes agent filters, prompt
+  shaping, and service constraints, the next execution-identity slice should
+  stay conservative:
+  - let `taskRunSpec.overrides.runtimeProfileId` re-resolve step execution identity on config-driven planning
+  - treat `taskRunSpec.overrides.browserProfileId` as a compatibility requirement
+  - if the selected or overridden runtime identity cannot satisfy the browser
+    requirement, block the step cleanly
+  - for already-resolved team inputs, validate compatibility instead of
+    inventing a second resolver
+  This makes task/run-spec execution identity real without introducing another
+  planner or executor path.
+- 2026-04-11: After the first task-aware bridge consumer lands, make the next
+  task/run-spec slice consume planning behavior, not just identity plumbing:
+  - let `taskRunSpec.overrides.agentIds` filter the planned team members/roles
+  - let `taskRunSpec.overrides.promptAppend` extend planned step prompts
+  - let `taskRunSpec.overrides.structuredContext` flow into planned step structured data
+  - let simple `allowedServices` / `blockedServices` constraints block steps
+    whose selected service is not permitted
+  - do not invent a second planner or executor path for this
+  This proves task/run-spec semantics are affecting the plan itself instead of
+  remaining passive metadata.
+- 2026-04-11: After task/run-spec identity is stable in planning, runtime
+  storage, and readback, the next real consumer should be an execution seam,
+  not another reporting field. The first good consumer is the team-runtime
+  bridge:
+  - add task-aware bridge entrypoints
+  - reuse the existing task-aware service-plan builders
+  - carry `taskRunSpecId` through the bridge execution summary
+  - do not invent a parallel task-aware executor path
+- 2026-04-11: Once assignment identity is available on:
+  - runtime run storage
+  - `GET /v1/responses/{response_id}`
+  - `GET /status/recovery/{run_id}`
+  stop exposing `taskRunSpecId` by inertia. Keep the compact operator surfaces
+  compact:
+  - do not add `taskRunSpecId` to `/status?recovery=true` without a concrete operator need
+  - do not add a second plain `/status` assignment rollup by default
+  Prefer reusing the existing detailed-read surfaces until a real consumer
+  proves otherwise.
+- 2026-04-11: If operators need assignment identity beyond response readback,
+  put the next exposure on the bounded per-run recovery detail route first:
+  - add `taskRunSpecId` to `GET /status/recovery/{run_id}`
+  - keep `/status?recovery=true` compact
+  - do not add a second assignment-summary vocabulary
+  This keeps detailed operator inspection rich without turning the recovery
+  summary into a bulky debug payload.
+- 2026-04-11: After `taskRunSpecId` is preserved onto runtime run records, the
+  first response/readback follow-through should stay narrow:
+  - expose `metadata.taskRunSpecId` on `GET /v1/responses/{response_id}`
+  - keep it top-level on response metadata
+  - do not invent a second `executionSummary` variant for assignment identity
+  - do not widen status/recovery payloads until a concrete operator consumer exists
+- 2026-04-11: Once the first bounded `TaskRunSpec` contract exists in
+  `src/teams/*`, carry `taskRunSpecId` as a first-class runtime run field
+  instead of preserving it only inside step-scoped structured data. Keep the
+  first follow-through slice narrow:
+  - add `ExecutionRun.taskRunSpecId`
+  - project `teamRun.taskRunSpecId` onto the runtime run record
+  - prove it in runtime type/schema/model tests
+  - do not broaden `TaskRunSpec` itself or add new public execution surfaces
+- 2026-04-11: The first code-facing `TaskRunSpec` slice should stay stricter
+  than the surrounding execution/runtime models:
+  - keep assignment intent structured and bounded
+  - use explicit enums for requested outputs, input-artifact kinds, and human/local-action policy
+  - keep `TaskRunSpec.requestedBy` structured
+  - project to simpler execution-side fields such as `TeamRun.requestedBy` at
+    the seam instead of weakening the assignment contract
+  This preserves the split between assignment intent and execution history.
+- 2026-04-11: Before adding code-facing team execution or public `team run`
+  surfaces, lock one concrete assignment contract first:
+  - one bounded `taskRunSpec`
+  - one selected `team`
+  - one planned `teamRun`
+  - one durable `teamRun.taskRunSpecId` binding
+  Do not treat bare `team` config as the complete executable input once this
+  layer exists. Keep assignment intent on `taskRunSpec` and execution history
+  on `teamRun`.
+- 2026-04-11: Once the bounded local-action / human-resume / targeted-drain
+  line has:
+  - control on `POST /status`
+  - responses-side readback on `GET /v1/responses/{response_id}`
+  - no second lifecycle model
+  stop extending that line by inertia. The next higher-yield architecture seam
+  is the missing task / run-spec layer that binds concrete work to the
+  existing team/runtime substrate. Prefer that binding layer over more local
+  operator reporting once the single-runner lifecycle contract is already
+  coherent.
+- 2026-04-11: After bounded `resume-human-escalation` and `drain-run` controls
+  exist, the first compact operator readback should stay on the existing
+  `GET /v1/responses/{response_id}` surface:
+  - expose one bounded `metadata.executionSummary.operatorControlSummary`
+  - derive resume state from persisted `human.resume.<stepId>` structured
+    output
+  - derive targeted-drain state from persisted operator `note-added` events
+  - do not invent a second operator-history route or a second lifecycle model
+  This keeps control and readback coherent on the existing direct-run surfaces.
+- 2026-04-11: After bounded human-escalation resume lands, the first post-resume follow-through seam should stay on the same `POST /status` surface and reuse the existing host drain:
+  - expose one `runControl.drain-run` action
+  - allow it only for direct runs
+  - trigger one targeted host-owned drain pass for the requested run
+  - reject skipped or non-direct cases cleanly instead of inventing a scheduler-like control plane
+  This gives resumed runs one immediate follow-through path without widening into broader orchestration.
+- 2026-04-11: After landing bounded local-action resolution, the next local-action lifecycle seam should reuse the existing human-escalation resume model on the same `POST /status` surface:
+  - expose one `runControl.resume-human-escalation` action
+  - allow it only for direct runs that currently have a cancelled human-escalation step
+  - pass note/guidance/override through to the existing runtime resume semantics
+  - reject non-paused runs cleanly instead of inventing broader force-resume behavior
+  This keeps post-escalation follow-through narrow and consistent with the already-proven runtime model.
+- 2026-04-11: The first local-action control seam should stay on the existing `POST /status` surface and mutate the same persisted outcome summary that responses readback already uses:
+  - resolve only currently `requested` local action records
+  - limit the first control to `approved|rejected|cancelled`
+  - update `step.localActionOutcomes.*` in the same write so `metadata.executionSummary.localActionSummary` stays authoritative on later reads
+  - reject already-resolved requests instead of overwriting them
+  This keeps local-action lifecycle follow-through coherent without inventing a second route family or a second outcome model.
+- 2026-04-11: For the first local-action lifecycle follow-through, prefer bounded readback on the existing responses surface over a new control route:
+  - reuse the persisted `step.localActionOutcomes.*` structured output
+  - expose one compact `metadata.executionSummary.localActionSummary`
+  - keep the summary bounded to counts plus compact items
+  This makes local-action outcomes visible to clients without inventing a second host-action lifecycle model.
+- 2026-04-11: Once the bounded cancel line is coherent end-to-end, stop extending it by default. The next higher-yield local service/runtime seam is local-action lifecycle follow-through:
+  - keep cancel work paused once control, late-completion protection, recovery visibility, and responses readback are all in place
+  - move to the remaining host-owned execution path that still lacks comparable lifecycle clarity
+  - prefer one bounded local-action control/readback seam before any broader reassignment or multi-runner work
+  This keeps execution progress driven by roadmap leverage instead of local completeness bias.
+- 2026-04-11: After adding bounded cancel control and recovery-side cancellation visibility, the first post-cancel lifecycle follow-through should land on the existing responses readback:
+  - expose cancellation outcome through `metadata.executionSummary`
+  - include `cancelledAt`, `source`, and `reason`
+  - derive it from the stored cancellation note event instead of inventing a second terminal model
+  Keep cancelled terminal readback on existing create/read surfaces before considering broader cleanup or retry semantics.
+- 2026-04-11: After landing a bounded cancel action, add the first readback on the existing recovery surfaces instead of widening plain status or inventing a second lifecycle model:
+  - separate `cancelledRunIds` from `idleRunIds` in recovery summary
+  - expose bounded cancellation reason maps on recovery summary
+  - expose `cancelledAt`, `source`, and `reason` on per-run recovery detail
+  Keep cancel visibility read-only and recovery-scoped first; plain `/status` should stay compact unless there is a stronger operator need.
+- 2026-04-11: Once single-runner ownership is live, the first stop path should stay narrow and reuse existing runtime semantics:
+  - use the existing `cancelled` vocabulary instead of inventing a second stop state
+  - scope the first cancel action to active leases owned by the local runner/host
+  - release the active lease with reason `cancelled`
+  - if delayed step work finishes after cancellation wins, preserve the `cancelled` terminal state instead of overwriting it with late completion
+  Prefer a conservative local cancel seam before any broader reassignment or multi-runner stop behavior.
+- 2026-04-11: After the stale-heartbeat line reaches a coherent checkpoint, stop adding more reporting by default. The next higher-yield live runner/service seam is bounded stop/cancel control:
+  - the runtime model already carries `cancelled`
+  - the host now has enough ownership, lease freshness, and operator visibility to support one conservative stop path
+  - this should land before any broader reassignment or multi-runner scheduling work
+  Prefer the next control seam over more stale-heartbeat-specific surfaces once classification, repair, and attention are already in place.
+- 2026-04-11: Once unrepaired `stale-heartbeat` attention exists on recovery surfaces, the first external consumer should be a compact startup/operator signal, not another status payload:
+  - read the existing recovery summary after the bounded startup drain pass
+  - emit `attention=stale-heartbeat-inspect-only:<count>` only when nonzero
+  - keep ordinary startup logs unchanged when there is no such attention
+  This makes the new signal visible during real service start without widening control or scheduling behavior.
+- 2026-04-11: After host and operator repair share one stale-heartbeat repair seam, the next bounded signal should be read-only attention, not more automation:
+  - surface only `stale-heartbeat` + `inspect-only`
+  - keep `suspiciously-idle` outside the attention path
+  - put compact aggregates on recovery summary and one explicit flag on per-run detail
+  This gives operators a narrow escalation target without inventing another action or scheduler rule.
+- 2026-04-11: Once a bounded operator repair action exists, do not leave host recovery on a second reclaim path. Route host repair through the same stale-heartbeat repair seam so:
+  - manual operator repair and host repair share one policy gate
+  - reclaimable stale-heartbeat leases still recover
+  - `suspiciously-idle` stays diagnostic-only everywhere
+  This avoids policy drift between status control and host recovery.
+- 2026-04-11: Once `stale-heartbeat` is visible on recovery surfaces and consumed in host skip/log behavior, the first operator action should stay manual and narrow:
+  - expose a single run-scoped `repair-stale-heartbeat` control on the existing `POST /status` surface
+  - allow it only when the run is still classified `stale-heartbeat`
+  - require the existing durable repair posture to already be `locally-reclaimable`
+  - reject `suspiciously-idle` as diagnostic-only
+  This keeps the first stuck-run repair action conservative and auditable instead of broadening into automatic reclaim or reassignment.
+- 2026-04-11: After adding read-only stuck-run classification, the first consumer should be the narrowest safe one: let `stale-heartbeat` become its own host skip/log posture, but keep `suspiciously-idle` diagnostic-only. That keeps operator signal high without jumping early to repair automation.
+- 2026-04-11: Once live runner-owned leases have real heartbeat freshness, add a read-only stuck-run classifier before any more repair automation. The bounded operator contract is:
+  - classify active leases as `fresh`, `stale-heartbeat`, or `suspiciously-idle`
+  - derive the result from existing lease heartbeat, runner liveness, and runner activity data
+  - surface compact aggregates on recovery summary and per-run detail on recovery detail
+  Keep this read-only until operators can inspect the classifications reliably.
+- 2026-04-11: Once a live persisted runner owns local claims, do not leave lease freshness as a one-shot timestamp. The first conservative rule is:
+  - acquire the lease with a real TTL immediately
+  - refresh that lease heartbeat while delayed local step work is still executing
+  - stop the heartbeat before final release
+  - reread the latest run record before final success/failure persist so heartbeat-side lease revisions are not lost
+  Keep this bounded to one local runner pass; do not turn it into multi-runner scheduling.
+- 2026-04-11: Once `api serve` owns a live persisted runner id, do not stop at heartbeat liveness. Add one bounded activity seam so operators can tell whether that runner has actually advanced work. The conservative contract is:
+  - persist `lastActivityAt`
+  - persist `lastClaimedRunId`
+  - update them only after a run actually advances
+  - surface them on the existing plain `/status.runner` block
+  Keep this metadata diagnostic only; do not turn it into multi-runner scheduling, reassignment, or a second execution source of truth.
 # Dev Fixes Log
 
 This log captures notable fixes, what broke, why, and how we verified the repair. The goal is to preserve lessons learned and avoid repeating regressions.
@@ -19,6 +884,274 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - Follow-ups:
 
 ## Entries
+
+- Date: 2026-04-11
+- Area: Plain status local-claim snapshot
+- Symptom:
+  - After `recoverySummary.localClaim` landed, operators still had to opt into `?recovery=true` to see any compact local-runner selection posture. Plain `/status` still exposed liveness but not current claimability.
+- Root cause:
+  - The only compact local-claim aggregate lived on the broader recovery summary path, which is a different operator intent than a lightweight status read.
+- Fix:
+  - Added a read-only `summarizeLocalClaimState(...)` helper in [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts).
+  - Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so plain `/status` now includes `localClaimSummary` without invoking the broader recovery summary/repair path.
+  - Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) and re-verified [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts).
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Keep plain `/status` limited to the compact direct-run snapshot.
+  - Leave broader source filters and repair-heavy views on the recovery routes unless there is a specific operator need.
+
+- Date: 2026-04-11
+- Area: Compact local-claim recovery summary
+- Symptom:
+  - After the single-runner selection seam landed, operators could inspect `localClaim.selected` only through the per-run recovery detail route. That was too narrow for checking overall local runner posture across the current recovery set.
+- Root cause:
+  - The status recovery summary still aggregated reclaim/repair state only. It had no compact projection of the configured local runner's selected vs blocked vs unavailable posture across runs.
+- Fix:
+  - Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `summarizeRecoveryState(...)` now returns bounded `localClaim` aggregates for the configured local runner.
+  - Reused the existing single-runner selection seam in [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) instead of adding a second claim classifier.
+  - Let [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) surface that summary through the existing `GET /status?recovery=true` contract.
+  - Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts).
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Keep the summary compact; deeper diagnosis still belongs on `GET /status/recovery/{run_id}`.
+  - Do not widen this into multi-runner competition or scheduling without a separate checkpoint.
+
+- Date: 2026-04-11
+- Area: Local runner-selection seam
+- Symptom:
+  - After local claim-read landed, the repo could explain one configured runner's posture for a run, but host execution and recovery detail were still relying on separate paths. That left `localClaim` descriptive while `serviceHost` claim gating stayed partially duplicated.
+- Root cause:
+  - The claim-read helper and the host execution gate were not yet sharing one authoritative selected/not-selected decision for the configured local runner.
+- Fix:
+  - Added `selectStoredExecutionRunLocalClaim(...)` in [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) as the bounded single-runner selection seam.
+  - Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `readRecoveryDetail(...)` now exposes `localClaim.selected` and `drainRunsOnce(...)` now gates local execution through the same selection result.
+  - Expanded focused coverage in [tests/runtime.claims.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.claims.test.ts), [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts), and [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts).
+- Verification:
+  - `pnpm vitest run tests/runtime.claims.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Keep this seam single-runner scoped until there is a concrete need for multi-runner competition.
+  - If operators need more visibility, add a compact summary/read surface before any scheduler-like expansion.
+
+- Date: 2026-04-11
+- Area: Local runner claim-read seam
+- Symptom:
+  - After runner-owned host claims landed, operators and tests could tell whether a claim happened, but they still could not read the configured local runner's current claim posture for a specific run without inferring it from leases, queue state, and runner records separately.
+- Root cause:
+  - The repo had persisted candidate evaluation helpers and a recovery-detail route, but there was no bounded single-runner read seam tying those together for the currently configured local host runner.
+- Fix:
+  - Extended [src/runtime/claims.ts](/home/ecochran76/workspace.local/oracle/src/runtime/claims.ts) with `evaluateStoredExecutionRunLocalClaim(...)` for one configured runner.
+  - Extended [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so `readRecoveryDetail(...)` now includes `localClaim` when a host `runnerId` is configured.
+  - Reused the existing [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) recovery-detail route instead of adding a new claim route.
+  - Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) and updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts).
+- Verification:
+  - `pnpm vitest run tests/runtime.claims.test.ts tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Add one bounded local runner-selection seam before any multi-runner scheduling.
+  - Keep this detail block compact; do not turn `/status/recovery/{run_id}` into a broad debug dump.
+
+- Date: 2026-04-11
+- Area: Runner-aware host claim ownership
+- Symptom:
+  - After live runner self-registration landed, `serviceHost` still claimed runnable work through a plain owner string even when a persisted live runner record existed. That meant the durable runner model was visible but still not authoritative for local claim ownership.
+- Root cause:
+  - Host execution already accepted an `ownerId`, but there was no bounded gate that checked whether a configured runner owner was actually active and unexpired before claiming work.
+- Fix:
+  - Updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts) so hosts can take a bounded `runnerId`:
+    - if the configured runner record is active and unexpired, new leases are claimed under that runner id
+    - if the configured runner is missing, stale, or expired, runnable work is skipped with `claim-owner-unavailable`
+  - Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) to pass the live `api serve` runner id through the host claim path.
+  - Added focused coverage in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts) for:
+    - healthy runner -> runner-owned lease
+    - missing runner -> blocked claim with no lease mutation
+  - Re-verified [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) beside the host change.
+- Verification:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Add one bounded local runner-selection or claim-read seam before any multi-runner scheduling.
+  - Keep reassignment and broader candidate competition deferred until that simpler claim seam exists.
+
+- Date: 2026-04-11
+- Area: `api serve` live runner ownership
+- Symptom:
+  - The repo had durable runner records, claim evaluation, reconciliation, repair, and status reporting, but `auracall api serve` still did not register itself as a live persisted runner. That left the durable runner model disconnected from the actual service host.
+- Root cause:
+  - Earlier durable-state slices stopped at data model and inspection seams. `src/http/responsesServer.ts` still owned background drain locally without advertising or heartbeating a persisted runner identity.
+- Fix:
+  - Updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts) so `createResponsesHttpServer(...)` now:
+    - creates or reuses one persisted runner id based on the bound local `host:port`
+    - passes the shared `runnersControl` seam into `createExecutionServiceHost(...)`
+    - heartbeats that runner on a bounded timer while the server is alive
+    - marks the runner `stale` on shutdown
+    - reports that live runner posture on `/status` under `runner`
+  - Added focused coverage in [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) for:
+    - live runner registration and status reporting
+    - stale-on-close behavior
+  - Re-verified adjacent host behavior in [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts).
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.serviceHost.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Use the persisted live runner identity in one bounded host claim/lease path instead of stopping at heartbeat-only ownership.
+  - Keep multi-runner assignment and reassignment deferred until a single live-claim seam exists.
+
+- Date: 2026-04-09
+- Area: Role-aware team planning and explicit planned handoffs
+- Symptom:
+  - After task-aware planning landed, the planner still lacked a real source of role semantics and still had no explicit handoff entities. That limited the internal model for orchestrator/engineer and proposal-style specialist teams.
+- Root cause:
+  - Team config only exposed a flat `agents[]` list, and the earlier task-aware planner slice improved assignment intent propagation without yet giving teams a structured role layer or a first-class handoff planning output.
+- Fix:
+  - Added optional team config metadata in [src/schema/types.ts](/home/ecochran76/workspace.local/oracle/src/schema/types.ts):
+    - `teams.<name>.instructions`
+    - `teams.<name>.roles.<roleId>`
+      - `agent`
+      - `order`
+      - `instructions`
+      - `responseShape`
+      - `stepKind`
+      - `handoffToRole`
+  - Added config coverage in [tests/config.test.ts](/home/ecochran76/workspace.local/oracle/tests/config.test.ts).
+  - Extended [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so config-driven task-aware planning can:
+    - consume team-level instructions
+    - consume per-role instructions and response-shape hints
+    - bind roles to concrete agents
+    - derive role-aware step kinds
+    - generate richer task-aware prompts
+    - derive explicit planned handoff entities from step dependencies
+  - Extended [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts) so `TeamRunServicePlan` now exposes:
+    - `handoffs`
+    - `handoffsById`
+    - config-driven task-aware planning helper support
+  - Added focused regression coverage in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/config.test.ts tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/runtime.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Decide whether planned handoffs should be persisted directly in the team-run bundle instead of remaining service-plan derived.
+  - Define a first explicit local host-action request entity and its ownership boundary relative to steps and handoffs.
+
+- Date: 2026-04-09
+- Area: Task-aware team planning seam
+- Symptom:
+  - After `taskRunSpec` landed, planned team runs still ignored it. The planner was still deriving step intent entirely from resolved member order, which meant assignment-specific objective/output/action semantics were not yet present in the planned steps themselves.
+- Root cause:
+  - The initial `taskRunSpec` code slice intentionally stopped at types, schemas, and normalization helpers and did not yet wire the assignment object into team-run planning.
+- Fix:
+  - Added explicit `taskRunSpecId` linkage to planned `teamRun` records in [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts) and [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts).
+  - Added task-aware planning in [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) through `createTeamRunBundleFromResolvedTeamTaskRunSpec(...)`, including:
+    - step prompt generation from assignment objective and requested outputs
+    - input artifact propagation into planned step inputs
+    - structured task metadata on planned steps
+    - conservative task-aware step-kind inference
+  - Added the service-layer helper [src/teams/service.ts](/home/ecochran76/workspace.local/oracle/src/teams/service.ts) so future callers can request a service-ready plan from `resolvedTeam + taskRunSpec`.
+  - Added focused coverage in:
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+    - [tests/teams.service.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.service.test.ts)
+    - [tests/runtime.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts tests/teams.service.test.ts tests/runtime.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Decide whether the next planner seam should derive steps from explicit team roles/policies instead of only ordered members plus assignment intent.
+  - Define a first explicit local-action request entity and handoff-planning model.
+
+- Date: 2026-04-09
+- Area: First code-facing `taskRunSpec` seam
+- Symptom:
+  - The assignment layer had been documented, but the code still had no stable object for the concrete work being given to a team. That left future planner/execution code at risk of inferring assignment semantics from ad hoc `initialInputs` or from current member-order team-run defaults.
+- Root cause:
+  - Earlier slices established team boundaries and team-run execution records first, but stopped before landing a code-facing assignment object.
+- Fix:
+  - Added `taskRunSpec` types and conservative defaults in [src/teams/types.ts](/home/ecochran76/workspace.local/oracle/src/teams/types.ts).
+  - Added matching Zod schemas in [src/teams/schema.ts](/home/ecochran76/workspace.local/oracle/src/teams/schema.ts).
+  - Added a bounded normalization helper `createTaskRunSpec(...)` in [src/teams/model.ts](/home/ecochran76/workspace.local/oracle/src/teams/model.ts) so requested outputs, input artifacts, turn policy, human-interaction policy, and local-action policy all produce one stable parsed shape.
+  - Added focused coverage in:
+    - [tests/teams.types.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.types.test.ts)
+    - [tests/teams.schema.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.schema.test.ts)
+    - [tests/teams.model.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.model.test.ts)
+- Verification:
+  - `pnpm vitest run tests/teams.types.test.ts tests/teams.schema.test.ts tests/teams.model.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-ups:
+  - Map `team + taskRunSpec` to planned `teamRun` steps explicitly.
+  - Keep public `team run` surfaces deferred until that planner seam exists.
+
+- Date: 2026-04-09
+- Area: First code-facing task/run-spec planning seam
+- Symptom:
+  - The roadmap and team docs now distinguished reusable teams from execution runs, but the repo still had no dedicated code-facing assignment object for the concrete work being given to a team.
+- Root cause:
+  - Earlier planning focused on team boundaries and execution records first, which left the assignment layer implicit and at risk of being inferred from current internal member-order planning defaults.
+- Fix:
+  - Added [docs/dev/task-run-spec-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/task-run-spec-plan.md) to define the first bounded assignment-layer shape between `team` and `run`.
+  - Recommended `taskRunSpec` as the default object name, with `taskSpec` as the fallback.
+  - Defined minimum assignment fields for:
+    - objective
+    - success criteria
+    - requested outputs
+    - input artifacts
+    - constraints
+    - overrides
+    - turn policy
+    - human-interaction policy
+    - local-action policy
+  - Linked that plan from [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md), [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md), and [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md).
+- Verification:
+  - Manual readback audit for consistency across team-boundary, team-service-execution, team-run-data-model, roadmap, and execution-plan docs.
+- Follow-ups:
+  - Choose final naming between `taskRunSpec` and `taskSpec`.
+  - Define the first `src/*` schema and planner mapping from assignment object to planned `teamRun`.
+
+- Date: 2026-04-09
+- Area: Team/task/run boundary promoted into explicit roadmap sequencing
+- Symptom:
+  - The semantic split between reusable team templates and concrete assignments was documented in design notes, but the top-level roadmap still treated it mostly as narrative guidance rather than as a gating checkpoint.
+- Root cause:
+  - Roadmap text had not yet been tightened after the team semantics audit, so future public `team run` work could still appear closer than it should.
+- Fix:
+  - Updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) to add explicit service-mode checkpoints for:
+    - team semantics
+    - task / run-spec modeling
+    - team-run execution
+    - handoff / host-action behavior
+  - Updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the active execution board now treats the `team` vs `task / run spec` split as a real gate before public team-execution surfaces.
+- Verification:
+  - Manual roadmap/readback audit for consistency between top-level roadmap and execution-plan sequencing.
+- Follow-ups:
+  - Define the first code-facing `task` / `run spec` schema.
+  - Keep public `team run` CLI/API/MCP work deferred until that schema exists.
+
+- Date: 2026-04-09
+- Area: Team concept boundary before public execution semantics
+- Symptom:
+  - The repo had a good internal team planning/runtime bridge seam, but the conceptual meaning of `team` was still at risk of drifting toward the current MVP builder defaults:
+    - raw member order as workflow order
+    - one member -> one prompt-like step
+    - no clean separation between reusable team definition and one concrete assignment
+- Root cause:
+  - The earlier planning docs separated team from runner topology, but they did not yet state explicitly that a team should be a reusable orchestration template with a separate task/run-specific input layer.
+- Fix:
+  - Updated [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md) to define `team` as a reusable orchestration template and to separate:
+    - `team`
+    - `task` / `run spec`
+    - `run`
+  - Updated [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md) so future execution semantics bind one concrete task/run spec to one team template and treat ordered member projection as an MVP strategy rather than the full team concept.
+  - Updated [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) so the roadmap now explicitly calls for a task/run-spec layer before any public team-execution surface.
+- Verification:
+  - Manual audit of the current team boundary docs, internal bridge code, and public CLI help text for semantic consistency.
+- Follow-ups:
+  - Define the first code-facing schema and naming for `task` / `run spec`.
+  - Keep `src/teams/runtimeBridge.ts` internal until that schema exists and public `team run` semantics can be stated without leaking MVP builder assumptions.
 
 - Date: 2026-04-09
 - Area: Operator-facing recovery summary on status endpoint
@@ -10043,3 +11176,1101 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   for inspection. Avoid route-wide status-query parsing that leaks into unrelated
   endpoints because it turns benign query params into 400s and makes operator
   probing inconsistent.
+- 2026-04-09: Once team planning starts emitting explicit handoffs, persist them
+  in the team-run bundle and runtime bundle instead of recomputing them only in
+  the service-plan view. Re-deriving orchestration entities in one layer makes
+  later history, host actions, and execution state harder to reason about.
+- 2026-04-09: Give local host work its own durable entity shape early.
+  `localActionRequest` should be distinct from:
+  - team step output
+  - handoff payload
+  - shared state notes
+  That keeps approval, execution, and result reporting semantics explicit
+  instead of hiding host-side work inside ad hoc JSON blobs.
+- 2026-04-09: Once `localActionRequest` exists as a durable entity, let step
+  outputs declare requests through one bounded machine-readable field such as
+  `output.structuredData.localActionRequests[]`. Do not invent a second,
+  separate host-side request channel before the first lifecycle is proven.
+- 2026-04-09: Keep the first local-action lifecycle policy-gated and
+  callback-driven. The runtime runner should:
+  - derive requests from step output
+  - reject them immediately when step policy forbids or disallows them
+  - persist request/result metadata in the run bundle
+  Avoid failing the whole step just because a host action request is rejected or
+  one optional executor is not yet wired; durable reporting is the first goal.
+- 2026-04-09: The first built-in host executor should use `execFile` with
+  explicit argument arrays, not shell-string execution. That preserves the
+  bounded local-action contract and avoids introducing shell interpolation as
+  the default execution path.
+- 2026-04-09: For the first concrete host-action executor, prefer one safe kind
+  (`shell`) with:
+  - timeout clamp
+  - stdout/stderr truncation
+  - structured failure payload
+  Keep allowlists and richer action kinds for follow-up slices instead of
+  over-designing the first executor.
+- 2026-04-10: Put shell command and cwd narrowing on the existing
+  `localActionPolicy` seam before adding more host-action kinds. That keeps the
+  first hardening step aligned with the assignment model instead of inventing a
+  second policy vocabulary in the executor alone.
+- 2026-04-10: Plan local command complexity as staged widening, not as one
+  monolithic “shell support” switch:
+  - `bounded-command`
+  - `repo-automation`
+  - `extended`
+  Let host/runtime policy define the real ceiling and let team/task policy only
+  narrow it.
+- 2026-04-10: Once the host shell policy seam exists, remove stale parallel
+  schema/helper paths immediately. Leaving two runtime-local-action config
+  shapes in the tree makes it too easy for `api serve`, tests, and future team
+  execution work to drift onto different policy sources.
+- 2026-04-10: Shell local-action policy needs two layers:
+  - host/runtime ceiling
+  - task/step narrowing
+  Let task policy narrow command/cwd scope for a specific assignment, but do
+  not let team/task config become the only source of truth for what the host is
+  willing to execute globally.
+- 2026-04-10: Grow local command complexity in stages instead of broadening
+  shell semantics opportunistically:
+  - `bounded-command`
+  - `repo-automation`
+  - `extended`
+  Add one explicit acceptance bar and rejected-command/rejected-cwd tests before
+  moving to the next stage.
+- 2026-04-10: Keep local command complexity staged. The right order is:
+  1. bounded command execution
+  2. repo automation
+  3. only then broader or richer host actions
+  Do not jump from one safe `execFile` path straight to arbitrary shell
+  semantics.
+- 2026-04-10: The actual shell-command ceiling belongs to host/runtime policy,
+  not team config. Teams and task run specs may request narrower permissions,
+  but the executor allowlist and cwd roots should stay on one host-owned seam so
+  execution safety does not drift across teams.
+- 2026-04-10: Once durable `localActionRequest` records exist, project
+  orchestrator-facing summaries from those records into shared state instead of
+  inventing a parallel host-action summary source. The current convention is:
+  - one structured output per owner step
+  - key: `step.localActionOutcomes.<stepId>`
+  - value: counts plus compact request items
+  - one compact shared-state note for quick inspection
+  Keep the durable request entities as the source of truth and treat the shared
+  state projection as a derived convenience view for later handoffs and
+  orchestrator prompts.
+- 2026-04-10: When later steps need host-action awareness, inject a
+  dependency-scoped view of the derived shared-state summaries into execution
+  context rather than mutating stored step inputs. The bounded execution-context
+  shape should expose:
+  - `sharedStateContext.dependencyStepIds`
+  - `sharedStateContext.dependencyLocalActionOutcomes`
+  - `sharedStateContext.upstreamLocalActionOutcomes`
+  This keeps persistence unchanged while giving orchestrators and downstream
+  workers a predictable read path.
+- 2026-04-10: Prompt shaping for downstream/orchestrator steps should happen at
+  execution time from `sharedStateContext.dependencyLocalActionOutcomes`, not by
+  baking speculative host-action summaries into planner-time prompts. Keep the
+  prompt addition bounded:
+  - one `Dependency local action outcomes:` block
+  - dependency-scoped lines only
+  - status counts plus latest summary
+  Keep raw request payloads out of the prompt unless a later slice proves they
+  are required.
+- 2026-04-10: Explicit handoffs should reuse the same bounded host-action
+  summary vocabulary as shared state and prompt shaping. For handoffs leaving a
+  completed step, carry:
+  - `structuredData.localActionOutcomeSummaryKey`
+  - `structuredData.localActionOutcomeContext`
+  Do not invent a separate handoff-only host-action payload shape unless a
+  later slice proves the shared vocabulary is insufficient.
+- 2026-04-10: Orchestrator decision guidance should be derived from the existing
+  dependency-scoped host-action summary vocabulary, not from raw request
+  payloads or a second decision-state model. The current bounded classes are:
+  - `continue`
+  - `steer`
+  - `escalate`
+  Keep the rule set simple and dependency-scoped until richer orchestration
+  loops are proven.
+- 2026-04-10: The first bounded decision-guidance model is now proven across:
+  - prompt shaping
+  - execution context
+  - handoff payloads
+  Keep all three surfaces on the same `continue` / `steer` / `escalate`
+  vocabulary before adding richer human-interaction or stop-state behavior.
+- 2026-04-10: Once `escalate` guidance is proven, map it onto the existing
+  `humanInteractionPolicy.defaultBehavior` seam instead of inventing a second
+  control policy. Current bounded behavior:
+  - `continue` => advisory only
+  - `pause` => cancel current step/run with an explicit `human.escalation.*`
+    shared-state marker
+  - `fail` => deterministic `human_escalation_required` failure
+- 2026-04-10: Do not treat bridge-path control flow as implied just because the
+  direct runner path is covered. The team-runtime bridge needs its own regressions
+  for:
+  - advisory `continue`
+  - pause-for-human
+  - fail-on-escalate
+  because planned-step projection and runtime-bundle mutation can hide policy
+  propagation bugs.
+- 2026-04-10: Resume after `pause` should be a control-layer mutation, not a
+  runner special case. The bounded contract is:
+  - keep `human.escalation.<stepId>` as the pause evidence
+  - add `human.resume.<stepId>` on resume
+  - reopen the cancelled step as `runnable`
+  - add a one-shot step-local resume override so the same escalation signal does
+    not immediately pause the step again
+- 2026-04-10: Richer human input on resume should extend the existing
+  `human.resume.<stepId>` / `humanEscalationResume` seam instead of inventing a
+  second override channel. The current bounded follow-through is:
+  - optional machine-readable `guidance`
+  - persist it on `human.resume.<stepId>`
+  - mirror it onto the reopened step under
+    `input.structuredData.humanEscalationResume`
+  - expose it in execution-time prompt/context with one bounded
+    `Human resume guidance:` block
+  Keep richer resume edits advisory until a later slice proves a typed
+  mutation contract.
+- 2026-04-10: The first typed resume mutation contract should be narrower than
+  the advisory guidance channel. The current safe boundary is:
+  - advisory:
+    - `guidance`
+  - typed mutation:
+    - `override.promptAppend`
+  Persist both on the existing resume seam, but only let the typed path mutate
+  resumed behavior directly.
+- 2026-04-10: The next safe typed resume mutation after `promptAppend` is
+  execution-context `override.structuredContext`, not policy mutation. Carry it
+  on the same durable resume seam and expose it through resumed-step
+  `sharedStateContext` plus one bounded prompt block, but do not let resume
+  modify `humanInteractionPolicy`, host shell ceilings, or other cross-cutting
+  runtime policy.
+- 2026-04-10: Once `steer` is proven as a decision class, give it one typed
+  contract on the existing decision-guidance seam instead of inventing a second
+  downstream-control model. The current bounded contract is:
+  - `kind: host-action-steer`
+  - `recommendedAction: continue-with-caution`
+  - `promptAppend`
+  - `structuredContext`
+  Surface it through execution context, prompt shaping, and existing handoff
+  `localActionDecisionGuidance` so downstream behavior changes without adding a
+  parallel handoff-only schema.
+- 2026-04-10: After the first typed `resume` and `steer` contracts are in
+  place, stop deepening orchestration semantics by default. That is the
+  checkpoint where the higher-yield blocker becomes service-host / runner
+  orchestration:
+  - broader host-owned recovery
+  - bounded background drain/restart behavior
+  - richer operator visibility
+  Keep public team execution deferred until that substrate is stronger.
+- 2026-04-10: For `api serve`, the correct ownership split is:
+  - `responsesService`
+    - persist and map direct responses
+  - `responsesServer`
+    - own bounded drain/recovery through the shared `serviceHost` seam
+  Keep the service shim persistence-first and keep route-level execution
+  behavior on the host/server side so direct runs and future team runs continue
+  to converge on one runtime substrate.
+- 2026-04-10: Once `api serve` owns drain through the shared host seam, stop
+  awaiting direct-run execution from the caller path. The correct next step is
+  a single-flight background drain loop that:
+  - kicks immediately after create
+  - continues on a bounded timer
+  - never overlaps host drains
+  - stops cleanly on server shutdown
+  That keeps execution ownership with the server host instead of sliding back
+  into request-scoped orchestration.
+- 2026-04-10: The first autonomous `api serve` drain loop should reuse the same
+  serialized server-owned drain queue as startup recovery and request-triggered
+  drain. Do not add a second background worker path inside the server. One
+  bounded timer-driven scheduler with shared shutdown cleanup is enough for the
+  first host-owned loop.
+- 2026-04-10: The first operator visibility slice for host-owned `api serve`
+  drain should stay on `/status`, not a new route family. The bounded useful
+  fields are:
+  - `enabled`
+  - `intervalMs`
+  - `state`
+  - `lastTrigger`
+  - `lastStartedAt`
+  - `lastCompletedAt`
+  That is enough to observe the live loop without exposing a second control
+  plane too early.
+- 2026-04-10: The first operator control slice for host-owned `api serve` drain
+  should stay on the same `/status` surface:
+  - `POST /status` with `pause|resume`
+  Keep it bounded:
+  - pause future scheduling only
+  - do not interrupt an in-flight drain
+  - reuse the same server-owned scheduler path on resume
+  Do not create a second control route family or a second scheduler just to add
+  basic operator control.
+- 2026-04-10: Stranded-run recovery in `serviceHost` should survive one
+  persist-time revision race before giving up. The bounded rule is:
+  - try the normal rewind-to-runnable repair
+  - on one persist failure, reread the latest record
+  - retry once only if the reread run is still lease-free and stranded
+  That improves host recovery quality without introducing unbounded retry or
+  multi-host coordination semantics.
+- 2026-04-10: Recovery summaries should not lump all lease-free running work
+  into `strandedRunIds`. Use the same dry-run rewind classification as real
+  stranded repair and report:
+  - `recoverableStrandedRunIds`
+  - `strandedRunIds`
+  That keeps `/status?recovery=true` aligned with what the host can actually
+  repair instead of overstating unrecoverable stranded work.
+- 2026-04-10: Batch drain reporting should preserve execution history but
+  collapse repeated skipped states per run. For `drainRunsUntilIdle(...)`:
+  - keep each executed pass
+  - keep only the latest unresolved skipped state per run
+  - suppress follow-up terminal `no-runnable-step` entries after a run already
+    executed in the same bounded batch
+  That keeps startup recovery and host-drain logs focused on the current
+  unresolved work instead of replaying the same idle/completed skip posture on
+  every pass.
+- 2026-04-10: Once a host drain cap is reached, do not turn every remaining
+  candidate into `limit-reached`. Keep real skip posture for work that was not
+  actually executable:
+  - executable or recoverable-stranded => `limit-reached`
+  - active lease => `active-lease`
+  - idle/terminal => `no-runnable-step`
+  - unrecoverable stranded => `stranded-running-no-lease`
+  That keeps capped startup recovery and mixed-batch host drains honest about
+  what is deferred versus what was never runnable in that pass.
+- 2026-04-10: Mixed-batch host drains should prioritize actionable work before
+  non-executable work. The current bounded order is:
+  - runnable
+  - recoverable stranded
+  - active lease
+  - unrecoverable stranded
+  - idle
+  Keep `createdAt` ordering stable within each class. This improves capped host
+  recovery behavior without adding a second scheduler or widening protocol
+  surface.
+- 2026-04-10: Within each host-drain priority class, keep scheduling explicitly
+  oldest-first by `createdAt` until there is a real need for a different
+  fairness policy. Make that rule explicit in tests so it does not remain an
+  accidental side effect of sort order.
+- 2026-04-10: After mixed-batch class priority and within-class ordering are
+  fixed, add only one bounded budgeting rule before considering anything more
+  adaptive:
+  - if both actionable classes are present and `maxRuns > 1`
+  - reserve one slot for the oldest recoverable-stranded run
+  - give the remaining slots to oldest runnable runs
+  This prevents recoverable-stranded work from being starved indefinitely
+  without introducing a second scheduler or a complex fairness model.
+- 2026-04-10: Once host recovery behavior is coherent, prefer richer operator
+  visibility over more scheduling nuance. The current bounded visibility model
+  is:
+  - `/status?recovery=true` adds aggregate `metrics.*` counts alongside the
+    existing per-class ID arrays
+  - startup recovery logs add aligned aggregate metrics for:
+    - `deferred-by-budget`
+    - `active-lease`
+    - `stranded`
+    - `idle`
+  Reuse the same classification vocabulary instead of inventing a second
+  reporting model.
+- 2026-04-10: After the local `serviceHost` recovery lane reaches a coherent
+  checkpoint, stop deepening single-process host policy by default. The next
+  higher-leverage question is the roadmap substrate boundary:
+  - durable queue/run/step/handoff persistence
+  - service-account/browser-affinity mirroring
+  - multi-runner lease/heartbeat ownership
+  In other words: pause local recovery tuning and shift to the durable-state /
+  multi-runner planning seam before adding more `serviceHost` detail.
+- 2026-04-11: Once the single-process host-recovery lane is coherent, do not
+  guess at multi-runner behavior from local `serviceHost` semantics. Add one
+  explicit durable-ownership plan before broader service-mode coding:
+  - durable queue/run/step/handoff ownership
+  - service-account/browser-affinity mirroring
+  - multi-runner lease/heartbeat ownership
+  - replay/postmortem guarantees
+  That is the correct next substrate checkpoint before any broader runner or
+  worker expansion.
+- 2026-04-11: The first implementation seam for the durable-state lane should
+  be a derived queue-ready projection, not a second persistent model. Derive it
+  from the existing runtime inspection/dispatch path and let it answer:
+  - runnable now
+  - waiting
+  - held by active lease
+  - recoverable stranded
+  - idle
+  - future affinity-blocked claim posture
+  That gives the repo one code-facing durable-state vocabulary without
+  prematurely committing to Redis/Postgres shape or worker breadth.
+- 2026-04-11: After the derived queue-ready projection exists, the next
+  durable-state seam should be one explicit runtime-local affinity record,
+  not more inferred step-field heuristics. Keep the first bounded fields to:
+  - `service`
+  - `serviceAccountId`
+  - `browserRequired`
+  - `runtimeProfileId`
+  - `browserProfileId`
+  - `hostRequirement`
+  - `requiredHostId`
+  - `eligibilityNote`
+  Let the queue projection consume that record directly while remaining derived
+  from runtime inspection state. Do not turn affinity into a second queue
+  source of truth or a full account-mirroring implementation too early.
+- 2026-04-11: After explicit affinity exists, the next durable-state seam
+  should be one explicit runtime-local runner identity / heartbeat record.
+  Keep the first bounded runner fields to:
+  - `id`
+  - `hostId`
+  - `status`
+  - `startedAt`
+  - `lastHeartbeatAt`
+  - `expiresAt`
+  - `serviceIds`
+  - `runtimeProfileIds`
+  - `browserProfileIds`
+  - `serviceAccountIds`
+  - `browserCapable`
+  - `eligibilityNote`
+  Let the queue projection evaluate that record directly against affinity
+  requirements for claim posture, but do not confuse this with a full
+  multi-runner registry or distributed lease coordinator yet.
+- 2026-04-11: Once the runtime-local runner record exists, persist it through a
+  separate revisioned local runner registry/store instead of burying runner
+  identity in lease payloads or process-local config. The current bounded store
+  contract should stay at:
+  - register
+  - read
+  - list
+  - heartbeat
+  - mark stale
+  Use the same local JSON record/CAS pattern as runtime run records, but keep
+  runner identity/liveness metadata separate from run execution history so
+  future claim logic can reason about runners without mutating leases first.
+- 2026-04-12: When the team/runtime bridge and task-run-spec substrate are
+  already well covered in repo tests, stop adding more team/task field
+  semantics before live experimentation. The gating question becomes
+  executable-surface readiness, not model richness. Before real live team
+  workflow experiments, require all three:
+  - one real bounded team execution entrypoint
+  - one bounded manual smoke for that path
+  - one bounded live smoke for that same path
+  Prefer a CLI/dev execution seam first if the public API surface is still
+  direct-run oriented. Do not mistake strong internal bridge tests for live
+  readiness.
+- 2026-04-11: After runner records are persisted, add one bounded
+  claim-candidate evaluation seam before any lease allocator or scheduler
+  logic. The helper should combine:
+  - persisted run inspection
+  - the derived queue-ready projection
+  - explicit affinity requirements
+  - persisted runner records
+  The current bounded candidate classes are:
+  - `eligible`
+  - `blocked-affinity`
+  - `stale-runner`
+  - `not-ready`
+  Keep this deterministic and local. It should explain claim posture, not
+  perform lease acquisition or distributed scheduling.
+- 2026-04-11: After claim-candidate evaluation exists, add one bounded
+  stale-runner expiry sweep on the same runner-control seam before attempting
+  lease/runner reconciliation. The bounded rule is:
+  - read persisted runner records
+  - if `status = active` and `expiresAt <= now`, mark the runner `stale`
+  - leave fresh `active` runners unchanged
+  - let later claim evaluation reflect the stale posture
+  Keep the first expiry slice runner-only. Do not mutate leases in the same
+  step or turn it into a scheduler.
+- 2026-04-11: After runner expiry exists, add one diagnosis-first
+  lease/runner reconciliation seam before any repair logic. The bounded helper
+  should compare active leases against persisted runner records and classify:
+  - `no-active-lease`
+  - `active-runner`
+  - `stale-runner`
+  - `missing-runner`
+  Keep the first reconciliation slice read-only. It should explain lease
+  ownership posture, not mutate leases or reassign work.
+- 2026-04-11: After diagnosis-first reconciliation exists, add one bounded
+  repair/reclaim posture seam before any actual lease mutation. The current
+  bounded postures are:
+  - `inspect-only`
+  - `locally-reclaimable`
+  - `not-reclaimable`
+  Keep the first reclaim rule conservative:
+  - stale or missing runner ownership is only locally reclaimable after the
+    active lease itself is expired
+  This keeps repair policy explicit before any code actually clears or expires
+  leases on behalf of a dead runner.
+- 2026-04-11: After repair posture is explicit, the first mutation path should
+  stay narrow:
+  - mutate only `locally-reclaimable` cases
+  - leave `inspect-only` and `not-reclaimable` cases read-only
+  - reuse the existing runtime lease-expiry path instead of inventing a custom
+    lease-mutation workflow
+  That proves a safe reclaim action before any broader host automation starts
+  clearing leases on behalf of unavailable runners.
+- 2026-04-11: Once the first conservative lease-repair action exists, make
+  `serviceHost` consume that seam before it clears expired leases during drain
+  or recovery summary. Do not keep the older blanket rule that any expired
+  lease timestamp is automatically reclaimable. The current bounded host rule
+  should be:
+  - stale or missing runner + expired lease => locally reclaimable
+  - active runner + expired lease => keep `active-lease`
+  That keeps host recovery aligned with persisted runner liveness instead of
+  bypassing the durable repair policy.
+- 2026-04-11: When operator visibility is added for the new reconciliation /
+  repair seam, keep it on the existing recovery summary surface instead of
+  inventing a parallel status model. The current bounded contract is:
+  - `leaseRepair.locallyReclaimableRunIds`
+  - `leaseRepair.inspectOnlyRunIds`
+  - `leaseRepair.notReclaimableRunIds`
+  - `leaseRepair.repairedRunIds`
+  - `leaseRepair.reasonsByRunId`
+  with matching counts in `leaseRepair.metrics`.
+  Also keep the read semantics explicit: a recovery summary read may itself
+  repair locally reclaimable expired leases, so repeated `/status?recovery=true`
+  reads can legitimately change from `locallyReclaimable` to ordinary
+  `reclaimable` state on later reads.
+- 2026-04-11: Once the compact recovery summary and per-run reason map are in
+  place, stop adding more detail to `/status?recovery=true`. Put deeper
+  inspection on a separate read-only surface instead. The current bounded
+  operator detail route is:
+  - `GET /status/recovery/{run_id}`
+  and it returns one run's:
+  - current host classification
+  - active lease snapshot
+  - dispatch posture
+  - reconciliation / repair posture and reasons
+  That keeps the summary surface compact while still allowing precise
+  inspection when needed.
+- 2026-04-11: After the durable-state lane has:
+  - explicit runner records
+  - persisted runner registry/control
+  - claim/reconciliation/repair posture
+  - compact summary and detailed operator inspection
+  stop deepening that lane by inertia. The next higher-yield gap is live
+  runner ownership, not more durable vocabulary. Reopen service-host / runner
+  orchestration at:
+  - runner self-registration for `api serve` / `serviceHost`
+  - runner heartbeat while the host is alive
+  That is the first slice that makes the new durable runner model real in live
+  service behavior.
+- 2026-04-10: The first service-host ownership shift for `api serve` should be:
+  - let `responsesService` persist in create-only mode
+  - let `responsesServer` invoke bounded drain through `serviceHost`
+  - reread persisted state for the HTTP payload
+  That moves runner ownership out of the service shim without changing the
+  public route surface or forcing autonomous background behavior too early.
+- 2026-04-12: Treat `projects create <name>` as create-only, not as an
+  implicit create-or-reuse helper. Provider-backed project creation must
+  preflight visible projects and reject:
+  - exact-name duplicates
+  - ambiguous same-name candidate sets
+  before provider creation runs. Resolution/reuse belongs on the existing
+  project-id/name lookup path; create should not silently mint a second project
+  with the same display name.
+- 2026-04-12: When a live duplicate project already exists, cleanup should be
+  based on durable operator state, not display name alone. Compare:
+  - configured/canonical project id in `~/.auracall/config.json`
+  - project-scoped conversations
+  - attached project files
+  - live instruction readability / project-page navigability
+  Then remove or rename only the empty/non-canonical duplicate.
+- 2026-04-12: For browser-backed team live coverage, test the real CLI contract
+  instead of a lower-level executor shim. The stable machine-readable team-run
+  surface is:
+  - top-level `taskRunSpec`
+  - top-level `execution`
+  where execution carries:
+  - `teamId`
+  - `taskRunSpecId`
+  - `runtimeSourceKind`
+  - `runtimeRunStatus`
+  - `finalOutputSummary`
+  - `stepSummaries[*].runtimeProfileId`
+  - `stepSummaries[*].browserProfileId`
+  - `stepSummaries[*].service`
+  That keeps live coverage pinned to the actual operator path and catches CLI
+  contract drift directly.
+- 2026-04-12: Once a browser-backed team live smoke returns `execution.runtimeRunId`,
+  use that id to prove durable readback on the existing operator seam rather
+  than spinning up a second transport just for inspection. The narrow follow-
+  through is:
+  - `createExecutionRuntimeControl()`
+  - `createExecutionServiceHost(...)`
+  - `readRecoveryDetail(runtimeRunId)`
+  and it should at least confirm:
+  - `sourceKind = team-run`
+  - `taskRunSpecId = taskRunSpec.id`
+  - non-empty durable orchestration timeline
+- 2026-04-12: If the next proof target is the existing HTTP operator seam,
+  keep it bounded: reuse the same runtime store from the live run and stand up
+  `createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control })`
+  only long enough to assert:
+  - `GET /status/recovery/{run_id}`
+  - `object = recovery_detail`
+  - `detail.runId = execution.runtimeRunId`
+  - `detail.sourceKind = team-run`
+  - `detail.taskRunSpecId = taskRunSpec.id`
+  - non-empty durable orchestration timeline
+  That proves the transport seam without widening the live workflow or relying
+  on a separate background server process.
+- 2026-04-12: Team-backed response readback already keys off the stored run id.
+  For a live team run, the bounded response proof is:
+  - `GET /v1/responses/{response_id}`
+  - with `response_id = execution.runtimeRunId`
+  and it should confirm:
+  - `object = response`
+  - `metadata.runId = execution.runtimeRunId`
+  - `metadata.taskRunSpecId = taskRunSpec.id`
+  - `metadata.service = <expected service>`
+  - `metadata.runtimeProfile = <expected runtime profile>`
+  - non-empty durable orchestration timeline
+  Do not invent a second response-id mapping for team runs unless the stored
+  response model actually changes.
+- 2026-04-12: The first broader team live workflow should be multi-step before
+  multi-agent. Reuse the same provider-backed team CLI surface and keep the
+  expansion deterministic:
+  - one extra configured agent alias may still point at the same AuraCall
+    runtime profile
+  - one extra team should carry two ordered members
+  - the live smoke must raise `--max-turns` to match the real step count
+  - prove the broader workflow with the same readback seams as the baseline
+    single-step path
+  For a two-step team, the durable signal that matters is not
+  `terminalStepCount`; it is:
+  - two ordered succeeded `stepSummaries`
+  - shared-state consumed-transfer evidence
+  - at least one durable `handoff-consumed` timeline item
+- 2026-04-12: Grok now needs the same basic "do not hammer the service during
+  live testing" posture that Gemini already had, but not ChatGPT's heavier
+  mutation-budget model. The first honest Grok guard should stay simple:
+  - persist one cooldown record per managed browser profile under
+    `~/.auracall/cache/providers/grok/__runtime__/rate-limit-<browser profile>.json`
+  - enforce minimum spacing before the next Grok browser mutation
+  - persist cooldowns only on clear Grok rate-limit failures
+  - fail fast when the remaining delay exceeds a bounded auto-wait window
+  Do not invent a Grok write-weight budget until live evidence shows the simple
+  cooldown/spacing model is insufficient.
+- 2026-04-12: After landing the simple Grok cooldown/spacing guard, validate it
+  against the existing live baseline before adding more guard complexity. The
+  acceptance bar is:
+  - `AURACALL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-grok-live.test.ts`
+  - both `auracall-solo` and `auracall-two-step` still succeed
+  - the managed-browser-profile guard file exists at
+    `~/.auracall/cache/providers/grok/__runtime__/rate-limit-<browser profile>.json`
+  - the success path may persist only:
+    - `updatedAt`
+    - `lastMutationAt`
+  If that bar is green, stop deepening the guard line by inertia. The next
+  higher-yield work is broader live team behavior, not a heavier Grok throttle
+  model.
+- 2026-04-12: The first honest multi-agent Grok live proof should stay
+  deterministic and tool-free. Use a planner-to-finisher team:
+  - planner step produces only a compact downstream handoff
+  - finisher step emits the exact final token
+  - `--max-turns` stays equal to the real step count
+  - prove the same four seams as the existing baseline:
+    - CLI execution
+    - durable host readback
+    - HTTP recovery detail
+    - HTTP response readback
+  Do not mix multi-agent routing with tool-calling or approval semantics in
+  the same first slice; otherwise failures stop being attributable.
+- 2026-04-12: The first team tooling slice should stay bounded to the existing
+  local-action shell seam, not invent a new tool transport. The useful shape is:
+  - CLI narrows execution with:
+    - `--allow-local-shell-command <command>`
+    - `--allow-local-cwd-root <path>`
+  - `taskRunSpec.localActionPolicy` remains the bridge contract
+  - the browser-backed stored-step executor may parse one compact JSON envelope
+    into `localActionRequests`
+  - keep the first accepted action kind to bounded `shell` only
+  If the model-side envelope is still live-flaky, keep the automated live case
+  on a second opt-in gate instead of poisoning the stable Grok baseline.
+- 2026-04-12: Grok browser throttling is not only generic "too many requests"
+  text. A visible toast like:
+  - `Query limit reached for Auto`
+  - `Try again in 4 minutes`
+  must be treated as a first-class rate-limit signal. The right behavior is:
+  - fail fast from the Grok response wait loop as soon as that toast is visible
+  - seed the existing per-managed-browser-profile Grok cooldown state
+  - honor the provider-declared retry window when present instead of always
+    using the default cooldown constant
+  Do not let that surface degrade into a generic Grok timeout; that just
+  invites repeated testing churn against the same managed browser profile.
+- 2026-04-12: Gemini-bound stored team execution must not bypass the resolved
+  browser-family source-cookie config or Gemini's exported-cookie fallback.
+  Two separate gaps showed up during the first `auracall-gemini-tooling` live
+  smoke:
+  - the stored-step executor routed Gemini through the generic ChatGPT browser
+    runner instead of `createGeminiWebExecutor({})`
+  - even after fixing dispatch, the stored-step executor still passed only
+    top-level `browser.*` fields, which meant Gemini team runs ignored:
+    - the selected browser profile's source cookie settings
+    - `~/.auracall/browser-profiles/<auracallProfile>/gemini/cookies.json`
+    - `~/.auracall/cookies.json`
+  The durable rule is:
+  - `src/runtime/configuredExecutor.ts` must route `service = gemini` through
+    the Gemini web executor
+  - it must project the resolved browser profile's source-cookie fields into
+    the browser run config
+  - and it must reuse the same exported inline-cookie fallback that direct
+    Gemini browser mode already depends on when Linux keyring cookie reads are
+    unavailable
+  This matters on WSL pairings like this machine, where direct Chrome cookie
+  reads can return zero Google auth cookies plus the warning:
+  - `Failed to read Linux keyring via secret-tool; v11 cookies may be unavailable.`
+- 2026-04-12: Once a Gemini team path is green manually, lock it in with a
+  separate opt-in live harness instead of folding it into the Grok suite.
+  Gemini team runs have different auth prerequisites and failure modes:
+  - exported scoped cookies may be required even when the managed browser
+    profile is signed in
+  - the preflight should fail clearly if
+    `~/.auracall/browser-profiles/default/gemini/cookies.json`
+    is missing or lacks `__Secure-1PSID` / `__Secure-1PSIDTS`
+  - the live proof should cover the same four seams as the Grok team suite:
+    - CLI execution
+    - durable host readback
+    - HTTP recovery detail
+    - HTTP response readback
+  The durable rule is to keep Gemini team live coverage on its own gate, not
+  as conditional branches inside the Grok team test file.
+- 2026-04-10: After the orchestration contract lane reaches a coherent internal
+  checkpoint, stop adding more contract variants by inertia. Reassess the
+  roadmap and prefer the higher-yield unfinished execution lane:
+  - host-owned `api serve` drain/recovery behavior over the existing
+    `serviceHost` seam
+  That is a better next investment than more resume/steer subtype expansion
+  once the current bounded semantics are already coherent.
+- 2026-04-13: Mixed-provider negative-path team tests should reuse the
+  existing operator-control seam, not invent a cross-service control variant.
+  The durable pattern is:
+  - let the first provider-backed run pause for human escalation in normal
+    team execution
+  - resolve the pending local action through existing `POST /status`
+    `localActionControl.resolve-request`
+  - follow with existing `runControl.resume-human-escalation`
+  - finish with existing `runControl.drain-run`
+  - prove the outcome through the same three readback surfaces:
+    - durable host detail
+    - `GET /status/recovery/{run_id}`
+    - `GET /v1/responses/{response_id}`
+  For mixed-provider cancellation specifically, the authoritative proof surface
+  for provider routing remains stored `stepSummaries`; response metadata is not
+  a per-step provider matrix.
+- 2026-04-13: Mixed-provider rejection can reuse the same exact runtime/control
+  pattern as mixed-provider cancellation. The only semantic differences that
+  need to change are:
+  - `localActionControl.resolve-request.resolution = rejected`
+  - resumed guidance and override text must explicitly mention rejection
+  - readback assertions should key off:
+    - `localActionSummary.counts.rejected`
+    - stored local-action `status = rejected`
+    - stored `resultSummary = human rejected ...`
+  Everything else should stay constant:
+  - same team shape
+  - same `/status` resume/drain path
+  - same host/recovery/response readback surfaces
+- 2026-04-13: Mixed-provider approval is a different semantic from
+  `localActionControl.resolve-request = approved`. The durable rule is:
+  - use `runControl.resume-human-escalation` with explicit approval guidance
+  - keep the blocked local-action record intact as evidence of the original
+    policy stop
+  - prove approval through:
+    - `operatorControlSummary.humanEscalationResume`
+    - resumed execution timeline in recovery detail
+    - terminal stored step summary after targeted drain
+  Do not collapse this into the request-resolution pathway unless the runtime
+  contract itself changes.
+- 2026-04-13: When expanding mixed-provider operator control to Gemini, do not
+  fork the control model. Reuse the same pattern as `chatgpt -> grok`:
+  - one dedicated cross-service tooling team
+  - existing `runControl.resume-human-escalation`
+  - existing `runControl.drain-run`
+  - exported-cookie preflight before live Gemini work
+  - stored `stepSummaries` remain the routing authority
+  The provider-specific part is operational, not semantic:
+  - serialize Gemini live probes
+  - require valid exported cookies before running
+  - otherwise keep assertions and control flow aligned with the Grok-backed
+    mixed-provider approval slice
+- 2026-04-13: If a resumed `chatgpt -> gemini` mixed-provider rejection run
+  fails once with a bare resumed-step `fetch failed`, do not immediately widen
+  runtime semantics or add retries deep in the control path. First do one
+  bounded rerun of the exact same live case. The rejection control seam and
+  stored state can still be correct while the resumed Gemini browser step flakes
+  transiently.
+- 2026-04-13: The `chatgpt -> gemini` cancellation path reuses the exact same
+  control pattern as the Grok and Gemini rejection slices:
+  - `localActionControl.resolve-request = cancelled`
+  - `runControl.resume-human-escalation`
+  - `runControl.drain-run`
+  Keep the provider-specific differences operational only:
+  - Gemini exported-cookie preflight
+  - serialized browser locks
+  - stored step state remains the routing authority
+  Do not fork the control semantics just because Gemini tends to finish with a
+  longer cleanup tail.
+- 2026-04-13: Reverse-order mixed-provider approval with a Grok requester needs
+  a tighter requester-envelope contract than the forward `chatgpt -> *` paths.
+  The first `grok -> chatgpt` approval attempt failed because the requester
+  folded sibling structured-context fields into the local-action payload:
+  - emitted `{"localActionRequests":[{"toolEnvelope":{...},"finalToken":"..."}]}`
+  - persisted no actionable `localActionRequests`
+  - never paused for human escalation
+  The durable rule for this reverse-order Grok requester slice is:
+  - provide one explicit `toolEnvelope` structured-context key
+  - require the requester to emit exactly
+    `{"localActionRequests":[toolEnvelope]}`
+  - forbid sibling fields such as `finalToken` inside the request item
+  - if the first live attempt misses the pause and the stored run shows no
+    actionable local request, fix the requester contract before touching the
+    runtime/operator-control seam
+- 2026-04-13: Once the reverse-order Grok requester contract is fixed,
+  reverse-order cancellation should reuse the exact same control shape as the
+  forward mixed-provider cancellation path. Keep the differences narrow:
+  - same `auracall-reverse-cross-service-tooling` team
+  - same `{"localActionRequests":[toolEnvelope]}` requester contract
+  - `localActionControl.resolve-request = cancelled`
+  - `runControl.resume-human-escalation`
+  - `runControl.drain-run`
+  - same host/recovery/response readback surfaces
+  Do not introduce a reverse-order-specific control seam just because the
+  provider order changed.
+- 2026-04-13: Reverse-order rejection should reuse the same exact control seam
+  as reverse-order cancellation. Keep the semantic delta narrow:
+  - same `auracall-reverse-cross-service-tooling` team
+  - same `{"localActionRequests":[toolEnvelope]}` requester contract
+  - `localActionControl.resolve-request = rejected`
+  - rejection-specific resume note, guidance, and override prompt only
+  - same host/recovery/response readback surfaces
+  If reverse-order rejection fails, inspect requester envelope drift first,
+  then request-resolution persistence, before changing the operator seam.
+- 2026-04-13: Reverse-order Gemini approval should reuse the same exact
+  approval seam as reverse-order ChatGPT approval. Keep the provider-specific
+  differences operational only:
+  - dedicated `auracall-reverse-cross-service-gemini-tooling` team
+  - same reverse Grok requester envelope contract:
+    `{"localActionRequests":[toolEnvelope]}`
+  - existing `runControl.resume-human-escalation`
+  - existing `runControl.drain-run`
+  - mandatory exported-cookie preflight before live Gemini work
+  - stored `stepSummaries` remain the routing authority
+  Do not fork the operator semantics just because the finisher provider changes
+  from ChatGPT to Gemini.
+- 2026-04-13: Reverse-order Gemini cancellation should reuse the same exact
+  control seam as reverse-order ChatGPT cancellation. Keep the differences
+  narrow:
+  - same `auracall-reverse-cross-service-gemini-tooling` team
+  - same reverse Grok requester envelope contract:
+    `{"localActionRequests":[toolEnvelope]}`
+  - `localActionControl.resolve-request = cancelled`
+  - `runControl.resume-human-escalation`
+  - `runControl.drain-run`
+  - same host/recovery/response readback surfaces
+  - mandatory exported-cookie preflight before live Gemini work
+  If reverse-order Gemini cancellation fails, inspect requester envelope drift
+  first, then request-resolution persistence, before changing the operator
+  seam.
+- 2026-04-13: Reverse-order Gemini rejection should reuse the same exact
+  control seam as reverse-order Gemini cancellation. Keep the semantic delta
+  narrow:
+  - same `auracall-reverse-cross-service-gemini-tooling` team
+  - same reverse Grok requester envelope contract:
+    `{"localActionRequests":[toolEnvelope]}`
+  - `localActionControl.resolve-request = rejected`
+  - rejection-specific resume note, guidance, and override prompt only
+  - same host/recovery/response readback surfaces
+  - mandatory exported-cookie preflight before live Gemini work
+  If reverse-order Gemini rejection fails, inspect requester envelope drift
+  first, then request-resolution persistence, before changing the operator
+  seam.
+- 2026-04-13: Gemini-to-ChatGPT approval should reuse the same exact approval
+  seam as the other mixed-provider approval slices. Keep the provider-specific
+  differences operational only:
+  - dedicated `auracall-reverse-cross-service-chatgpt-tooling` team
+  - Gemini requester emits exactly `{"localActionRequests":[toolEnvelope]}`
+  - existing `runControl.resume-human-escalation`
+  - existing `runControl.drain-run`
+  - mandatory exported-cookie preflight before live Gemini work
+  - stored `stepSummaries` remain the routing authority
+  Do not fork the operator semantics just because Gemini is now the requester
+  and ChatGPT is the finisher.
+- 2026-04-13: Gemini-to-ChatGPT cancellation should reuse the same exact
+  control seam as Gemini-to-ChatGPT approval. Keep the semantic delta narrow:
+  - same `auracall-reverse-cross-service-chatgpt-tooling` team
+  - Gemini requester emits exactly `{"localActionRequests":[toolEnvelope]}`
+  - `localActionControl.resolve-request = cancelled`
+  - `runControl.resume-human-escalation`
+  - `runControl.drain-run`
+  - same host/recovery/response readback surfaces
+  - mandatory exported-cookie preflight before live Gemini work
+  If the first gated live attempt returns an unexpected initial `failed` status
+  but a direct bounded team run still shows the expected paused posture, do one
+  bounded rerun of the exact same live case before changing runtime or
+  operator-control code.
+- 2026-04-13: Gemini-to-ChatGPT rejection should reuse the same exact control
+  seam as Gemini-to-ChatGPT cancellation. Keep the semantic delta narrow:
+  - same `auracall-reverse-cross-service-chatgpt-tooling` team
+  - Gemini requester emits exactly `{"localActionRequests":[toolEnvelope]}`
+  - `localActionControl.resolve-request = rejected`
+  - rejection-specific resume note, guidance, and override prompt only
+  - same host/recovery/response readback surfaces
+  - mandatory exported-cookie preflight before live Gemini work
+  Do not change the runtime or operator seam just because Gemini is now the
+  requester; treat requester-envelope drift or transient provider/browser noise
+  as the first investigation targets.
+- 2026-04-13: Once the current mixed-provider operator matrix covers the main
+  provider orders with:
+  - approval
+  - cancellation
+  - rejection
+  stop expanding provider-order permutations by default. At that point the
+  next higher-value phase is:
+  - live-suite consolidation
+  - stable-vs-extended matrix classification
+  - readback/runtime hardening
+  not more pair proliferation. Additional provider orders should require a
+  specific product reason, not just matrix completeness for its own sake.
+- 2026-04-13: When one run persists multiple
+  `step.localActionOutcomes.<stepId>` summaries, response readback should
+  prefer the terminal step's summary instead of older step-local action
+  summaries. Lock that precedence at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  This keeps `metadata.executionSummary.localActionSummary` aligned with the
+  terminal step that actually defines the final run outcome.
+- 2026-04-13: Cancellation no-note fallback should be explicit on every
+  operator-facing read surface, not just one runtime layer. If a cancelled run
+  has no cancellation `note-added` event, lock the same fallback on:
+  - runtime response readback
+  - host recovery detail
+  - HTTP `GET /status/recovery/{run_id}`
+  The fallback contract remains:
+  - `cancelledAt = run.updatedAt`
+  - `source = null`
+  - `reason = null`
+- 2026-04-13: When one run persists multiple operator-control entries, response
+  readback should prefer the latest persisted operator state instead of older
+  resume/drain records. Lock that precedence at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - latest `human.resume.<stepId>` summary wins
+  - latest operator `drain-run` note wins
+- 2026-04-13: Requested-output fulfillment should not treat internal structured
+  outputs as satisfying a required structured-report / JSON output. Keep the
+  fulfillment boundary explicit at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  Internal-only entries that must stay excluded from structured-output
+  fulfillment are:
+  - `response.output`
+  - `human.resume.<stepId>`
+  - `step.localActionOutcomes.<stepId>`
+- 2026-04-13: Orchestration timeline summaries should keep full totals while
+  bounding item windows. Lock that windowing on both surfaces:
+  - runtime response readback
+  - host recovery detail
+  The windowing contract is:
+  - preserve full `total`
+  - keep only the newest `10` `items`
+- 2026-04-13: Handoff-transfer summaries should prefer stored consumed transfer
+  state over planned handoff fallback when both exist. Lock that precedence on
+  both main read surfaces:
+  - runtime response readback
+  - host recovery detail
+  The precedence contract is:
+  - stored `step.consumedTaskTransfers.<stepId>` summary wins
+  - planned handoff `taskTransfer` stays fallback only
+- 2026-04-13: When one run persists multiple
+  `step.providerUsage.<stepId>` summaries, response readback should prefer the
+  terminal step's stored usage summary instead of an older step summary. Lock
+  that precedence at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - terminal step `step.providerUsage.<stepId>` summary wins
+  - older step usage summaries stay fallback only
+- 2026-04-14: When multiple steps on one run carry `requestedOutputs`,
+  terminal response readback should prefer the terminal step's requested-output
+  contract instead of older step requests. Lock that precedence at both
+  layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - terminal step `requestedOutputs` drive `requestedOutputSummary`
+  - older unmet step requests stay excluded from terminal requested-output
+    policy
+- 2026-04-14: When terminal readback has both an explicit terminal step
+  failure and a missing required requested output, `failureSummary` should
+  prefer the explicit terminal step failure. Lock that precedence at both
+  layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - terminal step `failure` wins
+  - derived `requested_output_required_missing` stays fallback only
+- 2026-04-14: When multiple steps on one run carry input artifacts, response
+  readback should prefer the terminal step's artifact set instead of older
+  step artifacts. Lock that precedence at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - terminal step `input.artifacts` drive `inputArtifactSummary`
+  - older step artifacts stay fallback only
+- 2026-04-14: When one run contains both a failed step and a later succeeded
+  or cancelled step, terminal response readback should still prefer the failed
+  step. Lock that precedence at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The precedence contract is:
+  - failed step wins `terminalStepId`
+  - failed step wins `completedAt`
+  - failed step wins `failureSummary`
+- 2026-04-14: When the terminal step carries no input artifacts, response
+  readback should fall back to the latest earlier step that does. Lock that
+  fallback at both layers:
+  - runtime response readback
+  - HTTP `GET /v1/responses/{response_id}`
+  The fallback contract is:
+  - terminal step with artifacts wins
+  - otherwise use the latest earlier step with `input.artifacts`
+- 2026-04-14: When no stored consumed transfer summary exists for the selected
+  dependent step, recovery detail should fall back to planned handoff transfer
+  data. Lock that fallback at both layers:
+  - host recovery detail
+  - HTTP `GET /status/recovery/{run_id}`
+  The fallback contract is:
+  - stored `step.consumedTaskTransfers.<stepId>` summary wins when present
+  - otherwise use planned handoff `structuredData.taskTransfer`
+- 2026-04-14: When a runtime/readback hardening pass has already locked the
+  main operator-facing contract families, stop adding more micro
+  precedence/fallback slices by default. The next higher-value move is a
+  roadmap checkpoint plus contract/docs consolidation:
+  - deduplicate the active roadmap, journal, fixes log, and testing notes
+  - declare the current hardening subphase materially sufficient
+  - choose the next phase from broader product risk, not from another easy
+    reader-edge-case
+- 2026-04-14: Once a hardening checkpoint is materially sufficient, the
+  operator-facing testing docs should summarize the proved contract families
+  instead of mirroring every individual micro-slice. Keep the detailed history
+  in the journal/fixes log; keep `docs/testing.md` compact and operational.
+- 2026-04-14: For a mature repo with strong local `AGENTS.md` guidance, policy
+  adoption should be migration-first:
+  - install the shared policy body under `docs/dev/policies/`
+  - keep `AGENTS.md` as a thin repo-specific wire-in
+  - establish `docs/dev/plans/` before rewriting roadmap/runbook structure
+  - do not force a full planning-contract migration in the same slice as the
+    first policy install
+- 2026-04-14: Plan-library compliance can use file time attributes
+  deterministically, but only as one scoring input. The bounded migration audit
+  should combine:
+  - canonical path
+  - `mtime` / `ctime`
+  - `ROADMAP.md` / `RUNBOOK.md` / `AGENTS.md` references
+  - lightweight plan-content signals
+  Use that composite score to classify loose plans as:
+  - `keep`
+  - `merge`
+  - `retire`
+  Do not let file times alone decide planning authority.
+- 2026-04-14: First bounded plan migration should preserve the old loose plan
+  as a pointer instead of deleting it outright. For active-plan migration:
+  - move authority into `docs/dev/plans/`
+  - rewire `ROADMAP.md`, `RUNBOOK.md`, and `AGENTS.md`
+  - leave the old loose plan path as stable history/pointer while widespread
+    links still exist
+- 2026-04-14: Keep informational plan indexes outside `docs/dev/plans/` if
+  the strict planning audit treats every Markdown file in that directory as a
+  plan artifact. Canonical plan directories should contain actual plans only;
+  indexes and guidance belong adjacent to the directory, not inside it.
+- 2026-04-14: When migrating an active repo to stricter planning governance,
+  split structural normalization from semantic reconciliation. Converting
+  `ROADMAP.md` and `RUNBOOK.md` heading shapes to the audited contract can be a
+  bounded doc-only slice; do not mix it with broader reprioritization or lane
+  rewrites unless that is explicitly intended.
+- 2026-04-14: After the planning-compliance framework is green, migrate the
+  loose plan library one bounded file at a time:
+  - create the canonical plan under `docs/dev/plans/`
+  - rewire only the active adjacent references that actually govern work
+  - leave the old loose file as pointer/history
+  - keep the strict planning audit green after each migration
+- 2026-04-14: When migrating a dependent plan cluster, rewire canonical-plan
+  cross-links at the same time as roadmap/runbook links. If plan B is already
+  canonical and plan C depends on it, moving plan C should also update the
+  canonical B -> C link so the canonical set stays internally consistent.
+- 2026-04-14: Once the planning-compliance framework is green and the first
+  few migrations prove the pattern, pause for one full legacy-plan review
+  before continuing. Use the deterministic audit to classify the remaining
+  loose set into:
+  - legacy pointers
+  - merge-next clusters
+  - retire candidates
+  Then resume one-file migrations from the reviewed cluster order rather than
+  local adjacency alone.
+- 2026-04-14: After a full legacy-plan review establishes a migration batch,
+  keep following dependency order inside that batch. In the current team/service
+  foundation cluster, the stable order is:
+  - task / run spec
+  - team run data model
+  - team service execution
+  - then team/config or durable-state boundaries
+- 2026-04-14: Do not migrate every legacy plan just because it is structurally
+  mergeable. Once a minimal canonical plan set exists:
+  - archive low-signal legacy plans under `docs/dev/plans/legacy-archive/`
+  - use serial + ctime datestamp filenames
+  - exclude the archive directory from canonical plan audits
+  - keep active docs wired only to canonical or still-live loose plans
+  - rely on lexical search for backward peeks into archived planning history
+- 2026-04-14: Archive coherent closed design clusters together when their
+  value is historical context, not future authority. The runtime/cache cluster
+  was a good batch because:
+  - it had no remaining roadmap authority
+  - the files mostly referenced each other
+  - only a few still-live docs needed explicit rewiring to archived paths
+  This is higher leverage than migrating that kind of cluster into canonical
+  authority one file at a time.
+- 2026-04-14: Treat testing/smoke docs as live authority when archiving
+  browser-history plans. Before moving ChatGPT/Grok backlog notes into
+  `docs/dev/plans/legacy-archive/`, first rewire:
+  - `docs/testing.md`
+  - `docs/dev/smoke-tests.md`
+  - any still-live adjacent browser plans
+  Historical journal links can remain stale; active operator guidance cannot.
+- 2026-04-14: Once the archive cleanup reduces the loose-plan set to live
+  future-signal items only, stop archiving and resume selective
+  canonicalization. The durable-state ownership lane was the right first
+  post-archive canonical migration because it still had explicit roadmap
+  authority and a direct architectural relationship to the active execution
+  board.
+- 2026-04-14: When a still-live legacy plan is promoted into canonical
+  authority, finish the slice by updating the legacy archive index in the same
+  turn. The archive directory is only useful if operators can deterministically
+  map old loose paths to archived filenames.
+- 2026-04-14: If a loose plan is referenced directly from `ROADMAP.md` and
+  from already-canonical adjacent plans, treat it as governing authority and
+  promote it into `docs/dev/plans/` instead of leaving it loose. That pattern
+  now covers the team boundary and should drive later merge-vs-keep decisions.
+- 2026-04-14: Apply the same governing-authority rule to umbrella plans, not
+  just boundary docs. If a loose architecture plan is the direct roadmap entry
+  point for a still-live cluster, promote it into canonical authority before
+  migrating or judging the narrower dependent plans beneath it.
+- 2026-04-14: If a loose plan is referenced from both `ROADMAP.md` and
+  `AGENTS.md`, promote it into canonical authority ahead of other roadmap-only
+  loose plans. That combination marks it as both strategic and operationally
+  active, not just background architecture context.
+- 2026-04-14: Once a config umbrella plan is canonical, promote its remaining
+  roadmap-linked boundary docs next rather than skipping to unrelated loose
+  plans. The agent boundary followed the config umbrella for that reason and
+  should be the default pattern for the rest of the config cluster.
+- 2026-04-14: When the remaining loose-plan set is entirely live governing work, finish the backlog in one bounded canonicalization slice instead of dragging it across multiple turns. Rewire roadmap/runbook/testing links and archive the old paths in the same change so the deterministic plan audit can fall to `merge=0` immediately.
+- 2026-04-14: After a planning-authority migration phase finishes, immediately rewrite the execution owner doc to reflect the new steady state. If the execution board still points at completed archive/canonicalization work, the team will drift back into documentation churn instead of the next product lane.
+- 2026-04-14: When a roadmap says "define the first concrete shape next," do not stop at directional bullets. Write the actual conservative v1 contract, include one example object, and state explicit non-goals so the next implementation slice cannot smuggle runner topology or execution history into the authoring model.
+- 2026-04-14: On a broadly dirty worktree, check git-policy compliance explicitly before planning/doc edits: stay narrow, do not clean unrelated changes, and keep the next slice scoped to the targeted authority docs only.
+- 2026-04-14: After concrete authoring and execution contracts exist, do not jump straight into coding. Write one bounded implementation slice that names the projection chain, write scope, and explicit out-of-scope surfaces; otherwise service/runtime work will sprawl into public execution APIs too early.
+
+- 2026-04-14: Before implementing a planned projection slice, verify whether the projection path already exists in code. In this repo, `taskRunSpec -> teamRun -> runtime` projection was already live; the real missing seam was durable `taskRunSpec` persistence. Fix the missing seam instead of duplicating a second projection abstraction.
+
+- 2026-04-14: After adding durable `taskRunSpec` persistence, the next highest-value seam was not a new command; it was bounded readback on the surfaces that already exposed `taskRunSpecId`. Add a compact persisted task-spec summary there first so operators can inspect linkage without widening public surface area.
+
+- 2026-04-14: Once bounded persistence and readback are live, the next operator-facing step should be one internal inspection entrypoint that reuses those summaries. Add that debug surface before any broader public team-execution API so operators can inspect linkage without forcing public-surface decisions early.
+
+- 2026-04-14: After an internal debug seam proves stable, the first public team execution surface should be read-only inspection, not create/run mutation. Reuse the same bounded linkage payload on HTTP before deciding whether public write semantics are justified.
+
+- 2026-04-14: Treat repo-root `undefined:/` as disposable temp-path fallout, not source. Safe worktree cleanup is: remove the tree and ignore `undefined:/` in `.gitignore`. Do not sweep broader untracked/modified files in the same turn unless you have explicit intent for the in-flight feature/docs changes.

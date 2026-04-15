@@ -26,6 +26,7 @@ auracall api serve --host 0.0.0.0 --listen-public --port 8080
 Current endpoints:
 
 - `GET /status`
+- `GET /status/recovery/{run_id}`
 - `GET /v1/models`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
@@ -44,12 +45,98 @@ Current limits:
 - tune startup recovery scan cap with `--recover-runs-on-start-max <count>`
 - `/status` reports explicit development posture, route surface, and
   unauthenticated/local-only state, including the current AuraCall version
+  - `/status.runner` now reports the live persisted local runner owned by
+    `api serve`:
+    - `id`
+    - `hostId`
+    - `status`
+    - `lastHeartbeatAt`
+    - `expiresAt`
+    - `lastActivityAt`
+    - `lastClaimedRunId`
+  - plain `/status.localClaimSummary` now reports a compact direct-run local
+    claim snapshot when a local runner is configured:
+    - `sourceKind`
+    - `runnerId`
+    - `selectedRunIds`
+    - `blockedRunIds`
+    - `notReadyRunIds`
+    - `unavailableRunIds`
+    - `reasonsByRunId`
   - when called with `?recovery=1` (or `?recovery=true`) it also returns:
     - `recoverySummary.totalRuns`
     - reclaimable run IDs in `recoverySummary.reclaimableRunIds`
     - busy active-lease IDs in `recoverySummary.activeLeaseRunIds`
     - stranded-running-without-lease IDs in `recoverySummary.strandedRunIds`
     - idle/terminal IDs in `recoverySummary.idleRunIds`
+    - bounded local-claim summary in `recoverySummary.localClaim` when a local runner is configured:
+      - `runnerId`
+      - `selectedRunIds`
+      - `blockedRunIds`
+      - `notReadyRunIds`
+      - `unavailableRunIds`
+      - `reasonsByRunId`
+    - bounded active-lease health in `recoverySummary.activeLeaseHealth`:
+      - `freshRunIds`
+      - `staleHeartbeatRunIds`
+      - `suspiciousIdleRunIds`
+      - `reasonsByRunId`
+    - bounded lease-repair posture in `recoverySummary.leaseRepair`:
+      - `locallyReclaimableRunIds`
+      - `inspectOnlyRunIds`
+      - `notReclaimableRunIds`
+      - `repairedRunIds`
+      - `reasonsByRunId`
+  - `GET /status/recovery/{run_id}` returns one bounded per-run recovery
+    detail view with:
+    - `taskRunSpecId`
+    - `orchestrationTimelineSummary`
+      - derived from selected relevant durable `sharedState.history` entries
+      - `total`
+      - bounded `items`
+        - `type`
+        - `createdAt`
+        - `stepId`
+        - `note`
+        - `handoffId`
+    - current host classification
+    - active lease snapshot
+    - dispatch posture
+    - reconciliation / repair posture and reasons
+    - active-lease health under `leaseHealth`, including whether the lease looks fresh, stale-heartbeat, or suspiciously idle
+    - bounded host drain now also treats `stale-heartbeat` as its own skip posture; `suspiciously-idle` remains diagnostic only
+    - `POST /status` now also accepts one bounded stale-heartbeat lease repair action:
+      - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
+      - it only succeeds when the run is currently `stale-heartbeat` and already `locally-reclaimable` by the existing durable repair policy
+      - `suspiciously-idle` remains read-only and is rejected by that action
+    - `POST /status` now also accepts one bounded local run-cancel action:
+      - `{"runControl":{"action":"cancel-run","runId":"..."}}`
+      - it only succeeds for active runs currently owned by the local configured runner/host
+      - successful cancellation releases the active lease with release reason `cancelled`
+      - inactive or not-owned runs are rejected cleanly
+    - `POST /status` now also accepts one bounded human-escalation resume action:
+      - `{"runControl":{"action":"resume-human-escalation","runId":"...","note":"...","guidance":{...},"override":{"promptAppend":"...","structuredContext":{...}}}}`
+      - it only succeeds for direct or team runs currently paused for human escalation
+      - successful resume returns the cancelled human-escalation step to `runnable`
+      - runs without a paused human-escalation step are rejected cleanly
+    - `POST /status` now also accepts one bounded targeted drain action:
+      - `{"runControl":{"action":"drain-run","runId":"..."}}`
+      - it only succeeds for direct or team runs
+      - successful drain runs one targeted host-owned execution pass for that run
+      - skipped or non-runnable runs are rejected cleanly
+    - `POST /status` now also accepts one bounded local-action request resolution action:
+      - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
+      - it only succeeds for currently `requested` local action records on direct or team runs
+      - already-resolved requests are rejected cleanly
+    - recovery summary/detail now also surface bounded attention for stale-heartbeat cases that remain `inspect-only`
+    - recovery summary/detail now also surface bounded cancellation readback:
+      - `recoverySummary.cancelledRunIds`
+      - `recoverySummary.cancellation.reasonsByRunId`
+      - per-run `cancellation.cancelledAt`
+      - per-run `cancellation.source`
+      - per-run `cancellation.reason`
+    - startup recovery logs now also emit `attention=stale-heartbeat-inspect-only:<count>` when such cases remain after the bounded startup pass
+    - configured local runner claim posture under `localClaim`, including whether the configured local runner is selected
     - optional `sourceKind` filter (`direct`, `team-run`, or `all`), defaulting to
       `direct`
 - optional `X-AuraCall-*` headers for execution hints:
@@ -60,6 +147,18 @@ Current limits:
 - no auth
 - no streaming/SSE
 - no `POST /v1/chat/completions` adapter yet
+- local `api serve` now self-registers one persisted runner record and
+  heartbeats it while the server is alive; shutdown marks that runner stale
+- successful bounded direct-run execution now also updates that runner record
+  with the last observed execution activity and claimed run id
+- if a run is cancelled while a delayed local step is still finishing, the
+  runner path now preserves the `cancelled` terminal state instead of
+  overwriting it with a later completion persist
+- bounded local execution now refreshes the active lease heartbeat while a step
+  is still running, so live runner-owned claims start fresh and stay fresh
+  during one delayed local execution pass
+- bounded local host claims now use that live runner id as the lease owner,
+  and new claims are skipped when the configured runner owner is unavailable
 - non-loopback host binding is still unauthenticated and warned as unsafe
 
 This server is intended as the first local compatibility surface, not yet a
@@ -80,10 +179,97 @@ Current response readback note:
 
 - AuraCall now adds a bounded `metadata.executionSummary` object on the same
   response body for runtime-backed direct runs
+- AuraCall response readback now also includes bounded assignment identity at
+  top-level metadata:
+  - `taskRunSpecId`
 - current fields are:
   - `terminalStepId`
   - `completedAt`
   - `lastUpdatedAt`
+  - `inputArtifactSummary`
+    - `total`
+    - bounded `items`
+      - `id`
+      - `kind`
+      - `title`
+      - `path`
+      - `uri`
+  - `handoffTransferSummary`
+    - `total`
+    - bounded `items`
+      - `handoffId`
+      - `fromStepId`
+      - `fromAgentId`
+      - `title`
+      - `objective`
+      - `requestedOutputCount`
+      - `inputArtifactCount`
+  - `orchestrationTimelineSummary`
+    - derived from bounded relevant entries in durable `sharedState.history`
+    - `total`
+    - bounded `items`
+      - `type`
+      - `createdAt`
+      - `stepId`
+      - `note`
+      - `handoffId`
+  - `requestedOutputSummary`
+    - `total`
+    - `fulfilledCount`
+    - `missingRequiredCount`
+    - bounded `items`
+      - `label`
+      - `kind`
+      - `format`
+      - `destination`
+      - `required`
+      - `fulfilled`
+      - `evidence`
+  - `requestedOutputPolicy`
+    - `status`
+    - `message`
+    - `missingRequiredLabels`
+    - when required outputs remain missing, response readback now also returns:
+      - `status = failed`
+      - `failureSummary.code = requested_output_required_missing`
+      - stored runtime/service terminal state also converges to `failed` for
+        those same clearly missing-required cases
+    - when the next runnable step would exceed
+      `constraints.providerBudget.maxRequests`, stored runtime/service state
+      now fails before execution with:
+      - `failureSummary.code = task_provider_request_limit_exceeded`
+    - when cumulative stored provider usage already exceeds
+      `constraints.providerBudget.maxTokens`, stored runtime/service state now
+      fails before the next step executes with:
+      - `failureSummary.code = task_provider_token_limit_exceeded`
+  - `providerUsageSummary`
+    - when the stored execution path reports real usage, readback now also
+      includes:
+      - `ownerStepId`
+      - `generatedAt`
+      - `inputTokens`
+      - `outputTokens`
+      - `reasoningTokens`
+      - `totalTokens`
+  - `operatorControlSummary`
+    - `humanEscalationResume`
+      - `resumedAt`
+      - `note`
+    - `targetedDrain`
+      - `requestedAt`
+      - `status`
+      - `reason`
+      - `skipReason`
+  - `localActionSummary`
+    - operator resolution on `POST /status` updates this same summary in later `GET /v1/responses/{response_id}` reads
+    - `ownerStepId`
+    - `generatedAt`
+    - `counts`
+    - bounded `items`
+  - `cancellationSummary`
+    - `cancelledAt`
+    - `source`
+    - `reason`
   - `failureSummary`
 
 Minimal local smoke:
