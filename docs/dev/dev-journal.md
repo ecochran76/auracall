@@ -1,3 +1,14 @@
+## 2026-04-15 - Startup recovery suspicious-idle attention logs
+
+- Completed one bounded startup-recovery observability refinement:
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so startup recovery logs now preserve bounded
+    `attention=suspiciously-idle:<count>` when active leases look idle-but-not-stale
+  - kept the existing skip taxonomy unchanged:
+    - suspiciously-idle still rolls up under `skips=active-lease`
+    - stale-heartbeat remains its own skip/attention posture
+  - locked the behavior with focused HTTP coverage and synchronized operator docs.
+
 ## 2026-04-15 - Runtime inspection alias match summary
 
 - Completed one more bounded read-only runtime inspection refinement:

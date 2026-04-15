@@ -789,6 +789,8 @@
     - startup recovery logs now also emit bounded stale-heartbeat attention
       when unrepaired inspect-only cases remain:
       - `attention=stale-heartbeat-inspect-only:<count>`
+      - `attention=suspiciously-idle:<count>` when active leases look
+        idle-but-not-stale
     - the per-run detail surface now also reports the configured local runner's
       claim posture under `localClaim`, including whether it is currently
       selected for local claiming

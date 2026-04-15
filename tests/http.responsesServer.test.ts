@@ -8388,6 +8388,68 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('logs bounded suspiciously-idle attention when startup recovery sees idle active leases', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-idle-attention-log-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(
+      control,
+      'resp_attention_idle',
+      '2026-04-08T14:40:00.000Z',
+      'Inspect suspicious idle lease',
+    );
+    await control.acquireLease({
+      runId: 'resp_attention_idle',
+      leaseId: 'resp_attention_idle:lease:1',
+      ownerId: 'runner:idle-attention',
+      acquiredAt: '2026-04-08T14:40:00.000Z',
+      heartbeatAt: '2026-04-08T14:44:55.000Z',
+      expiresAt: '2026-04-08T14:50:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:idle-attention',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T14:30:00.000Z',
+        lastHeartbeatAt: '2026-04-08T14:44:55.000Z',
+        expiresAt: '2026-04-08T14:50:00.000Z',
+        lastActivityAt: '2026-04-08T14:39:00.000Z',
+        lastClaimedRunId: 'run_before_idle_attention',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const logs: string[] = [];
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+        logger: (message) => {
+          logs.push(message);
+        },
+      },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T14:45:00.000Z'),
+      },
+    );
+
+    try {
+      const startupLog = logs.find((entry) => entry.includes('Startup recovery (direct) completed'));
+      expect(startupLog).toBeDefined();
+      expect(startupLog).toContain('skips=active-lease:1');
+      expect(startupLog).toContain('attention=suspiciously-idle:1');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('enables startup recovery by default for serveResponsesHttp', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-default-'));
     cleanup.push(homeDir);

@@ -1,3 +1,11 @@
+- 2026-04-15: If startup recovery keeps suspiciously-idle active leases as diagnostic-only instead of reclaiming them, preserve that count explicitly in the startup log attention summary instead of hiding it under generic `active-lease`.
+  - Keep the coarse drain taxonomy unchanged:
+    - suspiciously-idle still counts as `active-lease`
+  - But also emit bounded startup attention:
+    - `attention=suspiciously-idle:<count>`
+  - This makes operator startup logs match the already-computed recovery
+    health signal without widening the recovery action surface.
+
 - 2026-04-15: If an inspection alias resolves through a latest-match strategy, surface a bounded candidate summary in the same payload.
   - Runtime inspection now also returns:
     - `matchingRuntimeRunCount`

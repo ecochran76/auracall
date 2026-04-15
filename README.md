@@ -241,6 +241,8 @@ Terminology note:
       - per-run `cancellation.reason`
     - startup recovery logs now also emit:
       - `attention=stale-heartbeat-inspect-only:<count>`
+      - `attention=suspiciously-idle:<count>` when active leases look
+        idle-but-not-stale
     - configured local runner claim posture under `localClaim`, including whether the current local runner is actually selected
   - `GET /v1/team-runs/inspect` returns one bounded read-only team linkage view:
     - query by `taskRunSpecId=<task_run_spec_id>`, `teamRunId=<team_run_id>`, or `runtimeRunId=<runtime_run_id>`

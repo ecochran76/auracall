@@ -834,6 +834,7 @@ export async function createResponsesHttpServer(
         maxRuns: recoverRunsOnStartMaxRuns,
         staleHeartbeatInspectOnlyCount:
           recoverySummary.attention.metrics.staleHeartbeatInspectOnlyCount,
+        suspiciouslyIdleCount: recoverySummary.activeLeaseHealth.metrics.suspiciousIdleCount,
       }),
     );
   }
@@ -1004,7 +1005,12 @@ function createHttpStatusResponse(input: {
 
 function createStartupRecoveryLog(
   result: DrainStoredExecutionRunsUntilIdleResult,
-  options: { sourceKind: string; maxRuns: number; staleHeartbeatInspectOnlyCount?: number },
+  options: {
+    sourceKind: string;
+    maxRuns: number;
+    staleHeartbeatInspectOnlyCount?: number;
+    suspiciouslyIdleCount?: number;
+  },
 ): string {
   const skipCounts: Record<string, number> = {};
   for (const entry of result.drained) {
@@ -1041,8 +1047,17 @@ function createStartupRecoveryLog(
     parts.push(`executed=${result.executedRunIds.slice(0, 5).join(',')}`);
   }
 
+  const attentionEntries: string[] = [];
   if ((options.staleHeartbeatInspectOnlyCount ?? 0) > 0) {
-    parts.push(`attention=stale-heartbeat-inspect-only:${options.staleHeartbeatInspectOnlyCount}`);
+    attentionEntries.push(
+      `stale-heartbeat-inspect-only:${options.staleHeartbeatInspectOnlyCount}`,
+    );
+  }
+  if ((options.suspiciouslyIdleCount ?? 0) > 0) {
+    attentionEntries.push(`suspiciously-idle:${options.suspiciouslyIdleCount}`);
+  }
+  if (attentionEntries.length > 0) {
+    parts.push(`attention=${attentionEntries.join(',')}`);
   }
 
   if (result.drained.length > options.maxRuns) {
