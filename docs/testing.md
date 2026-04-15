@@ -179,8 +179,18 @@
       - `queueState`
       - `claimState`
       - `nextRunnableStepId`
+      - `activeLeaseId`
+      - `activeLeaseOwnerId`
       - step-id buckets for running/waiting/deferred/terminal posture
       - bounded affinity posture
+        - `requiredService`
+        - `requiredRuntimeProfileId`
+        - `requiredBrowserProfileId`
+        - `requiredHostId`
+        - `hostRequirement`
+        - `requiredServiceAccountId`
+        - `browserRequired`
+        - `eligibilityNote`
     - if `runnerId` is supplied, the same inspection route should also include
       one bounded persisted runner summary and evaluate queue affinity against
       that runner

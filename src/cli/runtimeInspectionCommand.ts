@@ -37,9 +37,24 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
   lines.push(`  - Queue state: ${payload.runtime.queueProjection.queueState}`);
   lines.push(`  - Claim state: ${payload.runtime.queueProjection.claimState}`);
   lines.push(`  - Next runnable step: ${payload.runtime.queueProjection.nextRunnableStepId ?? '(none)'}`);
+  lines.push(`  - Active lease id: ${payload.runtime.queueProjection.activeLeaseId ?? '(none)'}`);
   lines.push(`  - Active lease owner: ${payload.runtime.queueProjection.activeLeaseOwnerId ?? '(none)'}`);
   lines.push(`  - Affinity status: ${payload.runtime.queueProjection.affinity.status}`);
   lines.push(`  - Affinity reason: ${payload.runtime.queueProjection.affinity.reason ?? '(none)'}`);
+  lines.push(`  - Required service: ${payload.runtime.queueProjection.affinity.requiredService ?? '(none)'}`);
+  lines.push(
+    `  - Required runtime profile: ${payload.runtime.queueProjection.affinity.requiredRuntimeProfileId ?? '(none)'}`,
+  );
+  lines.push(
+    `  - Required browser profile: ${payload.runtime.queueProjection.affinity.requiredBrowserProfileId ?? '(none)'}`,
+  );
+  lines.push(`  - Required host: ${payload.runtime.queueProjection.affinity.requiredHostId ?? '(none)'}`);
+  lines.push(`  - Host requirement: ${payload.runtime.queueProjection.affinity.hostRequirement}`);
+  lines.push(
+    `  - Required service account: ${payload.runtime.queueProjection.affinity.requiredServiceAccountId ?? '(none)'}`,
+  );
+  lines.push(`  - Browser required: ${payload.runtime.queueProjection.affinity.browserRequired ? 'yes' : 'no'}`);
+  lines.push(`  - Eligibility note: ${payload.runtime.queueProjection.affinity.eligibilityNote ?? '(none)'}`);
 
   if (payload.runner) {
     lines.push('- Evaluated runner:');

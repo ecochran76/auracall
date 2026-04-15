@@ -1,3 +1,16 @@
+## 2026-04-15 - Runtime inspection queue projection rendering
+
+- Completed one bounded runtime-inspection operator-surface refinement:
+  - updated [src/cli/runtimeInspectionCommand.ts](/home/ecochran76/workspace.local/oracle/src/cli/runtimeInspectionCommand.ts)
+    so the CLI formatter now preserves more of the existing queue projection:
+    - `activeLeaseId`
+    - `activeLeaseOwnerId`
+    - bounded affinity requirements and notes
+  - kept the API payload unchanged and locked the existing queue-projection
+    fields more explicitly in focused CLI/HTTP tests
+  - synchronized operator docs to the current payload instead of leaving those
+    fields implicit.
+
 ## 2026-04-15 - Local claim status maps
 
 - Completed one bounded local-claim summary refinement:

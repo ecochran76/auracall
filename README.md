@@ -171,8 +171,18 @@ Terminology note:
         - `queueState`
         - `claimState`
         - `nextRunnableStepId`
+        - `activeLeaseId`
+        - `activeLeaseOwnerId`
         - active/waiting/running/deferred/terminal step ids
         - bounded affinity evaluation
+          - `requiredService`
+          - `requiredRuntimeProfileId`
+          - `requiredBrowserProfileId`
+          - `requiredHostId`
+          - `hostRequirement`
+          - `requiredServiceAccountId`
+          - `browserRequired`
+          - `eligibilityNote`
       - bounded `runner` summary when:
         - `runnerId` is supplied, or
         - the active lease owner resolves to a persisted runner record

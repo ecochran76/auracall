@@ -389,6 +389,16 @@ describe('runtime inspection CLI helpers', () => {
     expect(rendered).toContain('Matching runtime runs: 2');
     expect(rendered).toContain('Matching runtime run ids: runtime_cli_inspect_2, runtime_cli_inspect_1');
     expect(rendered).toContain('Queue state: active-lease');
+    expect(rendered).toContain('Active lease id: lease_1');
+    expect(rendered).toContain('Active lease owner: runner:cli');
     expect(rendered).toContain('Affinity status: not-evaluated');
+    expect(rendered).toContain('Required service: chatgpt');
+    expect(rendered).toContain('Required runtime profile: default');
+    expect(rendered).toContain('Required browser profile: (none)');
+    expect(rendered).toContain('Required host: (none)');
+    expect(rendered).toContain('Host requirement: any');
+    expect(rendered).toContain('Required service account: (none)');
+    expect(rendered).toContain('Browser required: no');
+    expect(rendered).toContain('Eligibility note: (none)');
   });
 });

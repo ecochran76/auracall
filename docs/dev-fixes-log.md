@@ -1,3 +1,11 @@
+- 2026-04-15: If runtime inspection already returns bounded queue-projection lease and affinity requirement fields, preserve them in the operator-facing formatter and docs instead of collapsing them to queue/claim/affinity status alone.
+  - Runtime inspection CLI now also renders:
+    - `activeLeaseId`
+    - `activeLeaseOwnerId`
+    - bounded affinity requirements and notes
+  - Keep the API contract unchanged; this is an operator-surface alignment
+    slice, not a new inspection model.
+
 - 2026-04-15: If local-claim summary already computes bounded per-run statuses, preserve them explicitly instead of forcing operators to infer them from grouped buckets plus free-form reasons.
   - Local claim summaries now also return:
     - `statusByRunId`
