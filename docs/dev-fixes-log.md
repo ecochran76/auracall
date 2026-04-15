@@ -12389,3 +12389,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   that `api serve` derives `serviceAccountIds` from configured service identity
   using `email`, then `handle`, then `name`, and does not live-probe browser
   account state during runner registration.
+- 2026-04-15: After configured account-affinity is implemented, tested, and
+  documented, stop adding more reporting by default. Reassess the roadmap and
+  make the next checkpoint validation-first: one bounded `api serve` smoke for
+  `/status`, local-claim summary, and `GET /v1/runtime-runs/inspect` affinity
+  readback before any public team execution writes or multi-runner service mode.

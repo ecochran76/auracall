@@ -252,7 +252,7 @@ Sequencing rule:
   postmortem, and multi-process coordination
 
 ### Durable State And Account Mirroring
-Status: planned
+Status: in progress
 
 The future runner/service layer will need storage beyond the current
 single-process/session model. That includes both orchestration state and a
@@ -273,6 +273,30 @@ Important note:
   - handoffs
   - service accounts
   - browser-bearing execution affinity
+
+Current checkpoint:
+- the first single-runner durable ownership substrate is live:
+  - persisted runtime bundles for runs, steps, events, leases, and shared state
+  - persisted local runner records with heartbeat/liveness state
+  - read-only runtime queue projection and runner affinity inspection
+  - configured service-account affinity using
+    `service-account:<service>:<identity-key>`
+  - local-claim and targeted-drain gating that preserves actionable affinity
+    mismatch reasons
+- this remains a single-runner/local-service checkpoint:
+  - configured service identity is declarative config evidence, not live
+    browser-account proof
+  - no multi-runner scheduler, reassignment loop, or public team execution
+    writes are authorized by this checkpoint
+
+Next checkpoint:
+- run one bounded `api serve` operator smoke that proves the documented
+  read-only account-affinity posture end to end:
+  - `/status` exposes the live runner and local-claim summary
+  - `GET /v1/runtime-runs/inspect` exposes configured
+    `requiredServiceAccountId`
+  - a mismatched runner/account path remains skipped or blocked with a stable
+    local-claim reason
 
 Execution docs:
 - Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)

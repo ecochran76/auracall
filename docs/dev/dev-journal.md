@@ -16109,6 +16109,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     - operators can now distinguish configured account affinity from browser
       account verification when interpreting runtime inspection and local-claim
       diagnostics.
+
+## 2026-04-15 - Durable-state roadmap reassessment
+
+- Reassessed the active execution roadmap after the configured account-affinity
+  checkpoint:
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    so Durable State And Account Mirroring is now `in progress` with an
+    explicit single-runner/local-service checkpoint
+  - updated
+    [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    to stop adding more account-affinity reporting by default and move to one
+    bounded validation checkpoint
+  - updated
+    [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+    with the shipped single-runner/account-affinity state and the next
+    `api serve` smoke acceptance criteria
+  - recorded the decision in [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
+  - why this matters:
+    - the lane now has a validation-first checkpoint instead of drifting into
+      public team execution writes or multi-runner service mode prematurely.
 ## 2026-04-15 - Targeted drain skipped-note contract cleanup
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:

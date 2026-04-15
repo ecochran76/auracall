@@ -112,3 +112,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     with the same bounded match-summary contract
 - Verification target:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+
+## Turn 8 | 2026-04-15
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Adjacent plan:
+  `docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md`
+- Goal: reassess the roadmap after the configured account-affinity checkpoint
+  instead of continuing implementation by inertia.
+- Decision:
+  - durable state/account mirroring is now an active single-runner checkpoint,
+    not merely planned future signal
+  - configured account-affinity is complete enough across runner metadata,
+    runtime inspection, local claim, targeted-drain diagnostics, tests, and
+    operator docs
+  - public team execution writes and multi-runner/background-worker service mode
+    remain paused
+- Next checkpoint:
+  - run one bounded local `api serve` operator smoke for `/status`,
+    local-claim summary, and `GET /v1/runtime-runs/inspect` account-affinity
+    readback before choosing another implementation lane
+- Verification target:
+  - `pnpm run plans:audit`
+  - `pnpm run check`

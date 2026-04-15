@@ -5,16 +5,23 @@ Lane: P01
 
 ## Current State
 
-- the durable ownership lane is still explicitly referenced from
-  `ROADMAP.md`, so it remains future-signal planning rather than archive-only
-  history
+- the durable ownership lane is now active in `ROADMAP.md`
 - the adjacent runtime/history design notes have already been archived under
   `docs/dev/plans/legacy-archive/`
-- the planning-compliance framework is green, so this slice is promoting the
-  durable-state plan into canonical authority without changing the underlying
-  design intent
-- the live need is stable plan placement and wiring, not another semantic
-  rewrite of the durable ownership model
+- the first single-runner/local-service checkpoint has shipped:
+  - runtime queue projection
+  - persisted local runner identity and heartbeat
+  - local runner claim gating
+  - bounded runtime/team inspection readback
+  - configured service-account affinity projected through runner metadata,
+    runtime inspection, local claim, and targeted-drain diagnostics
+- the lane is not ready to widen into multi-runner scheduling or public team
+  execution writes
+- the next live need is validation-first:
+  - run one bounded `api serve` operator smoke for the documented
+    read-only/account-affinity posture
+  - then choose the next implementation lane from evidence instead of adding
+    more reporting by default
 
 # Durable State And Account Mirroring Plan
 
@@ -150,9 +157,8 @@ The repo already has enough substrate to define this boundary concretely:
 
 What the repo does not yet have is an explicit durable model for:
 
-- queue membership separate from “runs discovered by listRuns()”
-- service-account/browser-affinity ownership separate from current local
-  environment assumptions
+- queue membership separate from “runs discovered by listRuns()” when broader
+  service mode needs it
 - multi-runner heartbeat ownership beyond one local process
 - replay/debug guarantees across process restarts and machine boundaries
 
@@ -236,3 +242,52 @@ Current checkpoint:
   [src/runtime/projection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/projection.ts)
   can now consume that record directly while staying derived from runtime
   inspection state
+- configured service identity is now projected into that same affinity model:
+  - runner metadata derives `serviceAccountIds` from configured service
+    identity
+  - runtime inspection derives matching `requiredServiceAccountId` for the
+    active step service
+  - service-host local claim blocks missing-account runners with
+    `blocked-affinity`
+  - targeted drain preserves the stable `claim-owner-unavailable` skip taxonomy
+    while carrying the actionable missing-account reason separately
+- the id shape is `service-account:<service>:<identity-key>`, with identity
+  key preference `email`, then `handle`, then `name`
+- this remains declarative configured affinity:
+  - `api serve` does not live-probe browser account state during runner
+    registration
+  - a matching id proves matching configured account ids, not independent proof
+    of the currently logged-in browser tab
+
+## Next Checkpoint
+
+Before starting a broader implementation lane, run one bounded local operator
+smoke for the current single-runner posture.
+
+Acceptance criteria:
+
+- `auracall api serve --port <ephemeral>` starts with a persisted local runner
+  and reports it on `/status`
+- `/status` includes a compact local-claim summary for direct runs
+- one persisted direct run can be inspected through `GET /v1/runtime-runs/inspect`
+  with the documented queue/affinity fields
+- configured service-account affinity is visible as
+  `requiredServiceAccountId = service-account:<service>:<identity-key>` when
+  configured identity exists
+- if a runner lacks that configured account id, the run remains unclaimed with
+  a stable local-claim reason rather than silently falling back to the generic
+  host owner
+
+Non-goals:
+
+- no public `team run` write surface
+- no multi-runner scheduler or reassignment loop
+- no live browser account probing during runner registration
+- no Redis/Postgres migration
+
+Decision after smoke:
+
+- if the documented posture is green, pause the durable-state/account-affinity
+  lane and choose the next roadmap lane explicitly
+- if the smoke exposes an operator gap, fix that narrow read-only/diagnostic gap
+  before any broader service-mode work
