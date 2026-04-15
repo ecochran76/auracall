@@ -2380,6 +2380,85 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('surfaces suspiciously-idle attention on bounded recovery detail over HTTP', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-detail-idle-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(
+      control,
+      'status_detail_idle',
+      '2026-04-08T16:10:00.000Z',
+      'Keep this lease under inspection.',
+    );
+    await control.acquireLease({
+      runId: 'status_detail_idle',
+      leaseId: 'status_detail_idle:lease:idle',
+      ownerId: 'runner:idle-http-detail',
+      acquiredAt: '2026-04-08T16:10:00.000Z',
+      heartbeatAt: '2026-04-08T16:14:55.000Z',
+      expiresAt: '2026-04-08T16:20:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:idle-http-detail',
+        hostId: 'host:http-responses:127.0.0.1:8080',
+        startedAt: '2026-04-08T16:00:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:14:55.000Z',
+        expiresAt: '2026-04-08T16:20:00.000Z',
+        lastActivityAt: '2026-04-08T16:09:00.000Z',
+        lastClaimedRunId: 'run_before_idle_detail',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T16:15:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/status_detail_idle`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId: 'status_detail_idle',
+          hostState: 'active-lease',
+          repair: {
+            posture: 'not-reclaimable',
+            reason: 'active lease is still owned by an active runner',
+            reconciliationStatus: 'active-runner',
+            reconciliationReason: null,
+          },
+          leaseHealth: {
+            status: 'suspiciously-idle',
+            reason: 'active lease has no observed runner activity since it was acquired',
+            leaseHeartbeatAt: '2026-04-08T16:14:55.000Z',
+            leaseExpiresAt: '2026-04-08T16:20:00.000Z',
+            runnerLastHeartbeatAt: '2026-04-08T16:14:55.000Z',
+            runnerLastActivityAt: '2026-04-08T16:09:00.000Z',
+          },
+          attention: {
+            needed: true,
+            kind: 'suspiciously-idle',
+            reason: 'active lease has no observed runner activity since it was acquired',
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces bounded team-run inspection by task run spec id over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-task-'));
     cleanup.push(tmp);

@@ -230,9 +230,10 @@ Terminology note:
       - it only applies to currently `requested` local action records on direct or team runs
       - it updates the persisted local-action outcome summary used by `GET /v1/responses/{response_id}`
       - already-resolved requests are rejected cleanly instead of being overwritten
-    - recovery summary/detail now also surface bounded attention for unrepaired stale-heartbeat cases:
+    - recovery summary/detail now also surface bounded operator attention for
+      stale-heartbeat and suspiciously-idle active-lease cases:
       - `recoverySummary.attention.staleHeartbeatInspectOnlyRunIds`
-      - per-run `attention.kind = stale-heartbeat-inspect-only`
+      - per-run `attention.kind = stale-heartbeat-inspect-only|suspiciously-idle`
     - recovery summary/detail now also surface bounded cancellation readback:
       - `recoverySummary.cancelledRunIds`
       - `recoverySummary.cancellation.reasonsByRunId`

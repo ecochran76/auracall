@@ -1,3 +1,11 @@
+- 2026-04-15: If per-run recovery detail already reports `leaseHealth.status = suspiciously-idle` under inspect-only posture, do not drop that operator-attention signal by returning `attention = null`.
+  - Preserve bounded per-run attention instead:
+    - `attention.kind = suspiciously-idle`
+  - Keep the action boundary unchanged:
+    - suspiciously-idle remains read-only and non-repairable
+  - This keeps recovery detail aligned with the same operator-attention model
+    already exposed through lease health and startup attention logs.
+
 - 2026-04-15: If startup recovery keeps suspiciously-idle active leases as diagnostic-only instead of reclaiming them, preserve that count explicitly in the startup log attention summary instead of hiding it under generic `active-lease`.
   - Keep the coarse drain taxonomy unchanged:
     - suspiciously-idle still counts as `active-lease`

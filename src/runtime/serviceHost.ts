@@ -206,7 +206,7 @@ export interface ExecutionServiceHostRecoveryDetail {
   leaseHealth: ExecutionServiceHostActiveLeaseHealth | null;
   attention: {
     needed: boolean;
-    kind: 'stale-heartbeat-inspect-only' | null;
+    kind: 'stale-heartbeat-inspect-only' | 'suspiciously-idle' | null;
     reason: string | null;
   } | null;
   cancellation: {
@@ -792,6 +792,12 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
                 kind: 'stale-heartbeat-inspect-only',
                 reason: repair.reason,
               }
+            : leaseHealth?.status === 'suspiciously-idle'
+              ? {
+                  needed: true,
+                  kind: 'suspiciously-idle',
+                  reason: leaseHealth.reason,
+                }
             : null,
         cancellation: cancellation
           ? {

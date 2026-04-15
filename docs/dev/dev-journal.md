@@ -1,3 +1,17 @@
+## 2026-04-15 - Recovery detail suspicious-idle attention
+
+- Completed one bounded recovery-detail operator-readback refinement:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so per-run recovery detail now preserves
+    `attention.kind = suspiciously-idle` when the lease health already
+    classifies the active lease that way, even when repair posture stays
+    `not-reclaimable`
+  - kept suspiciously-idle read-only:
+    - no repair posture changed
+    - no aggregate recovery summary shape changed
+  - locked the behavior in focused service-host and HTTP recovery-detail tests
+    and synchronized operator docs.
+
 ## 2026-04-15 - Startup recovery suspicious-idle attention logs
 
 - Completed one bounded startup-recovery observability refinement:

@@ -775,11 +775,11 @@
       - successful action results should also include bounded
         `reconciliationReason`
       - suspiciously-idle leases remain diagnostic-only and should return 409
-    - recovery summary/detail now also surface bounded attention for
-      unrepaired stale-heartbeat cases:
+    - recovery summary/detail now also surface bounded operator attention for
+      stale-heartbeat and suspiciously-idle active-lease cases:
       - `recoverySummary.attention.staleHeartbeatInspectOnlyRunIds`
       - `recoverySummary.attention.reasonsByRunId`
-      - per-run `attention.kind = stale-heartbeat-inspect-only`
+      - per-run `attention.kind = stale-heartbeat-inspect-only|suspiciously-idle`
     - recovery summary/detail now also surface bounded cancellation readback:
       - `recoverySummary.cancelledRunIds`
       - `recoverySummary.cancellation.reasonsByRunId`

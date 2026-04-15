@@ -3045,7 +3045,11 @@ describe('runtime service host', () => {
       runnerLastHeartbeatAt: '2026-04-08T15:04:55.000Z',
       runnerLastActivityAt: '2026-04-08T14:59:00.000Z',
     });
-    expect(detail?.attention).toBeNull();
+    expect(detail?.attention).toEqual({
+      needed: true,
+      kind: 'suspiciously-idle',
+      reason: 'active lease has no observed runner activity since it was acquired',
+    });
   });
 
   it('repairs only stale-heartbeat leases that are already locally reclaimable', async () => {
