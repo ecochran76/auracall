@@ -929,6 +929,8 @@ describe('runtime service host', () => {
       status: 'resolved',
       resolved: true,
       reason: 'local action approved by service host operator control',
+      resolvedAt: '2026-04-11T18:05:00.000Z',
+      ownerStepId: 'run_host_local_action_control:step:1',
     });
 
     const storedRecord = await control.readRun('run_host_local_action_control');
@@ -1000,6 +1002,8 @@ describe('runtime service host', () => {
       status: 'resolved',
       resolved: true,
       reason: 'local action rejected by service host operator control',
+      resolvedAt: '2026-04-11T18:07:00.000Z',
+      ownerStepId: 'run_host_team_local_action_control:step:1',
     });
 
     const storedRecord = await control.readRun('run_host_team_local_action_control');
@@ -1108,6 +1112,8 @@ describe('runtime service host', () => {
       resolved: false,
       reason:
         'local action request run_host_local_action_resolved:action:run_host_local_action_resolved:step:1:1 is already approved',
+      resolvedAt: null,
+      ownerStepId: 'run_host_local_action_resolved:step:1',
     });
   });
 
@@ -1151,6 +1157,8 @@ describe('runtime service host', () => {
       status: 'resumed',
       resumed: true,
       reason: 'human approved resume',
+      resumedAt: '2026-04-11T19:10:00.000Z',
+      resumedStepId: 'run_host_resume_human_escalation:step:2',
     });
 
     const storedRecord = await control.readRun('run_host_resume_human_escalation');
@@ -1205,6 +1213,8 @@ describe('runtime service host', () => {
       status: 'not-paused',
       resumed: false,
       reason: 'run run_host_resume_not_paused has no cancelled human-escalation step to resume',
+      resumedAt: null,
+      resumedStepId: null,
     });
   });
 

@@ -473,6 +473,14 @@ Terminology note:
       - `counts`
       - bounded `items`
       - operator resolution of pending local-action requests now updates this same summary
+    - immediate `/status` operator action results now also preserve bounded
+      identity/timestamp detail:
+      - `resolve-request`
+        - `resolvedAt`
+        - `ownerStepId`
+      - `resume-human-escalation`
+        - `resumedAt`
+        - `resumedStepId`
   - non-loopback `--host` bindings are allowed but still warned as unsafe for
     anything beyond local development
 - If your Gemini account can’t access “Pro”, Aura-Call auto-falls back to a supported model for web runs (and logs the fallback in verbose mode).

@@ -252,6 +252,8 @@ export interface ExecutionServiceHostResumeHumanEscalationResult {
   status: 'resumed' | 'not-found' | 'not-paused';
   resumed: boolean;
   reason: string;
+  resumedAt: string | null;
+  resumedStepId: string | null;
 }
 
 export interface ExecutionServiceHostDrainActionResult {
@@ -271,6 +273,8 @@ export interface ExecutionServiceHostLocalActionResolveResult {
   status: 'resolved' | 'not-found' | 'not-pending';
   resolved: boolean;
   reason: string;
+  resolvedAt: string | null;
+  ownerStepId: string | null;
 }
 
 interface EvaluatedStaleHeartbeatRepair {
@@ -899,6 +903,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           status: 'not-found',
           resumed: false,
           reason: `run ${runId} was not found`,
+          resumedAt: null,
+          resumedStepId: null,
         };
       }
 
@@ -915,6 +921,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           status: 'not-paused',
           resumed: false,
           reason: `run ${runId} has no cancelled human-escalation step to resume`,
+          resumedAt: null,
+          resumedStepId: null,
         };
       }
 
@@ -932,6 +940,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         status: 'resumed',
         resumed: true,
         reason: options.note ?? 'run resumed after human escalation',
+        resumedAt,
+        resumedStepId: pausedStep.id,
       };
     },
 
@@ -1010,6 +1020,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           status: 'not-found',
           resolved: false,
           reason: `run ${runId} was not found`,
+          resolvedAt: null,
+          ownerStepId: null,
         };
       }
 
@@ -1023,6 +1035,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           status: 'not-found',
           resolved: false,
           reason: `local action request ${requestId} was not found`,
+          resolvedAt: null,
+          ownerStepId: null,
         };
       }
 
@@ -1035,6 +1049,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           status: 'not-pending',
           resolved: false,
           reason: `local action request ${requestId} is already ${existingRequest.status}`,
+          resolvedAt: null,
+          ownerStepId: existingRequest.ownerStepId,
         };
       }
 
@@ -1118,6 +1134,8 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         status: 'resolved',
         resolved: true,
         reason: note ?? defaultLocalActionResolutionReason(resolution),
+        resolvedAt,
+        ownerStepId: existingRequest.ownerStepId,
       };
     },
 

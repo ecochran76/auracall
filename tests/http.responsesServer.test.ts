@@ -5177,6 +5177,8 @@ describe('http responses adapter', () => {
           status: 'resolved',
           resolved: true,
           reason: 'local action approved by service host operator control',
+          resolvedAt: '2026-04-11T18:25:00.000Z',
+          ownerStepId: 'status_local_action_control:step:1',
         },
       });
 
@@ -5274,6 +5276,8 @@ describe('http responses adapter', () => {
           status: 'resolved',
           resolved: true,
           reason: 'local action rejected by service host operator control',
+          resolvedAt: '2026-04-11T18:27:00.000Z',
+          ownerStepId: 'status_team_local_action_control:step:1',
         },
       });
 
@@ -5475,6 +5479,8 @@ describe('http responses adapter', () => {
           status: 'resumed',
           resumed: true,
           reason: 'human approved resume',
+          resumedAt: '2026-04-11T19:30:00.000Z',
+          resumedStepId: 'status_resume_human:step:2',
         },
       });
 
@@ -5672,6 +5678,8 @@ describe('http responses adapter', () => {
           status: 'resumed',
           resumed: true,
           reason: 'human approved team resume',
+          resumedAt: '2026-04-12T22:40:00.000Z',
+          resumedStepId: 'status_team_drain_run:step:2',
         },
       });
 

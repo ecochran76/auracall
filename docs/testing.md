@@ -153,6 +153,12 @@
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:
       - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
+      - successful local-action resolution should also return bounded:
+        - `resolvedAt`
+        - `ownerStepId`
+      - successful human-escalation resume should also return bounded:
+        - `resumedAt`
+        - `resumedStepId`
   - create bounded response:
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:

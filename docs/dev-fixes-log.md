@@ -12320,3 +12320,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - This keeps the repair taxonomy stable while letting `/status` callers
     distinguish missing-runner, stale-runner, and active-runner causes without
     jumping to the separate recovery-detail route first.
+- 2026-04-15: When an operator action immediately persists a concrete step id or timestamp, preserve that identity in the action result instead of forcing callers to wait for later readback.
+  - `resolve-request` now also returns:
+    - `resolvedAt`
+    - `ownerStepId`
+  - `resume-human-escalation` now also returns:
+    - `resumedAt`
+    - `resumedStepId`
+  - This keeps `/status` operator actions self-describing without widening the
+    broader response-readback summaries.

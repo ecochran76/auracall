@@ -15991,3 +15991,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
     so the `POST /status` lease-repair action documents the same bounded
     detail field.
+## 2026-04-15 - Operator action result identity/timestamp detail
+
+- Completed one bounded `/status` operator-action refinement:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so successful local-action resolution now also returns:
+    - `resolvedAt`
+    - `ownerStepId`
+  - successful human-escalation resume now also returns:
+    - `resumedAt`
+    - `resumedStepId`
+  - kept the existing coarse statuses and reasons unchanged while exposing the
+    already-persisted identifiers/timestamps that callers otherwise had to
+    rediscover through later response readback.
+  - added focused host and HTTP coverage in:
+    - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    so the `/status` action-result contract reflects the same bounded detail.
