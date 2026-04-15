@@ -12379,3 +12379,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `blocked-affinity` summaries and targeted-drain skips that preserve the
   actionable missing-account detail under the stable
   `claim-owner-unavailable` skip taxonomy.
+- 2026-04-15: Keep runtime inspection and local-claim diagnostics pinned to
+  the same configured service-account affinity source. A direct
+  `inspectRuntimeRun(...)` test should compare the projected affinity reason
+  with `selectStoredExecutionRunLocalClaim(...)` so HTTP route tests cannot
+  mask drift in the shared helper.

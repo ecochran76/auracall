@@ -16075,6 +16075,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - why this matters:
     - the configured account-affinity lane is now covered at the service-host
       claim boundary, not only through HTTP/runtime-inspection readback.
+
+## 2026-04-15 - Configured account-affinity inspection consistency
+
+- Added direct runtime-inspection helper coverage for configured
+  service-account affinity:
+  - added
+    [tests/runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
+    to prove `inspectRuntimeRun(...)` projects the same configured
+    `requiredServiceAccountId` and missing-account reason that local-claim
+    evaluation uses
+  - covered both the missing-account runner path and the matching-account
+    runner path without adding any new route or write behavior
+  - why this matters:
+    - the account-affinity contract is now pinned at the shared inspection
+      helper, the HTTP readback route, and the service-host local-claim seam.
 ## 2026-04-15 - Targeted drain skipped-note contract cleanup
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:
