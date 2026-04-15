@@ -1,12 +1,25 @@
 # RUNBOOK
 
-## Current working set
+## Turn 1 | 2026-04-14
 
-- Active plan: `docs/dev/grok-files-ui-diagnostics-followup-2026-03-31.md`
-- Goal: extend scoped UI diagnostics into Grok file surfaces before adding more
-  provider-local selector workarounds.
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Adjacent canonical plan: `docs/dev/plans/0002-2026-04-14-task-run-spec.md`
+- Adjacent canonical plan: `docs/dev/plans/0003-2026-04-14-team-run-data-model.md`
+- Adjacent canonical plan: `docs/dev/plans/0004-2026-04-14-team-service-execution.md`
+- Adjacent canonical plan: `docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md`
+- Adjacent canonical plan: `docs/dev/plans/0006-2026-04-14-team-config-boundary.md`
+- Adjacent canonical plan: `docs/dev/plans/0007-2026-04-14-config-model-refactor.md`
+- Adjacent canonical plan: `docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md`
+- Adjacent canonical plan: `docs/dev/plans/0009-2026-04-14-agent-config-boundary.md`
+- Adjacent canonical plan: `docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md`
+- Adjacent canonical plan: `docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md`
+- Adjacent canonical plan: `docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md`
+- Adjacent canonical plan: `docs/dev/plans/0013-2026-04-14-gemini-completion.md`
+- Adjacent canonical plan: `docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md`
+- Goal: migrate active planning authority into canonical `docs/dev/plans/`
+  artifacts without changing runtime behavior.
 
-## Repo operating rules
+## Turn 2 | 2026-04-14
 
 - Read `AGENTS.md` before touching behavior.
 - Keep `docs/dev/dev-journal.md` and `docs/dev-fixes-log.md` updated when a
@@ -18,7 +31,7 @@
 - For broader package-boundary follow-ons after the ChatGPT cycle, review
   `docs/dev/browser-service-lessons-review-2026-03-30.md`.
 
-## Current implementation target
+## Turn 3 | 2026-04-14
 
 Prioritize diagnostics adoption on these Grok surfaces:
 
@@ -28,7 +41,7 @@ Prioritize diagnostics adoption on these Grok surfaces:
 Keep trigger/button scoring provider-local unless the same scoring shape repeats
 on another real surface/provider.
 
-## Validation commands
+## Turn 4 | 2026-04-14
 
 Run on a normal Node 22 + pnpm dev box:
 

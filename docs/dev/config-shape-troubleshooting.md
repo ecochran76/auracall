@@ -7,7 +7,7 @@ target-shape, and mixed-shape Aura-Call configs.
 
 This is a troubleshooting doc, not a migration policy doc. For transition
 policy, see
-[config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md).
+[0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md).
 
 ## Shape terms
 

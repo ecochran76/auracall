@@ -78,7 +78,7 @@ Progress as of 2026-03-30:
   - registry liveness classification + safer stale-entry pruning / reattach diagnostics
 
 Current registry/reattach reliability execution doc:
-- [browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-reattach-reliability-plan.md)
+- [browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
 
 Current active plan:
 - Keep provider-local trigger scoring in adapters unless the same scoring shape

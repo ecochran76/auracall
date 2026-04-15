@@ -64,7 +64,7 @@ Formalize the `browserService` base layer so browser automation is reusable outs
 
 4) **Document the public surface**
    - Add `docs/dev/browser-service.md` describing the base class and invariants.
-   - Update `docs/dev/browser-service-refactor-roadmap.md` with Phase 2 exit criteria.
+   - Update `docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md` with Phase 2 exit criteria.
 
 ## Validation (No Regressions)
 - CLI: `projects`, `conversations`, `login`, `doctor` all run using the new base class.

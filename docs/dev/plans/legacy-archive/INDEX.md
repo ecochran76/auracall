@@ -1,0 +1,88 @@
+# Legacy Plan Archive
+
+This directory holds non-authoritative legacy plan files.
+
+Archive contract:
+- files here are searchable background only
+- active authority stays in:
+  - `ROADMAP.md`
+  - `RUNBOOK.md`
+  - `docs/dev/plans/`
+- archive filenames use:
+  - zero-padded serial
+  - ctime datestamp
+  - original slug
+
+Archive batch: 2026-04-14
+- `0001-2026-04-08-upstream-sync-plan.md`
+  - from `docs/dev/upstream-sync-plan.md`
+- `0002-2026-04-14-next-execution-plan.md`
+  - from `docs/dev/next-execution-plan.md`
+- `0003-2026-04-14-task-run-spec-plan.md`
+  - from `docs/dev/task-run-spec-plan.md`
+- `0004-2026-04-14-team-run-data-model-plan.md`
+  - from `docs/dev/team-run-data-model-plan.md`
+- `0005-2026-04-14-team-service-execution-plan.md`
+  - from `docs/dev/team-service-execution-plan.md`
+- `0006-2026-04-08-browser-service-registry-plan.md`
+  - from `docs/dev/browser-service-registry-plan.md`
+- `0007-2026-04-08-cache-architecture-plan.md`
+  - from `docs/dev/cache-architecture-plan.md`
+- `0008-2026-04-08-cache-artifact-projection-plan.md`
+  - from `docs/dev/cache-artifact-projection-plan.md`
+- `0009-2026-04-08-cache-db-migration-plan.md`
+  - from `docs/dev/cache-db-migration-plan.md`
+- `0010-2026-04-08-cache-remaining-todos-plan.md`
+  - from `docs/dev/cache-remaining-todos-plan.md`
+- `0011-2026-04-08-cache-sql-file-catalog-plan.md`
+  - from `docs/dev/cache-sql-file-catalog-plan.md`
+- `0012-2026-04-08-runtime-control-surface-plan.md`
+  - from `docs/dev/runtime-control-surface-plan.md`
+- `0013-2026-04-08-http-responses-adapter-plan.md`
+  - from `docs/dev/http-responses-adapter-plan.md`
+- `0014-2026-04-14-team-runtime-bridge-plan.md`
+  - from `docs/dev/team-runtime-bridge-plan.md`
+- `0015-2026-04-14-runtime-runner-slice-plan.md`
+  - from `docs/dev/runtime-runner-slice-plan.md`
+- `0016-2026-04-14-api-compatibility-plan.md`
+  - from `docs/dev/api-compatibility-plan.md`
+- `0017-2026-04-14-runtime-service-host-plan.md`
+  - from `docs/dev/runtime-service-host-plan.md`
+- `0018-2026-04-14-service-runtime-execution-plan.md`
+  - from `docs/dev/service-runtime-execution-plan.md`
+- `0019-2026-04-08-chatgpt-conversation-surface-plan.md`
+  - from `docs/dev/chatgpt-conversation-surface-plan.md`
+- `0020-2026-04-08-chatgpt-hardening-plan.md`
+  - from `docs/dev/chatgpt-hardening-plan.md`
+- `0021-2026-04-08-chatgpt-polish-plan.md`
+  - from `docs/dev/chatgpt-polish-plan.md`
+- `0022-2026-04-08-chatgpt-project-surface-plan.md`
+  - from `docs/dev/chatgpt-project-surface-plan.md`
+- `0023-2026-04-08-gemini-conversation-gem-cache-plan.md`
+  - from `docs/dev/gemini-conversation-gem-cache-plan.md`
+- `0024-2026-04-08-grok-remaining-crud-plan.md`
+  - from `docs/dev/grok-remaining-crud-plan.md`
+- `0025-2026-04-08-service-volatility-chatgpt-workflow-plan.md`
+  - from `docs/dev/service-volatility-chatgpt-workflow-plan.md`
+- `0026-2026-04-14-durable-state-account-mirroring-plan.md`
+  - from `docs/dev/durable-state-account-mirroring-plan.md`
+- `0027-2026-04-09-team-config-boundary-plan.md`
+  - from `docs/dev/team-config-boundary-plan.md`
+- `0028-2026-04-08-config-model-refactor-plan.md`
+  - from `docs/dev/config-model-refactor-plan.md`
+- `0029-2026-04-08-browser-profile-family-refactor-plan.md`
+  - from `docs/dev/browser-profile-family-refactor-plan.md`
+- `0030-2026-04-08-agent-config-boundary-plan.md`
+  - from `docs/dev/agent-config-boundary-plan.md`
+- `0031-2026-04-08-config-model-input-alias-plan.md`
+  - from `docs/dev/config-model-input-alias-plan.md`
+- `0032-2026-04-08-service-volatility-chatgpt-plan.md`
+  - from `docs/dev/service-volatility-chatgpt-plan.md`
+- `0033-2026-03-18-browser-service-refactor-roadmap.md`
+  - from `docs/dev/browser-service-refactor-roadmap.md`
+- `0034-2026-04-08-service-volatility-refactor-plan.md`
+  - from `docs/dev/service-volatility-refactor-plan.md`
+- `0035-2026-04-08-gemini-completion-plan.md`
+  - from `docs/dev/gemini-completion-plan.md`
+- `0036-2026-04-08-browser-service-reattach-reliability-plan.md`
+  - from `docs/dev/browser-service-reattach-reliability-plan.md`

@@ -2,9 +2,9 @@
 
 These are real end-to-end checks for the Grok browser path. Keep them updated as behavior changes.
 
-For the still-open breadth work after this acceptance bar, see [grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/grok-remaining-crud-plan.md).
+For the historical Grok breadth backlog after this acceptance bar, see [0024-2026-04-08-grok-remaining-crud-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0024-2026-04-08-grok-remaining-crud-plan.md).
 If a smoke fails because of structural DOM drift rather than Grok-only behavior, consult [browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md) before adding another provider-local workaround.
-For the finished ChatGPT project-management surface, see [chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-project-surface-plan.md). For the work that closed the ChatGPT browser MVP, see [chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-conversation-surface-plan.md). For the active post-MVP polish checklist, see [chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/chatgpt-polish-plan.md).
+For the finished ChatGPT project-management surface, see [0022-2026-04-08-chatgpt-project-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0022-2026-04-08-chatgpt-project-surface-plan.md). For the work that closed the ChatGPT browser MVP, see [0019-2026-04-08-chatgpt-conversation-surface-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0019-2026-04-08-chatgpt-conversation-surface-plan.md). For the post-MVP polish history, see [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
 
 Current post-acceptance status:
 - the full scripted WSL-primary Grok acceptance pass remains the canonical
@@ -60,7 +60,7 @@ Current ChatGPT project status:
   - project `g-p-69c9b2d3940c8191beca8032978bd981`
   - conversation `69c9b37a-3c94-832d-be89-5ceaf91bd748`
   - the runner now survives real ChatGPT cooldowns during rename/delete cleanup instead of dying on a harness timeout
-- ChatGPT browser MVP is complete; current work is acceptance/artifact polish tracked in `docs/dev/chatgpt-polish-plan.md`
+- ChatGPT browser MVP is complete; prior acceptance/artifact polish work is archived in `docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md`
 
 ## Environment
 

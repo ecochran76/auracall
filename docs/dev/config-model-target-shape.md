@@ -201,7 +201,7 @@ Current recommendation:
 
 Alias-transition policy:
 
-- [config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+- [0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
 
 ## Practical guidance for current implementation slices
 

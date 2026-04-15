@@ -14,8 +14,8 @@ aliases.
   - `docs/testing.md`
   - newest entries in `docs/dev-fixes-log.md`
 - For browser/config work, also skim:
-  - `docs/dev/browser-profile-family-refactor-plan.md`
-  - `docs/dev/next-execution-plan.md`
+  - `docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md`
+  - `docs/dev/plans/0001-2026-04-14-execution.md`
   - `docs/dev/browser-service-upgrade-backlog.md`
   - `docs/dev/browser-service-tools.md`
 
@@ -136,3 +136,52 @@ Every end-of-turn update must include all of the following sections:
     to the next checkpoint or pause for a roadmap reassessment.
 - Risks/Blockers
   - Top residual blockers with the exact unblocker needed.
+
+## Policy Loading Contract
+
+- `AGENTS.md` is a routing surface, not a one-time pointer.
+- Re-read the relevant policy files under `docs/dev/policies/` at the start of any non-trivial turn.
+- Re-read the relevant policy files when task scope changes mid-session.
+- When behavior is ambiguous, prefer re-reading policy over improvising from stale assumptions.
+
+## Policy Re-read Triggers
+
+- re-read planning-related policy before opening, revising, or closing a substantive plan
+- re-read documentation-related policy before changing docs, contracts, or canonical authorities
+- re-read validation and closeout policy before claiming work complete
+- re-read branch, commit, and integration policy before starting a multi-file or multi-step implementation slice
+
+## Policy Entry
+
+This repo keeps its durable repo-local policy under `docs/dev/policies/`.
+
+Always read:
+- `docs/dev/policies/0008-architecture-guardrails.md`
+- `docs/dev/policies/0009-documentation-change-control.md`
+- `docs/dev/policies/0017-turn-closeout.md`
+- `docs/dev/policies/0018-validation-and-handoff.md`
+
+For planning/roadmap work also read:
+- `docs/dev/policies/0005-planning-discipline.md`
+- `docs/dev/policies/0007-roadmap-runbook-governance.md`
+
+For git/integration/release work also read:
+- `docs/dev/policies/0010-git-worktree-hygiene.md`
+- `docs/dev/policies/0011-commit-history-discipline.md`
+- `docs/dev/policies/0012-branch-and-integration-strategy.md`
+- `docs/dev/policies/0013-commit-and-push-cadence.md`
+- `docs/dev/policies/0016-versioning-and-release.md`
+- `docs/dev/policies/0019-upstream-fork-maintenance.md`
+
+For multi-agent or long-running context work also read:
+- `docs/dev/policies/0004-notes-and-memories.md`
+- `docs/dev/policies/0006-parallel-plan-design.md`
+- `docs/dev/policies/0014-multi-agent-reconciliation.md`
+- `docs/dev/policies/0015-subagent-workflow-optimization.md`
+
+## Scope
+
+- `AGENTS.md` includes repo-local guidance plus the policy entry section.
+- The durable policy body lives under `docs/dev/policies/`.
+- Canonical bounded plan artifacts belong under `docs/dev/plans/`.
+- Keep repo-specific commands, environment details, and operational caveats in this file or adjacent local docs.

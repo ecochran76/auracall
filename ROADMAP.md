@@ -1,12 +1,20 @@
 # Aura-Call Roadmap
 
-## Active Initiatives
+## P01 | Active Initiatives
 
 ### Current Execution Board
 
 Status: in progress
+Lane: P01
 
-Use [docs/dev/next-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/next-execution-plan.md) as the execution owner document for:
+Current State:
+- canonical active execution authority now lives under
+  `docs/dev/plans/0001-2026-04-14-execution.md`
+- low-signal loose execution pointers now live under
+  `docs/dev/plans/legacy-archive/`
+- planning-authority migration is complete and the next decision is product sequencing
+
+Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 
 - the active team/service-foundation work
 - any bounded config-model follow-through
@@ -28,7 +36,7 @@ The next configuration/runtime refactor should separate:
 - immutable launch-plan resolution
 
 Execution docs:
-- Repo-wide plan: [docs/dev/browser-profile-family-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-profile-family-refactor-plan.md)
+- Repo-wide plan: [docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md)
 
 Current note:
 - Phase 1 is complete enough through commit `196aad27`
@@ -48,6 +56,7 @@ This refactor should establish the long-term layering:
 - AuraCall runtime profiles
 - agents
 - teams
+- task / run spec
 
 Current config-model checkpoint:
 - target-shape is now the primary documented and default-written model:
@@ -114,6 +123,13 @@ Current note:
       - multi-turn automation across agents
       - explicit inter-agent data handoff
       while runners/parallelism remain a separate execution layer
+    - teams should be treated as reusable orchestration templates, not as
+      complete one-off assignments
+    - a separate task / run-spec layer should carry:
+      - the concrete bundle
+      - the requested outcome
+      - run-specific constraints
+      - temporary overrides
 
 Sequencing rule:
 - do the config-model refactor before implementing agents
@@ -122,19 +138,25 @@ Sequencing rule:
   main planning/implementation track
 
 Execution docs:
-- Repo-wide plan: [docs/dev/config-model-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-refactor-plan.md)
+- Repo-wide plan: [docs/dev/plans/0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md)
 - Target public shape: [docs/dev/config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)
-- Input alias policy: [docs/dev/config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-input-alias-plan.md)
+- Input alias policy: [docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0031-2026-04-08-config-model-input-alias-plan.md)
 - Troubleshooting: [docs/dev/config-shape-troubleshooting.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-shape-troubleshooting.md)
-- Agent boundary: [docs/dev/agent-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/agent-config-boundary-plan.md)
-- Team boundary: [docs/dev/team-config-boundary-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-config-boundary-plan.md)
-- Team service execution: [docs/dev/team-service-execution-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-service-execution-plan.md)
-- Team run data model: [docs/dev/team-run-data-model-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/team-run-data-model-plan.md)
+- Agent boundary: [docs/dev/plans/0009-2026-04-14-agent-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0009-2026-04-14-agent-config-boundary.md)
+- Team boundary: [docs/dev/plans/0006-2026-04-14-team-config-boundary.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0006-2026-04-14-team-config-boundary.md)
+- Team service execution: [docs/dev/plans/0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+- Task / run spec: [docs/dev/plans/0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
+- Team run data model: [docs/dev/plans/0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
 
 Next recommendation:
-- keep implementation paused
-- define the first concrete team-run data model next
-- then start code only when the service/runners track is ready
+- keep public team execution paused
+- the first concrete task / run-spec shape is now defined in the canonical plan
+- the concrete `teamRun` execution contract is now defined in the canonical team-run plan
+- the first internal implementation slice is now live for durable `taskRunSpec` persistence plus `taskRunSpec -> teamRun -> runtime` projection
+- the bounded internal inspection/readback seam for that persisted linkage is now live on existing response/recovery surfaces
+- the narrow internal debug/inspection command is now live as `auracall teams inspect`
+- the first bounded public read-only team inspection surface is now live as `GET /v1/team-runs/inspect`
+- next, decide whether a public write/create team-execution surface is justified
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it
@@ -169,6 +191,25 @@ Primary goals:
 - define queue/lease ownership cleanly
 - keep runner/service execution separate from team orchestration intent
 
+Execution checkpoints:
+- Team semantics checkpoint
+  - `team` is a reusable orchestration template
+  - it owns reusable collaboration policy, not one concrete assignment
+- Task / run-spec checkpoint
+  - define the concrete assignment layer that binds work to a team
+  - keep bundle/goal/constraints/overrides out of the long-lived team
+    template
+- Team-run execution checkpoint
+  - bind one task / run spec to one team template
+  - keep the first public execution contract conservative:
+    - sequential first
+    - fail-fast by default
+    - no implicit parallelism from membership alone
+- Handoff / host-action checkpoint
+  - explicit structured handoffs
+  - deterministic status fields for unattended loops
+  - machine-readable local host-action requests when supported
+
 Current checkpoint:
 - read-only team execution planning is in place:
   - `teamRun`
@@ -185,6 +226,13 @@ Current checkpoint:
   records and executes local runnable steps through one bounded host pass
 - `auracall api serve` now recovers stale runs at startup and reports bounded
   recovery counts
+
+Current sequencing gate:
+- do not add a public `team run` CLI/API/MCP surface until:
+  - team semantics are frozen
+  - the task / run-spec layer exists
+  - public team execution can be stated without relying on current internal
+    member-order MVP projection
 
 Sequencing rule:
 - do not expand this layer into multi-runner/background worker service mode until the
@@ -213,6 +261,9 @@ Important note:
   - handoffs
   - service accounts
   - browser-bearing execution affinity
+
+Execution docs:
+- Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
 
 ### External Control Surfaces
 Status: planned
@@ -263,7 +314,7 @@ Current note:
   already has inherited Oracle support across both API and web/browser paths
 - the next Gemini move should be a bounded audit/alignment plan, not a broad
   rewrite:
-  - [docs/dev/gemini-completion-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/gemini-completion-plan.md)
+  - [docs/dev/plans/0013-2026-04-14-gemini-completion.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0013-2026-04-14-gemini-completion.md)
 
 Sequencing rule:
 - prefer building shared runtime/orchestration layers first, then expanding
@@ -292,7 +343,7 @@ Safety note:
   - audit trail
   - environment isolation
 
-## Priority Buckets
+## P02 | Priority Buckets
 
 ### Now
 
@@ -331,22 +382,22 @@ Primary goals:
 - avoid a big-bang rewrite of ChatGPT, Grok, and Gemini at the same time
 
 Execution docs:
-- Repo-wide plan: [docs/dev/service-volatility-refactor-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-refactor-plan.md)
+- Repo-wide plan: [docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md)
 - Inventory: [docs/dev/service-volatility-inventory.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-inventory.md)
 - Per-service plan template: [docs/dev/service-volatility-service-plan-template.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-service-plan-template.md)
-- First pilot plan: [docs/dev/service-volatility-chatgpt-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/service-volatility-chatgpt-plan.md)
+- First pilot plan: [docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md)
 
 Release discipline:
 - no service migration starts without a service-specific plan
 - no service migration lands without targeted regression coverage and the relevant acceptance bar
 
-## Existing Long-Running Tracks
+## P03 | Existing Long-Running Tracks
 
 ### Browser Service Hardening
-See [docs/dev/browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-refactor-roadmap.md).
+See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md).
 
 Current focused reliability slice:
-- [docs/dev/browser-service-reattach-reliability-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-reattach-reliability-plan.md)
+- [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

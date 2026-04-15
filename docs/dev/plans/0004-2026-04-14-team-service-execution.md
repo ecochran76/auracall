@@ -1,0 +1,372 @@
+# Team Service Execution Plan | 0004-2026-04-14
+
+State: OPEN
+Lane: P01
+
+## Current State
+
+- the repo already has a bounded team service-execution contract recorded in
+  the loose planning docs and referenced from the roadmap
+- the adjacent canonical planning cluster now exists under `docs/dev/plans/`:
+  - `0002-2026-04-14-task-run-spec.md`
+  - `0003-2026-04-14-team-run-data-model.md`
+- the adjacent task/run-spec and team-run contracts are now concrete enough to support a bounded implementation-planning slice
+- this plan now defines the first internal implementation slice for projecting one `taskRunSpec` into one sequential `teamRun` with initial `step` and `sharedState` records
+- the slice stays intentionally internal and does not authorize a public `team run` surface yet
+
+# Team Service Execution Plan
+
+## Purpose
+
+Define the first execution contract for future team runs once Aura-Call grows
+service mode, runners, and parallelism.
+
+This plan is intentionally one layer above the current CLI-only `--team`
+planning surface. It does not authorize implementation by itself. It defines
+the default assumptions the later service/runners work should follow unless a
+better reason emerges.
+
+## Position in the stack
+
+The intended layering remains:
+
+1. browser profile
+2. AuraCall runtime profile
+3. agent
+4. team
+5. task / run spec
+6. service mode / runners / parallel execution
+
+Important split:
+
+- team config expresses orchestration intent
+- task / run spec expresses the concrete assignment
+- the service/runners layer executes that intent
+
+## Team and task split
+
+The execution model should not treat `team` as the complete executable input.
+
+Safer model:
+
+- `team`
+  - reusable orchestration template
+  - member roles, instructions, routing policy, handoff contracts, automation
+    defaults
+- `task` / `run spec`
+  - one concrete assignment for that team
+  - input bundle, objective, success criteria, turn budget overrides, and any
+    run-specific constraints
+- `team run`
+  - one execution attempt of one task through one team template
+
+This avoids baking one-off task detail into long-lived team definitions while
+still allowing highly opinionated team behaviors.
+
+## North-star use cases
+
+Future teams are expected to support:
+
+- divide-and-conquer work across multiple agents
+- multi-turn automation that moves through multiple agents in sequence
+- explicit data handoff between specialist agents
+- mixed sequential and parallel collaboration where the orchestration layer
+  decides what should happen, and the runner layer decides how to execute it
+
+## Default execution assumptions
+
+Until there is a stronger product reason, the default team execution contract
+should be conservative:
+
+- default execution mode is sequential
+- parallelism must be explicit, not implied by team membership
+- handoff payloads must be explicit, structured, and inspectable
+- one team run owns one shared run state object
+- failures stop the active run by default unless a future policy explicitly
+  marks a step as best-effort or non-blocking
+
+These defaults optimize for operator clarity and debuggability before
+throughput.
+
+## Execution model
+
+The future execution model should treat a team run as an orchestration graph
+with a conservative MVP shape:
+
+- one concrete task / run spec is bound to one selected team
+- a team run resolves to a list of member execution steps
+- each step references an agent
+- each agent resolves to one AuraCall runtime profile
+- that runtime profile resolves to one browser profile and one default service
+- the runner layer decides whether a step runs:
+  - immediately
+  - after another step completes
+  - in parallel with another step
+
+Safe first contract:
+
+- ordered steps first
+- optional future dependency graph later
+- one selected `taskRunSpec` bound to one selected `team`
+- one planned `teamRun` derived from that bound pair before runtime execution
+
+Important implementation caution:
+
+- ordered member projection may be a safe MVP execution strategy
+- it should not be mistaken for the full conceptual meaning of team
+- richer workflows may later derive steps from team policy plus task type,
+  rather than from raw member order alone
+
+That means the MVP service layer should start with:
+
+- sequential step execution
+- optional explicit fan-out/fan-in later
+
+## Handoff contract
+
+Every inter-agent handoff should be explicit.
+
+Minimum handoff payload shape:
+
+- `runId`
+- `teamId`
+- `fromAgentId`
+- `toAgentId`
+- `stepId`
+- `taskSummary`
+- `artifacts`
+- `structuredData`
+- `notes`
+- `status`
+
+Minimum rules:
+
+- handoffs must be serializable
+- handoffs must be storable for postmortem/debug
+- handoffs must not depend on hidden browser tab state alone
+- handoffs must be valid even if the receiving step runs on a different runner
+
+For unattended multi-turn teams, handoffs may also include:
+
+- deterministic status indicators
+- structured turn summaries
+- next-turn recommendations
+- machine-readable local-action requests for AuraCall to execute on the host
+
+Those should remain explicit payload fields, not informal prompt prose.
+
+## Shared run state
+
+One future team run should own one shared state object with append-only
+history.
+
+Minimum responsibilities:
+
+- record step start/end
+- record handoffs
+- record produced artifacts
+- record structured outputs
+- record failure reason and owning step
+
+This shared state should be the durable source of truth for team orchestration,
+not ad hoc browser/session state.
+
+## Failure and retry ownership
+
+Default policy:
+
+- a step failure stops the team run
+- retries belong to the service/runners layer
+- retry policy is owned per step execution, not per team membership
+
+Important split:
+
+- teams express the intended workflow
+- runners own:
+  - retry/backoff
+  - queueing
+  - concurrency limits
+  - lease/ownership
+  - cancellation
+
+Possible future exceptions, but not MVP:
+
+- best-effort steps
+- partial completion policies
+- compensating rollback behavior
+
+## Parallelism boundary
+
+Parallelism should not be inferred from:
+
+- multiple team members
+- multiple browser profiles
+- multiple agents with different runtime profiles
+
+Parallelism should require explicit orchestration semantics plus runner support.
+
+Safe future rule:
+
+- team config may eventually express that a phase is parallelizable
+- runner policy decides whether enough capacity exists to execute it in parallel
+
+## Runner assignment boundary
+
+Runner assignment belongs to the service layer.
+
+That layer should decide:
+
+- which runner executes a step
+- whether two steps may share a runner
+- whether a browser-bearing step must stay on a runner with the right browser
+  profile/account state
+- whether a handoff crosses runner boundaries
+
+Team config should not directly encode:
+
+- worker pool sizing
+- runner ids
+- queue shards
+- runner leases
+- service topology
+
+## MVP recommendation
+
+The first real team execution MVP should be:
+
+- sequential only
+- one team run at a time
+- explicit step list
+- explicit handoff payload persistence
+- fail-fast by default
+- no implicit parallel fan-out
+- one concrete task / run spec bound to one team template
+
+Additional explicit binding rule:
+
+- `taskRunSpec` owns assignment intent
+- `teamRun` owns execution history
+- the service/runtime layer should not accept a bare `team` as the complete
+  executable input once `taskRunSpec` exists
+
+Why:
+
+- easier to debug
+- easier to inspect
+- easier to replay
+- compatible with later parallel expansion
+
+## First implementation slice
+
+The first implementation slice should be internal-only and narrowly scoped:
+
+1. accept one persisted `taskRunSpec`
+2. resolve one selected `team`
+3. project one planned `teamRun`
+4. project the initial sequential `step` list
+5. create one empty-but-owned `sharedState` record
+6. stop before public team-execution API/CLI/MCP expansion
+
+### In scope
+
+- internal persistence and projection for:
+  - `taskRunSpec`
+  - `teamRun`
+  - initial `step` records
+  - initial `sharedState`
+- conservative projection from one team template to one sequential execution plan
+- explicit `taskRunSpecId -> teamRun.id` binding
+- deterministic initial statuses for planned vs runnable steps
+
+### Out of scope
+
+- public `team run` CLI/API/MCP surface
+- multi-runner execution
+- queue topology
+- lease coordination redesign
+- implicit parallelism
+- best-effort or compensating execution policies
+- broad runner-affinity work beyond what current runtime identity already needs
+
+### Proposed implementation target
+
+The first implementation slice should produce this durable chain:
+
+- persisted `taskRunSpec`
+- one persisted `teamRun` with:
+  - `taskRunSpecId`
+  - `teamId`
+  - conservative execution `policy`
+  - `sharedStateId`
+  - ordered `stepIds`
+- one persisted `sharedState` with empty initial `history`
+- planned `step` records with resolved:
+  - `agentId`
+  - `runtimeProfileId`
+  - `browserProfileId` when present
+  - `service`
+
+### Suggested code seam
+
+Keep the first implementation slice bounded to current runtime/team layers:
+
+- `src/teams/model.ts`
+- `src/teams/runtimeBridge.ts`
+- `src/teams/service.ts`
+- `src/runtime/model.ts`
+- `src/runtime/schema.ts`
+- `src/runtime/projection.ts`
+- adjacent tests for teams/runtime projection
+
+Important rule:
+
+- do not widen the first slice into external-control-surface behavior
+- prove the internal projection path first
+
+### Acceptance criteria for the first implementation slice
+
+- one `taskRunSpec` can be persisted and validated
+- one internal projection creates exactly one `teamRun`
+- that `teamRun` references exactly one `taskRunSpecId`
+- initial `step` and `sharedState` records are created deterministically
+- the slice remains sequential and fail-fast
+- no assignment-intent fields are duplicated onto `teamRun`
+- no public team-execution interface is introduced
+
+### Verification target
+
+Minimum proof for the first code slice should include:
+
+- focused unit tests for `taskRunSpec -> teamRun` projection
+- focused schema/model tests for the new records
+- focused teams/runtime bridge tests for step projection
+- `pnpm exec tsc -p tsconfig.json --noEmit`
+
+### Follow-on checkpoint after this slice
+
+Only after the internal projection path is stable should the repo decide whether to:
+
+- expose a bounded internal command for debugging
+- add a narrow public team-execution surface
+- widen toward runner/service orchestration details
+
+## Not in scope for this plan
+
+- concrete CLI flags for team execution
+- runner implementation details
+- queue schema
+- persistence backend choice
+- service deployment layout
+- final schema naming for `task` vs `run spec`
+
+## Definition of done for this planning seam
+
+This seam is complete enough when:
+
+- team orchestration intent is clearly separated from runner execution concerns
+- the default execution assumptions are explicit
+- the handoff payload contract is explicit
+- the shared run-state requirement is explicit
+- the failure/retry ownership split is explicit
+- the first internal implementation slice is explicitly bounded
+- roadmap/execution docs point to this plan before any team execution work begins

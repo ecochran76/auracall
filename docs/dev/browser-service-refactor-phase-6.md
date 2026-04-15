@@ -26,7 +26,7 @@ Status: complete
 - Confirm no LLM-specific naming appears in the browser-service package (types, errors, logs).
 - Add explicit notes in `docs/dev/browser-service.md` on stable vs experimental APIs.
 - Decide on any missing exports that Oracle wrappers currently re-export but should come from the package directly.
-- Reference: `docs/dev/browser-service-registry-plan.md`.
+- Reference: `docs/dev/plans/legacy-archive/0006-2026-04-08-browser-service-registry-plan.md`.
 
 ### 2) Move remaining generic helpers
 - Scan `src/browser/index.ts` for helpers that are not ChatGPT/Grok specific and move to browser-service:
