@@ -1028,6 +1028,62 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('registers config-derived runner capability metadata for api serve', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-config-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let nowValue = new Date('2026-04-15T09:00:00.000Z');
+    const runnersControl = createExecutionRunnerControl();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => nowValue,
+        runnersControl,
+        config: {
+          runtimeProfiles: {
+            analyst: {
+              engine: 'api',
+              defaultService: 'grok',
+            },
+            default: {
+              engine: 'browser',
+              defaultService: 'chatgpt',
+              browserProfile: 'default',
+            },
+            'gemini-browser': {
+              engine: 'browser',
+              browserProfile: 'wsl-chrome-2',
+              services: {
+                gemini: {
+                  url: 'https://gemini.google.com/app',
+                },
+              },
+            },
+          },
+        },
+      },
+    );
+
+    try {
+      const storedRunner = await runnersControl.readRunner(`runner:http-responses:127.0.0.1:${server.port}`);
+      expect(storedRunner).not.toBeNull();
+      expect(storedRunner).toMatchObject({
+        runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+        runner: {
+          serviceIds: ['chatgpt', 'gemini', 'grok'],
+          runtimeProfileIds: ['analyst', 'default', 'gemini-browser'],
+          browserProfileIds: ['default', 'wsl-chrome-2'],
+          serviceAccountIds: [],
+          browserCapable: true,
+        },
+      });
+    } finally {
+      nowValue = new Date('2026-04-15T09:00:30.000Z');
+      await server.close();
+    }
+  });
+
   it('marks the persisted api serve runner stale on close', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-close-'));
     cleanup.push(homeDir);

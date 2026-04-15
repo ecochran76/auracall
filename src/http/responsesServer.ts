@@ -3,7 +3,11 @@ import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
 import { loadUserConfig } from '../config.js';
-import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
+import {
+  getCurrentRuntimeProfiles,
+  projectConfigModel,
+  resolveHostLocalActionExecutionPolicy,
+} from '../config/model.js';
 import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
@@ -61,6 +65,7 @@ export interface ResponsesHttpServerOptions {
 export interface ResponsesHttpServerDeps {
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
+  config?: Record<string, unknown>;
   now?: () => Date;
   generateResponseId?: () => string;
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
@@ -187,6 +192,74 @@ interface HttpStatusResponse {
       } & ExecutionServiceHostStaleHeartbeatActionResult);
 }
 
+type RunnerServiceId = 'chatgpt' | 'gemini' | 'grok';
+
+const KNOWN_RUNNER_SERVICE_IDS: RunnerServiceId[] = ['chatgpt', 'gemini', 'grok'];
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | undefined): {
+  serviceIds: RunnerServiceId[];
+  runtimeProfileIds: string[];
+  browserProfileIds: string[];
+  serviceAccountIds: string[];
+  browserCapable: boolean;
+} {
+  const configRecord = config ?? {};
+  const projectedModel = projectConfigModel(configRecord);
+  if (projectedModel.runtimeProfiles.length === 0) {
+    return {
+      serviceIds: [...KNOWN_RUNNER_SERVICE_IDS],
+      runtimeProfileIds: ['default'],
+      browserProfileIds: [],
+      serviceAccountIds: [],
+      browserCapable: true,
+    };
+  }
+
+  const serviceIds = new Set<RunnerServiceId>();
+  const browserProfileIds = new Set<string>();
+  const runtimeProfiles = getCurrentRuntimeProfiles(configRecord);
+  let browserCapable = false;
+
+  for (const runtimeProfile of projectedModel.runtimeProfiles) {
+    if (runtimeProfile.defaultService) {
+      serviceIds.add(runtimeProfile.defaultService);
+    }
+    if (runtimeProfile.browserProfileId) {
+      browserProfileIds.add(runtimeProfile.browserProfileId);
+      browserCapable = true;
+    }
+
+    const rawRuntimeProfile = runtimeProfiles[runtimeProfile.id];
+    if (!isRecord(rawRuntimeProfile)) {
+      continue;
+    }
+    if (rawRuntimeProfile.engine === 'browser' || isRecord(rawRuntimeProfile.browser)) {
+      browserCapable = true;
+    }
+    const rawServices = isRecord(rawRuntimeProfile.services) ? rawRuntimeProfile.services : null;
+    if (!rawServices) {
+      continue;
+    }
+    for (const serviceId of KNOWN_RUNNER_SERVICE_IDS) {
+      if (isRecord(rawServices[serviceId])) {
+        serviceIds.add(serviceId);
+      }
+    }
+  }
+
+  return {
+    serviceIds: [...serviceIds].sort(),
+    runtimeProfileIds: projectedModel.runtimeProfiles.map((runtimeProfile) => runtimeProfile.id),
+    browserProfileIds: [...browserProfileIds].sort(),
+    serviceAccountIds: [],
+    browserCapable,
+  };
+}
+
 export async function createResponsesHttpServer(
   options: ResponsesHttpServerOptions = {},
   deps: ResponsesHttpServerDeps = {},
@@ -200,6 +273,7 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartMaxRuns = options.recoverRunsOnStartMaxRuns ?? 100;
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
+  const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(deps.config);
   const runnerHeartbeatIntervalMs = 5_000;
   const runnerHeartbeatTtlMs = 15_000;
   let host: ExecutionServiceHost;
@@ -661,9 +735,11 @@ export async function createResponsesHttpServer(
           startedAt: heartbeatAt,
           lastHeartbeatAt: heartbeatAt,
           expiresAt,
-          serviceIds: ['chatgpt', 'gemini', 'grok'],
-          runtimeProfileIds: ['default'],
-          browserCapable: true,
+          serviceIds: localRunnerCapabilitySummary.serviceIds,
+          runtimeProfileIds: localRunnerCapabilitySummary.runtimeProfileIds,
+          browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
+          serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
+          browserCapable: localRunnerCapabilitySummary.browserCapable,
           eligibilityNote: 'api serve local runner',
         }),
       });
@@ -816,6 +892,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? 250,
     },
     {
+      config: loadedConfig.config as Record<string, unknown>,
       now: () => new Date(),
       localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
         loadedConfig.config as Record<string, unknown>,
