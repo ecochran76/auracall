@@ -6031,7 +6031,7 @@ describe('http responses adapter', () => {
               runId,
               type: 'note-added',
               createdAt: skippedAt,
-              note: 'claim-owner-unavailable',
+              note: 'runner runner:missing-http-readback has no persisted runner record',
               payload: {
                 source: 'operator',
                 action: 'drain-run',
@@ -6054,7 +6054,7 @@ describe('http responses adapter', () => {
             runId,
             type: 'note-added',
             createdAt: skippedAt,
-            note: 'claim-owner-unavailable',
+            note: 'runner runner:missing-http-readback has no persisted runner record',
             payload: {
               source: 'operator',
               action: 'drain-run',
@@ -6091,7 +6091,7 @@ describe('http responses adapter', () => {
               targetedDrain: {
                 requestedAt: skippedAt,
                 status: 'skipped',
-                reason: 'claim-owner-unavailable',
+                reason: 'runner runner:missing-http-readback has no persisted runner record',
                 skipReason: 'claim-owner-unavailable',
               },
             },
@@ -6102,7 +6102,7 @@ describe('http responses adapter', () => {
       const recoveryRead = await fetch(`http://127.0.0.1:${server.port}/status/recovery/${runId}`);
       expect(recoveryRead.status).toBe(200);
       const recoveryPayload = (await recoveryRead.json()) as Record<string, any>;
-      expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
+          expect(recoveryPayload.detail.orchestrationTimelineSummary.items).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             type: 'note-added',
@@ -6111,7 +6111,7 @@ describe('http responses adapter', () => {
           }),
           expect.objectContaining({
             type: 'note-added',
-            note: 'claim-owner-unavailable',
+            note: 'runner runner:missing-http-readback has no persisted runner record',
             stepId: null,
           }),
         ]),
@@ -6272,7 +6272,7 @@ describe('http responses adapter', () => {
               runId,
               type: 'note-added',
               createdAt: '2026-04-11T20:21:10.000Z',
-              note: 'claim-owner-unavailable',
+              note: 'runner runner:missing-http-precedence has no persisted runner record',
               payload: {
                 source: 'operator',
                 action: 'drain-run',
@@ -6308,7 +6308,7 @@ describe('http responses adapter', () => {
             runId,
             type: 'note-added',
             createdAt: '2026-04-11T20:21:10.000Z',
-            note: 'claim-owner-unavailable',
+            note: 'runner runner:missing-http-precedence has no persisted runner record',
             payload: {
               source: 'operator',
               action: 'drain-run',

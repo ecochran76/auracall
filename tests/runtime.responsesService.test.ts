@@ -1081,7 +1081,7 @@ describe('runtime responses service', () => {
             runId,
             type: 'note-added',
             createdAt: skippedAt,
-            note: 'claim-owner-unavailable',
+            note: 'runner runner:missing-service-readback has no persisted runner record',
             payload: {
               source: 'operator',
               action: 'drain-run',
@@ -1112,7 +1112,7 @@ describe('runtime responses service', () => {
             targetedDrain: {
               requestedAt: skippedAt,
               status: 'skipped',
-              reason: 'claim-owner-unavailable',
+              reason: 'runner runner:missing-service-readback has no persisted runner record',
               skipReason: 'claim-owner-unavailable',
             },
           },
@@ -1257,7 +1257,7 @@ describe('runtime responses service', () => {
             runId,
             type: 'note-added',
             createdAt: '2026-04-08T14:41:10.000Z',
-            note: 'claim-owner-unavailable',
+            note: 'runner runner:missing-service-precedence has no persisted runner record',
             payload: {
               source: 'operator',
               action: 'drain-run',

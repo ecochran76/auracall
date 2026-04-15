@@ -133,7 +133,7 @@
   - if the local configured runner cannot safely claim the targeted run,
     `drainRun(...)` should return:
     - `status = skipped`
-    - `reason = claim-owner-unavailable`
+    - `reason = <specific local-claim explanation>`
     - `skipReason = claim-owner-unavailable`
   - keep the persisted run's own `sourceKind` unchanged while reporting that
     ownership failure
@@ -147,7 +147,8 @@
     - `status = executed`
     - `status = skipped`
   - for skipped targeted drain:
-    - `reason` and `skipReason` should both carry the persisted skip posture
+    - `skipReason` should keep the bounded skip posture
+    - `reason` should preserve the persisted actionable note when available
     - recovery detail timeline should retain the persisted skipped drain note
 - 2026-04-13: Keep cancellation readback stable even when older data lacks a
   cancellation note event:

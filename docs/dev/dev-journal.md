@@ -15960,3 +15960,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - 2026-04-14: Examined the dirty worktree for safe cleanup. Removed the recurring stray repo-root `undefined:/` lighthouse scratch tree and added `.gitignore` coverage for `undefined:/` so future temp-path resolution bugs do not keep dirtying the repo. Left the remaining dirt intact because it is substantive in-flight code/doc work, not safe throwaway output.
 - 2026-04-15: Tightened `api serve` local-runner registration so persisted runner records derive runtime/browser capability metadata from the existing AuraCall config model when config is available. The slice stays internal-only: no route contract changed, but runner affinity data is now less misleading than the previous hardcoded `default` runtime-profile registration.
 - 2026-04-15: Tightened targeted-drain operator readback so skipped drains keep the bounded `skipReason = claim-owner-unavailable` enum but preserve the specific local-claim explanation in free-form `reason` and the persisted note. This improves diagnostics for missing/stale/affinity-blocked local runners without widening the coarse skip taxonomy.
+## 2026-04-15 - Targeted drain skipped-note contract cleanup
+
+- Completed a bounded contract-cleanup slice around targeted drain readback fixtures:
+  - updated skipped targeted-drain response/readback fixtures in:
+    - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - canonicalized them to match the live service-host behavior:
+    - `skipReason` stays the bounded enum `claim-owner-unavailable`
+    - free-form `reason` / persisted operator note carries the actionable local-claim explanation
+  - corrected the stale durable rule in
+    [docs/dev-fixes-log.md](/home/ecochran76/workspace.local/oracle/docs/dev-fixes-log.md)
+    so targeted-drain ownership failures no longer imply `reason = skipReason`.
