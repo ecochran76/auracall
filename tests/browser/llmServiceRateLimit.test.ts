@@ -33,11 +33,11 @@ class RateLimitTestLlmService extends LlmService {
     };
   }
 
-  getGuardStatePath(providerId: 'chatgpt' | 'gemini' = 'chatgpt'): string | null {
+  getGuardStatePath(providerId: 'chatgpt' | 'gemini' | 'grok' = 'chatgpt'): string | null {
     if (providerId === 'chatgpt') {
       return resolveChatgptRateLimitGuardPath({ profileName: 'default' });
     }
-    return path.join(homeDirForTests(), 'cache', 'providers', 'gemini', '__runtime__', 'rate-limit-default.json');
+    return path.join(homeDirForTests(), 'cache', 'providers', providerId, '__runtime__', 'rate-limit-default.json');
   }
 
   async runGuarded<T>(action: string, fn: () => Promise<T>): Promise<T> {
@@ -322,6 +322,61 @@ describe('llmService ChatGPT rate-limit guard', () => {
     const provider = {
       id: 'gemini',
       config: { id: 'gemini', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const first = new RateLimitTestLlmService(userConfig, provider);
+    const second = new RateLimitTestLlmService(userConfig, provider);
+
+    try {
+      await expect(first.runGuarded('deleteConversation', async () => undefined)).resolves.toBeUndefined();
+      const startedAt = Date.now();
+      await expect(second.runGuarded('renameProject', async () => undefined)).resolves.toBeUndefined();
+      expect(Date.now() - startedAt).toBeGreaterThanOrEqual(70);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('persists Grok cooldown after a rate-limit error and blocks later live calls', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-grok-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'grok',
+      config: { id: 'grok', selectors: {} as never },
+    } satisfies LlmServiceAdapter;
+    const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
+    const service = new RateLimitTestLlmService(userConfig, provider);
+
+    try {
+      await expect(
+        service.runGuarded('deleteConversation', async () => {
+          throw new Error('Query limit reached for Auto. Try again in 4 minutes.');
+        }),
+      ).rejects.toThrow(/Query limit reached for Auto|Try again in 4 minutes/i);
+
+      const guardStatePath = service.getGuardStatePath('grok');
+      const persisted = JSON.parse(await readFile(guardStatePath as string, 'utf8')) as {
+        cooldownUntil?: number;
+        cooldownAction?: string;
+      };
+      expect(typeof persisted.cooldownUntil).toBe('number');
+      expect(persisted.cooldownAction).toBe('deleteConversation');
+
+      const nextProcess = new RateLimitTestLlmService(userConfig, provider);
+      await expect(
+        nextProcess.runGuarded('listConversations', async () => []),
+      ).rejects.toThrow(/Grok rate limit cooldown active until/i);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('spaces Grok mutating operations across separate service instances', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-grok-guard-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const provider = {
+      id: 'grok',
+      config: { id: 'grok', selectors: {} as never },
     } satisfies LlmServiceAdapter;
     const userConfig = { browser: { cache: {} } } as ResolvedUserConfig;
     const first = new RateLimitTestLlmService(userConfig, provider);

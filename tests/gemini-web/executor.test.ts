@@ -81,6 +81,8 @@ describe('gemini-web executor', () => {
     );
     expect(result.answerMarkdown).toContain('## Thinking');
     expect(result.answerMarkdown).toContain('Generated 1 image(s).');
+    expect(result.conversationId).toBe('1');
+    expect(result.tabUrl).toBe('https://gemini.google.com/app/1');
   });
 
   it('runs the edit flow as two calls and uses intro metadata', async () => {
@@ -108,7 +110,7 @@ describe('gemini-web executor', () => {
       });
 
     const exec = createGeminiWebExecutor({ editImage: inPath, outputPath: outPath });
-    await exec({
+    const result = await exec({
       prompt: 'add sunglasses',
       attachments: [],
       config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default' },
@@ -129,6 +131,8 @@ describe('gemini-web executor', () => {
       outPath,
       expect.any(AbortSignal),
     );
+    expect(result.conversationId).toBe('meta');
+    expect(result.tabUrl).toBe('https://gemini.google.com/app/meta');
   });
 
   it('uses chromeCookiePath when provided', async () => {
@@ -207,5 +211,28 @@ describe('gemini-web executor', () => {
     );
     expect(runGeminiWebWithFallback).not.toHaveBeenCalled();
     expect(result.answerText).toBe('native upload ok');
+  });
+
+  it('extracts Gemini conversation id from nested metadata', async () => {
+    const { createGeminiWebExecutor } = await import('../../src/gemini-web/executor.js');
+    runGeminiWebWithFallback.mockResolvedValueOnce({
+      rawResponseText: 'see https://gemini.google.com/app/raw-conversation-id for details',
+      text: 'ok',
+      thoughts: null,
+      metadata: [{ other: true }, { nested: { conversationId: 'nested-conversation-id' } }],
+      images: [],
+      effectiveModel: 'gemini-3-pro',
+    });
+
+    const exec = createGeminiWebExecutor({});
+    const result = await exec({
+      prompt: 'hello',
+      attachments: [],
+      config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default' },
+      log: () => {},
+    });
+
+    expect(result.conversationId).toBe('nested-conversation-id');
+    expect(result.tabUrl).toBe('https://gemini.google.com/app/nested-conversation-id');
   });
 });

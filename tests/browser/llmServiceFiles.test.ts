@@ -33,11 +33,17 @@ class TestLlmService extends LlmService {
     return this.fixedCacheContext;
   }
 
-  async listProjects(): Promise<[]> {
+  async listProjects(options?: BrowserProviderListOptions): Promise<[]> {
+    if (this.provider.listProjects) {
+      return (await this.provider.listProjects(options)) as [];
+    }
     return [];
   }
 
-  async listConversations(): Promise<[]> {
+  async listConversations(_projectId?: string, options?: BrowserProviderListOptions): Promise<[]> {
+    if (this.provider.listConversations) {
+      return (await this.provider.listConversations(_projectId, options)) as [];
+    }
     return [];
   }
 
@@ -150,6 +156,46 @@ describe('llmService project file cache writes', () => {
       await service.createProject({ name: 'Fresh Gem' }, { listOptions: {} });
       const cached = await store.readProjects(cacheContext);
       expect(cached.items).toEqual([created]);
+    } finally {
+      await rm(homeDir, { recursive: true, force: true });
+    }
+  });
+
+  test('createProject refuses an exact-name duplicate before provider creation', async () => {
+    const homeDir = await mkdtemp(path.join(os.tmpdir(), 'auracall-llm-projects-'));
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const cacheContext: ProviderCacheContext = {
+      provider: 'grok',
+      userConfig: {} as ProviderCacheContext['userConfig'],
+      listOptions: {},
+      identityKey: 'cache-test@example.com',
+    };
+    const store = new JsonCacheStore();
+    const provider = {
+      id: 'grok',
+      config: { id: 'grok', selectors: {} as never },
+      listProjects: vi.fn(async () => [
+        {
+          id: 'project-123',
+          name: 'AuraCall',
+          provider: 'grok' as const,
+          url: 'https://grok.com/project/project-123',
+        },
+      ]),
+      createProject: vi.fn(async () => ({
+        id: 'project-999',
+        name: 'AuraCall',
+        provider: 'grok' as const,
+        url: 'https://grok.com/project/project-999',
+      })),
+    };
+    const service = new TestLlmService(provider as never, store, cacheContext);
+
+    try {
+      await expect(service.createProject({ name: 'AuraCall' }, { listOptions: {} })).rejects.toThrow(
+        'Project "AuraCall" already exists for grok (project-123). Reuse that project instead of creating a duplicate.',
+      );
+      expect(provider.createProject).not.toHaveBeenCalled();
     } finally {
       await rm(homeDir, { recursive: true, force: true });
     }

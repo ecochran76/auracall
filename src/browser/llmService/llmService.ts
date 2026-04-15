@@ -1,7 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { ResolvedUserConfig } from '../../config.js';
-import { getAuracallHomeDir } from '../../auracallHome.js';
 import { getPreferredRuntimeProfile, getPreferredRuntimeProfileName } from '../../config/model.js';
 import type { BrowserProviderListOptions, ProviderUserIdentity } from '../providers/types.js';
 import {
@@ -21,6 +20,11 @@ import {
   type ChatgptRateLimitGuardState,
   writeChatgptRateLimitGuardState,
 } from '../chatgptRateLimitGuard.js';
+import {
+  readSimpleProviderGuardState,
+  type SimpleProviderGuardState,
+  writeSimpleProviderGuardState,
+} from '../simpleProviderGuard.js';
 import type {
   ConversationArtifact,
   Conversation,
@@ -70,6 +74,10 @@ const GEMINI_RATE_LIMIT_COOLDOWN_MS = 10 * 60_000;
 const GEMINI_RATE_LIMIT_AUTO_WAIT_MAX_MS = 45_000;
 const GEMINI_POST_COMMIT_QUIET_MS = 12_000;
 const GEMINI_MUTATION_MIN_INTERVAL_MS = 25_000;
+const GROK_RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
+const GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS = 30_000;
+const GROK_POST_COMMIT_QUIET_MS = 8_000;
+const GROK_MUTATION_MIN_INTERVAL_MS = 12_000;
 
 type ProviderGuardSettings = {
   cooldownMs: number;
@@ -82,17 +90,6 @@ type ProviderGuardSettings = {
   postCommitJitterMaxMs: number;
   simplePostCommitQuietMs?: number;
   simpleMutationMinIntervalMs?: number;
-};
-
-type SimpleProviderGuardState = {
-  provider: 'gemini';
-  profile: string;
-  updatedAt: number;
-  lastMutationAt?: number;
-  cooldownUntil?: number;
-  cooldownDetectedAt?: number;
-  cooldownReason?: string;
-  cooldownAction?: string;
 };
 
 type ConversationArtifactFetchStatus = 'materialized' | 'skipped' | 'error';
@@ -1101,6 +1098,20 @@ export abstract class LlmService {
       throw new Error(`Project creation is not supported for ${this.providerId}.`);
     }
     const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: true });
+    if (this.provider.listProjects) {
+      const existing = await this.listProjects(listOptions);
+      const matched = matchProjectByName(existing, input.name);
+      if (matched.match) {
+        throw new Error(
+          `Project "${input.name}" already exists for ${this.providerId} (${matched.match.id}). ` +
+          `Reuse that project instead of creating a duplicate.`,
+        );
+      }
+      if (matched.candidates.length > 1) {
+        const names = matched.candidates.map((item) => item.name || item.id).join(', ');
+        throw new Error(`Project name "${input.name}" is ambiguous. Matches: ${names}`);
+      }
+    }
     const created = await this.withRetry(
       () => this.provider.createProject?.(input, listOptions) as Promise<Project | null>,
       { action: 'createProject' },
@@ -1987,6 +1998,20 @@ export abstract class LlmService {
         simpleMutationMinIntervalMs: GEMINI_MUTATION_MIN_INTERVAL_MS,
       };
     }
+    if (this.providerId === 'grok') {
+      return {
+        cooldownMs: GROK_RATE_LIMIT_COOLDOWN_MS,
+        autoWaitMaxMs: GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+        mutationWindowMs: 0,
+        mutationMaxWeight: 0,
+        mutationBudgetAutoWaitMaxMs: 0,
+        postCommitAutoWaitMaxMs: GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS,
+        postCommitQuietScale: 0,
+        postCommitJitterMaxMs: 0,
+        simplePostCommitQuietMs: GROK_POST_COMMIT_QUIET_MS,
+        simpleMutationMinIntervalMs: GROK_MUTATION_MIN_INTERVAL_MS,
+      };
+    }
     return null;
   }
 
@@ -1995,7 +2020,7 @@ export abstract class LlmService {
     if (!settings) {
       return;
     }
-    if (this.providerId === 'gemini') {
+    if (this.providerId === 'gemini' || this.providerId === 'grok') {
       const state = await this.readProviderGuardState();
       if (!state) {
         return;
@@ -2009,7 +2034,7 @@ export abstract class LlmService {
         } else {
           const summary = state.cooldownReason ? ` ${state.cooldownReason}` : '';
           throw new Error(
-            `Gemini anti-bot cooldown active until ${new Date(cooldownUntil).toISOString()} (${Math.ceil(
+            `${this.providerId === 'gemini' ? 'Gemini anti-bot' : 'Grok rate limit'} cooldown active until ${new Date(cooldownUntil).toISOString()} (${Math.ceil(
               remainingMs / 1000,
             )}s remaining).${summary}`.trim(),
           );
@@ -2029,7 +2054,13 @@ export abstract class LlmService {
       if (remainingMs <= 0) {
         return;
       }
-      const label = this.isMutatingProviderAction(action) ? 'Gemini write spacing' : 'Gemini post-write quiet period';
+      const label = this.isMutatingProviderAction(action)
+        ? this.providerId === 'gemini'
+          ? 'Gemini write spacing'
+          : 'Grok write spacing'
+        : this.providerId === 'gemini'
+          ? 'Gemini post-write quiet period'
+          : 'Grok post-write quiet period';
       const autoWaitMaxMs = this.isMutatingProviderAction(action)
         ? Math.max(settings.autoWaitMaxMs, settings.postCommitAutoWaitMaxMs)
         : settings.postCommitAutoWaitMaxMs;
@@ -2107,9 +2138,9 @@ export abstract class LlmService {
     }
     const now = Date.now();
     const current = await this.readProviderGuardState();
-    if (this.providerId === 'gemini') {
+    if (this.providerId === 'gemini' || this.providerId === 'grok') {
       const next: SimpleProviderGuardState = {
-        provider: 'gemini',
+        provider: this.providerId,
         profile: this.resolveActiveProfileName() ?? 'default',
         updatedAt: now,
         lastMutationAt: this.isMutatingProviderAction(action)
@@ -2166,11 +2197,11 @@ export abstract class LlmService {
     }
     const now = Date.now();
     const current = await this.readProviderGuardState();
-    const cooldownUntil = now + settings.cooldownMs;
+    const cooldownUntil = now + (this.extractProviderRetryAfterMs(error) ?? settings.cooldownMs);
     const reason = this.extractProviderRateLimitSummary(error);
-    if (this.providerId === 'gemini') {
+    if (this.providerId === 'gemini' || this.providerId === 'grok') {
       await this.writeProviderGuardState({
-        provider: 'gemini',
+        provider: this.providerId,
         profile: this.resolveActiveProfileName() ?? 'default',
         updatedAt: now,
         cooldownDetectedAt: now,
@@ -2180,9 +2211,9 @@ export abstract class LlmService {
         lastMutationAt: this.isMutatingProviderAction(action) ? now : undefined,
       } satisfies SimpleProviderGuardState);
       const detail = reason ? ` ${reason}` : '';
-      const message = `Gemini anti-bot block detected while ${action}; cooling down until ${new Date(
-        cooldownUntil,
-      ).toISOString()}.${detail}`.trim();
+      const message = `${
+        this.providerId === 'gemini' ? 'Gemini anti-bot block' : 'Grok rate limit'
+      } detected while ${action}; cooling down until ${new Date(cooldownUntil).toISOString()}.${detail}`.trim();
       if (error instanceof Error) {
         const wrapped = new Error(message, { cause: error }) as Error & {
           uiDiagnostics?: unknown;
@@ -2242,7 +2273,7 @@ export abstract class LlmService {
   }
 
   private isMutatingProviderAction(action: string): boolean {
-    if (this.providerId !== 'chatgpt' && this.providerId !== 'gemini') {
+    if (this.providerId !== 'chatgpt' && this.providerId !== 'gemini' && this.providerId !== 'grok') {
       return false;
     }
     switch (action) {
@@ -2273,6 +2304,9 @@ export abstract class LlmService {
     if (this.providerId === 'gemini') {
       return /google\.com\/sorry|unusual traffic|captcha|recaptcha|human verification|anti-bot/i.test(message);
     }
+    if (this.providerId === 'grok') {
+      return /too many requests|query limit|rate limit|try again later|try again in\s+\d+|slow down|request limit/i.test(message);
+    }
     return false;
   }
 
@@ -2286,7 +2320,37 @@ export abstract class LlmService {
       const direct = normalized.match(/(google blocked gemini[^.]*\.?|unusual traffic[^.]*\.?|captcha[^.]*\.?)/i);
       return direct?.[1]?.trim() ?? null;
     }
+    if (this.providerId === 'grok') {
+      const normalized = message.replace(/\s+/g, ' ').trim();
+      const direct = normalized.match(
+        /(query limit[^.]*\.?(?:\s*try again in [^.]*\.?)?|too many requests[^.]*\.?|rate limit[^.]*\.?|slow down[^.]*\.?|try again later[^.]*\.?|try again in [^.]*\.?)/i,
+      );
+      return direct?.[1]?.trim() ?? null;
+    }
     return null;
+  }
+
+  private extractProviderRetryAfterMs(error: unknown): number | null {
+    const message = error instanceof Error ? error.message : String(error);
+    if (this.providerId !== 'grok') {
+      return null;
+    }
+    const match = message.match(/try again in\s+(\d+)\s*(second|seconds|sec|secs|minute|minutes|min|mins|hour|hours)/i);
+    if (!match) {
+      return null;
+    }
+    const amount = Number(match[1]);
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return null;
+    }
+    const unit = match[2].toLowerCase();
+    if (unit.startsWith('sec')) {
+      return amount * 1000;
+    }
+    if (unit.startsWith('hour')) {
+      return amount * 60 * 60_000;
+    }
+    return amount * 60_000;
   }
 
   private async readProviderGuardState(): Promise<ChatgptRateLimitGuardState | SimpleProviderGuardState | null> {
@@ -2296,28 +2360,12 @@ export abstract class LlmService {
         cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
       });
     }
-    if (this.providerId === 'gemini') {
-      const statePath = this.resolveSimpleProviderGuardStatePath();
-      try {
-        const raw = await fs.readFile(statePath, 'utf8');
-        const parsed = JSON.parse(raw) as Partial<SimpleProviderGuardState>;
-        return {
-          provider: 'gemini',
-          profile: this.resolveActiveProfileName() ?? 'default',
-          updatedAt: typeof parsed.updatedAt === 'number' ? parsed.updatedAt : 0,
-          lastMutationAt: typeof parsed.lastMutationAt === 'number' ? parsed.lastMutationAt : undefined,
-          cooldownUntil: typeof parsed.cooldownUntil === 'number' ? parsed.cooldownUntil : undefined,
-          cooldownDetectedAt: typeof parsed.cooldownDetectedAt === 'number' ? parsed.cooldownDetectedAt : undefined,
-          cooldownReason: typeof parsed.cooldownReason === 'string' ? parsed.cooldownReason : undefined,
-          cooldownAction: typeof parsed.cooldownAction === 'string' ? parsed.cooldownAction : undefined,
-        };
-      } catch (error) {
-        const code = (error as { code?: string }).code;
-        if (code === 'ENOENT') {
-          return null;
-        }
-        throw error;
-      }
+    if (this.providerId === 'gemini' || this.providerId === 'grok') {
+      return readSimpleProviderGuardState({
+        provider: this.providerId,
+        profileName: this.resolveActiveProfileName() ?? 'default',
+        cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
+      });
     }
     return null;
   }
@@ -2330,19 +2378,14 @@ export abstract class LlmService {
       });
       return;
     }
-    if (this.providerId !== 'gemini') {
+    if (this.providerId !== 'gemini' && this.providerId !== 'grok') {
       return;
     }
-    const statePath = this.resolveSimpleProviderGuardStatePath();
-    await fs.mkdir(path.dirname(statePath), { recursive: true });
-    await fs.writeFile(statePath, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
-  }
-
-  private resolveSimpleProviderGuardStatePath(): string {
-    const cacheRoot = this.userConfig.browser?.cache?.rootDir?.trim()
-      ? path.resolve(this.userConfig.browser.cache.rootDir.trim())
-      : path.join(getAuracallHomeDir(), 'cache', 'providers');
-    return path.join(cacheRoot, this.providerId, '__runtime__', `rate-limit-${this.resolveActiveProfileName() ?? 'default'}.json`);
+    await writeSimpleProviderGuardState(state as SimpleProviderGuardState, {
+      provider: this.providerId,
+      profileName: this.resolveActiveProfileName() ?? 'default',
+      cacheRoot: this.userConfig.browser?.cache?.rootDir ?? null,
+    });
   }
 
   private isRetryableError(error: unknown): boolean {

@@ -56,6 +56,82 @@ function normalizeGeminiUrl(value: string | null | undefined): string {
   }
 }
 
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function extractGeminiConversationIdFromUrl(value: string): string | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.hostname !== 'gemini.google.com') return null;
+    const match = url.pathname.match(/^\/app\/([^/?#]+)/i);
+    return match?.[1] ?? null;
+  } catch {
+    const match = trimmed.match(/(?:^|\/)app\/([^/?#]+)/i);
+    return match?.[1] ?? null;
+  }
+}
+
+function extractGeminiConversationIdFromMetadata(
+  value: unknown,
+  visited = new Set<unknown>(),
+  depth = 0,
+): string | null {
+  if (depth > 5 || value == null) return null;
+  if (typeof value === 'string') {
+    return extractGeminiConversationIdFromUrl(value);
+  }
+  if (typeof value !== 'object') {
+    return null;
+  }
+  if (visited.has(value)) {
+    return null;
+  }
+  visited.add(value);
+
+  if (Array.isArray(value)) {
+    for (const entry of value) {
+      const resolved = extractGeminiConversationIdFromMetadata(entry, visited, depth + 1);
+      if (resolved) return resolved;
+    }
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const direct =
+    asNonEmptyString(record.conversationId) ??
+    asNonEmptyString(record.conversation_id) ??
+    asNonEmptyString(record.chat) ??
+    asNonEmptyString(record.cid);
+  if (direct) return direct;
+
+  for (const candidate of Object.values(record)) {
+    const resolved = extractGeminiConversationIdFromMetadata(candidate, visited, depth + 1);
+    if (resolved) return resolved;
+  }
+  return null;
+}
+
+function resolveGeminiConversationMetadata(
+  metadata: unknown,
+  rawResponseText: string,
+): { conversationId: string | null; tabUrl: string | null } {
+  const conversationId =
+    extractGeminiConversationIdFromMetadata(metadata) ??
+    extractGeminiConversationIdFromUrl(rawResponseText);
+  if (!conversationId) {
+    return { conversationId: null, tabUrl: null };
+  }
+  return {
+    conversationId,
+    tabUrl: new URL(`app/${conversationId}`, GEMINI_DEFAULT_URL).toString(),
+  };
+}
+
 function shouldUseGeminiNativeBrowserAttachments(runOptions: BrowserRunOptions): boolean {
   if ((runOptions.attachments?.length ?? 0) === 0) {
     return false;
@@ -280,6 +356,8 @@ export function createGeminiWebExecutor(
 
     const model: GeminiWebModelId = resolveGeminiWebModel(runOptions.config?.desiredModel, log);
     let response: GeminiWebResponse;
+    let resolvedConversationId: string | null = null;
+    let resolvedTabUrl: string | null = null;
 
     try {
       if (!editImagePath && !generateImagePath && shouldUseGeminiNativeBrowserAttachments(runOptions)) {
@@ -318,6 +396,14 @@ export function createGeminiWebExecutor(
           has_images: false,
           image_count: 0,
         };
+        const conversationMetadata = resolveGeminiConversationMetadata(out.metadata, out.rawResponseText);
+        const introConversationMetadata = resolveGeminiConversationMetadata(
+          intro.metadata,
+          intro.rawResponseText,
+        );
+        resolvedConversationId =
+          conversationMetadata.conversationId ?? introConversationMetadata.conversationId;
+        resolvedTabUrl = conversationMetadata.tabUrl ?? introConversationMetadata.tabUrl;
 
         const resolvedOutputPath = outputPath ?? generateImagePath ?? 'generated.png';
         const imageSave = await saveFirstGeminiImageFromOutput(out, cookieMap, resolvedOutputPath, controller.signal);
@@ -342,6 +428,9 @@ export function createGeminiWebExecutor(
           has_images: false,
           image_count: 0,
         };
+        const conversationMetadata = resolveGeminiConversationMetadata(out.metadata, out.rawResponseText);
+        resolvedConversationId = conversationMetadata.conversationId;
+        resolvedTabUrl = conversationMetadata.tabUrl;
         const imageSave = await saveFirstGeminiImageFromOutput(out, cookieMap, generateImagePath, controller.signal);
         response.has_images = imageSave.saved;
         response.image_count = imageSave.imageCount;
@@ -367,6 +456,9 @@ export function createGeminiWebExecutor(
           has_images: out.images.length > 0,
           image_count: out.images.length,
         };
+        const conversationMetadata = resolveGeminiConversationMetadata(out.metadata, out.rawResponseText);
+        resolvedConversationId = conversationMetadata.conversationId;
+        resolvedTabUrl = conversationMetadata.tabUrl;
       }
     } finally {
       clearTimeout(timeout);
@@ -393,6 +485,8 @@ export function createGeminiWebExecutor(
       tookMs,
       answerTokens: estimateTokenCount(answerText),
       answerChars: answerText.length,
+      conversationId: resolvedConversationId ?? undefined,
+      tabUrl: resolvedTabUrl ?? undefined,
     };
   };
 }

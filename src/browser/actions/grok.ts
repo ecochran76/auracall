@@ -458,13 +458,25 @@ export async function waitForGrokAssistantResult(
   Runtime: ChromeClient['Runtime'],
   timeoutMs: number,
   logger: BrowserLogger,
+  options: {
+    baseline?: {
+      count: number;
+      lastText: string;
+      lastMarkdown: string;
+      lastHtml: string;
+      toastText?: string;
+    } | null;
+  } = {},
 ): Promise<{ text: string; markdown: string; html?: string }> {
-  const baseline = await readAssistantSnapshot(Runtime);
+  const baseline = options.baseline ?? (await readAssistantSnapshot(Runtime));
   let lastSignature = baseline.lastMarkdown || baseline.lastText;
   let stableCount = 0;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const current = await readAssistantSnapshot(Runtime);
+    if (current.toastText && isGrokRateLimitToastText(current.toastText)) {
+      throw new Error(current.toastText);
+    }
     const currentSignature = current.lastMarkdown || current.lastText;
     const baselineSignature = baseline.lastMarkdown || baseline.lastText;
     const hasNewContent =
@@ -533,6 +545,16 @@ export function buildGrokAssistantSnapshotExpressionForTest(): string {
   return buildGrokAssistantSnapshotExpression();
 }
 
+export async function readGrokAssistantSnapshotForRuntime(
+  Runtime: ChromeClient['Runtime'],
+): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string; toastText: string }> {
+  return readAssistantSnapshot(Runtime);
+}
+
+function isGrokRateLimitToastText(value: string): boolean {
+  return /query limit|too many requests|rate limit|request limit|try again in\s+\d+/i.test(value);
+}
+
 function buildGrokAssistantSnapshotExpression(): string {
   return `(() => {
       const bubbles = ${buildFindAllSelectorsExpression(GROK_ASSISTANT_BUBBLE_SELECTORS)};
@@ -541,7 +563,29 @@ function buildGrokAssistantSnapshotExpression(): string {
         ? assistant
         : bubbles.filter((b) => !b.className.includes('bg-surface-l1'));
       const last = candidates[candidates.length - 1];
-      if (!last) return { count: candidates.length, lastText: '', lastMarkdown: '', lastHtml: '' };
+      const isVisible = (el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(el);
+        const rect = el.getBoundingClientRect();
+        return style.display !== 'none' && style.visibility !== 'hidden' && rect.width > 0 && rect.height > 0;
+      };
+      const readToastText = () => {
+        const selectors = [
+          '[role="alert"]',
+          '[role="status"]',
+          '[data-sonner-toast]',
+          '[data-toast]',
+          '[data-radix-toast-viewport] *',
+        ];
+        const values = selectors
+          .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+          .filter((node) => isVisible(node))
+          .map((node) => normalizeText(node.textContent || ''))
+          .filter(Boolean)
+          .filter((text) => /query limit|too many requests|rate limit|request limit|try again in\\s+\\d+/i.test(text));
+        return values[values.length - 1] || '';
+      };
+      if (!last) return { count: candidates.length, lastText: '', lastMarkdown: '', lastHtml: '', toastText: readToastText() };
 
       const normalizeText = (value) =>
         String(value || '')
@@ -713,6 +757,7 @@ function buildGrokAssistantSnapshotExpression(): string {
           lastText: text || markdown,
           lastMarkdown: markdown || text,
           lastHtml: markdownRoot.innerHTML || '',
+          toastText: readToastText(),
         };
       }
 
@@ -741,13 +786,19 @@ function buildGrokAssistantSnapshotExpression(): string {
       });
 
       const fallbackText = normalizeText(clone.textContent || '');
-      return { count: candidates.length, lastText: fallbackText, lastMarkdown: fallbackText, lastHtml: '' };
+      return {
+        count: candidates.length,
+        lastText: fallbackText,
+        lastMarkdown: fallbackText,
+        lastHtml: '',
+        toastText: readToastText(),
+      };
     })()`;
 }
 
 async function readAssistantSnapshot(
   Runtime: ChromeClient['Runtime'],
-): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string }> {
+): Promise<{ count: number; lastText: string; lastMarkdown: string; lastHtml: string; toastText: string }> {
   const outcome = await Runtime.evaluate({
     expression: buildGrokAssistantSnapshotExpression(),
     returnByValue: true,
@@ -757,6 +808,7 @@ async function readAssistantSnapshot(
     lastText: outcome.result?.value?.lastText ?? '',
     lastMarkdown: outcome.result?.value?.lastMarkdown ?? '',
     lastHtml: outcome.result?.value?.lastHtml ?? '',
+    toastText: outcome.result?.value?.toastText ?? '',
   };
 }
 

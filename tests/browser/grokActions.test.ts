@@ -138,7 +138,7 @@ describe('grok actions', () => {
     const logger = vi.fn();
     const evaluate = vi
       .fn()
-      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '' } } })
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
       .mockResolvedValueOnce({
         result: {
           value: {
@@ -146,6 +146,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
+            toastText: '',
           },
         },
       })
@@ -156,6 +157,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
+            toastText: '',
           },
         },
       })
@@ -166,6 +168,7 @@ describe('grok actions', () => {
             lastText: 'alpha\n\nbeta',
             lastMarkdown: '- alpha\n\n```txt\nbeta\n```',
             lastHtml: '<ul><li>alpha</li></ul>',
+            toastText: '',
           },
         },
       });
@@ -188,7 +191,7 @@ describe('grok actions', () => {
     const logger = vi.fn();
     const evaluate = vi
       .fn()
-      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '' } } })
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
       .mockResolvedValueOnce({
         result: {
           value: {
@@ -196,6 +199,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
+            toastText: '',
           },
         },
       })
@@ -206,6 +210,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
+            toastText: '',
           },
         },
       })
@@ -216,6 +221,7 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
+            toastText: '',
           },
         },
       })
@@ -226,12 +232,70 @@ describe('grok actions', () => {
             lastText: 'plain text',
             lastMarkdown: '- plain text',
             lastHtml: '<p>plain text</p>',
+            toastText: '',
           },
         },
       });
     const runtime = { evaluate } as unknown as ChromeClient['Runtime'];
 
     await expect(waitForGrokAssistantResponse(runtime, 2500, logger)).resolves.toBe('plain text');
+  });
+
+  test('waitForGrokAssistantResult accepts a pre-submit baseline so fast replies do not self-baseline', async () => {
+    const logger = vi.fn();
+    const evaluate = vi
+      .fn()
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'AURACALL_TEAM_SMOKE_OK',
+            lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
+            lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
+            toastText: '',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'AURACALL_TEAM_SMOKE_OK',
+            lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
+            lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
+            toastText: '',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'AURACALL_TEAM_SMOKE_OK',
+            lastMarkdown: 'AURACALL_TEAM_SMOKE_OK',
+            lastHtml: '<p>AURACALL_TEAM_SMOKE_OK</p>',
+            toastText: '',
+          },
+        },
+      });
+    const runtime = { evaluate } as unknown as ChromeClient['Runtime'];
+
+    await expect(
+      waitForGrokAssistantResult(runtime, 2000, logger, {
+        baseline: {
+          count: 0,
+          lastText: '',
+          lastMarkdown: '',
+          lastHtml: '',
+        },
+      }),
+    ).resolves.toEqual({
+      text: 'AURACALL_TEAM_SMOKE_OK',
+      markdown: 'AURACALL_TEAM_SMOKE_OK',
+      html: '<p>AURACALL_TEAM_SMOKE_OK</p>',
+    });
+
+    expect(logger).toHaveBeenCalledWith('Recovered assistant response');
   });
 
   test('buildGrokAssistantSnapshotExpression strips sticky copy chrome and serializes code blocks', () => {
@@ -241,5 +305,28 @@ describe('grok actions', () => {
     expect(expression).toContain('span.font-mono');
     expect(expression).toContain("className.includes('sticky')");
     expect(expression).toContain("node.tagName === 'BUTTON'");
+  });
+
+  test('waitForGrokAssistantResult fails fast on visible query-limit toast text', async () => {
+    const logger = vi.fn();
+    const evaluate = vi
+      .fn()
+      .mockResolvedValueOnce({ result: { value: { count: 1, lastText: '', lastMarkdown: '', lastHtml: '', toastText: '' } } })
+      .mockResolvedValue({
+        result: {
+          value: {
+            count: 1,
+            lastText: '',
+            lastMarkdown: '',
+            lastHtml: '',
+            toastText: 'Query limit reached for Auto. Try again in 4 minutes.',
+          },
+        },
+      });
+    const runtime = { evaluate } as unknown as ChromeClient['Runtime'];
+
+    await expect(waitForGrokAssistantResult(runtime, 2000, logger)).rejects.toThrow(
+      'Query limit reached for Auto. Try again in 4 minutes.',
+    );
   });
 });

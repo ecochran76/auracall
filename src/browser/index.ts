@@ -44,6 +44,7 @@ import {
   navigateToGrok,
   ensureGrokLoggedIn,
   ensureGrokPromptReady,
+  readGrokAssistantSnapshotForRuntime,
   setGrokPrompt,
   submitGrokPrompt,
   waitForGrokAssistantResult,
@@ -97,6 +98,11 @@ import {
   persistBrowserPostmortemRecord,
 } from './domDebug.js';
 import { classifyBrowserToolsBlockingState } from '../../packages/browser-service/src/browserTools.js';
+import {
+  readSimpleProviderGuardState,
+  resolveSimpleProviderGuardProfileName,
+  writeSimpleProviderGuardState,
+} from './simpleProviderGuard.js';
 
 export type { BrowserAutomationConfig, BrowserRunOptions, BrowserRunResult } from './types.js';
 export { CHATGPT_URL, DEFAULT_MODEL_STRATEGY, DEFAULT_MODEL_TARGET } from './constants.js';
@@ -429,6 +435,173 @@ async function noteChatgptBrowserMutationSuccess(
       managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
       managedProfileRoot: config.managedProfileRoot ?? null,
     },
+  );
+}
+
+function resolveGrokBrowserGuardProfileName(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  managedProfileDir?: string | null,
+): string {
+  return resolveSimpleProviderGuardProfileName({
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+}
+
+function isGrokRateLimitMessage(message: string): boolean {
+  return /too many requests|query limit|rate limit|request limit|slow down|try again later|try again in\s+\d+/i.test(message);
+}
+
+function extractGrokRateLimitSummary(message: string): string | null {
+  const normalized = message.replace(/\s+/g, ' ').trim();
+  const direct = normalized.match(
+    /(query limit[^.]*\.?(?:\s*try again in [^.]*\.?)?|too many requests[^.]*\.?|rate limit[^.]*\.?|request limit[^.]*\.?|slow down[^.]*\.?|try again later[^.]*\.?|try again in [^.]*\.?)/i,
+  );
+  return direct?.[1]?.trim() ?? null;
+}
+
+function extractRetryAfterMs(message: string): number | null {
+  const match = message.match(/try again in\s+(\d+)\s*(second|seconds|sec|secs|minute|minutes|min|mins|hour|hours)/i);
+  if (!match) {
+    return null;
+  }
+  const amount = Number(match[1]);
+  if (!Number.isFinite(amount) || amount <= 0) {
+    return null;
+  }
+  const unit = match[2].toLowerCase();
+  if (unit.startsWith('sec')) {
+    return amount * 1000;
+  }
+  if (unit.startsWith('hour')) {
+    return amount * 60 * 60_000;
+  }
+  return amount * 60_000;
+}
+
+async function enforceGrokBrowserRateLimitGuard(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  logger: BrowserLogger,
+  managedProfileDir?: string | null,
+): Promise<void> {
+  const state = await readSimpleProviderGuardState({
+    provider: 'grok',
+    profileName: resolveGrokBrowserGuardProfileName(config, managedProfileDir),
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+  if (!state) {
+    return;
+  }
+  const now = Date.now();
+  if (typeof state.cooldownUntil === 'number' && state.cooldownUntil > now) {
+    const remainingMs = state.cooldownUntil - now;
+    if (remainingMs <= GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS) {
+      logger(`[browser] Waiting ${Math.ceil(remainingMs / 1000)}s for Grok cooldown to clear.`);
+      await delay(remainingMs);
+    } else {
+      const summary = state.cooldownReason ? ` ${state.cooldownReason}` : '';
+      throw new Error(
+        `Grok rate limit cooldown active until ${new Date(state.cooldownUntil).toISOString()} (${Math.ceil(
+          remainingMs / 1000,
+        )}s remaining).${summary}`.trim(),
+      );
+    }
+  }
+  const lastMutationAt = typeof state.lastMutationAt === 'number' ? state.lastMutationAt : null;
+  if (!lastMutationAt) {
+    return;
+  }
+  const quietUntil = Math.max(lastMutationAt + GROK_MUTATION_MIN_INTERVAL_MS, lastMutationAt + GROK_POST_COMMIT_QUIET_MS);
+  const remainingMs = quietUntil - now;
+  if (remainingMs <= 0) {
+    return;
+  }
+  if (remainingMs <= GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS) {
+    logger(`[browser] Waiting ${Math.ceil(remainingMs / 1000)}s for Grok write spacing.`);
+    await delay(remainingMs);
+    return;
+  }
+  throw new Error(
+    `Grok write spacing active until ${new Date(quietUntil).toISOString()} (${Math.ceil(
+      remainingMs / 1000,
+    )}s remaining).`,
+  );
+}
+
+async function noteGrokBrowserMutationSuccess(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  managedProfileDir?: string | null,
+): Promise<void> {
+  const now = Date.now();
+  const current = await readSimpleProviderGuardState({
+    provider: 'grok',
+    profileName: resolveGrokBrowserGuardProfileName(config, managedProfileDir),
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+  const next = {
+    provider: 'grok' as const,
+    profile: resolveGrokBrowserGuardProfileName(config, managedProfileDir),
+    updatedAt: now,
+    lastMutationAt: now,
+  };
+  if (typeof current?.cooldownUntil === 'number' && current.cooldownUntil > now) {
+    Object.assign(next, {
+      cooldownUntil: current.cooldownUntil,
+      cooldownDetectedAt: current.cooldownDetectedAt,
+      cooldownReason: current.cooldownReason,
+      cooldownAction: current.cooldownAction,
+    });
+  }
+  await writeSimpleProviderGuardState(next, {
+    provider: 'grok',
+    profileName: next.profile,
+    managedProfileDir: managedProfileDir ?? config.manualLoginProfileDir ?? null,
+    managedProfileRoot: config.managedProfileRoot ?? null,
+  });
+}
+
+async function handleGrokBrowserRateLimitFailure(options: {
+  config: ReturnType<typeof resolveBrowserConfig>;
+  logger: BrowserLogger;
+  error: Error;
+  action: string;
+  managedProfileDir?: string | null;
+}): Promise<Error> {
+  if (!isGrokRateLimitMessage(options.error.message)) {
+    return options.error;
+  }
+  const now = Date.now();
+  const retryAfterMs = extractRetryAfterMs(options.error.message);
+  const cooldownUntil = now + (retryAfterMs ?? GROK_RATE_LIMIT_COOLDOWN_MS);
+  const profile = resolveGrokBrowserGuardProfileName(options.config, options.managedProfileDir);
+  const reason = extractGrokRateLimitSummary(options.error.message);
+  await writeSimpleProviderGuardState(
+    {
+      provider: 'grok',
+      profile,
+      updatedAt: now,
+      lastMutationAt: now,
+      cooldownDetectedAt: now,
+      cooldownUntil,
+      cooldownReason: reason ?? undefined,
+      cooldownAction: options.action,
+    },
+    {
+      provider: 'grok',
+      profileName: profile,
+      managedProfileDir: options.managedProfileDir ?? options.config.manualLoginProfileDir ?? null,
+      managedProfileRoot: options.config.managedProfileRoot ?? null,
+    },
+  );
+  options.logger(`[browser] Grok rate limit detected; cooling down until ${new Date(cooldownUntil).toISOString()}.`);
+  const detail = reason ? ` ${reason}` : '';
+  return new Error(
+    `Grok rate limit detected while ${options.action}; cooling down until ${new Date(
+      cooldownUntil,
+    ).toISOString()}.${detail}`.trim(),
+    { cause: options.error },
   );
 }
 
@@ -2196,6 +2369,7 @@ async function runRemoteGrokBrowserMode(
   let connectionClosedUnexpectedly = false;
   let disposeRemoteTransport: (() => Promise<void>) | null = null;
   const startedAt = Date.now();
+  await enforceGrokBrowserRateLimitGuard(config, logger, config.manualLoginProfileDir ?? null);
   const runtimeHintCb = options.runtimeHintCb;
   const emitRuntimeHint = async () => {
     if (!runtimeHintCb) return;
@@ -2282,6 +2456,7 @@ async function runRemoteGrokBrowserMode(
       await uploadGrokAttachments(DOM, Runtime, attachments, logger);
     }
 
+    const grokAssistantBaseline = await readGrokAssistantSnapshotForRuntime(Runtime);
     await setGrokPrompt(Input, Runtime, promptText);
     await submitGrokPrompt(Input, Runtime);
     logger('Submitted prompt');
@@ -2294,7 +2469,10 @@ async function runRemoteGrokBrowserMode(
       await emitRuntimeHint();
     }
 
-    const answer = await waitForGrokAssistantResult(Runtime, config.timeoutMs, logger);
+    const answer = await waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
+      baseline: grokAssistantBaseline,
+    });
+    await noteGrokBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(() => undefined);
     const durationMs = Date.now() - startedAt;
 
     return {
@@ -2314,14 +2492,21 @@ async function runRemoteGrokBrowserMode(
     };
   } catch (error) {
     const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const guardedError = await handleGrokBrowserRateLimitFailure({
+      config,
+      logger,
+      error: normalizedError,
+      action: 'browserRun',
+      managedProfileDir: config.manualLoginProfileDir ?? null,
+    });
     const socketClosed = connectionClosedUnexpectedly || isWebSocketClosureError(normalizedError);
     connectionClosedUnexpectedly = connectionClosedUnexpectedly || socketClosed;
     if (!socketClosed) {
-      logger(`Failed to complete Grok run: ${normalizedError.message}`);
-      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && normalizedError.stack) {
-        logger(normalizedError.stack);
+      logger(`Failed to complete Grok run: ${guardedError.message}`);
+      if ((config.debug || process.env.CHATGPT_DEVTOOLS_TRACE === '1') && guardedError.stack) {
+        logger(guardedError.stack);
       }
-      throw normalizedError;
+      throw guardedError;
     }
     throw new BrowserAutomationError('Remote Chrome connection lost before Aura-Call finished.', {
       stage: 'connection-lost',
@@ -2362,6 +2547,11 @@ export {
   uploadAttachmentFile,
   waitForAttachmentCompletion,
 } from './pageActions.js';
+
+const GROK_RATE_LIMIT_COOLDOWN_MS = 5 * 60_000;
+const GROK_RATE_LIMIT_AUTO_WAIT_MAX_MS = 30_000;
+const GROK_POST_COMMIT_QUIET_MS = 8_000;
+const GROK_MUTATION_MIN_INTERVAL_MS = 12_000;
 
 function isWebSocketClosureError(error: Error): boolean {
   const message = error.message.toLowerCase();
@@ -2588,6 +2778,7 @@ async function runGrokBrowserMode({
     logger,
     auracallProfileName,
   });
+  await enforceGrokBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
     config: launchConfig,
     userDataDir,
@@ -2826,6 +3017,7 @@ async function runGrokBrowserMode({
       await raceWithDisconnect(uploadGrokAttachments(DOM, Runtime, attachments, logger));
     }
 
+    const grokAssistantBaseline = await raceWithDisconnect(readGrokAssistantSnapshotForRuntime(Runtime));
     await raceWithDisconnect(setGrokPrompt(Input, Runtime, promptText));
     await raceWithDisconnect(submitGrokPrompt(Input, Runtime));
     await delay(500);
@@ -2837,8 +3029,11 @@ async function runGrokBrowserMode({
     }
 
     const answer = await raceWithDisconnect(
-      waitForGrokAssistantResult(Runtime, config.timeoutMs, logger),
+      waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
+        baseline: grokAssistantBaseline,
+      }),
     );
+    await noteGrokBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
     answerText = answer.text;
     answerMarkdown = answer.markdown;
     answerHtml = answer.html ?? '';
@@ -2865,6 +3060,14 @@ async function runGrokBrowserMode({
       controllerPid: chrome.process?.pid,
     };
   } catch (error) {
+    const normalizedError = error instanceof Error ? error : new Error(String(error));
+    const guardedError = await handleGrokBrowserRateLimitFailure({
+      config,
+      logger,
+      error: normalizedError,
+      action: 'browserRun',
+      managedProfileDir: userDataDir,
+    });
     if (shouldPreserveBrowserOnError(error, headless)) {
       preserveBrowserOnError = true;
       const runtime = {
@@ -2892,11 +3095,11 @@ async function runGrokBrowserMode({
         error,
       );
     }
-    if (error instanceof BrowserAutomationError) {
-      throw error;
+    if (guardedError instanceof BrowserAutomationError) {
+      throw guardedError;
     }
-    const message = error instanceof Error ? error.message : 'Grok browser automation failed.';
-    throw new BrowserAutomationError(message, { stage: 'execute-browser' }, error);
+    const message = guardedError.message || 'Grok browser automation failed.';
+    throw new BrowserAutomationError(message, { stage: 'execute-browser' }, guardedError);
   } finally {
     const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
     if (!keepBrowserOpen && chrome) {
