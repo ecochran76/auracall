@@ -213,7 +213,7 @@ Terminology note:
       - `attention=stale-heartbeat-inspect-only:<count>`
     - configured local runner claim posture under `localClaim`, including whether the current local runner is actually selected
   - `GET /v1/team-runs/inspect` returns one bounded read-only team linkage view:
-    - query by `taskRunSpecId=<task_run_spec_id>` or `runtimeRunId=<runtime_run_id>`
+    - query by `taskRunSpecId=<task_run_spec_id>`, `teamRunId=<team_run_id>`, or `runtimeRunId=<runtime_run_id>`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -646,6 +646,7 @@ auracall teams run auracall-cross-service-gemini "Reply exactly with: OK" --max-
 
 # Inspect persisted task assignment and linked runtime state
 auracall teams inspect --task-run-spec-id taskrun_auracall-solo_abc123 --json
+auracall teams inspect --team-run-id teamrun_auracall-solo_abc123 --json
 auracall teams inspect --runtime-run-id teamrun_auracall-solo_abc123
 ```
 

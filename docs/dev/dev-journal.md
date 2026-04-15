@@ -15892,4 +15892,6 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 
 - 2026-04-14: Added `GET /v1/team-runs/inspect` as the first bounded public read-only team execution surface. It reuses the same persisted `taskRunSpec -> teamRun -> runtime` linkage model as `auracall teams inspect` and stays inspection-only.
 
+- 2026-04-14: Extended the bounded inspection surface to accept `teamRunId` as a first-class lookup key on both `auracall teams inspect` and `GET /v1/team-runs/inspect`. This keeps the next slice on the read-only path and addresses the natural operator lookup id before deciding whether any public write/create team surface is warranted.
+
 - 2026-04-14: Examined the dirty worktree for safe cleanup. Removed the recurring stray repo-root `undefined:/` lighthouse scratch tree and added `.gitignore` coverage for `undefined:/` so future temp-path resolution bugs do not keep dirtying the repo. Left the remaining dirt intact because it is substantive in-flight code/doc work, not safe throwaway output.

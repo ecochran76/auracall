@@ -547,6 +547,198 @@ describe('team run CLI helpers', () => {
     });
   });
 
+  it('inspects persisted linkage by team run id', async () => {
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun() {
+        throw new Error('not used');
+      },
+      async inspectRun(runId) {
+        if (runId !== 'runtime_run_3') {
+          return null;
+        }
+        return {
+          record: {
+            runId: 'runtime_run_3',
+            revision: 1,
+            persistedAt: '2026-04-14T16:06:00.000Z',
+            bundle: {
+              run: {
+                id: 'runtime_run_3',
+                sourceKind: 'team-run',
+                sourceId: 'teamrun_3',
+                taskRunSpecId: 'task_spec_3',
+                status: 'running',
+                createdAt: '2026-04-14T16:00:00.000Z',
+                updatedAt: '2026-04-14T16:06:00.000Z',
+                trigger: 'cli',
+                requestedBy: 'auracall teams run',
+                entryPrompt: null,
+                initialInputs: {},
+                sharedStateId: 'shared_3',
+                stepIds: [],
+                policy: { failPolicy: 'fail-fast' },
+              },
+              steps: [],
+              handoffs: [],
+              localActionRequests: [],
+              sharedState: {
+                id: 'shared_3',
+                runId: 'runtime_run_3',
+                status: 'active',
+                artifacts: [],
+                structuredOutputs: [],
+                notes: [],
+                history: [],
+                lastUpdatedAt: '2026-04-14T16:06:00.000Z',
+              },
+              events: [],
+              leases: [],
+            },
+          },
+          dispatchPlan: {
+            run: {} as never,
+            sharedState: {} as never,
+            steps: [],
+            stepsById: {},
+            nextRunnableStepId: null,
+            runnableStepIds: [],
+            deferredStepIds: [],
+            waitingStepIds: [],
+            blockedStepIds: [],
+            blockedByFailureStepIds: [],
+            terminalStepIds: [],
+            runningStepIds: [],
+            missingDependencyStepIds: [],
+          },
+        } as never;
+      },
+      async listRuns() {
+        return [
+          {
+            runId: 'runtime_run_3',
+            revision: 1,
+            persistedAt: '2026-04-14T16:06:00.000Z',
+            bundle: {
+              run: {
+                id: 'runtime_run_3',
+                sourceKind: 'team-run',
+                sourceId: 'teamrun_3',
+                taskRunSpecId: 'task_spec_3',
+                status: 'running',
+                createdAt: '2026-04-14T16:00:00.000Z',
+                updatedAt: '2026-04-14T16:06:00.000Z',
+                trigger: 'cli',
+                requestedBy: 'auracall teams run',
+                entryPrompt: null,
+                initialInputs: {},
+                sharedStateId: 'shared_3',
+                stepIds: [],
+                policy: { failPolicy: 'fail-fast' },
+              },
+              steps: [],
+              handoffs: [],
+              localActionRequests: [],
+              sharedState: {
+                id: 'shared_3',
+                runId: 'runtime_run_3',
+                status: 'active',
+                artifacts: [],
+                structuredOutputs: [],
+                notes: [],
+                history: [],
+                lastUpdatedAt: '2026-04-14T16:06:00.000Z',
+              },
+              events: [],
+              leases: [],
+            },
+          },
+        ] as never;
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+    const taskRunSpecStore: TaskRunSpecRecordStore = {
+      async ensureStorage() {
+        throw new Error('not used');
+      },
+      async writeSpec() {
+        throw new Error('not used');
+      },
+      async readSpec() {
+        throw new Error('not used');
+      },
+      async readRecord(taskRunSpecId) {
+        if (taskRunSpecId !== 'task_spec_3') {
+          return null;
+        }
+        return {
+          taskRunSpecId: 'task_spec_3',
+          revision: 1,
+          persistedAt: '2026-04-14T16:00:00.000Z',
+          spec: {
+            id: 'task_spec_3',
+            teamId: 'auracall-solo',
+            title: 'Team run lookup',
+            objective: 'Inspect by team run id.',
+            createdAt: '2026-04-14T16:00:00.000Z',
+            successCriteria: ['inspect by team run id'],
+            requestedOutputs: [{ label: 'final-response', kind: 'final-response', destination: 'response-body' }],
+            inputArtifacts: [],
+            context: {},
+            overrides: {},
+            requestedBy: { kind: 'cli', label: 'auracall teams run' },
+            trigger: 'cli',
+          } as never,
+        };
+      },
+      async writeRecord() {
+        throw new Error('not used');
+      },
+    };
+
+    const result = await inspectConfiguredTeamRun({
+      teamRunId: 'teamrun_3',
+      control,
+      taskRunSpecStore,
+    });
+
+    expect(result).toMatchObject({
+      resolvedBy: 'team-run-id',
+      queryId: 'teamrun_3',
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: ['runtime_run_3'],
+      taskRunSpecSummary: {
+        id: 'task_spec_3',
+        teamId: 'auracall-solo',
+      },
+      runtime: {
+        runtimeRunId: 'runtime_run_3',
+        teamRunId: 'teamrun_3',
+        taskRunSpecId: 'task_spec_3',
+        runtimeRunStatus: 'running',
+      },
+    });
+  });
+
   it('formats a readable inspection summary', () => {
     const text = formatTeamRunCliInspectionPayload({
       resolvedBy: 'task-run-spec-id',

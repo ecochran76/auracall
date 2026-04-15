@@ -156,6 +156,10 @@ Next recommendation:
 - the bounded internal inspection/readback seam for that persisted linkage is now live on existing response/recovery surfaces
 - the narrow internal debug/inspection command is now live as `auracall teams inspect`
 - the first bounded public read-only team inspection surface is now live as `GET /v1/team-runs/inspect`
+  - current lookup keys:
+    - `taskRunSpecId`
+    - `teamRunId`
+    - `runtimeRunId`
 - next, decide whether a public write/create team-execution surface is justified
 
 Browser reliability maintenance note:

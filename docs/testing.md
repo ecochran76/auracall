@@ -142,6 +142,7 @@
       - keep that fallback explicit on both:
         - `GET /v1/responses/{response_id}`
     - `GET /v1/team-runs/inspect?taskRunSpecId=<task_run_spec_id>`
+    - `GET /v1/team-runs/inspect?teamRunId=<team_run_id>`
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:
       - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
@@ -1239,6 +1240,7 @@
   - `pnpm tsx bin/auracall.ts teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`
   - inspect the persisted linkage from that payload:
     - `pnpm tsx bin/auracall.ts teams inspect --task-run-spec-id <taskRunSpecId> --json`
+    - `pnpm tsx bin/auracall.ts teams inspect --team-run-id <teamRunId> --json`
     - `pnpm tsx bin/auracall.ts teams inspect --runtime-run-id <runtimeRunId> --json`
   - current expected result:
     - real `taskRunSpec` payload
@@ -1271,6 +1273,10 @@
   - current inspect posture:
     - `teams inspect` should read back the same persisted `taskRunSpecSummary`
       and linked runtime run identity without creating a new execution surface
+    - lookup should work by:
+      - `taskRunSpecId`
+      - `teamRunId`
+      - `runtimeRunId`
   - automated provider-backed approval/resume/drain coverage now also exists:
     - `AURACALL_LIVE_TEST=1 AURACALL_CHATGPT_APPROVAL_LIVE_TEST=1 DISPLAY=:0.0 pnpm vitest run tests/live/team-chatgpt-live.test.ts -t "human escalation"`
     - current expected result:

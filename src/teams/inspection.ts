@@ -9,6 +9,7 @@ import {
 
 export interface InspectTeamRunLinkageInput {
   taskRunSpecId?: string | null;
+  teamRunId?: string | null;
   runtimeRunId?: string | null;
   control?: ExecutionRuntimeControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
@@ -38,7 +39,7 @@ export interface TeamRunInspectionRuntimeSummary {
 }
 
 export interface TeamRunInspectionPayload {
-  resolvedBy: 'task-run-spec-id' | 'runtime-run-id';
+  resolvedBy: 'task-run-spec-id' | 'team-run-id' | 'runtime-run-id';
   queryId: string;
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   matchingRuntimeRunCount: number;
@@ -62,16 +63,21 @@ export async function inspectTeamRunLinkage(
   const control = input.control ?? createExecutionRuntimeControl();
   const taskRunSpecStore = input.taskRunSpecStore ?? createTaskRunSpecRecordStore();
   const taskRunSpecId = normalizeOptionalId(input.taskRunSpecId);
+  const teamRunId = normalizeOptionalId(input.teamRunId);
   const runtimeRunId = normalizeOptionalId(input.runtimeRunId);
+  const providedLookupCount = [taskRunSpecId, teamRunId, runtimeRunId].filter(Boolean).length;
 
-  if (!taskRunSpecId && !runtimeRunId) {
-    throw new TeamRunInspectionError('invalid-request', 'Provide --task-run-spec-id or --runtime-run-id.');
-  }
-
-  if (taskRunSpecId && runtimeRunId) {
+  if (providedLookupCount === 0) {
     throw new TeamRunInspectionError(
       'invalid-request',
-      'Choose exactly one lookup key: --task-run-spec-id or --runtime-run-id.',
+      'Provide --task-run-spec-id, --team-run-id, or --runtime-run-id.',
+    );
+  }
+
+  if (providedLookupCount > 1) {
+    throw new TeamRunInspectionError(
+      'invalid-request',
+      'Choose exactly one lookup key: --task-run-spec-id, --team-run-id, or --runtime-run-id.',
     );
   }
 
@@ -92,9 +98,33 @@ export async function inspectTeamRunLinkage(
     });
   }
 
+  if (teamRunId) {
+    const runtimeRecords = (await control.listRuns({ sourceKind: 'team-run' }))
+      .filter((record) => record.bundle.run.sourceId === teamRunId)
+      .sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
+    if (runtimeRecords.length === 0) {
+      throw new TeamRunInspectionError('not-found', `Team run ${teamRunId} was not found.`);
+    }
+    const latestRuntimeRunId = runtimeRecords[0]?.runId;
+    const runtimeInspection = latestRuntimeRunId ? await control.inspectRun(latestRuntimeRunId) : null;
+    const taskRunSpecSummary = runtimeInspection?.record.bundle.run.taskRunSpecId
+      ? await readStoredTaskRunSpecSummary(taskRunSpecStore, runtimeInspection.record.bundle.run.taskRunSpecId)
+      : null;
+    return buildTeamRunInspectionPayload({
+      resolvedBy: 'team-run-id',
+      queryId: teamRunId,
+      taskRunSpecSummary,
+      matchingRuntimeRunIds: runtimeRecords.slice(0, 10).map((record) => record.runId),
+      runtimeInspection,
+    });
+  }
+
   const resolvedTaskRunSpecId = taskRunSpecId;
   if (!resolvedTaskRunSpecId) {
-    throw new TeamRunInspectionError('invalid-request', 'Provide --task-run-spec-id or --runtime-run-id.');
+    throw new TeamRunInspectionError(
+      'invalid-request',
+      'Provide --task-run-spec-id, --team-run-id, or --runtime-run-id.',
+    );
   }
   const taskRunSpecSummary = await readStoredTaskRunSpecSummary(taskRunSpecStore, resolvedTaskRunSpecId);
   if (!taskRunSpecSummary) {
@@ -118,7 +148,7 @@ export async function inspectTeamRunLinkage(
 }
 
 function buildTeamRunInspectionPayload(input: {
-  resolvedBy: 'task-run-spec-id' | 'runtime-run-id';
+  resolvedBy: 'task-run-spec-id' | 'team-run-id' | 'runtime-run-id';
   queryId: string;
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   matchingRuntimeRunIds: string[];

@@ -332,6 +332,7 @@ export async function createResponsesHttpServer(
         try {
           const inspection = await inspectTeamRunLinkage({
             taskRunSpecId: url.searchParams.get('taskRunSpecId'),
+            teamRunId: url.searchParams.get('teamRunId'),
             runtimeRunId: url.searchParams.get('runtimeRunId'),
             control,
           });
@@ -852,7 +853,8 @@ function createHttpStatusResponse(input: {
     routes: {
       status: '/status',
       recoveryDetailTemplate: '/status/recovery/{run_id}',
-      teamRunInspection: '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}',
+      teamRunInspection:
+        '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',

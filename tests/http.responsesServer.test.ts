@@ -2612,6 +2612,144 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('surfaces bounded team-run inspection by team run id over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-teamrun-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const createdAt = '2026-04-14T16:00:00.000Z';
+    const runtimeRunId = 'runtime_http_inspect_teamrun_1';
+    const teamRunId = 'teamrun_http_inspect_teamrun_1';
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_http_inspect_teamrun_1',
+      teamId: 'auracall-two-step',
+      title: 'Inspect HTTP team run',
+      objective: 'Finish one team run.',
+      successCriteria: ['Finish one team run.'],
+      requestedOutputs: [
+        {
+          kind: 'final-response',
+          label: 'final-response',
+          format: 'markdown',
+          required: true,
+          destination: 'response-body',
+        },
+      ],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt,
+    });
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runtimeRunId,
+          sourceKind: 'team-run',
+          sourceId: teamRunId,
+          taskRunSpecId: 'task_spec_http_inspect_teamrun_1',
+          status: 'running',
+          createdAt,
+          updatedAt: '2026-04-14T16:06:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'auracall teams run',
+          entryPrompt: 'Inspect team run id.',
+          initialInputs: {},
+          sharedStateId: `${runtimeRunId}:state`,
+          stepIds: [`${runtimeRunId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runtimeRunId}:step:1`,
+            runId: runtimeRunId,
+            sourceStepId: `${teamRunId}:step:1`,
+            agentId: 'auracall-two-step:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect team run id.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T16:01:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runtimeRunId}:state`,
+          runId: runtimeRunId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T16:06:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?teamRunId=${teamRunId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          taskRunSpecSummary: { id: string };
+          runtime: { runtimeRunId: string; teamRunId: string | null; runtimeRunStatus: string };
+        };
+      };
+      expect(payload.inspection).toMatchObject({
+        resolvedBy: 'team-run-id',
+        queryId: teamRunId,
+        taskRunSpecSummary: {
+          id: 'task_spec_http_inspect_teamrun_1',
+        },
+        runtime: {
+          runtimeRunId,
+          teamRunId,
+          runtimeRunStatus: 'running',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('rejects invalid team-run inspection query shape over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-invalid-'));
     cleanup.push(tmp);
@@ -2624,7 +2762,7 @@ describe('http responses adapter', () => {
       expect(response.status).toBe(400);
       const payload = (await response.json()) as { error: { type: string; message: string } };
       expect(payload.error.type).toBe('invalid_request_error');
-      expect(payload.error.message).toContain('--task-run-spec-id or --runtime-run-id');
+      expect(payload.error.message).toContain('--task-run-spec-id, --team-run-id, or --runtime-run-id');
     } finally {
       await server.close();
     }

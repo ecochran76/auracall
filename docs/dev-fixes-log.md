@@ -12273,4 +12273,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 
 - 2026-04-14: After an internal debug seam proves stable, the first public team execution surface should be read-only inspection, not create/run mutation. Reuse the same bounded linkage payload on HTTP before deciding whether public write semantics are justified.
 
+- 2026-04-14: Once read-only team inspection is live, add the operator-natural lookup ids before considering any public write surface. In this repo, `teamRunId` was the missing first-class key; adding it to the shared inspection helper, CLI, and HTTP route increased utility without widening execution semantics.
+
 - 2026-04-14: Treat repo-root `undefined:/` as disposable temp-path fallout, not source. Safe worktree cleanup is: remove the tree and ignore `undefined:/` in `.gitignore`. Do not sweep broader untracked/modified files in the same turn unless you have explicit intent for the in-flight feature/docs changes.

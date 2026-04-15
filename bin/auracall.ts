@@ -7820,6 +7820,7 @@ teamsCommand
   .command('inspect')
   .description('Inspect persisted task assignment and linked runtime state.')
   .option('--task-run-spec-id <id>', 'Inspect one persisted task run spec and its latest linked runtime run.')
+  .option('--team-run-id <id>', 'Inspect one team run id and its linked persisted task run spec/runtime run.')
   .option('--runtime-run-id <id>', 'Inspect one runtime run and its linked persisted task run spec.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
@@ -7827,6 +7828,10 @@ teamsCommand
       taskRunSpecId:
         typeof commandOptions.taskRunSpecId === 'string' && commandOptions.taskRunSpecId.trim().length > 0
           ? commandOptions.taskRunSpecId.trim()
+          : null,
+      teamRunId:
+        typeof commandOptions.teamRunId === 'string' && commandOptions.teamRunId.trim().length > 0
+          ? commandOptions.teamRunId.trim()
           : null,
       runtimeRunId:
         typeof commandOptions.runtimeRunId === 'string' && commandOptions.runtimeRunId.trim().length > 0
