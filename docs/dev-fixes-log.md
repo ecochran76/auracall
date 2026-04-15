@@ -12384,3 +12384,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `inspectRuntimeRun(...)` test should compare the projected affinity reason
   with `selectStoredExecutionRunLocalClaim(...)` so HTTP route tests cannot
   mask drift in the shared helper.
+- 2026-04-15: Document configured service-account affinity as declarative
+  config evidence, not live browser-account proof. Operator docs should say
+  that `api serve` derives `serviceAccountIds` from configured service identity
+  using `email`, then `handle`, then `name`, and does not live-probe browser
+  account state during runner registration.

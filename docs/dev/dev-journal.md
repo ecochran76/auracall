@@ -16090,6 +16090,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - why this matters:
     - the account-affinity contract is now pinned at the shared inspection
       helper, the HTTP readback route, and the service-host local-claim seam.
+
+## 2026-04-15 - Configured account-affinity docs boundary
+
+- Tightened live operator docs for configured service-account affinity:
+  - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md),
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md),
+    and
+    [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    to state that `service-account:<service>:<identity-key>` affinity is
+    derived from configured service identity only
+  - made the non-goal explicit:
+    - `api serve` does not live-probe the browser account during runner
+      registration
+    - matching affinity proves matching configured account ids, not independent
+      proof of the currently logged-in browser tab
+  - why this matters:
+    - operators can now distinguish configured account affinity from browser
+      account verification when interpreting runtime inspection and local-claim
+      diagnostics.
 ## 2026-04-15 - Targeted drain skipped-note contract cleanup
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:

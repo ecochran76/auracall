@@ -187,6 +187,13 @@ Terminology note:
           `requiredServiceAccountId` uses the same
           `service-account:<service>:<identity-key>` shape as runner
           `serviceAccountIds`
+        - this is declarative config-derived affinity only:
+          - identity key preference is `email`, then `handle`, then `name`
+          - `api serve` does not live-probe the browser account during runner
+            registration
+          - a matching id means the runner is configured for that account, not
+            that the currently logged-in browser tab has been independently
+            verified
       - bounded `runner` summary when:
         - `runnerId` is supplied, or
         - the active lease owner resolves to a persisted runner record

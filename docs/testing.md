@@ -195,6 +195,12 @@
         runtime inspection and local claim evaluation should require the same
         `service-account:<service>:<identity-key>` id that `api serve` runner
         records advertise
+      - this id is derived from config only:
+        - identity key preference is `email`, then `handle`, then `name`
+        - `api serve` does not live-probe the browser account during runner
+          registration
+        - a match proves configured account affinity, not independent proof of
+          the currently logged-in browser tab
     - if `runnerId` is supplied, the same inspection route should also include
       one bounded persisted runner summary and evaluate queue affinity against
       that runner

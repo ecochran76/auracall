@@ -171,6 +171,13 @@ Current limits:
         - configured service identity for the active step service is projected
           into `requiredServiceAccountId` using the same
           `service-account:<service>:<identity-key>` shape as runner metadata
+        - this configured identity is declarative:
+          - identity key preference is `email`, then `handle`, then `name`
+          - `api serve` does not live-probe the browser account during runner
+            registration
+          - matching affinity means the runner and run share the same
+            configured account id, not that the current browser tab account was
+            independently verified
       - bounded `runner` summary when a runner is explicitly queried or the
         active lease owner resolves to a persisted runner record
         - `api serve` derives runner `serviceAccountIds` from configured
