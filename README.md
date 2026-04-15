@@ -153,6 +153,9 @@ Terminology note:
     queue/runner view:
     - required query:
       - `runId`
+      - `runtimeRunId`
+      - `teamRunId`
+      - `taskRunSpecId`
     - optional query:
       - `runnerId`
     - returns:

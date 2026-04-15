@@ -962,7 +962,8 @@ describe('http responses adapter', () => {
         },
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
-          runtimeRunInspection: '/v1/runtime-runs/inspect?runId={run_id}[&runnerId={runner_id}]',
+          runtimeRunInspection:
+            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}]',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -2769,7 +2770,7 @@ describe('http responses adapter', () => {
     }
   });
 
-  it('surfaces bounded runtime queue projection and runner evaluation over HTTP', async () => {
+  it('supports all runtime lookup keys for bounded runtime queue projection over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-'));
     cleanup.push(tmp);
     setAuracallHomeDirOverrideForTest(tmp);
@@ -2777,6 +2778,9 @@ describe('http responses adapter', () => {
     const control = createExecutionRuntimeControl();
     const runnersControl = createExecutionRunnerControl();
     const runId = 'runtime_http_inspect_1';
+    const runtimeRunId = runId;
+    const teamRunId = 'teamrun_http_runtime_inspect_1';
+    const taskRunSpecId = 'task_spec_http_runtime_inspect_1';
     const createdAt = '2026-04-15T12:00:00.000Z';
     const runnerId = 'runner:http-runtime-inspect';
 
@@ -2785,8 +2789,8 @@ describe('http responses adapter', () => {
         run: createExecutionRun({
           id: runId,
           sourceKind: 'team-run',
-          sourceId: 'teamrun_http_runtime_inspect_1',
-          taskRunSpecId: null,
+          sourceId: teamRunId,
+          taskRunSpecId,
           status: 'planned',
           createdAt,
           updatedAt: createdAt,
@@ -2848,11 +2852,69 @@ describe('http responses adapter', () => {
 
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control, runnersControl });
     try {
-      const response = await fetch(
+      const testCases = [
+        {
+          label: 'runId',
+          query: `runId=${runId}`,
+        },
+        {
+          label: 'runtimeRunId',
+          query: `runtimeRunId=${runtimeRunId}`,
+        },
+        {
+          label: 'teamRunId',
+          query: `teamRunId=${teamRunId}`,
+        },
+        {
+          label: 'taskRunSpecId',
+          query: `taskRunSpecId=${taskRunSpecId}`,
+        },
+      ] as const;
+
+      for (const testCase of testCases) {
+        const response = await fetch(`http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?${testCase.query}`);
+        expect(response.status).toBe(200);
+        const payload = (await response.json()) as {
+          object: string;
+          inspection: {
+            queryRunId: string;
+            runtime: {
+              runId: string;
+              teamRunId: string | null;
+              queueProjection: {
+                queueState: string;
+                claimState: string;
+                affinity: { status: string };
+              };
+            };
+            runner: { runnerId: string; selectedBy: string; status: string } | null;
+          };
+        };
+        expect(payload).toMatchObject({
+          object: 'runtime_run_inspection',
+          inspection: {
+            queryRunId: runId,
+            runtime: {
+              runId,
+              teamRunId,
+              queueProjection: {
+                queueState: 'runnable',
+                claimState: 'claimable',
+                affinity: {
+                  status: 'not-evaluated',
+                },
+              },
+            },
+            runner: null,
+          },
+        });
+      }
+
+      const runnerResponse = await fetch(
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=${runnerId}`,
       );
-      expect(response.status).toBe(200);
-      const payload = (await response.json()) as {
+      expect(runnerResponse.status).toBe(200);
+      const runnerPayload = (await runnerResponse.json()) as {
         object: string;
         inspection: {
           queryRunId: string;
@@ -2868,13 +2930,13 @@ describe('http responses adapter', () => {
           runner: { runnerId: string; selectedBy: string; status: string };
         };
       };
-      expect(payload).toMatchObject({
+      expect(runnerPayload).toMatchObject({
         object: 'runtime_run_inspection',
         inspection: {
           queryRunId: runId,
           runtime: {
             runId,
-            teamRunId: 'teamrun_http_runtime_inspect_1',
+            teamRunId,
             queueProjection: {
               queueState: 'runnable',
               claimState: 'claimable',
@@ -2890,6 +2952,24 @@ describe('http responses adapter', () => {
           },
         },
       });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects invalid runtime inspection query shape over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-invalid-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/runtime-runs/inspect`);
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: { type: string; message: string } };
+      expect(payload.error.type).toBe('invalid_request_error');
+      expect(payload.error.message).toContain('Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.');
     } finally {
       await server.close();
     }

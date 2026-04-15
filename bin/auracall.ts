@@ -931,12 +931,27 @@ apiCommand
 apiCommand
   .command('inspect-run')
   .description('Inspect one persisted runtime run and its bounded queue/runner posture.')
-  .requiredOption('--run-id <id>', 'Inspect one persisted runtime run id.')
+  .option('--run-id <id>', 'Inspect one persisted runtime run by runtime run id.')
+  .option('--runtime-run-id <id>', 'Inspect one persisted runtime run by runtime run id (canonical runtime alias).')
+  .option('--team-run-id <id>', 'Inspect the latest persisted runtime run linked to a team run id.')
+  .option('--task-run-spec-id <id>', 'Inspect the latest persisted runtime run linked to a task run spec id.')
   .option('--runner-id <id>', 'Optionally evaluate claim affinity against one persisted runner id.')
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const payload = await inspectConfiguredRuntimeRun({
       runId: commandOptions.runId,
+      runtimeRunId:
+        typeof commandOptions.runtimeRunId === 'string' && commandOptions.runtimeRunId.trim().length > 0
+          ? commandOptions.runtimeRunId.trim()
+          : null,
+      teamRunId:
+        typeof commandOptions.teamRunId === 'string' && commandOptions.teamRunId.trim().length > 0
+          ? commandOptions.teamRunId.trim()
+          : null,
+      taskRunSpecId:
+        typeof commandOptions.taskRunSpecId === 'string' && commandOptions.taskRunSpecId.trim().length > 0
+          ? commandOptions.taskRunSpecId.trim()
+          : null,
       runnerId:
         typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
           ? commandOptions.runnerId.trim()

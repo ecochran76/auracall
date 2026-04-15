@@ -161,8 +161,11 @@ Next recommendation:
     - `teamRunId`
     - `runtimeRunId`
 - the first bounded public read-only runtime queue surface is now live as `GET /v1/runtime-runs/inspect`
-  - required lookup key:
+  - current lookup keys:
     - `runId`
+    - `runtimeRunId`
+    - `teamRunId`
+    - `taskRunSpecId`
   - optional runner evaluation:
     - `runnerId`
 - next, keep public team execution writes paused and only widen read-only runtime inspection if a concrete operator gap remains

@@ -144,6 +144,9 @@
     - `GET /v1/team-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/team-runs/inspect?teamRunId=<team_run_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>`
+    - `GET /v1/runtime-runs/inspect?runtimeRunId=<runtime_run_id>`
+    - `GET /v1/runtime-runs/inspect?teamRunId=<team_run_id>`
+    - `GET /v1/runtime-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&runnerId=<runner_id>`
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:

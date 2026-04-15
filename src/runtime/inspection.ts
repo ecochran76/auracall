@@ -10,6 +10,9 @@ import type { ExecutionRunStoredRecord } from './store.js';
 
 export interface InspectRuntimeRunInput {
   runId?: string | null;
+  runtimeRunId?: string | null;
+  teamRunId?: string | null;
+  taskRunSpecId?: string | null;
   runnerId?: string | null;
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
@@ -65,15 +68,55 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
   const runnersControl = input.runnersControl ?? createExecutionRunnerControl();
   const taskRunSpecStore = input.taskRunSpecStore ?? createTaskRunSpecRecordStore();
   const runId = normalizeOptionalId(input.runId);
+  const runtimeRunId = normalizeOptionalId(input.runtimeRunId);
+  const teamRunId = normalizeOptionalId(input.teamRunId);
+  const taskRunSpecId = normalizeOptionalId(input.taskRunSpecId);
   const requestedRunnerId = normalizeOptionalId(input.runnerId);
 
-  if (!runId) {
-    throw new RuntimeRunInspectionError('invalid-request', 'Provide --run-id.');
+  const providedLookupCount = [runId, runtimeRunId, teamRunId, taskRunSpecId].filter(Boolean).length;
+
+  if (providedLookupCount === 0) {
+    throw new RuntimeRunInspectionError(
+      'invalid-request',
+      'Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.',
+    );
   }
 
-  const runtimeInspection = await control.inspectRun(runId);
+  if (providedLookupCount > 1) {
+    throw new RuntimeRunInspectionError(
+      'invalid-request',
+      'Choose exactly one runtime lookup key: --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.',
+    );
+  }
+
+  const resolvedRunId =
+    runtimeRunId ??
+    runId ??
+    (await resolveRuntimeRunIdForTeamRun(control, teamRunId)) ??
+    (await resolveRuntimeRunIdForTaskRunSpec(control, taskRunSpecId));
+
+  if (resolvedRunId === null) {
+    if (teamRunId) {
+      throw new RuntimeRunInspectionError('not-found', `Team run ${teamRunId} was not found.`);
+    }
+    if (taskRunSpecId) {
+      throw new RuntimeRunInspectionError(
+        'not-found',
+        `No runtime run was found for task run spec ${taskRunSpecId}.`,
+      );
+    }
+    if (runtimeRunId || runId) {
+      throw new RuntimeRunInspectionError(
+        'not-found',
+        `Runtime run ${runtimeRunId ?? runId} was not found.`,
+      );
+    }
+    throw new RuntimeRunInspectionError('not-found', 'No matching runtime run was found.');
+  }
+
+  const runtimeInspection = await control.inspectRun(resolvedRunId);
   if (!runtimeInspection) {
-    throw new RuntimeRunInspectionError('not-found', `Runtime run ${runId} was not found.`);
+    throw new RuntimeRunInspectionError('not-found', `Runtime run ${resolvedRunId} was not found.`);
   }
 
   const selectedRunner = await selectInspectionRunner(runtimeInspection.record, {
@@ -88,7 +131,7 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     : null;
 
   return {
-    queryRunId: runId,
+    queryRunId: resolvedRunId,
     taskRunSpecSummary,
     runtime: {
       runId: runtimeInspection.record.runId,
@@ -121,6 +164,30 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
         }
       : null,
   };
+}
+
+async function resolveRuntimeRunIdForTeamRun(
+  control: ExecutionRuntimeControlContract,
+  teamRunId: string | null,
+): Promise<string | null> {
+  if (!teamRunId) return null;
+  const runtimeRecords = (await control.listRuns({ sourceKind: 'team-run' })).filter(
+    (record) => record.bundle.run.sourceId === teamRunId,
+  );
+  const sorted = runtimeRecords.sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
+  return sorted[0]?.runId ?? null;
+}
+
+async function resolveRuntimeRunIdForTaskRunSpec(
+  control: ExecutionRuntimeControlContract,
+  taskRunSpecId: string | null,
+): Promise<string | null> {
+  if (!taskRunSpecId) return null;
+  const runtimeRecords = (await control.listRuns()).filter(
+    (record) => record.bundle.run.taskRunSpecId === taskRunSpecId,
+  );
+  const sorted = runtimeRecords.sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
+  return sorted[0]?.runId ?? null;
 }
 
 async function selectInspectionRunner(

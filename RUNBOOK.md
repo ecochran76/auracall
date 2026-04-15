@@ -58,3 +58,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts proj
 DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts projects files remove <projectId> <file> --target grok
 DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts files remove <fileId> --target grok
 ```
+
+## Turn 5 | 2026-04-15
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Goal: keep the public runtime inspection contract aligned across CLI, HTTP,
+  tests, and governing docs without widening execution semantics.
+- Completed:
+  - widened `auracall api inspect-run` and `GET /v1/runtime-runs/inspect` to
+    accept exactly one of:
+    - `runId`
+    - `runtimeRunId`
+    - `teamRunId`
+    - `taskRunSpecId`
+  - preserved `runnerId` as the optional affinity-evaluation input
+  - added focused CLI and HTTP coverage for the new lookup aliases plus
+    invalid-request shape checks
+  - synchronized `README.md`, `docs/testing.md`, `ROADMAP.md`, and the active
+    execution plan with the same lookup-key contract
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+  - `pnpm plans:audit`

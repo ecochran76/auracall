@@ -1,3 +1,31 @@
+## 2026-04-15 - Runtime inspection contract doc alignment
+
+- Completed cross-authority doc alignment for the public runtime inspection API:
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) and
+    [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) to match the current runtime lookup keys:
+    - `runId`
+    - `runtimeRunId`
+    - `teamRunId`
+    - `taskRunSpecId`
+  - kept `runnerId` as the optional affinity evaluation input, consistent with
+    implementation and CLI/HTTP behavior.
+
+## 2026-04-15 - Runtime inspect alias contract alignment
+
+- Completed focused documentation-and-test alignment for runtime run inspection aliases:
+  - Updated [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts) so
+    `GET /v1/runtime-runs/inspect` is now validated for:
+    - `runId`
+    - `runtimeRunId`
+    - `teamRunId`
+    - `taskRunSpecId`
+  - Kept and preserved `runId`+`runnerId` runner-aware affinity evaluation coverage.
+  - Added explicit invalid-shape HTTP assertion for missing runtime lookup keys with
+    `Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.`
+  - Updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
+    runtime inspect sections to match the same four-lookup contract.
+
 ## 2026-04-13 - Live-suite consolidation tier map
 
 - Current focus:

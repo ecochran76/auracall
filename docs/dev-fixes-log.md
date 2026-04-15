@@ -1,3 +1,17 @@
+- 2026-04-15: Realigned runtime inspection contracts across route handler tests and operator docs after introducing additional runtime lookup aliases in the route template:
+  - added `GET /v1/runtime-runs/inspect` coverage for `runId`, `runtimeRunId`,
+    `teamRunId`, and `taskRunSpecId` in
+    [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - retained and preserved the `runId` + `runnerId` affinity-check path, so
+    runner-aware projection is still locked.
+  - added explicit HTTP invalid-shape assertion requiring one lookup key with
+    message `Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.`
+  - synchronized [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
+    [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md) runtime inspect query guidance to the same supported keys.
+  - also synchronized planning authority docs so [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md) and
+    [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+    now list the current runtime lookup key set, preventing planner/implementation drift.
+
 - 2026-04-13: A roadmap reassessment is not operational until it names the
   concrete live suites that belong in each tier. The durable live-suite split
   for the current phase is:

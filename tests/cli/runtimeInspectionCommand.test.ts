@@ -23,40 +23,41 @@ describe('runtime inspection CLI helpers', () => {
     await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
   });
 
-  it('inspects one runtime run with bounded queue projection and runner evaluation', async () => {
-    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-'));
-    cleanup.push(homeDir);
-    setAuracallHomeDirOverrideForTest(homeDir);
-
-    const control = createExecutionRuntimeControl();
-    const runnersControl = createExecutionRunnerControl();
-    const runId = 'runtime_cli_inspect_1';
-    const createdAt = '2026-04-15T12:00:00.000Z';
-    const runnerId = 'runner:cli-inspect';
-
+  const seedRuntimeRun = async (
+    control: ReturnType<typeof createExecutionRuntimeControl>,
+    input: {
+      runId: string;
+      sourceKind: 'direct' | 'team-run';
+      sourceId?: string | null;
+      taskRunSpecId?: string | null;
+      createdAt: string;
+      trigger?: 'cli' | 'api';
+    },
+  ) => {
+    const stepId = `${input.runId}:step:1`;
     await control.createRun(
       createExecutionRunRecordBundle({
         run: createExecutionRun({
-          id: runId,
-          sourceKind: 'team-run',
-          sourceId: 'teamrun_cli_inspect_1',
-          taskRunSpecId: null,
+          id: input.runId,
+          sourceKind: input.sourceKind,
+          sourceId: input.sourceId ?? (input.sourceKind === 'team-run' ? `${input.runId}:team` : null),
+          taskRunSpecId: input.taskRunSpecId ?? null,
           status: 'planned',
-          createdAt,
-          updatedAt: createdAt,
-          trigger: 'cli',
+          createdAt: input.createdAt,
+          updatedAt: input.createdAt,
+          trigger: input.trigger ?? 'cli',
           requestedBy: 'auracall teams run',
           entryPrompt: 'Inspect runtime run.',
           initialInputs: {},
-          sharedStateId: `${runId}:state`,
-          stepIds: [`${runId}:step:1`],
+          sharedStateId: `${input.runId}:state`,
+          stepIds: [stepId],
           policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
         }),
         steps: [
           createExecutionRunStep({
-            id: `${runId}:step:1`,
-            runId,
-            sourceStepId: 'teamrun_cli_inspect_1:step:1',
+            id: stepId,
+            runId: input.runId,
+            sourceStepId: `${input.sourceId ?? 'teamrun_cli_inspect'}:step:1`,
             agentId: 'agent:1',
             runtimeProfileId: 'default',
             browserProfileId: null,
@@ -75,18 +76,38 @@ describe('runtime inspection CLI helpers', () => {
           }),
         ],
         sharedState: createExecutionRunSharedState({
-          id: `${runId}:state`,
-          runId,
+          id: `${input.runId}:state`,
+          runId: input.runId,
           status: 'active',
           artifacts: [],
           structuredOutputs: [],
           notes: [],
           history: [],
-          lastUpdatedAt: createdAt,
+          lastUpdatedAt: input.createdAt,
         }),
         events: [],
       }),
     );
+  };
+
+  it('inspects one runtime run with bounded queue projection and runner evaluation', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_cli_inspect_1';
+    const createdAt = '2026-04-15T12:00:00.000Z';
+    const runnerId = 'runner:cli-inspect';
+
+    await seedRuntimeRun(control, {
+      runId,
+      sourceKind: 'team-run',
+      sourceId: 'teamrun_cli_inspect_1',
+      createdAt,
+      trigger: 'cli',
+    });
     await runnersControl.registerRunner({
       runner: createExecutionRunnerRecord({
         id: runnerId,
@@ -130,6 +151,126 @@ describe('runtime inspection CLI helpers', () => {
         status: 'active',
       },
     });
+  });
+
+  it('resolves runtime inspection by team run id alias', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-team-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_cli_team_alias_inspect';
+    const teamRunId = 'teamrun_cli_alias_inspect';
+    const createdAt = '2026-04-15T12:01:00.000Z';
+
+    await seedRuntimeRun(control, {
+      runId,
+      sourceKind: 'team-run',
+      sourceId: teamRunId,
+      createdAt,
+      trigger: 'cli',
+    });
+
+    const payload = await inspectConfiguredRuntimeRun({
+      teamRunId,
+      control,
+    });
+
+    expect(payload).toMatchObject({
+      queryRunId: runId,
+      runtime: {
+        runId,
+        teamRunId,
+      },
+    });
+  });
+
+  it('resolves runtime inspection by runtimeRunId alias', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-runtime-id-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_cli_runtime_id_alias';
+    const createdAt = '2026-04-15T12:02:00.000Z';
+
+    await seedRuntimeRun(control, {
+      runId,
+      sourceKind: 'direct',
+      createdAt,
+      trigger: 'api',
+    });
+
+    const payload = await inspectConfiguredRuntimeRun({
+      runtimeRunId: runId,
+      control,
+    });
+
+    expect(payload).toMatchObject({
+      queryRunId: runId,
+      runtime: {
+        runId,
+      },
+    });
+  });
+
+  it('resolves runtime inspection by task run spec id alias', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-task-spec-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_cli_task_spec_alias';
+    const taskRunSpecId = 'task_spec_cli_alias';
+    const createdAt = '2026-04-15T12:03:00.000Z';
+
+    await seedRuntimeRun(control, {
+      runId,
+      sourceKind: 'team-run',
+      sourceId: 'teamrun_cli_task_alias',
+      taskRunSpecId,
+      createdAt,
+      trigger: 'cli',
+    });
+
+    const payload = await inspectConfiguredRuntimeRun({
+      taskRunSpecId,
+      control,
+    });
+
+    expect(payload).toMatchObject({
+      queryRunId: runId,
+      runtime: {
+        runId,
+        taskRunSpecId,
+      },
+    });
+  });
+
+  it('errors when no runtime lookup key is provided', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-no-key-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    await expect(
+      inspectConfiguredRuntimeRun({
+        control: createExecutionRuntimeControl(),
+      }),
+    ).rejects.toThrow('Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.');
+  });
+
+  it('errors when multiple runtime lookup keys are provided', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-multi-key-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    await expect(
+      inspectConfiguredRuntimeRun({
+        runId: 'runtime_cli_multi_1',
+        teamRunId: 'teamrun_cli_multi_1',
+        control: createExecutionRuntimeControl(),
+      }),
+    ).rejects.toThrow('Choose exactly one runtime lookup key: --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.');
   });
 
   it('formats bounded runtime inspection payload for operators', () => {
