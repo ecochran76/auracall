@@ -1,3 +1,20 @@
+## 2026-04-15 - OpenAI endpoint doc authority realignment
+
+- Completed one bounded secondary-doc authority cleanup:
+  - updated [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+    to match the current tested local server surface for:
+    - `GET /status`
+    - `GET /status/recovery/{run_id}`
+    - `GET /v1/team-runs/inspect`
+    - `GET /v1/runtime-runs/inspect`
+  - added missing inspection endpoint coverage to the doc and synchronized
+    newer compact fields such as:
+    - `statusByRunId`
+    - runtime queue projection lease/affinity fields
+    - recovery-detail `taskRunSpecSummary`, `handoffTransferSummary`, and
+      bounded attention kinds
+  - kept this slice documentation-only; no runtime behavior changed.
+
 ## 2026-04-15 - Runtime inspection queue projection rendering
 
 - Completed one bounded runtime-inspection operator-surface refinement:

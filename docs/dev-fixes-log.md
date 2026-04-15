@@ -1,3 +1,13 @@
+- 2026-04-15: Keep secondary endpoint authority docs aligned with the tested local server surface; do not let `docs/openai-endpoints.md` lag behind `README.md`, `docs/testing.md`, and route-handler tests.
+  - The durable rule for this seam is:
+    - if the local dev server adds or reshapes bounded inspection/readback
+      fields, update secondary endpoint docs in the same pass or immediately
+      after the primary contract docs
+  - This is especially important for:
+    - `GET /v1/team-runs/inspect`
+    - `GET /v1/runtime-runs/inspect`
+    - compact `/status.localClaimSummary` fields like `statusByRunId`
+
 - 2026-04-15: If runtime inspection already returns bounded queue-projection lease and affinity requirement fields, preserve them in the operator-facing formatter and docs instead of collapsing them to queue/claim/affinity status alone.
   - Runtime inspection CLI now also renders:
     - `activeLeaseId`

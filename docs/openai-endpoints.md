@@ -27,6 +27,8 @@ Current endpoints:
 
 - `GET /status`
 - `GET /status/recovery/{run_id}`
+- `GET /v1/team-runs/inspect`
+- `GET /v1/runtime-runs/inspect`
 - `GET /v1/models`
 - `POST /v1/responses`
 - `GET /v1/responses/{response_id}`
@@ -62,6 +64,7 @@ Current limits:
     - `blockedRunIds`
     - `notReadyRunIds`
     - `unavailableRunIds`
+    - `statusByRunId`
     - `reasonsByRunId`
   - when called with `?recovery=1` (or `?recovery=true`) it also returns:
     - `recoverySummary.totalRuns`
@@ -75,6 +78,7 @@ Current limits:
       - `blockedRunIds`
       - `notReadyRunIds`
       - `unavailableRunIds`
+      - `statusByRunId`
       - `reasonsByRunId`
     - bounded active-lease health in `recoverySummary.activeLeaseHealth`:
       - `freshRunIds`
@@ -90,6 +94,7 @@ Current limits:
   - `GET /status/recovery/{run_id}` returns one bounded per-run recovery
     detail view with:
     - `taskRunSpecId`
+    - bounded `taskRunSpecSummary`
     - `orchestrationTimelineSummary`
       - derived from selected relevant durable `sharedState.history` entries
       - `total`
@@ -99,46 +104,98 @@ Current limits:
         - `stepId`
         - `note`
         - `handoffId`
+    - bounded `handoffTransferSummary`
     - current host classification
     - active lease snapshot
     - dispatch posture
     - reconciliation / repair posture and reasons
-    - active-lease health under `leaseHealth`, including whether the lease looks fresh, stale-heartbeat, or suspiciously idle
-    - bounded host drain now also treats `stale-heartbeat` as its own skip posture; `suspiciously-idle` remains diagnostic only
-    - `POST /status` now also accepts one bounded stale-heartbeat lease repair action:
+      - including bounded `reconciliationReason`
+    - active-lease health under `leaseHealth`, including whether the lease
+      looks fresh, stale-heartbeat, or suspiciously idle
+    - bounded operator attention:
+      - `attention.kind = stale-heartbeat-inspect-only|suspiciously-idle`
+    - bounded cancellation readback:
+      - `cancellation.cancelledAt`
+      - `cancellation.source`
+      - `cancellation.reason`
+    - configured local runner claim posture under `localClaim`, including:
+      - `status`
+      - `selected`
+      - `queueState`
+      - `claimState`
+      - `affinityStatus`
+      - `affinityReason`
+  - `GET /v1/team-runs/inspect` returns one bounded read-only team linkage
+    view:
+    - query by `taskRunSpecId=<task_run_spec_id>`,
+      `teamRunId=<team_run_id>`, or `runtimeRunId=<runtime_run_id>`
+    - returns:
+      - `resolvedBy`
+      - `queryId`
+      - bounded `taskRunSpecSummary`
+      - bounded linkage to the selected runtime run
+  - `GET /v1/runtime-runs/inspect` returns one bounded read-only runtime
+    queue/runner view:
+    - query by exactly one of:
+      - `runId`
+      - `runtimeRunId`
+      - `teamRunId`
+      - `taskRunSpecId`
+    - optional:
+      - `runnerId`
+    - returns:
+      - `resolvedBy`
+      - `queryId`
+      - `queryRunId`
+      - `matchingRuntimeRunCount`
+      - bounded `matchingRuntimeRunIds`
+      - bounded `taskRunSpecSummary` when task-backed
+      - `runtime.queueProjection` with:
+        - `queueState`
+        - `claimState`
+        - `nextRunnableStepId`
+        - `activeLeaseId`
+        - `activeLeaseOwnerId`
+        - active/waiting/running/deferred/terminal step ids
+        - bounded affinity posture:
+          - `status`
+          - `reason`
+          - `requiredService`
+          - `requiredRuntimeProfileId`
+          - `requiredBrowserProfileId`
+          - `requiredHostId`
+          - `hostRequirement`
+          - `requiredServiceAccountId`
+          - `browserRequired`
+          - `eligibilityNote`
+      - bounded `runner` summary when a runner is explicitly queried or the
+        active lease owner resolves to a persisted runner record
+  - `POST /status` now also accepts bounded operator actions:
+    - stale-heartbeat lease repair:
       - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`
-      - it only succeeds when the run is currently `stale-heartbeat` and already `locally-reclaimable` by the existing durable repair policy
+      - only succeeds when the run is currently `stale-heartbeat` and already
+        `locally-reclaimable`
       - `suspiciously-idle` remains read-only and is rejected by that action
-    - `POST /status` now also accepts one bounded local run-cancel action:
+    - local run cancel:
       - `{"runControl":{"action":"cancel-run","runId":"..."}}`
-      - it only succeeds for active runs currently owned by the local configured runner/host
-      - successful cancellation releases the active lease with release reason `cancelled`
-      - inactive or not-owned runs are rejected cleanly
-    - `POST /status` now also accepts one bounded human-escalation resume action:
+      - only succeeds for active runs currently owned by the local configured
+        runner/host
+      - successful cancellation releases the active lease with release reason
+        `cancelled`
+    - human-escalation resume:
       - `{"runControl":{"action":"resume-human-escalation","runId":"...","note":"...","guidance":{...},"override":{"promptAppend":"...","structuredContext":{...}}}}`
-      - it only succeeds for direct or team runs currently paused for human escalation
-      - successful resume returns the cancelled human-escalation step to `runnable`
-      - runs without a paused human-escalation step are rejected cleanly
-    - `POST /status` now also accepts one bounded targeted drain action:
+      - only succeeds for direct or team runs currently paused for human
+        escalation
+    - targeted drain:
       - `{"runControl":{"action":"drain-run","runId":"..."}}`
-      - it only succeeds for direct or team runs
-      - successful drain runs one targeted host-owned execution pass for that run
-      - skipped or non-runnable runs are rejected cleanly
-    - `POST /status` now also accepts one bounded local-action request resolution action:
+      - only succeeds for direct or team runs
+    - local-action request resolution:
       - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
-      - it only succeeds for currently `requested` local action records on direct or team runs
-      - already-resolved requests are rejected cleanly
-    - recovery summary/detail now also surface bounded attention for stale-heartbeat cases that remain `inspect-only`
-    - recovery summary/detail now also surface bounded cancellation readback:
-      - `recoverySummary.cancelledRunIds`
-      - `recoverySummary.cancellation.reasonsByRunId`
-      - per-run `cancellation.cancelledAt`
-      - per-run `cancellation.source`
-      - per-run `cancellation.reason`
-    - startup recovery logs now also emit `attention=stale-heartbeat-inspect-only:<count>` when such cases remain after the bounded startup pass
-    - configured local runner claim posture under `localClaim`, including whether the configured local runner is selected
-    - optional `sourceKind` filter (`direct`, `team-run`, or `all`), defaulting to
-      `direct`
+      - only succeeds for currently `requested` local action records on direct
+        or team runs
+  - startup recovery logs now also emit:
+    - `attention=stale-heartbeat-inspect-only:<count>`
+    - `attention=suspiciously-idle:<count>`
 - optional `X-AuraCall-*` headers for execution hints:
   - `X-AuraCall-Runtime-Profile`
   - `X-AuraCall-Agent`
