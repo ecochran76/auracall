@@ -5765,6 +5765,73 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('preserves the specific local-claim reason when POST /status targeted drain is skipped', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-drain-skip-reason-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(
+      control,
+      'status_drain_run_missing_runner',
+      '2026-04-15T15:00:00.000Z',
+      'Targeted drain should preserve the missing-runner reason.',
+    );
+
+    const executionHost = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      runnerId: 'runner:missing-http-drain',
+      now: () => '2026-04-15T15:05:00.000Z',
+    });
+
+    const drainResult = await executionHost.drainRun('status_drain_run_missing_runner');
+    expect(drainResult).toMatchObject({
+      action: 'drain-run',
+      runId: 'status_drain_run_missing_runner',
+      status: 'skipped',
+      drained: false,
+      reason: 'runner runner:missing-http-drain has no persisted runner record',
+      skipReason: 'claim-owner-unavailable',
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        executionHost,
+        now: () => new Date('2026-04-15T15:05:00.000Z'),
+      },
+    );
+
+    try {
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/status_drain_run_missing_runner`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: 'status_drain_run_missing_runner',
+        status: 'in_progress',
+        metadata: {
+          executionSummary: {
+            operatorControlSummary: {
+              targetedDrain: {
+                requestedAt: '2026-04-15T15:05:00.000Z',
+                status: 'skipped',
+                reason: 'runner runner:missing-http-drain has no persisted runner record',
+                skipReason: 'claim-owner-unavailable',
+              },
+            },
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces bounded operator control summary through the same responses surface', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-summary-'));
     cleanup.push(homeDir);

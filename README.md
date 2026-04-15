@@ -455,7 +455,11 @@ Terminology note:
       - `targetedDrain.requestedAt`
       - `targetedDrain.status`
       - `targetedDrain.reason`
+        - preserves the specific local-claim explanation when targeted drain
+          cannot safely claim a run
       - `targetedDrain.skipReason`
+        - keeps the bounded coarse skip enum such as
+          `claim-owner-unavailable`
     - cancelled terminal reads now also include
       `metadata.executionSummary.cancellationSummary` with:
       - `cancelledAt`

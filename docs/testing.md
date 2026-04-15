@@ -119,7 +119,9 @@
           `expiredLeaseRunIds`
     - response/readback should preserve both targeted-drain outcomes:
       - `operatorControlSummary.targetedDrain.status = executed|skipped`
-      - skipped targeted drain keeps `reason = skipReason`
+      - skipped targeted drain keeps `skipReason = claim-owner-unavailable`
+      - `reason` should preserve the specific local-claim explanation when one
+        is available
       - recovery detail timeline retains the persisted skipped drain note
     - when multiple resume/drain operator-control entries exist on one run,
       response readback should prefer the latest persisted resume summary and

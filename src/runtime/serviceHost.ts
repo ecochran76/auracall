@@ -70,6 +70,7 @@ export interface DrainedStoredExecutionRunResult {
     | 'no-runnable-step'
     | 'stranded-running-no-lease'
     | 'limit-reached';
+  detailReason?: string | null;
   record?: ExecutionRunStoredRecord;
 }
 
@@ -978,7 +979,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         runId,
         now(),
         'skipped',
-        entry.reason ?? 'run was skipped by targeted host drain',
+        entry.detailReason ?? entry.reason ?? 'run was skipped by targeted host drain',
         entry.reason ?? null,
       );
       return {
@@ -986,7 +987,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         runId,
         status: 'skipped',
         drained: false,
-        reason: entry.reason ?? 'run was skipped by targeted host drain',
+        reason: entry.detailReason ?? entry.reason ?? 'run was skipped by targeted host drain',
         skipReason: entry.reason ?? null,
       };
     },
@@ -1213,6 +1214,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               runId: currentRecord.runId,
               result: 'skipped',
               reason: 'claim-owner-unavailable',
+              detailReason: localClaim?.reason ?? 'claim-owner-unavailable',
               record: inspection.record,
             });
             continue;

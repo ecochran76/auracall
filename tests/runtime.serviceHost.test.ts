@@ -615,6 +615,7 @@ describe('runtime service host', () => {
         runId: 'run_host_runner_missing',
         result: 'skipped',
         reason: 'claim-owner-unavailable',
+        detailReason: 'runner runner:missing-http has no persisted runner record',
       }),
     ]);
 
@@ -1359,7 +1360,7 @@ describe('runtime service host', () => {
       runId: 'run_host_team_targeted_drain_claim_blocked',
       status: 'skipped',
       drained: false,
-      reason: 'claim-owner-unavailable',
+      reason: 'runner runner:missing-team-drain has no persisted runner record',
       skipReason: 'claim-owner-unavailable',
     });
 
