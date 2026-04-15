@@ -1,3 +1,10 @@
+- 2026-04-15: If an inspection alias resolves through a latest-match strategy, surface a bounded candidate summary in the same payload.
+  - Runtime inspection now also returns:
+    - `matchingRuntimeRunCount`
+    - bounded `matchingRuntimeRunIds`
+  - This makes `teamRunId` and `taskRunSpecId` lookup behavior auditable
+    without widening the route into a broader recovery or history endpoint.
+
 - 2026-04-15: When a read-only inspection surface accepts alias lookup keys, preserve the alias provenance in the payload instead of returning only the resolved canonical id.
   - Runtime inspection now returns:
     - `resolvedBy`

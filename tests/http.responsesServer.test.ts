@@ -2880,6 +2880,8 @@ describe('http responses adapter', () => {
             resolvedBy: string;
             queryId: string;
             queryRunId: string;
+            matchingRuntimeRunCount: number;
+            matchingRuntimeRunIds: string[];
             runtime: {
               runId: string;
               teamRunId: string | null;
@@ -2912,6 +2914,8 @@ describe('http responses adapter', () => {
                     ? teamRunId
                     : taskRunSpecId,
             queryRunId: runId,
+            matchingRuntimeRunCount: 1,
+            matchingRuntimeRunIds: [runId],
             runtime: {
               runId,
               teamRunId,
@@ -2938,6 +2942,8 @@ describe('http responses adapter', () => {
           resolvedBy: string;
           queryId: string;
           queryRunId: string;
+          matchingRuntimeRunCount: number;
+          matchingRuntimeRunIds: string[];
           runtime: {
             runId: string;
             teamRunId: string | null;
@@ -2956,6 +2962,8 @@ describe('http responses adapter', () => {
           resolvedBy: 'run-id',
           queryId: runId,
           queryRunId: runId,
+          matchingRuntimeRunCount: 1,
+          matchingRuntimeRunIds: [runId],
           runtime: {
             runId,
             teamRunId,
@@ -2992,6 +3000,161 @@ describe('http responses adapter', () => {
       const payload = (await response.json()) as { error: { type: string; message: string } };
       expect(payload.error.type).toBe('invalid_request_error');
       expect(payload.error.message).toContain('Provide --run-id, --runtime-run-id, --team-run-id, or --task-run-spec-id.');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('reports bounded candidate matches for alias-based runtime inspection over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-matches-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const teamRunId = 'teamrun_http_runtime_matches';
+    const taskRunSpecId = 'task_spec_http_runtime_matches';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: 'runtime_http_matches_old',
+          sourceKind: 'team-run',
+          sourceId: teamRunId,
+          taskRunSpecId,
+          status: 'planned',
+          createdAt: '2026-04-15T12:00:00.000Z',
+          updatedAt: '2026-04-15T12:00:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect older runtime queue projection.',
+          initialInputs: {},
+          sharedStateId: 'runtime_http_matches_old:state',
+          stepIds: ['runtime_http_matches_old:step:1'],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: 'runtime_http_matches_old:step:1',
+            runId: 'runtime_http_matches_old',
+            sourceStepId: 'teamrun_http_runtime_matches:step:1',
+            agentId: 'agent:inspect',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect older runtime queue projection.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: 'runtime_http_matches_old:state',
+          runId: 'runtime_http_matches_old',
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-15T12:00:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: 'runtime_http_matches_new',
+          sourceKind: 'team-run',
+          sourceId: teamRunId,
+          taskRunSpecId,
+          status: 'planned',
+          createdAt: '2026-04-15T12:01:00.000Z',
+          updatedAt: '2026-04-15T12:01:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect newer runtime queue projection.',
+          initialInputs: {},
+          sharedStateId: 'runtime_http_matches_new:state',
+          stepIds: ['runtime_http_matches_new:step:1'],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: 'runtime_http_matches_new:step:1',
+            runId: 'runtime_http_matches_new',
+            sourceStepId: 'teamrun_http_runtime_matches:step:1',
+            agentId: 'agent:inspect',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect newer runtime queue projection.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: 'runtime_http_matches_new:state',
+          runId: 'runtime_http_matches_new',
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-15T12:01:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?teamRunId=${teamRunId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        object: string;
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          queryRunId: string;
+          matchingRuntimeRunCount: number;
+          matchingRuntimeRunIds: string[];
+          runtime: {
+            runId: string;
+            taskRunSpecId: string | null;
+          };
+        };
+      };
+      expect(payload).toMatchObject({
+        object: 'runtime_run_inspection',
+        inspection: {
+          resolvedBy: 'team-run-id',
+          queryId: teamRunId,
+          queryRunId: 'runtime_http_matches_new',
+          matchingRuntimeRunCount: 2,
+          matchingRuntimeRunIds: ['runtime_http_matches_new', 'runtime_http_matches_old'],
+          runtime: {
+            runId: 'runtime_http_matches_new',
+            taskRunSpecId,
+          },
+        },
+      });
     } finally {
       await server.close();
     }

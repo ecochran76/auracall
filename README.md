@@ -162,6 +162,9 @@ Terminology note:
       - `resolvedBy`
       - `queryId`
       - `queryRunId`
+      - bounded alias match summary:
+        - `matchingRuntimeRunCount`
+        - `matchingRuntimeRunIds`
       - bounded `taskRunSpecSummary` when the runtime run is task-backed
       - `runtime.queueProjection` with:
         - `queueState`

@@ -96,3 +96,19 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     same bounded response contract
 - Verification target:
   - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+
+## Turn 7 | 2026-04-15
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Goal: keep runtime inspection alias resolution auditable when one alias can
+  map to multiple persisted runtime runs.
+- Completed:
+  - added bounded alias match summary to runtime inspection payloads:
+    - `matchingRuntimeRunCount`
+    - `matchingRuntimeRunIds`
+  - kept the route read-only and bounded to the latest resolved runtime run
+    plus a compact candidate summary
+  - synchronized CLI formatting, focused HTTP/CLI tests, and operator docs
+    with the same bounded match-summary contract
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`

@@ -14,6 +14,7 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
     `- Resolved by: ${payload.resolvedBy}`,
     `- Query: ${payload.queryId}`,
     `- Query run id: ${payload.queryRunId}`,
+    `- Matching runtime runs: ${payload.matchingRuntimeRunCount}`,
     `- Runtime run: ${payload.runtime.runId}`,
     `- Source: ${payload.runtime.sourceKind}`,
     `- Status: ${payload.runtime.runStatus}`,
@@ -21,6 +22,10 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
     `- Team run id: ${payload.runtime.teamRunId ?? '(none)'}`,
     `- Task run spec id: ${payload.runtime.taskRunSpecId ?? '(none)'}`,
   ];
+
+  if (payload.matchingRuntimeRunIds.length > 1) {
+    lines.push(`- Matching runtime run ids: ${payload.matchingRuntimeRunIds.join(', ')}`);
+  }
 
   if (payload.taskRunSpecSummary) {
     lines.push(

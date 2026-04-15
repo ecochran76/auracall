@@ -132,6 +132,8 @@ describe('runtime inspection CLI helpers', () => {
       resolvedBy: 'run-id',
       queryId: runId,
       queryRunId: runId,
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: [runId],
       runtime: {
         runId,
         teamRunId: 'teamrun_cli_inspect_1',
@@ -182,6 +184,8 @@ describe('runtime inspection CLI helpers', () => {
       resolvedBy: 'team-run-id',
       queryId: teamRunId,
       queryRunId: runId,
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: [runId],
       runtime: {
         runId,
         teamRunId,
@@ -214,6 +218,8 @@ describe('runtime inspection CLI helpers', () => {
       resolvedBy: 'runtime-run-id',
       queryId: runId,
       queryRunId: runId,
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: [runId],
       runtime: {
         runId,
       },
@@ -248,8 +254,54 @@ describe('runtime inspection CLI helpers', () => {
       resolvedBy: 'task-run-spec-id',
       queryId: taskRunSpecId,
       queryRunId: runId,
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: [runId],
       runtime: {
         runId,
+        taskRunSpecId,
+      },
+    });
+  });
+
+  it('reports bounded candidate matches for alias-based runtime inspection', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-cli-runtime-inspect-matches-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const teamRunId = 'teamrun_cli_alias_matches';
+    const taskRunSpecId = 'task_spec_cli_alias_matches';
+
+    await seedRuntimeRun(control, {
+      runId: 'runtime_cli_alias_old',
+      sourceKind: 'team-run',
+      sourceId: teamRunId,
+      taskRunSpecId,
+      createdAt: '2026-04-15T12:01:00.000Z',
+      trigger: 'cli',
+    });
+    await seedRuntimeRun(control, {
+      runId: 'runtime_cli_alias_new',
+      sourceKind: 'team-run',
+      sourceId: teamRunId,
+      taskRunSpecId,
+      createdAt: '2026-04-15T12:02:00.000Z',
+      trigger: 'cli',
+    });
+
+    const payload = await inspectConfiguredRuntimeRun({
+      teamRunId,
+      control,
+    });
+
+    expect(payload).toMatchObject({
+      resolvedBy: 'team-run-id',
+      queryId: teamRunId,
+      queryRunId: 'runtime_cli_alias_new',
+      matchingRuntimeRunCount: 2,
+      matchingRuntimeRunIds: ['runtime_cli_alias_new', 'runtime_cli_alias_old'],
+      runtime: {
+        runId: 'runtime_cli_alias_new',
         taskRunSpecId,
       },
     });
@@ -286,6 +338,8 @@ describe('runtime inspection CLI helpers', () => {
       resolvedBy: 'team-run-id',
       queryId: 'teamrun_cli_inspect_2',
       queryRunId: 'runtime_cli_inspect_2',
+      matchingRuntimeRunCount: 2,
+      matchingRuntimeRunIds: ['runtime_cli_inspect_2', 'runtime_cli_inspect_1'],
       taskRunSpecSummary: null,
       runtime: {
         runId: 'runtime_cli_inspect_2',
@@ -332,6 +386,8 @@ describe('runtime inspection CLI helpers', () => {
     expect(rendered).toContain('AuraCall runtime inspection');
     expect(rendered).toContain('Resolved by: team-run-id');
     expect(rendered).toContain('Query: teamrun_cli_inspect_2');
+    expect(rendered).toContain('Matching runtime runs: 2');
+    expect(rendered).toContain('Matching runtime run ids: runtime_cli_inspect_2, runtime_cli_inspect_1');
     expect(rendered).toContain('Queue state: active-lease');
     expect(rendered).toContain('Affinity status: not-evaluated');
   });

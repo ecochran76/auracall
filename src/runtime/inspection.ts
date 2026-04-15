@@ -50,6 +50,8 @@ export interface RuntimeRunInspectionPayload {
   resolvedBy: 'run-id' | 'runtime-run-id' | 'team-run-id' | 'task-run-spec-id';
   queryId: string;
   queryRunId: string;
+  matchingRuntimeRunCount: number;
+  matchingRuntimeRunIds: string[];
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   runtime: RuntimeRunInspectionRuntimeSummary;
   runner: RuntimeRunInspectionRunnerSummary | null;
@@ -108,11 +110,15 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     );
   }
 
-  const resolvedRunId =
-    runtimeRunId ??
-    runId ??
-    (await resolveRuntimeRunIdForTeamRun(control, teamRunId)) ??
-    (await resolveRuntimeRunIdForTaskRunSpec(control, taskRunSpecId));
+  const resolvedRunIdInfo = runId
+    ? { queryRunId: runId, matchingRuntimeRunIds: [runId] }
+    : runtimeRunId
+      ? { queryRunId: runtimeRunId, matchingRuntimeRunIds: [runtimeRunId] }
+      : teamRunId
+        ? await resolveRuntimeRunIdForTeamRun(control, teamRunId)
+        : await resolveRuntimeRunIdForTaskRunSpec(control, taskRunSpecId);
+
+  const resolvedRunId = resolvedRunIdInfo?.queryRunId ?? null;
 
   if (resolvedRunId === null) {
     if (teamRunId) {
@@ -153,6 +159,8 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     resolvedBy: lookup.resolvedBy,
     queryId: lookup.queryId,
     queryRunId: resolvedRunId,
+    matchingRuntimeRunCount: resolvedRunIdInfo?.matchingRuntimeRunIds.length ?? 0,
+    matchingRuntimeRunIds: resolvedRunIdInfo?.matchingRuntimeRunIds ?? [],
     taskRunSpecSummary,
     runtime: {
       runId: runtimeInspection.record.runId,
@@ -190,25 +198,27 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
 async function resolveRuntimeRunIdForTeamRun(
   control: ExecutionRuntimeControlContract,
   teamRunId: string | null,
-): Promise<string | null> {
+): Promise<{ queryRunId: string; matchingRuntimeRunIds: string[] } | null> {
   if (!teamRunId) return null;
-  const runtimeRecords = (await control.listRuns({ sourceKind: 'team-run' })).filter(
-    (record) => record.bundle.run.sourceId === teamRunId,
-  );
-  const sorted = runtimeRecords.sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
-  return sorted[0]?.runId ?? null;
+  const runtimeRecords = (await control.listRuns({ sourceKind: 'team-run' }))
+    .filter((record) => record.bundle.run.sourceId === teamRunId)
+    .sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
+  const matchingRuntimeRunIds = runtimeRecords.slice(0, 10).map((record) => record.runId);
+  const queryRunId = matchingRuntimeRunIds[0] ?? null;
+  return queryRunId ? { queryRunId, matchingRuntimeRunIds } : null;
 }
 
 async function resolveRuntimeRunIdForTaskRunSpec(
   control: ExecutionRuntimeControlContract,
   taskRunSpecId: string | null,
-): Promise<string | null> {
+): Promise<{ queryRunId: string; matchingRuntimeRunIds: string[] } | null> {
   if (!taskRunSpecId) return null;
-  const runtimeRecords = (await control.listRuns()).filter(
-    (record) => record.bundle.run.taskRunSpecId === taskRunSpecId,
-  );
-  const sorted = runtimeRecords.sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
-  return sorted[0]?.runId ?? null;
+  const runtimeRecords = (await control.listRuns())
+    .filter((record) => record.bundle.run.taskRunSpecId === taskRunSpecId)
+    .sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
+  const matchingRuntimeRunIds = runtimeRecords.slice(0, 10).map((record) => record.runId);
+  const queryRunId = matchingRuntimeRunIds[0] ?? null;
+  return queryRunId ? { queryRunId, matchingRuntimeRunIds } : null;
 }
 
 async function selectInspectionRunner(

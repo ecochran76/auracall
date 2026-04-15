@@ -165,6 +165,8 @@
       - `resolvedBy`
       - `queryId`
       - `queryRunId`
+      - `matchingRuntimeRunCount`
+      - bounded `matchingRuntimeRunIds`
       - `queueState`
       - `claimState`
       - `nextRunnableStepId`

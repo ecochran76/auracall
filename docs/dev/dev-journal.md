@@ -1,3 +1,17 @@
+## 2026-04-15 - Runtime inspection alias match summary
+
+- Completed one more bounded read-only runtime inspection refinement:
+  - updated [src/runtime/inspection.ts](/home/ecochran76/workspace.local/oracle/src/runtime/inspection.ts)
+    so alias-based runtime inspection now also preserves:
+    - `matchingRuntimeRunCount`
+    - bounded `matchingRuntimeRunIds`
+  - kept the route read-only and bounded:
+    - direct runtime-id queries report one exact match
+    - alias queries report the latest resolved runtime run plus a bounded
+      candidate set for operator clarity
+  - synchronized the CLI formatter, focused CLI/HTTP tests, and operator docs
+    with the same bounded match-summary contract.
+
 ## 2026-04-15 - Runtime inspection alias provenance
 
 - Completed a bounded operator-readback refinement for runtime inspection:
