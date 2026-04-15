@@ -81,6 +81,10 @@ export type ExecutionServiceHostLocalClaimSummary = {
   blockedRunIds: string[];
   notReadyRunIds: string[];
   unavailableRunIds: string[];
+  statusByRunId: Record<
+    string,
+    ExecutionRunLocalClaimResult['status']
+  >;
   reasonsByRunId: Record<string, string>;
   metrics: {
     selectedCount: number;
@@ -395,6 +399,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               blockedRunIds: [],
               notReadyRunIds: [],
               unavailableRunIds: [],
+              statusByRunId: {},
               reasonsByRunId: {},
               metrics: {
                 selectedCount: 0,
@@ -521,12 +526,13 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             },
           );
           if (localClaim) {
-            if (localClaim.reason) {
-              summary.localClaim.reasonsByRunId[currentRecord.runId] = localClaim.reason;
-            }
-            if (localClaim.selected) {
-              summary.localClaim.selectedRunIds.push(currentRecord.runId);
-            } else if (localClaim.status === 'blocked-affinity') {
+          if (localClaim.reason) {
+            summary.localClaim.reasonsByRunId[currentRecord.runId] = localClaim.reason;
+          }
+          summary.localClaim.statusByRunId[currentRecord.runId] = localClaim.status;
+          if (localClaim.selected) {
+            summary.localClaim.selectedRunIds.push(currentRecord.runId);
+          } else if (localClaim.status === 'blocked-affinity') {
               summary.localClaim.blockedRunIds.push(currentRecord.runId);
             } else if (localClaim.status === 'not-ready') {
               summary.localClaim.notReadyRunIds.push(currentRecord.runId);
@@ -641,6 +647,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         blockedRunIds: [],
         notReadyRunIds: [],
         unavailableRunIds: [],
+        statusByRunId: {},
         reasonsByRunId: {},
         metrics: {
           selectedCount: 0,
@@ -676,6 +683,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         if (localClaim.reason) {
           summary.reasonsByRunId[candidate.runId] = localClaim.reason;
         }
+        summary.statusByRunId[candidate.runId] = localClaim.status;
         if (localClaim.selected) {
           summary.selectedRunIds.push(candidate.runId);
         } else if (localClaim.status === 'blocked-affinity') {

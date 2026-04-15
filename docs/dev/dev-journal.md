@@ -1,3 +1,15 @@
+## 2026-04-15 - Local claim status maps
+
+- Completed one bounded local-claim summary refinement:
+  - updated [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+    so local claim summaries now preserve bounded `statusByRunId` alongside
+    grouped run-id buckets and free-form reasons
+  - kept the summary compact:
+    - no per-run projection payloads were added
+    - existing grouped buckets and metrics remain unchanged
+  - locked the missing-runner case through focused service-host and HTTP status
+    coverage and synchronized operator docs.
+
 ## 2026-04-15 - Recovery detail suspicious-idle attention
 
 - Completed one bounded recovery-detail operator-readback refinement:

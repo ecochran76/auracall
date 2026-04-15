@@ -101,6 +101,7 @@
       - `localClaimSummary.blockedRunIds`
       - `localClaimSummary.notReadyRunIds`
       - `localClaimSummary.unavailableRunIds`
+      - `localClaimSummary.statusByRunId`
   - optional operator control on the same surface:
     - pause: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"backgroundDrain":{"action":"pause"}}'`
     - resume: `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"backgroundDrain":{"action":"resume"}}'`
@@ -716,6 +717,7 @@
       - `localClaim.blockedRunIds`
       - `localClaim.notReadyRunIds`
       - `localClaim.unavailableRunIds`
+      - `localClaim.statusByRunId`
       - `localClaim.reasonsByRunId`
     - startup recovery/batch-drain reporting now collapses repeated skipped
       states per run and suppresses follow-up terminal `no-runnable-step`

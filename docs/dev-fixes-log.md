@@ -1,3 +1,11 @@
+- 2026-04-15: If local-claim summary already computes bounded per-run statuses, preserve them explicitly instead of forcing operators to infer them from grouped buckets plus free-form reasons.
+  - Local claim summaries now also return:
+    - `statusByRunId`
+  - Keep the compact aggregate surface:
+    - preserve grouped id buckets
+    - preserve `reasonsByRunId`
+    - do not widen into full per-run claim projections
+
 - 2026-04-15: If per-run recovery detail already reports `leaseHealth.status = suspiciously-idle` under inspect-only posture, do not drop that operator-attention signal by returning `attention = null`.
   - Preserve bounded per-run attention instead:
     - `attention.kind = suspiciously-idle`

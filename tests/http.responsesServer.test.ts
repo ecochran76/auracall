@@ -934,6 +934,7 @@ describe('http responses adapter', () => {
           blockedRunIds: [],
           notReadyRunIds: [],
           unavailableRunIds: [],
+          statusByRunId: {},
           reasonsByRunId: {},
           metrics: {
             selectedCount: 0,
@@ -1936,6 +1937,10 @@ describe('http responses adapter', () => {
           blockedRunIds: [],
           notReadyRunIds: [],
           unavailableRunIds: [],
+          statusByRunId: {
+            status_recovery_direct: 'eligible',
+            status_busy_direct: 'eligible',
+          },
           reasonsByRunId: {},
           metrics: {
             selectedCount: 2,
@@ -1957,6 +1962,10 @@ describe('http responses adapter', () => {
             blockedRunIds: [],
             notReadyRunIds: [],
             unavailableRunIds: [],
+            statusByRunId: {
+              status_recovery_direct: 'eligible',
+              status_busy_direct: 'eligible',
+            },
             reasonsByRunId: {},
             metrics: {
               selectedCount: 2,
@@ -2034,6 +2043,10 @@ describe('http responses adapter', () => {
           blockedRunIds: [],
           notReadyRunIds: [],
           unavailableRunIds: [],
+          statusByRunId: {
+            status_recovery_direct: 'eligible',
+            status_busy_direct: 'eligible',
+          },
           reasonsByRunId: {},
           metrics: {
             selectedCount: 2,
@@ -2055,6 +2068,9 @@ describe('http responses adapter', () => {
             blockedRunIds: [],
             notReadyRunIds: [],
             unavailableRunIds: [],
+            statusByRunId: {
+              status_recovery_team: 'eligible',
+            },
             reasonsByRunId: {},
             metrics: {
               selectedCount: 1,
@@ -2128,6 +2144,10 @@ describe('http responses adapter', () => {
           blockedRunIds: [],
           notReadyRunIds: [],
           unavailableRunIds: [],
+          statusByRunId: {
+            status_recovery_direct: 'eligible',
+            status_busy_direct: 'eligible',
+          },
           reasonsByRunId: {},
           metrics: {
             selectedCount: 2,
@@ -2149,6 +2169,11 @@ describe('http responses adapter', () => {
             blockedRunIds: [],
             notReadyRunIds: [],
             unavailableRunIds: [],
+            statusByRunId: {
+              status_recovery_direct: 'eligible',
+              status_recovery_team: 'eligible',
+              status_busy_direct: 'eligible',
+            },
             reasonsByRunId: {},
             metrics: {
               selectedCount: 3,
@@ -2293,6 +2318,67 @@ describe('http responses adapter', () => {
       expect(payload).not.toHaveProperty('recoverySummary.orchestrationTimelineSummary');
       expect(payload).not.toHaveProperty('recoverySummary.handoffTransferSummary');
       expect(payload).not.toHaveProperty('recoverySummary.leaseHealth');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('surfaces bounded local claim status map when the configured runner record is unavailable', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-local-claim-status-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(
+      control,
+      'status_missing_local_runner',
+      '2026-04-08T15:00:00.000Z',
+      'Expose missing runner local claim status.',
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-08T15:05:00.000Z'),
+        localRunnerId: 'runner:missing-http-local',
+        localRunnerHostId: 'host:http-responses:127.0.0.1:8080',
+        executionHost: createExecutionServiceHost({
+          control,
+          runnerId: 'runner:missing-http-local',
+          ownerId: 'host:http-responses:127.0.0.1:8080',
+          now: () => '2026-04-08T15:05:00.000Z',
+        }),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: 'runner:missing-http-local',
+          selectedRunIds: [],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: ['status_missing_local_runner'],
+          statusByRunId: {
+            status_missing_local_runner: 'claim-owner-unavailable',
+          },
+          reasonsByRunId: {
+            status_missing_local_runner:
+              'runner runner:missing-http-local has no persisted runner record',
+          },
+          metrics: {
+            selectedCount: 0,
+            blockedCount: 0,
+            notReadyCount: 0,
+            unavailableCount: 1,
+          },
+        },
+      });
     } finally {
       await server.close();
     }

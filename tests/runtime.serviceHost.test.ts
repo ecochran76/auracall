@@ -2180,6 +2180,48 @@ describe('runtime service host', () => {
     });
   });
 
+  it('preserves bounded local claim status map when the configured runner record is unavailable', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_local_claim_missing_runner', '2026-04-08T15:00:00.000Z'));
+
+    const host = createExecutionServiceHost({
+      control,
+      runnerId: 'runner:missing-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const summary = await host.summarizeLocalClaimState({
+      sourceKind: 'direct',
+    });
+
+    expect(summary).toEqual({
+      sourceKind: 'direct',
+      runnerId: 'runner:missing-local',
+      selectedRunIds: [],
+      blockedRunIds: [],
+      notReadyRunIds: [],
+      unavailableRunIds: ['run_local_claim_missing_runner'],
+      statusByRunId: {
+        run_local_claim_missing_runner: 'claim-owner-unavailable',
+      },
+      reasonsByRunId: {
+        run_local_claim_missing_runner:
+          'runner runner:missing-local has no persisted runner record',
+      },
+      metrics: {
+        selectedCount: 0,
+        blockedCount: 0,
+        notReadyCount: 0,
+        unavailableCount: 1,
+      },
+    });
+  });
+
   it('surfaces bounded handoff-transfer summary on recovery detail for stored team-run-backed runs', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

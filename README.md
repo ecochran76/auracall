@@ -127,6 +127,7 @@ Terminology note:
       - `blockedRunIds`
       - `notReadyRunIds`
       - `unavailableRunIds`
+      - `statusByRunId`
       - `reasonsByRunId`
     - also includes bounded active-lease health under `activeLeaseHealth`:
       - `freshRunIds`
@@ -293,6 +294,7 @@ Terminology note:
     - `blockedRunIds`
     - `notReadyRunIds`
     - `unavailableRunIds`
+    - `statusByRunId`
     - `reasonsByRunId`
   - bounded local claims now use that live runner id as the lease owner
     instead of a generic host-only owner string
