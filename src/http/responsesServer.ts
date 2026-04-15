@@ -200,6 +200,32 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
+function normalizeServiceAccountIdentityKey(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const normalized = value.trim().replace(/\s+/g, ' ').toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function createServiceAccountId(serviceId: RunnerServiceId, serviceConfig: unknown): string | null {
+  if (!isRecord(serviceConfig) || !isRecord(serviceConfig.identity)) return null;
+  const identityKey =
+    normalizeServiceAccountIdentityKey(serviceConfig.identity.email) ??
+    normalizeServiceAccountIdentityKey(serviceConfig.identity.handle) ??
+    normalizeServiceAccountIdentityKey(serviceConfig.identity.name);
+  return identityKey ? `service-account:${serviceId}:${identityKey}` : null;
+}
+
+function addConfiguredServiceAccountId(input: {
+  accountIds: Set<string>;
+  serviceId: RunnerServiceId;
+  serviceConfig: unknown;
+}): void {
+  const serviceAccountId = createServiceAccountId(input.serviceId, input.serviceConfig);
+  if (serviceAccountId) {
+    input.accountIds.add(serviceAccountId);
+  }
+}
+
 function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | undefined): {
   serviceIds: RunnerServiceId[];
   runtimeProfileIds: string[];
@@ -221,12 +247,19 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
 
   const serviceIds = new Set<RunnerServiceId>();
   const browserProfileIds = new Set<string>();
+  const serviceAccountIds = new Set<string>();
+  const globalServices = isRecord(configRecord.services) ? configRecord.services : {};
   const runtimeProfiles = getCurrentRuntimeProfiles(configRecord);
   let browserCapable = false;
 
   for (const runtimeProfile of projectedModel.runtimeProfiles) {
     if (runtimeProfile.defaultService) {
       serviceIds.add(runtimeProfile.defaultService);
+      addConfiguredServiceAccountId({
+        accountIds: serviceAccountIds,
+        serviceId: runtimeProfile.defaultService,
+        serviceConfig: globalServices[runtimeProfile.defaultService],
+      });
     }
     if (runtimeProfile.browserProfileId) {
       browserProfileIds.add(runtimeProfile.browserProfileId);
@@ -247,6 +280,16 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
     for (const serviceId of KNOWN_RUNNER_SERVICE_IDS) {
       if (isRecord(rawServices[serviceId])) {
         serviceIds.add(serviceId);
+        addConfiguredServiceAccountId({
+          accountIds: serviceAccountIds,
+          serviceId,
+          serviceConfig: globalServices[serviceId],
+        });
+        addConfiguredServiceAccountId({
+          accountIds: serviceAccountIds,
+          serviceId,
+          serviceConfig: rawServices[serviceId],
+        });
       }
     }
   }
@@ -255,7 +298,7 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
     serviceIds: [...serviceIds].sort(),
     runtimeProfileIds: projectedModel.runtimeProfiles.map((runtimeProfile) => runtimeProfile.id),
     browserProfileIds: [...browserProfileIds].sort(),
-    serviceAccountIds: [],
+    serviceAccountIds: [...serviceAccountIds].sort(),
     browserCapable,
   };
 }
@@ -263,6 +306,7 @@ function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | un
 function createLocalRunnerEligibilityNote(input: {
   phase: 'register' | 'heartbeat' | 'shutdown';
   capabilitySummary: {
+    serviceIds: RunnerServiceId[];
     serviceAccountIds: string[];
     browserCapable: boolean;
   };
@@ -273,10 +317,19 @@ function createLocalRunnerEligibilityNote(input: {
       : input.phase === 'heartbeat'
         ? 'api serve runner heartbeat'
         : 'api serve shutdown';
-  if (!input.capabilitySummary.browserCapable || input.capabilitySummary.serviceAccountIds.length > 0) {
+  if (!input.capabilitySummary.browserCapable) {
     return base;
   }
-  return `${base}; service-account affinity not projected`;
+  if (input.capabilitySummary.serviceAccountIds.length === 0) {
+    return `${base}; service-account affinity not projected`;
+  }
+  const accountServices = new Set(
+    input.capabilitySummary.serviceAccountIds
+      .map((accountId) => accountId.match(/^service-account:([^:]+):/)?.[1])
+      .filter((serviceId): serviceId is RunnerServiceId => KNOWN_RUNNER_SERVICE_IDS.includes(serviceId as RunnerServiceId)),
+  );
+  const missingAccountService = input.capabilitySummary.serviceIds.find((serviceId) => !accountServices.has(serviceId));
+  return missingAccountService ? `${base}; service-account affinity partially projected` : base;
 }
 
 export async function createResponsesHttpServer(

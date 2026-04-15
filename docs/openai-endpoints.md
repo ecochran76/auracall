@@ -170,8 +170,11 @@ Current limits:
           - `eligibilityNote`
       - bounded `runner` summary when a runner is explicitly queried or the
         active lease owner resolves to a persisted runner record
-        - browser-capable `api serve` runners without durable
-          `serviceAccountIds` preserve that limitation in `eligibilityNote`
+        - `api serve` derives runner `serviceAccountIds` from configured
+          service identities when present, using
+          `service-account:<service>:<identity-key>`
+        - browser-capable `api serve` runners with absent or incomplete
+          configured identities preserve that limitation in `eligibilityNote`
   - `POST /status` now also accepts bounded operator actions:
     - stale-heartbeat lease repair:
       - `{"leaseRepair":{"action":"repair-stale-heartbeat","runId":"..."}}`

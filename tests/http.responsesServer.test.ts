@@ -592,6 +592,7 @@ describe('http responses adapter', () => {
               reason: `run ${runId} was not found`,
               leaseHealthStatus: null,
               repairPosture: null,
+              reconciliationReason: null,
             };
           },
           async cancelOwnedRun(runId) {
@@ -610,6 +611,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resumed: false,
               reason: `run ${runId} was not found`,
+              resumedAt: null,
+              resumedStepId: null,
             };
           },
           async drainRun(runId) {
@@ -631,6 +634,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resolved: false,
               reason: `run ${runId} was not found`,
+              resolvedAt: null,
+              ownerStepId: null,
             };
           },
           async readRecoveryDetail() {
@@ -775,6 +780,7 @@ describe('http responses adapter', () => {
               reason: `run ${runId} was not found`,
               leaseHealthStatus: null,
               repairPosture: null,
+              reconciliationReason: null,
             };
           },
           async cancelOwnedRun(runId) {
@@ -793,6 +799,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resumed: false,
               reason: `run ${runId} was not found`,
+              resumedAt: null,
+              resumedStepId: null,
             };
           },
           async drainRun(runId) {
@@ -814,6 +822,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resolved: false,
               reason: `run ${runId} was not found`,
+              resolvedAt: null,
+              ownerStepId: null,
             };
           },
           async readRecoveryDetail() {
@@ -1042,6 +1052,13 @@ describe('http responses adapter', () => {
         now: () => nowValue,
         runnersControl,
         config: {
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'ChatGPT-Operator@Example.COM',
+              },
+            },
+          },
           runtimeProfiles: {
             analyst: {
               engine: 'api',
@@ -1058,6 +1075,9 @@ describe('http responses adapter', () => {
               services: {
                 gemini: {
                   url: 'https://gemini.google.com/app',
+                  identity: {
+                    handle: 'Gemini WSL',
+                  },
                 },
               },
             },
@@ -1075,9 +1095,12 @@ describe('http responses adapter', () => {
           serviceIds: ['chatgpt', 'gemini', 'grok'],
           runtimeProfileIds: ['analyst', 'default', 'gemini-browser'],
           browserProfileIds: ['default', 'wsl-chrome-2'],
-          serviceAccountIds: [],
+          serviceAccountIds: [
+            'service-account:chatgpt:chatgpt-operator@example.com',
+            'service-account:gemini:gemini wsl',
+          ],
           browserCapable: true,
-          eligibilityNote: 'api serve local runner; service-account affinity not projected',
+          eligibilityNote: 'api serve local runner; service-account affinity partially projected',
         },
       });
     } finally {
@@ -1143,6 +1166,7 @@ describe('http responses adapter', () => {
               reason: `run ${runId} was not found`,
               leaseHealthStatus: null,
               repairPosture: null,
+              reconciliationReason: null,
             };
           },
           async cancelOwnedRun(runId) {
@@ -1161,6 +1185,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resumed: false,
               reason: `run ${runId} was not found`,
+              resumedAt: null,
+              resumedStepId: null,
             };
           },
           async drainRun(runId) {
@@ -1182,6 +1208,8 @@ describe('http responses adapter', () => {
               status: 'not-found' as const,
               resolved: false,
               reason: `run ${runId} was not found`,
+              resolvedAt: null,
+              ownerStepId: null,
             };
           },
           async readRecoveryDetail() {
@@ -2342,8 +2370,6 @@ describe('http responses adapter', () => {
       {
         control,
         now: () => new Date('2026-04-08T15:05:00.000Z'),
-        localRunnerId: 'runner:missing-http-local',
-        localRunnerHostId: 'host:http-responses:127.0.0.1:8080',
         executionHost: createExecutionServiceHost({
           control,
           runnerId: 'runner:missing-http-local',
