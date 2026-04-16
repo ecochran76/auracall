@@ -12394,3 +12394,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   make the next checkpoint validation-first: one bounded `api serve` smoke for
   `/status`, local-claim summary, and `GET /v1/runtime-runs/inspect` affinity
   readback before any public team execution writes or multi-runner service mode.
+- 2026-04-15: The account-affinity smoke can be run safely without touching
+  live providers by isolating `AURACALL_HOME_DIR`, starting `api serve` with
+  startup recovery disabled, pausing background drain, and then seeding a
+  runnable persisted direct run. This proves `/status` and
+  `GET /v1/runtime-runs/inspect` account-affinity readback while avoiding a
+  browser/API execution side effect.
+- 2026-04-15: Once that isolated smoke is green, close the current
+  durable-state/account-affinity sub-lane instead of adding more diagnostics by
+  default. The next implementation step should be chosen as a new roadmap
+  decision, not as automatic continuation of the account-affinity thread.

@@ -290,13 +290,19 @@ Current checkpoint:
     writes are authorized by this checkpoint
 
 Next checkpoint:
-- run one bounded `api serve` operator smoke that proves the documented
-  read-only account-affinity posture end to end:
-  - `/status` exposes the live runner and local-claim summary
-  - `GET /v1/runtime-runs/inspect` exposes configured
+- completed on 2026-04-15:
+  - one bounded isolated `api serve` operator smoke proved the documented
+    read-only account-affinity posture end to end
+  - `/status` exposed the live runner and local-claim summary
+  - `GET /v1/runtime-runs/inspect` exposed configured
     `requiredServiceAccountId`
-  - a mismatched runner/account path remains skipped or blocked with a stable
-    local-claim reason
+  - a mismatched runner/account path remained `blocked-affinity` with the
+    stable missing service-account reason
+
+Next recommendation:
+- pause this durable-state/account-affinity sub-lane
+- choose the next roadmap lane explicitly before implementing more service
+  behavior
 
 Execution docs:
 - Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)

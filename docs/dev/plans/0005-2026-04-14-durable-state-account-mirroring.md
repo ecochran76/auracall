@@ -17,11 +17,12 @@ Lane: P01
     runtime inspection, local claim, and targeted-drain diagnostics
 - the lane is not ready to widen into multi-runner scheduling or public team
   execution writes
-- the next live need is validation-first:
-  - run one bounded `api serve` operator smoke for the documented
-    read-only/account-affinity posture
-  - then choose the next implementation lane from evidence instead of adding
-    more reporting by default
+- the validation-first checkpoint has passed:
+  - one bounded isolated `api serve` smoke proved the documented
+    read-only/account-affinity posture without touching live browser/API
+    providers
+  - the next implementation lane should be chosen explicitly instead of adding
+    more durable-state/account-affinity reporting by default
 
 # Durable State And Account Mirroring Plan
 
@@ -259,24 +260,25 @@ Current checkpoint:
   - a matching id proves matching configured account ids, not independent proof
     of the currently logged-in browser tab
 
-## Next Checkpoint
+## Completed Validation Checkpoint
 
-Before starting a broader implementation lane, run one bounded local operator
-smoke for the current single-runner posture.
+Before starting a broader implementation lane, the repo ran one bounded local
+operator smoke for the current single-runner posture.
 
-Acceptance criteria:
+Acceptance criteria met:
 
-- `auracall api serve --port <ephemeral>` starts with a persisted local runner
-  and reports it on `/status`
-- `/status` includes a compact local-claim summary for direct runs
-- one persisted direct run can be inspected through `GET /v1/runtime-runs/inspect`
-  with the documented queue/affinity fields
-- configured service-account affinity is visible as
+- `auracall api serve --port 18080 --no-recover-runs-on-start` started against
+  an isolated temporary `AURACALL_HOME_DIR` with a persisted local runner and
+  reported it on `/status`
+- `/status` included a compact local-claim summary for a seeded direct run
+- the seeded direct run was inspected through
+  `GET /v1/runtime-runs/inspect` with the documented queue/affinity fields
+- configured service-account affinity was visible as
   `requiredServiceAccountId = service-account:<service>:<identity-key>` when
   configured identity exists
-- if a runner lacks that configured account id, the run remains unclaimed with
-  a stable local-claim reason rather than silently falling back to the generic
-  host owner
+- a runner lacking that configured account id remained `blocked-affinity` with
+  a stable missing service-account reason rather than silently falling back to
+  the generic host owner
 
 Non-goals:
 
@@ -287,7 +289,6 @@ Non-goals:
 
 Decision after smoke:
 
-- if the documented posture is green, pause the durable-state/account-affinity
-  lane and choose the next roadmap lane explicitly
-- if the smoke exposes an operator gap, fix that narrow read-only/diagnostic gap
-  before any broader service-mode work
+- the documented posture is green
+- pause the durable-state/account-affinity sub-lane
+- choose the next roadmap lane explicitly before any broader service-mode work

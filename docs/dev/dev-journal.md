@@ -16129,6 +16129,38 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - why this matters:
     - the lane now has a validation-first checkpoint instead of drifting into
       public team execution writes or multi-runner service mode prematurely.
+
+## 2026-04-15 - Account-affinity api serve smoke
+
+- Ran the bounded local `api serve` account-affinity smoke:
+  - used an isolated temporary `AURACALL_HOME_DIR` with configured ChatGPT
+    service identity `operator@example.com`
+  - started `auracall api serve --port 18080 --no-recover-runs-on-start`
+  - paused background drain before seeding a runnable direct runtime record, so
+    no live browser/API provider call was made
+  - verified `/status` exposed the persisted local runner and a compact
+    `localClaimSummary` selecting `smoke_runtime_account_affinity_1`
+  - verified `GET /v1/runtime-runs/inspect` against the server runner returned:
+    - `claimState = claimable`
+    - `requiredServiceAccountId = service-account:chatgpt:operator@example.com`
+    - matching runner `serviceAccountIds`
+  - verified the same inspection route against an intentionally
+    missing-account runner returned:
+    - `claimState = blocked-affinity`
+    - the stable missing service-account reason
+  - stopped the isolated server after the smoke
+  - why this matters:
+    - the durable-state/account-affinity checkpoint is now validated end to end
+      without touching live browser state or public team execution writes.
+- Updated the active roadmap and execution plans after the smoke:
+  - [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+  - [0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md)
+  - [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+  - decision:
+    - pause the durable-state/account-affinity sub-lane at this green
+      single-runner checkpoint
+    - choose the next roadmap lane explicitly before more service-mode
+      implementation.
 ## 2026-04-15 - Targeted drain skipped-note contract cleanup
 
 - Completed a bounded contract-cleanup slice around targeted drain readback fixtures:

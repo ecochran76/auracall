@@ -135,3 +135,36 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit`
   - `pnpm run check`
+
+## Turn 9 | 2026-04-15
+
+- Active plan: `docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md`
+- Goal: run the bounded local `api serve` operator smoke requested by the
+  durable account-affinity checkpoint.
+- Completed:
+  - started `auracall api serve` against an isolated temporary
+    `AURACALL_HOME_DIR` with configured ChatGPT service identity
+  - paused background drain before seeding a runnable direct run, so the smoke
+    did not call live browser/API providers
+  - confirmed `/status` exposed:
+    - active persisted local runner
+    - paused background drain
+    - compact direct-run `localClaimSummary`
+    - `selectedRunIds = ["smoke_runtime_account_affinity_1"]`
+  - confirmed `GET /v1/runtime-runs/inspect` with the server runner returned:
+    - `claimState = claimable`
+    - `requiredServiceAccountId = service-account:chatgpt:operator@example.com`
+    - runner `serviceAccountIds` containing the same id
+  - confirmed the same inspection route with an intentionally missing-account
+    runner returned:
+    - `claimState = blocked-affinity`
+    - `reason = runner runner:smoke-missing-account does not expose service account service-account:chatgpt:operator@example.com`
+  - stopped the isolated server after the smoke.
+- Decision:
+  - the durable-state/account-affinity sub-lane is green at the current
+    single-runner checkpoint
+  - pause this sub-lane and choose the next roadmap lane explicitly before more
+    service-mode implementation
+- Verification target:
+  - `pnpm run check`
+  - `git diff --check`
