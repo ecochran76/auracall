@@ -248,6 +248,14 @@ Current migration checkpoint:
     - root browser config is still a compatibility/defaults surface
     - there is no safe automatic rewrite until the remaining `browser` versus
       `llmDefaults` ownership contract is narrowed further
+  - `llmDefaults.modelStrategy` also remains diagnostics-only:
+    - it is still the compatibility bridge seam for legacy model-strategy
+      defaults
+    - doctor should flag it as compatibility-only service default state, not
+      as the preferred place to encode active service behavior
+    - there is no safe automatic rewrite until the remaining
+      `llmDefaults` versus `services.<service>` ownership contract is narrowed
+      further
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

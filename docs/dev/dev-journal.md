@@ -16948,3 +16948,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the current repo still uses root `browser` plus `llmDefaults` as a
     compatibility/defaults seam, so this slice records the misplacement
     explicitly without claiming a safe automatic rewrite yet
+## 2026-04-17 - Config doctor now flags compatibility-only llmDefaults service defaults
+
+- Continued the active `0007` lane with one more bounded doctor-only ownership
+  checkpoint:
+  - `config doctor` now reports when `llmDefaults` still carries
+    service-scoped default state such as:
+    - `llmDefaults.modelStrategy`
+- Reason:
+  - `llmDefaults.modelStrategy` still participates in compatibility
+    materialization, so it is not ready for automatic rewrite
+  - but it is no longer the preferred place to encode active service behavior;
+    operators should prefer `services.<service>` or
+    `runtimeProfiles.<name>.services.<service>` instead

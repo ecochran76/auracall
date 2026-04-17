@@ -260,6 +260,22 @@ Action:
   - `llmDefaults` still acts as the compatibility bridge for some model and
     project defaults
 
+### `llm-defaults-service-scoped-defaults-present`
+
+Meaning:
+- `llmDefaults` still carries service-layer default state such as:
+  - `llmDefaults.modelStrategy`
+
+Action:
+- treat `llmDefaults` as compatibility bridge state only
+- prefer `services.<service>` or `runtimeProfiles.<name>.services.<service>`
+  for active service behavior
+- do not expect `config migrate` to rewrite this automatically yet:
+  - `llmDefaults` still participates in compatibility materialization for
+    legacy model/project defaults
+  - the remaining `llmDefaults` versus `services.<service>` ownership seam is
+    not narrow enough for safe automatic relocation
+
 ### `runtime-profile-service-scoped-escape-hatches-present`
 
 Meaning:

@@ -1018,6 +1018,50 @@ describe('config model helpers', () => {
     });
   });
 
+  it('surfaces llmDefaults model strategy as a compatibility-only service default seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      llmDefaults: {
+        modelStrategy: 'current',
+      },
+      browserProfiles: {
+        default: {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'llm-defaults-service-scoped-defaults-present',
+          severity: 'info',
+          message:
+            'llmDefaults still defines service-scoped defaults (llmDefaults.modelStrategy); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.',
+        }),
+      ],
+    });
+  });
+
   it('surfaces redundant default-equivalent manualLoginProfileDir overrides', () => {
     const config = {
       defaultRuntimeProfile: 'default',

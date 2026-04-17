@@ -1033,6 +1033,45 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces llmDefaults modelStrategy as a compatibility-only service default seam in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        llmDefaults: {
+          modelStrategy: 'current',
+        },
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'llm-defaults-service-scoped-defaults-present',
+          severity: 'info',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).toContain(
+      '[info] llmDefaults still defines service-scoped defaults (llmDefaults.modelStrategy); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.',
+    );
+  });
+
   it('surfaces redundant default-equivalent managed profile paths in doctor output', () => {
     const report = buildConfigDoctorReport(
       {

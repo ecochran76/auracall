@@ -12765,3 +12765,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   are legacy global service defaults, not browser-family state. Diagnose them
   as misplaced service-scoped defaults, but keep the current `llmDefaults`
   bridge intact until that compatibility seam is narrowed explicitly.
+- 2026-04-17: Treat `llmDefaults.modelStrategy` as compatibility-only bridge
+  state, not as the preferred active service-default layer. Diagnose it in
+  `config doctor`, but do not auto-migrate it until the remaining
+  `llmDefaults` versus `services.<service>` ownership seam is narrowed
+  explicitly.

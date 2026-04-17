@@ -129,6 +129,7 @@ export interface ConfigModelDoctorIssue {
     | 'mixed-browser-profile-keys'
     | 'mixed-runtime-profile-keys'
     | 'global-browser-service-scoped-defaults-present'
+    | 'llm-defaults-service-scoped-defaults-present'
     | 'conflicting-browser-profile-definitions'
     | 'browser-profile-service-scoped-overrides-present'
     | 'conflicting-runtime-profile-definitions'
@@ -208,6 +209,15 @@ function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | Mutab
   return Object.keys(globalBrowser)
     .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key))
     .map((key) => `browser.${key}`);
+}
+
+function describeLlmDefaultsServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
+  const llmDefaults = isRecord((config as MutableRecord).llmDefaults) ? ((config as MutableRecord).llmDefaults as MutableRecord) : {};
+  const keys: string[] = [];
+  if (llmDefaults.modelStrategy !== undefined) {
+    keys.push('llmDefaults.modelStrategy');
+  }
+  return keys;
 }
 
 function describeBrowserProfileServiceScopedOverrides(browserProfile: MutableBrowserProfile): string[] {
@@ -865,6 +875,14 @@ export function analyzeConfigModelBridgeHealth(
       code: 'global-browser-service-scoped-defaults-present',
       severity: 'info',
       message: `Top-level browser config still defines service-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.`,
+    });
+  }
+  const llmDefaultsServiceScopedDefaults = describeLlmDefaultsServiceScopedDefaults(config);
+  if (llmDefaultsServiceScopedDefaults.length > 0) {
+    issues.push({
+      code: 'llm-defaults-service-scoped-defaults-present',
+      severity: 'info',
+      message: `llmDefaults still defines service-scoped defaults (${llmDefaultsServiceScopedDefaults.join(', ')}); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.`,
     });
   }
 
