@@ -927,6 +927,10 @@ describe('http responses adapter', () => {
   });
 
   it('reports explicit development posture through /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-posture-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
     try {

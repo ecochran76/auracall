@@ -16877,3 +16877,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     migration cleanup
   - preserve genuine external managed-profile overrides unchanged
   - prune empty `services.<service>` stubs left behind by that bounded cleanup
+## 2026-04-17 - HTTP status posture test now isolates AuraCall home state
+
+- Follow-up hygiene after the broad checkpoint sweep:
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  now overrides AuraCall home with a temp directory for the
+  `/status` development-posture case.
+- Reason:
+  - the default runtime control can see persisted runs under the real
+    `~/.auracall` home
+  - that leaked a live `notReadyRunIds` entry into a test that was asserting an
+    empty local-claim summary

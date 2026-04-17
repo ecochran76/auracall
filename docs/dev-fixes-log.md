@@ -12734,3 +12734,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   left behind by conservative config cleanup as residue, not semantic state.
   Once the last field in a service stub is removed by bounded migrate cleanup,
   prune the empty service entry instead of preserving `{}`.
+- 2026-04-17: HTTP server tests that assert empty runtime/local-claim posture
+  must override AuraCall home to a temp directory. Otherwise the default
+  runtime control can ingest persisted runs from the operator's real
+  `~/.auracall` state and leak live `notReadyRunIds` into otherwise isolated
+  `/status` assertions.
