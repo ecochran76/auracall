@@ -12776,3 +12776,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   preferred place to encode active service/project defaults, so doctor should
   flag them alongside `llmDefaults.modelStrategy` instead of auto-migrating
   them.
+- 2026-04-17: Keep the compatibility write contract explicit while the seam is
+  still transitional. `materializeConfigV2()` may still backfill
+  `llmDefaults.modelStrategy`, `llmDefaults.defaultProjectName`, and
+  `llmDefaults.defaultProjectId` from root `model` / `browser` defaults when
+  no explicit `llmDefaults` block exists, but explicit `llmDefaults` values
+  must continue to win over that bridge-output path.

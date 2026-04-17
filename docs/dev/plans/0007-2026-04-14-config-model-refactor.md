@@ -259,6 +259,11 @@ Current migration checkpoint:
     - there is no safe automatic rewrite until the remaining
       `llmDefaults` versus `services.<service>` ownership contract is narrowed
       further
+    - current compatibility-write contract also stays explicit:
+      - bridge output may still backfill `llmDefaults` from root
+        `model` / `browser.modelStrategy` / `browser.projectName` /
+        `browser.projectId` when no explicit `llmDefaults` block exists
+      - explicit `llmDefaults` values still win over that backfill path
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

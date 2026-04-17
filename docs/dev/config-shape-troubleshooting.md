@@ -275,6 +275,9 @@ Action:
 - do not expect `config migrate` to rewrite this automatically yet:
   - `llmDefaults` still participates in compatibility materialization for
     legacy model/project defaults
+  - compatibility bridge output may still backfill these keys from root
+    `model` / `browser` defaults when no explicit `llmDefaults` block exists
+  - explicit `llmDefaults` values still win over that backfill path
   - the remaining `llmDefaults` versus `services.<service>` ownership seam is
     not narrow enough for safe automatic relocation
 

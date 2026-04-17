@@ -157,6 +157,9 @@ Current note:
         `llmDefaults.defaultProjectId` should be treated as compatibility-only
         bridge state, not as the preferred active service/project-default
         layer
+      - compatibility bridge output may still backfill those `llmDefaults`
+        keys from root `model` / `browser` defaults when no explicit
+        `llmDefaults` block exists
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

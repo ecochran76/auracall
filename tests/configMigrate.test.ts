@@ -399,6 +399,82 @@ describe('config migrate bridge helpers', () => {
     expect(result.defaultRuntimeProfile).toBeUndefined();
   });
 
+  it('backfills llmDefaults project and model defaults from root browser state for compatibility bridge output', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        model: 'gpt-5.2',
+        browser: {
+          modelStrategy: 'current',
+          projectName: 'Legacy Project',
+          projectId: 'g-p-legacy-project',
+        },
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.llmDefaults).toEqual({
+      model: 'gpt-5.2',
+      modelStrategy: 'current',
+      defaultProjectName: 'Legacy Project',
+      defaultProjectId: 'g-p-legacy-project',
+    });
+  });
+
+  it('preserves explicit llmDefaults during compatibility bridge materialization', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        model: 'gpt-5.2',
+        browser: {
+          modelStrategy: 'current',
+          projectName: 'Root Project',
+          projectId: 'g-p-root-project',
+        },
+        llmDefaults: {
+          model: 'gpt-5.1',
+          modelStrategy: 'select',
+          defaultProjectName: 'Pinned Legacy Project',
+          defaultProjectId: 'g-p-pinned-project',
+        },
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.llmDefaults).toEqual({
+      model: 'gpt-5.1',
+      modelStrategy: 'select',
+      defaultProjectName: 'Pinned Legacy Project',
+      defaultProjectId: 'g-p-pinned-project',
+    });
+  });
+
   it('moves obvious browser-owned runtime overrides into the referenced bridge browser family', () => {
     const result = materializeConfigV2(
       {

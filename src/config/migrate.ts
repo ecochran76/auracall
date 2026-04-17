@@ -504,6 +504,8 @@ export function materializeConfigV2(
     result.browserDefaults = result.browser;
   }
   if (!isRecord(result.llmDefaults)) {
+    // Compatibility bridge output still backfills legacy llmDefaults from the
+    // root model/browser defaults when no explicit llmDefaults block exists.
     const llmDefaults: Record<string, unknown> = {};
     if (result.model !== undefined) {
       llmDefaults.model = result.model;

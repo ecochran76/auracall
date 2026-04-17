@@ -16976,3 +16976,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - but they are no longer the preferred place to encode active
     service/project behavior; operators should prefer `services.<service>` or
     `runtimeProfiles.<name>.services.<service>` instead
+## 2026-04-17 - Compatibility bridge writes still backfill llmDefaults from root browser defaults
+
+- Continued the active `0007` lane with one bounded compatibility-write audit:
+  - `materializeConfigV2()` still backfills legacy `llmDefaults` from root:
+    - `model`
+    - `browser.modelStrategy`
+    - `browser.projectName`
+    - `browser.projectId`
+    when no explicit `llmDefaults` block exists
+  - explicit `llmDefaults` still win over that backfill path
+- Reason:
+  - this is still an intentional compatibility export contract, not accidental
+    leakage
+  - the repo needed test-backed and doc-backed authority for that behavior now
+    that doctor explicitly marks the same keys as compatibility-only bridge
+    state
