@@ -222,6 +222,10 @@ Current migration checkpoint:
     `manualLoginProfileDir` values when they exactly match the managed profile
     path Aura-Call would derive for the same AuraCall runtime profile +
     service target
+  - `config doctor` and `config migrate` may now also treat
+    `runtimeProfiles.<name>.services.<service>.modelStrategy`,
+    `thinkingTime`, and `composerTool` as redundant when they exactly mirror
+    the already-inherited top-level `services.<service>` defaults
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

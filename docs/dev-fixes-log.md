@@ -12730,6 +12730,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   default-equivalent derived managed profile path for the same AuraCall
   runtime profile + service target; preserve external managed-profile override
   paths unchanged.
+- 2026-04-17: Apply the same redundancy principle to service defaults.
+  `runtimeProfiles.<name>.services.<service>.modelStrategy`, `thinkingTime`,
+  and `composerTool` are config noise when they exactly match the inherited
+  top-level `services.<service>` values. Doctor should flag them and migrate
+  may remove them conservatively, then prune any empty service stub left
+  behind.
 - 2026-04-17: Treat empty `runtimeProfiles.<name>.services.<service>` objects
   left behind by conservative config cleanup as residue, not semantic state.
   Once the last field in a service stub is removed by bounded migrate cleanup,

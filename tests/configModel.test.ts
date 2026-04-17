@@ -983,4 +983,57 @@ describe('config model helpers', () => {
       ],
     });
   });
+
+  it('surfaces redundant default-equivalent runtime-profile service overrides', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/usr/bin/google-chrome' },
+      },
+      services: {
+        chatgpt: {
+          modelStrategy: 'current',
+          thinkingTime: 'extended',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          services: {
+            chatgpt: {
+              modelStrategy: 'current',
+              thinkingTime: 'extended',
+              composerTool: 'canvas',
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-service-defaults-redundant',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines default-equivalent service overrides (services.chatgpt.modelStrategy, services.chatgpt.thinkingTime); remove them unless this runtime profile intentionally diverges from inherited service defaults.',
+        }),
+      ],
+    });
+  });
 });

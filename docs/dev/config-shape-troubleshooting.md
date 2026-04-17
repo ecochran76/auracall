@@ -258,6 +258,22 @@ Action:
   - `runtimeProfiles.<name>.browser.manualLoginProfileDir`
   - `runtimeProfiles.<name>.services.<service>.manualLoginProfileDir`
 
+### `runtime-profile-service-defaults-redundant`
+
+Meaning:
+- the AuraCall runtime profile explicitly defines service-level values that
+  already match the inherited top-level `services.<service>` defaults
+
+Action:
+- remove the explicit runtime-profile service values unless this runtime
+  profile is intentionally diverging from global service defaults
+- `config migrate` can now remove these redundant default-equivalent service
+  values conservatively
+- this can appear on:
+  - `runtimeProfiles.<name>.services.<service>.modelStrategy`
+  - `runtimeProfiles.<name>.services.<service>.thinkingTime`
+  - `runtimeProfiles.<name>.services.<service>.composerTool`
+
 ### `unused-browser-profile`
 
 Meaning:

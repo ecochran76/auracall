@@ -16877,6 +16877,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     migration cleanup
   - preserve genuine external managed-profile overrides unchanged
   - prune empty `services.<service>` stubs left behind by that bounded cleanup
+## 2026-04-17 - Config doctor and migrate now trim redundant inherited service defaults
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  runtime-profile service values for `modelStrategy`, `thinkingTime`, and
+  `composerTool` are now treated as redundant when they exactly mirror the
+  already-inherited top-level `services.<service>` defaults.
+- Current policy:
+  - keep explicit runtime-profile service values only when they intentionally
+    diverge from inherited global service defaults
+  - let `config migrate` remove default-equivalent duplicates conservatively
 ## 2026-04-17 - HTTP status posture test now isolates AuraCall home state
 
 - Follow-up hygiene after the broad checkpoint sweep:

@@ -137,6 +137,7 @@ export interface ConfigModelDoctorIssue {
     | 'runtime-profile-service-scoped-overrides-relocatable-present'
     | 'runtime-profile-service-scoped-escape-hatches-present'
     | 'runtime-profile-manual-login-profile-dir-redundant'
+    | 'runtime-profile-service-defaults-redundant'
     | 'unused-browser-profile'
     | 'active-runtime-profile-missing-browser-profile'
     | 'agent-missing-runtime-profile'
@@ -288,6 +289,30 @@ function describeRedundantManagedProfileDirOverrides(
     });
     if (path.resolve(manualLoginProfileDir) === path.resolve(expected)) {
       redundant.push(`services.${serviceId}.manualLoginProfileDir`);
+    }
+  }
+
+  return redundant;
+}
+
+function describeRedundantRuntimeProfileServiceDefaults(
+  config: OracleConfig | MutableRecord,
+  runtimeProfile: MutableRuntimeProfile,
+): string[] {
+  const globalServices = isRecord((config as MutableRecord).services) ? ((config as MutableRecord).services as MutableRecord) : {};
+  const runtimeServices = isRecord(runtimeProfile.services) ? runtimeProfile.services : {};
+  const redundant: string[] = [];
+
+  for (const serviceId of ['chatgpt', 'gemini', 'grok'] as const) {
+    const globalService = isRecord(globalServices[serviceId]) ? (globalServices[serviceId] as MutableRecord) : null;
+    const runtimeService = isRecord(runtimeServices[serviceId]) ? (runtimeServices[serviceId] as MutableRecord) : null;
+    if (!globalService || !runtimeService) continue;
+
+    for (const key of RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS) {
+      if (runtimeService[key] === undefined || globalService[key] === undefined) continue;
+      if (areEquivalentRecords(runtimeService[key], globalService[key])) {
+        redundant.push(`services.${serviceId}.${key}`);
+      }
     }
   }
 
@@ -949,6 +974,15 @@ export function analyzeConfigModelBridgeHealth(
           code: 'runtime-profile-manual-login-profile-dir-redundant',
           severity: 'info',
           message: `AuraCall runtime profile "${name}" still defines default-equivalent managed profile paths (${redundantManagedProfileDirOverrides.join(', ')}); remove them unless you intend a real external managed-profile override.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+      const redundantServiceDefaults = describeRedundantRuntimeProfileServiceDefaults(config, runtimeProfile);
+      if (redundantServiceDefaults.length > 0) {
+        issues.push({
+          code: 'runtime-profile-service-defaults-redundant',
+          severity: 'info',
+          message: `AuraCall runtime profile "${name}" still defines default-equivalent service overrides (${redundantServiceDefaults.join(', ')}); remove them unless this runtime profile intentionally diverges from inherited service defaults.`,
           auracallRuntimeProfile: name,
         });
       }

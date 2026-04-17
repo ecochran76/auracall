@@ -232,6 +232,28 @@ function normalizeRedundantManagedProfileDirOverrides(options: {
   }
 }
 
+function normalizeRedundantRuntimeProfileServiceDefaults(config: MutableConfig, runtimeProfiles: Record<string, unknown>): void {
+  const globalServices = isRecord(config.services) ? (config.services as Record<string, unknown>) : {};
+  for (const runtimeProfileValue of Object.values(runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+    const runtimeServices = isRecord(runtimeProfileValue.services) ? runtimeProfileValue.services : null;
+    if (!runtimeServices) continue;
+
+    for (const serviceId of KNOWN_SERVICE_IDS) {
+      const globalService = isRecord(globalServices[serviceId]) ? (globalServices[serviceId] as Record<string, unknown>) : null;
+      const runtimeService = isRecord(runtimeServices[serviceId]) ? (runtimeServices[serviceId] as Record<string, unknown>) : null;
+      if (!globalService || !runtimeService) continue;
+
+      for (const key of RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS) {
+        if (runtimeService[key] === undefined || globalService[key] === undefined) continue;
+        if (valuesEquivalent(runtimeService[key], globalService[key])) {
+          delete runtimeService[key];
+        }
+      }
+    }
+  }
+}
+
 function pruneEmptyRuntimeProfileServices(runtimeProfiles: Record<string, unknown>): void {
   for (const runtimeProfileValue of Object.values(runtimeProfiles)) {
     if (!isRecord(runtimeProfileValue)) continue;
@@ -567,6 +589,7 @@ export function materializeConfigV2(
         browserProfiles: result.browserProfiles as Record<string, unknown>,
         runtimeProfiles: result.runtimeProfiles as Record<string, unknown>,
       });
+      normalizeRedundantRuntimeProfileServiceDefaults(result, result.runtimeProfiles as Record<string, unknown>);
       pruneEmptyRuntimeProfileServices(result.runtimeProfiles as Record<string, unknown>);
     }
 
@@ -594,6 +617,7 @@ export function materializeConfigV2(
         browserProfiles: result.browserFamilies as Record<string, unknown>,
         runtimeProfiles: result.profiles as Record<string, unknown>,
       });
+      normalizeRedundantRuntimeProfileServiceDefaults(result, result.profiles as Record<string, unknown>);
       pruneEmptyRuntimeProfileServices(result.profiles as Record<string, unknown>);
     }
   }

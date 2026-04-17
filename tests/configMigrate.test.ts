@@ -295,6 +295,45 @@ describe('config migrate bridge helpers', () => {
     });
   });
 
+  it('removes default-equivalent runtime-profile service overrides during target-shape cleanup', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        services: {
+          chatgpt: {
+            modelStrategy: 'current',
+            thinkingTime: 'extended',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                modelStrategy: 'current',
+                thinkingTime: 'extended',
+                composerTool: 'canvas',
+              },
+            },
+          },
+        },
+      } as any,
+      { targetShape: true },
+    );
+
+    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
+      composerTool: 'canvas',
+    });
+  });
+
   it('preserves conflicting service-scoped values in runtimeProfile.browser during cleanup', () => {
     const result = materializeConfigV2(
       {
@@ -464,6 +503,43 @@ describe('config migrate bridge helpers', () => {
       manualLogin: true,
     });
     expect(result.profiles?.consulting?.services?.gemini).toBeUndefined();
+  });
+
+  it('removes default-equivalent runtime-profile service overrides during bridge-shape cleanup', () => {
+    const result = materializeConfigV2(
+      {
+        version: 2,
+        auracallProfile: 'consulting',
+        browserFamilies: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        services: {
+          grok: {
+            modelStrategy: 'current',
+          },
+        },
+        profiles: {
+          consulting: {
+            engine: 'browser',
+            browserFamily: 'consulting',
+            defaultService: 'grok',
+            services: {
+              grok: {
+                modelStrategy: 'current',
+                composerTool: 'deep-search',
+              },
+            },
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.profiles?.consulting?.services?.grok).toEqual({
+      composerTool: 'deep-search',
+    });
   });
 
   it('prunes empty services containers after conservative cleanup', () => {

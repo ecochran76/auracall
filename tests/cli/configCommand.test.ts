@@ -999,6 +999,54 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces redundant default-equivalent runtime-profile service overrides in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        services: {
+          chatgpt: {
+            modelStrategy: 'current',
+            thinkingTime: 'extended',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                modelStrategy: 'current',
+                thinkingTime: 'extended',
+                composerTool: 'canvas',
+              },
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'runtime-profile-service-defaults-redundant',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).toContain(
+      '[info] AuraCall runtime profile "default" still defines default-equivalent service overrides (services.chatgpt.modelStrategy, services.chatgpt.thinkingTime); remove them unless this runtime profile intentionally diverges from inherited service defaults.',
+    );
+  });
+
   it('surfaces selected team planning in config doctor without enabling team execution semantics', () => {
     const report = buildConfigDoctorReport(
       {
