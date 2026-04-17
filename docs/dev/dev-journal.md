@@ -16961,3 +16961,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - but it is no longer the preferred place to encode active service behavior;
     operators should prefer `services.<service>` or
     `runtimeProfiles.<name>.services.<service>` instead
+## 2026-04-17 - Config doctor now extends the llmDefaults bridge warning to project defaults
+
+- Continued the active `0007` lane with a bounded follow-up on the same
+  compatibility seam:
+  - `config doctor` now includes:
+    - `llmDefaults.defaultProjectName`
+    - `llmDefaults.defaultProjectId`
+    in the same compatibility-only bridge warning as
+    `llmDefaults.modelStrategy`
+- Reason:
+  - those project-default keys still participate in compatibility
+    materialization into root browser project state
+  - but they are no longer the preferred place to encode active
+    service/project behavior; operators should prefer `services.<service>` or
+    `runtimeProfiles.<name>.services.<service>` instead

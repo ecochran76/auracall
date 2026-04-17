@@ -1018,11 +1018,13 @@ describe('config model helpers', () => {
     });
   });
 
-  it('surfaces llmDefaults model strategy as a compatibility-only service default seam', () => {
+  it('surfaces llmDefaults model and project defaults as a compatibility-only bridge seam', () => {
     const config = {
       defaultRuntimeProfile: 'default',
       llmDefaults: {
         modelStrategy: 'current',
+        defaultProjectName: 'Legacy Project',
+        defaultProjectId: 'g-p-legacy-project',
       },
       browserProfiles: {
         default: {
@@ -1056,7 +1058,7 @@ describe('config model helpers', () => {
           code: 'llm-defaults-service-scoped-defaults-present',
           severity: 'info',
           message:
-            'llmDefaults still defines service-scoped defaults (llmDefaults.modelStrategy); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.',
+            'llmDefaults still defines compatibility-only service defaults (llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.',
         }),
       ],
     });

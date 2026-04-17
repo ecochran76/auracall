@@ -248,11 +248,14 @@ Current migration checkpoint:
     - root browser config is still a compatibility/defaults surface
     - there is no safe automatic rewrite until the remaining `browser` versus
       `llmDefaults` ownership contract is narrowed further
-  - `llmDefaults.modelStrategy` also remains diagnostics-only:
-    - it is still the compatibility bridge seam for legacy model-strategy
+  - `llmDefaults` model/project defaults also remain diagnostics-only:
+    - `llmDefaults.modelStrategy`
+    - `llmDefaults.defaultProjectName`
+    - `llmDefaults.defaultProjectId`
+    - they are still the compatibility bridge seam for legacy model/project
       defaults
-    - doctor should flag it as compatibility-only service default state, not
-      as the preferred place to encode active service behavior
+    - doctor should flag them as compatibility-only service default state, not
+      as the preferred place to encode active service/project behavior
     - there is no safe automatic rewrite until the remaining
       `llmDefaults` versus `services.<service>` ownership contract is narrowed
       further

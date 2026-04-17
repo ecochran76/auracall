@@ -12770,3 +12770,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `config doctor`, but do not auto-migrate it until the remaining
   `llmDefaults` versus `services.<service>` ownership seam is narrowed
   explicitly.
+- 2026-04-17: Apply that same compatibility-only rule to
+  `llmDefaults.defaultProjectName` and `llmDefaults.defaultProjectId`. They
+  still participate in compatibility materialization, but they are not the
+  preferred place to encode active service/project defaults, so doctor should
+  flag them alongside `llmDefaults.modelStrategy` instead of auto-migrating
+  them.

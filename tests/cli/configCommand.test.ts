@@ -1033,12 +1033,14 @@ describe('config show helpers', () => {
     );
   });
 
-  it('surfaces llmDefaults modelStrategy as a compatibility-only service default seam in doctor output', () => {
+  it('surfaces llmDefaults model and project defaults as a compatibility-only bridge seam in doctor output', () => {
     const report = buildConfigDoctorReport(
       {
         defaultRuntimeProfile: 'default',
         llmDefaults: {
           modelStrategy: 'current',
+          defaultProjectName: 'Legacy Project',
+          defaultProjectId: 'g-p-legacy-project',
         },
         browserProfiles: {
           default: {
@@ -1068,7 +1070,7 @@ describe('config show helpers', () => {
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: ok');
     expect(text).toContain(
-      '[info] llmDefaults still defines service-scoped defaults (llmDefaults.modelStrategy); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.',
+      '[info] llmDefaults still defines compatibility-only service defaults (llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.',
     );
   });
 

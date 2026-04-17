@@ -153,8 +153,10 @@ Current note:
         `browser.composerTool` should also be treated as misplaced
         service-scoped defaults, while `llmDefaults` remains the compatibility
         bridge seam for model/project defaults
-      - `llmDefaults.modelStrategy` should be treated as compatibility-only
-        bridge state, not as the preferred active service-default layer
+      - `llmDefaults.modelStrategy`, `llmDefaults.defaultProjectName`, and
+        `llmDefaults.defaultProjectId` should be treated as compatibility-only
+        bridge state, not as the preferred active service/project-default
+        layer
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

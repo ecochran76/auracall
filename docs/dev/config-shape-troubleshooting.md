@@ -265,11 +265,13 @@ Action:
 Meaning:
 - `llmDefaults` still carries service-layer default state such as:
   - `llmDefaults.modelStrategy`
+  - `llmDefaults.defaultProjectName`
+  - `llmDefaults.defaultProjectId`
 
 Action:
 - treat `llmDefaults` as compatibility bridge state only
 - prefer `services.<service>` or `runtimeProfiles.<name>.services.<service>`
-  for active service behavior
+  for active service/project behavior
 - do not expect `config migrate` to rewrite this automatically yet:
   - `llmDefaults` still participates in compatibility materialization for
     legacy model/project defaults

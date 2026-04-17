@@ -217,6 +217,12 @@ function describeLlmDefaultsServiceScopedDefaults(config: OracleConfig | Mutable
   if (llmDefaults.modelStrategy !== undefined) {
     keys.push('llmDefaults.modelStrategy');
   }
+  if (llmDefaults.defaultProjectName !== undefined) {
+    keys.push('llmDefaults.defaultProjectName');
+  }
+  if (llmDefaults.defaultProjectId !== undefined) {
+    keys.push('llmDefaults.defaultProjectId');
+  }
   return keys;
 }
 
@@ -882,7 +888,7 @@ export function analyzeConfigModelBridgeHealth(
     issues.push({
       code: 'llm-defaults-service-scoped-defaults-present',
       severity: 'info',
-      message: `llmDefaults still defines service-scoped defaults (${llmDefaultsServiceScopedDefaults.join(', ')}); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service behavior.`,
+      message: `llmDefaults still defines compatibility-only service defaults (${llmDefaultsServiceScopedDefaults.join(', ')}); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.`,
     });
   }
 
