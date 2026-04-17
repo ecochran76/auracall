@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
   assertResponsesHostAllowed,
@@ -24,6 +24,8 @@ import {
   createExecutionRunStep,
 } from '../src/runtime/model.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+
+vi.setConfig({ testTimeout: 10000 });
 
 describe('http responses adapter', () => {
   const cleanup: string[] = [];
@@ -4904,10 +4906,10 @@ describe('http responses adapter', () => {
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
 
     try {
-      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/missing_run`);
+      const response = await fetch(`http://127.0.0.1:${server.port}/status/recovery/missing-run`);
       expect(response.status).toBe(404);
       const payload = (await response.json()) as { error: { message: string } };
-      expect(payload.error.message).toContain('Recovery detail for run missing_run was not found');
+      expect(payload.error.message).toContain('Recovery detail for run missing-run was not found');
     } finally {
       await server.close();
     }

@@ -16888,3 +16888,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `~/.auracall` home
   - that leaked a live `notReadyRunIds` entry into a test that was asserting an
     empty local-claim summary
+## 2026-04-17 - Suspiciously-idle HTTP repair test now carries an explicit timeout budget
+
+- Follow-up validation hardening after the aggregate touched-surface sweep:
+  the heavy HTTP responses test file now carries an explicit `10000ms`
+  Vitest per-file timeout budget, including the suspiciously-idle lease repair
+  case in
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  instead of relying on the default `5000ms`.
+- Reason:
+  - isolated HTTP cases were functionally green but aggregate load in the same
+    file could still hit the default budget
+  - file-level budget is cleaner than chasing individual timeout annotations
+  - this is a test-budget fix, not a runtime behavior change
+## 2026-04-17 - Aggregate validation now hardens HTTP recovery-detail and Grok response tests
+
+- Follow-up aggregate-suite stabilization:
+  - the missing recovery-detail HTTP test now uses a normal missing run id
+    shape (`missing-run`) so it exercises the intended `404 not found` route
+    instead of stricter invalid-id handling
+  - the Grok plain-text response test now provides one extra stable assistant
+    snapshot so aggregate load does not exhaust the mock sequence before the
+    response stabilizes

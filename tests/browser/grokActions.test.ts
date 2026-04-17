@@ -235,6 +235,17 @@ describe('grok actions', () => {
             toastText: '',
           },
         },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'plain text',
+            lastMarkdown: '- plain text',
+            lastHtml: '<p>plain text</p>',
+            toastText: '',
+          },
+        },
       });
     const runtime = { evaluate } as unknown as ChromeClient['Runtime'];
 

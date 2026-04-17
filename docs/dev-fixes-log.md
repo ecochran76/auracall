@@ -12739,3 +12739,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runtime control can ingest persisted runs from the operator's real
   `~/.auracall` state and leak live `notReadyRunIds` into otherwise isolated
   `/status` assertions.
+- 2026-04-17: When an HTTP responses test is functionally green in isolation
+  but can still hit the default 5s budget under aggregate-suite load, prefer a
+  file-level `vi.setConfig({ testTimeout: ... })` on the heavy HTTP test file
+  over chasing individual per-test timeout annotations. Treat it as test-budget
+  tuning, not runtime flakiness.
+- 2026-04-17: Keep aggregate validation fixtures aligned with real route and
+  polling semantics. For HTTP recovery-detail tests, use a normal missing run
+  id shape when asserting `404 not found`. For Grok response polling tests,
+  provide enough repeated stable snapshots that aggregate-suite load cannot
+  exhaust the mocked sequence before stabilization is detected.
