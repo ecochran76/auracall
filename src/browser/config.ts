@@ -341,7 +341,7 @@ function resolveEffectiveDisplay(options: {
   if (envDisplay) {
     return envDisplay;
   }
-  if (isWslEnvironment() && isLinuxHostedChromePath(options.resolvedChromePath)) {
+  if (isWslEnvironment() && !isWindowsHostedChromePath(options.resolvedChromePath)) {
     return ':0.0';
   }
   return DEFAULT_BROWSER_CONFIG.display;

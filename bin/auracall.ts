@@ -87,7 +87,9 @@ import {
   executeConfiguredTeamRun,
   formatTeamRunCliExecutionPayload,
   formatTeamRunCliInspectionPayload,
+  formatTeamRunCliReviewLedgerPayload,
   inspectConfiguredTeamRun,
+  reviewConfiguredTeamRun,
   type TeamRunCliResponseFormat,
 } from '../src/cli/teamRunCommand.js';
 import {
@@ -936,6 +938,16 @@ apiCommand
   .option('--team-run-id <id>', 'Inspect the latest persisted runtime run linked to a team run id.')
   .option('--task-run-spec-id <id>', 'Inspect the latest persisted runtime run linked to a task run spec id.')
   .option('--runner-id <id>', 'Optionally evaluate claim affinity against one persisted runner id.')
+  .option(
+    '--probe <service-state>',
+    'Optionally request one bounded live probe. Current value: service-state.',
+    (value) => {
+      if (value === 'service-state') {
+        return value;
+      }
+      throw new Error('Invalid --probe value. Use service-state.');
+    },
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const payload = await inspectConfiguredRuntimeRun({
@@ -956,6 +968,7 @@ apiCommand
         typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
           ? commandOptions.runnerId.trim()
           : null,
+      includeServiceState: commandOptions.probe === 'service-state',
     });
 
     if (commandOptions.json) {
@@ -7889,6 +7902,37 @@ teamsCommand
     }
 
     console.log(formatTeamRunCliInspectionPayload(payload));
+  });
+
+teamsCommand
+  .command('review')
+  .description('Review one persisted team-run sequence as a read-only ledger.')
+  .option('--task-run-spec-id <id>', 'Review the latest persisted runtime run linked to one task run spec.')
+  .option('--team-run-id <id>', 'Review the latest persisted runtime run linked to one team run id.')
+  .option('--runtime-run-id <id>', 'Review one persisted runtime run.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (commandOptions) => {
+    const payload = await reviewConfiguredTeamRun({
+      taskRunSpecId:
+        typeof commandOptions.taskRunSpecId === 'string' && commandOptions.taskRunSpecId.trim().length > 0
+          ? commandOptions.taskRunSpecId.trim()
+          : null,
+      teamRunId:
+        typeof commandOptions.teamRunId === 'string' && commandOptions.teamRunId.trim().length > 0
+          ? commandOptions.teamRunId.trim()
+          : null,
+      runtimeRunId:
+        typeof commandOptions.runtimeRunId === 'string' && commandOptions.runtimeRunId.trim().length > 0
+          ? commandOptions.runtimeRunId.trim()
+          : null,
+    });
+
+    if (commandOptions.json) {
+      console.log(JSON.stringify(payload, null, 2));
+      return;
+    }
+
+    console.log(formatTeamRunCliReviewLedgerPayload(payload));
   });
 
 teamsCommand

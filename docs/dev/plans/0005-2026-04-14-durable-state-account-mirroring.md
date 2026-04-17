@@ -1,6 +1,6 @@
 # Durable State And Account Mirroring Plan | 0005-2026-04-14
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Current State
@@ -21,8 +21,12 @@ Lane: P01
   - one bounded isolated `api serve` smoke proved the documented
     read-only/account-affinity posture without touching live browser/API
     providers
-  - the next implementation lane should be chosen explicitly instead of adding
-    more durable-state/account-affinity reporting by default
+  - the roadmap reassessment is complete:
+    - this bounded single-runner/account-affinity checkpoint is closed
+    - no new durable-state/account-mirroring implementation slice is active
+      right now
+    - only reopen this lane when a broader durable-ownership seam is selected
+      explicitly
 
 # Durable State And Account Mirroring Plan
 

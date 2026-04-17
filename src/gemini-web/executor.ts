@@ -1,5 +1,11 @@
 import path from 'node:path';
-import type { BrowserRunOptions, BrowserRunResult, BrowserLogger, CookieParam } from '../browser/types.js';
+import type {
+  BrowserRunOptions,
+  BrowserRunResult,
+  BrowserLogger,
+  CookieParam,
+  BrowserPassiveObservation,
+} from '../browser/types.js';
 import { getCookies } from '@steipete/sweet-cookie';
 import { runGeminiWebWithFallback, saveFirstGeminiImageFromOutput } from './client.js';
 import type { GeminiWebModelId } from './client.js';
@@ -32,6 +38,46 @@ const GEMINI_DEFAULT_URL = 'https://gemini.google.com/app';
 
 function estimateTokenCount(text: string): number {
   return Math.ceil(text.length / 4);
+}
+
+function recordBrowserPassiveObservation(
+  observations: BrowserPassiveObservation[],
+  observation: Omit<BrowserPassiveObservation, 'observedAt'>,
+): void {
+  if (observations.some((entry) => entry.state === observation.state)) {
+    return;
+  }
+  observations.push({
+    ...observation,
+    observedAt: new Date().toISOString(),
+  });
+}
+
+function buildGeminiPassiveObservations(response: GeminiWebResponse): BrowserPassiveObservation[] {
+  const observations: BrowserPassiveObservation[] = [];
+  if (typeof response.thoughts === 'string' && response.thoughts.trim().length > 0) {
+    recordBrowserPassiveObservation(observations, {
+      state: 'thinking',
+      source: 'browser-service',
+      evidenceRef: 'gemini-thoughts',
+      confidence: 'medium',
+    });
+  }
+  if ((typeof response.text === 'string' && response.text.trim().length > 0) || response.image_count > 0) {
+    recordBrowserPassiveObservation(observations, {
+      state: 'response-incoming',
+      source: 'browser-service',
+      evidenceRef: response.image_count > 0 ? 'gemini-web-response-images' : 'gemini-web-response-text',
+      confidence: 'medium',
+    });
+    recordBrowserPassiveObservation(observations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'gemini-web-response-finished',
+      confidence: 'high',
+    });
+  }
+  return observations;
 }
 
 function resolveInvocationPath(value: string | undefined): string | undefined {
@@ -477,6 +523,7 @@ export function createGeminiWebExecutor(
     }
 
     const tookMs = Date.now() - startTime;
+    const passiveObservations = buildGeminiPassiveObservations(response);
     log?.(`[gemini-web] Completed in ${tookMs}ms`);
 
     return {
@@ -487,6 +534,7 @@ export function createGeminiWebExecutor(
       answerChars: answerText.length,
       conversationId: resolvedConversationId ?? undefined,
       tabUrl: resolvedTabUrl ?? undefined,
+      passiveObservations,
     };
   };
 }

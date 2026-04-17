@@ -1,3 +1,424 @@
+## 2026-04-16 - Runtime inspection service-state probe contract
+
+- Current focus:
+  - add one bounded read-only mid-turn `serviceState` probe to runtime
+    inspection without widening `/status` into provider chat-state semantics,
+    then wire provider-owned live probes on the managed browser path one
+    service at a time
+- Completed:
+  - closed the passive provider-observation provider-parity plan and opened a
+    new bounded plan for live runtime-inspection service-state probing:
+    - `docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md`
+  - extended runtime inspection with an opt-in `serviceState` payload that is
+    only returned when explicitly requested
+  - added explicit honest probe posture:
+    - `probeStatus = observed`
+    - `probeStatus = unavailable`
+  - wired the same opt-in contract through:
+    - `GET /v1/runtime-runs/inspect?runId=<id>&probe=service-state`
+    - `auracall api inspect-run --run-id <id> --probe service-state`
+  - kept the actual live probe injectable so provider/browser code still owns
+    provider-state detection
+  - added the default `api serve` ChatGPT probe callback:
+    - resolves the running step AuraCall runtime profile through
+      `resolveConfig({ profile: step.runtimeProfileId })`
+    - probes only ChatGPT-managed browser sessions on that resolved profile
+    - returns honest `null` when the step runtime profile cannot be matched
+      back to the resolved AuraCall runtime profile
+  - added focused ChatGPT live-probe helper coverage for:
+    - placeholder-turn `thinking`
+    - assistant-visible `response-incoming`
+    - auth-surface `login-required`
+  - added a Gemini-backed live probe on the same runtime-inspection seam for
+    browser-backed Gemini runs only:
+    - resolves the running step AuraCall runtime profile before probing
+    - refuses non-browser Gemini runtime profiles instead of fabricating
+      browser state for API-backed runs
+    - derives Gemini state from provider-owned page evidence:
+      - `thinking` when the submitted prompt is committed into Gemini history
+        and no answer is visible yet
+      - `response-incoming` when Gemini answer text is visible before the page
+        looks quiescent
+      - `response-complete` when visible answer text is present and Gemini
+        looks quiescent
+      - `login-required` on visible sign-in surfaces
+  - added focused Gemini live-probe helper and runtime-profile routing
+    coverage
+- Verification:
+  - `pnpm vitest run tests/browser/liveServiceState.test.ts tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+  - live `api serve` ChatGPT proof:
+    - `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts api serve --port 8092`
+    - `POST /v1/responses` with `auracall.runtimeProfile = default` and
+      `service = chatgpt` produced a real browser-backed mid-turn run:
+      - `runId = resp_6a82023f7cc1458aa57411654f982eaf`
+      - response remained `in_progress`
+      - step status remained `running`
+    - mid-turn `GET /v1/runtime-runs/inspect?runId=resp_6a82023f7cc1458aa57411654f982eaf&probe=service-state`
+      returned:
+      - `probeStatus = observed`
+      - `service = chatgpt`
+      - `state = unknown`
+      - `evidenceRef = chatgpt-live-probe-no-signal`
+      - `confidence = low`
+    - same live proof also exposed one wrapper bug:
+      - `serveResponsesHttp` had not been wiring the configured stored-step
+        executor by default
+      - after wiring it, direct browser-backed `/v1/responses` runs execute on
+        the real configured browser path
+  - stronger live follow-up proof on the managed ChatGPT runtime profile:
+    - `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts api serve --port 8093`
+    - `POST /v1/responses` with:
+      - `auracall.runtimeProfile = wsl-chrome-2`
+      - `auracall.service = chatgpt`
+      - model `gpt-5.2-thinking`
+      - `runId = resp_a212f22157344324bb8d8d52adbfeb8f`
+    - mid-turn `GET /v1/runtime-runs/inspect?runId=resp_a212f22157344324bb8d8d52adbfeb8f&probe=service-state`
+      first returned:
+      - `probeStatus = observed`
+      - `state = thinking`
+      - `evidenceRef = chatgpt-placeholder-turn`
+      - `confidence = high`
+    - bounded live DOM inspection on the same managed tab showed:
+      - `stopVisible = true`
+      - `lastAssistantText = ChatGPT said:Pro thinking`
+      - no useful `[role="status"]` / `aria-live` fallback signal
+    - later mid-turn inspection on the same run returned:
+      - `probeStatus = observed`
+      - `state = response-incoming`
+      - `evidenceRef = chatgpt-streaming-visible`
+      - `confidence = high`
+    - terminal inspection on the same run then correctly returned:
+      - `probeStatus = unavailable`
+      - reason `runtime run ... is not actively running`
+  - focused Gemini probe validation:
+    - `pnpm vitest run --testTimeout=15000 tests/browser/liveServiceState.test.ts tests/http.responsesServer.test.ts tests/runtime.inspection.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+    - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - managed Gemini browser-path setup proof:
+    - `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile auracall-gemini-pro setup --target gemini --skip-verify`
+    - follow-up `doctor --target gemini --json` showed:
+      - managed browser profile exists
+      - active managed Gemini instance is running
+      - the visible page surface is still Gemini `Sign in`
+  - bounded Gemini direct `/v1/responses` probe smoke:
+    - proved the run completed, but it was not a browser-backed mid-turn proof
+      for the new seam
+    - this exposed one required contract guard:
+      - the default Gemini live probe must refuse non-browser runtime profiles
+        instead of attaching generic browser semantics to API-backed runs
+  - operator follow-up on the managed Gemini sign-in surface:
+    - the visible `Sign in` page was recoverable by pressing the Gemini
+      `Sign in` button once because the Google login was still remembered on
+      that managed browser profile
+  - remembered-login recovery plus cookie export on the managed Gemini path:
+    - `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts login --target gemini --profile auracall-gemini-pro --export-cookies`
+    - saved:
+      - `/home/ecochran76/.auracall/browser-profiles/auracall-gemini-pro/gemini/cookies.json`
+      - `/home/ecochran76/.auracall/cookies.json`
+  - direct browser-backed Gemini smoke after cookie export:
+    - `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile auracall-gemini-pro --engine browser --model gemini-3-pro --prompt 'Reply exactly with: AURACALL_GEMINI_BROWSER_DIRECT_SMOKE_OK' --wait --verbose --force`
+    - completed successfully in ~6.4s with:
+      - `AURACALL_GEMINI_BROWSER_DIRECT_SMOKE_OK`
+  - live `api serve` Gemini probe follow-up on the same warmed browser path:
+    - started `env -u DISPLAY ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts api serve --port 8095`
+    - short direct response:
+      - `runId = resp_468cab911b7b457780ab19b05e17ae1d`
+      - completed successfully with:
+        - `AURACALL_GEMINI_API_PROBE_SUCCESS_OK`
+      - but it finished too quickly to capture a mid-turn `serviceState`
+        observation
+    - longer direct response:
+      - `runId = resp_627587b126034820bf7f2a395b88f6da`
+      - remained active long enough for repeated live inspection
+      - mid-turn `GET /v1/runtime-runs/inspect?...&probe=service-state`
+        returned:
+        - `probeStatus = observed`
+        - `service = gemini`
+        - `state = unknown`
+        - `evidenceRef = gemini-live-probe-no-signal`
+        - `confidence = low`
+      - the same run later failed with:
+        - `Gemini returned control frames only and never materialized a response body.`
+- Follow-up note:
+  - the read-only inspection seam is now contract-complete and ChatGPT-backed
+    for active managed-browser runs
+  - Gemini is now also wired for browser-backed runs on the same seam, but the
+    managed `auracall-gemini-pro` browser path is still blocked by a visible
+    sign-in surface on this machine
+  - Grok still returns honest `unavailable` posture on this seam until it gets
+    a provider-owned live probe
+  - current live quality note:
+    - the managed `wsl-chrome-2` ChatGPT path now has direct live proof for
+      both `thinking` and `response-incoming`
+    - the earlier low-confidence `unknown` result on the `default` runtime
+      profile is no longer enough evidence to justify widening the probe
+      heuristics on its own
+    - Gemini browser-backed live probing should only be claimed after one
+      signed-in managed Gemini run proves the provider-owned state progression
+    - on this machine, the first recovery step for a visible Gemini `Sign in`
+      page should be one bounded manual `Sign in` click before treating the
+      managed browser profile as fully blocked
+    - the browser-backed Gemini execution path is green again after cookie
+      export, but the mid-turn inspection seam has only been live-proven to
+      `observed + unknown` on the longer active Gemini run so far
+    - the next Gemini improvement is signal quality, not more auth recovery
+
+## 2026-04-16 - Grok passive observation parity
+
+- Current focus:
+  - extend the stored passive-observation seam from ChatGPT and Gemini to Grok
+    without inventing Grok states in generic runtime or ledger code
+- Completed:
+  - added Grok passive observations on the browser execution path:
+    - `thinking` after Grok accepts the submitted prompt
+    - `response-incoming` when the first new assistant content appears
+    - `response-complete` when the Grok assistant result stabilizes and
+      returns
+  - wired the same observation sequence through both Grok browser execution
+    paths:
+    - managed/local browser execution
+    - remote Chrome Grok execution
+  - confirmed configured stored-step execution persists Grok passive
+    observations into `browserRun.passiveObservations` on the existing seam
+- Verification:
+  - `pnpm vitest run tests/browser/grokActions.test.ts tests/runtime.configuredExecutor.test.ts tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `git diff --check`
+- Follow-up note:
+  - Grok parity is test-verified but not live-verified in this turn
+  - the passive-observation provider-parity slice is now code-complete and the
+    next checkpoint is live validation plus roadmap reassessment
+
+## 2026-04-16 - Gemini passive observation parity
+
+- Current focus:
+  - extend the stored passive-observation seam from ChatGPT to Gemini without
+    moving provider-state inference into the review ledger
+- Completed:
+  - added Gemini passive observations on the TypeScript Gemini web executor
+    path:
+    - `thinking` when Gemini returns provider thoughts
+    - `response-incoming` when text or images materialize
+    - `response-complete` on successful Gemini executor completion
+  - added Gemini passive observations on the browser-native attachment path:
+    - `thinking` after the prompt is committed into Gemini history and before
+      an answer is visible
+    - `response-incoming` when answer text first becomes visible
+    - `response-complete` when the answer stabilizes and returns
+  - confirmed configured stored-step execution persists Gemini passive
+    observations into `browserRun.passiveObservations` on the existing seam
+- Verification:
+  - `pnpm vitest run tests/gemini-web/executor.test.ts tests/runtime.configuredExecutor.test.ts tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `git diff --check`
+- Follow-up note:
+  - Gemini parity is test-verified but not live-verified in this turn
+  - live Gemini validation still needs the stricter exported-cookie and
+    anti-bot preflight already documented for this machine
+
+## 2026-04-16 - ChatGPT passive DOM trace validation
+
+- Current focus:
+  - validate live ChatGPT DOM-state progression for instant and thinking mode
+    on the managed WSL Chrome path before widening passive monitoring
+- Completed:
+  - proved the WSL managed ChatGPT path launches with ambient `DISPLAY`
+    unset and still inherits `DISPLAY=:0.0`
+  - captured one direct instant-mode ChatGPT DOM trace for a longer response
+    prompt at `/tmp/chatgpt-direct-instant-dom-trace.jsonl`
+  - captured one direct thinking-mode ChatGPT DOM trace for the same prompt at
+    `/tmp/chatgpt-direct-thinking-dom-trace.jsonl`
+  - confirmed the current useful thinking signal is a placeholder assistant
+    turn with text `ChatGPT said:Thinking`, followed by growing assistant text
+    while the stop button stays visible, then final completion when the stop
+    button disappears
+  - tightened thinking-status sanitization so the verbose progress monitor
+    keeps a bounded state label and does not spill prompt or assistant-body
+    text after the placeholder phase
+  - re-ran a live ChatGPT thinking-mode browser pass and confirmed the monitor
+    now logs one bounded `Thinking` status line without later `You said:`
+    or file-body noise
+- Verification:
+  - `env -u DISPLAY ... pnpm tsx bin/auracall.ts login --target chatgpt --profile default`
+  - direct instant-mode trace:
+    - `gpt-5.2-instant`
+    - `/tmp/chatgpt-direct-instant-dom-trace.jsonl`
+    - `/tmp/chatgpt-direct-instant.log`
+  - direct thinking-mode trace:
+    - `gpt-5.2-thinking --browser-thinking-time extended`
+    - `/tmp/chatgpt-direct-thinking-dom-trace.jsonl`
+    - `/tmp/chatgpt-direct-thinking.log`
+  - post-patch thinking-mode recheck:
+    - `env -u DISPLAY ... pnpm tsx bin/auracall.ts --profile default --chatgpt --model gpt-5.2-thinking --browser-thinking-time extended --verbose --wait --write-output /tmp/chatgpt-postpatch-thinking-output-2.txt --file README.md --prompt 'Compare merge sort and quicksort in exactly 6 bullet points, one sentence each, and end with a one-sentence recommendation.'`
+- Key result:
+  - the generic status-node scan did not emit a stable `thinkingMessages[]`
+    signal on this live page
+  - the reliable thinking evidence came from the assistant-turn placeholder and
+    existing stop-button / assistant-snapshot progression instead
+  - after the sanitization patch, the live verbose monitor preserved the
+    bounded `Thinking` label rather than degrading into full conversation text
+
+## 2026-04-16 - WSL browser display default
+
+- Current focus:
+  - make headful WSL browser launches default `DISPLAY` to `:0.0` unless the
+    operator or config already chose something else
+- Completed:
+  - widened browser display resolution so WSL defaults apply even before Linux
+    Chrome path discovery succeeds
+  - preserved precedence for explicit `browser.display`,
+    `AURACALL_BROWSER_DISPLAY`, and explicit Windows-hosted Chrome paths
+  - updated the WSL ChatGPT runbook to reflect the new default
+- Verification:
+  - `pnpm vitest run tests/browser/config.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+- Follow-up note:
+  - root one-shot browser UX is still easy to misuse during live smokes:
+    - top-level `--target` is rejected even though `login` accepts it
+    - root one-shot runs also require at least one `--file`
+  - next bounded CLI UX slice should either:
+    - accept top-level `--target` as an alias for `--browser-target`, or
+    - emit a more directed error that points operators to
+      `--browser-target` / `--chatgpt` / `--gemini` / `--grok`
+
+## 2026-04-15 - Passive provider observations Slice 1
+
+- Current focus:
+  - add one stored passive-observation seam and prove it end to end on the
+    ChatGPT browser execution path
+- Completed:
+  - extended ChatGPT browser execution to return stored passive observations
+    for `thinking`, `response-incoming`, and `response-complete`
+  - persisted those observations into configured stored-step
+    `browserRun.passiveObservations`
+  - projected stored passive observations through the review ledger and CLI
+    review text
+  - updated README, testing docs, roadmap, runbook, and the canonical passive
+    observations plan
+- Verification:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-15 - Review-ledger reassessment and next lane selection
+
+- Current focus:
+  - close the completed review-ledger checkpoint and choose the next bounded
+    observability lane
+- Completed:
+  - closed [0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+    after finishing its four implementation slices
+  - added [0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+    as the next bounded plan
+  - selected adapter-owned passive provider observations as the next explicit
+    implementation lane
+  - set the first slice to a stored passive-observation seam plus ChatGPT
+    execution-path capture for `thinking`, `response-incoming`, and
+    `response-complete`
+- Verification:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## 2026-04-15 - Team-run review ledger Slice 4
+
+- Current focus:
+  - attach minimal hard-stop observations to the review ledger without adding
+    live DOM polling or broad chat-state detection
+- Completed:
+  - projected durable failure-derived observations for provider error, login
+    required, captcha/human-verification, and awaiting human action
+  - included source, timestamp, confidence, and evidence reference
+  - updated `auracall teams review` text formatting to list observations
+  - updated README, testing docs, roadmap, runbook, and the canonical plan
+- Verification:
+  - `pnpm vitest run tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-15 - Team-run review ledger Slice 3
+
+- Current focus:
+  - enrich provider references without adding scraping or inferred cache paths
+- Completed:
+  - enriched configured stored-step browser metadata with provider/service,
+    conversation id, tab URL, configured URL, project id, runtime profile id,
+    browser profile id, agent id, selected model, and cache path status
+  - projected the enriched metadata through the team-run review ledger
+  - updated CLI text formatting to show project/model/cache status
+  - updated README, testing docs, roadmap, runbook, and the canonical plan
+- Verification:
+  - `pnpm vitest run tests/runtime.configuredExecutor.test.ts tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-15 - Team-run review ledger Slice 2
+
+- Current focus:
+  - expose the internal ledger projection through one bounded read-only
+    operator surface
+- Completed:
+  - added `reviewTeamRunLedger(...)` to the team review ledger module
+  - added `auracall teams review`
+  - preserved the same one-key lookup discipline as team inspection:
+    - `--task-run-spec-id`
+    - `--team-run-id`
+    - `--runtime-run-id`
+  - added CLI-helper coverage for:
+    - runtime-run lookup
+    - text formatting
+    - ambiguous lookup rejection
+  - updated README, testing docs, roadmap, runbook, and the canonical plan
+- Verification:
+  - `pnpm vitest run tests/teams.reviewLedger.test.ts tests/cli/teamRunCommand.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-15 - Team-run review ledger Slice 1
+
+- Current focus:
+  - implement the internal projection-only review ledger without widening
+    public team execution behavior
+- Completed:
+  - added [reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts)
+    as the internal read-only ledger projection helper
+  - added [teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.reviewLedger.test.ts)
+    covering:
+    - deterministic serial step ordering
+    - handoff and artifact projection
+    - prompt/input and output snapshots
+    - provider conversation refs from existing `browserRun` metadata
+    - missing provider refs represented as `null`
+  - updated the canonical review-ledger plan and roadmap with the Slice 1
+    checkpoint
+- Verification:
+  - `pnpm vitest run tests/teams.reviewLedger.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+
+## 2026-04-15 - Team-run review ledger planning
+
+- Current focus:
+  - convert the service-health/passive-monitoring/reproducibility design
+    discussion into canonical planning authority before implementation
+- Completed:
+  - added [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+    as the bounded plan for whole-sequence team-run review
+  - updated [ROADMAP.md](/home/ecochran76/workspace.local/oracle/ROADMAP.md)
+    so team-run review and observability is the next higher-level
+    service/runtime lane
+  - updated [RUNBOOK.md](/home/ecochran76/workspace.local/oracle/RUNBOOK.md)
+    with the sequencing decision and first implementation checkpoint
+- Decision:
+  - build the durable review ledger before broad passive provider-state
+    monitoring
+  - leave an observation slot in the ledger for later states such as
+    `thinking`, `response-incoming`, provider errors, login-required, and
+    captcha/human-verification hard stops
+- Why it matters:
+  - users need one Aura-Call-owned sequence to review a team task after the
+    fact
+  - provider caches remain useful evidence, but should not be the only
+    orchestration record
+  - passive monitoring becomes more useful once observations have a durable
+    per-step parent
+
 ## 2026-04-15 - OpenAI endpoint doc authority realignment
 
 - Completed one bounded secondary-doc authority cleanup:
@@ -16211,3 +16632,248 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - updated [README.md](/home/ecochran76/workspace.local/oracle/README.md) and
     [docs/testing.md](/home/ecochran76/workspace.local/oracle/docs/testing.md)
     so the `/status` action-result contract reflects the same bounded detail.
+## 2026-04-16 - Gemini live probe prefers executor-owned active state
+
+- Completed one bounded Gemini live-probe refinement for
+  `GET /v1/runtime-runs/inspect?...&probe=service-state`:
+  - added
+    [src/runtime/liveServiceStateRegistry.ts](/home/ecochran76/workspace.local/oracle/src/runtime/liveServiceStateRegistry.ts)
+    as a transient in-memory registry for active run-scoped provider state
+  - updated
+    [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+    so browser-backed Gemini execution records transient active `thinking`
+    state under:
+    - `state = thinking`
+    - `source = browser-service`
+    - `evidenceRef = gemini-web-request-started`
+    - `confidence = medium`
+  - updated
+    [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so the default Gemini live probe prefers that executor-owned active state
+    before falling back to page/DOM evidence
+  - added focused coverage in:
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - live proof on `auracall-gemini-pro` via `auracall api serve --port 8096`
+    showed repeated mid-turn `serviceState` readback of:
+    - `probeStatus = observed`
+    - `state = thinking`
+    - `evidenceRef = gemini-web-request-started`
+    - `confidence = medium`
+  - the same run later failed after the active proof window, so this slice
+    improves live state quality, not Gemini completion reliability.
+## 2026-04-17 - Grok live probe closes provider-breadth checkpoint
+
+- Completed one bounded Grok live-probe slice for
+  `GET /v1/runtime-runs/inspect?...&probe=service-state`:
+  - updated [src/browser/liveServiceState.ts](/home/ecochran76/workspace.local/oracle/src/browser/liveServiceState.ts)
+    with a provider-owned Grok live helper that can read:
+    - `response-incoming`
+    - `provider-error`
+    - `login-required`
+  - updated [src/runtime/configuredExecutor.ts](/home/ecochran76/workspace.local/oracle/src/runtime/configuredExecutor.ts)
+    so browser-backed Grok execution records transient active `thinking`
+    state under:
+    - `state = thinking`
+    - `source = browser-service`
+    - `evidenceRef = grok-prompt-submitted`
+    - `confidence = medium`
+  - updated [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+    so the default Grok live probe prefers executor-owned active state before
+    falling back to page/DOM evidence and refuses non-browser runtime
+    profiles
+  - added focused coverage in:
+    - [tests/browser/liveServiceState.test.ts](/home/ecochran76/workspace.local/oracle/tests/browser/liveServiceState.test.ts)
+    - [tests/runtime.configuredExecutor.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.configuredExecutor.test.ts)
+    - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  - live proof on `auracall-grok-auto` via `auracall api serve --port 8097`
+    showed repeated mid-turn `serviceState` readback of:
+    - `probeStatus = observed`
+    - `state = thinking`
+    - `evidenceRef = grok-prompt-submitted`
+    - `confidence = medium`
+  - the same run later succeeded and terminal inspection returned honest
+    `unavailable`, which closes the current provider-breadth checkpoint for
+    the live `serviceState` seam.
+## 2026-04-17 - Service-state lane reassessment
+
+- Reassessed the runtime-inspection `serviceState` lane after provider-breadth
+  completion:
+  - closed
+    [0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+    as the completed breadth checkpoint
+  - opened
+    [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+    as the bounded quality follow-up lane
+  - kept the architectural boundary unchanged:
+    - richer Gemini/Grok mid-turn states must stay on the existing
+      run-scoped `serviceState` seam
+    - `/status` remains server/runner health only
+    - no generic runtime-owned DOM polling is authorized
+## 2026-04-17 - Gemini quality follow-up recorded as negative evidence
+
+- Ran the first bounded quality follow-up attempt for Gemini richer mid-turn
+  states on the existing `serviceState` seam.
+- Live `api serve` evidence on this machine/profile still showed:
+  - active `thinking` via executor-owned `gemini-web-request-started`
+  - then fast failure / terminal `unavailable`
+  - no stable provider-owned `response-incoming` or `response-complete`
+    evidence before failure
+- Bounded DOM inspection on the managed Gemini browser profile still showed the
+  idle/home surface rather than active answer-bearing chat history.
+- Recorded the conclusion in
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
+  keep Gemini executor-owned `thinking` as the honest fallback on this
+  machine/profile instead of inventing richer heuristic states.
+## 2026-04-17 - Grok quality follow-up recorded as negative evidence
+
+- Implemented one bounded Grok precedence refinement in
+  [src/http/responsesServer.ts](/home/ecochran76/workspace.local/oracle/src/http/responsesServer.ts)
+  so provider-owned visible answer state can override transient executor-owned
+  `thinking` when it is actually present.
+- Added focused HTTP coverage in
+  [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+  for that precedence rule.
+- Live `api serve` quality proof on this machine/profile still showed:
+  - active `thinking` via executor-owned `grok-prompt-submitted`
+  - then terminal `unavailable` after successful completion
+  - no stable provider-owned `response-incoming` during the active polling
+    window
+- Recorded the conclusion in
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md):
+  keep Grok executor-owned `thinking` as the honest active fallback on this
+  machine/profile while retaining the stricter precedence logic for future
+  runs that do expose provider-owned answer visibility.
+## 2026-04-17 - Service-state reassessment closed without a new lane
+
+- Reassessed the live runtime-inspection `serviceState` lane after closing
+  [0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md).
+- Decision:
+  - do not open another bounded `serviceState` implementation plan right now
+  - keep the current run-scoped seam in maintenance mode
+  - only resume this lane if a future live proof exposes a new provider-owned
+    evidence seam
+- Why:
+  - ChatGPT already has the strongest richer active-state progression
+  - Gemini and Grok quality follow-ups both closed with bounded negative
+    evidence on this machine/profile
+  - widening `/status` or adding generic runtime-owned DOM polling would
+    regress the current architecture boundary
+## 2026-04-17 - Durable-state checkpoint closed without a new slice
+
+- Reassessed
+  [0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)
+  after re-reading the current roadmap and the already-shipped
+  single-runner/account-affinity checkpoint.
+- Decision:
+  - close `0005` as a completed bounded checkpoint
+  - do not open another durable-state/account-mirroring implementation slice
+    in this turn
+  - keep the lane in maintenance mode until a broader durable-ownership seam
+    is selected explicitly
+- Why:
+  - the plan already said the isolated `api serve` smoke was the validation
+    gate before choosing another lane
+  - continuing to add durable-state/account-affinity behavior by inertia would
+    violate the plan's own stop condition
+## 2026-04-17 - Config doctor warns on browser-owned runtime overrides
+
+- Completed one bounded config-model refactor slice under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config doctor` now warns when an AuraCall runtime profile still carries
+  broad browser-owned override state through:
+  - broad launch/browser-family fields under
+    `runtimeProfiles.<name>.browser`
+  - top-level runtime-profile `keepBrowser`
+- Kept the slice diagnostic-only:
+  - compatibility loading is unchanged
+  - no runtime selection or execution semantics changed
+- Updated the troubleshooting and roadmap authority so operators have one
+  explicit signal that those fields belong lower in the browser-profile layer
+  unless they are intentional advanced escape hatches.
+## 2026-04-17 - Config migrate hoists obvious browser-owned runtime overrides
+
+- Completed one bounded follow-up slice under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config migrate` now hoists obvious broad browser-owned runtime fields into
+  the referenced browser profile when it is safe.
+- Current auto-cleanup scope:
+  - broad launch/browser-family fields from `runtimeProfiles.<name>.browser`
+  - runtime-profile `keepBrowser`
+- Safety boundary:
+  - existing browser-profile values win
+  - conflicting runtime-profile values stay in place
+  - service-scoped browser/account escape hatches such as `manualLogin`,
+    `manualLoginProfileDir`, `modelStrategy`, `thinkingTime`, and
+    `composerTool` are still advisory-only
+## 2026-04-17 - Service-scoped runtime overrides now have explicit advisory policy
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config doctor` now surfaces service-scoped browser escape hatches as
+  informational policy guidance when they still live under
+  `runtimeProfiles.<name>.browser`.
+- Current policy:
+  - keep `manualLogin`, `manualLoginProfileDir`, `modelStrategy`,
+    `thinkingTime`, and `composerTool` there only as intentional escape
+    hatches
+  - when they are truly service-targeted, prefer
+    `runtimeProfiles.<name>.services.<service>`
+  - they remain advisory-only in doctor output, but `config migrate` may now
+    relocate them when one concrete `defaultService` makes the service target
+    explicit and no conflicting service-level value already exists
+## 2026-04-17 - Config doctor now separates relocatable service fields from escape hatches
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config doctor` no longer treats all service-scoped browser fields as one
+  advisory bucket.
+- Current diagnostic split:
+  - relocatable service fields:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+  - managed-profile escape hatches:
+    - `manualLogin`
+    - `manualLoginProfileDir`
+- Current policy:
+  - prefer moving the relocatable service fields into
+    `runtimeProfiles.<name>.services.<service>`
+  - keep the managed-profile escape hatches conservative until their ownership
+    boundary is narrowed further
+  - `config migrate` stays aligned with that split:
+    - it may relocate `modelStrategy`, `thinkingTime`, and `composerTool`
+    - it does not auto-relocate `manualLogin` or `manualLoginProfileDir`
+## 2026-04-17 - Manual-login escape hatches now have an explicit lower-level contract
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  lower-level browser profile resolution now drops `manualLoginProfileDir`
+  whenever `manualLogin` is explicitly disabled.
+- Current contract:
+  - browser execution overrides still win over service fallback for
+    `manualLogin` and `manualLoginProfileDir`
+  - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+  - these fields remain managed-profile escape hatches, not generic
+    relocatable service knobs
+## 2026-04-17 - Config doctor now flags default-equivalent managed profile paths as redundant
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config doctor` now identifies explicit `manualLoginProfileDir` values that
+  merely duplicate Aura-Call's derived managed profile path.
+- Current policy:
+  - treat default-equivalent managed profile paths as redundant config noise
+  - keep explicit paths only when they intentionally point somewhere else
+## 2026-04-17 - Config migrate now removes redundant default-equivalent managed profile paths
+
+- Completed one bounded follow-up under
+  [0007-2026-04-14-config-model-refactor.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0007-2026-04-14-config-model-refactor.md):
+  `config migrate` now removes `manualLoginProfileDir` values only when they
+  exactly match Aura-Call's derived managed profile path for the same AuraCall
+  runtime profile + service target.
+- Current policy:
+  - remove default-equivalent managed profile paths automatically during
+    migration cleanup
+  - preserve genuine external managed-profile overrides unchanged
+  - prune empty `services.<service>` stubs left behind by that bounded cleanup

@@ -30,6 +30,7 @@ export async function waitForAssistantResponse(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
+  options: { onResponseIncoming?: () => void } = {},
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } }> {
   const start = Date.now();
   logger('Waiting for ChatGPT response');
@@ -46,7 +47,13 @@ export async function waitForAssistantResponse(
   );
   // Stop the watchdog loop once the observer path wins so we do not keep polling until timeout.
   const pollerAbort = new AbortController();
-  const pollerPromise = pollAssistantCompletion(Runtime, timeoutMs, minTurnIndex, pollerAbort.signal).then(
+  const pollerPromise = pollAssistantCompletion(
+    Runtime,
+    timeoutMs,
+    minTurnIndex,
+    pollerAbort.signal,
+    options.onResponseIncoming,
+  ).then(
     (value) => {
       if (!value) {
         throw { source: 'poll' as const, error: new Error(ASSISTANT_POLL_TIMEOUT_ERROR) };
@@ -65,6 +72,7 @@ export async function waitForAssistantResponse(
       logger('Captured assistant response via snapshot watchdog');
       evaluationPromise.catch(() => undefined);
       await terminateRuntimeExecution(Runtime);
+      options.onResponseIncoming?.();
       return winner.value;
     }
     pollerAbort.abort();
@@ -77,8 +85,15 @@ export async function waitForAssistantResponse(
       } else if (source === 'poll') {
         throw error;
       } else if (source === 'evaluation') {
-        const recovered = await recoverAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex);
+        const recovered = await recoverAssistantResponse(
+          Runtime,
+          timeoutMs,
+          logger,
+          minTurnIndex,
+          options.onResponseIncoming,
+        );
         if (recovered) {
+          options.onResponseIncoming?.();
           return recovered;
         }
         await logDomFailure(Runtime, logger, 'assistant-response');
@@ -98,7 +113,13 @@ export async function waitForAssistantResponse(
   if (!parsed) {
     let remainingMs = Math.max(0, timeoutMs - (Date.now() - start));
     if (remainingMs > 0) {
-      const recovered = await recoverAssistantResponse(Runtime, remainingMs, logger, minTurnIndex);
+      const recovered = await recoverAssistantResponse(
+        Runtime,
+        remainingMs,
+        logger,
+        minTurnIndex,
+        options.onResponseIncoming,
+      );
       if (recovered) {
         return recovered;
       }
@@ -131,6 +152,7 @@ export async function waitForAssistantResponse(
       logger('Assistant still generating; waiting for completion');
       const completed = await pollAssistantCompletion(Runtime, remainingMs, minTurnIndex);
       if (completed) {
+        options.onResponseIncoming?.();
         return completed;
       }
     } else if (completionVisible) {
@@ -221,6 +243,7 @@ async function recoverAssistantResponse(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
+  onResponseIncoming?: () => void,
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> {
   const recoveryTimeoutMs = Math.max(0, timeoutMs);
   if (recoveryTimeoutMs === 0) {
@@ -235,6 +258,7 @@ async function recoverAssistantResponse(
     400,
   );
   if (recovered) {
+    onResponseIncoming?.();
     logger('Recovered assistant response via polling fallback');
     return recovered;
   }
@@ -340,11 +364,13 @@ async function pollAssistantCompletion(
   timeoutMs: number,
   minTurnIndex?: number,
   abortSignal?: AbortSignal,
+  onResponseIncoming?: () => void,
 ): Promise<{ text: string; html?: string; meta: { turnId?: string | null; messageId?: string | null } } | null> {
   const watchdogDeadline = Date.now() + timeoutMs;
   let previousLength = 0;
   let stableCycles = 0;
   let lastChangeAt = Date.now();
+  let responseIncomingEmitted = false;
   while (Date.now() < watchdogDeadline) {
     if (abortSignal?.aborted) {
       return null;
@@ -352,6 +378,10 @@ async function pollAssistantCompletion(
     const snapshot = await readAssistantSnapshot(Runtime, minTurnIndex);
     const normalized = normalizeAssistantSnapshot(snapshot);
     if (normalized) {
+      if (!responseIncomingEmitted) {
+        responseIncomingEmitted = true;
+        onResponseIncoming?.();
+      }
       const currentLength = normalized.text.length;
       if (currentLength > previousLength) {
         previousLength = currentLength;

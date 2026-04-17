@@ -401,4 +401,71 @@ describe('runtime inspection CLI helpers', () => {
     expect(rendered).toContain('Browser required: no');
     expect(rendered).toContain('Eligibility note: (none)');
   });
+
+  it('formats opt-in service-state probe output for operators', () => {
+    const rendered = formatRuntimeRunInspectionPayload({
+      resolvedBy: 'run-id',
+      queryId: 'runtime_cli_probe_1',
+      queryRunId: 'runtime_cli_probe_1',
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: ['runtime_cli_probe_1'],
+      taskRunSpecSummary: null,
+      runtime: {
+        runId: 'runtime_cli_probe_1',
+        teamRunId: null,
+        taskRunSpecId: null,
+        sourceKind: 'direct',
+        runStatus: 'running',
+        updatedAt: '2026-04-16T18:10:00.000Z',
+        queueProjection: {
+          runId: 'runtime_cli_probe_1',
+          sourceKind: 'direct',
+          runStatus: 'running',
+          createdAt: '2026-04-16T18:00:00.000Z',
+          updatedAt: '2026-04-16T18:10:00.000Z',
+          queueState: 'active-lease',
+          claimState: 'held-by-lease',
+          nextRunnableStepId: null,
+          runningStepIds: ['runtime_cli_probe_1:step:1'],
+          waitingStepIds: [],
+          deferredStepIds: [],
+          blockedStepIds: [],
+          blockedByFailureStepIds: [],
+          terminalStepIds: [],
+          missingDependencyStepIds: [],
+          activeLeaseId: 'runtime_cli_probe_1:lease:1',
+          activeLeaseOwnerId: 'runner:probe',
+          affinity: {
+            status: 'not-evaluated',
+            reason: null,
+            requiredService: 'chatgpt',
+            requiredServiceAccountId: null,
+            browserRequired: true,
+            requiredRuntimeProfileId: 'default',
+            requiredBrowserProfileId: 'default',
+            hostRequirement: 'any',
+            requiredHostId: null,
+            eligibilityNote: null,
+          },
+        },
+      },
+      runner: null,
+      serviceState: {
+        probeStatus: 'observed',
+        service: 'chatgpt',
+        ownerStepId: 'runtime_cli_probe_1:step:1',
+        state: 'response-incoming',
+        source: 'browser-service',
+        observedAt: '2026-04-16T18:10:03.000Z',
+        evidenceRef: 'chatgpt-streaming-visible',
+        confidence: 'medium',
+        reason: null,
+      },
+    });
+
+    expect(rendered).toContain('Service-state probe:');
+    expect(rendered).toContain('Probe status: observed');
+    expect(rendered).toContain('State: response-incoming');
+    expect(rendered).toContain('Evidence ref: chatgpt-streaming-visible');
+  });
 });

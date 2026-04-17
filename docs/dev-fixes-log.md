@@ -1,3 +1,251 @@
+- 2026-04-16: `auracall api serve` must wire the configured stored-step
+  executor by default if direct `/v1/responses` runs are expected to exercise
+  the real browser/API execution path.
+  - The durable rule for this seam is:
+    - `createResponsesHttpServer(...)` may still accept injected executors for
+      tests and bounded overrides
+    - but the CLI wrapper `serveResponsesHttp(...)` must install the same
+      configured executor path operators expect from normal Aura-Call runtime
+      execution
+  - Otherwise:
+    - direct `/v1/responses` can complete as empty no-op runs
+    - mid-turn live `serviceState` probing appears broken even though the
+      inspection contract itself is fine
+
+- 2026-04-16: When `api serve` exposes live runtime-inspection
+  `serviceState`, resolve the running step AuraCall runtime profile before
+  attaching to a managed browser session.
+  - The durable rule for the default ChatGPT-backed live probe is:
+    - resolve `step.runtimeProfileId` through `resolveConfig({ profile })`
+    - only probe the managed browser session when the resolved
+      `auracallProfile` matches that running step runtime profile
+    - return honest `unavailable` posture instead of probing a mismatched
+      runtime profile or falling back to a server-default profile
+  - This keeps run-scoped live probing aligned with the actual executing
+    browser family and avoids cross-profile state leakage.
+
+- 2026-04-16: Keep live provider `serviceState` probing opt-in on
+  `GET /v1/runtime-runs/inspect`, not on `/status`.
+  - The durable rule for this seam is:
+    - `/status` remains server/runner/background-drain health
+    - `GET /v1/runtime-runs/inspect` may expose one run-scoped live
+      `serviceState` only when explicitly requested
+    - `serviceState` must stay separate from runtime queue/lease posture
+    - unavailable live probing should be returned honestly as
+      `probeStatus = unavailable` with a bounded reason
+  - Do not collapse provider chat-state semantics into generic server health
+    or pretend a live probe exists when no provider/browser probe is wired.
+
+- 2026-04-16: On the managed ChatGPT runtime-inspection probe path, treat the
+  placeholder assistant turn and stop-button streaming state as the primary
+  live `serviceState` evidence before widening heuristics.
+  - The durable rule for the first ChatGPT live probe is:
+    - `thinking` should come from the assistant placeholder turn such as
+      `ChatGPT said:Thinking` or `ChatGPT said:Pro thinking`
+    - `response-incoming` should come from visible streaming state with the
+      stop button present once assistant output is materialized
+    - terminal runs should fall back to explicit `unavailable` posture instead
+      of replaying stale provider state
+  - Do not broaden the live probe based only on one earlier low-confidence
+    `unknown` result when the managed runtime-profile path already has direct
+    proof for `thinking` and `response-incoming`.
+
+- 2026-04-16: Default runtime-inspection Gemini live probing must be bounded
+  to browser-backed runtime profiles only.
+  - The durable rule for Gemini on `GET /v1/runtime-runs/inspect` is:
+    - resolve `step.runtimeProfileId` through `resolveConfig({ profile })`
+    - require the resolved runtime profile to be browser-backed before
+      attaching to a managed Gemini browser session
+    - return honest `unavailable` posture for Gemini API-backed runs instead
+      of projecting browser semantics onto them
+  - Gemini live browser state should stay Gemini-owned:
+    - `thinking` from committed prompt history without answer text yet
+    - `response-incoming` from visible answer text before the page looks
+      quiescent
+    - `response-complete` from visible answer text plus quiescent page state
+    - `login-required` from visible Gemini sign-in surfaces
+  - Do not treat a completed Gemini API run as evidence that the browser live
+    probe path is green.
+
+- 2026-04-16: On this WSL Gemini pairing, a visible Gemini `Sign in` surface
+  can still be a recoverable remembered-login state rather than a full auth
+  loss.
+  - The durable operator rule is:
+    - if the managed Gemini browser shows a visible `Sign in` button, try one
+      bounded manual `Sign in` click first
+    - if that click restores the remembered Google session, continue with one
+      real AuraCall Gemini command before doing more diagnostics
+    - only treat the profile as blocked if the sign-in surface persists after
+      that bounded recovery step
+  - Do not immediately discard the managed profile or assume exported-cookie
+    fallback is required when the remembered session can be resumed in one
+    click.
+
+- 2026-04-16: On this WSL Gemini pairing, remembered-login recovery plus
+  cookie export restores the browser-backed Gemini path, but the live
+  runtime-inspection probe still needs better signal quality.
+  - The durable operator rule is:
+    - after one successful remembered-login recovery, run
+      `auracall login --target gemini --profile auracall-gemini-pro --export-cookies`
+      before deeper Gemini browser proofs on this machine
+    - confirm one direct Gemini browser smoke succeeds before retrying
+      `api serve` probe validation
+  - Current live evidence boundary:
+    - browser-backed Gemini direct execution is green again after cookie
+      export
+    - short `api serve` Gemini runs can complete too quickly to observe
+      mid-turn state
+    - longer active runs currently prove the inspection seam is live but may
+      still return `state = unknown` with
+      `evidenceRef = gemini-live-probe-no-signal`
+  - Do not claim Gemini mid-turn semantic parity yet; the next slice is
+    improving Gemini live-state evidence, not more auth/bootstrap work.
+
+- 2026-04-16: Grok passive observation parity should stay Grok-owned and use
+  Grok’s existing assistant-result lifecycle instead of ChatGPT/Gemini
+  heuristics.
+  - The durable rule for Grok on the stored observation seam is:
+    - record `thinking` when Grok accepts the submitted prompt and provider
+      work starts
+    - record `response-incoming` when the first new Grok assistant content is
+      observed beyond the baseline snapshot
+    - record `response-complete` when the Grok assistant result stabilizes and
+      returns
+  - Do not reuse ChatGPT placeholder thinking rules or Gemini metadata rules
+    for Grok.
+
+- 2026-04-16: Gemini passive observation parity should come from the executor
+  path that actually owns Gemini state, not from review-ledger inference.
+  - The durable rule for Gemini on the stored observation seam is:
+    - let the Gemini web executor emit bounded observations from returned
+      provider metadata:
+      - `thinking` only when Gemini returns provider thoughts
+      - `response-incoming` when text or images materialize
+      - `response-complete` on successful executor completion
+    - let the browser-native Gemini attachment path emit bounded observations
+      from page-state progression:
+      - prompt committed into history
+      - answer text first visible
+      - answer stabilized and finished
+  - Do not reuse ChatGPT DOM heuristics for Gemini or invent Gemini states in
+    the ledger layer.
+
+- 2026-04-16: On live ChatGPT thinking-mode runs, the most reliable passive
+  thinking signal is the placeholder assistant turn, not generic status-node
+  text.
+  - Live direct-run traces on the managed WSL Chrome profile showed this
+    sequence:
+    - placeholder assistant text `ChatGPT said:Thinking`
+    - growing assistant response while the stop button remains visible
+    - completion when the stop button disappears
+  - The durable rule for the next passive-monitoring slice is:
+    - treat assistant-turn placeholder text plus assistant snapshot growth as
+      the primary ChatGPT thinking/response-incoming evidence
+    - keep generic `[role="status"]` / `aria-live` / `data-testid*="thinking"`
+      scans as supplemental diagnostics only
+    - sanitize matched thinking-status text down to bounded state labels and
+      drop obvious conversation echoes such as `You said:` or inline file
+      bodies before logging or persisting
+  - Do not promote generic status-node scans to canonical chat-state evidence
+    unless they are proven stable in the live managed-profile path.
+
+- 2026-04-16: Default WSL headful browser launches to `DISPLAY=:0.0` unless
+  the operator has already specified a display or explicitly targets
+  Windows-hosted Chrome.
+  - The durable rule for browser display resolution is:
+    - keep explicit `browser.display` first
+    - then honor `AURACALL_BROWSER_DISPLAY`
+    - on WSL, default to `:0.0` whenever the launch is not explicitly aimed at
+      Windows-hosted Chrome
+  - Do not require Linux Chrome path discovery to succeed before applying the
+    WSL default; that leaves headful launches incorrectly blocked on an empty
+    ambient `DISPLAY`.
+
+- 2026-04-15: Persist richer passive provider states on the execution seam,
+  not by ledger inference.
+  - The durable rule for Slice 1 of passive provider observations is:
+    - let ChatGPT browser execution emit stored observations for `thinking`,
+      `response-incoming`, and `response-complete`
+    - persist them on `browserRun.passiveObservations`
+    - let the review ledger project stored observations generically
+  - Do not infer those states later from lease state, generic failure text, or
+    review-ledger heuristics.
+
+- 2026-04-15: Keep richer passive provider monitoring adapter-owned and
+  execution-path persisted.
+  - The durable rule after the review-ledger checkpoint is:
+    - close the completed ledger plan rather than widening it indefinitely
+    - use a separate bounded plan for richer passive monitoring
+    - let provider adapters/executors emit `thinking`,
+      `response-incoming`, and `response-complete`
+    - keep the review ledger generic and projection-only for those states
+  - This prevents runtime/service-mode health or generic ledger code from
+    inventing provider chat-state semantics.
+
+- 2026-04-15: Keep first-pass team-run review observations durable and
+  failure-derived.
+  - The durable rule for Slice 4 is:
+    - project observations only from stored step failure metadata or explicit
+      provider-state details
+    - cover provider error, login required, captcha/human-verification, and
+      awaiting human action
+    - include source, observed timestamp, confidence, and evidence reference
+    - do not infer rich live chat states such as `thinking` or
+      `response-incoming` from generic failure text
+  - This keeps passive monitoring attached to the ledger without letting DOM
+    heuristics redefine execution semantics.
+
+- 2026-04-15: Do not infer provider cache paths while enriching team-run
+  review-ledger provider references.
+  - The durable rule for provider refs is:
+    - copy concrete conversation ids, tab URLs, configured URLs, project ids,
+      runtime/browser profile ids, agent ids, and selected models from stored
+      execution metadata
+    - report a cache path only when stored metadata already carries a concrete
+      path
+    - use an explicit unavailable cache status when stored-step execution has
+      not resolved provider cache identity
+  - This keeps provider caches supplemental and avoids turning naming
+    conventions into false evidence.
+
+- 2026-04-15: Keep `auracall teams review` read-only and aligned with the
+  existing team inspection lookup contract.
+  - The durable rule for the first operator review surface is:
+    - accept exactly one of `--task-run-spec-id`, `--team-run-id`, or
+      `--runtime-run-id`
+    - preserve alias provenance and bounded matching runtime-run ids
+    - return the projected ledger rather than recomputing execution state
+    - do not add public team execution writes
+  - This keeps whole-sequence review separate from runtime recovery/status and
+    leaves passive provider observations for a later ledger-attached slice.
+
+- 2026-04-15: Keep the first team-run review ledger implementation
+  projection-only and null-safe.
+  - The durable rule for Slice 1 is:
+    - project from existing runtime bundles
+    - preserve current step, handoff, artifact, input, output, failure, and
+      provenance fields
+    - read provider conversation refs only from metadata already present on
+      step output, currently `structuredData.browserRun`
+    - represent unavailable provider refs as `null`
+  - Do not add provider scraping, public team execution writes, or passive
+    provider-state monitoring while implementing the internal projection helper.
+
+- 2026-04-15: Do not build broad passive provider-state monitoring before
+  there is a durable team-run review ledger to attach observations to.
+  - The durable sequencing rule is:
+    - first create an Aura-Call-owned whole-sequence ledger for team runs
+    - then attach passive provider observations to ledger steps
+    - keep provider chat caches as supplemental evidence, not the canonical
+      orchestration record
+  - The first implementation slice should be projection-only and read-only:
+    - project from existing task-run spec, team-run, runtime run, steps,
+      handoffs, shared state, events, and response summaries
+    - preserve provider/cache references when available
+    - represent missing provider refs as `null`, not inferred values
+  - Rich chat states such as `thinking` and `response-incoming` should be
+    provider-adapter observations later, not runtime lease states.
+
 - 2026-04-15: Keep secondary endpoint authority docs aligned with the tested local server surface; do not let `docs/openai-endpoints.md` lag behind `README.md`, `docs/testing.md`, and route-handler tests.
   - The durable rule for this seam is:
     - if the local dev server adds or reshapes bounded inspection/readback
@@ -12404,3 +12652,85 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   durable-state/account-affinity sub-lane instead of adding more diagnostics by
   default. The next implementation step should be chosen as a new roadmap
   decision, not as automatic continuation of the account-affinity thread.
+- 2026-04-16: Gemini browser-backed live inspection should not depend only on
+  page/DOM evidence. When the Gemini page stays on an idle-looking surface but
+  the configured browser-backed executor is actively running, prefer a
+  transient executor-owned `thinking` record keyed by runtime run id plus step
+  id, and keep DOM/page evidence as fallback for richer states.
+- 2026-04-17: Grok browser-backed live inspection should follow the same split
+  as Gemini: prefer transient executor-owned `thinking` state for active runs,
+  and use provider-owned page evidence only for richer states like visible
+  assistant text, signed-out surfaces, or rate-limit toasts.
+- 2026-04-17: When bounded live Gemini quality probing still shows only
+  executor-owned `thinking` followed by failure or terminal `unavailable`, and
+  managed-profile DOM inspection stays on the idle/home surface, do not invent
+  richer active states from generic heuristics. Record the negative evidence
+  and keep `thinking` as the honest active fallback on that machine/profile.
+- 2026-04-17: For Grok live inspection, transient executor-owned `thinking`
+  should not blindly mask stronger provider-owned visible answer state.
+  Tighten precedence so provider-owned `response-incoming` can win when
+  present, but if bounded live proof still never exposes that stronger state on
+  the current machine/profile, record negative evidence and keep `thinking` as
+  the honest active fallback.
+- 2026-04-17: After provider-breadth completion plus bounded Gemini/Grok
+  quality follow-ups close with negative evidence, stop opening new
+  `serviceState` implementation lanes by default. Keep the current seam in
+  maintenance mode and only resume expansion when a fresh provider-owned
+  evidence seam is observed in live proof.
+- 2026-04-17: When a bounded durable-state/account-affinity checkpoint has
+  already shipped its validation smoke and the plan itself says to choose the
+  next roadmap lane explicitly, close that plan instead of leaving it
+  implicitly active. Keep the lane in maintenance mode until a broader
+  durable-ownership seam is chosen.
+- 2026-04-17: In the config-model refactor lane, prefer diagnostics before
+  behavior changes when runtime profiles still carry broad browser-owned
+  fields. A `config doctor` warning for broad launch/browser-family fields
+  under `runtimeProfiles.<name>.browser` plus runtime-profile `keepBrowser`
+  tightens the ownership boundary without breaking compatibility loading.
+- 2026-04-17: When adding config-model cleanup for misplaced browser-owned
+  runtime fields, keep the transform conservative. `config migrate` may hoist
+  broad launch/browser-family fields from `runtimeProfiles.<name>.browser`
+  plus runtime-profile `keepBrowser` into the referenced browser profile, but
+  browser-profile values must win and conflicting runtime-profile values must
+  remain in place rather than being rewritten silently. Service-scoped escape
+  hatches like `manualLoginProfileDir` should remain advisory-only until their
+  boundary is defined explicitly.
+- 2026-04-17: For service-scoped browser/account escape hatches that still live
+  under `runtimeProfiles.<name>.browser`, prefer advisory diagnostics before
+  migration. `manualLogin`, `manualLoginProfileDir`, `modelStrategy`,
+  `thinkingTime`, and `composerTool` should be treated as intentional escape
+  hatches unless they can be moved explicitly to
+  `runtimeProfiles.<name>.services.<service>`.
+- 2026-04-17: Once the service target is explicit, keep the cleanup
+  conservative instead of leaving everything advisory forever. In this repo,
+  `config migrate` may relocate `modelStrategy`, `thinkingTime`, and
+  `composerTool` from `runtimeProfiles.<name>.browser` into
+  `runtimeProfiles.<name>.services.<defaultService>` only when one concrete
+  `defaultService` exists and the destination value is not already
+  conflicting. Keep `manualLogin` and `manualLoginProfileDir` conservative
+  until their managed-profile ownership boundary is narrower.
+- 2026-04-17: Match diagnostics to the migration contract. Do not report
+  `modelStrategy`, `thinkingTime`, `composerTool`, `manualLogin`, and
+  `manualLoginProfileDir` as one flat doctor bucket once migration behavior is
+  more precise. Split relocatable service fields from managed-profile escape
+  hatches so operators can tell what should move versus what still needs
+  manual judgment.
+- 2026-04-17: Keep the managed-profile escape hatches internally coherent.
+  If `manualLogin` is explicitly false, lower-level browser profile resolution
+  should also drop `manualLoginProfileDir` instead of carrying a stale managed
+  profile path forward. Browser execution overrides still win over service
+  fallback, but the path is only meaningful when manual login is enabled.
+- 2026-04-17: Once the lower-level contract is explicit, detect redundant
+  explicit managed profile paths. If `manualLoginProfileDir` exactly matches
+  the path Aura-Call would derive from managed profile root + AuraCall runtime
+  profile + service target, treat it as removable config noise rather than a
+  meaningful override.
+- 2026-04-17: Keep cleanup aligned with that redundancy rule. `config migrate`
+  may remove `manualLoginProfileDir` only when it is exactly the
+  default-equivalent derived managed profile path for the same AuraCall
+  runtime profile + service target; preserve external managed-profile override
+  paths unchanged.
+- 2026-04-17: Treat empty `runtimeProfiles.<name>.services.<service>` objects
+  left behind by conservative config cleanup as residue, not semantic state.
+  Once the last field in a service stub is removed by bounded migrate cleanup,
+  prune the empty service entry instead of preserving `{}`.

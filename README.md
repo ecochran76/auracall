@@ -112,6 +112,8 @@ Terminology note:
     - `POST /v1/responses` may now initially return `in_progress` while the
       server-owned local background drain advances work
     - poll `GET /v1/responses/{response_id}` for terminal readback
+    - direct browser-backed runs now use the same configured stored-step
+      executor path as normal Aura-Call runtime execution
   - startup recovery default source can be tuned with
     `--recover-runs-on-start-source <direct|team-run|all>`
     (`direct` by default)
@@ -159,6 +161,7 @@ Terminology note:
       - `taskRunSpecId`
     - optional query:
       - `runnerId`
+      - `probe=service-state`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -167,6 +170,27 @@ Terminology note:
         - `matchingRuntimeRunCount`
         - `matchingRuntimeRunIds`
       - bounded `taskRunSpecSummary` when the runtime run is task-backed
+      - optional `serviceState` when explicitly requested with
+        `probe=service-state`
+        - this is a live run-scoped provider-state probe, not durable replay
+        - current posture is explicit:
+          - `probeStatus = observed`
+          - `probeStatus = unavailable`
+        - current default live probes are:
+          - ChatGPT on the managed browser path
+          - Gemini on browser-backed runtime profiles only
+            - active browser-backed Gemini runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+          - Grok on browser-backed runtime profiles only
+            - active browser-backed Grok runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+        - Gemini API-backed runtime profiles still return honest
+          `unavailable` posture on this seam
+        - Grok API-backed runtime profiles still return honest `unavailable`
+          posture on this seam
+        - keep `serviceState` separate from:
+          - runtime queue/lease state
+          - `/status` server/runner health
       - `runtime.queueProjection` with:
         - `queueState`
         - `claimState`
@@ -722,6 +746,11 @@ auracall teams run auracall-cross-service-gemini "Reply exactly with: OK" --max-
 auracall teams inspect --task-run-spec-id taskrun_auracall-solo_abc123 --json
 auracall teams inspect --team-run-id teamrun_auracall-solo_abc123 --json
 auracall teams inspect --runtime-run-id teamrun_auracall-solo_abc123
+
+# Review the whole persisted team-run sequence as a read-only ledger
+auracall teams review --task-run-spec-id taskrun_auracall-solo_abc123 --json
+auracall teams review --team-run-id teamrun_auracall-solo_abc123 --json
+auracall teams review --runtime-run-id teamrun_auracall-solo_abc123
 ```
 
 Current boundary:
@@ -732,6 +761,41 @@ Current boundary:
   `taskRunSpec -> teamRun -> runtime` linkage. It reads one persisted task
   assignment plus the latest linked runtime dispatch state without widening
   public team execution semantics.
+- `auracall teams review` is a bounded read-only review surface for the
+  persisted team-run sequence. It projects steps, handoffs, artifacts,
+  prompt/input snapshots, output snapshots, failures, and provider
+  conversation refs when existing runtime metadata carries them. Provider refs
+  include stored conversation id, tab URL, configured URL, project id, runtime
+  profile id, browser profile id, agent id, and selected model when available.
+  Missing provider refs are reported as `null`; provider cache paths are only
+  reported when stored metadata already carries a concrete path.
+- Review observations now include:
+  - durable failure-derived hard stops for provider error, login required,
+    captcha/human-verification, and awaiting human action
+  - stored ChatGPT passive observations for `thinking`,
+    `response-incoming`, and `response-complete` when the browser execution
+    path emits them
+  - stored Gemini passive observations for `thinking`,
+    `response-incoming`, and `response-complete` when the Gemini executor path
+    or browser-native attachment path emits them
+  - stored Grok passive observations for `thinking`,
+    `response-incoming`, and `response-complete` when the Grok browser
+    execution path emits them
+  - on the current managed WSL Chrome path, ChatGPT `thinking` is most
+    reliably evidenced by the placeholder assistant turn
+    `ChatGPT said:Thinking`; generic status-node scans remain supplemental
+- Gemini observations currently derive from Gemini-owned executor evidence, not
+  ChatGPT-style DOM heuristics:
+  - web executor: returned thoughts/text/images plus successful completion
+  - browser-native attachment path: prompt committed, answer first visible,
+    answer stabilized
+- Grok observations currently derive from Grok’s own assistant-result
+  lifecycle:
+  - prompt submitted
+  - first new assistant content visible
+  - stabilized result returned
+- Rich passive monitoring is still provider-path scoped. The provider-parity
+  slice is implemented; broader monitoring remains a later checkpoint.
 - Browser-backed team execution is now provider-backed on the stored-step seam.
 - The current live smoke target is:
   - `auracall teams run auracall-solo "Reply exactly with: AURACALL_TEAM_SMOKE_OK" --title "AuraCall team smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_TEAM_SMOKE_OK and nothing else." --max-turns 1 --json`

@@ -3,6 +3,7 @@ import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
 import { loadUserConfig } from '../config.js';
+import { resolveConfig } from '../schema/resolver.js';
 import {
   getCurrentRuntimeProfiles,
   projectConfigModel,
@@ -24,6 +25,8 @@ import type {
 } from '../runtime/apiTypes.js';
 import {
   inspectRuntimeRun,
+  type RuntimeRunInspectionServiceStateProbeResult,
+  type ProbeRuntimeRunServiceStateInput,
   RuntimeRunInspectionError,
   type RuntimeRunInspectionPayload,
 } from '../runtime/inspection.js';
@@ -36,7 +39,9 @@ import {
   createExecutionRequestFromRecord,
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
+import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { createExecutionRunnerRecord } from '../runtime/model.js';
+import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
 import {
   createExecutionRunnerControl,
   type ExecutionRunnerControlContract,
@@ -56,6 +61,11 @@ import {
   type ExecutionServiceHostDeps,
 } from '../runtime/serviceHost.js';
 import type { ExecutionRunSourceKind, ExecutionRunnerStatus } from '../runtime/types.js';
+import {
+  probeChatgptBrowserServiceState,
+  probeGeminiBrowserServiceState,
+  probeGrokBrowserServiceState,
+} from '../browser/liveServiceState.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -76,6 +86,9 @@ export interface ResponsesHttpServerDeps {
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
+  probeRuntimeRunServiceState?: (
+    input: ProbeRuntimeRunServiceStateInput,
+  ) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -91,6 +104,8 @@ interface ServerOwnedDrainOptions {
 
 export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
   listenPublic?: boolean;
+  executeStoredRunStep?: ResponsesHttpServerDeps['executeStoredRunStep'];
+  probeRuntimeRunServiceState?: ResponsesHttpServerDeps['probeRuntimeRunServiceState'];
 }
 
 interface HttpErrorPayload {
@@ -511,12 +526,15 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'GET' && url.pathname === '/v1/runtime-runs/inspect') {
         try {
+          const runtimeInspectQuery = parseRuntimeInspectionQuery(url.searchParams);
           const inspection = await inspectRuntimeRun({
             runId: url.searchParams.get('runId'),
             runtimeRunId: url.searchParams.get('runtimeRunId'),
             teamRunId: url.searchParams.get('teamRunId'),
             taskRunSpecId: url.searchParams.get('taskRunSpecId'),
             runnerId: url.searchParams.get('runnerId'),
+            includeServiceState: runtimeInspectQuery.probe === 'service-state',
+            probeServiceState: deps.probeRuntimeRunServiceState,
             control,
             runnersControl,
             createRunAffinity,
@@ -966,8 +984,19 @@ export async function createResponsesHttpServer(
 export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}): Promise<void> {
   assertResponsesHostAllowed(options.host, options.listenPublic ?? false);
   const logger = options.logger ?? console.log;
-  const { listenPublic: _unusedListenPublic, ...serverOptions } = options;
+  const {
+    listenPublic: _unusedListenPublic,
+    executeStoredRunStep: overrideExecuteStoredRunStep,
+    probeRuntimeRunServiceState: overrideProbeRuntimeRunServiceState,
+    ...serverOptions
+  } = options;
   const loadedConfig = await loadUserConfig(process.cwd());
+  const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
+    loadedConfig.config as Record<string, unknown>,
+  );
+  if (!configuredStoredStepExecutor) {
+    throw new Error('Configured stored-step executor was not created for api serve.');
+  }
   const server = await createResponsesHttpServer(
     {
       ...serverOptions,
@@ -981,6 +1010,11 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
         loadedConfig.config as Record<string, unknown>,
       ),
+      executeStoredRunStep:
+        overrideExecuteStoredRunStep ??
+        (async (_request, context) => configuredStoredStepExecutor(context)),
+      probeRuntimeRunServiceState:
+        overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
     },
   );
   const host = options.host ?? '127.0.0.1';
@@ -1009,6 +1043,93 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     process.once('SIGINT', handleSignal);
     process.once('SIGTERM', handleSignal);
   });
+}
+
+type DefaultRuntimeRunServiceStateProbeDeps = {
+  resolveConfigImpl?: typeof resolveConfig;
+  probeChatgptBrowserServiceStateImpl?: typeof probeChatgptBrowserServiceState;
+  probeGeminiBrowserServiceStateImpl?: typeof probeGeminiBrowserServiceState;
+  probeGrokBrowserServiceStateImpl?: typeof probeGrokBrowserServiceState;
+  readLiveRuntimeRunServiceStateImpl?: typeof readLiveRuntimeRunServiceState;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+};
+
+export function createDefaultRuntimeRunServiceStateProbe(
+  deps: DefaultRuntimeRunServiceStateProbeDeps = {},
+): ResponsesHttpServerDeps['probeRuntimeRunServiceState'] {
+  const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
+  const probeChatgptBrowserServiceStateImpl =
+    deps.probeChatgptBrowserServiceStateImpl ?? probeChatgptBrowserServiceState;
+  const probeGeminiBrowserServiceStateImpl =
+    deps.probeGeminiBrowserServiceStateImpl ?? probeGeminiBrowserServiceState;
+  const probeGrokBrowserServiceStateImpl =
+    deps.probeGrokBrowserServiceStateImpl ?? probeGrokBrowserServiceState;
+  const readLiveRuntimeRunServiceStateImpl =
+    deps.readLiveRuntimeRunServiceStateImpl ?? readLiveRuntimeRunServiceState;
+  const cwd = deps.cwd ?? process.cwd();
+  const env = deps.env ?? process.env;
+
+  return async ({ inspection, step }) => {
+    if (step.service !== 'chatgpt' && step.service !== 'gemini' && step.service !== 'grok') {
+      return null;
+    }
+
+    let transientLiveState: RuntimeRunInspectionServiceStateProbeResult | null = null;
+    if (step.service === 'gemini' || step.service === 'grok') {
+      const inspectionRunId =
+        typeof inspection?.record?.runId === 'string' && inspection.record.runId.trim().length > 0
+          ? inspection.record.runId.trim()
+          : null;
+      if (inspectionRunId) {
+        transientLiveState = readLiveRuntimeRunServiceStateImpl({
+          runId: inspectionRunId,
+          stepId: step.id,
+          service: step.service,
+        });
+        if (transientLiveState && step.service === 'gemini') {
+          return transientLiveState;
+        }
+      }
+    }
+
+    const runtimeProfileId =
+      typeof step.runtimeProfileId === 'string' && step.runtimeProfileId.trim().length > 0
+        ? step.runtimeProfileId.trim()
+        : null;
+    const resolvedConfig = await resolveConfigImpl(
+      runtimeProfileId ? { profile: runtimeProfileId } : {},
+      cwd,
+      env,
+    );
+
+    if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
+      return null;
+    }
+
+    if (step.service === 'chatgpt') {
+      return probeChatgptBrowserServiceStateImpl(resolvedConfig);
+    }
+
+    if (resolvedConfig.engine !== 'browser') {
+      return null;
+    }
+
+    if (step.service === 'gemini') {
+      return probeGeminiBrowserServiceStateImpl(resolvedConfig, {
+        prompt: typeof step.input?.prompt === 'string' ? step.input.prompt : null,
+      });
+    }
+
+    const grokState = await probeGrokBrowserServiceStateImpl(resolvedConfig);
+    if (grokState && grokState.state !== 'unknown' && grokState.state !== 'thinking') {
+      return grokState;
+    }
+    if (transientLiveState) {
+      return transientLiveState;
+    }
+    return grokState;
+  };
 }
 
 export function assertResponsesHostAllowed(host: string | undefined, listenPublic: boolean): void {
@@ -1058,7 +1179,7 @@ function createHttpStatusResponse(input: {
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       runtimeRunInspection:
-        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}]',
+        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state]',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
@@ -1204,6 +1325,10 @@ interface ParsedStatusQuery {
   sourceKindSummary?: ExecutionRunSourceKind | 'all';
 }
 
+interface ParsedRuntimeInspectionQuery {
+  probe?: 'service-state';
+}
+
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
   const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
   const parsed = z
@@ -1228,6 +1353,17 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
   return {
     recovery: parsed.recovery ?? false,
     sourceKindSummary: parsed.sourceKind,
+  };
+}
+
+function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRuntimeInspectionQuery {
+  const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
+  const parsed = z.object({
+    probe: z.enum(['service-state']).optional(),
+  }).parse(raw);
+
+  return {
+    probe: parsed.probe,
   };
 }
 

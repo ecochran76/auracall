@@ -34,6 +34,8 @@ Current canonical active execution plan:
 - `docs/dev/plans/0012-2026-04-14-service-volatility-refactor.md`
 - `docs/dev/plans/0013-2026-04-14-gemini-completion.md`
 - `docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md`
+- `docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md`
+- `docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md`
 
 Audit helper:
 - `pnpm run plans:audit`

@@ -6,9 +6,11 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import {
   assertResponsesHostAllowed,
+  createDefaultRuntimeRunServiceStateProbe,
   createResponsesHttpServer,
   serveResponsesHttp,
 } from '../src/http/responsesServer.js';
+import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
 import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
@@ -28,6 +30,7 @@ describe('http responses adapter', () => {
 
   afterEach(async () => {
     setAuracallHomeDirOverrideForTest(null);
+    resetLiveRuntimeRunServiceStateRegistryForTests();
     await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
   });
 
@@ -383,7 +386,17 @@ describe('http responses adapter', () => {
   };
 
   const terminateServeResponsesHttp = async (options: Parameters<typeof serveResponsesHttp>[0]) => {
-    const servePromise = serveResponsesHttp(options);
+    const servePromise = serveResponsesHttp({
+      executeStoredRunStep: async () => ({
+        output: {
+          summary: 'test stub executor',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      }),
+      ...options,
+    });
     await new Promise((resolve) => setTimeout(resolve, 250));
     process.emit('SIGINT');
     await servePromise;
@@ -974,7 +987,7 @@ describe('http responses adapter', () => {
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
           runtimeRunInspection:
-            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}]',
+            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state]',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -3272,6 +3285,644 @@ describe('http responses adapter', () => {
     } finally {
       await server.close();
     }
+  });
+
+  it('returns honest unavailable service-state posture when the probe is requested but not configured', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-service-state-unavailable-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_http_service_state_unavailable';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-16T18:20:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe active service state.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'agent:inspect-service-state',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe active service state.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&probe=service-state`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      expect(payload).toMatchObject({
+        inspection: {
+          serviceState: {
+            probeStatus: 'unavailable',
+            service: 'chatgpt',
+            ownerStepId: stepId,
+            state: null,
+            source: null,
+            observedAt: null,
+            evidenceRef: null,
+            confidence: null,
+            reason: 'service-state probe is not configured for chatgpt',
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns observed service-state probe payload over HTTP when the live probe is configured', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-service-state-observed-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_http_service_state_observed';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-16T18:25:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe active service state.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'agent:inspect-service-state',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe active service state.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        probeRuntimeRunServiceState: async ({ step }) => ({
+          service: step.service,
+          ownerStepId: step.id,
+          state: 'thinking',
+          source: 'provider-adapter',
+          observedAt: '2026-04-16T18:25:04.000Z',
+          evidenceRef: 'chatgpt-placeholder-turn',
+          confidence: 'high',
+        }),
+      },
+    );
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&probe=service-state`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      expect(payload).toMatchObject({
+        inspection: {
+          serviceState: {
+            probeStatus: 'observed',
+            service: 'chatgpt',
+            ownerStepId: stepId,
+            state: 'thinking',
+            source: 'provider-adapter',
+            observedAt: '2026-04-16T18:25:04.000Z',
+            evidenceRef: 'chatgpt-placeholder-turn',
+            confidence: 'high',
+            reason: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('resolves the running step AuraCall runtime profile before probing ChatGPT service state', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      cwd: '/tmp/auracall-probe-cwd',
+      env: { TEST_ENV: '1' },
+      resolveConfigImpl: async (cliOptions, cwd, env) => {
+        expect(cliOptions).toEqual({ profile: 'work' });
+        expect(cwd).toBe('/tmp/auracall-probe-cwd');
+        expect(env).toMatchObject({ TEST_ENV: '1' });
+        return {
+          auracallProfile: 'work',
+          services: {
+            chatgpt: {
+              url: 'https://chatgpt.com/',
+            },
+          },
+        } as never;
+      },
+      probeChatgptBrowserServiceStateImpl: async (config) => ({
+        service: 'chatgpt',
+        ownerStepId: null,
+        state: config.auracallProfile === 'work' ? 'thinking' : 'unknown',
+        source: 'provider-adapter',
+        observedAt: '2026-04-16T20:00:04.000Z',
+        evidenceRef: 'chatgpt-placeholder-turn',
+        confidence: 'high',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-chatgpt-1',
+        service: 'chatgpt',
+        runtimeProfileId: 'work',
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'provider-adapter',
+      evidenceRef: 'chatgpt-placeholder-turn',
+      confidence: 'high',
+    });
+  });
+
+  it('resolves the running step AuraCall runtime profile before probing Gemini service state', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      cwd: '/tmp/auracall-probe-cwd',
+      env: { TEST_ENV: '1' },
+      resolveConfigImpl: async (cliOptions, cwd, env) => {
+        expect(cliOptions).toEqual({ profile: 'auracall-gemini-pro' });
+        expect(cwd).toBe('/tmp/auracall-probe-cwd');
+        expect(env).toMatchObject({ TEST_ENV: '1' });
+        return {
+          engine: 'browser',
+          auracallProfile: 'auracall-gemini-pro',
+          services: {
+            gemini: {
+              url: 'https://gemini.google.com/app',
+            },
+          },
+        } as never;
+      },
+      probeGeminiBrowserServiceStateImpl: async (config, options) => ({
+        service: 'gemini',
+        ownerStepId: null,
+        state:
+          config.auracallProfile === 'auracall-gemini-pro' &&
+            options?.prompt === 'Summarize merge sort.'
+            ? 'thinking'
+            : 'unknown',
+        source: 'provider-adapter',
+        observedAt: '2026-04-16T22:30:04.000Z',
+        evidenceRef: 'gemini-native-prompt-committed',
+        confidence: 'medium',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-gemini-1',
+        service: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        input: {
+          prompt: 'Summarize merge sort.',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'provider-adapter',
+      evidenceRef: 'gemini-native-prompt-committed',
+      confidence: 'medium',
+    });
+  });
+
+  it('prefers transient Gemini executor-owned live state before DOM probing', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      readLiveRuntimeRunServiceStateImpl: () => ({
+        service: 'gemini',
+        ownerStepId: 'step-gemini-live-1',
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-17T01:30:00.000Z',
+        evidenceRef: 'gemini-web-request-started',
+        confidence: 'medium',
+      }),
+      probeGeminiBrowserServiceStateImpl: async () => {
+        throw new Error('should not fall back to Gemini DOM probe when live executor state exists');
+      },
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {
+        record: {
+          runId: 'runtime_gemini_live_1',
+        },
+      } as never,
+      runner: null,
+      step: {
+        id: 'step-gemini-live-1',
+        service: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GEMINI_LIVE_STATE_OK',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'browser-service',
+      evidenceRef: 'gemini-web-request-started',
+      confidence: 'medium',
+    });
+  });
+
+  it('prefers transient Grok executor-owned live state before DOM probing', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      readLiveRuntimeRunServiceStateImpl: () => ({
+        service: 'grok',
+        ownerStepId: 'step-grok-live-1',
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-17T02:30:00.000Z',
+        evidenceRef: 'grok-prompt-submitted',
+        confidence: 'medium',
+      }),
+      probeGrokBrowserServiceStateImpl: async () => ({
+        service: 'grok',
+        ownerStepId: null,
+        state: 'unknown',
+        source: 'provider-adapter',
+        observedAt: '2026-04-17T02:31:00.000Z',
+        evidenceRef: 'grok-live-probe-no-signal',
+        confidence: 'low',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {
+        record: {
+          runId: 'runtime_grok_live_1',
+        },
+      } as never,
+      runner: null,
+      step: {
+        id: 'step-grok-live-1',
+        service: 'grok',
+        runtimeProfileId: 'auracall-grok-auto',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GROK_LIVE_STATE_OK',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'browser-service',
+      evidenceRef: 'grok-prompt-submitted',
+      confidence: 'medium',
+    });
+  });
+
+  it('prefers provider-owned Grok response state over transient thinking when visible', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      readLiveRuntimeRunServiceStateImpl: () => ({
+        service: 'grok',
+        ownerStepId: 'step-grok-live-2',
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-17T02:33:00.000Z',
+        evidenceRef: 'grok-prompt-submitted',
+        confidence: 'medium',
+      }),
+      probeGrokBrowserServiceStateImpl: async () => ({
+        service: 'grok',
+        ownerStepId: null,
+        state: 'response-incoming',
+        source: 'provider-adapter',
+        observedAt: '2026-04-17T02:33:02.000Z',
+        evidenceRef: 'grok-assistant-visible',
+        confidence: 'high',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {
+        record: {
+          runId: 'runtime_grok_live_2',
+        },
+      } as never,
+      runner: null,
+      step: {
+        id: 'step-grok-live-2',
+        service: 'grok',
+        runtimeProfileId: 'auracall-grok-auto',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GROK_LIVE_STATE_OK',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'response-incoming',
+      source: 'provider-adapter',
+      evidenceRef: 'grok-assistant-visible',
+      confidence: 'high',
+    });
+  });
+
+  it('routes Grok browser-backed runtime profiles through the default service-state probe', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'auracall-grok-auto',
+          engine: 'browser',
+          services: {
+            grok: {
+              url: 'https://grok.com/',
+            },
+          },
+        }) as never,
+      probeGrokBrowserServiceStateImpl: async (config) => ({
+        service: 'grok',
+        ownerStepId: null,
+        state: config.auracallProfile === 'auracall-grok-auto' ? 'response-incoming' : 'unknown',
+        source: 'provider-adapter',
+        observedAt: '2026-04-17T02:32:00.000Z',
+        evidenceRef: 'grok-assistant-visible',
+        confidence: 'high',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-grok-1',
+        service: 'grok',
+        runtimeProfileId: 'auracall-grok-auto',
+        input: {
+          prompt: 'Summarize merge sort.',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'response-incoming',
+      source: 'provider-adapter',
+      evidenceRef: 'grok-assistant-visible',
+      confidence: 'high',
+    });
+  });
+
+  it('does not probe Grok service state for non-browser runtime profiles', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'auracall-grok-auto',
+          engine: 'api',
+          services: {
+            grok: {
+              url: 'https://grok.com/',
+            },
+          },
+        }) as never,
+      probeGrokBrowserServiceStateImpl: async () => {
+        throw new Error('should not probe Grok browser state for API runtime profiles');
+      },
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-grok-2',
+        service: 'grok',
+        runtimeProfileId: 'auracall-grok-auto',
+        input: {
+          prompt: 'Summarize merge sort.',
+        },
+      } as never,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('keeps the default service-state probe honest when the resolved runtime profile does not match the running step', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'default',
+          services: {
+            chatgpt: {
+              url: 'https://chatgpt.com/',
+            },
+          },
+        }) as never,
+      probeChatgptBrowserServiceStateImpl: async () => {
+        throw new Error('should not probe mismatched runtime profiles');
+      },
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-chatgpt-2',
+        service: 'chatgpt',
+        runtimeProfileId: 'work',
+      } as never,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('keeps the default Gemini service-state probe honest when the resolved runtime profile does not match the running step', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'default',
+          services: {
+            gemini: {
+              url: 'https://gemini.google.com/app',
+            },
+          },
+        }) as never,
+      probeGeminiBrowserServiceStateImpl: async () => {
+        throw new Error('should not probe mismatched Gemini runtime profiles');
+      },
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-gemini-2',
+        service: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        input: {
+          prompt: 'Summarize merge sort.',
+        },
+      } as never,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it('does not probe Gemini service state for non-browser runtime profiles', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'auracall-gemini-pro',
+          engine: 'api',
+          services: {
+            gemini: {
+              url: 'https://gemini.google.com/app',
+            },
+          },
+        }) as never,
+      probeGeminiBrowserServiceStateImpl: async () => {
+        throw new Error('should not probe Gemini browser state for API runtime profiles');
+      },
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {} as never,
+      runner: null,
+      step: {
+        id: 'step-gemini-3',
+        service: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        input: {
+          prompt: 'Summarize merge sort.',
+        },
+      } as never,
+    });
+
+    expect(result).toBeNull();
   });
 
   it('evaluates configured service-account affinity on runtime inspection over HTTP', async () => {

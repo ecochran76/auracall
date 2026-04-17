@@ -6,7 +6,14 @@ import {
   bootstrapManagedProfile,
   findBrowserCookieFile,
 } from './profileStore.js';
-import type { BrowserRunOptions, BrowserRunResult, BrowserLogger, ChromeClient, BrowserAttachment } from './types.js';
+import type {
+  BrowserAttachment,
+  BrowserLogger,
+  BrowserPassiveObservation,
+  BrowserRunOptions,
+  BrowserRunResult,
+  ChromeClient,
+} from './types.js';
 import {
   launchChrome,
   registerTerminationHooks,
@@ -1009,6 +1016,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   let removeTerminationHooks: (() => void) | null = null;
   let preserveBrowserOnError = false;
   let runtimeForGuard: ChromeClient['Runtime'] | null = null;
+  const passiveObservations: BrowserPassiveObservation[] = [];
 
   try {
     try {
@@ -1415,7 +1423,19 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         throw error;
       }
     }
-    stopThinkingMonitor = startThinkingStatusMonitor(Runtime, logger, options.verbose ?? false);
+    stopThinkingMonitor = startThinkingStatusMonitor(
+      Runtime,
+      logger,
+      options.verbose ?? false,
+      (message) => {
+        recordBrowserPassiveObservation(passiveObservations, {
+          state: 'thinking',
+          source: 'browser-service',
+          evidenceRef: message,
+          confidence: 'medium',
+        });
+      },
+    );
     // Helper to normalize text for echo detection (collapse whitespace, lowercase)
     const normalizeForComparison = (text: string): string =>
       text.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -1474,6 +1494,16 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
         config.timeoutMs,
         logger,
         baselineTurns ?? undefined,
+        {
+          onResponseIncoming: () => {
+            recordBrowserPassiveObservation(passiveObservations, {
+              state: 'response-incoming',
+              source: 'browser-service',
+              evidenceRef: 'chatgpt-assistant-snapshot',
+              confidence: 'high',
+            });
+          },
+        },
       ),
     );
     // Ensure we store the final conversation URL even if the UI updated late.
@@ -1647,6 +1677,12 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
     stopThinkingMonitor?.();
     runStatus = 'complete';
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'chatgpt-response-finished',
+      confidence: 'high',
+    });
     const durationMs = Date.now() - startedAt;
     const answerChars = answerText.length;
     const answerTokens = estimateTokenCount(answerMarkdown);
@@ -1666,6 +1702,7 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
       tabUrl: lastUrl,
       conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
       composerTool: selectedComposerTool,
+      passiveObservations,
       controllerPid: process.pid,
     };
   } catch (error) {
@@ -1901,6 +1938,7 @@ async function runRemoteBrowserMode(
   let stopThinkingMonitor: (() => void) | null = null;
   let removeDialogHandler: (() => void) | null = null;
   let runtimeForGuard: ChromeClient['Runtime'] | null = null;
+  const passiveObservations: BrowserPassiveObservation[] = [];
 
   try {
     const connection = await connectToRemoteChrome(host, port, logger, config.url, {
@@ -2083,7 +2121,19 @@ async function runRemoteBrowserMode(
         throw error;
       }
     }
-    stopThinkingMonitor = startThinkingStatusMonitor(Runtime, logger, options.verbose ?? false);
+    stopThinkingMonitor = startThinkingStatusMonitor(
+      Runtime,
+      logger,
+      options.verbose ?? false,
+      (message) => {
+        recordBrowserPassiveObservation(passiveObservations, {
+          state: 'thinking',
+          source: 'browser-service',
+          evidenceRef: message,
+          confidence: 'medium',
+        });
+      },
+    );
     // Helper to normalize text for echo detection (collapse whitespace, lowercase)
     const normalizeForComparison = (text: string): string =>
       text.toLowerCase().replace(/\s+/g, ' ').trim();
@@ -2141,6 +2191,16 @@ async function runRemoteBrowserMode(
       config.timeoutMs,
       logger,
       baselineTurns ?? undefined,
+      {
+        onResponseIncoming: () => {
+          recordBrowserPassiveObservation(passiveObservations, {
+            state: 'response-incoming',
+            source: 'browser-service',
+            evidenceRef: 'chatgpt-assistant-snapshot',
+            confidence: 'high',
+          });
+        },
+      },
     );
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
     if (baselineNormalized) {
@@ -2275,6 +2335,12 @@ async function runRemoteBrowserMode(
       }
     }
     stopThinkingMonitor?.();
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'chatgpt-response-finished',
+      confidence: 'high',
+    });
 
     const durationMs = Date.now() - startedAt;
     const answerChars = answerText.length;
@@ -2296,6 +2362,7 @@ async function runRemoteBrowserMode(
       tabUrl: lastUrl,
       conversationId: lastUrl ? extractConversationIdFromUrl(lastUrl) : undefined,
       composerTool: selectedComposerTool,
+      passiveObservations,
       controllerPid: process.pid,
     };
   } catch (error) {
@@ -2354,6 +2421,7 @@ async function runRemoteGrokBrowserMode(
   logger: BrowserLogger,
   options: BrowserRunOptions,
 ): Promise<BrowserRunResult> {
+  const passiveObservations: BrowserPassiveObservation[] = [];
   const remoteChromeConfig = config.remoteChrome;
   if (!remoteChromeConfig) {
     throw new Error('Remote Chrome configuration missing. Pass --remote-chrome <host:port> to use this mode.');
@@ -2459,6 +2527,12 @@ async function runRemoteGrokBrowserMode(
     const grokAssistantBaseline = await readGrokAssistantSnapshotForRuntime(Runtime);
     await setGrokPrompt(Input, Runtime, promptText);
     await submitGrokPrompt(Input, Runtime);
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'thinking',
+      source: 'browser-service',
+      evidenceRef: 'grok-prompt-submitted',
+      confidence: 'medium',
+    });
     logger('Submitted prompt');
     await delay(500);
 
@@ -2471,9 +2545,23 @@ async function runRemoteGrokBrowserMode(
 
     const answer = await waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
       baseline: grokAssistantBaseline,
+      onResponseIncoming: () => {
+        recordBrowserPassiveObservation(passiveObservations, {
+          state: 'response-incoming',
+          source: 'browser-service',
+          evidenceRef: 'grok-assistant-visible',
+          confidence: 'high',
+        });
+      },
     });
     await noteGrokBrowserMutationSuccess(config, config.manualLoginProfileDir ?? null).catch(() => undefined);
     const durationMs = Date.now() - startedAt;
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'grok-response-finished',
+      confidence: 'high',
+    });
 
     return {
       answerText: answer.text,
@@ -2488,6 +2576,7 @@ async function runRemoteGrokBrowserMode(
       userDataDir: undefined,
       chromeTargetId: remoteTargetId ?? undefined,
       tabUrl: lastUrl,
+      passiveObservations,
       controllerPid: process.pid,
     };
   } catch (error) {
@@ -2585,9 +2674,10 @@ async function waitForAssistantResponseWithReload(
   timeoutMs: number,
   logger: BrowserLogger,
   minTurnIndex?: number,
+  options: { onResponseIncoming?: () => void } = {},
 ) {
   try {
-    return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex);
+    return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);
   } catch (error) {
     if (!shouldReloadAfterAssistantError(error)) {
       throw error;
@@ -2599,7 +2689,7 @@ async function waitForAssistantResponseWithReload(
     logger('Assistant response stalled; reloading conversation and retrying once');
     await Page.navigate({ url: conversationUrl });
     await delay(1000);
-    return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex);
+    return await waitForAssistantResponse(Runtime, timeoutMs, logger, minTurnIndex, options);
   }
 }
 
@@ -2662,6 +2752,7 @@ function startThinkingStatusMonitor(
   Runtime: ChromeClient['Runtime'],
   logger: BrowserLogger,
   includeDiagnostics = false,
+  onThinkingStatus?: (message: string) => void,
 ): () => void {
   let stopped = false;
   let pending = false;
@@ -2677,6 +2768,7 @@ function startThinkingStatusMonitor(
       const nextMessage = await readThinkingStatus(Runtime);
       if (nextMessage && nextMessage !== lastMessage) {
         lastMessage = nextMessage;
+        onThinkingStatus?.(nextMessage);
         let locatorSuffix = '';
         if (includeDiagnostics) {
           try {
@@ -2705,6 +2797,19 @@ function startThinkingStatusMonitor(
   };
 }
 
+function recordBrowserPassiveObservation(
+  observations: BrowserPassiveObservation[],
+  observation: Omit<BrowserPassiveObservation, 'observedAt'>,
+): void {
+  if (observations.some((entry) => entry.state === observation.state)) {
+    return;
+  }
+  observations.push({
+    ...observation,
+    observedAt: new Date().toISOString(),
+  });
+}
+
 async function runGrokBrowserMode({
   promptText,
   attachments,
@@ -2720,6 +2825,7 @@ async function runGrokBrowserMode({
   runtimeHintCb?: BrowserRunOptions['runtimeHintCb'];
   auracallProfileName?: string | null;
 }): Promise<BrowserRunResult> {
+  const passiveObservations: BrowserPassiveObservation[] = [];
   let chrome: LaunchedChrome | null = null;
   let chromeHost = '127.0.0.1';
   let lastUrl: string | undefined;
@@ -3020,6 +3126,12 @@ async function runGrokBrowserMode({
     const grokAssistantBaseline = await raceWithDisconnect(readGrokAssistantSnapshotForRuntime(Runtime));
     await raceWithDisconnect(setGrokPrompt(Input, Runtime, promptText));
     await raceWithDisconnect(submitGrokPrompt(Input, Runtime));
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'thinking',
+      source: 'browser-service',
+      evidenceRef: 'grok-prompt-submitted',
+      confidence: 'medium',
+    });
     await delay(500);
     const href = await Runtime.evaluate({ expression: 'location.href', returnByValue: true });
     const currentUrl = typeof href.result?.value === 'string' ? href.result.value : '';
@@ -3031,6 +3143,14 @@ async function runGrokBrowserMode({
     const answer = await raceWithDisconnect(
       waitForGrokAssistantResult(Runtime, config.timeoutMs, logger, {
         baseline: grokAssistantBaseline,
+        onResponseIncoming: () => {
+          recordBrowserPassiveObservation(passiveObservations, {
+            state: 'response-incoming',
+            source: 'browser-service',
+            evidenceRef: 'grok-assistant-visible',
+            confidence: 'high',
+          });
+        },
       }),
     );
     await noteGrokBrowserMutationSuccess(config, userDataDir).catch(() => undefined);
@@ -3043,6 +3163,12 @@ async function runGrokBrowserMode({
     runStatus = 'complete';
     const durationMs = Date.now() - startedAt;
     const answerTokens = estimateTokenCount(answerMarkdown);
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'grok-response-finished',
+      confidence: 'high',
+    });
     return {
       answerText,
       answerMarkdown,
@@ -3057,6 +3183,7 @@ async function runGrokBrowserMode({
       chromeTargetId: undefined,
       tabUrl: currentUrl,
       conversationId: extractConversationIdFromUrl(currentUrl),
+      passiveObservations,
       controllerPid: chrome.process?.pid,
     };
   } catch (error) {
@@ -3156,11 +3283,42 @@ function sanitizeThinkingText(raw: string): string {
     return '';
   }
   const trimmed = raw.trim();
-  const prefixPattern = /^(pro thinking)\s*[•:\-–—]*\s*/i;
-  if (prefixPattern.test(trimmed)) {
-    return trimmed.replace(prefixPattern, '').trim();
+  const normalized = trimmed.replace(/\s+/g, ' ');
+  const lower = normalized.toLowerCase();
+  const placeholderPattern = /^chatgpt said:\s*thinking\s*$/i;
+  if (placeholderPattern.test(normalized)) {
+    return 'Thinking';
   }
-  return trimmed;
+  if (lower.startsWith('you said:') || lower.includes('### file:')) {
+    return '';
+  }
+  const prefixPattern = /^(pro thinking)\s*[•:\-–—]*\s*/i;
+  if (prefixPattern.test(normalized)) {
+    const remainder = normalized.replace(prefixPattern, '').trim();
+    return remainder || 'Thinking';
+  }
+  if (lower.includes('thinking')) {
+    return 'Thinking';
+  }
+  if (lower.includes('reasoning')) {
+    return 'Reasoning';
+  }
+  if (lower.includes('clarifying')) {
+    return 'Clarifying';
+  }
+  if (lower.includes('planning')) {
+    return 'Planning';
+  }
+  if (lower.includes('drafting')) {
+    return 'Drafting';
+  }
+  if (lower.includes('summarizing')) {
+    return 'Summarizing';
+  }
+  if (normalized.length > 80) {
+    return '';
+  }
+  return normalized;
 }
 
 async function gracefulShutdownChrome(
@@ -3229,16 +3387,35 @@ function buildThinkingStatusExpression(): string {
   return `(() => {
     const selectors = ${selectorLiteral};
     const keywords = ${keywordsLiteral};
+    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
+    const isVisible = (node) => {
+      if (!(node instanceof Element)) return false;
+      const rect = node.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return false;
+      const style = window.getComputedStyle(node);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    };
     const nodes = new Set();
     for (const selector of selectors) {
       document.querySelectorAll(selector).forEach((node) => nodes.add(node));
     }
     document.querySelectorAll('[data-testid]').forEach((node) => nodes.add(node));
+    const assistantTurns = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], [data-turn="assistant"]'));
+    const lastAssistantTurn = assistantTurns.length > 0 ? assistantTurns[assistantTurns.length - 1] : null;
+    if (lastAssistantTurn instanceof HTMLElement && isVisible(lastAssistantTurn)) {
+      const assistantText = normalize(lastAssistantTurn.textContent || '');
+      if (/^chatgpt said:\\s*thinking\\s*$/i.test(assistantText)) {
+        return assistantText;
+      }
+    }
     for (const node of nodes) {
       if (!(node instanceof HTMLElement)) {
         continue;
       }
-      const text = node.textContent?.trim();
+      if (!isVisible(node)) {
+        continue;
+      }
+      const text = normalize(node.textContent || '');
       if (!text) {
         continue;
       }
@@ -3261,4 +3438,12 @@ function buildThinkingStatusExpression(): string {
     }
     return null;
   })()`;
+}
+
+export function sanitizeThinkingTextForTest(raw: string): string {
+  return sanitizeThinkingText(raw);
+}
+
+export function buildThinkingStatusExpressionForTest(): string {
+  return buildThinkingStatusExpression();
 }

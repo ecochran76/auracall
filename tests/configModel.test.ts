@@ -830,4 +830,157 @@ describe('config model helpers', () => {
       ]),
     });
   });
+
+  it('warns when a runtime profile still carries browser-owned override fields', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/usr/bin/google-chrome' },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          keepBrowser: true,
+          browser: {
+            chromePath: '/custom/chrome',
+            display: ':0.0',
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-browser-owned-overrides-present',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, browser.display, keepBrowser); move them to the referenced browser profile unless this is an intentional advanced escape hatch.',
+        }),
+      ],
+    });
+  });
+
+  it('surfaces relocatable service-scoped fields separately from managed-profile escape hatches', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/usr/bin/google-chrome' },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          browser: {
+            manualLogin: true,
+            manualLoginProfileDir: '/tmp/managed/chatgpt',
+            modelStrategy: 'current',
+            thinkingTime: 'extended',
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 2,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-overrides-relocatable-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines relocatable service-scoped browser overrides (browser.modelStrategy, browser.thinkingTime); prefer runtimeProfiles.<name>.services.chatgpt, and keep runtimeProfiles.<name>.browser for non-service escape hatches only.',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-escape-hatches-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.',
+        }),
+      ],
+    });
+  });
+
+  it('surfaces redundant default-equivalent manualLoginProfileDir overrides', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {
+          managedProfileRoot: '/tmp/auracall/browser-profiles',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          browser: {
+            manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+          },
+          services: {
+            grok: {
+              manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 2,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-escape-hatches-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-manual-login-profile-dir-redundant',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines default-equivalent managed profile paths (browser.manualLoginProfileDir (chatgpt), services.grok.manualLoginProfileDir); remove them unless you intend a real external managed-profile override.',
+        }),
+      ],
+    });
+  });
 });

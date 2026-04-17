@@ -867,6 +867,138 @@ describe('config show helpers', () => {
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
   });
 
+  it('surfaces browser-owned runtime profile overrides in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+            keepBrowser: true,
+            browser: {
+              chromePath: '/custom/chrome',
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'runtime-profile-browser-owned-overrides-present',
+          auracallRuntimeProfile: 'default',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain(
+      '[warning] AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, keepBrowser); move them to the referenced browser profile unless this is an intentional advanced escape hatch.',
+    );
+  });
+
+  it('surfaces relocatable service fields separately from managed-profile escape hatches in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+            browser: {
+              manualLogin: true,
+              manualLoginProfileDir: '/tmp/managed/chatgpt',
+              modelStrategy: 'current',
+              thinkingTime: 'extended',
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-overrides-relocatable-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-escape-hatches-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).not.toContain('runtime profile "default" still defines browser-owned override fields');
+    expect(text).toContain(
+      '[info] AuraCall runtime profile "default" still defines relocatable service-scoped browser overrides (browser.modelStrategy, browser.thinkingTime); prefer runtimeProfiles.<name>.services.chatgpt, and keep runtimeProfiles.<name>.browser for non-service escape hatches only.',
+    );
+    expect(text).toContain(
+      '[info] AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.',
+    );
+  });
+
+  it('surfaces redundant default-equivalent managed profile paths in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+            browser: {
+              manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+            },
+            services: {
+              grok: {
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
+              },
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'runtime-profile-manual-login-profile-dir-redundant',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).toContain(
+      '[info] AuraCall runtime profile "default" still defines default-equivalent managed profile paths (browser.manualLoginProfileDir (chatgpt), services.grok.manualLoginProfileDir); remove them unless you intend a real external managed-profile override.',
+    );
+  });
+
   it('surfaces selected team planning in config doctor without enabling team execution semantics', () => {
     const report = buildConfigDoctorReport(
       {

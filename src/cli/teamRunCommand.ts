@@ -6,6 +6,11 @@ import {
   type InspectTeamRunLinkageInput,
   type TeamRunInspectionPayload,
 } from '../teams/inspection.js';
+import {
+  reviewTeamRunLedger,
+  type ReviewTeamRunLedgerInput,
+  type TeamRunReviewLedgerPayload,
+} from '../teams/reviewLedger.js';
 import type { TaskRunSpec } from '../teams/types.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 
@@ -232,6 +237,67 @@ export function formatTeamRunCliInspectionPayload(payload: TeamRunInspectionPayl
   return lines.join('\n');
 }
 
+export function formatTeamRunCliReviewLedgerPayload(payload: TeamRunReviewLedgerPayload): string {
+  const lines = [
+    `Resolved by: ${payload.resolvedBy}`,
+    `Query: ${payload.queryId}`,
+    `Matching runtime runs: ${payload.matchingRuntimeRunCount}`,
+    `TaskRunSpec: ${payload.taskRunSpecSummary?.id ?? payload.ledger.taskRunSpecId ?? '(none)'}`,
+  ];
+
+  if (payload.taskRunSpecSummary) {
+    lines.push(`Team: ${payload.taskRunSpecSummary.teamId}`);
+    lines.push(`Title: ${payload.taskRunSpecSummary.title}`);
+    lines.push(`Objective: ${payload.taskRunSpecSummary.objective}`);
+  }
+
+  lines.push(`Team run: ${payload.ledger.teamRunId}`);
+  lines.push(`Runtime run: ${payload.ledger.runtimeRunId}`);
+  lines.push(`Status: ${payload.ledger.status}`);
+  lines.push(`Created at: ${payload.ledger.createdAt}`);
+  lines.push(`Updated at: ${payload.ledger.updatedAt}`);
+  lines.push(`Steps: ${payload.ledger.sequence.length}`);
+  for (const step of payload.ledger.sequence) {
+    lines.push(
+      `- ${step.order}. ${step.stepId} [${step.status}] agent=${step.agentId} service=${step.service ?? '(none)'} runtime=${step.runtimeProfileId ?? '(none)'}`,
+    );
+    if (step.parentStepIds.length > 0) {
+      lines.push(`  depends on: ${step.parentStepIds.join(', ')}`);
+    }
+    if (step.providerConversationRef) {
+      const providerRef = step.providerConversationRef;
+      lines.push(
+        `  provider ref: service=${providerRef.service} conversation=${providerRef.conversationId ?? '(none)'} project=${providerRef.projectId ?? '(none)'} model=${providerRef.model ?? '(none)'} url=${providerRef.url ?? providerRef.configuredUrl ?? '(none)'} cache=${providerRef.cachePath ?? '(none)'} cacheStatus=${providerRef.cachePathStatus ?? '(unknown)'}`,
+      );
+    } else {
+      lines.push('  provider ref: (none)');
+    }
+    lines.push(`  prompt: ${step.inputSnapshot.prompt ?? '(none)'}`);
+    if (step.outputSnapshot) {
+      lines.push(`  output: ${step.outputSnapshot.summary ?? step.outputSnapshot.text ?? '(none)'}`);
+    }
+    if (step.failure) {
+      lines.push(`  failure: ${step.failure.code}: ${step.failure.message}`);
+    }
+  }
+
+  lines.push(`Handoffs: ${payload.ledger.handoffs.length}`);
+  for (const handoff of payload.ledger.handoffs) {
+    lines.push(
+      `- ${handoff.id}: ${handoff.fromStepId} -> ${handoff.toStepId} [${handoff.status}] ${handoff.summary}`,
+    );
+  }
+  lines.push(`Artifacts: ${payload.ledger.artifacts.length}`);
+  lines.push(`Observations: ${payload.ledger.observations.length}`);
+  for (const observation of payload.ledger.observations) {
+    lines.push(
+      `- ${observation.id}: ${observation.state} step=${observation.stepId ?? '(none)'} source=${observation.source} confidence=${observation.confidence} evidence=${observation.evidenceRef ?? '(none)'}`,
+    );
+  }
+
+  return lines.join('\n');
+}
+
 export async function executeConfiguredTeamRun(
   input: ExecuteConfiguredTeamRunInput,
 ): Promise<ExecuteConfiguredTeamRunResult> {
@@ -282,4 +348,8 @@ export async function executeConfiguredTeamRun(
 
 export async function inspectConfiguredTeamRun(input: InspectTeamRunLinkageInput): Promise<TeamRunInspectionPayload> {
   return inspectTeamRunLinkage(input);
+}
+
+export async function reviewConfiguredTeamRun(input: ReviewTeamRunLedgerInput): Promise<TeamRunReviewLedgerPayload> {
+  return reviewTeamRunLedger(input);
 }

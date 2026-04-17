@@ -173,6 +173,45 @@ describe('resolveBrowserProfileResolution', () => {
     });
   });
 
+  test('drops manual-login profile path when manual login is explicitly disabled', () => {
+    const merged = {
+      services: {
+        chatgpt: { url: 'https://chatgpt.com/' },
+      },
+      browser: {
+        target: 'chatgpt',
+      },
+    };
+
+    const profile = {
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          manualLogin: true,
+          manualLoginProfileDir: '/tmp/managed/chatgpt',
+        },
+      },
+    };
+
+    const browser = {
+      target: 'chatgpt',
+      manualLogin: false,
+      manualLoginProfileDir: '/tmp/browser-override',
+    };
+
+    const result = resolveBrowserProfileResolution({
+      merged,
+      profileName: 'default',
+      profile,
+      browser,
+    });
+
+    expect(result.serviceBinding.manualLogin).toBe(false);
+    expect(result.serviceBinding.manualLoginProfileDir).toBeUndefined();
+    expect(result.launchProfile.manualLogin).toBe(false);
+    expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
+  });
+
   test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
     const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
     cleanup.push(managedRoot);

@@ -5,11 +5,20 @@ import {
   executeConfiguredTeamRun,
   formatTeamRunCliExecutionPayload,
   formatTeamRunCliInspectionPayload,
+  formatTeamRunCliReviewLedgerPayload,
   inspectConfiguredTeamRun,
+  reviewConfiguredTeamRun,
 } from '../../src/cli/teamRunCommand.js';
 import type { ExecutionRuntimeControlContract } from '../../src/runtime/contract.js';
+import {
+  createExecutionRun,
+  createExecutionRunRecordBundle,
+  createExecutionRunSharedState,
+  createExecutionRunStep,
+} from '../../src/runtime/model.js';
 import type { TaskRunSpecRecordStore } from '../../src/teams/store.js';
 import type { TeamRuntimeBridge } from '../../src/teams/runtimeBridge.js';
+import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../../src/teams/types.js';
 
 describe('team run CLI helpers', () => {
   it('builds a bounded CLI task-run-spec with final-response defaults', () => {
@@ -832,5 +841,352 @@ describe('team run CLI helpers', () => {
     expect(text).toContain('Runtime status: succeeded');
     expect(text).toContain('Final output summary: final answer ready');
     expect(text).toContain('Shared state notes:');
+  });
+
+  it('reviews a persisted team run ledger by runtime run id', async () => {
+    const runId = 'team_review_cli_1';
+    const stepId = `${runId}:step:1`;
+    const bundle = createExecutionRunRecordBundle({
+      run: createExecutionRun({
+        id: runId,
+        sourceKind: 'team-run',
+        sourceId: 'teamrun_review_cli_1',
+        taskRunSpecId: 'task_review_cli_1',
+        status: 'succeeded',
+        createdAt: '2026-04-15T19:00:00.000Z',
+        updatedAt: '2026-04-15T19:03:00.000Z',
+        trigger: 'cli',
+        requestedBy: 'auracall teams run',
+        entryPrompt: null,
+        initialInputs: {},
+        sharedStateId: `${runId}:state`,
+        stepIds: [stepId],
+        policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+      }),
+      steps: [
+        createExecutionRunStep({
+          id: stepId,
+          runId,
+          sourceStepId: stepId,
+          agentId: 'analyst',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          kind: 'analysis',
+          status: 'succeeded',
+          order: 1,
+          dependsOnStepIds: [],
+          input: {
+            prompt: 'Review the run.',
+            handoffIds: [],
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+          output: {
+            summary: 'reviewed',
+            artifacts: [],
+            structuredData: {
+              browserRun: {
+                conversationId: 'conversation-1',
+                tabUrl: 'https://chatgpt.com/c/conversation-1',
+                service: 'chatgpt',
+                runtimeProfileId: 'default',
+                browserProfileId: 'default',
+                agentId: 'analyst',
+                projectId: 'g-p-cli-review',
+                configuredUrl: 'https://chatgpt.com/g/g-p-cli-review',
+                desiredModel: 'GPT-5.2',
+                cachePath: null,
+                cachePathStatus: 'unavailable',
+                passiveObservations: [
+                  {
+                    state: 'thinking',
+                    source: 'browser-service',
+                    observedAt: '2026-04-15T19:01:00.000Z',
+                    evidenceRef: 'Thinking about response',
+                    confidence: 'medium',
+                  },
+                  {
+                    state: 'response-incoming',
+                    source: 'browser-service',
+                    observedAt: '2026-04-15T19:01:03.000Z',
+                    evidenceRef: 'chatgpt-assistant-snapshot',
+                    confidence: 'high',
+                  },
+                  {
+                    state: 'response-complete',
+                    source: 'browser-service',
+                    observedAt: '2026-04-15T19:02:00.000Z',
+                    evidenceRef: 'chatgpt-response-finished',
+                    confidence: 'high',
+                  },
+                ],
+              },
+            },
+            notes: [],
+          },
+          completedAt: '2026-04-15T19:02:00.000Z',
+        }),
+      ],
+      sharedState: createExecutionRunSharedState({
+        id: `${runId}:state`,
+        runId,
+        status: 'succeeded',
+        artifacts: [],
+        structuredOutputs: [],
+        notes: [],
+        history: [],
+        lastUpdatedAt: '2026-04-15T19:03:00.000Z',
+      }),
+      events: [],
+    });
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun(candidateRunId) {
+        return candidateRunId === runId ? { runId, revision: 1, persistedAt: bundle.run.updatedAt, bundle } : null;
+      },
+      async inspectRun() {
+        throw new Error('not used');
+      },
+      async listRuns() {
+        throw new Error('not used');
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+    const taskRunSpecStore: TaskRunSpecRecordStore = {
+      async ensureStorage() {
+        throw new Error('not used');
+      },
+      async writeSpec() {
+        throw new Error('not used');
+      },
+      async readSpec() {
+        throw new Error('not used');
+      },
+      async readRecord(taskRunSpecId) {
+        if (taskRunSpecId !== 'task_review_cli_1') {
+          return null;
+        }
+        return {
+          taskRunSpecId: 'task_review_cli_1',
+          revision: 1,
+          persistedAt: '2026-04-15T19:00:01.000Z',
+          spec: {
+            id: 'task_review_cli_1',
+            teamId: 'auracall-solo',
+            title: 'Review CLI smoke',
+            objective: 'Review the run.',
+            createdAt: '2026-04-15T19:00:00.000Z',
+            successCriteria: [],
+            requestedOutputs: [],
+            inputArtifacts: [],
+            context: {},
+            overrides: {},
+            requestedBy: { kind: 'cli', label: 'auracall teams run' },
+            trigger: 'cli',
+          } as never,
+        };
+      },
+      async writeRecord() {
+        throw new Error('not used');
+      },
+    };
+
+    const payload = await reviewConfiguredTeamRun({
+      runtimeRunId: runId,
+      control,
+      taskRunSpecStore,
+    });
+
+    expect(payload).toMatchObject({
+      resolvedBy: 'runtime-run-id',
+      queryId: runId,
+      matchingRuntimeRunIds: [runId],
+      taskRunSpecSummary: {
+        id: 'task_review_cli_1',
+        teamId: 'auracall-solo',
+      },
+      ledger: {
+        teamRunId: 'teamrun_review_cli_1',
+        runtimeRunId: runId,
+        sequence: [
+          {
+            stepId,
+            providerConversationRef: {
+              service: 'chatgpt',
+              conversationId: 'conversation-1',
+              url: 'https://chatgpt.com/c/conversation-1',
+              configuredUrl: 'https://chatgpt.com/g/g-p-cli-review',
+              projectId: 'g-p-cli-review',
+              runtimeProfileId: 'default',
+              browserProfileId: 'default',
+              agentId: 'analyst',
+              model: 'GPT-5.2',
+              cachePathStatus: 'unavailable',
+            },
+          },
+        ],
+      },
+    });
+
+    const text = formatTeamRunCliReviewLedgerPayload(payload);
+    expect(text).toContain('Resolved by: runtime-run-id');
+    expect(text).toContain('Team run: teamrun_review_cli_1');
+    expect(text).toContain('provider ref: service=chatgpt conversation=conversation-1 project=g-p-cli-review model=GPT-5.2');
+    expect(text).toContain('cacheStatus=unavailable');
+    expect(text).toContain('Observations: 3');
+    expect(text).toContain('team_review_cli_1:step:1:stored-observation:1:thinking');
+    expect(text).toContain('team_review_cli_1:step:1:stored-observation:3:response-complete');
+  });
+
+  it('formats hard-stop observations in team run review text', async () => {
+    const runId = 'team_review_cli_hard_stop';
+    const stepId = `${runId}:step:1`;
+    const bundle = createExecutionRunRecordBundle({
+      run: createExecutionRun({
+        id: runId,
+        sourceKind: 'team-run',
+        sourceId: 'teamrun_review_cli_hard_stop',
+        taskRunSpecId: null,
+        status: 'failed',
+        createdAt: '2026-04-15T19:10:00.000Z',
+        updatedAt: '2026-04-15T19:11:00.000Z',
+        trigger: 'cli',
+        requestedBy: 'auracall teams run',
+        entryPrompt: null,
+        initialInputs: {},
+        sharedStateId: `${runId}:state`,
+        stepIds: [stepId],
+        policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+      }),
+      steps: [
+        createExecutionRunStep({
+          id: stepId,
+          runId,
+          sourceStepId: stepId,
+          agentId: 'reviewer',
+          runtimeProfileId: 'gemini-runtime',
+          browserProfileId: 'default',
+          service: 'gemini',
+          kind: 'review',
+          status: 'failed',
+          order: 1,
+          dependsOnStepIds: [],
+          input: {
+            prompt: 'Review through Gemini.',
+            handoffIds: [],
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+          output: {
+            summary: 'captcha page',
+            artifacts: [],
+            structuredData: {
+              browserRun: {
+                service: 'gemini',
+                tabUrl: 'https://google.com/sorry/index',
+              },
+            },
+            notes: [],
+          },
+          completedAt: '2026-04-15T19:10:30.000Z',
+          failure: {
+            code: 'runner_execution_failed',
+            message: 'Visible CAPTCHA page.',
+            ownerStepId: stepId,
+            details: {
+              providerState: 'captcha-or-human-verification',
+            },
+          },
+        }),
+      ],
+      sharedState: createExecutionRunSharedState({
+        id: `${runId}:state`,
+        runId,
+        status: 'failed',
+        artifacts: [],
+        structuredOutputs: [],
+        notes: [],
+        history: [],
+        lastUpdatedAt: '2026-04-15T19:11:00.000Z',
+      }),
+      events: [],
+    });
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun(candidateRunId) {
+        return candidateRunId === runId ? { runId, revision: 1, persistedAt: bundle.run.updatedAt, bundle } : null;
+      },
+      async inspectRun() {
+        throw new Error('not used');
+      },
+      async listRuns() {
+        throw new Error('not used');
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+
+    const payload = await reviewConfiguredTeamRun({
+      runtimeRunId: runId,
+      control,
+    });
+
+    expect(payload.ledger.observations).toHaveLength(1);
+    const text = formatTeamRunCliReviewLedgerPayload(payload);
+    expect(text).toContain('Observations: 1');
+    expect(text).toContain(`${stepId}:observation:captcha-or-human-verification`);
+    expect(text).toContain('source=provider-adapter confidence=high');
+    expect(text).toContain('evidence=https://google.com/sorry/index');
+  });
+
+  it('rejects ambiguous team run review lookups', async () => {
+    await expect(
+      reviewConfiguredTeamRun({
+        taskRunSpecId: 'task_1',
+        teamRunId: 'team_1',
+      }),
+    ).rejects.toThrow(
+      'Choose exactly one review lookup key: --task-run-spec-id, --team-run-id, or --runtime-run-id.',
+    );
   });
 });

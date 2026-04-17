@@ -67,5 +67,18 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
     lines.push(`  - Last claimed run: ${payload.runner.lastClaimedRunId ?? '(none)'}`);
   }
 
+  if (payload.serviceState) {
+    lines.push('- Service-state probe:');
+    lines.push(`  - Probe status: ${payload.serviceState.probeStatus}`);
+    lines.push(`  - Service: ${payload.serviceState.service ?? '(none)'}`);
+    lines.push(`  - Owner step: ${payload.serviceState.ownerStepId ?? '(none)'}`);
+    lines.push(`  - State: ${payload.serviceState.state ?? '(none)'}`);
+    lines.push(`  - Source: ${payload.serviceState.source ?? '(none)'}`);
+    lines.push(`  - Observed at: ${payload.serviceState.observedAt ?? '(none)'}`);
+    lines.push(`  - Confidence: ${payload.serviceState.confidence ?? '(none)'}`);
+    lines.push(`  - Evidence ref: ${payload.serviceState.evidenceRef ?? '(none)'}`);
+    lines.push(`  - Reason: ${payload.serviceState.reason ?? '(none)'}`);
+  }
+
   return lines.join('\n');
 }

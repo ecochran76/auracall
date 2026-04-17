@@ -151,6 +151,7 @@
     - `GET /v1/runtime-runs/inspect?teamRunId=<team_run_id>`
     - `GET /v1/runtime-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&runnerId=<runner_id>`
+    - `GET /v1/runtime-runs/inspect?runId=<run_id>&probe=service-state`
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:
       - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
@@ -167,6 +168,8 @@
   - current expected posture:
     - `POST /v1/responses` persists the run and the server-owned background
       drain advances it
+    - direct browser-backed `/v1/responses` runs now use the configured
+      stored-step executor path instead of a no-op wrapper path
     - `api serve` now also persists one bounded local runner record and keeps
       it heartbeated while the server stays up
     - `GET /v1/runtime-runs/inspect` now exposes the bounded queue projection
@@ -181,6 +184,22 @@
       - `nextRunnableStepId`
       - `activeLeaseId`
       - `activeLeaseOwnerId`
+      - optional `serviceState` when explicitly requested with
+        `probe=service-state`
+        - `probeStatus = observed|unavailable`
+        - keep it separate from queue/lease posture
+        - current default live probe coverage is:
+          - ChatGPT on the managed browser path
+          - Gemini on browser-backed runtime profiles only
+            - active browser-backed Gemini runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+          - Grok on browser-backed runtime profiles only
+            - active browser-backed Grok runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+        - Gemini API-backed runtime profiles still return honest
+          `unavailable` posture
+        - Grok API-backed runtime profiles still return honest `unavailable`
+          posture
       - step-id buckets for running/waiting/deferred/terminal posture
       - bounded affinity posture
         - `requiredService`
@@ -1301,6 +1320,10 @@
     - `pnpm tsx bin/auracall.ts teams inspect --task-run-spec-id <taskRunSpecId> --json`
     - `pnpm tsx bin/auracall.ts teams inspect --team-run-id <teamRunId> --json`
     - `pnpm tsx bin/auracall.ts teams inspect --runtime-run-id <runtimeRunId> --json`
+  - review the persisted team-run sequence from that payload:
+    - `pnpm tsx bin/auracall.ts teams review --task-run-spec-id <taskRunSpecId> --json`
+    - `pnpm tsx bin/auracall.ts teams review --team-run-id <teamRunId> --json`
+    - `pnpm tsx bin/auracall.ts teams review --runtime-run-id <runtimeRunId> --json`
   - current expected result:
     - real `taskRunSpec` payload
     - `runtimeSourceKind = team-run`
@@ -1308,7 +1331,40 @@
     - single step resolves to:
       - `runtimeProfileId = auracall-grok-auto`
       - `browserProfileId = default`
+    - `teams review` returns a read-only ledger with:
+      - `ledger.sequence`
+      - `ledger.handoffs`
+      - `ledger.artifacts`
+      - `ledger.observations = []` until passive-monitoring slices start
       - `service = grok`
+      - provider refs include stored conversation id, tab URL, configured URL,
+        project id, runtime profile id, browser profile id, agent id, and
+        selected model when present
+      - provider cache path stays `null` unless stored metadata already carries
+        a concrete path
+      - `ledger.observations` includes:
+        - durable hard-stop observations derived from failure metadata
+        - stored ChatGPT passive observations for `thinking`,
+          `response-incoming`, and `response-complete` when present on
+          `browserRun.passiveObservations`
+        - stored Gemini passive observations for `thinking`,
+          `response-incoming`, and `response-complete` when present on
+          `browserRun.passiveObservations`
+        - on the current managed WSL Chrome path, live thinking-mode evidence
+          is best recognized from the placeholder assistant turn
+          `ChatGPT said:Thinking`; generic status-node scans are supplemental
+        - Gemini evidence stays Gemini-owned:
+          - web executor observations come from returned
+            thoughts/text/images and successful completion
+          - browser-native attachment observations come from prompt committed,
+            answer first visible, and stable completion
+        - stored Grok passive observations for `thinking`,
+          `response-incoming`, and `response-complete` when present on
+          `browserRun.passiveObservations`
+        - Grok evidence stays Grok-owned:
+          - prompt submitted
+          - first new assistant content visible
+          - stabilized result returned
     - `finalOutputSummary = "AURACALL_TEAM_SMOKE_OK"`
   - `pnpm tsx bin/auracall.ts teams run auracall-chatgpt-solo "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" --title "AuraCall ChatGPT team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
   - current expected result:

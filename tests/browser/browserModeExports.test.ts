@@ -1,9 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import { runBrowserMode, CHATGPT_URL } from '../../src/browserMode.js';
 import {
+  buildThinkingStatusExpressionForTest,
   formatChatgptBlockingSurfaceErrorForTest,
   logChatgptUnexpectedStateForTest,
   resolveBrowserRuntimeEntryContextForTest,
+  sanitizeThinkingTextForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
   resolveManagedBrowserLaunchContextForTest,
@@ -131,6 +133,27 @@ describe('browserMode exports', () => {
         summary: 'retry',
       }),
     ).toContain('auto-click disabled');
+  });
+
+  test('normalizes the ChatGPT thinking placeholder into a stable thinking label', () => {
+    expect(sanitizeThinkingTextForTest('ChatGPT said:Thinking')).toBe('Thinking');
+    expect(sanitizeThinkingTextForTest('  ChatGPT said: Thinking  ')).toBe('Thinking');
+  });
+
+  test('drops verbose conversation echoes from thinking-status reads', () => {
+    expect(
+      sanitizeThinkingTextForTest(
+        'You said: Compare merge sort and quicksort in exactly 6 bullet points. ### File: README.md',
+      ),
+    ).toBe('');
+    expect(sanitizeThinkingTextForTest('thinking for a few seconds while reading context')).toBe('Thinking');
+  });
+
+  test('thinking-status expression checks the placeholder assistant turn before generic status nodes', () => {
+    const expression = buildThinkingStatusExpressionForTest();
+    expect(expression).toContain('[data-message-author-role="assistant"], [data-turn="assistant"]');
+    expect(expression).toContain('chatgpt said:\\s*thinking');
+    expect(expression).toContain('lastAssistantTurn');
   });
 
   test('send-side unexpected-state logging persists a bounded postmortem bundle in verbose mode', async () => {

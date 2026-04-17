@@ -10,6 +10,22 @@ export type {
 
 export type BrowserModelStrategy = 'select' | 'current' | 'ignore';
 export type ThinkingTimeLevel = 'light' | 'standard' | 'extended' | 'heavy';
+export type BrowserPassiveObservationState =
+  | 'thinking'
+  | 'response-incoming'
+  | 'response-complete'
+  | 'provider-error'
+  | 'login-required'
+  | 'captcha-or-human-verification'
+  | 'awaiting-human';
+
+export interface BrowserPassiveObservation {
+  state: BrowserPassiveObservationState;
+  source: 'provider-adapter' | 'browser-service';
+  observedAt: string;
+  evidenceRef?: string | null;
+  confidence: 'low' | 'medium' | 'high';
+}
 
 type LlmBrowserFields = {
   selectedAgentId?: string | null;
@@ -55,6 +71,7 @@ export type BrowserRunOptions = Omit<BaseTypes.BrowserRunOptions, 'config' | 'ru
 export type BrowserRunResult = BaseTypes.BrowserRunResult & {
   conversationId?: string;
   composerTool?: string | null;
+  passiveObservations?: BrowserPassiveObservation[];
 };
 
 export type ResolvedBrowserConfig = BaseTypes.ResolvedBrowserConfig & LlmBrowserFields;

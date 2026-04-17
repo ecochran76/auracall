@@ -9,6 +9,7 @@ import type {
   ExecutionRunSourceKind,
   ExecutionRunStatus,
   ExecutionRunnerStatus,
+  ExecutionRunStep,
 } from './types.js';
 import type { ExecutionRunnerStoredRecord } from './runnersStore.js';
 import type { ExecutionRunStoredRecord } from './store.js';
@@ -19,10 +20,50 @@ export interface InspectRuntimeRunInput {
   teamRunId?: string | null;
   taskRunSpecId?: string | null;
   runnerId?: string | null;
+  includeServiceState?: boolean;
+  probeServiceState?: (input: ProbeRuntimeRunServiceStateInput) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
   createRunAffinity?: (inspection: ExecutionRunInspection) => ExecutionRunAffinityRecord | null;
+}
+
+export type RuntimeRunInspectionServiceState =
+  | 'thinking'
+  | 'response-incoming'
+  | 'response-complete'
+  | 'provider-error'
+  | 'login-required'
+  | 'captcha-or-human-verification'
+  | 'awaiting-human'
+  | 'unknown';
+
+export interface RuntimeRunInspectionServiceStateSummary {
+  probeStatus: 'observed' | 'unavailable';
+  service: NonNullable<ExecutionRunStep['service']> | null;
+  ownerStepId: string | null;
+  state: RuntimeRunInspectionServiceState | null;
+  source: 'provider-adapter' | 'browser-service' | null;
+  observedAt: string | null;
+  evidenceRef: string | null;
+  confidence: 'low' | 'medium' | 'high' | null;
+  reason: string | null;
+}
+
+export interface ProbeRuntimeRunServiceStateInput {
+  inspection: ExecutionRunInspection;
+  runner: ExecutionRunnerStoredRecord | null;
+  step: ExecutionRunStep;
+}
+
+export interface RuntimeRunInspectionServiceStateProbeResult {
+  service?: NonNullable<ExecutionRunStep['service']> | null;
+  ownerStepId?: string | null;
+  state: RuntimeRunInspectionServiceState;
+  source: 'provider-adapter' | 'browser-service';
+  observedAt: string;
+  evidenceRef?: string | null;
+  confidence: 'low' | 'medium' | 'high';
 }
 
 export interface RuntimeRunInspectionRunnerSummary {
@@ -61,6 +102,7 @@ export interface RuntimeRunInspectionPayload {
   taskRunSpecSummary: TaskRunSpecInspectionSummary | null;
   runtime: RuntimeRunInspectionRuntimeSummary;
   runner: RuntimeRunInspectionRunnerSummary | null;
+  serviceState?: RuntimeRunInspectionServiceStateSummary;
 }
 
 export class RuntimeRunInspectionError extends Error {
@@ -161,6 +203,13 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
   const taskRunSpecSummary = runtimeInspection.record.bundle.run.taskRunSpecId
     ? await readStoredTaskRunSpecSummary(taskRunSpecStore, runtimeInspection.record.bundle.run.taskRunSpecId)
     : null;
+  const serviceState = input.includeServiceState
+    ? await inspectRuntimeRunServiceState({
+        inspection: runtimeInspection,
+        runner: selectedRunner?.runner ?? null,
+        probeServiceState: input.probeServiceState,
+      })
+    : undefined;
 
   return {
     resolvedBy: lookup.resolvedBy,
@@ -199,6 +248,117 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
           eligibilityNote: selectedRunner.runner.runner.eligibilityNote,
         }
       : null,
+    serviceState,
+  };
+}
+
+async function inspectRuntimeRunServiceState(input: {
+  inspection: ExecutionRunInspection;
+  runner: ExecutionRunnerStoredRecord | null;
+  probeServiceState: InspectRuntimeRunInput['probeServiceState'];
+}): Promise<RuntimeRunInspectionServiceStateSummary> {
+  if (input.inspection.record.bundle.run.status !== 'running') {
+    return {
+      probeStatus: 'unavailable',
+      service: null,
+      ownerStepId: null,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `runtime run ${input.inspection.record.runId} is not actively running`,
+    };
+  }
+
+  const runningStepId = input.inspection.dispatchPlan.runningStepIds[0] ?? null;
+  if (!runningStepId) {
+    return {
+      probeStatus: 'unavailable',
+      service: null,
+      ownerStepId: null,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `runtime run ${input.inspection.record.runId} has no running step to probe`,
+    };
+  }
+
+  const runningStep = input.inspection.record.bundle.steps.find((step) => step.id === runningStepId) ?? null;
+  if (!runningStep) {
+    return {
+      probeStatus: 'unavailable',
+      service: null,
+      ownerStepId: runningStepId,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `running step ${runningStepId} was not found in the stored execution bundle`,
+    };
+  }
+
+  if (!runningStep.service) {
+    return {
+      probeStatus: 'unavailable',
+      service: null,
+      ownerStepId: runningStep.id,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `running step ${runningStep.id} does not declare a probe-capable service`,
+    };
+  }
+
+  if (!input.probeServiceState) {
+    return {
+      probeStatus: 'unavailable',
+      service: runningStep.service,
+      ownerStepId: runningStep.id,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `service-state probe is not configured for ${runningStep.service}`,
+    };
+  }
+
+  const observed = await input.probeServiceState({
+    inspection: input.inspection,
+    runner: input.runner,
+    step: runningStep,
+  });
+
+  if (!observed) {
+    return {
+      probeStatus: 'unavailable',
+      service: runningStep.service,
+      ownerStepId: runningStep.id,
+      state: null,
+      source: null,
+      observedAt: null,
+      evidenceRef: null,
+      confidence: null,
+      reason: `service-state probe returned no live state for ${runningStep.service}`,
+    };
+  }
+
+  return {
+    probeStatus: 'observed',
+    service: observed.service ?? runningStep.service,
+    ownerStepId: observed.ownerStepId ?? runningStep.id,
+    state: observed.state,
+    source: observed.source,
+    observedAt: observed.observedAt,
+    evidenceRef: observed.evidenceRef ?? null,
+    confidence: observed.confidence,
+    reason: null,
   };
 }
 

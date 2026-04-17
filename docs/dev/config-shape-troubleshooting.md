@@ -167,6 +167,97 @@ Meaning:
 Action:
 - add the missing browser profile definition or fix the reference typo
 
+### `runtime-profile-browser-owned-overrides-present`
+
+Meaning:
+- the AuraCall runtime profile still carries broad browser-owned override
+  state, currently:
+  - broad launch/browser-family fields inside `runtimeProfiles.<name>.browser`,
+    for example:
+    - `chromePath`
+    - `display`
+    - `wslChromePreference`
+  - top-level runtime-profile `keepBrowser`
+
+Action:
+- move those settings to the referenced browser profile when they are part of
+  normal browser/account-bearing behavior
+- keep them in the runtime profile only when they are an intentional advanced
+  escape hatch and the coupling is understood
+- prefer leaving runtime profiles with Aura-Call workflow defaults and browser
+  profile references, not broad browser configuration blocks
+
+`config migrate` behavior:
+- when the runtime profile already references a real browser profile, migrate
+  now hoists obvious broad fields:
+  - broad launch/browser-family fields from `runtimeProfiles.<name>.browser`
+  - runtime-profile `keepBrowser`
+- browser-profile values remain authoritative during cleanup
+- conflicting runtime-profile values are preserved instead of being rewritten
+  silently
+- relocatable service fields such as:
+  - `modelStrategy`
+  - `thinkingTime`
+  - `composerTool`
+  now move into `runtimeProfiles.<name>.services.<defaultService>` only when:
+  - one concrete `defaultService` is present on the AuraCall runtime profile
+  - the destination service slot is unambiguous
+  - no conflicting service-level value already exists
+- managed-profile escape hatches such as:
+  - `manualLogin`
+  - `manualLoginProfileDir`
+  remain in `runtimeProfiles.<name>.browser`
+- if those conditions are not met, they remain in the runtime profile
+
+### `runtime-profile-service-scoped-overrides-relocatable-present`
+
+Meaning:
+- the AuraCall runtime profile still defines relocatable service-scoped browser
+  fields under `runtimeProfiles.<name>.browser`, such as:
+  - `modelStrategy`
+  - `thinkingTime`
+  - `composerTool`
+
+Action:
+- prefer `runtimeProfiles.<name>.services.<service>`
+- `config migrate` can move them automatically only when:
+  - one concrete `defaultService` is declared
+  - no conflicting service-level value already exists
+- if the destination remains ambiguous or conflicting, expect them to stay in
+  `runtimeProfiles.<name>.browser`
+
+### `runtime-profile-service-scoped-escape-hatches-present`
+
+Meaning:
+- the AuraCall runtime profile still defines managed-profile escape hatches
+  under `runtimeProfiles.<name>.browser`, such as:
+  - `manualLogin`
+  - `manualLoginProfileDir`
+
+Action:
+- keep them only when the managed-profile/account coupling is intentional
+- do not expect `config migrate` to relocate them casually
+- browser execution overrides still win over service fallback for these fields
+- `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+- narrow their ownership boundary further before automating any rewrite
+
+### `runtime-profile-manual-login-profile-dir-redundant`
+
+Meaning:
+- the AuraCall runtime profile explicitly defines a `manualLoginProfileDir`
+  that matches the managed profile path Aura-Call would derive anyway
+
+Action:
+- remove the explicit path unless you intend a real external managed-profile
+  override
+- `config migrate` can now remove these redundant default-equivalent paths
+  conservatively
+- if that removal leaves an empty `services.<service>` object behind, migrate
+  now prunes the empty stub as cleanup residue
+- this can appear on:
+  - `runtimeProfiles.<name>.browser.manualLoginProfileDir`
+  - `runtimeProfiles.<name>.services.<service>.manualLoginProfileDir`
+
 ### `unused-browser-profile`
 
 Meaning:

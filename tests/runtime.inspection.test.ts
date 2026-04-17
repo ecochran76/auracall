@@ -222,4 +222,107 @@ describe('runtime inspection', () => {
       reason: null,
     });
   });
+
+  it('returns an opt-in service-state probe summary for an active running step', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-service-state-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_inspect_service_state';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-16T18:00:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe active service state.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: 'default',
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe active service state.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    await control.acquireLease({
+      runId,
+      leaseId: `${runId}:lease:1`,
+      ownerId: 'runner:runtime-inspect-service-state',
+      acquiredAt: createdAt,
+      heartbeatAt: createdAt,
+      expiresAt: '2026-04-16T18:05:00.000Z',
+    });
+
+    const payload = await inspectRuntimeRun({
+      runId,
+      includeServiceState: true,
+      control,
+      probeServiceState: async ({ step }) => ({
+        service: step.service,
+        ownerStepId: step.id,
+        state: 'thinking',
+        source: 'provider-adapter',
+        observedAt: '2026-04-16T18:00:05.000Z',
+        evidenceRef: 'chatgpt-placeholder-turn',
+        confidence: 'high',
+      }),
+    });
+
+    expect(payload.serviceState).toMatchObject({
+      probeStatus: 'observed',
+      service: 'chatgpt',
+      ownerStepId: stepId,
+      state: 'thinking',
+      source: 'provider-adapter',
+      observedAt: '2026-04-16T18:00:05.000Z',
+      evidenceRef: 'chatgpt-placeholder-turn',
+      confidence: 'high',
+      reason: null,
+    });
+  });
 });

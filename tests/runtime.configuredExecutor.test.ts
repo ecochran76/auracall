@@ -1,10 +1,16 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { BrowserPassiveObservation } from '../src/browser/types.js';
 import { createConfiguredStoredStepExecutor } from '../src/runtime/configuredExecutor.js';
+import { readLiveRuntimeRunServiceState, resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 
 describe('configured stored-step executor', () => {
+  beforeEach(() => {
+    resetLiveRuntimeRunServiceStateRegistryForTests();
+  });
+
   it('executes a Grok browser-backed step from runtime-profile config and returns response output', async () => {
     const runBrowserModeImpl = vi.fn(async (options) => ({
       answerText: 'AURACALL_TEAM_SMOKE_OK',
@@ -91,6 +97,23 @@ describe('configured stored-step executor', () => {
       output: {
         summary: 'AURACALL_TEAM_SMOKE_OK',
         notes: ['browser conversation: https://grok.com/c/mock-conversation'],
+        structuredData: {
+          browserRun: {
+            provider: 'grok',
+            service: 'grok',
+            conversationId: 'mock-conversation',
+            tabUrl: 'https://grok.com/c/mock-conversation',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            agentId: 'auracall-orchestrator',
+            projectId: 'project_123',
+            configuredUrl: 'https://grok.com/',
+            desiredModel: 'Auto',
+            cachePath: null,
+            cachePathStatus: 'unavailable',
+            cachePathReason: 'provider cache identity is not resolved during stored-step execution',
+          },
+        },
       },
       sharedState: {
         structuredOutputs: [
@@ -329,9 +352,597 @@ describe('configured stored-step executor', () => {
     ]);
     expect(result?.output?.summary).toBe('AURACALL_GEMINI_TEAM_SMOKE_OK');
     expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'gemini',
       conversationId: 'mock-conversation',
       tabUrl: 'https://gemini.google.com/app',
       service: 'gemini',
+      runtimeProfileId: 'auracall-gemini-pro',
+      browserProfileId: 'default',
+      agentId: 'auracall-gemini-tool-requester',
+      configuredUrl: 'https://gemini.google.com/app',
+      desiredModel: 'Gemini 3 Pro',
+      cachePath: null,
+      cachePathStatus: 'unavailable',
+    });
+  });
+
+  it('publishes transient Gemini live thinking state while the browser-backed executor is in flight', async () => {
+    let resolveGeminiRun: ((value: {
+      answerText: string;
+      answerMarkdown: string;
+      tookMs: number;
+      answerTokens: number;
+      answerChars: number;
+    }) => void) | null = null;
+    const runGeminiBrowserModeImpl = vi.fn(
+      () =>
+        new Promise<{
+          answerText: string;
+          answerMarkdown: string;
+          tookMs: number;
+          answerTokens: number;
+          answerChars: number;
+        }>((resolve) => {
+          resolveGeminiRun = resolve;
+        }),
+    );
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          'auracall-gemini-pro': {
+            engine: 'browser',
+            defaultService: 'gemini',
+            browserProfile: 'default',
+          },
+        },
+      },
+      { runGeminiBrowserModeImpl },
+    );
+    if (!executeStoredRunStep) {
+      throw new Error('expected configured stored-step executor to be defined');
+    }
+
+    const executionPromise = executeStoredRunStep({
+      record: {
+        runId: 'teamrun_gemini_live_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_gemini_live_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_gemini_live_1:step:1',
+        agentId: 'auracall-gemini-finisher',
+        runtimeProfileId: 'auracall-gemini-pro',
+        browserProfileId: 'default',
+        service: 'gemini',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GEMINI_LIVE_STATE_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    await vi.waitFor(() => {
+      expect(
+        readLiveRuntimeRunServiceState({
+          runId: 'teamrun_gemini_live_1',
+          stepId: 'teamrun_gemini_live_1:step:1',
+          service: 'gemini',
+        }),
+      ).toMatchObject({
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'gemini-web-request-started',
+        confidence: 'medium',
+      });
+    });
+
+    expect(resolveGeminiRun).not.toBeNull();
+    resolveGeminiRun!({
+      answerText: 'AURACALL_GEMINI_LIVE_STATE_OK',
+      answerMarkdown: 'AURACALL_GEMINI_LIVE_STATE_OK',
+      tookMs: 250,
+      answerTokens: 8,
+      answerChars: 30,
+    });
+
+    await executionPromise;
+
+    expect(
+      readLiveRuntimeRunServiceState({
+        runId: 'teamrun_gemini_live_1',
+        stepId: 'teamrun_gemini_live_1:step:1',
+        service: 'gemini',
+      }),
+    ).toBeNull();
+  });
+
+  it('publishes transient Grok live thinking state while the browser-backed executor is in flight', async () => {
+    let resolveGrokRun: ((value: {
+      answerText: string;
+      answerMarkdown: string;
+      tookMs: number;
+      answerTokens: number;
+      answerChars: number;
+    }) => void) | null = null;
+    const runBrowserModeImpl = vi.fn(
+      () =>
+        new Promise<{
+          answerText: string;
+          answerMarkdown: string;
+          tookMs: number;
+          answerTokens: number;
+          answerChars: number;
+        }>((resolve) => {
+          resolveGrokRun = resolve;
+        }),
+    );
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          'auracall-grok-auto': {
+            engine: 'browser',
+            defaultService: 'grok',
+            browserProfile: 'default',
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+    if (!executeStoredRunStep) {
+      throw new Error('expected configured stored-step executor to be defined');
+    }
+
+    const executionPromise = executeStoredRunStep({
+      record: {
+        runId: 'teamrun_grok_live_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_grok_live_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_grok_live_1:step:1',
+        agentId: 'auracall-grok-finisher',
+        runtimeProfileId: 'auracall-grok-auto',
+        browserProfileId: 'default',
+        service: 'grok',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GROK_LIVE_STATE_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    await vi.waitFor(() => {
+      expect(
+        readLiveRuntimeRunServiceState({
+          runId: 'teamrun_grok_live_1',
+          stepId: 'teamrun_grok_live_1:step:1',
+          service: 'grok',
+        }),
+      ).toMatchObject({
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'grok-prompt-submitted',
+        confidence: 'medium',
+      });
+    });
+
+    expect(resolveGrokRun).not.toBeNull();
+    resolveGrokRun!({
+      answerText: 'AURACALL_GROK_LIVE_STATE_OK',
+      answerMarkdown: 'AURACALL_GROK_LIVE_STATE_OK',
+      tookMs: 250,
+      answerTokens: 8,
+      answerChars: 28,
+    });
+
+    await executionPromise;
+
+    expect(
+      readLiveRuntimeRunServiceState({
+        runId: 'teamrun_grok_live_1',
+        stepId: 'teamrun_grok_live_1:step:1',
+        service: 'grok',
+      }),
+    ).toBeNull();
+  });
+
+  it('persists ChatGPT passive observations from browser execution metadata', async () => {
+    const passiveObservations: BrowserPassiveObservation[] = [
+      {
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-15T21:20:00.000Z',
+        evidenceRef: 'Thinking about response',
+        confidence: 'medium',
+      },
+      {
+        state: 'response-incoming',
+        source: 'browser-service',
+        observedAt: '2026-04-15T21:20:04.000Z',
+        evidenceRef: 'chatgpt-assistant-snapshot',
+        confidence: 'high',
+      },
+      {
+        state: 'response-complete',
+        source: 'browser-service',
+        observedAt: '2026-04-15T21:20:07.000Z',
+        evidenceRef: 'chatgpt-response-finished',
+        confidence: 'high',
+      },
+    ];
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_CHATGPT_OBS_OK',
+      answerMarkdown: 'AURACALL_CHATGPT_OBS_OK',
+      tookMs: 800,
+      answerTokens: 9,
+      answerChars: 24,
+      tabUrl: 'https://chatgpt.com/c/mock-chatgpt-observation',
+      conversationId: 'mock-chatgpt-observation',
+      passiveObservations,
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            sourceCookiePath: '/tmp/source/Cookies',
+            bootstrapCookiePath: '/tmp/source/Cookies',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        services: {
+          chatgpt: {
+            url: 'https://chatgpt.com/g/g-p-observations',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-chatgpt-observations': {
+            engine: 'browser',
+            defaultService: 'chatgpt',
+            browserProfile: 'default',
+            browser: {
+              hideWindow: true,
+            },
+            services: {
+              chatgpt: {
+                model: 'GPT-5.2',
+                projectId: 'g-p-observations',
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_chatgpt_obs_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_chatgpt_obs_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_chatgpt_obs_1:step:1',
+        agentId: 'auracall-chatgpt-observer',
+        runtimeProfileId: 'auracall-chatgpt-observations',
+        browserProfileId: 'default',
+        service: 'chatgpt',
+        input: {
+          prompt: 'Reply exactly with AURACALL_CHATGPT_OBS_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'chatgpt',
+      service: 'chatgpt',
+      conversationId: 'mock-chatgpt-observation',
+      tabUrl: 'https://chatgpt.com/c/mock-chatgpt-observation',
+      runtimeProfileId: 'auracall-chatgpt-observations',
+      browserProfileId: 'default',
+      agentId: 'auracall-chatgpt-observer',
+      projectId: 'g-p-observations',
+      configuredUrl: 'https://chatgpt.com/g/g-p-observations',
+      desiredModel: 'GPT-5.2',
+      passiveObservations: [
+        {
+          state: 'thinking',
+          source: 'browser-service',
+          observedAt: '2026-04-15T21:20:00.000Z',
+        },
+        {
+          state: 'response-incoming',
+          source: 'browser-service',
+          observedAt: '2026-04-15T21:20:04.000Z',
+        },
+        {
+          state: 'response-complete',
+          source: 'browser-service',
+          observedAt: '2026-04-15T21:20:07.000Z',
+        },
+      ],
+    });
+  });
+
+  it('persists Gemini passive observations from browser execution metadata', async () => {
+    const passiveObservations: BrowserPassiveObservation[] = [
+      {
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-16T16:20:00.000Z',
+        evidenceRef: 'gemini-thoughts',
+        confidence: 'medium',
+      },
+      {
+        state: 'response-incoming',
+        source: 'browser-service',
+        observedAt: '2026-04-16T16:20:04.000Z',
+        evidenceRef: 'gemini-web-response-text',
+        confidence: 'medium',
+      },
+      {
+        state: 'response-complete',
+        source: 'browser-service',
+        observedAt: '2026-04-16T16:20:06.000Z',
+        evidenceRef: 'gemini-web-response-finished',
+        confidence: 'high',
+      },
+    ];
+    const runGeminiBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_GEMINI_OBS_OK',
+      answerMarkdown: 'AURACALL_GEMINI_OBS_OK',
+      tookMs: 800,
+      answerTokens: 9,
+      answerChars: 23,
+      tabUrl: 'https://gemini.google.com/app/mock-gemini-observation',
+      conversationId: 'mock-gemini-observation',
+      passiveObservations,
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            sourceCookiePath: '/tmp/source/Cookies',
+            bootstrapCookiePath: '/tmp/source/Cookies',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        services: {
+          gemini: {
+            url: 'https://gemini.google.com/app',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-gemini-observations': {
+            engine: 'browser',
+            defaultService: 'gemini',
+            browserProfile: 'default',
+            browser: {
+              hideWindow: true,
+            },
+            services: {
+              gemini: {
+                model: 'Gemini 3 Pro',
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/gemini',
+              },
+            },
+          },
+        },
+      },
+      { runGeminiBrowserModeImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_gemini_obs_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_gemini_obs_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_gemini_obs_1:step:1',
+        agentId: 'auracall-gemini-observer',
+        runtimeProfileId: 'auracall-gemini-observations',
+        browserProfileId: 'default',
+        service: 'gemini',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GEMINI_OBS_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'gemini',
+      service: 'gemini',
+      conversationId: 'mock-gemini-observation',
+      tabUrl: 'https://gemini.google.com/app/mock-gemini-observation',
+      runtimeProfileId: 'auracall-gemini-observations',
+      browserProfileId: 'default',
+      agentId: 'auracall-gemini-observer',
+      configuredUrl: 'https://gemini.google.com/app',
+      desiredModel: 'Gemini 3 Pro',
+      passiveObservations: [
+        {
+          state: 'thinking',
+          source: 'browser-service',
+          observedAt: '2026-04-16T16:20:00.000Z',
+        },
+        {
+          state: 'response-incoming',
+          source: 'browser-service',
+          observedAt: '2026-04-16T16:20:04.000Z',
+        },
+        {
+          state: 'response-complete',
+          source: 'browser-service',
+          observedAt: '2026-04-16T16:20:06.000Z',
+        },
+      ],
+    });
+  });
+
+  it('persists Grok passive observations from browser execution metadata', async () => {
+    const passiveObservations: BrowserPassiveObservation[] = [
+      {
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-16T17:00:00.000Z',
+        evidenceRef: 'grok-prompt-submitted',
+        confidence: 'medium',
+      },
+      {
+        state: 'response-incoming',
+        source: 'browser-service',
+        observedAt: '2026-04-16T17:00:03.000Z',
+        evidenceRef: 'grok-assistant-visible',
+        confidence: 'high',
+      },
+      {
+        state: 'response-complete',
+        source: 'browser-service',
+        observedAt: '2026-04-16T17:00:07.000Z',
+        evidenceRef: 'grok-response-finished',
+        confidence: 'high',
+      },
+    ];
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: 'AURACALL_GROK_OBS_OK',
+      answerMarkdown: 'AURACALL_GROK_OBS_OK',
+      tookMs: 800,
+      answerTokens: 9,
+      answerChars: 21,
+      tabUrl: 'https://grok.com/c/mock-grok-observation',
+      conversationId: 'mock-grok-observation',
+      passiveObservations,
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            sourceProfileName: 'Default',
+            sourceCookiePath: '/tmp/source/Cookies',
+            bootstrapCookiePath: '/tmp/source/Cookies',
+            managedProfileRoot: '/tmp/auracall/browser-profiles',
+          },
+        },
+        services: {
+          grok: {
+            url: 'https://grok.com/',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-grok-observations': {
+            engine: 'browser',
+            defaultService: 'grok',
+            browserProfile: 'default',
+            browser: {
+              hideWindow: true,
+            },
+            services: {
+              grok: {
+                model: 'Grok 4.1',
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_grok_obs_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_grok_obs_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_grok_obs_1:step:1',
+        agentId: 'auracall-grok-observer',
+        runtimeProfileId: 'auracall-grok-observations',
+        browserProfileId: 'default',
+        service: 'grok',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GROK_OBS_OK',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(result?.output?.structuredData?.browserRun).toMatchObject({
+      provider: 'grok',
+      service: 'grok',
+      conversationId: 'mock-grok-observation',
+      tabUrl: 'https://grok.com/c/mock-grok-observation',
+      runtimeProfileId: 'auracall-grok-observations',
+      browserProfileId: 'default',
+      agentId: 'auracall-grok-observer',
+      configuredUrl: 'https://grok.com/',
+      desiredModel: 'Grok 4.1',
+      passiveObservations: [
+        {
+          state: 'thinking',
+          source: 'browser-service',
+          observedAt: '2026-04-16T17:00:00.000Z',
+        },
+        {
+          state: 'response-incoming',
+          source: 'browser-service',
+          observedAt: '2026-04-16T17:00:03.000Z',
+        },
+        {
+          state: 'response-complete',
+          source: 'browser-service',
+          observedAt: '2026-04-16T17:00:07.000Z',
+        },
+      ],
     });
   });
 });

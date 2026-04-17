@@ -8,7 +8,12 @@ import { resolveBrowserConfig } from '../browser/config.js';
 import { bootstrapManagedProfile } from '../browser/profileStore.js';
 import { resolveManagedBrowserLaunchContextFromResolvedConfig } from '../browser/service/profileResolution.js';
 import { captureActionPhaseDiagnostics, runOrderedSurfaceFallback, waitForAttachmentSignals } from '../browser/service/ui.js';
-import type { BrowserRunOptions, BrowserRunResult, BrowserLogger } from '../browser/types.js';
+import type {
+  BrowserRunOptions,
+  BrowserRunResult,
+  BrowserLogger,
+  BrowserPassiveObservation,
+} from '../browser/types.js';
 
 const GEMINI_PROMPT_SELECTOR = 'div[role="textbox"][aria-label="Enter a prompt for Gemini"]';
 const GEMINI_UPLOAD_BUTTON_SELECTOR = 'button[aria-label="Open upload file menu"]';
@@ -46,6 +51,19 @@ const GEMINI_SIGNED_OUT_PROBE_EXPRESSION = `(() => {
 
 function normalizeWhitespace(value: string): string {
   return value.replace(/\s+/g, ' ').trim();
+}
+
+function recordBrowserPassiveObservation(
+  observations: BrowserPassiveObservation[],
+  observation: Omit<BrowserPassiveObservation, 'observedAt'>,
+): void {
+  if (observations.some((entry) => entry.state === observation.state)) {
+    return;
+  }
+  observations.push({
+    ...observation,
+    observedAt: new Date().toISOString(),
+  });
 }
 
 function isTransientGeminiPageError(error: unknown): boolean {
@@ -507,6 +525,7 @@ async function isGeminiSignedOut(page: Page): Promise<boolean> {
 async function waitForGeminiAnswer(page: Page, options: {
   prompt: string;
   timeoutMs: number;
+  passiveObservations?: BrowserPassiveObservation[];
 }): Promise<string> {
   const deadline = Date.now() + options.timeoutMs;
   let lastAnswer = '';
@@ -526,6 +545,18 @@ async function waitForGeminiAnswer(page: Page, options: {
       currentText,
       prompt: options.prompt,
     });
+    if (
+      options.passiveObservations &&
+      answer.length === 0 &&
+      isGeminiPromptCommitted({ historyText: currentText, prompt: options.prompt })
+    ) {
+      recordBrowserPassiveObservation(options.passiveObservations, {
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: 'gemini-native-prompt-committed',
+        confidence: 'medium',
+      });
+    }
 
     const promptText = normalizeWhitespace(state.promptText);
     if (promptText.length > 0 && !state.hasPendingBlob && !state.hasRemoveButton) {
@@ -541,6 +572,14 @@ async function waitForGeminiAnswer(page: Page, options: {
     }
 
     if (answer.length > 0) {
+      if (options.passiveObservations) {
+        recordBrowserPassiveObservation(options.passiveObservations, {
+          state: 'response-incoming',
+          source: 'browser-service',
+          evidenceRef: 'gemini-native-answer-visible',
+          confidence: 'high',
+        });
+      }
       if (answer === lastAnswer) {
         stableCount += 1;
       } else {
@@ -893,6 +932,7 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
 }): Promise<BrowserRunResult> {
   const startTime = Date.now();
   const logger = options.logger ?? (() => undefined);
+  const passiveObservations: BrowserPassiveObservation[] = [];
   const config = resolveBrowserConfig(
     { ...(options.runOptions.config ?? {}), target: 'gemini' },
     { auracallProfileName: options.runOptions.config?.auracallProfileName ?? null },
@@ -1009,6 +1049,7 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
     const answerText = await waitForGeminiAnswer(page, {
       prompt: options.prompt,
       timeoutMs: options.timeoutMs,
+      passiveObservations,
     });
     if (attachmentPaths.some(isLikelyImagePath) && isGeminiAttachmentBlindAnswer(answerText)) {
       phaseDiagnostics.final = await readGeminiAttachmentSubmitDiagnostics(activePage, options.prompt);
@@ -1043,6 +1084,12 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       );
     }
     const tookMs = Date.now() - startTime;
+    recordBrowserPassiveObservation(passiveObservations, {
+      state: 'response-complete',
+      source: 'browser-service',
+      evidenceRef: 'gemini-native-response-finished',
+      confidence: 'high',
+    });
     return {
       answerText,
       answerMarkdown: answerText,
@@ -1053,6 +1100,7 @@ export async function runGeminiNativeBrowserAttachmentPrompt(options: {
       chromePort: chrome.port,
       chromeHost,
       userDataDir,
+      passiveObservations,
     };
   } finally {
     if (!config.keepBrowser) {

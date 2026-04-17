@@ -83,6 +83,11 @@ describe('gemini-web executor', () => {
     expect(result.answerMarkdown).toContain('Generated 1 image(s).');
     expect(result.conversationId).toBe('1');
     expect(result.tabUrl).toBe('https://gemini.google.com/app/1');
+    expect(result.passiveObservations).toMatchObject([
+      { state: 'thinking', evidenceRef: 'gemini-thoughts' },
+      { state: 'response-incoming', evidenceRef: 'gemini-web-response-images' },
+      { state: 'response-complete', evidenceRef: 'gemini-web-response-finished' },
+    ]);
   });
 
   it('runs the edit flow as two calls and uses intro metadata', async () => {
@@ -211,6 +216,55 @@ describe('gemini-web executor', () => {
     );
     expect(runGeminiWebWithFallback).not.toHaveBeenCalled();
     expect(result.answerText).toBe('native upload ok');
+  });
+
+  it('passes through native Gemini passive observations for upload runs', async () => {
+    const { createGeminiWebExecutor } = await import('../../src/gemini-web/executor.js');
+    runGeminiNativeBrowserAttachmentPrompt.mockResolvedValueOnce({
+      answerText: 'native upload ok',
+      answerMarkdown: 'native upload ok',
+      tookMs: 1234,
+      answerTokens: 4,
+      answerChars: 16,
+      passiveObservations: [
+        {
+          state: 'thinking',
+          source: 'browser-service',
+          observedAt: '2026-04-16T00:00:00.000Z',
+          evidenceRef: 'gemini-native-prompt-committed',
+          confidence: 'medium',
+        },
+        {
+          state: 'response-incoming',
+          source: 'browser-service',
+          observedAt: '2026-04-16T00:00:02.000Z',
+          evidenceRef: 'gemini-native-answer-visible',
+          confidence: 'high',
+        },
+        {
+          state: 'response-complete',
+          source: 'browser-service',
+          observedAt: '2026-04-16T00:00:04.000Z',
+          evidenceRef: 'gemini-native-response-finished',
+          confidence: 'high',
+        },
+      ],
+    });
+
+    const exec = createGeminiWebExecutor({});
+    const result = await exec({
+      prompt: 'Describe the uploaded image.',
+      attachments: [{ path: '/tmp/input.png', displayPath: 'input.png' }],
+      attachmentMode: 'upload',
+      config: { desiredModel: 'Gemini 3 Pro', chromeProfile: 'Default', target: 'gemini' },
+      log: () => {},
+    });
+
+    expect(result.passiveObservations).toMatchObject([
+      { state: 'thinking', evidenceRef: 'gemini-native-prompt-committed' },
+      { state: 'response-incoming', evidenceRef: 'gemini-native-answer-visible' },
+      { state: 'response-complete', evidenceRef: 'gemini-native-response-finished' },
+    ]);
   });
 
   it('extracts Gemini conversation id from nested metadata', async () => {

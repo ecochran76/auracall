@@ -419,6 +419,12 @@ export function resolveBrowserProfileResolution(input: {
     collapseDisposableWindows: asBoolean(effectiveProfileBrowser.collapseDisposableWindows),
   };
 
+  const serviceBindingManualLogin = asBoolean(browser.manualLogin) ?? asBoolean(serviceConfig.manualLogin);
+  const serviceBindingManualLoginProfileDir =
+    serviceBindingManualLogin === false
+      ? undefined
+      : asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir);
+
   const serviceBinding: ResolvedServiceBinding = {
     serviceId: defaultService,
     serviceUrl,
@@ -435,9 +441,8 @@ export function resolveBrowserProfileResolution(input: {
     modelStrategy: asNonEmptyString(browser.modelStrategy) ?? asNonEmptyString(serviceConfig.modelStrategy),
     thinkingTime: asNonEmptyString(browser.thinkingTime) ?? asNonEmptyString(serviceConfig.thinkingTime),
     composerTool: asNonEmptyString(browser.composerTool) ?? asNonEmptyString(serviceConfig.composerTool),
-    manualLogin: asBoolean(browser.manualLogin) ?? asBoolean(serviceConfig.manualLogin),
-    manualLoginProfileDir:
-      asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir),
+    manualLogin: serviceBindingManualLogin,
+    manualLoginProfileDir: serviceBindingManualLoginProfileDir,
   };
 
   const configuredLaunchProfileName = asNonEmptyString(browser.chromeProfile) ?? browserProfile.sourceProfileName;

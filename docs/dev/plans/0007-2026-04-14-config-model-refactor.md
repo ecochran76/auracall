@@ -153,6 +153,81 @@ This means the next team-layer question is no longer basic composition. It is
 how to define future team selection/execution semantics without collapsing them
 into the later service/runners layer too early.
 
+Current diagnostic checkpoint:
+
+- `config doctor` now also warns when an AuraCall runtime profile still
+  carries browser-owned override state such as:
+  - broad launch/browser-family fields under `runtimeProfiles.<name>.browser`,
+    for example:
+    - `chromePath`
+    - `display`
+    - `wslChromePreference`
+  - top-level runtime-profile `keepBrowser`
+- this is a diagnostics-only checkpoint:
+  - compatibility loading remains intact
+  - operator guidance now pushes broad browser-owned overrides back toward the
+    referenced browser profile layer unless they are intentional advanced
+    escape hatches
+- `config doctor` now splits service-scoped runtime browser fields into two
+  advisory classes when they are still defined under
+  `runtimeProfiles.<name>.browser`:
+  - relocatable service fields:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+  - managed-profile escape hatches:
+    - `manualLogin`
+    - `manualLoginProfileDir`
+- current policy:
+  - prefer moving relocatable service fields into
+    `runtimeProfiles.<name>.services.<service>`
+  - keep `manualLogin` and `manualLoginProfileDir` only as intentional escape
+    hatches until their ownership boundary is narrowed further
+  - current escape-hatch contract:
+    - browser execution overrides still win over service fallback
+    - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+    - doctor should treat default-equivalent derived managed-profile paths as
+      redundant config noise, not as meaningful overrides
+  - `config migrate` may now move those fields automatically only when:
+    - the AuraCall runtime profile declares one concrete `defaultService`
+    - the destination `runtimeProfiles.<name>.services.<service>` slot is
+      unambiguous
+    - no conflicting service-level value already exists
+
+Current migration checkpoint:
+
+- `config migrate` now performs one bounded cleanup for obvious browser-owned
+  runtime overrides:
+  - if a runtime profile already references a real browser profile, migrate can
+    hoist:
+    - broad launch/browser-family fields from
+      `runtimeProfiles.<name>.browser`
+    - runtime-profile `keepBrowser`
+    into that browser profile
+- the cleanup remains conservative:
+  - existing browser-profile values win
+  - conflicting runtime-profile values are preserved in place rather than
+    rewritten silently
+  - relocatable service fields such as:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+    are now moved into `runtimeProfiles.<name>.services.<defaultService>`
+    only when the destination is explicit and non-conflicting
+  - managed-profile escape hatches:
+    - `manualLogin`
+    - `manualLoginProfileDir`
+    remain in `runtimeProfiles.<name>.browser`
+  - `config migrate` may now also remove default-equivalent
+    `manualLoginProfileDir` values when they exactly match the managed profile
+    path Aura-Call would derive for the same AuraCall runtime profile +
+    service target
+  - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
+    conservative cleanup are now pruned as residue
+  - if `defaultService` is missing or the service-level value already
+    conflicts, those fields remain in `runtimeProfiles.<name>.browser`
+  - external managed-profile overrides still remain untouched
+
 ## Current active checkpoint
 
 This is now the active architecture track.

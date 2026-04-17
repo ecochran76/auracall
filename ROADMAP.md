@@ -98,13 +98,51 @@ Current note:
       - session/status JSON
     - stored session metadata now preserves:
       - `options.selectedAgentId`
-- current runtime/browser checkpoint:
+  - current runtime/browser checkpoint:
     - one shared runtime selection helper now exists for:
       - `selected agent -> runtimeProfile -> browserProfile`
     - one browser-facing helper now exists for:
       - runtime selection + browser profile resolution
     - browser config, browser runtime metadata, and session/status postmortems
       now all preserve selected-agent provenance locally
+  - current config-boundary checkpoint:
+    - `config doctor` now warns when an AuraCall runtime profile still carries
+      broad browser-owned override state such as:
+      - broad launch/browser-family fields under
+        `runtimeProfiles.<name>.browser`
+      - top-level runtime-profile `keepBrowser`
+    - this remains diagnostics only:
+      - compatibility loading is unchanged
+      - browser-owned state should still migrate downward toward browser
+        profiles unless an advanced escape hatch is intentional
+    - `config migrate` now performs one bounded cleanup for those obvious broad
+      overrides when it is safe:
+      - referenced browser-profile values win
+      - conflicting runtime-profile values are left in place
+      - service-scoped browser/account fields move only when one concrete
+        `defaultService` makes the destination unambiguous
+      - conflicting or still-ambiguous service-scoped fields remain in place
+    - `config doctor` now distinguishes:
+      - relocatable service fields:
+        - `modelStrategy`
+        - `thinkingTime`
+        - `composerTool`
+      - managed-profile escape hatches:
+        - `manualLogin`
+        - `manualLoginProfileDir`
+    - current doctor policy:
+      - prefer moving relocatable service fields into
+        `runtimeProfiles.<name>.services.<service>`
+      - keep the managed-profile escape hatches conservative until their
+        ownership boundary is narrowed further
+      - browser execution overrides still win over service fallback
+      - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+      - default-equivalent derived managed-profile paths should be treated as
+        redundant config noise
+      - `config migrate` may now remove those default-equivalent explicit
+        paths conservatively, while preserving real external overrides
+      - empty service stubs left behind by that bounded cleanup should be
+        pruned as residue, not preserved as meaningful config
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`
@@ -147,6 +185,7 @@ Execution docs:
 - Team service execution: [docs/dev/plans/0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
 - Task / run spec: [docs/dev/plans/0002-2026-04-14-task-run-spec.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0002-2026-04-14-task-run-spec.md)
 - Team run data model: [docs/dev/plans/0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
 
 Next recommendation:
 - keep public team execution paused
@@ -168,7 +207,8 @@ Next recommendation:
     - `taskRunSpecId`
   - optional runner evaluation:
     - `runnerId`
-- next, keep public team execution writes paused and only widen read-only runtime inspection if a concrete operator gap remains
+- next, keep public team execution writes paused and build the team-run review
+  ledger before developing broad passive provider-state monitoring
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it
@@ -251,6 +291,85 @@ Sequencing rule:
   durable state and account model are explicit enough to support replay,
   postmortem, and multi-process coordination
 
+### Team Run Review And Observability
+Status: in progress
+
+The next higher-level capability is whole-sequence review for team tasks.
+Aura-Call should not rely on individual provider chat caches as the only way to
+understand a serial or future parallel team run after the fact.
+
+Primary goals:
+- reconstruct a complete team-run sequence from Aura-Call-owned durable state
+- preserve per-step provider/cache references when available
+- preserve prompt/input snapshots, normalized outputs, artifacts, failures, and
+  handoffs
+- leave an explicit observation slot for future passive provider-state
+  monitoring
+
+Current checkpoint:
+- Review-ledger checkpoint is complete under:
+  - [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+  - completed scope:
+    - read-only ledger projection
+    - `auracall teams review`
+    - stored provider reference enrichment
+    - durable failure-derived hard-stop observations
+- Completed checkpoint:
+  - [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+  - completed scope:
+    - stored passive observation seam on the execution path
+    - ChatGPT, Gemini, and Grok provider-parity persistence
+    - review-ledger projection of stored passive observations
+    - live persisted validation of the bounded provider-parity seam
+- Completed checkpoint:
+  - [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+  - completed scope:
+    - opt-in read-only runtime-inspection `serviceState` contract
+    - default ChatGPT-backed live probe on the managed browser path
+    - default Gemini-backed live probe on browser-backed runtime profiles
+    - default Grok-backed live probe on browser-backed runtime profiles
+    - executor-owned transient Gemini `thinking` state for active
+      browser-backed runs when DOM/page evidence is absent
+    - executor-owned transient Grok `thinking` state for active
+      browser-backed runs when DOM/page evidence is absent
+  - [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+  - completed scope:
+    - bounded Gemini quality probing recorded as negative evidence on this
+      machine/profile
+    - bounded Grok quality probing recorded as negative evidence on this
+      machine/profile
+    - keep executor-owned `thinking` as the honest active fallback for Gemini
+      and Grok unless future provider-owned evidence proves a richer live state
+    - retain the existing run-scoped `serviceState` seam without widening
+      `/status` or adding generic runtime-owned DOM polling
+- Active next checkpoint is:
+  - roadmap reassessment is complete for the current live-state lane
+  - current state:
+    - the run-scoped `serviceState` seam is live-validated across ChatGPT,
+      Gemini, and Grok
+    - ChatGPT has the strongest richer active progression
+    - Gemini and Grok quality follow-ups are now recorded as bounded negative
+      evidence on this machine/profile
+    - no new bounded `serviceState` follow-up plan is justified right now
+  - next checkpoint:
+    - keep the current seam in maintenance mode
+    - only resume service-state expansion if a new provider-owned evidence seam
+      is identified
+
+Sequencing rule:
+- build the durable review ledger before broad passive chat-state monitoring
+- passive states should be provider-adapter observations attached to the
+  ledger later instead of defining the core orchestration model
+- do not resume durable-state/account-mirroring work or cache-path-resolution
+  work ahead of the first stored passive-observation seam unless a new blocker
+  appears
+
+Execution docs:
+- Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
+- Passive provider observations: [docs/dev/plans/0016-2026-04-15-passive-provider-observations.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0016-2026-04-15-passive-provider-observations.md)
+- Runtime inspection service-state probe: [docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0017-2026-04-16-runtime-inspection-service-state-probe.md)
+- Service-state quality follow-up: [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
+
 ### Durable State And Account Mirroring
 Status: in progress
 
@@ -300,9 +419,11 @@ Next checkpoint:
     stable missing service-account reason
 
 Next recommendation:
-- pause this durable-state/account-affinity sub-lane
-- choose the next roadmap lane explicitly before implementing more service
-  behavior
+- roadmap reassessment for this checkpoint is complete
+- keep this durable-state/account-affinity checkpoint closed and in
+  maintenance mode
+- only reopen this lane when a broader durable-ownership seam is selected
+  explicitly before implementing more service behavior
 
 Execution docs:
 - Durable ownership checkpoint: [docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0005-2026-04-14-durable-state-account-mirroring.md)

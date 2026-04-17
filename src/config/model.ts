@@ -1,5 +1,7 @@
 import type { OracleConfig } from './schema.js';
 import type { LocalActionExecutionPolicy } from '../runtime/localActions.js';
+import { resolveManagedProfileDir } from '../browser/profileStore.js';
+import path from 'node:path';
 
 type MutableRecord = Record<string, unknown>;
 type MutableBrowserProfile = Record<string, unknown>;
@@ -131,6 +133,10 @@ export interface ConfigModelDoctorIssue {
     | 'mixed-runtime-profile-browser-reference'
     | 'runtime-profile-missing-browser-profile'
     | 'runtime-profile-browser-profile-missing'
+    | 'runtime-profile-browser-owned-overrides-present'
+    | 'runtime-profile-service-scoped-overrides-relocatable-present'
+    | 'runtime-profile-service-scoped-escape-hatches-present'
+    | 'runtime-profile-manual-login-profile-dir-redundant'
     | 'unused-browser-profile'
     | 'active-runtime-profile-missing-browser-profile'
     | 'agent-missing-runtime-profile'
@@ -169,6 +175,123 @@ export const CONFIG_MODEL_BRIDGE_KEYS: ConfigModelBridgeKeys = {
 
 function isRecord(value: unknown): value is MutableRecord {
   return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+
+const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
+  'chromePath',
+  'display',
+  'managedProfileRoot',
+  'sourceProfilePath',
+  'sourceProfileName',
+  'sourceCookiePath',
+  'bootstrapCookiePath',
+  'debugPort',
+  'debugPortStrategy',
+  'debugPortRange',
+  'blockingProfileAction',
+  'wslChromePreference',
+  'serviceTabLimit',
+  'blankTabLimit',
+  'collapseDisposableWindows',
+  'headless',
+  'hideWindow',
+  'remoteChrome',
+]);
+const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set(['modelStrategy', 'thinkingTime', 'composerTool']);
+const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);
+
+function describeRuntimeProfileBrowserOwnedOverrides(runtimeProfile: MutableRuntimeProfile): string[] {
+  const present: string[] = [];
+  if (isRecord(runtimeProfile.browser)) {
+    const browserOwnedKeys = Object.keys(runtimeProfile.browser).filter((key) =>
+      RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS.has(key),
+    );
+    if (browserOwnedKeys.length > 0) {
+      present.push(...browserOwnedKeys.map((key) => `browser.${key}`));
+    }
+  }
+  if (typeof runtimeProfile.keepBrowser === 'boolean') {
+    present.push('keepBrowser');
+  }
+  return present;
+}
+
+function describeRuntimeProfileRelocatableServiceOverrides(runtimeProfile: MutableRuntimeProfile): string[] {
+  if (!isRecord(runtimeProfile.browser)) {
+    return [];
+  }
+  return Object.keys(runtimeProfile.browser)
+    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key))
+    .map((key) => `browser.${key}`);
+}
+
+function describeRuntimeProfileServiceScopedEscapeHatches(runtimeProfile: MutableRuntimeProfile): string[] {
+  if (!isRecord(runtimeProfile.browser)) {
+    return [];
+  }
+  return Object.keys(runtimeProfile.browser)
+    .filter((key) => RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS.has(key))
+    .map((key) => `browser.${key}`);
+}
+
+function describeRedundantManagedProfileDirOverrides(
+  config: OracleConfig | MutableRecord,
+  runtimeProfileName: string,
+  runtimeProfile: MutableRuntimeProfile,
+): string[] {
+  const browserProfile = getRuntimeProfileBrowserProfile(config, runtimeProfile);
+  const runtimeBrowser = isRecord(runtimeProfile.browser) ? runtimeProfile.browser : {};
+  const globalBrowser = isRecord((config as MutableRecord).browser) ? ((config as MutableRecord).browser as MutableRecord) : {};
+  const managedProfileRoot =
+    (typeof runtimeBrowser.managedProfileRoot === 'string' && runtimeBrowser.managedProfileRoot.trim().length > 0
+      ? runtimeBrowser.managedProfileRoot
+      : null) ??
+    (browserProfile && typeof browserProfile.managedProfileRoot === 'string' && browserProfile.managedProfileRoot.trim().length > 0
+      ? browserProfile.managedProfileRoot
+      : null) ??
+    (typeof globalBrowser.managedProfileRoot === 'string' && globalBrowser.managedProfileRoot.trim().length > 0
+      ? globalBrowser.managedProfileRoot
+      : null);
+
+  const redundant: string[] = [];
+  const runtimeBrowserManualLoginProfileDir =
+    typeof runtimeBrowser.manualLoginProfileDir === 'string' && runtimeBrowser.manualLoginProfileDir.trim().length > 0
+      ? runtimeBrowser.manualLoginProfileDir.trim()
+      : null;
+  const defaultService = asServiceId(runtimeProfile.defaultService);
+  if (runtimeBrowserManualLoginProfileDir && defaultService) {
+    const expected = resolveManagedProfileDir({
+      configuredDir: null,
+      managedProfileRoot,
+      auracallProfileName: runtimeProfileName,
+      target: defaultService,
+    });
+    if (path.resolve(runtimeBrowserManualLoginProfileDir) === path.resolve(expected)) {
+      redundant.push(`browser.manualLoginProfileDir (${defaultService})`);
+    }
+  }
+
+  const profileServices = isRecord(runtimeProfile.services) ? runtimeProfile.services : {};
+  for (const serviceId of ['chatgpt', 'gemini', 'grok'] as const) {
+    const serviceConfig = isRecord(profileServices[serviceId]) ? profileServices[serviceId] : null;
+    if (!serviceConfig) continue;
+    const manualLoginProfileDir =
+      typeof serviceConfig.manualLoginProfileDir === 'string' && serviceConfig.manualLoginProfileDir.trim().length > 0
+        ? serviceConfig.manualLoginProfileDir.trim()
+        : null;
+    if (!manualLoginProfileDir) continue;
+    const expected = resolveManagedProfileDir({
+      configuredDir: null,
+      managedProfileRoot,
+      auracallProfileName: runtimeProfileName,
+      target: serviceId,
+    });
+    if (path.resolve(manualLoginProfileDir) === path.resolve(expected)) {
+      redundant.push(`services.${serviceId}.manualLoginProfileDir`);
+    }
+  }
+
+  return redundant;
 }
 
 function asServiceId(value: unknown): 'chatgpt' | 'gemini' | 'grok' | null {
@@ -789,6 +912,47 @@ export function analyzeConfigModelBridgeHealth(
   }
 
   for (const [name, runtimeProfile] of Object.entries(runtimeProfiles)) {
+    if (isRecord(runtimeProfile)) {
+      const browserOwnedOverrides = describeRuntimeProfileBrowserOwnedOverrides(runtimeProfile);
+      if (browserOwnedOverrides.length > 0) {
+        issues.push({
+          code: 'runtime-profile-browser-owned-overrides-present',
+          severity: 'warning',
+          message: `AuraCall runtime profile "${name}" still defines browser-owned override fields (${browserOwnedOverrides.join(', ')}); move them to the referenced browser profile unless this is an intentional advanced escape hatch.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+      const relocatableServiceOverrides = describeRuntimeProfileRelocatableServiceOverrides(runtimeProfile);
+      if (relocatableServiceOverrides.length > 0) {
+        const defaultService = asServiceId(runtimeProfile.defaultService);
+        issues.push({
+          code: 'runtime-profile-service-scoped-overrides-relocatable-present',
+          severity: 'info',
+          message: defaultService
+            ? `AuraCall runtime profile "${name}" still defines relocatable service-scoped browser overrides (${relocatableServiceOverrides.join(', ')}); prefer runtimeProfiles.<name>.services.${defaultService}, and keep runtimeProfiles.<name>.browser for non-service escape hatches only.`
+            : `AuraCall runtime profile "${name}" still defines relocatable service-scoped browser overrides (${relocatableServiceOverrides.join(', ')}); declare one concrete defaultService or move them manually into runtimeProfiles.<name>.services.<service>.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+      const serviceScopedEscapeHatches = describeRuntimeProfileServiceScopedEscapeHatches(runtimeProfile);
+      if (serviceScopedEscapeHatches.length > 0) {
+        issues.push({
+          code: 'runtime-profile-service-scoped-escape-hatches-present',
+          severity: 'info',
+          message: `AuraCall runtime profile "${name}" still defines service-scoped browser escape hatches (${serviceScopedEscapeHatches.join(', ')}); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+      const redundantManagedProfileDirOverrides = describeRedundantManagedProfileDirOverrides(config, name, runtimeProfile);
+      if (redundantManagedProfileDirOverrides.length > 0) {
+        issues.push({
+          code: 'runtime-profile-manual-login-profile-dir-redundant',
+          severity: 'info',
+          message: `AuraCall runtime profile "${name}" still defines default-equivalent managed profile paths (${redundantManagedProfileDirOverrides.join(', ')}); remove them unless you intend a real external managed-profile override.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+    }
     if (
       isRecord(runtimeProfile) &&
       typeof runtimeProfile.browserProfile === 'string' &&

@@ -466,11 +466,13 @@ export async function waitForGrokAssistantResult(
       lastHtml: string;
       toastText?: string;
     } | null;
+    onResponseIncoming?: () => void;
   } = {},
 ): Promise<{ text: string; markdown: string; html?: string }> {
   const baseline = options.baseline ?? (await readAssistantSnapshot(Runtime));
   let lastSignature = baseline.lastMarkdown || baseline.lastText;
   let stableCount = 0;
+  let responseIncomingNotified = false;
   const deadline = Date.now() + timeoutMs;
   while (Date.now() < deadline) {
     const current = await readAssistantSnapshot(Runtime);
@@ -484,6 +486,10 @@ export async function waitForGrokAssistantResult(
       (current.count === baseline.count && currentSignature.length > baselineSignature.length);
 
     if (hasNewContent && currentSignature.trim().length > 0) {
+      if (!responseIncomingNotified) {
+        responseIncomingNotified = true;
+        options.onResponseIncoming?.();
+      }
       if (currentSignature === lastSignature) {
         stableCount += 1;
       } else {

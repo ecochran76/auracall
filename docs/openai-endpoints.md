@@ -38,6 +38,8 @@ Current limits:
 - loopback by default; non-loopback requires `--listen-public`
 - runtime-backed create/read with one bounded local execution pass for direct
   runs
+  - direct browser-backed `/v1/responses` runs now execute through the same
+    configured stored-step executor path as normal Aura-Call runtime work
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`
@@ -143,6 +145,7 @@ Current limits:
       - `taskRunSpecId`
     - optional:
       - `runnerId`
+      - `probe=service-state`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -150,6 +153,23 @@ Current limits:
       - `matchingRuntimeRunCount`
       - bounded `matchingRuntimeRunIds`
       - bounded `taskRunSpecSummary` when task-backed
+      - optional `serviceState` when explicitly requested with
+        `probe=service-state`
+        - `probeStatus = observed|unavailable`
+        - this is live run-scoped provider state, not durable replay
+        - current default live probe coverage is:
+          - ChatGPT on the managed browser path
+          - Gemini on browser-backed runtime profiles only
+            - active browser-backed Gemini runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+          - Grok on browser-backed runtime profiles only
+            - active browser-backed Grok runs prefer executor-owned transient
+              `thinking` state before DOM/page fallback
+        - Gemini API-backed runtime profiles still return honest
+          `unavailable` posture on this seam
+        - Grok API-backed runtime profiles still return honest `unavailable`
+          posture on this seam
+        - keep it separate from queue/lease posture and `/status`
       - `runtime.queueProjection` with:
         - `queueState`
         - `claimState`

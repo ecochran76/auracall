@@ -113,6 +113,28 @@ describe('resolveBrowserConfig', () => {
     expect(resolved.display).toBe(':0.0');
   });
 
+  test('defaults WSL display to :0.0 even before Linux Chrome path discovery', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+
+    const resolved = resolveBrowserConfig({
+      wslChromePreference: 'auto',
+    });
+
+    expect(resolved.chromePath).toBeNull();
+    expect(resolved.display).toBe(':0.0');
+  });
+
+  test('keeps WSL display unset for explicit Windows-hosted Chrome', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+
+    const resolved = resolveBrowserConfig({
+      chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
+    });
+
+    expect(resolved.chromePath).toBe('/mnt/c/Program Files/Google/Chrome/Application/chrome.exe');
+    expect(resolved.display).toBeNull();
+  });
+
   test('keeps an explicit display override for WSL Linux Chrome', () => {
     vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
     profileMocks.discoverDefaultBrowserProfile.mockReturnValue({
@@ -129,6 +151,17 @@ describe('resolveBrowserConfig', () => {
     });
 
     expect(resolved.display).toBe(':1');
+  });
+
+  test('prefers AURACALL_BROWSER_DISPLAY over the WSL default', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+    vi.stubEnv('AURACALL_BROWSER_DISPLAY', ':5');
+
+    const resolved = resolveBrowserConfig({
+      wslChromePreference: 'auto',
+    });
+
+    expect(resolved.display).toBe(':5');
   });
 
   test('keeps an explicit bootstrap cookie path even when WSL runtime Chrome is preferred', () => {

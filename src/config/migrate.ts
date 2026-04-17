@@ -1,4 +1,6 @@
 import type { OracleConfig } from './schema.js';
+import { resolveManagedProfileDir } from '../browser/profileStore.js';
+import path from 'node:path';
 import {
   getCurrentRuntimeProfiles,
   ensureRuntimeProfiles,
@@ -17,6 +19,32 @@ export type ConfigAliasRule = {
 };
 
 const KNOWN_SERVICES = new Set(['chatgpt', 'gemini', 'grok']);
+const KNOWN_SERVICE_IDS = ['chatgpt', 'gemini', 'grok'] as const;
+const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
+  'chromePath',
+  'display',
+  'managedProfileRoot',
+  'sourceProfilePath',
+  'sourceProfileName',
+  'sourceCookiePath',
+  'bootstrapCookiePath',
+  'debugPort',
+  'debugPortStrategy',
+  'debugPortRange',
+  'blockingProfileAction',
+  'wslChromePreference',
+  'serviceTabLimit',
+  'blankTabLimit',
+  'collapseDisposableWindows',
+  'headless',
+  'hideWindow',
+  'remoteChrome',
+]);
+const RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS = new Set([
+  'modelStrategy',
+  'thinkingTime',
+  'composerTool',
+]);
 
 const mapProfileConflictAction = (value: unknown): unknown => {
   if (value === 'terminate-existing') return 'restart';
@@ -50,6 +78,175 @@ function asString(value: unknown): string | undefined {
 
 function mergeRecords(base: Record<string, unknown>, overlay: Record<string, unknown>): Record<string, unknown> {
   return { ...base, ...overlay };
+}
+
+function valuesEquivalent(left: unknown, right: unknown): boolean {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function normalizeRuntimeProfileBrowserOwnedOverrides(options: {
+  browserProfiles: Record<string, unknown>;
+  runtimeProfiles: Record<string, unknown>;
+}): void {
+  for (const runtimeProfileValue of Object.values(options.runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+    const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfileValue);
+    if (!browserProfileId) continue;
+    const browserProfileValue = options.browserProfiles[browserProfileId];
+    if (!isRecord(browserProfileValue)) continue;
+
+    const browserOverrides = isRecord(runtimeProfileValue.browser) ? runtimeProfileValue.browser : null;
+    if (browserOverrides) {
+      for (const [key, value] of Object.entries(browserOverrides)) {
+        if (!RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS.has(key)) continue;
+        if (browserProfileValue[key] === undefined) {
+          browserProfileValue[key] = value;
+        }
+        if (valuesEquivalent(browserProfileValue[key], value)) {
+          delete browserOverrides[key];
+        }
+      }
+      if (Object.keys(browserOverrides).length === 0) {
+        delete runtimeProfileValue.browser;
+      }
+    }
+
+    if (runtimeProfileValue.keepBrowser !== undefined && browserProfileValue.keepBrowser === undefined) {
+      browserProfileValue.keepBrowser = runtimeProfileValue.keepBrowser;
+    }
+    if (
+      runtimeProfileValue.keepBrowser !== undefined &&
+      browserProfileValue.keepBrowser === runtimeProfileValue.keepBrowser
+    ) {
+      delete runtimeProfileValue.keepBrowser;
+    }
+  }
+}
+
+function normalizeRuntimeProfileServiceScopedOverrides(runtimeProfiles: Record<string, unknown>): void {
+  for (const runtimeProfileValue of Object.values(runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+    const defaultService = asString(runtimeProfileValue.defaultService);
+    if (!defaultService || !KNOWN_SERVICES.has(defaultService)) continue;
+
+    const browserOverrides = isRecord(runtimeProfileValue.browser) ? runtimeProfileValue.browser : null;
+    if (!browserOverrides) continue;
+
+    const runtimeServices = isRecord(runtimeProfileValue.services) ? runtimeProfileValue.services : {};
+    const serviceConfig = isRecord(runtimeServices[defaultService])
+      ? (runtimeServices[defaultService] as Record<string, unknown>)
+      : {};
+
+    for (const [key, value] of Object.entries(browserOverrides)) {
+      if (!RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS.has(key)) continue;
+      if (serviceConfig[key] === undefined) {
+        serviceConfig[key] = value;
+      }
+      if (valuesEquivalent(serviceConfig[key], value)) {
+        delete browserOverrides[key];
+      }
+    }
+
+    if (Object.keys(serviceConfig).length > 0) {
+      runtimeServices[defaultService] = serviceConfig;
+      runtimeProfileValue.services = runtimeServices;
+    }
+    if (Object.keys(browserOverrides).length === 0) {
+      delete runtimeProfileValue.browser;
+    }
+  }
+}
+
+function normalizeRedundantManagedProfileDirOverrides(options: {
+  config: MutableConfig;
+  browserProfiles: Record<string, unknown>;
+  runtimeProfiles: Record<string, unknown>;
+}): void {
+  const globalBrowser = isRecord(options.config.browser) ? options.config.browser : {};
+  for (const [runtimeProfileName, runtimeProfileValue] of Object.entries(options.runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+
+    const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfileValue);
+    const browserProfileValue =
+      browserProfileId && isRecord(options.browserProfiles[browserProfileId]) ? options.browserProfiles[browserProfileId] : null;
+    const browserOverrides = isRecord(runtimeProfileValue.browser) ? runtimeProfileValue.browser : null;
+    const managedProfileRoot =
+      (browserOverrides && typeof browserOverrides.managedProfileRoot === 'string' && browserOverrides.managedProfileRoot.trim().length > 0
+        ? browserOverrides.managedProfileRoot.trim()
+        : null) ??
+      (browserProfileValue &&
+      typeof browserProfileValue.managedProfileRoot === 'string' &&
+      browserProfileValue.managedProfileRoot.trim().length > 0
+        ? browserProfileValue.managedProfileRoot.trim()
+        : null) ??
+      (typeof globalBrowser.managedProfileRoot === 'string' && globalBrowser.managedProfileRoot.trim().length > 0
+        ? globalBrowser.managedProfileRoot.trim()
+        : null);
+
+    const defaultService = asString(runtimeProfileValue.defaultService);
+    const defaultServiceId =
+      defaultService === 'chatgpt' || defaultService === 'gemini' || defaultService === 'grok' ? defaultService : null;
+    const runtimeBrowserManualLoginProfileDir =
+      browserOverrides &&
+      typeof browserOverrides.manualLoginProfileDir === 'string' &&
+      browserOverrides.manualLoginProfileDir.trim().length > 0
+        ? browserOverrides.manualLoginProfileDir.trim()
+        : null;
+    if (browserOverrides && runtimeBrowserManualLoginProfileDir && defaultServiceId) {
+      const expected = resolveManagedProfileDir({
+        configuredDir: null,
+        managedProfileRoot,
+        auracallProfileName: runtimeProfileName,
+        target: defaultServiceId,
+      });
+      if (path.resolve(runtimeBrowserManualLoginProfileDir) === path.resolve(expected)) {
+        delete browserOverrides.manualLoginProfileDir;
+      }
+    }
+
+    const runtimeServices = isRecord(runtimeProfileValue.services) ? runtimeProfileValue.services : null;
+    if (runtimeServices) {
+      for (const serviceId of KNOWN_SERVICE_IDS) {
+        const serviceConfig = isRecord(runtimeServices[serviceId]) ? runtimeServices[serviceId] : null;
+        if (!serviceConfig) continue;
+        const manualLoginProfileDir =
+          typeof serviceConfig.manualLoginProfileDir === 'string' && serviceConfig.manualLoginProfileDir.trim().length > 0
+            ? serviceConfig.manualLoginProfileDir.trim()
+            : null;
+        if (!manualLoginProfileDir) continue;
+        const expected = resolveManagedProfileDir({
+          configuredDir: null,
+          managedProfileRoot,
+          auracallProfileName: runtimeProfileName,
+          target: serviceId,
+        });
+        if (path.resolve(manualLoginProfileDir) === path.resolve(expected)) {
+          delete serviceConfig.manualLoginProfileDir;
+        }
+      }
+    }
+
+    if (browserOverrides && Object.keys(browserOverrides).length === 0) {
+      delete runtimeProfileValue.browser;
+    }
+  }
+}
+
+function pruneEmptyRuntimeProfileServices(runtimeProfiles: Record<string, unknown>): void {
+  for (const runtimeProfileValue of Object.values(runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+    const runtimeServices = isRecord(runtimeProfileValue.services) ? runtimeProfileValue.services : null;
+    if (!runtimeServices) continue;
+    for (const serviceId of KNOWN_SERVICE_IDS) {
+      const serviceConfig = isRecord(runtimeServices[serviceId]) ? runtimeServices[serviceId] : null;
+      if (serviceConfig && Object.keys(serviceConfig).length === 0) {
+        delete runtimeServices[serviceId];
+      }
+    }
+    if (Object.keys(runtimeServices).length === 0) {
+      delete runtimeProfileValue.services;
+    }
+  }
 }
 
 function applyAliasRule(config: MutableConfig, rule: ConfigAliasRule): void {
@@ -359,6 +556,20 @@ export function materializeConfigV2(
       );
     }
 
+    if (isRecord(result.browserProfiles) && isRecord(result.runtimeProfiles)) {
+      normalizeRuntimeProfileBrowserOwnedOverrides({
+        browserProfiles: result.browserProfiles as Record<string, unknown>,
+        runtimeProfiles: result.runtimeProfiles as Record<string, unknown>,
+      });
+      normalizeRuntimeProfileServiceScopedOverrides(result.runtimeProfiles as Record<string, unknown>);
+      normalizeRedundantManagedProfileDirOverrides({
+        config: result,
+        browserProfiles: result.browserProfiles as Record<string, unknown>,
+        runtimeProfiles: result.runtimeProfiles as Record<string, unknown>,
+      });
+      pruneEmptyRuntimeProfileServices(result.runtimeProfiles as Record<string, unknown>);
+    }
+
     delete result.browserFamilies;
     delete result.profiles;
     delete result.auracallProfile;
@@ -371,6 +582,20 @@ export function materializeConfigV2(
       result.auracallProfile = defaultRuntimeProfile;
     }
     delete result.defaultRuntimeProfile;
+
+    if (isRecord(result.browserFamilies) && isRecord(result.profiles)) {
+      normalizeRuntimeProfileBrowserOwnedOverrides({
+        browserProfiles: result.browserFamilies as Record<string, unknown>,
+        runtimeProfiles: result.profiles as Record<string, unknown>,
+      });
+      normalizeRuntimeProfileServiceScopedOverrides(result.profiles as Record<string, unknown>);
+      normalizeRedundantManagedProfileDirOverrides({
+        config: result,
+        browserProfiles: result.browserFamilies as Record<string, unknown>,
+        runtimeProfiles: result.profiles as Record<string, unknown>,
+      });
+      pruneEmptyRuntimeProfileServices(result.profiles as Record<string, unknown>);
+    }
   }
 
   if (options.stripLegacy) {

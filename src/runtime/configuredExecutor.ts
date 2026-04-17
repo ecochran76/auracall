@@ -9,6 +9,10 @@ import type { BrowserAttachment, BrowserRunOptions, CookieParam } from '../brows
 import { getAuracallHomeDir } from '../auracallHome.js';
 import { createGeminiWebExecutor } from '../gemini-web/executor.js';
 import { resolveManagedProfileCookieExportPath } from '../browser/profileStore.js';
+import {
+  clearLiveRuntimeRunServiceState,
+  recordLiveRuntimeRunServiceState,
+} from './liveServiceStateRegistry.js';
 
 type MutableRecord = Record<string, unknown>;
 
@@ -335,9 +339,35 @@ export function createConfiguredStoredStepExecutor(
       verbose: false,
     };
 
-    const browserResult = service === 'gemini'
-      ? await runGeminiBrowserModeImpl(browserRunOptions)
-      : await runBrowserModeImpl(browserRunOptions);
+    const liveBrowserServiceStateKey =
+      service === 'gemini' || service === 'grok'
+        ? {
+            runId: context.record.runId,
+            stepId: context.step.id,
+          }
+        : null;
+
+    if (liveBrowserServiceStateKey) {
+      recordLiveRuntimeRunServiceState({
+        ...liveBrowserServiceStateKey,
+        service,
+        state: 'thinking',
+        source: 'browser-service',
+        evidenceRef: service === 'grok' ? 'grok-prompt-submitted' : 'gemini-web-request-started',
+        confidence: 'medium',
+      });
+    }
+
+    let browserResult;
+    try {
+      browserResult = service === 'gemini'
+        ? await runGeminiBrowserModeImpl(browserRunOptions)
+        : await runBrowserModeImpl(browserRunOptions);
+    } finally {
+      if (liveBrowserServiceStateKey) {
+        clearLiveRuntimeRunServiceState(liveBrowserServiceStateKey);
+      }
+    }
 
     const responseText = browserResult.answerMarkdown.trim().length > 0
       ? browserResult.answerMarkdown
@@ -349,12 +379,22 @@ export function createConfiguredStoredStepExecutor(
         artifacts: [],
         structuredData: {
           browserRun: {
+            provider: service,
+            service,
             conversationId: browserResult.conversationId ?? null,
             tabUrl: browserResult.tabUrl ?? null,
+            runtimeProfileId: runtimeSelection.runtimeProfileId,
+            browserProfileId: runtimeSelection.browserProfileId,
+            agentId: context.step.agentId,
+            projectId,
+            configuredUrl: targetUrl,
+            desiredModel,
+            cachePath: null,
+            cachePathStatus: 'unavailable',
+            cachePathReason: 'provider cache identity is not resolved during stored-step execution',
+            passiveObservations: browserResult.passiveObservations ?? [],
             answerChars: browserResult.answerChars,
             answerTokens: browserResult.answerTokens,
-            runtimeProfileId: runtimeSelection.runtimeProfileId,
-            service,
           },
           ...(localActionRequests.length > 0 ? { localActionRequests } : {}),
         },

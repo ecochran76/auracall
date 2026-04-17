@@ -298,6 +298,68 @@ describe('grok actions', () => {
     expect(logger).toHaveBeenCalledWith('Recovered assistant response');
   });
 
+  test('waitForGrokAssistantResult notifies once when first new assistant content appears', async () => {
+    const logger = vi.fn();
+    const onResponseIncoming = vi.fn();
+    const evaluate = vi
+      .fn()
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: '',
+            lastMarkdown: '',
+            lastHtml: '',
+            toastText: '',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'alpha',
+            lastMarkdown: 'alpha',
+            lastHtml: '<p>alpha</p>',
+            toastText: '',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'alpha',
+            lastMarkdown: 'alpha',
+            lastHtml: '<p>alpha</p>',
+            toastText: '',
+          },
+        },
+      })
+      .mockResolvedValueOnce({
+        result: {
+          value: {
+            count: 1,
+            lastText: 'alpha',
+            lastMarkdown: 'alpha',
+            lastHtml: '<p>alpha</p>',
+            toastText: '',
+          },
+        },
+      });
+    const runtime = { evaluate } as unknown as ChromeClient['Runtime'];
+
+    await expect(
+      waitForGrokAssistantResult(runtime, 2500, logger, { onResponseIncoming }),
+    ).resolves.toEqual({
+      text: 'alpha',
+      markdown: 'alpha',
+      html: '<p>alpha</p>',
+    });
+
+    expect(onResponseIncoming).toHaveBeenCalledTimes(1);
+  });
+
   test('buildGrokAssistantSnapshotExpression strips sticky copy chrome and serializes code blocks', () => {
     const expression = buildGrokAssistantSnapshotExpressionForTest();
     expect(expression).toContain('data-testid');
