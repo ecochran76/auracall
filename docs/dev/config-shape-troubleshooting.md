@@ -226,6 +226,23 @@ Action:
 - if the destination remains ambiguous or conflicting, expect them to stay in
   `runtimeProfiles.<name>.browser`
 
+### `browser-profile-service-scoped-overrides-present`
+
+Meaning:
+- the browser profile itself defines service-layer knobs such as:
+  - `modelStrategy`
+  - `thinkingTime`
+  - `composerTool`
+
+Action:
+- move these values out of the browser profile
+- keep browser profiles focused on browser/account-family concerns
+- prefer `runtimeProfiles.<name>.services.<service>` for service defaults
+- do not expect `config migrate` to rewrite this automatically:
+  - browser profiles do not declare one concrete service target
+  - the current resolver treats these values as runtime/service concerns, not
+    browser-profile state
+
 ### `runtime-profile-service-scoped-escape-hatches-present`
 
 Meaning:

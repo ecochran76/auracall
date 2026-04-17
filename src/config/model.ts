@@ -129,6 +129,7 @@ export interface ConfigModelDoctorIssue {
     | 'mixed-browser-profile-keys'
     | 'mixed-runtime-profile-keys'
     | 'conflicting-browser-profile-definitions'
+    | 'browser-profile-service-scoped-overrides-present'
     | 'conflicting-runtime-profile-definitions'
     | 'mixed-runtime-profile-browser-reference'
     | 'runtime-profile-missing-browser-profile'
@@ -200,6 +201,12 @@ const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
 ]);
 const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set(['modelStrategy', 'thinkingTime', 'composerTool']);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);
+
+function describeBrowserProfileServiceScopedOverrides(browserProfile: MutableBrowserProfile): string[] {
+  return Object.keys(browserProfile)
+    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key))
+    .map((key) => key);
+}
 
 function describeRuntimeProfileBrowserOwnedOverrides(runtimeProfile: MutableRuntimeProfile): string[] {
   const present: string[] = [];
@@ -859,6 +866,19 @@ export function analyzeConfigModelBridgeHealth(
           browserProfile: name,
         });
       }
+    }
+  }
+
+  for (const [name, browserProfile] of Object.entries(browserProfiles)) {
+    if (!isRecord(browserProfile)) continue;
+    const serviceScopedOverrides = describeBrowserProfileServiceScopedOverrides(browserProfile);
+    if (serviceScopedOverrides.length > 0) {
+      issues.push({
+        code: 'browser-profile-service-scoped-overrides-present',
+        severity: 'info',
+        message: `Browser profile "${name}" still defines service-scoped overrides (${serviceScopedOverrides.join(', ')}); keep browser profiles focused on browser/account-family state and move service defaults to runtimeProfiles.<name>.services.<service> instead.`,
+        browserProfile: name,
+      });
     }
   }
 

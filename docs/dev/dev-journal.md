@@ -16921,3 +16921,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the Grok plain-text response test now provides one extra stable assistant
     snapshot so aggregate load does not exhaust the mock sequence before the
     response stabilizes
+## 2026-04-17 - Config doctor now flags misplaced service knobs on browser profiles
+
+- Continued the active `0007` config-model lane with one bounded doctor-only
+  checkpoint:
+  - `config doctor` now reports when a browser profile itself carries
+    service-scoped overrides such as:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+- Reason:
+  - the current resolver treats those values as runtime/service concerns
+  - browser profiles are the browser/account-family layer, so these keys are a
+    placement mistake rather than another safe redundancy-cleanup target

@@ -12755,3 +12755,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   id shape when asserting `404 not found`. For Grok response polling tests,
   provide enough repeated stable snapshots that aggregate-suite load cannot
   exhaust the mocked sequence before stabilization is detected.
+- 2026-04-17: Do not treat browser-profile placement for `modelStrategy`,
+  `thinkingTime`, or `composerTool` as harmless redundancy. Under the current
+  resolver those keys are runtime/service concerns, so `config doctor` should
+  flag them as misplaced service-scoped overrides on browser profiles instead
+  of trying to auto-clean them there.

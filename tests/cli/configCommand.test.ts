@@ -954,6 +954,45 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces service-scoped overrides when they are misplaced on a browser profile in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+            modelStrategy: 'current',
+            thinkingTime: 'extended',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'browser-profile-service-scoped-overrides-present',
+          severity: 'info',
+          browserProfile: 'default',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).toContain(
+      '[info] Browser profile "default" still defines service-scoped overrides (modelStrategy, thinkingTime); keep browser profiles focused on browser/account-family state and move service defaults to runtimeProfiles.<name>.services.<service> instead.',
+    );
+  });
+
   it('surfaces redundant default-equivalent managed profile paths in doctor output', () => {
     const report = buildConfigDoctorReport(
       {

@@ -146,6 +146,9 @@ Current note:
         redundant noise
       - empty service stubs left behind by that bounded cleanup should be
         pruned as residue, not preserved as meaningful config
+      - browser-profile placement for `modelStrategy`, `thinkingTime`, and
+        `composerTool` should be treated as misplaced service-scoped overrides,
+        not as another redundancy-cleanup target
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

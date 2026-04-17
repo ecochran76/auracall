@@ -181,6 +181,11 @@ Current diagnostic checkpoint:
 - current policy:
   - prefer moving relocatable service fields into
     `runtimeProfiles.<name>.services.<service>`
+  - keep those service fields off browser profiles entirely:
+    - browser profiles do not own service-layer defaults for
+      `modelStrategy`, `thinkingTime`, or `composerTool`
+    - doctor should treat those keys under a browser profile as misplaced
+      service-scoped overrides, not as another redundancy-cleanup target
   - keep `manualLogin` and `manualLoginProfileDir` only as intentional escape
     hatches until their ownership boundary is narrowed further
   - current escape-hatch contract:
@@ -226,6 +231,10 @@ Current migration checkpoint:
     `runtimeProfiles.<name>.services.<service>.modelStrategy`,
     `thinkingTime`, and `composerTool` as redundant when they exactly mirror
     the already-inherited top-level `services.<service>` defaults
+  - browser-profile placement for those same fields remains diagnostics-only:
+    - there is no safe automatic relocation target at the browser-profile
+      layer because the current resolver treats them as runtime/service
+      concerns, not browser/account-family state
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

@@ -929,6 +929,50 @@ describe('config model helpers', () => {
     });
   });
 
+  it('surfaces service-scoped overrides when they are misplaced on a browser profile', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {
+          chromePath: '/usr/bin/google-chrome',
+          modelStrategy: 'current',
+          thinkingTime: 'extended',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'browser-profile-service-scoped-overrides-present',
+          severity: 'info',
+          browserProfile: 'default',
+          message:
+            'Browser profile "default" still defines service-scoped overrides (modelStrategy, thinkingTime); keep browser profiles focused on browser/account-family state and move service defaults to runtimeProfiles.<name>.services.<service> instead.',
+        }),
+      ],
+    });
+  });
+
   it('surfaces redundant default-equivalent manualLoginProfileDir overrides', () => {
     const config = {
       defaultRuntimeProfile: 'default',
