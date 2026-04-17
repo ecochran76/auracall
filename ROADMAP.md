@@ -149,6 +149,10 @@ Current note:
       - browser-profile placement for `modelStrategy`, `thinkingTime`, and
         `composerTool` should be treated as misplaced service-scoped overrides,
         not as another redundancy-cleanup target
+      - top-level `browser.modelStrategy`, `browser.thinkingTime`, and
+        `browser.composerTool` should also be treated as misplaced
+        service-scoped defaults, while `llmDefaults` remains the compatibility
+        bridge seam for model/project defaults
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

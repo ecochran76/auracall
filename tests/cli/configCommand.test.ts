@@ -993,6 +993,46 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces service-scoped defaults when they are misplaced on top-level browser config in doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browser: {
+          modelStrategy: 'current',
+          thinkingTime: 'extended',
+        },
+        browserProfiles: {
+          default: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'global-browser-service-scoped-defaults-present',
+          severity: 'info',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('Status: ok');
+    expect(text).toContain(
+      '[info] Top-level browser config still defines service-scoped defaults (browser.modelStrategy, browser.thinkingTime); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.',
+    );
+  });
+
   it('surfaces redundant default-equivalent managed profile paths in doctor output', () => {
     const report = buildConfigDoctorReport(
       {

@@ -128,6 +128,7 @@ export interface ConfigModelDoctorIssue {
     | 'legacy-runtime-profiles-present'
     | 'mixed-browser-profile-keys'
     | 'mixed-runtime-profile-keys'
+    | 'global-browser-service-scoped-defaults-present'
     | 'conflicting-browser-profile-definitions'
     | 'browser-profile-service-scoped-overrides-present'
     | 'conflicting-runtime-profile-definitions'
@@ -201,6 +202,13 @@ const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
 ]);
 const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set(['modelStrategy', 'thinkingTime', 'composerTool']);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);
+
+function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
+  const globalBrowser = isRecord((config as MutableRecord).browser) ? ((config as MutableRecord).browser as MutableRecord) : {};
+  return Object.keys(globalBrowser)
+    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key))
+    .map((key) => `browser.${key}`);
+}
 
 function describeBrowserProfileServiceScopedOverrides(browserProfile: MutableBrowserProfile): string[] {
   return Object.keys(browserProfile)
@@ -850,6 +858,15 @@ export function analyzeConfigModelBridgeHealth(
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   const issues: ConfigModelDoctorIssue[] = [];
   const referencedBrowserProfiles = new Set<string>();
+
+  const globalBrowserServiceScopedDefaults = describeGlobalBrowserServiceScopedDefaults(config);
+  if (globalBrowserServiceScopedDefaults.length > 0) {
+    issues.push({
+      code: 'global-browser-service-scoped-defaults-present',
+      severity: 'info',
+      message: `Top-level browser config still defines service-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.`,
+    });
+  }
 
   if (Object.keys(targetBrowserProfiles).length > 0 && Object.keys(bridgeBrowserProfiles).length > 0) {
     issues.push({

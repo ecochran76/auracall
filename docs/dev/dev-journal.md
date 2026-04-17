@@ -16934,3 +16934,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the current resolver treats those values as runtime/service concerns
   - browser profiles are the browser/account-family layer, so these keys are a
     placement mistake rather than another safe redundancy-cleanup target
+## 2026-04-17 - Config doctor now flags misplaced service defaults on top-level browser config
+
+- Continued the active `0007` lane with another doctor-only ownership
+  checkpoint:
+  - `config doctor` now reports when the top-level `browser` block carries
+    service-scoped defaults such as:
+    - `browser.modelStrategy`
+    - `browser.thinkingTime`
+    - `browser.composerTool`
+- Reason:
+  - those keys are not browser-family state
+  - the current repo still uses root `browser` plus `llmDefaults` as a
+    compatibility/defaults seam, so this slice records the misplacement
+    explicitly without claiming a safe automatic rewrite yet

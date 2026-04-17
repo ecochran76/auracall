@@ -12760,3 +12760,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   resolver those keys are runtime/service concerns, so `config doctor` should
   flag them as misplaced service-scoped overrides on browser profiles instead
   of trying to auto-clean them there.
+- 2026-04-17: Apply that same ownership rule to the top-level `browser` block.
+  `browser.modelStrategy`, `browser.thinkingTime`, and `browser.composerTool`
+  are legacy global service defaults, not browser-family state. Diagnose them
+  as misplaced service-scoped defaults, but keep the current `llmDefaults`
+  bridge intact until that compatibility seam is narrowed explicitly.

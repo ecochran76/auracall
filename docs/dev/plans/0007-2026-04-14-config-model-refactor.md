@@ -179,6 +179,14 @@ Current diagnostic checkpoint:
     - `manualLogin`
     - `manualLoginProfileDir`
 - current policy:
+  - keep top-level root browser config out of service ownership:
+    - `browser.modelStrategy`, `browser.thinkingTime`, and
+      `browser.composerTool` are legacy global service defaults, not
+      browser-family state
+    - doctor should flag those keys under the top-level `browser` block as
+      misplaced service-scoped defaults
+    - `llmDefaults` remains a compatibility bridge for model/project defaults
+      until that ownership seam is narrowed further
   - prefer moving relocatable service fields into
     `runtimeProfiles.<name>.services.<service>`
   - keep those service fields off browser profiles entirely:
@@ -235,6 +243,11 @@ Current migration checkpoint:
     - there is no safe automatic relocation target at the browser-profile
       layer because the current resolver treats them as runtime/service
       concerns, not browser/account-family state
+  - top-level root-browser placement for those same fields also remains
+    diagnostics-only:
+    - root browser config is still a compatibility/defaults surface
+    - there is no safe automatic rewrite until the remaining `browser` versus
+      `llmDefaults` ownership contract is narrowed further
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

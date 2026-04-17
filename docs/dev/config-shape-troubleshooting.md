@@ -243,6 +243,23 @@ Action:
   - the current resolver treats these values as runtime/service concerns, not
     browser-profile state
 
+### `global-browser-service-scoped-defaults-present`
+
+Meaning:
+- the top-level `browser` block still defines service-layer defaults such as:
+  - `browser.modelStrategy`
+  - `browser.thinkingTime`
+  - `browser.composerTool`
+
+Action:
+- keep the root `browser` block focused on generic browser automation behavior
+- prefer `services.<service>` or `runtimeProfiles.<name>.services.<service>`
+  for these service knobs
+- do not expect `config migrate` to rewrite this automatically yet:
+  - root `browser` is still a compatibility/defaults surface
+  - `llmDefaults` still acts as the compatibility bridge for some model and
+    project defaults
+
 ### `runtime-profile-service-scoped-escape-hatches-present`
 
 Meaning:

@@ -973,6 +973,51 @@ describe('config model helpers', () => {
     });
   });
 
+  it('surfaces service-scoped defaults when they are misplaced on the top-level browser config', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browser: {
+        modelStrategy: 'current',
+        thinkingTime: 'extended',
+      },
+      browserProfiles: {
+        default: {
+          chromePath: '/usr/bin/google-chrome',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: [
+        expect.objectContaining({
+          code: 'global-browser-service-scoped-defaults-present',
+          severity: 'info',
+          message:
+            'Top-level browser config still defines service-scoped defaults (browser.modelStrategy, browser.thinkingTime); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.',
+        }),
+      ],
+    });
+  });
+
   it('surfaces redundant default-equivalent manualLoginProfileDir overrides', () => {
     const config = {
       defaultRuntimeProfile: 'default',
