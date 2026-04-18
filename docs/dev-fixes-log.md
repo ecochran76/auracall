@@ -12892,3 +12892,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `agents.<name>.defaults` should surface as an info-level placeholder seam
   so operators do not infer live behavior from generic agent-default keys
   before a typed workflow-defaults contract exists.
+- 2026-04-18: Keep the positive live agent contract explicit too, not just the
+  negative/placeholder warnings. In this repo, `agents.<name>.runtimeProfile`
+  is still the only live agent-owned execution selector; accepted descriptive
+  fields like `description`, `instructions`, and `metadata` remain
+  organizational / future-workflow config and should not affect runtime
+  selection, browser profile resolution, or default service resolution.

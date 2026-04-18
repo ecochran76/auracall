@@ -18,8 +18,14 @@ Lane: P01
     explicitly
   - service identity rewiring inside agent defaults should surface explicitly
 - current execution semantics remain intentionally narrow:
+  - `agents.<name>.runtimeProfile` is still the only live execution selector
+    owned at the agent layer
+  - `agents.<name>.description`, `instructions`, and `metadata` remain
+    organizational / future-workflow fields, not runtime selectors
   - `agents.<name>.defaults` is still parsed as a generic bag
-  - but runtime selection and default service resolution still ignore it
+  - runtime selection, browser profile resolution, and default service
+    resolution still ignore those descriptive fields and the generic defaults
+    bag
   - live agent selection still flows only through:
     - `agents.<name>.runtimeProfile`
     - the referenced AuraCall runtime profile
@@ -110,6 +116,15 @@ Allowed at the agent layer:
 - service/model preference narrowing when compatible with the runtime profile
 - task-specific defaults that do not mutate browser/account-bearing state
 
+Current live posture for those allowed fields:
+- only `agents.<name>.runtimeProfile` currently affects runtime selection
+- `instructions`, `description`, and `metadata` are accepted as
+  organizational/future-workflow config only
+- they do not currently change:
+  - runtime selection
+  - browser profile resolution
+  - default service resolution
+
 Not allowed at the agent layer:
 - browser profile selection overrides
 - source browser profile overrides
@@ -167,7 +182,11 @@ The current reserved config placeholders should be interpreted as:
 - `agents.<name>.runtimeProfile`
   - required conceptual anchor, even if not enforced yet
 - `agents.<name>.instructions`
-  - placeholder for future persona/instruction text
+  - accepted today, but still placeholder/future-workflow text
+- `agents.<name>.description`
+  - accepted today, but still organizational metadata
+- `agents.<name>.metadata`
+  - accepted today, but still organizational/future-orchestration metadata
 - `teams.<name>.agents`
   - placeholder membership list only
 

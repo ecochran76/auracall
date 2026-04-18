@@ -17313,3 +17313,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this warning keeps operators from inferring live semantics from
     placeholder keys while the repo decides on a future typed agent-defaults
     surface
+## 2026-04-18 - Positive live agent semantics remain narrower than the accepted schema
+
+- Followed the placeholder-seam warning with a positive-contract checkpoint
+  instead of inventing a new typed agent surface by momentum:
+  - added focused config-model coverage proving that
+    `agents.<name>.description`, `instructions`, and `metadata` do not affect:
+    - runtime selection
+    - browser profile resolution
+    - default service resolution
+  - updated the agent boundary plan, config umbrella plan, roadmap, operator
+    config docs, and troubleshooting docs to say directly that
+    `agents.<name>.runtimeProfile` is still the only live agent-owned
+    execution selector today
+- Reason:
+  - the schema already accepts descriptive agent fields, so the repo needed to
+    distinguish accepted shape from live execution semantics explicitly
+  - this keeps the lane honest without widening the surface area before a
+    later typed workflow-defaults design slice

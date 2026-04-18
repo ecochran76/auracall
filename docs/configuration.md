@@ -438,6 +438,11 @@ Within each file, later CLI flags still override config, and environment variabl
 - Use `--agent <name>` to resolve a run through a reserved agent reference.
   - Today this only selects the referenced AuraCall runtime profile and its browser-profile inheritance.
   - It does not enable separate agent execution behavior yet.
+  - `agents.<name>.description`, `instructions`, and `metadata` are accepted
+    config fields, but they still do not affect runtime selection, browser
+    profile resolution, or default service resolution.
+  - `agents.<name>.defaults` also remains execution-inert for now; treat it as
+    a placeholder seam, not a live override surface.
   - If both `--profile` and `--agent` are passed, `--profile` wins.
 - Use `--team <name>` only for planning and inspection surfaces today.
   - It does not change the active runtime selection.
@@ -487,6 +492,11 @@ Within each file, later CLI flags still override config, and environment variabl
 - `runtimeProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
 - `agents` and `teams` are reserved top-level config blocks for the future config-model refactor.
   - Aura-Call now lets `--agent <name>` resolve through `agents.<name>.runtimeProfile` for selection semantics only.
+  - `agents.<name>.description`, `instructions`, and `metadata` remain
+    organizational/future-workflow fields today.
+  - `agents.<name>.defaults` remains a placeholder seam and does not currently
+    change runtime selection, browser profile resolution, or default service
+    resolution.
   - They still do not introduce separate agent or team execution behavior yet.
 - `runtimeProfiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
 - `runtimeProfiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.

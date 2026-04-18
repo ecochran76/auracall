@@ -393,8 +393,13 @@ Current bounded follow-through at this layer:
       - runtime/browser selection remains anchored on
         `agents.<name>.runtimeProfile` plus the referenced AuraCall runtime
         profile
+      - current positive live agent contract remains narrow:
+        - `agents.<name>.runtimeProfile` is the only live agent-owned
+          execution selector today
+        - `agents.<name>.description`, `instructions`, and `metadata` remain
+          organizational / future-workflow fields for now
       - the generic agent defaults bag is still execution-inert for runtime
-        selection and default service resolution
+        selection, browser profile resolution, and default service resolution
   - team boundary:
     - invalid `teams.<name>.roles.<role>.agent` references should surface
       explicitly

@@ -485,6 +485,59 @@ describe('config model helpers', () => {
     });
   });
 
+  it('keeps agent descriptive fields non-execution for runtime and browser resolution', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: { chromePath: '/chrome/default' },
+        consulting: { chromePath: '/chrome/consulting' },
+      },
+      runtimeProfiles: {
+        default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        work: { browserProfile: 'consulting', defaultService: 'grok' },
+      },
+      agents: {
+        analyst: {
+          runtimeProfile: 'default',
+          description: 'Use the consulting runtime profile instead.',
+          instructions: 'Prefer Grok and the consulting browser profile.',
+          metadata: {
+            runtimeProfile: 'work',
+            browserProfile: 'consulting',
+            defaultService: 'grok',
+          },
+        },
+      },
+    };
+
+    expect(resolveAgentSelection(config, 'analyst')).toEqual({
+      agentId: 'analyst',
+      runtimeProfileId: 'default',
+      browserProfileId: 'default',
+      defaultService: 'chatgpt',
+      exists: true,
+    });
+    expect(resolveRuntimeSelection(config, { explicitAgentId: 'analyst' })).toEqual({
+      agent: {
+        agentId: 'analyst',
+        runtimeProfileId: 'default',
+        browserProfileId: 'default',
+        defaultService: 'chatgpt',
+        exists: true,
+      },
+      runtimeProfileId: 'default',
+      runtimeProfile: {
+        browserProfile: 'default',
+        defaultService: 'chatgpt',
+      },
+      browserProfileId: 'default',
+      browserProfile: {
+        chromePath: '/chrome/default',
+      },
+      defaultService: 'chatgpt',
+    });
+  });
+
   it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {
     const config = {
       auracallProfile: 'legacy',

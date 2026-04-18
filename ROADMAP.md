@@ -232,8 +232,13 @@ Current note:
         - current posture stays diagnostics-only:
           - agent workflow defaults remain allowed when they do not mutate
             browser/account ownership
+          - `agents.<name>.runtimeProfile` remains the only live
+            agent-owned execution selector today
+          - `agents.<name>.description`, `instructions`, and `metadata`
+            remain organizational / future-workflow fields for now
           - the generic agent defaults bag is still execution-inert for
-            runtime selection and default service resolution
+            runtime selection, browser profile resolution, and default service
+            resolution
       - team-role integrity:
       - `teams.<name>.roles.<role>.agent` should not silently reference a
         missing agent or an agent outside team membership

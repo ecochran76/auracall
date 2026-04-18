@@ -158,6 +158,12 @@ Action:
 - keep current live agent selection anchored on:
   - `agents.<name>.runtimeProfile`
   - the referenced AuraCall runtime profile
+- remember that other accepted agent fields such as:
+  - `agents.<name>.description`
+  - `agents.<name>.instructions`
+  - `agents.<name>.metadata`
+  are still organizational / future-workflow fields today, not live runtime
+  selectors
 - if you need real live agent-owned defaults, introduce them through an
   explicit typed contract instead of relying on the generic defaults bag
 
