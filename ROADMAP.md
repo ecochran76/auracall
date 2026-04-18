@@ -193,6 +193,9 @@ Current note:
           - `--project-id` and `--project-name` now also populate the selected
             runtime-profile service block when one concrete default service
             exists
+          - `--conversation-id` and `--conversation-name` now also populate
+            the selected runtime-profile service block when one concrete
+            default service exists
           - their root-browser mapping still remains for transitional
             compatibility
         - do not attempt a precedence rewrite until those authoring paths are

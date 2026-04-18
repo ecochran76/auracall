@@ -193,7 +193,9 @@ function applyOracleProfile(
 function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: OptionValues): void {
   const projectId = asNonEmptyString((cliOptions as MutableConfig).projectId);
   const projectName = asNonEmptyString((cliOptions as MutableConfig).projectName);
-  if (!projectId && !projectName) return;
+  const conversationId = asNonEmptyString((cliOptions as MutableConfig).conversationId);
+  const conversationName = asNonEmptyString((cliOptions as MutableConfig).conversationName);
+  if (!projectId && !projectName && !conversationId && !conversationName) return;
 
   const selection = resolveRuntimeSelection(merged, {
     explicitProfileName:
@@ -229,6 +231,12 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   }
   if (projectName) {
     serviceConfig.projectName = projectName;
+  }
+  if (conversationId) {
+    serviceConfig.conversationId = conversationId;
+  }
+  if (conversationName) {
+    serviceConfig.conversationName = conversationName;
   }
 }
 

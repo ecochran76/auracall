@@ -17135,3 +17135,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     already clearly service-scoped in the preferred config model
   - keeping the root-browser mapping avoids breaking the current resolver
     contract while starting to align CLI input with service ownership
+## 2026-04-18 - Conversation selector CLI flags now dual-write into the selected service block
+
+- Continued the active `0007` lane with the matching conversation-selector
+  narrowing step:
+  - `--conversation-id` and `--conversation-name` still keep their current
+    root-browser mapping
+  - when one concrete selected runtime profile and `defaultService` exist,
+    they now also mirror into:
+    - `runtimeProfiles.<name>.services.<defaultService>.conversationId`
+    - `runtimeProfiles.<name>.services.<defaultService>.conversationName`
+  - when no concrete default service exists, they stay root-browser-only
+  - added focused resolver coverage for both:
+    - the dual-write path
+    - the no-default-service fallback
+- Reason:
+  - the resolver treats conversation selectors with the same precedence shape
+    as project selectors today, so the same bounded dual-write is justified
+  - keeping the root-browser mapping preserves compatibility while moving
+    another live authoring path toward service ownership

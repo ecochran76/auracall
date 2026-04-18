@@ -12832,3 +12832,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `runtimeProfiles.<name>.services.<defaultService>` block when one concrete
   default service exists. If no concrete default service exists, leave them on
   the root browser layer only.
+- 2026-04-18: Apply the same bounded dual-write rule to conversation
+  selectors when the resolver ownership shape matches the project selectors.
+  In this repo, `--conversation-id` and `--conversation-name` can also mirror
+  into the selected `runtimeProfiles.<name>.services.<defaultService>` block
+  when one concrete default service exists, while preserving the current
+  root-browser mapping as transitional input.

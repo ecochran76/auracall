@@ -195,6 +195,44 @@ describe('Config Resolver', () => {
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.projectName).toBe('CLI Project');
   });
 
+  it('should also mirror cli conversation selectors into the selected runtime-profile service block', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                conversationId: 'config-conversation-id',
+                conversationName: 'Config Conversation',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      conversationId: 'cli-conversation-id',
+      conversationName: 'CLI Conversation',
+    });
+
+    expect(result.browser.conversationId).toBe('cli-conversation-id');
+    expect(result.browser.conversationName).toBe('CLI Conversation');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.conversationId).toBe('cli-conversation-id');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.conversationName).toBe('CLI Conversation');
+  });
+
   it('should leave project selectors on the root browser layer when no concrete default service exists', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {
@@ -223,6 +261,37 @@ describe('Config Resolver', () => {
 
     expect(result.browser.projectId).toBe('cli-project-id');
     expect(result.browser.projectName).toBe('CLI Project');
+    expect(result.runtimeProfiles?.default?.services).toBeUndefined();
+  });
+
+  it('should leave conversation selectors on the root browser layer when no concrete default service exists', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      conversationId: 'cli-conversation-id',
+      conversationName: 'CLI Conversation',
+    });
+
+    expect(result.browser.conversationId).toBe('cli-conversation-id');
+    expect(result.browser.conversationName).toBe('CLI Conversation');
     expect(result.runtimeProfiles?.default?.services).toBeUndefined();
   });
 
