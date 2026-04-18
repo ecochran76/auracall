@@ -41,6 +41,8 @@ export const CLI_MAPPING: Record<string, string> = {
   'remoteChrome': 'browser.remoteChrome',
   
   // Browser - URLs/Scope
+  // Transitional contract: these flags still target the root browser block
+  // because the live resolver consumes that layer directly today.
   'grokUrl': 'browser.grokUrl',
   'chatgptUrl': 'browser.chatgptUrl',
   'geminiUrl': 'browser.geminiUrl',

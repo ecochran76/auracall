@@ -113,7 +113,9 @@ describe('Config Resolver', () => {
         version: 3,
         model: 'gpt-5.2-pro',
         browser: {
+          projectId: 'config-project-id',
           projectName: 'Config Project',
+          conversationName: 'Config Conversation',
           conversationId: 'config-conversation',
           modelStrategy: 'select',
           thinkingTime: 'light',
@@ -122,7 +124,9 @@ describe('Config Resolver', () => {
         services: {
           chatgpt: {
             url: 'https://chatgpt.com/',
+            projectId: 'service-project-id',
             projectName: 'Service Project',
+            conversationName: 'Service Conversation',
             conversationId: 'service-conversation',
             modelStrategy: 'current',
             thinkingTime: 'heavy',
@@ -135,14 +139,18 @@ describe('Config Resolver', () => {
     });
 
     const result = await resolveConfig({
+      projectId: 'cli-project-id',
       projectName: 'CLI Project',
+      conversationName: 'CLI Conversation',
       conversationId: 'cli-conversation',
       browserModelStrategy: 'ignore',
       browserThinkingTime: 'extended',
       browserComposerTool: 'canvas',
     });
 
+    expect(result.browser.projectId).toBe('cli-project-id');
     expect(result.browser.projectName).toBe('CLI Project');
+    expect(result.browser.conversationName).toBe('CLI Conversation');
     expect(result.browser.conversationId).toBe('cli-conversation');
     expect(result.browser.modelStrategy).toBe('ignore');
     expect(result.browser.thinkingTime).toBe('extended');

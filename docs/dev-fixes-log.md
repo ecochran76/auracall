@@ -12819,3 +12819,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `--browser-thinking-time`, and `--browser-composer-tool` are still
   supported transitional inputs on the root `browser` block. Lock that with
   focused resolver coverage before attempting any CLI remap.
+- 2026-04-18: When a transitional CLI mapping is still intentional, say so in
+  the source, not only in plans. In this repo the root-browser-targeting
+  service/project flag set should carry an inline note in `src/schema/cli-map.ts`
+  and one resolver test that covers the full set together, so future narrowing
+  work starts from an explicit contract instead of scattered field-by-field
+  assumptions.

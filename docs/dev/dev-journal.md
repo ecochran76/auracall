@@ -17098,3 +17098,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     CLI narrowing work
   - future precedence or mapping changes can now be evaluated against a
     test-backed current contract instead of inference
+## 2026-04-18 - CLI map source now documents the transitional root-browser contract
+
+- Continued the active `0007` lane with one narrow source-of-truth hardening
+  step:
+  - added an inline contract comment in `src/schema/cli-map.ts` stating that
+    the root-browser-targeting service/project CLI flags remain intentionally
+    mapped to the root `browser` block for now
+  - widened resolver coverage so the explicit transitional set now proves all
+    seven current flags together:
+    - `--project-id`
+    - `--project-name`
+    - `--conversation-id`
+    - `--conversation-name`
+    - `--browser-model-strategy`
+    - `--browser-thinking-time`
+    - `--browser-composer-tool`
+- Reason:
+  - the repo needed the code-level mapping contract to be as explicit as the
+    plan/docs contract before any narrowing slice starts
