@@ -1446,10 +1446,12 @@ describe('config model helpers', () => {
           browserProfile: 'default',
           defaultService: 'chatgpt',
           browser: {
+            manualLogin: true,
             manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/chatgpt',
           },
           services: {
             grok: {
+              manualLogin: true,
               manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
             },
           },
@@ -1483,6 +1485,61 @@ describe('config model helpers', () => {
           auracallRuntimeProfile: 'default',
           message:
             'AuraCall runtime profile "default" still defines default-equivalent managed profile paths (browser.manualLoginProfileDir (chatgpt), services.grok.manualLoginProfileDir); remove them unless you intend a real external managed-profile override.',
+        }),
+      ],
+    });
+  });
+
+  it('warns when manualLoginProfileDir is set without active manualLogin', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {
+          managedProfileRoot: '/tmp/auracall/browser-profiles',
+        },
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+          browser: {
+            manualLoginProfileDir: '/tmp/external/chatgpt',
+          },
+          services: {
+            grok: {
+              manualLoginProfileDir: '/tmp/external/grok',
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 2,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-service-scoped-escape-hatches-present',
+          severity: 'info',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-manual-login-profile-dir-inactive',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines manualLoginProfileDir without active manualLogin (browser.manualLoginProfileDir, services.grok.manualLoginProfileDir); these paths are inert until manualLogin is explicitly true for the same scope.',
         }),
       ],
     });

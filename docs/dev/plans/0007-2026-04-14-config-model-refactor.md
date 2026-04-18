@@ -203,6 +203,8 @@ Current diagnostic checkpoint:
   - current escape-hatch contract:
     - browser execution overrides still win over service fallback
     - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+    - doctor should also warn when `manualLoginProfileDir` is set without
+      active `manualLogin`, because that path is otherwise inert config noise
     - doctor should treat default-equivalent derived managed-profile paths as
       redundant config noise, not as meaningful overrides
   - `config migrate` may now move those fields automatically only when:

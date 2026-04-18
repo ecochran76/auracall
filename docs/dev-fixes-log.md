@@ -12910,3 +12910,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `llmDefaults.defaultProjectName`, and `llmDefaults.defaultProjectId`
   because bridge output may still backfill all of them from root
   `model` / `browser` defaults when no explicit `llmDefaults` block exists.
+- 2026-04-18: When an escape-hatch path only matters behind an explicit toggle,
+  doctor should say so directly. In this repo,
+  `manualLoginProfileDir` without active `manualLogin` is inert config noise
+  and should surface as a warning instead of looking like live managed-profile
+  behavior.

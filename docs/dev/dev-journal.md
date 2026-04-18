@@ -17363,3 +17363,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     contract inconsistent
   - this closes the remaining read-side ambiguity without changing migration
     or resolver behavior
+## 2026-04-18 - manualLoginProfileDir now warns when it is inert
+
+- Returned to the remaining managed-profile escape-hatch ambiguity in the
+  runtime-profile lane:
+  - added a doctor warning when `manualLoginProfileDir` is present without
+    active `manualLogin` on the same runtime or service scope
+  - added focused config-model and CLI doctor coverage for both browser-scope
+    and service-scope inert path cases
+  - updated the governing/operator docs to state explicitly that
+    `manualLoginProfileDir` is inert unless `manualLogin` is true
+- Reason:
+  - the plan already said that `manualLoginProfileDir` only matters when
+    `manualLogin` is enabled, but the doctor seam was still leaving the
+    ineffective-path case silent
+  - this closes a real runtime-profile ownership gap without widening migrate
+    behavior

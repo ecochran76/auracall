@@ -485,6 +485,8 @@ Within each file, later CLI flags still override config, and environment variabl
 - `services.<service>.interactiveLogin` can set a global login mode default; `runtimeProfiles.<name>.services.<service>.interactiveLogin` overrides it per runtime profile (legacy `manualLogin` still works).
 - `services.<service>.manualLoginProfileDir` (and its per-runtime-profile override) controls the persistent managed browser profile dir used for interactive login.
   - Treat this as an advanced override. The default path is derived from `browser.managedProfileRoot + auracallProfile + service`.
+  - It is only meaningful when `manualLogin` / `interactiveLogin` is enabled
+    for that same scope.
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - `services.<service>.features` holds provider-specific feature flags. Typical keys:
   - `chatgpt`: `web_search`, `deep_research`, `company_knowledge`, `apps`

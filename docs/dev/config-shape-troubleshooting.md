@@ -459,6 +459,21 @@ Action:
 - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
 - narrow their ownership boundary further before automating any rewrite
 
+### `runtime-profile-manual-login-profile-dir-inactive`
+
+Meaning:
+- the AuraCall runtime profile defines `manualLoginProfileDir`, but the same
+  runtime/service scope does not enable `manualLogin`
+
+Action:
+- either set `manualLogin: true` for that same scope or remove the explicit
+  path
+- do not treat the path as active configuration by itself:
+  - it stays inert until `manualLogin` is explicitly true
+  - this can appear on:
+    - `runtimeProfiles.<name>.browser.manualLoginProfileDir`
+    - `runtimeProfiles.<name>.services.<service>.manualLoginProfileDir`
+
 ### `runtime-profile-manual-login-profile-dir-redundant`
 
 Meaning:

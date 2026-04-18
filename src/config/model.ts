@@ -140,6 +140,7 @@ export interface ConfigModelDoctorIssue {
     | 'runtime-profile-service-scoped-overrides-relocatable-present'
     | 'runtime-profile-service-scoped-escape-hatches-present'
     | 'runtime-profile-manual-login-profile-dir-redundant'
+    | 'runtime-profile-manual-login-profile-dir-inactive'
     | 'runtime-profile-service-defaults-redundant'
     | 'unused-browser-profile'
     | 'active-runtime-profile-missing-browser-profile'
@@ -416,6 +417,37 @@ function describeRedundantManagedProfileDirOverrides(
   }
 
   return redundant;
+}
+
+function describeInactiveManagedProfileDirOverrides(runtimeProfile: MutableRuntimeProfile): string[] {
+  const inactive: string[] = [];
+  const runtimeBrowser = isRecord(runtimeProfile.browser) ? runtimeProfile.browser : {};
+  const runtimeBrowserManualLogin =
+    typeof runtimeBrowser.manualLogin === 'boolean' ? runtimeBrowser.manualLogin : null;
+  const runtimeBrowserManualLoginProfileDir =
+    typeof runtimeBrowser.manualLoginProfileDir === 'string' && runtimeBrowser.manualLoginProfileDir.trim().length > 0
+      ? runtimeBrowser.manualLoginProfileDir.trim()
+      : null;
+  if (runtimeBrowserManualLoginProfileDir && runtimeBrowserManualLogin !== true) {
+    inactive.push('browser.manualLoginProfileDir');
+  }
+
+  const profileServices = isRecord(runtimeProfile.services) ? runtimeProfile.services : {};
+  for (const serviceId of ['chatgpt', 'gemini', 'grok'] as const) {
+    const serviceConfig = isRecord(profileServices[serviceId]) ? profileServices[serviceId] : null;
+    if (!serviceConfig) continue;
+    const manualLogin =
+      typeof serviceConfig.manualLogin === 'boolean' ? serviceConfig.manualLogin : null;
+    const manualLoginProfileDir =
+      typeof serviceConfig.manualLoginProfileDir === 'string' && serviceConfig.manualLoginProfileDir.trim().length > 0
+        ? serviceConfig.manualLoginProfileDir.trim()
+        : null;
+    if (manualLoginProfileDir && manualLogin !== true) {
+      inactive.push(`services.${serviceId}.manualLoginProfileDir`);
+    }
+  }
+
+  return inactive;
 }
 
 function describeRedundantRuntimeProfileServiceDefaults(
@@ -1234,6 +1266,15 @@ export function analyzeConfigModelBridgeHealth(
           code: 'runtime-profile-manual-login-profile-dir-redundant',
           severity: 'info',
           message: `AuraCall runtime profile "${name}" still defines default-equivalent managed profile paths (${redundantManagedProfileDirOverrides.join(', ')}); remove them unless you intend a real external managed-profile override.`,
+          auracallRuntimeProfile: name,
+        });
+      }
+      const inactiveManagedProfileDirOverrides = describeInactiveManagedProfileDirOverrides(runtimeProfile);
+      if (inactiveManagedProfileDirOverrides.length > 0) {
+        issues.push({
+          code: 'runtime-profile-manual-login-profile-dir-inactive',
+          severity: 'warning',
+          message: `AuraCall runtime profile "${name}" still defines manualLoginProfileDir without active manualLogin (${inactiveManagedProfileDirOverrides.join(', ')}); these paths are inert until manualLogin is explicitly true for the same scope.`,
           auracallRuntimeProfile: name,
         });
       }

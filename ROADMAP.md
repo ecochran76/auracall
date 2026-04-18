@@ -172,6 +172,8 @@ Current note:
         `projectId`, `conversationName`, and `conversationId`, with
         `manualLogin` / `manualLoginProfileDir` kept separate as managed-profile
         escape hatches
+      - `manualLoginProfileDir` should also be treated as inert unless
+        `manualLogin` is explicitly true for the same runtime/service scope
       - policy decision: that root-browser inventory remains supported
         transitional behavior for now, but it is no longer the preferred
         authoring surface for new config
