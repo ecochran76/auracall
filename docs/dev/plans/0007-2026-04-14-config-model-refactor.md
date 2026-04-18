@@ -346,6 +346,15 @@ Current migration checkpoint:
         `model` / `browser.modelStrategy` / `browser.projectName` /
         `browser.projectId` when no explicit `llmDefaults` block exists
       - explicit `llmDefaults` values still win over that backfill path
+  - compatibility bridge writes now also honor the same target-first
+    authority as read-time dual-read:
+    - when bridge output is requested from mixed-shape input,
+      `browserProfiles` must overwrite stale `browserFamilies`
+    - `runtimeProfiles` must overwrite stale `profiles`
+    - `runtimeProfiles.<name>.browserProfile` must overwrite stale
+      `profiles.<name>.browserFamily`
+    - explicit bridge output should emit bridge-only keys, not preserve mixed
+      target + bridge residue
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

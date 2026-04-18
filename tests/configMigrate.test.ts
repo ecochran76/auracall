@@ -397,6 +397,61 @@ describe('config migrate bridge helpers', () => {
     expect(result.version).toBe(2);
     expect(result.auracallProfile).toBe('consulting');
     expect(result.defaultRuntimeProfile).toBeUndefined();
+    expect(result.browserFamilies?.consulting).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+    });
+    expect(result.profiles?.consulting).toEqual({
+      engine: 'browser',
+      browserFamily: 'consulting',
+      defaultService: 'chatgpt',
+    });
+    expect(result.browserProfiles).toBeUndefined();
+    expect(result.runtimeProfiles).toBeUndefined();
+  });
+
+  it('treats target-shaped definitions as authoritative when writing compatibility bridge output', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        browserFamilies: {
+          consulting: {
+            chromePath: '/bridge/chrome',
+          },
+        },
+        browserProfiles: {
+          consulting: {
+            chromePath: '/target/chrome',
+          },
+        },
+        profiles: {
+          consulting: {
+            engine: 'browser',
+            browserFamily: 'bridge-profile',
+            defaultService: 'chatgpt',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'target-profile',
+            defaultService: 'grok',
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.browserFamilies?.consulting).toEqual({
+      chromePath: '/target/chrome',
+    });
+    expect(result.profiles?.consulting).toEqual({
+      engine: 'browser',
+      browserFamily: 'target-profile',
+      defaultService: 'grok',
+    });
+    expect(result.browserProfiles).toBeUndefined();
+    expect(result.runtimeProfiles).toBeUndefined();
   });
 
   it('backfills llmDefaults project and model defaults from root browser state for compatibility bridge output', () => {

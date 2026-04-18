@@ -12915,3 +12915,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `manualLoginProfileDir` without active `manualLogin` is inert config noise
   and should surface as a warning instead of looking like live managed-profile
   behavior.
+- 2026-04-18: Compatibility bridge writes must follow the same target-first
+  authority as read-time dual-read. In this repo, when `--bridge-shape`
+  materializes output from mixed-shape input, `browserProfiles` and
+  `runtimeProfiles` should overwrite stale bridge copies and emit bridge-only
+  keys instead of preserving mixed-shape residue.

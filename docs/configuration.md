@@ -190,6 +190,10 @@ Target-model note:
   - `browserFamilies` as the browser-profile bridge
 - `profiles` as the AuraCall runtime-profile bridge
 - use `--bridge-shape` when you intentionally want compatibility bridge output
+- when compatibility bridge output is requested from mixed-shape input:
+  - target keys still supply the authoritative values
+  - bridge output rewrites back to bridge-only keys instead of preserving a
+    mixed-shape file
 
 Transitional authoring note:
 - new or cleaned-up service defaults should prefer:

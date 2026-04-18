@@ -541,6 +541,13 @@ Those emit:
 - `profiles`
 - `profiles.<name>.browserFamily`
 
+Bridge-write rule:
+
+- if target-shape keys are also present in the source config, they still win
+  as the authoritative source for compatibility output
+- `--bridge-shape` should emit bridge-only keys, not preserve a mixed-shape
+  file with stale target copies alongside bridge copies
+
 The default target-shape writes emit:
 
 - `browserProfiles`

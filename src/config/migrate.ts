@@ -271,6 +271,52 @@ function pruneEmptyRuntimeProfileServices(runtimeProfiles: Record<string, unknow
   }
 }
 
+function materializeBridgeBrowserProfiles(result: MutableConfig): void {
+  const sourceBrowserProfiles = isRecord(result.browserProfiles)
+    ? (result.browserProfiles as Record<string, unknown>)
+    : isRecord(result.browserFamilies)
+      ? (result.browserFamilies as Record<string, unknown>)
+      : {};
+  if (Object.keys(sourceBrowserProfiles).length === 0) {
+    delete result.browserFamilies;
+    return;
+  }
+  result.browserFamilies = Object.fromEntries(
+    Object.entries(sourceBrowserProfiles).map(([name, browserProfile]) => [
+      name,
+      isRecord(browserProfile) ? { ...browserProfile } : browserProfile,
+    ]),
+  );
+}
+
+function materializeBridgeRuntimeProfiles(result: MutableConfig): void {
+  const sourceRuntimeProfiles = isRecord(result.runtimeProfiles)
+    ? (result.runtimeProfiles as Record<string, unknown>)
+    : isRecord(result.profiles)
+      ? (result.profiles as Record<string, unknown>)
+      : isRecord(result.auracallProfiles)
+        ? (result.auracallProfiles as Record<string, unknown>)
+        : {};
+  if (Object.keys(sourceRuntimeProfiles).length === 0) {
+    delete result.profiles;
+    return;
+  }
+  result.profiles = Object.fromEntries(
+    Object.entries(sourceRuntimeProfiles).map(([name, runtimeProfile]) => {
+      if (!isRecord(runtimeProfile)) {
+        return [name, runtimeProfile];
+      }
+      const nextRuntimeProfile: Record<string, unknown> = { ...runtimeProfile };
+      const browserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfile);
+      if (browserProfileId) {
+        nextRuntimeProfile.browserFamily = browserProfileId;
+      }
+      delete nextRuntimeProfile.browserProfile;
+      return [name, nextRuntimeProfile];
+    }),
+  );
+}
+
 function applyAliasRule(config: MutableConfig, rule: ConfigAliasRule): void {
   const segments = rule.path.split('.');
   const walk = (node: unknown, index: number): void => {
@@ -607,6 +653,11 @@ export function materializeConfigV2(
       result.auracallProfile = defaultRuntimeProfile;
     }
     delete result.defaultRuntimeProfile;
+
+    materializeBridgeBrowserProfiles(result);
+    materializeBridgeRuntimeProfiles(result);
+    delete result.browserProfiles;
+    delete result.runtimeProfiles;
 
     if (isRecord(result.browserFamilies) && isRecord(result.profiles)) {
       normalizeRuntimeProfileBrowserOwnedOverrides({

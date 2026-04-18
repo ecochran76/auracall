@@ -167,6 +167,12 @@ Current note:
       - compatibility bridge output may still backfill those `llmDefaults`
         keys from root `model` / `browser` defaults when no explicit
         `llmDefaults` block exists
+      - compatibility bridge writes should now mirror the same target-first
+        authority as read-time dual-read:
+        - target `browserProfiles` overwrite stale `browserFamilies`
+        - target `runtimeProfiles` overwrite stale `profiles`
+        - bridge output should emit bridge-only keys instead of preserving
+          mixed target + bridge residue
       - current active root-browser service-default inventory is now explicit:
         `modelStrategy`, `thinkingTime`, `composerTool`, `projectName`,
         `projectId`, `conversationName`, and `conversationId`, with

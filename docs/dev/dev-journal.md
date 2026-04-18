@@ -17379,3 +17379,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     ineffective-path case silent
   - this closes a real runtime-profile ownership gap without widening migrate
     behavior
+## 2026-04-18 - compatibility bridge writes now honor target-first authority
+
+- Returned to the remaining mixed-shape writeback ambiguity in `0007`:
+  - updated `materializeConfigV2(..., { targetShape: false })` so bridge
+    output is derived from authoritative target-shape definitions when both
+    shapes are present
+  - bridge output now rewrites back to bridge-only keys instead of preserving
+    mixed target + bridge residue
+  - added focused migrate coverage for:
+    - target-shaped downgrade to clean bridge output
+    - target definitions overwriting stale bridge copies during bridge writes
+  - updated the config umbrella plan, roadmap, operator config docs, and
+    troubleshooting guide to state the target-first bridge-write rule
+- Reason:
+  - the docs already said target keys win on dual-read, but compatibility
+    bridge writes could still preserve stale bridge copies and mixed-shape
+    residue
+  - this closes the remaining precedence/writeback gap without reopening a
+    broader alias-policy rewrite
