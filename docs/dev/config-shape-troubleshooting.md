@@ -129,6 +129,55 @@ Action:
 - keep target-shape if you are intentionally migrating forward
 - otherwise remove the target copy and stay bridge-shaped
 
+### `agent-defaults-runtime-bypass-present`
+
+Meaning:
+- `agents.<name>.defaults` tries to override runtime/browser selection through
+  keys such as:
+  - `defaults.runtimeProfile`
+  - `defaults.browserProfile`
+  - `defaults.browserFamily`
+
+Action:
+- keep runtime/browser selection anchored on:
+  - `agents.<name>.runtimeProfile`
+  - the referenced AuraCall runtime profile
+- remove runtime-selection bypass keys from the agent defaults bag
+- if the agent really needs a different runtime/browser identity, model that
+  as a different AuraCall runtime profile instead of an agent-local bypass
+
+### `agent-defaults-browser-owned-overrides-present`
+
+Meaning:
+- `agents.<name>.defaults` still carries browser/account-bearing override
+  state, such as:
+  - `defaults.browser`
+  - source/bootstrap/cookie path overrides
+  - managed-profile override paths
+  - debug-port or browser lifecycle policy overrides
+
+Action:
+- keep agent defaults focused on workflow specialization, not browser/account
+  identity
+- move browser/account-bearing state down to:
+  - the referenced browser profile
+  - or the referenced AuraCall runtime profile when the setting is still
+    runtime-owned
+- do not use the agent defaults bag as a hidden browser override surface
+
+### `agent-defaults-service-identity-rewire-present`
+
+Meaning:
+- `agents.<name>.defaults` tries to rewire service identity through paths such
+  as:
+  - `defaults.services.<service>.identity`
+
+Action:
+- keep account identity on the referenced AuraCall runtime profile
+- use a different runtime profile if the agent needs a different service
+  identity/account
+- do not treat agent defaults as a hidden account-selection seam
+
 ### `team-role-agent-missing`
 
 Meaning:

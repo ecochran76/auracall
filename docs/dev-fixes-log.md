@@ -12873,3 +12873,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `order` still drives planned step sequencing, duplicate order still falls
   back to deterministic role-id ordering, and `handoffToRole` remains
   advisory metadata rather than a dependency-rewrite mechanism.
+- 2026-04-18: Treat `agents.<name>.defaults` as a bounded workflow-defaults
+  seam, not as a hidden runtime/browser override channel. In this repo,
+  `config doctor` should warn when agent defaults attempt runtime-selection
+  bypass (`defaults.runtimeProfile`, `defaults.browserProfile`,
+  `defaults.browserFamily`), browser/account-bearing overrides (for example
+  `defaults.browser` or managed-profile/cookie path overrides), or service
+  identity rewiring (`defaults.services.<service>.identity`) instead of
+  letting the generic defaults bag erode the agent/runtime/browser boundary.

@@ -366,20 +366,42 @@ Current bounded follow-through at this layer:
 
 - keep root-browser compatibility-alias work in maintenance mode unless a
   later slice explicitly chooses deprecation/reporting scope
-- continue doctor/report hardening for the next compositional layer above
+- continue doctor/report hardening for the next compositional layers above
   runtime profiles:
-  - invalid `teams.<name>.roles.<role>.agent` references should surface
-    explicitly
-  - invalid `teams.<name>.roles.<role>.handoffToRole` references should
-    surface explicitly
-  - ambiguous explicit role ordering and self-handoff should also surface
-    explicitly instead of relying on silent planning tiebreaks
-  - current team-role planning semantics should stay explicit:
-    - explicit role `order` drives sequencing
-    - duplicate order still falls back to a deterministic role-id tiebreak
-    - `handoffToRole` is advisory metadata only for now
-  - role-driven team planning is already real, so those references should not
-    remain silent config drift
+  - agent boundary:
+    - `agents.<name>.defaults` should not silently attempt runtime-selection
+      bypass through:
+      - `defaults.runtimeProfile`
+      - `defaults.browserProfile`
+      - `defaults.browserFamily`
+    - `agents.<name>.defaults` should not silently carry browser/account-owned
+      override state such as:
+      - `defaults.browser`
+      - source/bootstrap/cookie path overrides
+      - managed-profile overrides
+      - debug-port and browser lifecycle policy overrides
+    - `agents.<name>.defaults` should not silently rewire service identity
+      through:
+      - `defaults.services.<service>.identity`
+    - this remains diagnostics-only:
+      - agent workflow defaults are still allowed when they do not mutate
+        browser/account ownership
+      - runtime/browser selection remains anchored on
+        `agents.<name>.runtimeProfile` plus the referenced AuraCall runtime
+        profile
+  - team boundary:
+    - invalid `teams.<name>.roles.<role>.agent` references should surface
+      explicitly
+    - invalid `teams.<name>.roles.<role>.handoffToRole` references should
+      surface explicitly
+    - ambiguous explicit role ordering and self-handoff should also surface
+      explicitly instead of relying on silent planning tiebreaks
+    - current team-role planning semantics should stay explicit:
+      - explicit role `order` drives sequencing
+      - duplicate order still falls back to a deterministic role-id tiebreak
+      - `handoffToRole` is advisory metadata only for now
+    - role-driven team planning is already real, so those references should
+      not remain silent config drift
 
 See:
 

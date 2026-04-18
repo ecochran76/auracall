@@ -218,10 +218,19 @@ Current note:
       - `config show`
       - `profile list`
   - current semantic checkpoint:
-    - the next design question is team execution boundary, not more selection
-      plumbing
-    - the next bounded doctor seam above runtime profiles is team-role
-      integrity:
+    - the next design question is still broader execution/orchestration
+      boundary, not more selection plumbing
+    - the current bounded doctor seams above runtime profiles are now:
+      - agent-default ownership integrity:
+        - `agents.<name>.defaults` should not silently bypass runtime/browser
+          selection
+        - `agents.<name>.defaults` should not silently carry
+          browser/account-bearing override state
+        - `agents.<name>.defaults` should not silently rewire service identity
+        - current posture stays diagnostics-only:
+          - agent workflow defaults remain allowed when they do not mutate
+            browser/account ownership
+      - team-role integrity:
       - `teams.<name>.roles.<role>.agent` should not silently reference a
         missing agent or an agent outside team membership
       - `teams.<name>.roles.<role>.handoffToRole` should not silently point at

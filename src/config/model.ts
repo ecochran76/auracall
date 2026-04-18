@@ -145,6 +145,9 @@ export interface ConfigModelDoctorIssue {
     | 'active-runtime-profile-missing-browser-profile'
     | 'agent-missing-runtime-profile'
     | 'agent-runtime-profile-missing'
+    | 'agent-defaults-runtime-bypass-present'
+    | 'agent-defaults-browser-owned-overrides-present'
+    | 'agent-defaults-service-identity-rewire-present'
     | 'team-agent-missing'
     | 'team-role-agent-missing'
     | 'team-role-agent-not-in-membership'
@@ -210,6 +213,72 @@ const RUNTIME_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
 ]);
 const RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS = new Set(['modelStrategy', 'thinkingTime', 'composerTool']);
 const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manualLoginProfileDir']);
+const AGENT_BROWSER_OWNED_OVERRIDE_KEYS = new Set([
+  'chromePath',
+  'chromeProfile',
+  'profilePath',
+  'profileName',
+  'chromeCookiePath',
+  'cookiePath',
+  'bootstrapCookiePath',
+  'display',
+  'managedProfileRoot',
+  'profileConflictAction',
+  'blockingProfileAction',
+  'manualLogin',
+  'interactiveLogin',
+  'manualLoginProfileDir',
+  'headless',
+  'hideWindow',
+  'keepBrowser',
+  'debugPort',
+  'debugPortStrategy',
+  'debugPortRange',
+  'remoteChrome',
+  'cookieNames',
+  'inlineCookies',
+  'inlineCookiesFile',
+  'allowCookieErrors',
+  'noCookieSync',
+  'cookieSyncWaitMs',
+  'wslChromePreference',
+  'serviceTabLimit',
+  'blankTabLimit',
+  'collapseDisposableWindows',
+]);
+const AGENT_RUNTIME_BYPASS_KEYS = new Set(['runtimeProfile', 'browserProfile', 'browserFamily']);
+
+function describeAgentDefaultsRuntimeBypass(agent: MutableAgent): string[] {
+  const defaults = isRecord(agent.defaults) ? agent.defaults : {};
+  return Object.keys(defaults)
+    .filter((key) => AGENT_RUNTIME_BYPASS_KEYS.has(key))
+    .map((key) => `defaults.${key}`);
+}
+
+function describeAgentDefaultsBrowserOwnedOverrides(agent: MutableAgent): string[] {
+  const defaults = isRecord(agent.defaults) ? agent.defaults : {};
+  const overrides = Object.keys(defaults)
+    .filter((key) => AGENT_BROWSER_OWNED_OVERRIDE_KEYS.has(key))
+    .map((key) => `defaults.${key}`);
+  if (isRecord(defaults.browser)) {
+    overrides.push('defaults.browser');
+  }
+  return overrides;
+}
+
+function describeAgentDefaultsServiceIdentityRewires(agent: MutableAgent): string[] {
+  const defaults = isRecord(agent.defaults) ? agent.defaults : {};
+  const services = isRecord(defaults.services) ? defaults.services : {};
+  const rewires: string[] = [];
+  for (const serviceId of ['chatgpt', 'gemini', 'grok'] as const) {
+    const serviceConfig = isRecord(services[serviceId]) ? services[serviceId] : null;
+    if (!serviceConfig) continue;
+    if (isRecord(serviceConfig.identity)) {
+      rewires.push(`defaults.services.${serviceId}.identity`);
+    }
+  }
+  return rewires;
+}
 
 function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
   const globalBrowser = isRecord((config as MutableRecord).browser) ? ((config as MutableRecord).browser as MutableRecord) : {};
@@ -989,6 +1058,36 @@ export function analyzeConfigModelBridgeHealth(
         message: `Agent "${name}" references missing AuraCall runtime profile "${runtimeProfileId}".`,
         agent: name,
         auracallRuntimeProfile: runtimeProfileId,
+      });
+    }
+
+    const runtimeBypassDefaults = describeAgentDefaultsRuntimeBypass(agent);
+    if (runtimeBypassDefaults.length > 0) {
+      issues.push({
+        code: 'agent-defaults-runtime-bypass-present',
+        severity: 'warning',
+        message: `Agent "${name}" defaults still attempt runtime-selection bypass (${runtimeBypassDefaults.join(', ')}); keep runtime/browser selection anchored on agents.<name>.runtimeProfile and the referenced AuraCall runtime profile instead.`,
+        agent: name,
+      });
+    }
+
+    const browserOwnedDefaults = describeAgentDefaultsBrowserOwnedOverrides(agent);
+    if (browserOwnedDefaults.length > 0) {
+      issues.push({
+        code: 'agent-defaults-browser-owned-overrides-present',
+        severity: 'warning',
+        message: `Agent "${name}" defaults still define browser/account-bearing overrides (${browserOwnedDefaults.join(', ')}); agents may specialize workflow defaults, but browser-owned state belongs on browser profiles or AuraCall runtime profiles.`,
+        agent: name,
+      });
+    }
+
+    const serviceIdentityRewires = describeAgentDefaultsServiceIdentityRewires(agent);
+    if (serviceIdentityRewires.length > 0) {
+      issues.push({
+        code: 'agent-defaults-service-identity-rewire-present',
+        severity: 'warning',
+        message: `Agent "${name}" defaults still rewire service identity (${serviceIdentityRewires.join(', ')}); keep account identity on the referenced AuraCall runtime profile instead of agent-local defaults.`,
+        agent: name,
       });
     }
   }

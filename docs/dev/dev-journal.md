@@ -17254,3 +17254,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     topology
   - the team boundary docs needed to say that directly before any later
     behavior-facing orchestration slice
+## 2026-04-18 - Config doctor now enforces the first bounded agent-default ownership seam
+
+- Moved back up to the broader `0007` queue after parking the team-role
+  sub-lane:
+  - added doctor warnings when `agents.<name>.defaults` tries to bypass
+    runtime/browser selection through:
+    - `defaults.runtimeProfile`
+    - `defaults.browserProfile`
+    - `defaults.browserFamily`
+  - added doctor warnings when `agents.<name>.defaults` carries
+    browser/account-bearing override state such as:
+    - `defaults.browser`
+    - managed-profile override paths
+    - cookie/bootstrap path overrides
+  - added doctor warnings when `agents.<name>.defaults` rewires service
+    identity through:
+    - `defaults.services.<service>.identity`
+  - updated the agent boundary plan, config umbrella plan, roadmap, and
+    troubleshooting docs to make that ownership contract explicit
+- Reason:
+  - the agent schema already exposes a generic `defaults` bag, but the repo
+    had no guardrail preventing it from becoming a hidden runtime/browser
+    bypass surface
+  - this is the highest-value remaining doctor-only ownership seam above
+    runtime profiles that still fits the current `0007` boundary without
+    changing execution semantics

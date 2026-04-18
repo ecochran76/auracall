@@ -934,6 +934,73 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces agent defaults ownership-boundary warnings in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          researcher: {
+            runtimeProfile: 'default',
+            defaults: {
+              runtimeProfile: 'work',
+              browserProfile: 'consulting',
+              browser: {
+                chromePath: '/custom/chrome',
+              },
+              manualLoginProfileDir: '/tmp/manual',
+              services: {
+                chatgpt: {
+                  identity: {
+                    email: 'agent@example.com',
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default', explicitAgentId: 'researcher' },
+    );
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-defaults-runtime-bypass-present',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-defaults-browser-owned-overrides-present',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-defaults-service-identity-rewire-present',
+          agent: 'researcher',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain(
+      '[warning] Agent "researcher" defaults still attempt runtime-selection bypass (defaults.runtimeProfile, defaults.browserProfile); keep runtime/browser selection anchored on agents.<name>.runtimeProfile and the referenced AuraCall runtime profile instead.',
+    );
+    expect(text).toContain(
+      '[warning] Agent "researcher" defaults still define browser/account-bearing overrides (defaults.manualLoginProfileDir, defaults.browser); agents may specialize workflow defaults, but browser-owned state belongs on browser profiles or AuraCall runtime profiles.',
+    );
+    expect(text).toContain(
+      '[warning] Agent "researcher" defaults still rewire service identity (defaults.services.chatgpt.identity); keep account identity on the referenced AuraCall runtime profile instead of agent-local defaults.',
+    );
+  });
+
   it('surfaces ambiguous team role ordering and self-handoff in config doctor output', () => {
     const report = buildConfigDoctorReport(
       {

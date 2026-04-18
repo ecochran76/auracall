@@ -825,6 +825,74 @@ describe('config model helpers', () => {
     });
   });
 
+  it('reports agent defaults that violate the agent ownership boundary through the shared doctor seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      agents: {
+        researcher: {
+          runtimeProfile: 'default',
+          defaults: {
+            runtimeProfile: 'work',
+            browserProfile: 'consulting',
+            browser: {
+              chromePath: '/custom/chrome',
+            },
+            manualLoginProfileDir: '/tmp/manual',
+            services: {
+              chatgpt: {
+                identity: {
+                  email: 'agent@example.com',
+                },
+              },
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 3,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-defaults-runtime-bypass-present',
+          severity: 'warning',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-defaults-browser-owned-overrides-present',
+          severity: 'warning',
+          agent: 'researcher',
+        }),
+        expect.objectContaining({
+          code: 'agent-defaults-service-identity-rewire-present',
+          severity: 'warning',
+          agent: 'researcher',
+        }),
+      ]),
+    });
+  });
+
   it('reports ambiguous team role ordering and self-handoff through the shared doctor seam', () => {
     const config = {
       defaultRuntimeProfile: 'default',

@@ -11,6 +11,12 @@ Lane: P01
   - `docs/dev/plans/0007-2026-04-14-config-model-refactor.md`
 - the current need is stable canonical placement for the agent boundary inside
   that config cluster, not a semantic rewrite of the boundary itself
+- `config doctor` now enforces the first bounded ownership seam on
+  `agents.<name>.defaults`:
+  - runtime-selection bypass inside agent defaults should surface explicitly
+  - browser/account-bearing overrides inside agent defaults should surface
+    explicitly
+  - service identity rewiring inside agent defaults should surface explicitly
 - the old loose path will remain searchable in the legacy archive once the
   canonical plan is wired
 
@@ -108,6 +114,24 @@ Not allowed at the agent layer:
 
 If a future use case needs one of those, it should likely be modeled as a new
 runtime profile, not an agent override.
+
+Current doctor checkpoint:
+- `config doctor` should warn when `agents.<name>.defaults` attempts:
+  - runtime-selection bypass such as:
+    - `defaults.runtimeProfile`
+    - `defaults.browserProfile`
+    - `defaults.browserFamily`
+  - browser/account-bearing overrides such as:
+    - `defaults.browser`
+    - managed-profile or source-profile override paths
+    - cookie/bootstrap path overrides
+    - debug-port and browser lifecycle policy overrides
+  - service identity rewiring such as:
+    - `defaults.services.<service>.identity`
+- this remains diagnostics-only:
+  - agent execution semantics do not change
+  - agent-owned workflow defaults remain allowed when they do not mutate
+    browser/account ownership
 
 ## Team boundary
 
