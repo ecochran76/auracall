@@ -265,6 +265,9 @@ Action:
   active service/conversation-default state, not browser-family state
 - do not expect `config migrate` to rewrite this automatically yet:
   - root `browser` is still a compatibility/defaults surface
+  - the current root-browser service-default inventory is still supported as a
+    transitional live layer
+  - but it is no longer the preferred authoring surface for new config
   - `llmDefaults` still acts as the compatibility bridge for some model and
     project defaults
   - the current active root-browser service-default inventory is:

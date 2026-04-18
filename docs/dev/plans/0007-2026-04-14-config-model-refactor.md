@@ -252,6 +252,14 @@ Current migration checkpoint:
     - root browser config is still a compatibility/defaults surface
     - there is no safe automatic rewrite until the remaining `browser` versus
       `llmDefaults` ownership contract is narrowed further
+    - policy decision:
+      - the current active root-browser service-default inventory remains a
+        supported transitional layer for now
+      - it is not compatibility-only, because the live resolver still uses it
+        directly
+      - it is also not the preferred authoring surface; prefer
+        `services.<service>` or `runtimeProfiles.<name>.services.<service>`
+        for new or cleaned-up config
     - current active root-browser service-default inventory is:
       - `browser.modelStrategy`
       - `browser.thinkingTime`

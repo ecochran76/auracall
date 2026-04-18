@@ -1016,7 +1016,7 @@ describe('config model helpers', () => {
           code: 'global-browser-service-scoped-defaults-present',
           severity: 'info',
           message:
-            'Top-level browser config still defines service/project-scoped defaults (browser.modelStrategy, browser.thinkingTime, browser.projectName, browser.projectId, browser.conversationName, browser.conversationId); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.',
+            'Top-level browser config still defines transitional service/project-scoped defaults (browser.modelStrategy, browser.thinkingTime, browser.projectName, browser.projectId, browser.conversationName, browser.conversationId); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.',
         }),
       ],
     });

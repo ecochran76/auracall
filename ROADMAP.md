@@ -171,6 +171,9 @@ Current note:
         `projectId`, `conversationName`, and `conversationId`, with
         `manualLogin` / `manualLoginProfileDir` kept separate as managed-profile
         escape hatches
+      - policy decision: that root-browser inventory remains supported
+        transitional behavior for now, but it is no longer the preferred
+        authoring surface for new config
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

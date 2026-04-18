@@ -12800,3 +12800,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `modelStrategy`, `thinkingTime`, `composerTool`, `projectName`, `projectId`,
   `conversationName`, and `conversationId`, while `manualLogin` and
   `manualLoginProfileDir` remain separate managed-profile escape hatches.
+- 2026-04-18: Treat that root-browser live service-default inventory as
+  supported transitional behavior, not compatibility-only state. The live
+  resolver still consumes it directly, so the repo should keep it working for
+  now while steering new or cleaned-up config toward
+  `services.<service>` or `runtimeProfiles.<name>.services.<service>`.

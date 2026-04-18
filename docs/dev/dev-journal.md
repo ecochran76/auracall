@@ -17041,3 +17041,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Reason:
   - the repo needed one explicit inventory checkpoint before considering any
     broader precedence change
+## 2026-04-18 - Root browser live service-default layer remains supported transitional behavior
+
+- Continued the active `0007` lane with the policy decision that follows the
+  new inventory checkpoint:
+  - the current root-browser live service-default inventory remains supported
+    transitional behavior for now
+  - it is not compatibility-only, because the live resolver still uses it
+    directly
+  - it is also not the preferred authoring surface; new or cleaned-up config
+    should prefer `services.<service>` or
+    `runtimeProfiles.<name>.services.<service>`
+- Reason:
+  - this gives the repo one explicit stop point before any broader precedence
+    rewrite
