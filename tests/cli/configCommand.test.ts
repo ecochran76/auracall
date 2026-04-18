@@ -934,6 +934,68 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces ambiguous team role ordering and self-handoff in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          orchestrator: { runtimeProfile: 'default' },
+          reviewer: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: {
+            agents: ['orchestrator', 'reviewer'],
+            roles: {
+              orchestrator: {
+                agent: 'orchestrator',
+                order: 1,
+                handoffToRole: 'orchestrator',
+              },
+              reviewer: {
+                agent: 'reviewer',
+                order: 1,
+              },
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'team-role-self-handoff',
+          team: 'ops',
+          role: 'orchestrator',
+          handoffRole: 'orchestrator',
+        }),
+        expect.objectContaining({
+          code: 'team-role-order-duplicate',
+          team: 'ops',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain(
+      '[warning] Team "ops" role "orchestrator" hands off to itself; keep handoff targets role-to-role rather than self-referential.',
+    );
+    expect(text).toContain(
+      '[warning] Team "ops" reuses explicit role order 1 for multiple roles (orchestrator, reviewer); keep role ordering deterministic instead of relying on role-id tiebreaks.',
+    );
+  });
+
   it('surfaces browser-owned runtime profile overrides in config doctor output', () => {
     const report = buildConfigDoctorReport(
       {

@@ -165,6 +165,28 @@ Action:
 - keep handoff references local to the declared team role set so planned
   multi-step team runs do not carry broken role transitions
 
+### `team-role-self-handoff`
+
+Meaning:
+- `teams.<name>.roles.<role>.handoffToRole` points back at the same role
+
+Action:
+- change the handoff target to a different role or remove the handoff target if
+  the role should terminate its own branch of work
+- keep role handoffs directional; do not rely on self-referential handoff
+  targets as implicit stop markers
+
+### `team-role-order-duplicate`
+
+Meaning:
+- multiple roles in the same team reuse the same explicit `order` value
+
+Action:
+- assign distinct explicit role orders when ordering matters
+- do not rely on the current role-id tiebreak in planning as the durable team
+  contract
+- keep the team role sequence intentional and readable to operators
+
 ### `conflicting-runtime-profile-definitions`
 
 Meaning:

@@ -17223,3 +17223,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runtime-profile layer
   - this is a cleaner next `0007` seam than reopening root-browser alias
     reporting churn
+## 2026-04-18 - Config doctor now flags ambiguous team role ordering and self-handoff
+
+- Continued the same bounded team-role integrity lane after reference checks:
+  - added doctor warnings when multiple roles in one team reuse the same
+    explicit `order`
+  - added doctor warnings when a role hands off to itself through
+    `handoffToRole`
+  - updated troubleshooting/governing docs to treat those as planning-shape
+    drift, not harmless formatting detail
+- Reason:
+  - the current role parser silently normalizes duplicate order through
+    role-id tiebreaks
+  - self-handoff targets are a weak planning signal once role-aware handoff
+    metadata is already part of the model
+  - this keeps the slice doctor-only and avoids changing team-run sequencing
+    semantics by accident

@@ -372,6 +372,8 @@ Current bounded follow-through at this layer:
     explicitly
   - invalid `teams.<name>.roles.<role>.handoffToRole` references should
     surface explicitly
+  - ambiguous explicit role ordering and self-handoff should also surface
+    explicitly instead of relying on silent planning tiebreaks
   - role-driven team planning is already real, so those references should not
     remain silent config drift
 

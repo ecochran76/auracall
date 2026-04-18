@@ -226,6 +226,8 @@ Current note:
         missing agent or an agent outside team membership
       - `teams.<name>.roles.<role>.handoffToRole` should not silently point at
         a missing role
+      - explicit duplicate role ordering and self-handoff should not remain
+        silent planning drift either
     - future service-mode runners and parallelism should remain a higher layer,
       not be implied by current team config alone
     - future teams are expected to become the orchestration layer for:

@@ -12862,3 +12862,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   references a missing agent or an agent outside `teams.<name>.agents`, and
   when `handoffToRole` points at a missing role, rather than leaving those
   failures to degrade later into blocked team planning behavior.
+- 2026-04-18: Once team roles participate in planning order and handoff
+  metadata, doctor should also flag planning-shape drift, not just missing
+  references. In this repo, duplicate explicit role `order` values and
+  self-referential `handoffToRole` targets should surface as warnings instead
+  of being normalized silently through role-id tiebreaks or weak handoff
+  semantics.

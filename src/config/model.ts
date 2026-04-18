@@ -148,7 +148,9 @@ export interface ConfigModelDoctorIssue {
     | 'team-agent-missing'
     | 'team-role-agent-missing'
     | 'team-role-agent-not-in-membership'
-    | 'team-role-handoff-role-missing';
+    | 'team-role-handoff-role-missing'
+    | 'team-role-order-duplicate'
+    | 'team-role-self-handoff';
   severity: 'warning' | 'info';
   message: string;
   auracallRuntimeProfile?: string;
@@ -1010,8 +1012,14 @@ export function analyzeConfigModelBridgeHealth(
 
     const roles = isRecord(team) && isRecord(team.roles) ? (team.roles as Record<string, unknown>) : {};
     const roleIds = new Set(Object.keys(roles));
+    const explicitOrders = new Map<number, string[]>();
     for (const [roleId, roleConfig] of Object.entries(roles)) {
       if (!isRecord(roleConfig)) continue;
+      const explicitOrder = Number.isInteger(roleConfig.order) && Number(roleConfig.order) > 0 ? Number(roleConfig.order) : null;
+      if (explicitOrder !== null) {
+        explicitOrders.set(explicitOrder, [...(explicitOrders.get(explicitOrder) ?? []), roleId]);
+      }
+
       const roleAgentId =
         typeof roleConfig.agent === 'string' && roleConfig.agent.trim().length > 0 ? roleConfig.agent.trim() : null;
       if (roleAgentId && !agents[roleAgentId]) {
@@ -1047,7 +1055,26 @@ export function analyzeConfigModelBridgeHealth(
           role: roleId,
           handoffRole: handoffToRoleId,
         });
+      } else if (handoffToRoleId && handoffToRoleId === roleId) {
+        issues.push({
+          code: 'team-role-self-handoff',
+          severity: 'warning',
+          message: `Team "${name}" role "${roleId}" hands off to itself; keep handoff targets role-to-role rather than self-referential.`,
+          team: name,
+          role: roleId,
+          handoffRole: handoffToRoleId,
+        });
       }
+    }
+
+    for (const [order, roleIdsAtOrder] of explicitOrders.entries()) {
+      if (roleIdsAtOrder.length < 2) continue;
+      issues.push({
+        code: 'team-role-order-duplicate',
+        severity: 'warning',
+        message: `Team "${name}" reuses explicit role order ${order} for multiple roles (${roleIdsAtOrder.join(', ')}); keep role ordering deterministic instead of relying on role-id tiebreaks.`,
+        team: name,
+      });
     }
   }
 

@@ -825,6 +825,71 @@ describe('config model helpers', () => {
     });
   });
 
+  it('reports ambiguous team role ordering and self-handoff through the shared doctor seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      agents: {
+        orchestrator: { runtimeProfile: 'default' },
+        reviewer: { runtimeProfile: 'default' },
+      },
+      teams: {
+        ops: {
+          agents: ['orchestrator', 'reviewer'],
+          roles: {
+            orchestrator: {
+              agent: 'orchestrator',
+              order: 1,
+              handoffToRole: 'orchestrator',
+            },
+            reviewer: {
+              agent: 'reviewer',
+              order: 1,
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 2,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'team-role-self-handoff',
+          severity: 'warning',
+          team: 'ops',
+          role: 'orchestrator',
+          handoffRole: 'orchestrator',
+        }),
+        expect.objectContaining({
+          code: 'team-role-order-duplicate',
+          severity: 'warning',
+          team: 'ops',
+        }),
+      ]),
+    });
+  });
+
   it('reports mixed-key and conflicting dual-read diagnostics when target and bridge definitions disagree', () => {
     const config = {
       auracallProfile: 'default',
