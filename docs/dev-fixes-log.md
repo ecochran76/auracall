@@ -12851,3 +12851,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   browser layer as transitional compatibility-alias input, not just generic
   transitional drift, because the preferred service-scoped destination now
   exists for the mirrored CLI paths.
+- 2026-04-18: After the seven-flag dual-write pass and the doctor wording
+  update, treat the root-browser compatibility-alias lane as maintenance-only
+  until a future slice explicitly chooses deprecation or stronger reporting.
+  Do not keep extending this seam by inertia once the compatibility posture is
+  already explicit and test-backed.

@@ -302,6 +302,12 @@ Current migration checkpoint:
         - any future precedence rewrite is therefore blocked on either:
           - narrowing those authoring paths first
           - or explicitly preserving them as supported transitional input
+        - reassessment decision:
+          - the first bounded root-browser alias reconciliation pass is now
+            complete enough
+          - keep this alias surface in maintenance mode for now
+          - do not open deprecation/reporting churn on it unless a later slice
+            explicitly chooses that scope
     - current active root-browser service-default inventory is:
       - `browser.modelStrategy`
       - `browser.thinkingTime`

@@ -221,6 +221,10 @@ Transitional authoring note:
     inputs
 - treat that root-browser surface as a supported compatibility-alias input, not
   as the preferred long-term authoring layer
+- current reassessment:
+  - the first bounded compatibility-alias reconciliation pass is complete
+  - keep this root-browser alias surface stable unless a later slice
+    explicitly chooses deprecation or stronger reporting
 
 Runtime host policy note:
 - `runtime.localActions.shell` defines the host/runtime execution ceiling for

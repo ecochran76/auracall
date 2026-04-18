@@ -17190,3 +17190,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     place those defaults can land
   - the repo needed doctor/reporting language that matches the new alias
     reality before any later deprecation decision
+## 2026-04-18 - Root-browser compatibility-alias sub-lane is now maintenance-only
+
+- Reassessed the just-finished `0007` root-browser alias work after the full
+  seven-flag narrowing batch plus doctor wording reconciliation:
+  - current decision:
+    - this sub-lane is complete enough for now
+    - keep the root-browser alias path stable in maintenance mode
+    - do not open a deprecation/reporting follow-up unless a later slice
+      explicitly chooses that scope
+- Reason:
+  - the preferred service-scoped destination now exists for the mirrored CLI
+    paths
+  - the compatibility-alias posture is already explicit in code, tests, plan
+    text, roadmap text, and operator docs
+  - pushing farther now would be churn without a separately chosen deprecation
+    goal

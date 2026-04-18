@@ -204,6 +204,11 @@ Current note:
             compatibility-alias input
         - do not attempt a precedence rewrite until those authoring paths are
           narrowed or deliberately preserved
+        - reassessment decision:
+          - the first bounded root-browser compatibility-alias pass is now
+            complete enough
+          - keep further alias work in maintenance mode unless a later slice
+            explicitly chooses deprecation/reporting scope
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`
