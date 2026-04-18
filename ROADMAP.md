@@ -200,8 +200,8 @@ Current note:
             `--browser-composer-tool` now also populate the selected
             runtime-profile service block when one concrete default service
             exists
-          - their root-browser mapping still remains for transitional
-            compatibility
+          - their root-browser mapping still remains only as transitional
+            compatibility-alias input
         - do not attempt a precedence rewrite until those authoring paths are
           narrowed or deliberately preserved
   - current team-ready checkpoint:

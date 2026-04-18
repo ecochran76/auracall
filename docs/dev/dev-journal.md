@@ -17175,3 +17175,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - keeping the root-browser mapping preserves compatibility while finishing
     the first bounded CLI narrowing pass for the remaining root-browser
     service-default flags
+## 2026-04-18 - Root browser doctor wording now reflects compatibility-alias status
+
+- Continued the active `0007` lane with the follow-up reconciliation step after
+  the seven-flag dual-write pass:
+  - updated the `global-browser-service-scoped-defaults-present` doctor
+    message to describe the root `browser` service/project keys as
+    transitional compatibility-alias input, not just generic transitional
+    drift
+  - updated the matching config-model and CLI doctor expectations to the same
+    wording
+- Reason:
+  - after the CLI narrowing work, the root-browser layer is no longer the only
+    place those defaults can land
+  - the repo needed doctor/reporting language that matches the new alias
+    reality before any later deprecation decision

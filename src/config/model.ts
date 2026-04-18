@@ -887,7 +887,7 @@ export function analyzeConfigModelBridgeHealth(
     issues.push({
       code: 'global-browser-service-scoped-defaults-present',
       severity: 'info',
-      message: `Top-level browser config still defines transitional service/project-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.`,
+      message: `Top-level browser config still defines transitional compatibility-alias service/project-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults and treat the root browser layer as compatibility input rather than the primary authoring surface.`,
     });
   }
   const llmDefaultsServiceScopedDefaults = describeLlmDefaultsServiceScopedDefaults(config);

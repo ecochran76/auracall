@@ -219,8 +219,8 @@ Transitional authoring note:
     default service exists
   - when no concrete default service exists, they remain root-browser-only
     inputs
-- treat that root-browser surface as supported transitional input, not as the
-  preferred long-term authoring layer
+- treat that root-browser surface as a supported compatibility-alias input, not
+  as the preferred long-term authoring layer
 
 Runtime host policy note:
 - `runtime.localActions.shell` defines the host/runtime execution ceiling for

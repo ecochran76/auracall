@@ -12845,3 +12845,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `runtimeProfiles.<name>.services.<defaultService>` block when one concrete
   default service exists, but keep the existing root-browser mapping as
   transitional input until a later cleanup pass removes it explicitly.
+- 2026-04-18: Once the full seven-flag CLI dual-write path exists, update the
+  root-browser doctor wording to match reality. In this repo,
+  `global-browser-service-scoped-defaults-present` should describe the root
+  browser layer as transitional compatibility-alias input, not just generic
+  transitional drift, because the preferred service-scoped destination now
+  exists for the mirrored CLI paths.
