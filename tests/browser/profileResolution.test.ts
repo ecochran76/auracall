@@ -212,7 +212,7 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
   });
 
-  test('keeps the current root-browser service default inventory ahead of service-scoped defaults', () => {
+  test('prefers service-scoped defaults over the legacy root-browser inventory for service binding', () => {
     const merged = {
       model: 'gpt-5.2',
       services: {
@@ -265,13 +265,13 @@ describe('resolveBrowserProfileResolution', () => {
 
     expect(result.serviceBinding).toMatchObject({
       serviceId: 'chatgpt',
-      projectId: 'g-p-root-project',
-      projectName: 'Root Project',
-      conversationId: 'conv-root',
-      conversationName: 'Root Conversation',
-      modelStrategy: 'current',
-      thinkingTime: 'extended',
-      composerTool: 'canvas',
+      projectId: 'g-p-service-project',
+      projectName: 'Service Project',
+      conversationId: 'conv-service',
+      conversationName: 'Service Conversation',
+      modelStrategy: 'select',
+      thinkingTime: 'light',
+      composerTool: 'deep-research',
     });
   });
 

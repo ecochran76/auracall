@@ -419,8 +419,10 @@ Action:
     - CLI flag mapping still lands project/conversation ids plus browser
       service knobs on the root `browser` block
     - browser-mode docs still expose some legacy root-browser keys directly
-  - any future precedence rewrite is blocked until those authoring paths are
-    either narrowed or explicitly preserved
+  - active service binding now prefers the service-scoped values when both the
+    service-scoped and root-browser copies exist
+  - keep `manualLogin` / `manualLoginProfileDir` outside that rewrite:
+    they still act as browser-execution escape hatches
   - `llmDefaults` still acts as the compatibility bridge for some model and
     project defaults
   - the current active root-browser service-default inventory is:

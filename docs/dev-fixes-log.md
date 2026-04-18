@@ -12924,3 +12924,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runtime-profile bridge once `profiles` or `runtimeProfiles` exist. In this
   repo, keep `auracallProfiles` inspectable and available as a last-resort
   compatibility fallback only, not as the preferred active bridge.
+- 2026-04-18: Once root-browser CLI alias inputs also mirror into
+  `runtimeProfiles.<name>.services.<defaultService>`, active service binding
+  should prefer the service-scoped values over legacy root-browser copies for
+  project, conversation, and browser service knobs. Keep `manualLogin` and
+  `manualLoginProfileDir` out of that rewrite because they remain
+  browser-execution escape hatches.

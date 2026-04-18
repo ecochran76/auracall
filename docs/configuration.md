@@ -227,6 +227,10 @@ Transitional authoring note:
     default service exists
   - when no concrete default service exists, they remain root-browser-only
     inputs
+- active service binding now prefers the service-scoped values when both the
+  service-scoped and root-browser copies exist
+- keep `manualLogin` / `manualLoginProfileDir` separate from that precedence:
+  they remain browser-execution escape hatches
 - treat that root-browser surface as a supported compatibility-alias input, not
   as the preferred long-term authoring layer
 - current reassessment:

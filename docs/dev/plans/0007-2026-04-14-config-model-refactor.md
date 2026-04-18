@@ -301,9 +301,14 @@ Current migration checkpoint:
             concrete default service exists
           - their root-browser mapping remains in place only as transitional
             compatibility-alias input for now
-        - any future precedence rewrite is therefore blocked on either:
-          - narrowing those authoring paths first
-          - or explicitly preserving them as supported transitional input
+        - precedence checkpoint:
+          - those authoring paths are now explicitly preserved as supported
+            transitional input
+          - active service binding should prefer
+            `services.<service>` / `runtimeProfiles.<name>.services.<service>`
+            over the legacy root-browser copies when both exist
+          - keep `manualLogin` / `manualLoginProfileDir` outside that rewrite;
+            they remain browser-execution escape hatches
         - reassessment decision:
           - the first bounded root-browser alias reconciliation pass is now
             complete enough
@@ -321,14 +326,15 @@ Current migration checkpoint:
     - separate managed-profile escape hatches still remain:
       - `browser.manualLogin`
       - `browser.manualLoginProfileDir`
-    - current live resolver precedence still gives:
-      - `browser.projectName`
-      - `browser.projectId`
-      - `browser.conversationName`
-      - `browser.conversationId`
-      priority over service-scoped project/conversation defaults, so this
-      remains a real active ownership seam rather than bridge-output-only
-      noise
+    - current active service-binding precedence should now give:
+      - `services.<service>.projectName`
+      - `services.<service>.projectId`
+      - `services.<service>.conversationName`
+      - `services.<service>.conversationId`
+      - `services.<service>.modelStrategy`
+      - `services.<service>.thinkingTime`
+      - `services.<service>.composerTool`
+      priority over legacy root-browser copies when both exist
   - `llmDefaults` model/project defaults also remain diagnostics-only:
     - `llmDefaults.model`
     - `llmDefaults.modelStrategy`

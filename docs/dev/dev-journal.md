@@ -17417,3 +17417,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     bridge
   - this closes a real active-selection ambiguity without deleting the legacy
     compatibility seam outright
+## 2026-04-18 - service-scoped defaults now beat legacy root-browser copies
+
+- Returned to the remaining root-browser precedence seam in `0007`:
+  - updated service binding resolution so service-scoped values now win over
+    legacy root-browser copies for:
+    - `projectId`
+    - `projectName`
+    - `conversationId`
+    - `conversationName`
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+  - kept `manualLogin` / `manualLoginProfileDir` unchanged as
+    browser-execution escape hatches
+  - updated the focused browser profile-resolution coverage plus the governing
+    and operator docs to state the new precedence clearly
+- Reason:
+  - the CLI alias work already preserved supported root-browser inputs by
+    mirroring them into the service-scoped destination when a concrete default
+    service exists
+  - that made it safe to tighten live precedence toward the service-owned
+    layer without cutting off the compatibility-alias input path

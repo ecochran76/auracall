@@ -214,8 +214,10 @@ Current note:
             exists
           - their root-browser mapping still remains only as transitional
             compatibility-alias input
-        - do not attempt a precedence rewrite until those authoring paths are
-          narrowed or deliberately preserved
+        - active service binding should now prefer the service-scoped values
+          over legacy root-browser copies when both exist
+        - keep `manualLogin` / `manualLoginProfileDir` outside that rewrite;
+          they remain browser-execution escape hatches
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough
