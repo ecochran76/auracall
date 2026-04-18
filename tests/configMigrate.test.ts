@@ -454,6 +454,39 @@ describe('config migrate bridge helpers', () => {
     expect(result.runtimeProfiles).toBeUndefined();
   });
 
+  it('keeps browser-owned keepBrowser on the bridge browser family when writing compatibility output', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+            keepBrowser: true,
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: false },
+    );
+
+    expect(result.browserFamilies?.consulting).toEqual({
+      chromePath: '/usr/bin/google-chrome',
+      keepBrowser: true,
+    });
+    expect(result.profiles?.consulting).toEqual({
+      engine: 'browser',
+      browserFamily: 'consulting',
+      defaultService: 'chatgpt',
+    });
+  });
+
   it('backfills llmDefaults project and model defaults from root browser state for compatibility bridge output', () => {
     const result = materializeConfigV2(
       {

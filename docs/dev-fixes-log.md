@@ -12935,3 +12935,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   authority. In this repo, `browserProfiles.<name>.keepBrowser` should win
   over legacy `runtimeProfiles.<name>.keepBrowser` when both exist, leaving
   the runtime-profile copy as fallback-compatible residue only.
+- 2026-04-18: The matching bridge-shape contract for browser-owned
+  `keepBrowser` stays on the browser-family side. In this repo, when
+  target-shaped config writes compatibility bridge output,
+  `browserProfiles.<name>.keepBrowser` should materialize back onto
+  `browserFamilies.<name>`, not `profiles.<name>`.

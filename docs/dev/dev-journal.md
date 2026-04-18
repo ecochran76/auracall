@@ -17455,3 +17455,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     profile and treats browser-profile values as authoritative during cleanup
   - active resolution needed to match that ownership instead of continuing to
     center the runtime-profile copy
+
+## 2026-04-18 - bridge keepBrowser stays browser-family-owned
+
+- Returned to the matching compatibility bridge seam after validating the live
+  `keepBrowser` precedence rewrite:
+  - added a focused migrate regression proving that target-shaped
+    `browserProfiles.<name>.keepBrowser` materializes back onto
+    `browserFamilies.<name>`, not `profiles.<name>`
+  - updated the matching config-model plan and operator/troubleshooting docs
+    to state that bridge ownership explicitly
+- Reason:
+  - the failed follow-up hypothesis was useful: it exposed that bridge
+    `keepBrowser` already belongs to the browser-family side, and that this
+    contract was worth locking in the test suite instead of leaving implicit

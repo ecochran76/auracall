@@ -345,6 +345,8 @@ Action:
     `runtimeProfiles.<name>.keepBrowser` when both exist
   - runtime-profile `keepBrowser` remains only as fallback residue when no
     browser-profile-level value exists
+- compatibility bridge output keeps that browser-owned field on
+  `browserFamilies.<name>`, not on `profiles.<name>`
 - conflicting runtime-profile values are preserved instead of being rewritten
   silently
 - relocatable service fields such as:

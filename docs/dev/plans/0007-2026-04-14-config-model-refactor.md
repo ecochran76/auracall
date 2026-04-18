@@ -369,6 +369,9 @@ Current migration checkpoint:
     - `runtimeProfiles` must overwrite stale `profiles`
     - `runtimeProfiles.<name>.browserProfile` must overwrite stale
       `profiles.<name>.browserFamily`
+    - browser-owned `keepBrowser` should stay on bridge `browserFamilies`,
+      not drift back onto bridge `profiles`, when target-shaped config already
+      carries it under `browserProfiles.<name>`
     - explicit bridge output should emit bridge-only keys, not preserve mixed
       target + bridge residue
   - legacy `auracallProfiles` now stays a last-resort compatibility fallback
