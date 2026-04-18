@@ -340,6 +340,11 @@ Action:
   - broad launch/browser-family fields from `runtimeProfiles.<name>.browser`
   - runtime-profile `keepBrowser`
 - browser-profile values remain authoritative during cleanup
+- active resolution now also follows that ownership for `keepBrowser`:
+  - `browserProfiles.<name>.keepBrowser` wins over legacy
+    `runtimeProfiles.<name>.keepBrowser` when both exist
+  - runtime-profile `keepBrowser` remains only as fallback residue when no
+    browser-profile-level value exists
 - conflicting runtime-profile values are preserved instead of being rewritten
   silently
 - relocatable service fields such as:

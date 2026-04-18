@@ -12930,3 +12930,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   project, conversation, and browser service knobs. Keep `manualLogin` and
   `manualLoginProfileDir` out of that rewrite because they remain
   browser-execution escape hatches.
+- 2026-04-18: When browser-owned runtime residue already migrates into the
+  referenced browser profile, active resolution should honor the same
+  authority. In this repo, `browserProfiles.<name>.keepBrowser` should win
+  over legacy `runtimeProfiles.<name>.keepBrowser` when both exist, leaving
+  the runtime-profile copy as fallback-compatible residue only.

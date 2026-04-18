@@ -275,6 +275,28 @@ describe('resolveBrowserProfileResolution', () => {
     });
   });
 
+  test('prefers browser-profile keepBrowser over legacy runtime-profile keepBrowser', () => {
+    const result = resolveBrowserProfileResolution({
+      merged: {
+        browserProfiles: {
+          default: {
+            keepBrowser: false,
+          },
+        },
+        browser: {},
+      },
+      profileName: 'default',
+      profile: {
+        browserProfile: 'default',
+        keepBrowser: true,
+      },
+      browser: {},
+    });
+
+    expect(result.profileFamily.keepBrowser).toBe(false);
+    expect(result.launchProfile.keepBrowser).toBe(false);
+  });
+
   test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
     const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
     cleanup.push(managedRoot);

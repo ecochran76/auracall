@@ -467,6 +467,9 @@ Within each file, later CLI flags still override config, and environment variabl
 - On WSL, keep the primary WSL Chrome setup on `runtimeProfiles.default` if you want to reuse the long-lived managed browser profile at `~/.auracall/browser-profiles/default/<service>`.
 - Use family names like `wsl-chrome-2` for secondary WSL account profiles (for example, `consult@polymerconsultingroup.com`) while keeping `default` as primary.
 - Prefer a named `browserProfiles.<name>` block plus `runtimeProfiles.<name>.browserProfile` for runtime/browser-profile wiring instead of teaching raw path wiring as the main pattern.
+- `browserProfiles.<name>.keepBrowser` is now the preferred browser-owned home for keep-open behavior.
+  - when both are present, `browserProfiles.<name>.keepBrowser` wins over legacy `runtimeProfiles.<name>.keepBrowser`
+  - `runtimeProfiles.<name>.keepBrowser` remains fallback-compatible only when no browser-profile value exists
 - Compatibility bridge equivalents are:
   - `browserFamilies.<name>`
   - `profiles.<name>.browserFamily`

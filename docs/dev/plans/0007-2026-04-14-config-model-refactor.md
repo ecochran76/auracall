@@ -168,6 +168,12 @@ Current diagnostic checkpoint:
   - operator guidance now pushes broad browser-owned overrides back toward the
     referenced browser profile layer unless they are intentional advanced
     escape hatches
+  - active `keepBrowser` precedence is now narrowed:
+    - when a runtime profile references a browser profile, the referenced
+      browser profile's `keepBrowser` now wins over legacy
+      `runtimeProfiles.<name>.keepBrowser`
+    - legacy runtime-profile `keepBrowser` remains only as fallback residue
+      when no browser-profile-level value exists
 - `config doctor` now splits service-scoped runtime browser fields into two
   advisory classes when they are still defined under
   `runtimeProfiles.<name>.browser`:
@@ -227,6 +233,10 @@ Current migration checkpoint:
   - existing browser-profile values win
   - conflicting runtime-profile values are preserved in place rather than
     rewritten silently
+  - active resolution now matches that ownership tightening for
+    `keepBrowser`:
+    - `browserProfiles.<name>.keepBrowser` wins over legacy
+      `runtimeProfiles.<name>.keepBrowser` when both exist
   - relocatable service fields such as:
     - `modelStrategy`
     - `thinkingTime`

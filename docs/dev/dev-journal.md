@@ -17439,3 +17439,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     service exists
   - that made it safe to tighten live precedence toward the service-owned
     layer without cutting off the compatibility-alias input path
+
+## 2026-04-18 - browser-profile keepBrowser now beats legacy runtime residue
+
+- Returned to the remaining browser-owned precedence seam in `0007`:
+  - updated browser profile resolution so the referenced
+    `browserProfiles.<name>.keepBrowser` now wins over legacy
+    `runtimeProfiles.<name>.keepBrowser` when both exist
+  - kept runtime-profile `keepBrowser` as fallback-compatible residue only
+    when no browser-profile-level value exists
+  - added focused browser profile-resolution coverage plus matching plan /
+    troubleshooting / operator doc updates
+- Reason:
+  - `config migrate` already hoists `keepBrowser` into the referenced browser
+    profile and treats browser-profile values as authoritative during cleanup
+  - active resolution needed to match that ownership instead of continuing to
+    center the runtime-profile copy

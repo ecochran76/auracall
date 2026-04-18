@@ -338,6 +338,7 @@ export function resolveBrowserProfileResolution(input: {
     ...selectedBrowserProfile,
     ...profileBrowser,
   };
+  const browserProfileKeepBrowser = asBoolean(selectedBrowserProfile.keepBrowser);
   const services = isRecord(merged.services) ? merged.services : {};
   const profileServices = isRecord(profile.services) ? profile.services : {};
 
@@ -397,7 +398,7 @@ export function resolveBrowserProfileResolution(input: {
     profileName,
     browserProfileId,
     defaultService,
-    keepBrowser: asBoolean(profile.keepBrowser),
+    keepBrowser: browserProfileKeepBrowser ?? asBoolean(profile.keepBrowser),
     cacheDefaults,
   };
 

@@ -218,6 +218,12 @@ Current note:
           over legacy root-browser copies when both exist
         - keep `manualLogin` / `manualLoginProfileDir` outside that rewrite;
           they remain browser-execution escape hatches
+        - browser-owned `keepBrowser` should now follow the referenced browser
+          profile first:
+          - `browserProfiles.<name>.keepBrowser` wins over legacy
+            `runtimeProfiles.<name>.keepBrowser`
+          - runtime-profile `keepBrowser` remains fallback residue only when
+            no browser-profile-level value exists
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough
