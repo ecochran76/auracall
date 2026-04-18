@@ -222,6 +222,8 @@ Current note:
       boundary, not more selection plumbing
     - the current bounded doctor seams above runtime profiles are now:
       - agent-default ownership integrity:
+        - non-empty `agents.<name>.defaults` should surface as a placeholder
+          seam so operators do not infer live execution meaning from it
         - `agents.<name>.defaults` should not silently bypass runtime/browser
           selection
         - `agents.<name>.defaults` should not silently carry

@@ -143,6 +143,7 @@ export interface ConfigModelDoctorIssue {
     | 'runtime-profile-service-defaults-redundant'
     | 'unused-browser-profile'
     | 'active-runtime-profile-missing-browser-profile'
+    | 'agent-defaults-placeholder-present'
     | 'agent-missing-runtime-profile'
     | 'agent-runtime-profile-missing'
     | 'agent-defaults-runtime-bypass-present'
@@ -253,6 +254,11 @@ function describeAgentDefaultsRuntimeBypass(agent: MutableAgent): string[] {
   return Object.keys(defaults)
     .filter((key) => AGENT_RUNTIME_BYPASS_KEYS.has(key))
     .map((key) => `defaults.${key}`);
+}
+
+function describeAgentDefaultsPlaceholderKeys(agent: MutableAgent): string[] {
+  const defaults = isRecord(agent.defaults) ? agent.defaults : {};
+  return Object.keys(defaults).sort().map((key) => `defaults.${key}`);
 }
 
 function describeAgentDefaultsBrowserOwnedOverrides(agent: MutableAgent): string[] {
@@ -1058,6 +1064,16 @@ export function analyzeConfigModelBridgeHealth(
         message: `Agent "${name}" references missing AuraCall runtime profile "${runtimeProfileId}".`,
         agent: name,
         auracallRuntimeProfile: runtimeProfileId,
+      });
+    }
+
+    const placeholderDefaults = describeAgentDefaultsPlaceholderKeys(agent);
+    if (placeholderDefaults.length > 0) {
+      issues.push({
+        code: 'agent-defaults-placeholder-present',
+        severity: 'info',
+        message: `Agent "${name}" still defines generic defaults (${placeholderDefaults.join(', ')}); this bag remains execution-inert for now, so do not assume live agent behavior until a typed workflow-defaults contract exists.`,
+        agent: name,
       });
     }
 

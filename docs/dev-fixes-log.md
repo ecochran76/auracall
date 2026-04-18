@@ -12887,3 +12887,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   selection, browser profile resolution, and default service resolution; live
   agent selection still flows only through `agents.<name>.runtimeProfile` and
   the referenced AuraCall runtime profile.
+- 2026-04-18: When a generic placeholder bag remains execution-inert, say so
+  directly in doctor output. In this repo, non-empty
+  `agents.<name>.defaults` should surface as an info-level placeholder seam
+  so operators do not infer live behavior from generic agent-default keys
+  before a typed workflow-defaults contract exists.

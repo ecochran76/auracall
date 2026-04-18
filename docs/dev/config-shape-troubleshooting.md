@@ -146,6 +146,21 @@ Action:
 - if the agent really needs a different runtime/browser identity, model that
   as a different AuraCall runtime profile instead of an agent-local bypass
 
+### `agent-defaults-placeholder-present`
+
+Meaning:
+- `agents.<name>.defaults` is present, but the generic defaults bag still has
+  no typed live execution contract
+
+Action:
+- do not assume placeholder keys inside `agents.<name>.defaults` already
+  affect runtime selection, browser resolution, or active service behavior
+- keep current live agent selection anchored on:
+  - `agents.<name>.runtimeProfile`
+  - the referenced AuraCall runtime profile
+- if you need real live agent-owned defaults, introduce them through an
+  explicit typed contract instead of relying on the generic defaults bag
+
 ### `agent-defaults-browser-owned-overrides-present`
 
 Meaning:

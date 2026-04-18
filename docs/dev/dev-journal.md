@@ -17299,3 +17299,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - current runtime selection still composes only through
     `agents.<name>.runtimeProfile` plus the referenced AuraCall runtime
     profile, so that contract needed an explicit test-backed statement
+## 2026-04-18 - Config doctor now reports generic agent defaults as a placeholder seam
+
+- Continued the same bounded agent sub-lane after locking current inert
+  semantics:
+  - added an info-level doctor warning when `agents.<name>.defaults` is
+    present at all
+  - updated troubleshooting/governing docs to state that this generic bag is
+    still a placeholder seam, not a typed live execution contract
+- Reason:
+  - even without forbidden ownership drift, a non-empty generic defaults bag
+    still implies behavior that the runtime does not currently consume
+  - this warning keeps operators from inferring live semantics from
+    placeholder keys while the repo decides on a future typed agent-defaults
+    surface

@@ -369,6 +369,10 @@ Current bounded follow-through at this layer:
 - continue doctor/report hardening for the next compositional layers above
   runtime profiles:
   - agent boundary:
+    - non-empty `agents.<name>.defaults` should surface as an explicit
+      placeholder seam:
+      - the bag is still execution-inert for now
+      - operators should not infer live behavior from placeholder keys alone
     - `agents.<name>.defaults` should not silently attempt runtime-selection
       bypass through:
       - `defaults.runtimeProfile`

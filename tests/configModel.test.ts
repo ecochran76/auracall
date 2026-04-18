@@ -925,8 +925,13 @@ describe('config model helpers', () => {
         runtimeProfiles: 'target',
         runtimeProfileBrowserProfileReference: 'target',
       },
-      issueCount: 3,
+      issueCount: 4,
       issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-defaults-placeholder-present',
+          severity: 'info',
+          agent: 'researcher',
+        }),
         expect.objectContaining({
           code: 'agent-defaults-runtime-bypass-present',
           severity: 'warning',
@@ -940,6 +945,53 @@ describe('config model helpers', () => {
         expect.objectContaining({
           code: 'agent-defaults-service-identity-rewire-present',
           severity: 'warning',
+          agent: 'researcher',
+        }),
+      ]),
+    });
+  });
+
+  it('reports generic agent defaults as an execution-inert placeholder seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      agents: {
+        researcher: {
+          runtimeProfile: 'default',
+          defaults: {
+            modelStrategy: 'current',
+            projectName: 'placeholder-project',
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: true,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 1,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-defaults-placeholder-present',
+          severity: 'info',
           agent: 'researcher',
         }),
       ]),

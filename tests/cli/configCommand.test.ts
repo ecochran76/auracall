@@ -1001,6 +1001,48 @@ describe('config show helpers', () => {
     );
   });
 
+  it('surfaces generic agent defaults as an execution-inert placeholder seam in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          researcher: {
+            runtimeProfile: 'default',
+            defaults: {
+              modelStrategy: 'current',
+              projectName: 'placeholder-project',
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default', explicitAgentId: 'researcher' },
+    );
+
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'agent-defaults-placeholder-present',
+          agent: 'researcher',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain(
+      '[info] Agent "researcher" still defines generic defaults (defaults.modelStrategy, defaults.projectName); this bag remains execution-inert for now, so do not assume live agent behavior until a typed workflow-defaults contract exists.',
+    );
+  });
+
   it('surfaces ambiguous team role ordering and self-handoff in config doctor output', () => {
     const report = buildConfigDoctorReport(
       {

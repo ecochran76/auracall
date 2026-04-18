@@ -122,6 +122,10 @@ If a future use case needs one of those, it should likely be modeled as a new
 runtime profile, not an agent override.
 
 Current doctor checkpoint:
+- `config doctor` should also report when `agents.<name>.defaults` is present
+  at all:
+  - the generic defaults bag is still a placeholder seam
+  - it does not currently imply live execution behavior by itself
 - `config doctor` should warn when `agents.<name>.defaults` attempts:
   - runtime-selection bypass such as:
     - `defaults.runtimeProfile`
