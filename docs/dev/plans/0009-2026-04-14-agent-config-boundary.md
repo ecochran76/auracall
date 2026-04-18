@@ -17,6 +17,12 @@ Lane: P01
   - browser/account-bearing overrides inside agent defaults should surface
     explicitly
   - service identity rewiring inside agent defaults should surface explicitly
+- current execution semantics remain intentionally narrow:
+  - `agents.<name>.defaults` is still parsed as a generic bag
+  - but runtime selection and default service resolution still ignore it
+  - live agent selection still flows only through:
+    - `agents.<name>.runtimeProfile`
+    - the referenced AuraCall runtime profile
 - the old loose path will remain searchable in the legacy archive once the
   canonical plan is wired
 
@@ -132,6 +138,9 @@ Current doctor checkpoint:
   - agent execution semantics do not change
   - agent-owned workflow defaults remain allowed when they do not mutate
     browser/account ownership
+  - the generic `defaults` bag is not yet a live typed execution contract:
+    - keep future workflow-default work explicit and bounded instead of
+      implying current execution semantics from placeholder keys
 
 ## Team boundary
 

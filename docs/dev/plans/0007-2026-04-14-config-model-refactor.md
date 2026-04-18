@@ -389,6 +389,8 @@ Current bounded follow-through at this layer:
       - runtime/browser selection remains anchored on
         `agents.<name>.runtimeProfile` plus the referenced AuraCall runtime
         profile
+      - the generic agent defaults bag is still execution-inert for runtime
+        selection and default service resolution
   - team boundary:
     - invalid `teams.<name>.roles.<role>.agent` references should surface
       explicitly

@@ -12881,3 +12881,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `defaults.browser` or managed-profile/cookie path overrides), or service
   identity rewiring (`defaults.services.<service>.identity`) instead of
   letting the generic defaults bag erode the agent/runtime/browser boundary.
+- 2026-04-18: Keep current agent-default execution semantics explicit until a
+  later agent-design slice introduces a typed live workflow-defaults surface.
+  In this repo, `agents.<name>.defaults` is still execution-inert for runtime
+  selection, browser profile resolution, and default service resolution; live
+  agent selection still flows only through `agents.<name>.runtimeProfile` and
+  the referenced AuraCall runtime profile.

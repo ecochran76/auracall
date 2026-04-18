@@ -230,6 +230,8 @@ Current note:
         - current posture stays diagnostics-only:
           - agent workflow defaults remain allowed when they do not mutate
             browser/account ownership
+          - the generic agent defaults bag is still execution-inert for
+            runtime selection and default service resolution
       - team-role integrity:
       - `teams.<name>.roles.<role>.agent` should not silently reference a
         missing agent or an agent outside team membership

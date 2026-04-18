@@ -17280,3 +17280,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this is the highest-value remaining doctor-only ownership seam above
     runtime profiles that still fits the current `0007` boundary without
     changing execution semantics
+## 2026-04-18 - Agent defaults remain execution-inert after the ownership warnings
+
+- Followed the new doctor warnings with a semantics-lock checkpoint instead of
+  implying more live agent-default behavior than the repo actually has:
+  - added focused config-model coverage proving that
+    `agents.<name>.defaults` does not affect:
+    - runtime selection
+    - browser profile resolution
+    - default service resolution
+  - updated the agent boundary plan, config umbrella plan, and roadmap to say
+    directly that the generic agent defaults bag is still execution-inert for
+    this seam
+- Reason:
+  - the repo now warns on forbidden agent-default ownership drift, but that
+    alone could still leave operators thinking the remaining defaults bag has
+    live execution meaning
+  - current runtime selection still composes only through
+    `agents.<name>.runtimeProfile` plus the referenced AuraCall runtime
+    profile, so that contract needed an explicit test-backed statement
