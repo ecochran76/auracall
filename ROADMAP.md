@@ -166,6 +166,11 @@ Current note:
       - compatibility bridge output may still backfill those `llmDefaults`
         keys from root `model` / `browser` defaults when no explicit
         `llmDefaults` block exists
+      - current active root-browser service-default inventory is now explicit:
+        `modelStrategy`, `thinkingTime`, `composerTool`, `projectName`,
+        `projectId`, `conversationName`, and `conversationId`, with
+        `manualLogin` / `manualLoginProfileDir` kept separate as managed-profile
+        escape hatches
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

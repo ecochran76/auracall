@@ -17021,3 +17021,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     precedence over service-scoped conversation defaults
   - that makes them active ownership drift on the root browser block, not just
     inert compatibility residue
+## 2026-04-18 - Root browser live service-default inventory is now explicit
+
+- Continued the active `0007` lane with one bounded inventory pass instead of
+  another behavior change:
+  - the current active root-browser service-default inventory is now recorded
+    explicitly as:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+    - `projectName`
+    - `projectId`
+    - `conversationName`
+    - `conversationId`
+  - `manualLogin` and `manualLoginProfileDir` remain separate managed-profile
+    escape hatches
+  - added one resolver regression proving that the current root-browser
+    inventory still wins over service-scoped defaults in live resolution
+- Reason:
+  - the repo needed one explicit inventory checkpoint before considering any
+    broader precedence change

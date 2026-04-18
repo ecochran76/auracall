@@ -12794,3 +12794,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   service-scoped conversation defaults, so doctor should treat them as active
   root-browser ownership drift, not browser-family state or inert
   compatibility residue.
+- 2026-04-18: Keep the current root-browser live service-default inventory
+  explicit before attempting any broader precedence rewrite. Under the current
+  resolver, the active root-browser service-default layer is:
+  `modelStrategy`, `thinkingTime`, `composerTool`, `projectName`, `projectId`,
+  `conversationName`, and `conversationId`, while `manualLogin` and
+  `manualLoginProfileDir` remain separate managed-profile escape hatches.

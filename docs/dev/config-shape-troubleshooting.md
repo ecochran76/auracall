@@ -267,6 +267,17 @@ Action:
   - root `browser` is still a compatibility/defaults surface
   - `llmDefaults` still acts as the compatibility bridge for some model and
     project defaults
+  - the current active root-browser service-default inventory is:
+    - `modelStrategy`
+    - `thinkingTime`
+    - `composerTool`
+    - `projectName`
+    - `projectId`
+    - `conversationName`
+    - `conversationId`
+  - keep `manualLogin` / `manualLoginProfileDir` separate from that inventory:
+    they remain managed-profile escape hatches rather than normal
+    service-default state
 
 ### `llm-defaults-service-scoped-defaults-present`
 

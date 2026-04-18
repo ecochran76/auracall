@@ -212,6 +212,69 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
   });
 
+  test('keeps the current root-browser service default inventory ahead of service-scoped defaults', () => {
+    const merged = {
+      model: 'gpt-5.2',
+      services: {
+        chatgpt: { url: 'https://chatgpt.com/' },
+      },
+      browser: {
+        target: 'chatgpt',
+        projectId: 'g-p-root-project',
+        projectName: 'Root Project',
+        conversationId: 'conv-root',
+        conversationName: 'Root Conversation',
+        modelStrategy: 'current',
+        thinkingTime: 'extended',
+        composerTool: 'canvas',
+      },
+    };
+
+    const profile = {
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          projectId: 'g-p-service-project',
+          projectName: 'Service Project',
+          conversationId: 'conv-service',
+          conversationName: 'Service Conversation',
+          modelStrategy: 'select',
+          thinkingTime: 'light',
+          composerTool: 'deep-research',
+        },
+      },
+    };
+
+    const browser = {
+      target: 'chatgpt',
+      projectId: 'g-p-root-project',
+      projectName: 'Root Project',
+      conversationId: 'conv-root',
+      conversationName: 'Root Conversation',
+      modelStrategy: 'current',
+      thinkingTime: 'extended',
+      composerTool: 'canvas',
+    };
+
+    const result = resolveBrowserProfileResolution({
+      merged,
+      profileName: 'default',
+      profile,
+      browser,
+    });
+
+    expect(result.serviceBinding).toMatchObject({
+      serviceId: 'chatgpt',
+      projectId: 'g-p-root-project',
+      projectName: 'Root Project',
+      conversationId: 'conv-root',
+      conversationName: 'Root Conversation',
+      modelStrategy: 'current',
+      thinkingTime: 'extended',
+      composerTool: 'canvas',
+    });
+  });
+
   test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
     const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
     cleanup.push(managedRoot);

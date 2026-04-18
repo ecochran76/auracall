@@ -252,6 +252,17 @@ Current migration checkpoint:
     - root browser config is still a compatibility/defaults surface
     - there is no safe automatic rewrite until the remaining `browser` versus
       `llmDefaults` ownership contract is narrowed further
+    - current active root-browser service-default inventory is:
+      - `browser.modelStrategy`
+      - `browser.thinkingTime`
+      - `browser.composerTool`
+      - `browser.projectName`
+      - `browser.projectId`
+      - `browser.conversationName`
+      - `browser.conversationId`
+    - separate managed-profile escape hatches still remain:
+      - `browser.manualLogin`
+      - `browser.manualLoginProfileDir`
     - current live resolver precedence still gives:
       - `browser.projectName`
       - `browser.projectId`
