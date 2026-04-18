@@ -12812,3 +12812,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `browser.thinkingTime` and `browser.manualLoginProfileDir`. Any future
   precedence rewrite is therefore blocked on narrowing or explicitly
   preserving those authoring paths.
+- 2026-04-18: Keep the current CLI service/project flags explicit while the
+  root-browser layer remains transitional. Under the current resolver
+  contract, `--project-id`, `--project-name`, `--conversation-id`,
+  `--conversation-name`, `--browser-model-strategy`,
+  `--browser-thinking-time`, and `--browser-composer-tool` are still
+  supported transitional inputs on the root `browser` block. Lock that with
+  focused resolver coverage before attempting any CLI remap.

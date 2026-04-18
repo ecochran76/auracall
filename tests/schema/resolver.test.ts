@@ -107,6 +107,48 @@ describe('Config Resolver', () => {
     expect(result.browser.projectId).toBe('CLI_ID');
   });
 
+  it('should keep current browser service-scope CLI flags on the transitional root browser layer', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        model: 'gpt-5.2-pro',
+        browser: {
+          projectName: 'Config Project',
+          conversationId: 'config-conversation',
+          modelStrategy: 'select',
+          thinkingTime: 'light',
+          composerTool: 'web-search',
+        },
+        services: {
+          chatgpt: {
+            url: 'https://chatgpt.com/',
+            projectName: 'Service Project',
+            conversationId: 'service-conversation',
+            modelStrategy: 'current',
+            thinkingTime: 'heavy',
+            composerTool: 'deep-search',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      projectName: 'CLI Project',
+      conversationId: 'cli-conversation',
+      browserModelStrategy: 'ignore',
+      browserThinkingTime: 'extended',
+      browserComposerTool: 'canvas',
+    });
+
+    expect(result.browser.projectName).toBe('CLI Project');
+    expect(result.browser.conversationId).toBe('cli-conversation');
+    expect(result.browser.modelStrategy).toBe('ignore');
+    expect(result.browser.thinkingTime).toBe('extended');
+    expect(result.browser.composerTool).toBe('canvas');
+  });
+
   it('should apply selected v2 profile browser overrides over browserDefaults', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {

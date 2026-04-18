@@ -276,6 +276,16 @@ Current migration checkpoint:
             as:
             - `browser.thinkingTime`
             - `browser.manualLoginProfileDir`
+        - current classification:
+          - the following CLI flags remain supported transitional input on the
+            root `browser` block for now:
+            - `--project-id`
+            - `--project-name`
+            - `--conversation-id`
+            - `--conversation-name`
+            - `--browser-model-strategy`
+            - `--browser-thinking-time`
+            - `--browser-composer-tool`
         - any future precedence rewrite is therefore blocked on either:
           - narrowing those authoring paths first
           - or explicitly preserving them as supported transitional input

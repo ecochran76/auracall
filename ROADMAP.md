@@ -180,6 +180,15 @@ Current note:
           - CLI flag mapping for project/conversation ids and browser service
             knobs
           - browser-mode docs that still document legacy root-browser keys
+        - current CLI classification keeps these flags as supported
+          transitional root-browser inputs for now:
+          - `--project-id`
+          - `--project-name`
+          - `--conversation-id`
+          - `--conversation-name`
+          - `--browser-model-strategy`
+          - `--browser-thinking-time`
+          - `--browser-composer-tool`
         - do not attempt a precedence rewrite until those authoring paths are
           narrowed or deliberately preserved
   - current team-ready checkpoint:

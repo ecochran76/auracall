@@ -204,6 +204,8 @@ Transitional authoring note:
   - `--browser-model-strategy`
   - `--browser-thinking-time`
   - `--browser-composer-tool`
+- those CLI flags are still intentionally classified as supported transitional
+  root-browser inputs under the current resolver contract
 - treat that root-browser surface as supported transitional input, not as the
   preferred long-term authoring layer
 

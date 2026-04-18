@@ -17079,3 +17079,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this closes the gap between policy and actual operator exposure
   - any future precedence rewrite is still blocked until those authoring paths
     are narrowed or explicitly preserved
+## 2026-04-18 - Root-browser CLI service-default flags remain explicitly transitional
+
+- Continued the active `0007` lane with one bounded CLI classification
+  checkpoint:
+  - added resolver coverage confirming that current CLI service/project flags
+    still land on the root `browser` block rather than being silently
+    rehomed:
+    - `--project-name`
+    - `--conversation-id`
+    - `--browser-model-strategy`
+    - `--browser-thinking-time`
+    - `--browser-composer-tool`
+  - recorded those flags as supported transitional root-browser inputs in the
+    active plan and roadmap docs
+- Reason:
+  - this gives the repo one explicit execution-facing stop point before any
+    CLI narrowing work
+  - future precedence or mapping changes can now be evaluated against a
+    test-backed current contract instead of inference
