@@ -228,6 +228,10 @@ Current note:
         a missing role
       - explicit duplicate role ordering and self-handoff should not remain
         silent planning drift either
+      - current planner semantics remain intentionally narrow:
+        - explicit role `order` still drives sequencing
+        - `handoffToRole` remains advisory metadata, not dependency rewrite
+          policy
     - future service-mode runners and parallelism should remain a higher layer,
       not be implied by current team config alone
     - future teams are expected to become the orchestration layer for:

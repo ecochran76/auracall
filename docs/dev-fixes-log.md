@@ -12868,3 +12868,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   self-referential `handoffToRole` targets should surface as warnings instead
   of being normalized silently through role-id tiebreaks or weak handoff
   semantics.
+- 2026-04-18: Keep current team-role topology semantics explicit until a later
+  orchestration slice changes them deliberately. In this repo, explicit role
+  `order` still drives planned step sequencing, duplicate order still falls
+  back to deterministic role-id ordering, and `handoffToRole` remains
+  advisory metadata rather than a dependency-rewrite mechanism.

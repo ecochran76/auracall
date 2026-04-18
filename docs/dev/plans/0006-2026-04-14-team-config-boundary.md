@@ -176,6 +176,19 @@ That does not mean:
 - parallel execution is implied
 - current internal step-builder defaults are the final product meaning of `team`
 
+Current role-planning policy in this CLI-era checkpoint:
+
+- explicit role `order` currently drives planned step sequencing
+- when explicit role order ties, current planning stays deterministic through a
+  role-id tiebreak
+- `handoffToRole` is currently advisory metadata carried into planned step and
+  handoff payloads
+- `handoffToRole` does not currently rewrite planned dependency edges or step
+  order by itself
+
+That policy should remain explicit until a later slice deliberately chooses
+behavior-facing team orchestration semantics.
+
 ## Future service/runners boundary
 
 Aura-Call is expected to gain a service mode with runners and parallelism after

@@ -17239,3 +17239,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     metadata is already part of the model
   - this keeps the slice doctor-only and avoids changing team-run sequencing
     semantics by accident
+## 2026-04-18 - Team role handoff topology remains advisory-only for now
+
+- Reassessed the next step after the team-role doctor warnings instead of
+  changing planner behavior by momentum:
+  - locked current team-run planning semantics with focused tests
+  - documented that explicit role `order` still drives sequencing
+  - documented that duplicate explicit order still falls back to deterministic
+    role-id ordering
+  - documented that `handoffToRole` remains advisory metadata for now and does
+    not rewrite dependency edges by itself
+- Reason:
+  - the live planner still derives dependencies from step order, not role
+    topology
+  - the team boundary docs needed to say that directly before any later
+    behavior-facing orchestration slice

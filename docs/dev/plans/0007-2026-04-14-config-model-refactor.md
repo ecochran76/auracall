@@ -374,6 +374,10 @@ Current bounded follow-through at this layer:
     surface explicitly
   - ambiguous explicit role ordering and self-handoff should also surface
     explicitly instead of relying on silent planning tiebreaks
+  - current team-role planning semantics should stay explicit:
+    - explicit role `order` drives sequencing
+    - duplicate order still falls back to a deterministic role-id tiebreak
+    - `handoffToRole` is advisory metadata only for now
   - role-driven team planning is already real, so those references should not
     remain silent config drift
 

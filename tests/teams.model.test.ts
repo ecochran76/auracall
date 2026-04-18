@@ -673,6 +673,116 @@ describe('team run model helpers', () => {
     });
   });
 
+  it('treats handoffToRole as advisory metadata and keeps sequencing driven by explicit role order', () => {
+    const taskRunSpec = createTaskRunSpec({
+      id: 'task_vibe_topology_1',
+      teamId: 'vibe-code',
+      title: 'Lock current team role planning semantics',
+      objective: 'Confirm role handoff metadata does not rewrite planned step order.',
+      createdAt: '2026-04-18T00:00:00.000Z',
+    });
+
+    const bundle = createTeamRunBundleFromConfigTaskRunSpec({
+      config: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          orchestrator: { runtimeProfile: 'default' },
+          engineer: { runtimeProfile: 'default' },
+          reviewer: { runtimeProfile: 'default' },
+        },
+        teams: {
+          'vibe-code': {
+            agents: ['orchestrator', 'engineer', 'reviewer'],
+            roles: {
+              orchestrator: {
+                agent: 'orchestrator',
+                order: 1,
+                handoffToRole: 'reviewer',
+              },
+              engineer: {
+                agent: 'engineer',
+                order: 2,
+              },
+              reviewer: {
+                agent: 'reviewer',
+                order: 3,
+              },
+            },
+          },
+        },
+      },
+      teamId: 'vibe-code',
+      runId: 'run_task_topology_1',
+      createdAt: '2026-04-18T00:00:00.000Z',
+      taskRunSpec,
+    });
+
+    expect(bundle.steps.map((step) => step.agentId)).toEqual(['orchestrator', 'engineer', 'reviewer']);
+    expect(bundle.steps.map((step) => step.dependsOnStepIds)).toEqual([
+      [],
+      ['run_task_topology_1:step:1'],
+      ['run_task_topology_1:step:2'],
+    ]);
+    expect(bundle.steps[0]?.input.structuredData).toMatchObject({
+      roleId: 'orchestrator',
+      handoffToRoleId: 'reviewer',
+    });
+  });
+
+  it('keeps duplicate explicit role order deterministic through role-id tiebreaks', () => {
+    const taskRunSpec = createTaskRunSpec({
+      id: 'task_vibe_order_1',
+      teamId: 'vibe-code',
+      title: 'Lock duplicate role-order fallback',
+      objective: 'Confirm duplicate explicit role order still uses role-id tiebreaks.',
+      createdAt: '2026-04-18T00:00:00.000Z',
+    });
+
+    const bundle = createTeamRunBundleFromConfigTaskRunSpec({
+      config: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          alphaAgent: { runtimeProfile: 'default' },
+          betaAgent: { runtimeProfile: 'default' },
+        },
+        teams: {
+          'vibe-code': {
+            agents: ['alphaAgent', 'betaAgent'],
+            roles: {
+              beta: {
+                agent: 'betaAgent',
+                order: 1,
+              },
+              alpha: {
+                agent: 'alphaAgent',
+                order: 1,
+              },
+            },
+          },
+        },
+      },
+      teamId: 'vibe-code',
+      runId: 'run_task_order_1',
+      createdAt: '2026-04-18T00:00:00.000Z',
+      taskRunSpec,
+    });
+
+    expect(bundle.steps.map((step) => step.agentId)).toEqual(['alphaAgent', 'betaAgent']);
+    expect(bundle.steps.map((step) => step.input.structuredData.roleId)).toEqual(['alpha', 'beta']);
+  });
+
   it('applies task-aware agent filters, prompt overrides, structured context, and service constraints during planning', () => {
     const taskRunSpec = createTaskRunSpec({
       id: 'task_vibe_4',
