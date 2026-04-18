@@ -12788,3 +12788,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   The live resolver still gives those root browser project keys precedence
   over service-scoped project defaults, so doctor should flag them as active
   ownership drift, not just bridge-output residue.
+- 2026-04-18: Apply that same ownership rule to root
+  `browser.conversationName` and `browser.conversationId`. The live resolver
+  still gives those root browser conversation keys precedence over
+  service-scoped conversation defaults, so doctor should treat them as active
+  root-browser ownership drift, not browser-family state or inert
+  compatibility residue.

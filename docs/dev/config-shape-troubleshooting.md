@@ -252,6 +252,8 @@ Meaning:
   - `browser.composerTool`
   - `browser.projectName`
   - `browser.projectId`
+  - `browser.conversationName`
+  - `browser.conversationId`
 
 Action:
 - keep the root `browser` block focused on generic browser automation behavior
@@ -259,6 +261,8 @@ Action:
   for these service knobs
 - treat `browser.projectName` / `browser.projectId` as the same misplaced root
   service/project-default seam, not as browser-family state
+- treat `browser.conversationName` / `browser.conversationId` the same way:
+  active service/conversation-default state, not browser-family state
 - do not expect `config migrate` to rewrite this automatically yet:
   - root `browser` is still a compatibility/defaults surface
   - `llmDefaults` still acts as the compatibility bridge for some model and

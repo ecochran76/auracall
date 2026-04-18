@@ -17007,3 +17007,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `browser.projectId` precedence over service-scoped project defaults
   - that makes them active ownership-seam state, not just compatibility-write
     residue
+## 2026-04-18 - Config doctor now includes root browser conversation defaults in the misplaced root-browser seam
+
+- Continued the active `0007` lane with the matching conversation-level
+  ownership checkpoint:
+  - `config doctor` now also treats:
+    - `browser.conversationName`
+    - `browser.conversationId`
+    as part of the same misplaced top-level browser service/conversation
+    default seam
+- Reason:
+  - the live resolver still gives those root browser conversation keys
+    precedence over service-scoped conversation defaults
+  - that makes them active ownership drift on the root browser block, not just
+    inert compatibility residue

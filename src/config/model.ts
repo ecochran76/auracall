@@ -207,7 +207,14 @@ const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manual
 function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
   const globalBrowser = isRecord((config as MutableRecord).browser) ? ((config as MutableRecord).browser as MutableRecord) : {};
   return Object.keys(globalBrowser)
-    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key) || key === 'projectName' || key === 'projectId')
+    .filter(
+      (key) =>
+        RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key) ||
+        key === 'projectName' ||
+        key === 'projectId' ||
+        key === 'conversationId' ||
+        key === 'conversationName',
+    )
     .map((key) => `browser.${key}`);
 }
 

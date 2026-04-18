@@ -185,6 +185,8 @@ Current diagnostic checkpoint:
       browser-family state
     - `browser.projectName` and `browser.projectId` are also legacy global
       service/project defaults, not browser-family state
+    - `browser.conversationName` and `browser.conversationId` are also legacy
+      global service/conversation defaults, not browser-family state
     - doctor should flag those keys under the top-level `browser` block as
       misplaced service/project-scoped defaults
     - `llmDefaults` remains a compatibility bridge for model/project defaults
@@ -253,8 +255,11 @@ Current migration checkpoint:
     - current live resolver precedence still gives:
       - `browser.projectName`
       - `browser.projectId`
-      priority over service-scoped project defaults, so this remains a real
-      active ownership seam rather than bridge-output-only noise
+      - `browser.conversationName`
+      - `browser.conversationId`
+      priority over service-scoped project/conversation defaults, so this
+      remains a real active ownership seam rather than bridge-output-only
+      noise
   - `llmDefaults` model/project defaults also remain diagnostics-only:
     - `llmDefaults.modelStrategy`
     - `llmDefaults.defaultProjectName`
