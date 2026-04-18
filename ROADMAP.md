@@ -196,6 +196,10 @@ Current note:
           - `--conversation-id` and `--conversation-name` now also populate
             the selected runtime-profile service block when one concrete
             default service exists
+          - `--browser-model-strategy`, `--browser-thinking-time`, and
+            `--browser-composer-tool` now also populate the selected
+            runtime-profile service block when one concrete default service
+            exists
           - their root-browser mapping still remains for transitional
             compatibility
         - do not attempt a precedence rewrite until those authoring paths are

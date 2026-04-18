@@ -293,6 +293,10 @@ Current migration checkpoint:
           - `--conversation-id` and `--conversation-name` now also mirror into
             the selected `runtimeProfiles.<name>.services.<defaultService>`
             block when one concrete default service exists
+          - `--browser-model-strategy`, `--browser-thinking-time`, and
+            `--browser-composer-tool` now also mirror into the selected
+            `runtimeProfiles.<name>.services.<defaultService>` block when one
+            concrete default service exists
           - their root-browser mapping remains in place as transitional input
             for now
         - any future precedence rewrite is therefore blocked on either:

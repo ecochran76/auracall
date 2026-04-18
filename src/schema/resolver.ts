@@ -195,7 +195,18 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   const projectName = asNonEmptyString((cliOptions as MutableConfig).projectName);
   const conversationId = asNonEmptyString((cliOptions as MutableConfig).conversationId);
   const conversationName = asNonEmptyString((cliOptions as MutableConfig).conversationName);
-  if (!projectId && !projectName && !conversationId && !conversationName) return;
+  const modelStrategy = asNonEmptyString((cliOptions as MutableConfig).browserModelStrategy);
+  const thinkingTime = asNonEmptyString((cliOptions as MutableConfig).browserThinkingTime);
+  const composerTool = asNonEmptyString((cliOptions as MutableConfig).browserComposerTool);
+  if (
+    !projectId &&
+    !projectName &&
+    !conversationId &&
+    !conversationName &&
+    !modelStrategy &&
+    !thinkingTime &&
+    !composerTool
+  ) return;
 
   const selection = resolveRuntimeSelection(merged, {
     explicitProfileName:
@@ -237,6 +248,15 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   }
   if (conversationName) {
     serviceConfig.conversationName = conversationName;
+  }
+  if (modelStrategy) {
+    serviceConfig.modelStrategy = modelStrategy;
+  }
+  if (thinkingTime) {
+    serviceConfig.thinkingTime = thinkingTime;
+  }
+  if (composerTool) {
+    serviceConfig.composerTool = composerTool;
   }
 }
 

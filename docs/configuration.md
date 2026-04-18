@@ -213,6 +213,10 @@ Transitional authoring note:
   - `--conversation-id` and `--conversation-name` now also mirror into the
     selected `runtimeProfiles.<name>.services.<defaultService>` slot when one
     concrete default service exists
+  - `--browser-model-strategy`, `--browser-thinking-time`, and
+    `--browser-composer-tool` now also mirror into the selected
+    `runtimeProfiles.<name>.services.<defaultService>` slot when one concrete
+    default service exists
   - when no concrete default service exists, they remain root-browser-only
     inputs
 - treat that root-browser surface as supported transitional input, not as the

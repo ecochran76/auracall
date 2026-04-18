@@ -12838,3 +12838,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   into the selected `runtimeProfiles.<name>.services.<defaultService>` block
   when one concrete default service exists, while preserving the current
   root-browser mapping as transitional input.
+- 2026-04-18: The same bounded dual-write rule also applies to
+  `--browser-model-strategy`, `--browser-thinking-time`, and
+  `--browser-composer-tool` when the resolver and schema already treat those
+  knobs as service-scoped defaults. Mirror them into the selected
+  `runtimeProfiles.<name>.services.<defaultService>` block when one concrete
+  default service exists, but keep the existing root-browser mapping as
+  transitional input until a later cleanup pass removes it explicitly.

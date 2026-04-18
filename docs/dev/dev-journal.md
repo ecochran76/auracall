@@ -17154,3 +17154,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     as project selectors today, so the same bounded dual-write is justified
   - keeping the root-browser mapping preserves compatibility while moving
     another live authoring path toward service ownership
+## 2026-04-18 - Browser service knob CLI flags now dual-write into the selected service block
+
+- Continued the active `0007` lane with the remaining browser service-knob
+  narrowing step:
+  - `--browser-model-strategy`, `--browser-thinking-time`, and
+    `--browser-composer-tool` still keep their current root-browser mapping
+  - when one concrete selected runtime profile and `defaultService` exist,
+    they now also mirror into:
+    - `runtimeProfiles.<name>.services.<defaultService>.modelStrategy`
+    - `runtimeProfiles.<name>.services.<defaultService>.thinkingTime`
+    - `runtimeProfiles.<name>.services.<defaultService>.composerTool`
+  - when no concrete default service exists, they stay root-browser-only
+  - added focused resolver coverage for both:
+    - the dual-write path
+    - the no-default-service fallback
+- Reason:
+  - these knobs already have the same service-level schema and precedence shape
+    as the service defaults applied from `runtimeProfiles.<name>.services`
+  - keeping the root-browser mapping preserves compatibility while finishing
+    the first bounded CLI narrowing pass for the remaining root-browser
+    service-default flags

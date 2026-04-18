@@ -295,6 +295,81 @@ describe('Config Resolver', () => {
     expect(result.runtimeProfiles?.default?.services).toBeUndefined();
   });
 
+  it('should also mirror cli browser service knobs into the selected runtime-profile service block', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                modelStrategy: 'current',
+                thinkingTime: 'light',
+                composerTool: 'web-search',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      browserModelStrategy: 'ignore',
+      browserThinkingTime: 'extended',
+      browserComposerTool: 'canvas',
+    });
+
+    expect(result.browser.modelStrategy).toBe('ignore');
+    expect(result.browser.thinkingTime).toBe('extended');
+    expect(result.browser.composerTool).toBe('canvas');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.modelStrategy).toBe('ignore');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.thinkingTime).toBe('extended');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.composerTool).toBe('canvas');
+  });
+
+  it('should leave browser service knobs on the root browser layer when no concrete default service exists', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      browserModelStrategy: 'ignore',
+      browserThinkingTime: 'extended',
+      browserComposerTool: 'canvas',
+    });
+
+    expect(result.browser.modelStrategy).toBe('ignore');
+    expect(result.browser.thinkingTime).toBe('extended');
+    expect(result.browser.composerTool).toBe('canvas');
+    expect(result.runtimeProfiles?.default?.services).toBeUndefined();
+  });
+
   it('should apply selected v2 profile browser overrides over browserDefaults', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {
