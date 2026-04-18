@@ -16992,3 +16992,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the repo needed test-backed and doc-backed authority for that behavior now
     that doctor explicitly marks the same keys as compatibility-only bridge
     state
+## 2026-04-17 - Config doctor now includes root browser project defaults in the misplaced root-browser seam
+
+- Continued the active `0007` lane with one more root-browser ownership
+  checkpoint:
+  - `config doctor` now treats:
+    - `browser.projectName`
+    - `browser.projectId`
+    as part of the same misplaced top-level browser service/project-default
+    seam as `browser.modelStrategy`, `browser.thinkingTime`, and
+    `browser.composerTool`
+- Reason:
+  - the live resolver still gives root `browser.projectName` /
+    `browser.projectId` precedence over service-scoped project defaults
+  - that makes them active ownership-seam state, not just compatibility-write
+    residue

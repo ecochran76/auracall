@@ -178,13 +178,15 @@ Current diagnostic checkpoint:
   - managed-profile escape hatches:
     - `manualLogin`
     - `manualLoginProfileDir`
-- current policy:
+  - current policy:
   - keep top-level root browser config out of service ownership:
     - `browser.modelStrategy`, `browser.thinkingTime`, and
       `browser.composerTool` are legacy global service defaults, not
       browser-family state
+    - `browser.projectName` and `browser.projectId` are also legacy global
+      service/project defaults, not browser-family state
     - doctor should flag those keys under the top-level `browser` block as
-      misplaced service-scoped defaults
+      misplaced service/project-scoped defaults
     - `llmDefaults` remains a compatibility bridge for model/project defaults
       until that ownership seam is narrowed further
   - prefer moving relocatable service fields into
@@ -248,6 +250,11 @@ Current migration checkpoint:
     - root browser config is still a compatibility/defaults surface
     - there is no safe automatic rewrite until the remaining `browser` versus
       `llmDefaults` ownership contract is narrowed further
+    - current live resolver precedence still gives:
+      - `browser.projectName`
+      - `browser.projectId`
+      priority over service-scoped project defaults, so this remains a real
+      active ownership seam rather than bridge-output-only noise
   - `llmDefaults` model/project defaults also remain diagnostics-only:
     - `llmDefaults.modelStrategy`
     - `llmDefaults.defaultProjectName`

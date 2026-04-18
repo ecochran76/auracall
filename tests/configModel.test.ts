@@ -973,12 +973,14 @@ describe('config model helpers', () => {
     });
   });
 
-  it('surfaces service-scoped defaults when they are misplaced on the top-level browser config', () => {
+  it('surfaces service and project defaults when they are misplaced on the top-level browser config', () => {
     const config = {
       defaultRuntimeProfile: 'default',
       browser: {
         modelStrategy: 'current',
         thinkingTime: 'extended',
+        projectName: 'Legacy Root Project',
+        projectId: 'g-p-root-project',
       },
       browserProfiles: {
         default: {
@@ -1012,7 +1014,7 @@ describe('config model helpers', () => {
           code: 'global-browser-service-scoped-defaults-present',
           severity: 'info',
           message:
-            'Top-level browser config still defines service-scoped defaults (browser.modelStrategy, browser.thinkingTime); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.',
+            'Top-level browser config still defines service/project-scoped defaults (browser.modelStrategy, browser.thinkingTime, browser.projectName, browser.projectId); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.',
         }),
       ],
     });

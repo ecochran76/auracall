@@ -207,7 +207,7 @@ const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set(['manualLogin', 'manual
 function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
   const globalBrowser = isRecord((config as MutableRecord).browser) ? ((config as MutableRecord).browser as MutableRecord) : {};
   return Object.keys(globalBrowser)
-    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key))
+    .filter((key) => RUNTIME_SERVICE_SCOPED_RELOCATABLE_KEYS.has(key) || key === 'projectName' || key === 'projectId')
     .map((key) => `browser.${key}`);
 }
 
@@ -880,7 +880,7 @@ export function analyzeConfigModelBridgeHealth(
     issues.push({
       code: 'global-browser-service-scoped-defaults-present',
       severity: 'info',
-      message: `Top-level browser config still defines service-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.`,
+      message: `Top-level browser config still defines service/project-scoped defaults (${globalBrowserServiceScopedDefaults.join(', ')}); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.`,
     });
   }
   const llmDefaultsServiceScopedDefaults = describeLlmDefaultsServiceScopedDefaults(config);

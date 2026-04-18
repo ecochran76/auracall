@@ -12782,3 +12782,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `llmDefaults.defaultProjectId` from root `model` / `browser` defaults when
   no explicit `llmDefaults` block exists, but explicit `llmDefaults` values
   must continue to win over that bridge-output path.
+- 2026-04-17: Treat root `browser.projectName` and `browser.projectId` as part
+  of the same misplaced top-level browser service/project-default seam as
+  `browser.modelStrategy`, `browser.thinkingTime`, and `browser.composerTool`.
+  The live resolver still gives those root browser project keys precedence
+  over service-scoped project defaults, so doctor should flag them as active
+  ownership drift, not just bridge-output residue.

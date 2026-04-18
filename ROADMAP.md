@@ -151,8 +151,11 @@ Current note:
         not as another redundancy-cleanup target
       - top-level `browser.modelStrategy`, `browser.thinkingTime`, and
         `browser.composerTool` should also be treated as misplaced
-        service-scoped defaults, while `llmDefaults` remains the compatibility
-        bridge seam for model/project defaults
+        service-scoped defaults
+      - top-level `browser.projectName` and `browser.projectId` should also be
+        treated as misplaced service/project-scoped defaults, while
+        `llmDefaults` remains the compatibility bridge seam for model/project
+        defaults
       - `llmDefaults.modelStrategy`, `llmDefaults.defaultProjectName`, and
         `llmDefaults.defaultProjectId` should be treated as compatibility-only
         bridge state, not as the preferred active service/project-default

@@ -993,13 +993,15 @@ describe('config show helpers', () => {
     );
   });
 
-  it('surfaces service-scoped defaults when they are misplaced on top-level browser config in doctor output', () => {
+  it('surfaces service and project defaults when they are misplaced on top-level browser config in doctor output', () => {
     const report = buildConfigDoctorReport(
       {
         defaultRuntimeProfile: 'default',
         browser: {
           modelStrategy: 'current',
           thinkingTime: 'extended',
+          projectName: 'Legacy Root Project',
+          projectId: 'g-p-root-project',
         },
         browserProfiles: {
           default: {
@@ -1029,7 +1031,7 @@ describe('config show helpers', () => {
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: ok');
     expect(text).toContain(
-      '[info] Top-level browser config still defines service-scoped defaults (browser.modelStrategy, browser.thinkingTime); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these knobs.',
+      '[info] Top-level browser config still defines service/project-scoped defaults (browser.modelStrategy, browser.thinkingTime, browser.projectName, browser.projectId); keep root browser config focused on global browser automation behavior and prefer services.<service> or runtimeProfiles.<name>.services.<service> for these defaults.',
     );
   });
 
