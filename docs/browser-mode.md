@@ -77,6 +77,10 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
 - `--browser-timeout`, `--browser-input-timeout`: `1200s (20m)`/`30s` defaults. Durations accept `ms`, `s`, `m`, or `h` and can be chained (`1h2m10s`).
 - `--browser-model-strategy <select|current|ignore>`: control ChatGPT model selection. `select` (default) switches to the requested model; `current` keeps the active model and logs its label; `ignore` skips the picker entirely. (Ignored for Gemini web runs.)
 - `--browser-thinking-time <light|standard|extended|heavy>`: set the ChatGPT thinking-time intensity (Thinking/Pro models only). You can also set a default in `~/.auracall/config.json` via `profiles.<name>.browser.thinkingTime` (legacy `browser.thinkingTime` still works).
+  - preferred long-term config surface:
+    - `runtimeProfiles.<name>.services.<service>.thinkingTime`
+  - legacy root `browser.thinkingTime` remains supported as transitional input
+    because current CLI/browser authoring still exposes that layer
 - `--browser-port <port>` (alias: `--browser-debug-port`; env: `AURACALL_BROWSER_PORT`/`AURACALL_BROWSER_DEBUG_PORT`): force a fixed DevTools port. This is now an advanced/debugging override. When Aura-Call launches a local browser normally, it still honors `browser.debugPort`/`browser.debugPortRange`; but for integrated WSL -> Windows Chrome launches the default strategy is now `auto`, which means Chrome is launched with `--remote-debugging-port=0`, Aura-Call reads `DevToolsActivePort`, and then adopts the real live endpoint. Use `browser.debugPortStrategy: "fixed"` (or `AURACALL_BROWSER_PORT_STRATEGY=fixed`) only when you intentionally need a pinned port.
 - If you want Aura-Call to share an already-running Chrome profile, that Chrome must have been launched with `--remote-debugging-port`. Otherwise Aura-Call cannot attach to it. This is less safe than a dedicated Aura-Call profile because any local user/process can control the browser via that port.
   - Linux/macOS: `ps -ax | rg \"chrome.*remote-debugging-port\"` or `tr \"\\0\" \" \" < /proc/<pid>/cmdline | rg remote-debugging-port` to discover the active port.
@@ -172,6 +176,10 @@ auracall --engine browser \
 ```
 
 - Aura-Call launches Chrome headful with a persistent managed profile at `~/.auracall/browser-profiles/<auracallProfile>/<service>` by default (override with `AURACALL_BROWSER_PROFILE_DIR` or `profiles.<name>.services.<service>.manualLoginProfileDir` in `~/.auracall/config.json`; legacy `browser.manualLoginProfileDir` still works).
+  - preferred long-term config surface:
+    - `runtimeProfiles.<name>.services.<service>.manualLoginProfileDir`
+  - legacy root `browser.manualLoginProfileDir` remains supported as a
+    transitional escape hatch
 - Log into chatgpt.com in that window the first time; Aura-Call polls until the session is active, then proceeds.
 - Reuse the same profile on subsequent runs (no re-login unless the session expires).
 - Add `--browser-keep-browser` (or config `profiles.<name>.keepBrowser=true`) when doing the initial login/setup or debugging so the Chrome window stays open after the run. When omitted, Aura-Call closes Chrome but preserves the profile on disk.

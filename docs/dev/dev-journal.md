@@ -17055,3 +17055,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Reason:
   - this gives the repo one explicit stop point before any broader precedence
     rewrite
+## 2026-04-18 - Root browser service-default layer is still reachable through current authoring paths
+
+- Continued the active `0007` lane with one bounded usage-audit checkpoint:
+  - confirmed the root-browser service-default layer is still reachable through
+    real operator-facing authoring paths, not just the live resolver
+  - current evidence includes:
+    - CLI flag mapping still targeting the root `browser` block for:
+      - `--project-id`
+      - `--project-name`
+      - `--conversation-id`
+      - `--conversation-name`
+      - `--browser-model-strategy`
+      - `--browser-thinking-time`
+      - `--browser-composer-tool`
+    - browser-mode docs still documenting legacy root-browser keys such as:
+      - `browser.thinkingTime`
+      - `browser.manualLoginProfileDir`
+    - config docs still steering new authored config toward:
+      - `services.<service>`
+      - `runtimeProfiles.<name>.services.<service>`
+- Reason:
+  - this closes the gap between policy and actual operator exposure
+  - any future precedence rewrite is still blocked until those authoring paths
+    are narrowed or explicitly preserved

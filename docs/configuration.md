@@ -191,6 +191,22 @@ Target-model note:
 - `profiles` as the AuraCall runtime-profile bridge
 - use `--bridge-shape` when you intentionally want compatibility bridge output
 
+Transitional authoring note:
+- new or cleaned-up service defaults should prefer:
+  - `services.<service>`
+  - `runtimeProfiles.<name>.services.<service>`
+- some current CLI/browser entrypoints still resolve through the root
+  `browser` block for transitional compatibility, especially:
+  - `--project-id`
+  - `--project-name`
+  - `--conversation-id`
+  - `--conversation-name`
+  - `--browser-model-strategy`
+  - `--browser-thinking-time`
+  - `--browser-composer-tool`
+- treat that root-browser surface as supported transitional input, not as the
+  preferred long-term authoring layer
+
 Runtime host policy note:
 - `runtime.localActions.shell` defines the host/runtime execution ceiling for
   built-in shell local actions

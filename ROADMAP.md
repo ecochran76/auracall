@@ -174,6 +174,14 @@ Current note:
       - policy decision: that root-browser inventory remains supported
         transitional behavior for now, but it is no longer the preferred
         authoring surface for new config
+      - current usage audit result:
+        - root-browser service-default authoring is still exposed by real
+          operator-facing paths:
+          - CLI flag mapping for project/conversation ids and browser service
+            knobs
+          - browser-mode docs that still document legacy root-browser keys
+        - do not attempt a precedence rewrite until those authoring paths are
+          narrowed or deliberately preserved
   - current team-ready checkpoint:
     - one shared read-only resolver now exists for:
       - `team -> agent -> runtimeProfile -> browserProfile`

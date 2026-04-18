@@ -268,6 +268,12 @@ Action:
   - the current root-browser service-default inventory is still supported as a
     transitional live layer
   - but it is no longer the preferred authoring surface for new config
+  - current CLI/browser authoring still reaches this layer:
+    - CLI flag mapping still lands project/conversation ids plus browser
+      service knobs on the root `browser` block
+    - browser-mode docs still expose some legacy root-browser keys directly
+  - any future precedence rewrite is blocked until those authoring paths are
+    either narrowed or explicitly preserved
   - `llmDefaults` still acts as the compatibility bridge for some model and
     project defaults
   - the current active root-browser service-default inventory is:

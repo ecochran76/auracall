@@ -12805,3 +12805,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   resolver still consumes it directly, so the repo should keep it working for
   now while steering new or cleaned-up config toward
   `services.<service>` or `runtimeProfiles.<name>.services.<service>`.
+- 2026-04-18: Do not treat the root-browser service-default layer as
+  resolver-only debt yet. Current CLI flag mapping still writes
+  project/conversation ids plus browser service knobs onto the root `browser`
+  block, and browser-mode docs still expose legacy root-browser keys such as
+  `browser.thinkingTime` and `browser.manualLoginProfileDir`. Any future
+  precedence rewrite is therefore blocked on narrowing or explicitly
+  preserving those authoring paths.

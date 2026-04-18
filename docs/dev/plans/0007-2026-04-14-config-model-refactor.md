@@ -260,6 +260,25 @@ Current migration checkpoint:
       - it is also not the preferred authoring surface; prefer
         `services.<service>` or `runtimeProfiles.<name>.services.<service>`
         for new or cleaned-up config
+      - current usage audit result:
+        - this layer is still exposed by real operator-facing authoring paths,
+          not just by the live resolver
+        - current evidence includes:
+          - CLI flag mapping for:
+            - `--project-id`
+            - `--project-name`
+            - `--conversation-id`
+            - `--conversation-name`
+            - `--browser-model-strategy`
+            - `--browser-thinking-time`
+            - `--browser-composer-tool`
+          - browser-mode docs that still document legacy root-browser keys such
+            as:
+            - `browser.thinkingTime`
+            - `browser.manualLoginProfileDir`
+        - any future precedence rewrite is therefore blocked on either:
+          - narrowing those authoring paths first
+          - or explicitly preserving them as supported transitional input
     - current active root-browser service-default inventory is:
       - `browser.modelStrategy`
       - `browser.thinkingTime`
