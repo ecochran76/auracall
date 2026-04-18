@@ -189,6 +189,12 @@ Current note:
           - `--browser-model-strategy`
           - `--browser-thinking-time`
           - `--browser-composer-tool`
+        - current narrowing checkpoint:
+          - `--project-id` and `--project-name` now also populate the selected
+            runtime-profile service block when one concrete default service
+            exists
+          - their root-browser mapping still remains for transitional
+            compatibility
         - do not attempt a precedence rewrite until those authoring paths are
           narrowed or deliberately preserved
   - current team-ready checkpoint:

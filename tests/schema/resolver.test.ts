@@ -157,6 +157,75 @@ describe('Config Resolver', () => {
     expect(result.browser.composerTool).toBe('canvas');
   });
 
+  it('should also mirror cli project selectors into the selected runtime-profile service block', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            defaultService: 'chatgpt',
+            services: {
+              chatgpt: {
+                projectId: 'config-project-id',
+                projectName: 'Config Project',
+              },
+            },
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      projectId: 'cli-project-id',
+      projectName: 'CLI Project',
+    });
+
+    expect(result.browser.projectId).toBe('cli-project-id');
+    expect(result.browser.projectName).toBe('CLI Project');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.projectId).toBe('cli-project-id');
+    expect(result.runtimeProfiles?.default?.services?.chatgpt?.projectName).toBe('CLI Project');
+  });
+
+  it('should leave project selectors on the root browser layer when no concrete default service exists', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      projectId: 'cli-project-id',
+      projectName: 'CLI Project',
+    });
+
+    expect(result.browser.projectId).toBe('cli-project-id');
+    expect(result.browser.projectName).toBe('CLI Project');
+    expect(result.runtimeProfiles?.default?.services).toBeUndefined();
+  });
+
   it('should apply selected v2 profile browser overrides over browserDefaults', async () => {
     vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
       config: {

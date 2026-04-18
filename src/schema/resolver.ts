@@ -97,6 +97,7 @@ export async function resolveConfig(
       asNonEmptyString((cliOptions as MutableConfig).oracleProfile),
     explicitAgentId: asNonEmptyString((cliOptions as MutableConfig).agent),
   });
+  applyTransitionalCliServiceAliases(normalized, cliOptions);
   const effective = mergeRecursively(normalized, cliConfig);
 
   // 4. Resolve Model and Engine Business Logic
@@ -187,6 +188,48 @@ function applyOracleProfile(
   merged.browser = merged.browser ?? {};
   const browser = merged.browser;
   applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
+}
+
+function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: OptionValues): void {
+  const projectId = asNonEmptyString((cliOptions as MutableConfig).projectId);
+  const projectName = asNonEmptyString((cliOptions as MutableConfig).projectName);
+  if (!projectId && !projectName) return;
+
+  const selection = resolveRuntimeSelection(merged, {
+    explicitProfileName:
+      asNonEmptyString((cliOptions as MutableConfig).profile) ??
+      asNonEmptyString((cliOptions as MutableConfig).auracallProfile) ??
+      asNonEmptyString((cliOptions as MutableConfig).oracleProfile) ??
+      null,
+    explicitAgentId: asNonEmptyString((cliOptions as MutableConfig).agent) ?? null,
+  });
+  const runtimeProfileId = selection.runtimeProfileId;
+  const defaultService = selection.defaultService;
+  if (!runtimeProfileId || !defaultService) return;
+
+  if (!isRecord(merged.runtimeProfiles)) {
+    merged.runtimeProfiles = {};
+  }
+  const runtimeProfiles = merged.runtimeProfiles as Record<string, unknown>;
+  if (!isRecord(runtimeProfiles[runtimeProfileId])) {
+    runtimeProfiles[runtimeProfileId] = {};
+  }
+  const runtimeProfile = runtimeProfiles[runtimeProfileId] as MutableConfig;
+  if (!isRecord(runtimeProfile.services)) {
+    runtimeProfile.services = {};
+  }
+  const services = runtimeProfile.services as Record<string, unknown>;
+  if (!isRecord(services[defaultService])) {
+    services[defaultService] = {};
+  }
+  const serviceConfig = services[defaultService] as Record<string, unknown>;
+
+  if (projectId) {
+    serviceConfig.projectId = projectId;
+  }
+  if (projectName) {
+    serviceConfig.projectName = projectName;
+  }
 }
 
 function resolveActiveProfileName(

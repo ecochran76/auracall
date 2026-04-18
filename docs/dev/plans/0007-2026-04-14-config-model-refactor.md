@@ -286,6 +286,12 @@ Current migration checkpoint:
             - `--browser-model-strategy`
             - `--browser-thinking-time`
             - `--browser-composer-tool`
+        - current narrowing checkpoint:
+          - `--project-id` and `--project-name` now also mirror into the
+            selected `runtimeProfiles.<name>.services.<defaultService>` block
+            when one concrete default service exists
+          - their root-browser mapping remains in place as transitional input
+            for now
         - any future precedence rewrite is therefore blocked on either:
           - narrowing those authoring paths first
           - or explicitly preserving them as supported transitional input

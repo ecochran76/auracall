@@ -12825,3 +12825,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   and one resolver test that covers the full set together, so future narrowing
   work starts from an explicit contract instead of scattered field-by-field
   assumptions.
+- 2026-04-18: Start CLI narrowing with the lowest-risk service-scoped pair.
+  In this repo, `--project-id` and `--project-name` can dual-write safely:
+  keep the existing root-browser mapping for transitional compatibility, but
+  also mirror them into the selected
+  `runtimeProfiles.<name>.services.<defaultService>` block when one concrete
+  default service exists. If no concrete default service exists, leave them on
+  the root browser layer only.

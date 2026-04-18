@@ -17117,3 +17117,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Reason:
   - the repo needed the code-level mapping contract to be as explicit as the
     plan/docs contract before any narrowing slice starts
+## 2026-04-18 - Project selector CLI flags now dual-write into the selected service block
+
+- Continued the active `0007` lane with the first bounded CLI narrowing step:
+  - `--project-id` and `--project-name` still keep their current root-browser
+    mapping
+  - when one concrete selected runtime profile and `defaultService` exist,
+    they now also mirror into:
+    - `runtimeProfiles.<name>.services.<defaultService>.projectId`
+    - `runtimeProfiles.<name>.services.<defaultService>.projectName`
+  - when no concrete default service exists, they stay root-browser-only
+  - added focused resolver coverage for both:
+    - the dual-write path
+    - the no-default-service fallback
+- Reason:
+  - this is the lowest-risk narrowing step because project selectors are
+    already clearly service-scoped in the preferred config model
+  - keeping the root-browser mapping avoids breaking the current resolver
+    contract while starting to align CLI input with service ownership

@@ -206,6 +206,12 @@ Transitional authoring note:
   - `--browser-composer-tool`
 - those CLI flags are still intentionally classified as supported transitional
   root-browser inputs under the current resolver contract
+- narrowing checkpoint:
+  - `--project-id` and `--project-name` now also mirror into the selected
+    `runtimeProfiles.<name>.services.<defaultService>` slot when one concrete
+    default service exists
+  - when no concrete default service exists, they remain root-browser-only
+    inputs
 - treat that root-browser surface as supported transitional input, not as the
   preferred long-term authoring layer
 
