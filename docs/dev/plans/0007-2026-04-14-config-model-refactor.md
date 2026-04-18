@@ -398,6 +398,9 @@ Current bounded follow-through at this layer:
           execution selector today
         - `agents.<name>.description`, `instructions`, and `metadata` remain
           organizational / future-workflow fields for now
+        - `0007` does not currently open a typed live agent-defaults surface;
+          keep the agent layer selection-only plus descriptive metadata for
+          this phase
       - the generic agent defaults bag is still execution-inert for runtime
         selection, browser profile resolution, and default service resolution
   - team boundary:

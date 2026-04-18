@@ -497,6 +497,10 @@ Within each file, later CLI flags still override config, and environment variabl
   - `agents.<name>.defaults` remains a placeholder seam and does not currently
     change runtime selection, browser profile resolution, or default service
     resolution.
+  - this phase does not define any typed live agent-owned defaults yet; if
+    you need different live behavior, model it as a different AuraCall runtime
+    profile instead of assuming the agent layer already owns execution
+    defaults.
   - They still do not introduce separate agent or team execution behavior yet.
 - `runtimeProfiles.<name>.cache.*` sets defaults for cache behavior (including `store`, `refreshHours`, and `rootDir`).
 - `runtimeProfiles.<name>.cache.includeProjectOnlyConversations` controls whether refresh also inserts project-only conversation IDs that were not present in the global history snapshot.

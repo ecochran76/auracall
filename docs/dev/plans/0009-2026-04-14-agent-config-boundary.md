@@ -29,6 +29,13 @@ Lane: P01
   - live agent selection still flows only through:
     - `agents.<name>.runtimeProfile`
     - the referenced AuraCall runtime profile
+- current bounded policy decision:
+  - this `0009` seam does not introduce a typed live agent-owned defaults
+    surface yet
+  - the agent layer remains selection-only plus descriptive metadata for this
+    phase
+  - any future live agent-owned workflow defaults must come from a later
+    execution-facing design slice, not from extending `0007` by momentum
 - the old loose path will remain searchable in the legacy archive once the
   canonical plan is wired
 
@@ -124,6 +131,9 @@ Current live posture for those allowed fields:
   - runtime selection
   - browser profile resolution
   - default service resolution
+- the generic `defaults` bag also remains non-execution for this phase
+- no typed live agent-owned defaults are introduced under the current
+  config-boundary plan
 
 Not allowed at the agent layer:
 - browser profile selection overrides
@@ -160,6 +170,10 @@ Current doctor checkpoint:
   - the generic `defaults` bag is not yet a live typed execution contract:
     - keep future workflow-default work explicit and bounded instead of
       implying current execution semantics from placeholder keys
+  - policy checkpoint:
+    - do not use this plan to grow a typed live agent-defaults surface
+    - defer any such work to a later execution-facing slice with explicit
+      runtime semantics and validation
 
 ## Team boundary
 

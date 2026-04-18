@@ -17331,3 +17331,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     distinguish accepted shape from live execution semantics explicitly
   - this keeps the lane honest without widening the surface area before a
     later typed workflow-defaults design slice
+## 2026-04-18 - Agent lane stays selection-only in the current config-model phase
+
+- Closed the remaining near-term design ambiguity after the positive-contract
+  checkpoint:
+  - updated the agent boundary plan, config umbrella plan, roadmap, operator
+    config docs, and troubleshooting docs to state directly that this phase
+    does not introduce typed live agent-owned defaults
+  - locked the current policy that the agent layer remains:
+    - `runtimeProfile` selection
+    - descriptive / organizational metadata
+    for this `0007` phase
+- Reason:
+  - the repo no longer needed another round of “future typed defaults” hints
+    without execution semantics behind them
+  - this keeps `0007` focused on config-boundary cleanup instead of smuggling
+    in a premature agent-execution surface

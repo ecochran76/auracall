@@ -236,6 +236,9 @@ Current note:
             agent-owned execution selector today
           - `agents.<name>.description`, `instructions`, and `metadata`
             remain organizational / future-workflow fields for now
+          - do not introduce typed live agent-owned defaults in this
+            config-model phase; defer that to a later execution-facing design
+            slice
           - the generic agent defaults bag is still execution-inert for
             runtime selection, browser profile resolution, and default service
             resolution

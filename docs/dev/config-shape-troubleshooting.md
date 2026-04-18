@@ -164,6 +164,11 @@ Action:
   - `agents.<name>.metadata`
   are still organizational / future-workflow fields today, not live runtime
   selectors
+- current policy checkpoint:
+  - there is still no typed live agent-owned defaults surface in this phase
+  - if you need different live execution behavior today, move that behavior
+    into the referenced AuraCall runtime profile instead of waiting for the
+    generic agent layer to pick it up implicitly
 - if you need real live agent-owned defaults, introduce them through an
   explicit typed contract instead of relying on the generic defaults bag
 

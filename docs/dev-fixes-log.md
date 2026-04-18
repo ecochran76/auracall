@@ -12898,3 +12898,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   fields like `description`, `instructions`, and `metadata` remain
   organizational / future-workflow config and should not affect runtime
   selection, browser profile resolution, or default service resolution.
+- 2026-04-18: Resolve the next agent-design ambiguity explicitly instead of
+  leaving “typed live agent defaults” as implied near-term scope. In this
+  repo's current `0007` / `0009` phase, there is still no typed live
+  agent-owned defaults surface; keep agent semantics limited to
+  `runtimeProfile` selection plus descriptive metadata until a later
+  execution-facing slice defines stronger behavior and validation.
