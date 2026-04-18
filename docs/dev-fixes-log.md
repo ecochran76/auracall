@@ -12856,3 +12856,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   until a future slice explicitly chooses deprecation or stronger reporting.
   Do not keep extending this seam by inertia once the compatibility posture is
   already explicit and test-backed.
+- 2026-04-18: Treat team role references as part of the live config integrity
+  surface once role-aware planning consumes them. In this repo,
+  `config doctor` should warn when `teams.<name>.roles.<role>.agent`
+  references a missing agent or an agent outside `teams.<name>.agents`, and
+  when `handoffToRole` points at a missing role, rather than leaving those
+  failures to degrade later into blocked team planning behavior.

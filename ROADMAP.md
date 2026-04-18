@@ -220,6 +220,12 @@ Current note:
   - current semantic checkpoint:
     - the next design question is team execution boundary, not more selection
       plumbing
+    - the next bounded doctor seam above runtime profiles is team-role
+      integrity:
+      - `teams.<name>.roles.<role>.agent` should not silently reference a
+        missing agent or an agent outside team membership
+      - `teams.<name>.roles.<role>.handoffToRole` should not silently point at
+        a missing role
     - future service-mode runners and parallelism should remain a higher layer,
       not be implied by current team config alone
     - future teams are expected to become the orchestration layer for:

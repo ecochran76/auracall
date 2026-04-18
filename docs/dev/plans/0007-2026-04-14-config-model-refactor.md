@@ -362,6 +362,19 @@ near-term goal is no longer more key-shape migration. It is to:
    layer
 4. defer broad renames until that target is explicit enough to rename once
 
+Current bounded follow-through at this layer:
+
+- keep root-browser compatibility-alias work in maintenance mode unless a
+  later slice explicitly chooses deprecation/reporting scope
+- continue doctor/report hardening for the next compositional layer above
+  runtime profiles:
+  - invalid `teams.<name>.roles.<role>.agent` references should surface
+    explicitly
+  - invalid `teams.<name>.roles.<role>.handoffToRole` references should
+    surface explicitly
+  - role-driven team planning is already real, so those references should not
+    remain silent config drift
+
 See:
 
 - [config-model-target-shape.md](/home/ecochran76/workspace.local/oracle/docs/dev/config-model-target-shape.md)

@@ -145,13 +145,18 @@ export interface ConfigModelDoctorIssue {
     | 'active-runtime-profile-missing-browser-profile'
     | 'agent-missing-runtime-profile'
     | 'agent-runtime-profile-missing'
-    | 'team-agent-missing';
+    | 'team-agent-missing'
+    | 'team-role-agent-missing'
+    | 'team-role-agent-not-in-membership'
+    | 'team-role-handoff-role-missing';
   severity: 'warning' | 'info';
   message: string;
   auracallRuntimeProfile?: string;
   browserProfile?: string;
   agent?: string;
   team?: string;
+  role?: string;
+  handoffRole?: string;
 }
 
 export interface ConfigModelDoctorReport {
@@ -999,6 +1004,48 @@ export function analyzeConfigModelBridgeHealth(
           message: `Team "${name}" references missing agent "${agentId}".`,
           team: name,
           agent: agentId,
+        });
+      }
+    }
+
+    const roles = isRecord(team) && isRecord(team.roles) ? (team.roles as Record<string, unknown>) : {};
+    const roleIds = new Set(Object.keys(roles));
+    for (const [roleId, roleConfig] of Object.entries(roles)) {
+      if (!isRecord(roleConfig)) continue;
+      const roleAgentId =
+        typeof roleConfig.agent === 'string' && roleConfig.agent.trim().length > 0 ? roleConfig.agent.trim() : null;
+      if (roleAgentId && !agents[roleAgentId]) {
+        issues.push({
+          code: 'team-role-agent-missing',
+          severity: 'warning',
+          message: `Team "${name}" role "${roleId}" references missing agent "${roleAgentId}".`,
+          team: name,
+          role: roleId,
+          agent: roleAgentId,
+        });
+      } else if (roleAgentId && !agentIds.includes(roleAgentId)) {
+        issues.push({
+          code: 'team-role-agent-not-in-membership',
+          severity: 'warning',
+          message: `Team "${name}" role "${roleId}" references agent "${roleAgentId}" outside teams.${name}.agents membership.`,
+          team: name,
+          role: roleId,
+          agent: roleAgentId,
+        });
+      }
+
+      const handoffToRoleId =
+        typeof roleConfig.handoffToRole === 'string' && roleConfig.handoffToRole.trim().length > 0
+          ? roleConfig.handoffToRole.trim()
+          : null;
+      if (handoffToRoleId && !roleIds.has(handoffToRoleId)) {
+        issues.push({
+          code: 'team-role-handoff-role-missing',
+          severity: 'warning',
+          message: `Team "${name}" role "${roleId}" references missing handoff role "${handoffToRoleId}".`,
+          team: name,
+          role: roleId,
+          handoffRole: handoffToRoleId,
         });
       }
     }

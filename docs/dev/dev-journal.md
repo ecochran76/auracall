@@ -17206,3 +17206,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     text, roadmap text, and operator docs
   - pushing farther now would be churn without a separately chosen deprecation
     goal
+## 2026-04-18 - Config doctor now validates team role reference integrity
+
+- Continued the active `0007` lane above runtime profiles instead of reopening
+  the parked root-browser alias seam:
+  - added doctor warnings when `teams.<name>.roles.<role>.agent` points at:
+    - a missing agent
+    - or an agent outside `teams.<name>.agents`
+  - added doctor warnings when
+    `teams.<name>.roles.<role>.handoffToRole` points at a missing role in the
+    same team
+  - updated troubleshooting/governing docs to make those warnings canonical
+- Reason:
+  - role-aware team planning already consumes `roles` metadata
+  - broken role references were still silent config drift above the
+    runtime-profile layer
+  - this is a cleaner next `0007` seam than reopening root-browser alias
+    reporting churn

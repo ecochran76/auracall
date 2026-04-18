@@ -129,6 +129,42 @@ Action:
 - keep target-shape if you are intentionally migrating forward
 - otherwise remove the target copy and stay bridge-shaped
 
+### `team-role-agent-missing`
+
+Meaning:
+- `teams.<name>.roles.<role>.agent` points at an agent id that is not defined
+  under `agents`
+
+Action:
+- add the missing agent definition or correct the role mapping
+- do not leave this as silent drift:
+  - role-aware team planning already consumes team role metadata
+  - a missing role agent will otherwise degrade into blocked planning/runtime
+    behavior later
+
+### `team-role-agent-not-in-membership`
+
+Meaning:
+- `teams.<name>.roles.<role>.agent` points at a defined agent that is not
+  listed in `teams.<name>.agents`
+
+Action:
+- either add that agent to the team membership or move the role onto a member
+  agent that is already in the team
+- keep role assignment and team membership aligned; do not rely on implicit
+  membership through role config alone
+
+### `team-role-handoff-role-missing`
+
+Meaning:
+- `teams.<name>.roles.<role>.handoffToRole` points at a role id that does not
+  exist in the same team's `roles` block
+
+Action:
+- correct the handoff target or add the missing role
+- keep handoff references local to the declared team role set so planned
+  multi-step team runs do not carry broken role transitions
+
 ### `conflicting-runtime-profile-definitions`
 
 Meaning:

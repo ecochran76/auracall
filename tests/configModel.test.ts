@@ -753,6 +753,78 @@ describe('config model helpers', () => {
     });
   });
 
+  it('reports invalid team role references through the shared doctor seam', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      browserProfiles: {
+        default: {},
+      },
+      runtimeProfiles: {
+        default: {
+          browserProfile: 'default',
+          defaultService: 'chatgpt',
+        },
+      },
+      agents: {
+        researcher: { runtimeProfile: 'default' },
+        analyst: { runtimeProfile: 'default' },
+      },
+      teams: {
+        ops: {
+          agents: ['researcher'],
+          roles: {
+            lead: {
+              agent: 'missing-agent',
+              handoffToRole: 'missing-reviewer',
+            },
+            reviewer: {
+              agent: 'analyst',
+            },
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: 'default',
+      targetState: {
+        browserProfilesPresent: true,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'target',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 3,
+      issues: expect.arrayContaining([
+        expect.objectContaining({
+          code: 'team-role-agent-missing',
+          severity: 'warning',
+          team: 'ops',
+          role: 'lead',
+          agent: 'missing-agent',
+        }),
+        expect.objectContaining({
+          code: 'team-role-handoff-role-missing',
+          severity: 'warning',
+          team: 'ops',
+          role: 'lead',
+          handoffRole: 'missing-reviewer',
+        }),
+        expect.objectContaining({
+          code: 'team-role-agent-not-in-membership',
+          severity: 'warning',
+          team: 'ops',
+          role: 'reviewer',
+          agent: 'analyst',
+        }),
+      ]),
+    });
+  });
+
   it('reports mixed-key and conflicting dual-read diagnostics when target and bridge definitions disagree', () => {
     const config = {
       auracallProfile: 'default',

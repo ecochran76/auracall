@@ -867,6 +867,73 @@ describe('config show helpers', () => {
     expect(text).toContain('[warning] Team "ops" references missing agent "missing-agent".');
   });
 
+  it('surfaces invalid team role references in config doctor output', () => {
+    const report = buildConfigDoctorReport(
+      {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+        },
+        agents: {
+          researcher: { runtimeProfile: 'default' },
+          analyst: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: {
+            agents: ['researcher'],
+            roles: {
+              lead: {
+                agent: 'missing-agent',
+                handoffToRole: 'missing-reviewer',
+              },
+              reviewer: {
+                agent: 'analyst',
+              },
+            },
+          },
+        },
+      },
+      { explicitProfileName: 'default' },
+    );
+
+    expect(report.ok).toBe(false);
+    expect(report.issues).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          code: 'team-role-agent-missing',
+          team: 'ops',
+          role: 'lead',
+          agent: 'missing-agent',
+        }),
+        expect.objectContaining({
+          code: 'team-role-handoff-role-missing',
+          team: 'ops',
+          role: 'lead',
+          handoffRole: 'missing-reviewer',
+        }),
+        expect.objectContaining({
+          code: 'team-role-agent-not-in-membership',
+          team: 'ops',
+          role: 'reviewer',
+          agent: 'analyst',
+        }),
+      ]),
+    );
+
+    const text = formatConfigDoctorReport(report);
+    expect(text).toContain('[warning] Team "ops" role "lead" references missing agent "missing-agent".');
+    expect(text).toContain('[warning] Team "ops" role "lead" references missing handoff role "missing-reviewer".');
+    expect(text).toContain(
+      '[warning] Team "ops" role "reviewer" references agent "analyst" outside teams.ops.agents membership.',
+    );
+  });
+
   it('surfaces browser-owned runtime profile overrides in config doctor output', () => {
     const report = buildConfigDoctorReport(
       {
