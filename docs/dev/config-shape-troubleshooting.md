@@ -118,6 +118,9 @@ Meaning:
 
 Action:
 - same rule as above: target runtime-profile keys win
+- keep `auracallProfiles` as legacy residue only; it should not outrank the
+  current runtime-profile bridge for active fallback selection once `profiles`
+  or `runtimeProfiles` exist
 
 ### `conflicting-browser-profile-definitions`
 
@@ -128,6 +131,17 @@ Action:
 - decide which definition is the real one
 - keep target-shape if you are intentionally migrating forward
 - otherwise remove the target copy and stay bridge-shaped
+
+### `legacy-runtime-profiles-present`
+
+Meaning:
+- legacy runtime profiles still exist under `auracallProfiles`
+
+Action:
+- keep them only as compatibility residue or last-resort fallback
+- current `profiles` / `runtimeProfiles` should remain the active runtime
+  bridge whenever they exist
+- clean up `auracallProfiles` once compatibility consumers no longer need it
 
 ### `agent-defaults-runtime-bypass-present`
 

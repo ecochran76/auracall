@@ -798,6 +798,37 @@ describe('config show helpers', () => {
     expect(text).toContain('[info] Browser profile "orphaned" is defined but no AuraCall runtime profile references it.');
   });
 
+  it('keeps current runtime profiles ahead of legacy auracallProfiles in config show fallback selection', () => {
+    const report = buildConfigShowReport({
+      rawConfig: {
+        auracallProfile: 'legacy',
+        profiles: {
+          current: {
+            defaultService: 'chatgpt',
+          },
+        },
+        auracallProfiles: {
+          legacy: {
+            defaultService: 'grok',
+          },
+        },
+      },
+      resolvedConfig: {
+        auracallProfile: 'current',
+        browser: { target: 'chatgpt' },
+      } as never,
+      configPath: '/tmp/config.json',
+      loaded: true,
+    });
+
+    expect(report.active.auracallRuntimeProfile).toBe('current');
+    expect(report.available.legacyRuntimeProfiles).toEqual(['legacy']);
+
+    const text = formatConfigShowReport(report);
+    expect(text).toContain('AuraCall runtime profile: current');
+    expect(text).toContain('legacy runtime profiles present: yes');
+  });
+
   it('surfaces reserved agent and team reference warnings in config doctor output', () => {
     const report = buildConfigDoctorReport(
       {

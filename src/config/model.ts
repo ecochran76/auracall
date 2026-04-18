@@ -619,8 +619,11 @@ export function getLegacyRuntimeProfiles(config: OracleConfig | MutableRecord): 
 }
 
 export function getBridgeRuntimeProfiles(config: OracleConfig | MutableRecord): Record<string, MutableRuntimeProfile> {
-  const legacyProfiles = getLegacyRuntimeProfiles(config);
-  return Object.keys(legacyProfiles).length > 0 ? legacyProfiles : getCurrentRuntimeProfiles(config);
+  const currentProfiles = getCurrentRuntimeProfiles(config);
+  if (Object.keys(currentProfiles).length > 0) {
+    return currentProfiles;
+  }
+  return getLegacyRuntimeProfiles(config);
 }
 
 export function ensureBrowserProfiles(config: MutableRecord): Record<string, MutableBrowserProfile> {
@@ -794,17 +797,25 @@ export function getActiveRuntimeProfileName(
   const currentRuntimeProfiles = getCurrentRuntimeProfiles(config);
   const legacyRuntimeProfiles = getLegacyRuntimeProfiles(config);
   const runtimeProfiles = getBridgeRuntimeProfiles(config);
-  const explicit =
+  const explicitProfileName =
     typeof options.explicitProfileName === 'string' && options.explicitProfileName.trim().length > 0
       ? options.explicitProfileName.trim()
       : typeof configRecord.defaultRuntimeProfile === 'string' &&
           configRecord.defaultRuntimeProfile.trim().length > 0
         ? configRecord.defaultRuntimeProfile.trim()
-      : typeof config.auracallProfile === 'string' && config.auracallProfile.trim().length > 0
-        ? config.auracallProfile.trim()
         : null;
-  if (explicit && currentRuntimeProfiles[explicit]) return explicit;
-  if (explicit && legacyRuntimeProfiles[explicit]) return explicit;
+  if (explicitProfileName && currentRuntimeProfiles[explicitProfileName]) return explicitProfileName;
+  if (explicitProfileName && legacyRuntimeProfiles[explicitProfileName]) return explicitProfileName;
+  if (Object.keys(currentRuntimeProfiles).length > 0) {
+    if (currentRuntimeProfiles.default) return 'default';
+    const currentKeys = Object.keys(currentRuntimeProfiles);
+    return currentKeys.length > 0 ? currentKeys[0] ?? null : null;
+  }
+  const compatibilityProfileName =
+    typeof config.auracallProfile === 'string' && config.auracallProfile.trim().length > 0
+      ? config.auracallProfile.trim()
+      : null;
+  if (compatibilityProfileName && legacyRuntimeProfiles[compatibilityProfileName]) return compatibilityProfileName;
   if (runtimeProfiles.default) return 'default';
   const keys = Object.keys(runtimeProfiles);
   return keys.length > 0 ? keys[0] ?? null : null;

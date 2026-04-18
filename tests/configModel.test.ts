@@ -538,7 +538,7 @@ describe('config model helpers', () => {
     });
   });
 
-  it('prefers legacy auracallProfiles when selecting the active runtime profile bridge', () => {
+  it('keeps current runtime profile bridges ahead of legacy auracallProfiles for active selection', () => {
     const config = {
       auracallProfile: 'legacy',
       profiles: {
@@ -552,6 +552,25 @@ describe('config model helpers', () => {
     expect(getCurrentRuntimeProfiles(config)).toEqual({
       current: { defaultService: 'chatgpt' },
     });
+    expect(getLegacyRuntimeProfiles(config)).toEqual({
+      legacy: { defaultService: 'grok' },
+    });
+    expect(getBridgeRuntimeProfiles(config)).toEqual({
+      current: { defaultService: 'chatgpt' },
+    });
+    expect(getActiveRuntimeProfileName(config)).toBe('current');
+    expect(getActiveRuntimeProfile(config)).toEqual({ defaultService: 'chatgpt' });
+  });
+
+  it('falls back to legacy auracallProfiles only when no current runtime profiles exist', () => {
+    const config = {
+      auracallProfile: 'legacy',
+      auracallProfiles: {
+        legacy: { defaultService: 'grok' },
+      },
+    };
+
+    expect(getCurrentRuntimeProfiles(config)).toEqual({});
     expect(getLegacyRuntimeProfiles(config)).toEqual({
       legacy: { defaultService: 'grok' },
     });
@@ -674,8 +693,8 @@ describe('config model helpers', () => {
     };
 
     expect(projectConfigModel(config)).toEqual({
-      activeRuntimeProfileId: 'work',
-      activeBrowserProfileId: 'wsl-chrome-2',
+      activeRuntimeProfileId: 'default',
+      activeBrowserProfileId: 'default',
       browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
       runtimeProfiles: [
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
@@ -700,9 +719,9 @@ describe('config model helpers', () => {
     };
 
     expect(inspectConfigModel(config)).toEqual({
-      activeRuntimeProfileId: 'work',
-      activeBrowserProfileId: 'wsl-chrome-2',
-      activeDefaultService: 'grok',
+      activeRuntimeProfileId: 'default',
+      activeBrowserProfileId: 'default',
+      activeDefaultService: 'chatgpt',
       browserProfileIds: ['default', 'wsl-chrome-2'],
       runtimeProfiles: [
         { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },
@@ -722,8 +741,8 @@ describe('config model helpers', () => {
       },
       bridgeKeys: CONFIG_MODEL_BRIDGE_KEYS,
       projectedModel: {
-        activeRuntimeProfileId: 'work',
-        activeBrowserProfileId: 'wsl-chrome-2',
+        activeRuntimeProfileId: 'default',
+        activeBrowserProfileId: 'default',
         browserProfiles: [{ id: 'default' }, { id: 'wsl-chrome-2' }],
         runtimeProfiles: [
           { id: 'default', browserProfileId: 'default', defaultService: 'chatgpt' },

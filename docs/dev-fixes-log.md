@@ -12920,3 +12920,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   materializes output from mixed-shape input, `browserProfiles` and
   `runtimeProfiles` should overwrite stale bridge copies and emit bridge-only
   keys instead of preserving mixed-shape residue.
+- 2026-04-18: Legacy `auracallProfiles` must not outrank the current
+  runtime-profile bridge once `profiles` or `runtimeProfiles` exist. In this
+  repo, keep `auracallProfiles` inspectable and available as a last-resort
+  compatibility fallback only, not as the preferred active bridge.

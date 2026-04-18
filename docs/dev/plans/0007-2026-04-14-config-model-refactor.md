@@ -355,6 +355,11 @@ Current migration checkpoint:
       `profiles.<name>.browserFamily`
     - explicit bridge output should emit bridge-only keys, not preserve mixed
       target + bridge residue
+  - legacy `auracallProfiles` now stays a last-resort compatibility fallback
+    only:
+    - keep it visible to inspection/doctor as legacy residue
+    - but do not let it outrank current `profiles` / `runtimeProfiles` when
+      choosing the active runtime-profile bridge
   - empty `runtimeProfiles.<name>.services.<service>` stubs left behind by
     conservative cleanup are now pruned as residue
   - if `defaultService` is missing or the service-level value already

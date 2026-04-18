@@ -125,6 +125,10 @@ Use `auracall config doctor` when you want bridge-health checks instead:
 - unused browser profiles
 - legacy `auracallProfiles` still present
 - pass `--strict` when warnings should return a nonzero exit code for scripts/CI
+- `auracallProfiles` is now legacy inspection/fallback only:
+  - Aura-Call still reports it when present
+  - but current `profiles` / `runtimeProfiles` now stay ahead of it for
+    active fallback selection
 
 For future troubleshooting of bridge-shape vs target-shape vs mixed-shape
 configs, see:

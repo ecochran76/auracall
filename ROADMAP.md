@@ -173,6 +173,9 @@ Current note:
         - target `runtimeProfiles` overwrite stale `profiles`
         - bridge output should emit bridge-only keys instead of preserving
           mixed target + bridge residue
+      - legacy `auracallProfiles` should remain inspectable compatibility
+        residue only and should no longer outrank current `profiles` /
+        `runtimeProfiles` for active fallback selection
       - current active root-browser service-default inventory is now explicit:
         `modelStrategy`, `thinkingTime`, `composerTool`, `projectName`,
         `projectId`, `conversationName`, and `conversationId`, with

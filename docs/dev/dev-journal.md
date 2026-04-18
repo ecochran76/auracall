@@ -17398,3 +17398,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     residue
   - this closes the remaining precedence/writeback gap without reopening a
     broader alias-policy rewrite
+## 2026-04-18 - legacy auracallProfiles no longer outranks the current runtime bridge
+
+- Returned to the remaining fallback-selection ambiguity in `0007`:
+  - narrowed `getBridgeRuntimeProfiles()` so current `profiles` /
+    `runtimeProfiles` stay ahead of legacy `auracallProfiles`
+  - kept `auracallProfiles` visible for inspection/doctor and as a last-resort
+    fallback when no current runtime profiles exist
+  - added focused config-model coverage for:
+    - current bridge winning over legacy fallback
+    - legacy fallback still working when no current runtime profiles exist
+  - updated the config umbrella plan, roadmap, operator config docs, and
+    troubleshooting guide to state that `auracallProfiles` is now legacy
+    residue rather than the preferred active bridge
+- Reason:
+  - `auracallProfiles` was already documented as legacy presence, but the
+    fallback helper could still let it outrank the current runtime-profile
+    bridge
+  - this closes a real active-selection ambiguity without deleting the legacy
+    compatibility seam outright
