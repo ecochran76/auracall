@@ -159,9 +159,10 @@ Current note:
       - top-level `browser.conversationName` and
         `browser.conversationId` should also be treated as misplaced
         service/conversation-scoped defaults on the root browser block
-      - `llmDefaults.modelStrategy`, `llmDefaults.defaultProjectName`, and
+      - `llmDefaults.model`, `llmDefaults.modelStrategy`,
+        `llmDefaults.defaultProjectName`, and
         `llmDefaults.defaultProjectId` should be treated as compatibility-only
-        bridge state, not as the preferred active service/project-default
+        bridge state, not as the preferred active model/service/project-default
         layer
       - compatibility bridge output may still backfill those `llmDefaults`
         keys from root `model` / `browser` defaults when no explicit

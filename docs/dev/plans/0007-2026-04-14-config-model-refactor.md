@@ -328,6 +328,7 @@ Current migration checkpoint:
       remains a real active ownership seam rather than bridge-output-only
       noise
   - `llmDefaults` model/project defaults also remain diagnostics-only:
+    - `llmDefaults.model`
     - `llmDefaults.modelStrategy`
     - `llmDefaults.defaultProjectName`
     - `llmDefaults.defaultProjectId`

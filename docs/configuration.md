@@ -462,6 +462,12 @@ Within each file, later CLI flags still override config, and environment variabl
 - use `--bridge-shape` on `wizard`, `profile scaffold`, or `config migrate` only when you intentionally need compatibility bridge output.
 - Use separate named profiles for Windows Chrome or other experimental runtimes.
 - `model`, `filesReport`, `heartbeatSeconds`, and `apiBaseUrl` in config override the auto-detected values unless explicitly set on the CLI.
+- `llmDefaults.model`, `llmDefaults.modelStrategy`,
+  `llmDefaults.defaultProjectName`, and `llmDefaults.defaultProjectId` remain
+  compatibility-bridge fields.
+  - prefer root `model` plus `services.<service>` or
+    `runtimeProfiles.<name>.services.<service>` for active
+    model/service/project behavior.
 - If `azure.endpoint` (or `--azure-endpoint`) is set, Aura-Call reads `AZURE_OPENAI_API_KEY` first and falls back to `OPENAI_API_KEY` for GPT models.
 - Remote browser defaults follow the same order: `--remote-host/--remote-token` win, then `remote.host` / `remote.token` (or `remoteHost` / `remoteToken`) in the config, then `AURACALL_REMOTE_HOST` / `AURACALL_REMOTE_TOKEN` if still unset.
 - `OPENAI_API_KEY` only influences engine selection when neither the CLI nor `config.json` specify an engine (API when present, otherwise browser).

@@ -17347,3 +17347,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     without execution semantics behind them
   - this keeps `0007` focused on config-boundary cleanup instead of smuggling
     in a premature agent-execution surface
+## 2026-04-18 - llmDefaults model now matches the rest of the compatibility bridge seam
+
+- Returned to the remaining `llmDefaults` ownership gap after parking the
+  agent lane:
+  - extended the shared doctor seam so `llmDefaults.model` is reported
+    alongside `llmDefaults.modelStrategy`, `defaultProjectName`, and
+    `defaultProjectId`
+  - updated operator/governing docs to say explicitly that `llmDefaults.model`
+    is also compatibility-only bridge state and that active global model
+    authoring should use root `model`
+- Reason:
+  - bridge materialization already backfills `llmDefaults.model` from root
+    `model`, so leaving it out of doctor reporting made the compatibility
+    contract inconsistent
+  - this closes the remaining read-side ambiguity without changing migration
+    or resolver behavior

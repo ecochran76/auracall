@@ -12904,3 +12904,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   agent-owned defaults surface; keep agent semantics limited to
   `runtimeProfile` selection plus descriptive metadata until a later
   execution-facing slice defines stronger behavior and validation.
+- 2026-04-18: Keep the full `llmDefaults` compatibility bridge seam aligned on
+  both read and write surfaces. In this repo, `llmDefaults.model` should be
+  diagnosed alongside `llmDefaults.modelStrategy`,
+  `llmDefaults.defaultProjectName`, and `llmDefaults.defaultProjectId`
+  because bridge output may still backfill all of them from root
+  `model` / `browser` defaults when no explicit `llmDefaults` block exists.

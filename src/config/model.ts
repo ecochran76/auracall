@@ -303,6 +303,9 @@ function describeGlobalBrowserServiceScopedDefaults(config: OracleConfig | Mutab
 function describeLlmDefaultsServiceScopedDefaults(config: OracleConfig | MutableRecord): string[] {
   const llmDefaults = isRecord((config as MutableRecord).llmDefaults) ? ((config as MutableRecord).llmDefaults as MutableRecord) : {};
   const keys: string[] = [];
+  if (llmDefaults.model !== undefined) {
+    keys.push('llmDefaults.model');
+  }
   if (llmDefaults.modelStrategy !== undefined) {
     keys.push('llmDefaults.modelStrategy');
   }
@@ -977,7 +980,7 @@ export function analyzeConfigModelBridgeHealth(
     issues.push({
       code: 'llm-defaults-service-scoped-defaults-present',
       severity: 'info',
-      message: `llmDefaults still defines compatibility-only service defaults (${llmDefaultsServiceScopedDefaults.join(', ')}); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.`,
+      message: `llmDefaults still defines compatibility-only model/service/project defaults (${llmDefaultsServiceScopedDefaults.join(', ')}); keep llmDefaults as a compatibility bridge only and prefer root model plus services.<service> or runtimeProfiles.<name>.services.<service> for active model/service/project behavior.`,
     });
   }
 

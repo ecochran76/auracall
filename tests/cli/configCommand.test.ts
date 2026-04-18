@@ -1279,7 +1279,9 @@ describe('config show helpers', () => {
     const report = buildConfigDoctorReport(
       {
         defaultRuntimeProfile: 'default',
+        model: 'gpt-5.2',
         llmDefaults: {
+          model: 'gpt-5.1',
           modelStrategy: 'current',
           defaultProjectName: 'Legacy Project',
           defaultProjectId: 'g-p-legacy-project',
@@ -1312,7 +1314,7 @@ describe('config show helpers', () => {
     const text = formatConfigDoctorReport(report);
     expect(text).toContain('Status: ok');
     expect(text).toContain(
-      '[info] llmDefaults still defines compatibility-only service defaults (llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.',
+      '[info] llmDefaults still defines compatibility-only model/service/project defaults (llmDefaults.model, llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer root model plus services.<service> or runtimeProfiles.<name>.services.<service> for active model/service/project behavior.',
     );
   });
 

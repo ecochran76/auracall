@@ -1388,7 +1388,9 @@ describe('config model helpers', () => {
   it('surfaces llmDefaults model and project defaults as a compatibility-only bridge seam', () => {
     const config = {
       defaultRuntimeProfile: 'default',
+      model: 'gpt-5.2',
       llmDefaults: {
+        model: 'gpt-5.1',
         modelStrategy: 'current',
         defaultProjectName: 'Legacy Project',
         defaultProjectId: 'g-p-legacy-project',
@@ -1425,7 +1427,7 @@ describe('config model helpers', () => {
           code: 'llm-defaults-service-scoped-defaults-present',
           severity: 'info',
           message:
-            'llmDefaults still defines compatibility-only service defaults (llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer services.<service> or runtimeProfiles.<name>.services.<service> for active service/project behavior.',
+            'llmDefaults still defines compatibility-only model/service/project defaults (llmDefaults.model, llmDefaults.modelStrategy, llmDefaults.defaultProjectName, llmDefaults.defaultProjectId); keep llmDefaults as a compatibility bridge only and prefer root model plus services.<service> or runtimeProfiles.<name>.services.<service> for active model/service/project behavior.',
         }),
       ],
     });
