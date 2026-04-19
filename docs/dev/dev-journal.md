@@ -17745,3 +17745,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Reason:
   - the roadmap and supporting plans had already moved past service-state
     probing, but the execution owner doc was still pointing at closed work
+## 2026-04-18 - team execution authority now distinguishes the live CLI from paused HTTP/MCP writes
+
+- Re-audited the execution lane against shipped code and operator docs:
+  - `auracall teams run` is already live as a bounded CLI execution entrypoint
+    on top of the current single-host team-runtime bridge
+  - the internal `taskRunSpec -> teamRun -> step/sharedState` projection slice
+    is already shipped, not merely planned
+  - broader public team execution writes remain paused on HTTP/MCP surfaces
+- Reconciled the governing docs accordingly:
+  - `0001-2026-04-14-execution.md`
+  - `0004-2026-04-14-team-service-execution.md`
+  - `ROADMAP.md`
+- Reason:
+  - the roadmap and README already reflected the live CLI surface, but the
+    canonical execution plans still spoke as if no public team-run surface
+    existed at all

@@ -10,9 +10,14 @@ Lane: P01
 - the adjacent canonical planning cluster now exists under `docs/dev/plans/`:
   - `0002-2026-04-14-task-run-spec.md`
   - `0003-2026-04-14-team-run-data-model.md`
-- the adjacent task/run-spec and team-run contracts are now concrete enough to support a bounded implementation-planning slice
-- this plan now defines the first internal implementation slice for projecting one `taskRunSpec` into one sequential `teamRun` with initial `step` and `sharedState` records
-- the slice stays intentionally internal and does not authorize a public `team run` surface yet
+- the adjacent task/run-spec and team-run contracts are now concrete enough to
+  support bounded execution work, not just planning
+- the first internal implementation slice is now live for projecting one
+  persisted `taskRunSpec` into one sequential `teamRun` with initial `step`
+  and `sharedState` records
+- the bounded CLI write surface is also now live through `auracall teams run`
+  on top of that same single-host bridge
+- broader public team execution writes remain paused on HTTP/MCP surfaces
 
 # Team Service Execution Plan
 
@@ -258,14 +263,16 @@ Why:
 
 ## First implementation slice
 
-The first implementation slice should be internal-only and narrowly scoped:
+This slice is now complete.
+
+The completed first implementation slice is:
 
 1. accept one persisted `taskRunSpec`
 2. resolve one selected `team`
 3. project one planned `teamRun`
 4. project the initial sequential `step` list
 5. create one empty-but-owned `sharedState` record
-6. stop before public team-execution API/CLI/MCP expansion
+6. stop before broader public HTTP/MCP team-execution expansion
 
 ### In scope
 
@@ -280,13 +287,14 @@ The first implementation slice should be internal-only and narrowly scoped:
 
 ### Out of scope
 
-- public `team run` CLI/API/MCP surface
 - multi-runner execution
 - queue topology
 - lease coordination redesign
 - implicit parallelism
 - best-effort or compensating execution policies
 - broad runner-affinity work beyond what current runtime identity already needs
+- broader public team-execution write surfaces beyond the current bounded CLI
+  entrypoint
 
 ### Proposed implementation target
 
@@ -320,8 +328,9 @@ Keep the first implementation slice bounded to current runtime/team layers:
 
 Important rule:
 
-- do not widen the first slice into external-control-surface behavior
-- prove the internal projection path first
+- keep broader external-control-surface widening paused beyond the current
+  bounded CLI entrypoint
+- prove the internal projection path and single-host bridge first
 
 ### Acceptance criteria for the first implementation slice
 
@@ -331,7 +340,8 @@ Important rule:
 - initial `step` and `sharedState` records are created deterministically
 - the slice remains sequential and fail-fast
 - no assignment-intent fields are duplicated onto `teamRun`
-- no public team-execution interface is introduced
+- the bounded CLI write surface stays on the same sequential single-host bridge
+- no broader public HTTP/MCP team-execution write surface is introduced
 
 ### Verification target
 
@@ -347,7 +357,7 @@ Minimum proof for the first code slice should include:
 Only after the internal projection path is stable should the repo decide whether to:
 
 - expose a bounded internal command for debugging
-- add a narrow public team-execution surface
+- widen beyond the current bounded CLI entrypoint
 - widen toward runner/service orchestration details
 
 ## Not in scope for this plan
@@ -369,4 +379,5 @@ This seam is complete enough when:
 - the shared run-state requirement is explicit
 - the failure/retry ownership split is explicit
 - the first internal implementation slice is explicitly bounded
+- the first internal implementation slice is recorded as shipped
 - roadmap/execution docs point to this plan before any team execution work begins

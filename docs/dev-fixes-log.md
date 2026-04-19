@@ -13026,3 +13026,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   naming closed `0017`/`0018` service-state work as the next finite lane and
   point to the unresolved internal `taskRunSpec -> teamRun` execution slice
   instead.
+- 2026-04-18: When a bounded execution CLI has already shipped, execution
+  authority docs must distinguish that live surface from still-paused broader
+  public writes. In this repo, `auracall teams run` is already a real narrow
+  CLI execution entrypoint on the single-host team-runtime bridge, so
+  `0001`, `0004`, and `ROADMAP.md` had to stop saying no public team-run
+  surface existed at all and instead say that broader HTTP/MCP team execution
+  writes remain paused.

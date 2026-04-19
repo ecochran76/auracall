@@ -345,10 +345,12 @@ Execution docs:
 - Team run review ledger: [docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0015-2026-04-15-team-run-review-ledger.md)
 
 Next recommendation:
-- keep public team execution paused
+- keep broader public team execution writes paused on HTTP/MCP surfaces
 - the first concrete task / run-spec shape is now defined in the canonical plan
 - the concrete `teamRun` execution contract is now defined in the canonical team-run plan
 - the first internal implementation slice is now live for durable `taskRunSpec` persistence plus `taskRunSpec -> teamRun -> runtime` projection
+- the bounded CLI write surface is now live as `auracall teams run` on top of
+  that same sequential single-host bridge
 - the bounded internal inspection/readback seam for that persisted linkage is now live on existing response/recovery surfaces
 - the narrow internal debug/inspection command is now live as `auracall teams inspect`
 - the first bounded public read-only team inspection surface is now live as `GET /v1/team-runs/inspect`
@@ -364,8 +366,9 @@ Next recommendation:
     - `taskRunSpecId`
   - optional runner evaluation:
     - `runnerId`
-- next, keep public team execution writes paused and build the team-run review
-  ledger before developing broad passive provider-state monitoring
+- next, keep broader public team execution writes paused on HTTP/MCP surfaces
+  while tightening runner/service-mode ownership and preserving the current
+  bounded CLI bridge
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it
@@ -437,7 +440,8 @@ Current checkpoint:
   recovery counts
 
 Current sequencing gate:
-- do not add a public `team run` CLI/API/MCP surface until:
+- do not widen beyond the current bounded `auracall teams run` CLI surface
+  into broader HTTP/MCP team execution writes until:
   - team semantics are frozen
   - the task / run-spec layer exists
   - public team execution can be stated without relying on current internal
