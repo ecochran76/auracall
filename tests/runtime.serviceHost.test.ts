@@ -542,6 +542,65 @@ describe('runtime service host', () => {
     expect(storedRunner?.runner.lastClaimedRunId).toBe('run_host_runner_owner');
   });
 
+  it('keeps host claiming scoped to the configured runner even when another eligible runner is fresher', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_host_runner_scoped_claim', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:configured-older',
+        hostId: 'host:http-configured',
+        startedAt: '2026-04-08T14:58:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:20.000Z',
+        expiresAt: '2026-04-08T15:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:alternate-fresh',
+        hostId: 'host:http-alternate',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:50.000Z',
+        expiresAt: '2026-04-08T15:05:30.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      runnerId: 'runner:configured-older',
+      now: () => '2026-04-08T15:01:00.000Z',
+    });
+
+    const result = await host.drainRunsOnce({
+      runId: 'run_host_runner_scoped_claim',
+    });
+
+    expect(result.ownerId).toBe('runner:configured-older');
+    expect(result.executedRunIds).toEqual(['run_host_runner_scoped_claim']);
+    expect(result.drained[0]?.record?.bundle.leases[0]).toMatchObject({
+      ownerId: 'runner:configured-older',
+      status: 'released',
+      releaseReason: 'completed',
+    });
+
+    const configuredRunner = await runnersControl.readRunner('runner:configured-older');
+    const alternateRunner = await runnersControl.readRunner('runner:alternate-fresh');
+    expect(configuredRunner?.runner.lastClaimedRunId).toBe('run_host_runner_scoped_claim');
+    expect(configuredRunner?.runner.lastActivityAt).toBe('2026-04-08T15:01:00.000Z');
+    expect(alternateRunner?.runner.lastClaimedRunId).toBeNull();
+    expect(alternateRunner?.runner.lastActivityAt).toBeNull();
+  });
+
 
   it('refreshes runner-owned lease heartbeat during delayed host execution', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));

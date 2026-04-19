@@ -17959,3 +17959,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added focused claims regressions for:
   - freshest eligible runner winning ahead of an older equally eligible runner
   - stable runner-id fallback when heartbeats are identical
+## 2026-04-19 - Locked service-host runner scoping against multi-runner ambiguity
+
+- Audited the actual `serviceHost` drain path after tightening global
+  claim-candidate ordering.
+- Confirmed the host path is intentionally narrower than the candidate
+  evaluation seam:
+  - a host configured with one `runnerId` only evaluates that runner for local
+    claim
+  - it does not promote a fresher alternative runner automatically
+- Added a focused regression proving a configured older-but-eligible runner
+  still owns the drain even when another eligible runner has a fresher
+  heartbeat.

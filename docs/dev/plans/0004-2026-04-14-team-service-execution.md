@@ -278,6 +278,13 @@ Current bounded implication:
   - claim status rank first
   - then fresher runner heartbeat
   - then runner id as a stable fallback
+- bounded service-host execution remains runner-scoped:
+  - a host configured with one `runnerId` evaluates only that runner for local
+    claim and lease ownership
+  - it does not arbitrate across all eligible runners on behalf of the fleet
+  - the deterministic multi-runner tie-break currently applies to candidate
+    inspection/evaluation surfaces, not to a host rewriting its configured
+    execution owner
 - a bounded `auracall teams run` CLI pass may end with the short-lived local
   runner already marked stale while the stored team run remains paused for
   operator-controlled follow-through

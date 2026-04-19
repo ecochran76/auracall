@@ -13103,3 +13103,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   In this repo, bounded claim-candidate ordering now has an explicit tie-break:
   claim status rank first, then fresher runner heartbeat, then runner id as a
   stable fallback when heartbeats are equal.
+- 2026-04-19: Do not confuse global candidate ordering with host-side runner
+  arbitration. In this repo, a service host configured with one `runnerId`
+  stays runner-scoped for claim/drain decisions; even if another eligible
+  runner is fresher, the host should keep lease ownership on its configured
+  runner and leave multi-runner ordering to the candidate inspection/evaluation
+  seam.
