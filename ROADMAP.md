@@ -227,16 +227,19 @@ Current note:
         - the broader browser-owned runtime override block still remains
           partially transitional:
           - active resolution now prefers the referenced browser profile for:
+            - `blockingProfileAction`
             - `chromePath`
             - `display`
             - debug-port controls
+            - `headless`
+            - `hideWindow`
+            - `remoteChrome`
             - tab/window cleanup controls
             - `managedProfileRoot`
             - source-profile and cookie-source wiring
             - `wslChromePreference`
-          - conflicting runtime-profile `browser` values for
-            `blockingProfileAction`, `headless`, `hideWindow`, and
-            `remoteChrome` still win in active resolution today
+          - no browser-owned launch/browser-family field in that block now
+            outranks the referenced browser profile during active resolution
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough

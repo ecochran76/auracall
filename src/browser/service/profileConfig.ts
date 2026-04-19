@@ -103,11 +103,11 @@ function applyBrowserProfileDefaults(
       browser.manualLoginProfileDir = manualLoginProfileDir;
     }
   }
-  if ((overrideExisting || browser.headless === undefined) && profileBrowser.headless !== undefined) {
-    browser.headless = profileBrowser.headless;
+  if ((overrideExisting || browser.headless === undefined) && browserProfile.headless !== undefined) {
+    browser.headless = browserProfile.headless;
   }
-  if ((overrideExisting || browser.hideWindow === undefined) && profileBrowser.hideWindow !== undefined) {
-    browser.hideWindow = profileBrowser.hideWindow;
+  if ((overrideExisting || browser.hideWindow === undefined) && browserProfile.hideWindow !== undefined) {
+    browser.hideWindow = browserProfile.hideWindow;
   }
   if ((overrideExisting || browser.keepBrowser === undefined) && profileBrowser.keepBrowser !== undefined) {
     browser.keepBrowser = profileBrowser.keepBrowser;
@@ -133,8 +133,8 @@ function applyBrowserProfileDefaults(
   ) {
     browser.debugPortStrategy = browserProfile.debugPortStrategy;
   }
-  if ((overrideExisting || browser.remoteChrome === undefined) && profileBrowser.remoteChrome !== undefined) {
-    browser.remoteChrome = profileBrowser.remoteChrome;
+  if ((overrideExisting || browser.remoteChrome === undefined) && browserProfile.remoteChrome !== undefined) {
+    browser.remoteChrome = browserProfile.remoteChrome;
   }
   if ((overrideExisting || browser.thinkingTime === undefined) && profileBrowser.thinkingTime !== undefined) {
     browser.thinkingTime = profileBrowser.thinkingTime;

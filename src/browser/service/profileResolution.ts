@@ -50,6 +50,9 @@ export interface ResolvedBrowserProfile {
   debugPortStrategy?: DebugPortStrategy;
   debugPortRange?: [number, number];
   blockingProfileAction?: ResolvedBrowserConfig['blockingProfileAction'];
+  remoteChrome?: { host: string; port: number };
+  headless?: boolean;
+  hideWindow?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
   serviceTabLimit?: number;
   blankTabLimit?: number;
@@ -435,7 +438,12 @@ export function resolveBrowserProfileResolution(input: {
     debugPortRange:
       asDebugPortRange(selectedBrowserProfile.debugPortRange) ??
       asDebugPortRange(profileBrowser.debugPortRange),
-    blockingProfileAction: asBlockingProfileAction(effectiveProfileBrowser.blockingProfileAction),
+    blockingProfileAction:
+      asBlockingProfileAction(selectedBrowserProfile.blockingProfileAction) ??
+      asBlockingProfileAction(profileBrowser.blockingProfileAction),
+    remoteChrome: asRemoteChrome(selectedBrowserProfile.remoteChrome) ?? asRemoteChrome(profileBrowser.remoteChrome),
+    headless: asBoolean(selectedBrowserProfile.headless) ?? asBoolean(profileBrowser.headless),
+    hideWindow: asBoolean(selectedBrowserProfile.hideWindow) ?? asBoolean(profileBrowser.hideWindow),
     wslChromePreference:
       asWslPreference(selectedBrowserProfile.wslChromePreference) ??
       asWslPreference(profileBrowser.wslChromePreference),
@@ -496,9 +504,9 @@ export function resolveBrowserProfileResolution(input: {
     debugPortStrategy: asDebugPortStrategy(browser.debugPortStrategy) ?? browserProfile.debugPortStrategy,
     blockingProfileAction:
       asBlockingProfileAction(browser.blockingProfileAction) ?? browserProfile.blockingProfileAction,
-    remoteChrome: asRemoteChrome(browser.remoteChrome),
-    headless: asBoolean(browser.headless),
-    hideWindow: asBoolean(browser.hideWindow),
+    remoteChrome: asRemoteChrome(browser.remoteChrome) ?? browserProfile.remoteChrome,
+    headless: asBoolean(browser.headless) ?? browserProfile.headless,
+    hideWindow: asBoolean(browser.hideWindow) ?? browserProfile.hideWindow,
     keepBrowser: asBoolean(browser.keepBrowser) ?? profileFamily.keepBrowser,
     manualLogin: asBoolean(browser.manualLogin) ?? serviceBinding.manualLogin,
     wslChromePreference: asWslPreference(browser.wslChromePreference) ?? browserProfile.wslChromePreference,

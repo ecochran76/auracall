@@ -17555,3 +17555,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - migration already treats these fields as browser-owned runtime residue
   - keeping active resolution behind that ownership model would leave one more
     avoidable target-vs-runtime mismatch in the browser family lane
+## 2026-04-18 - browser profiles now also win for launch-control escape hatches
+
+- Closed the remaining browser-owned launch/browser-family precedence gap:
+  - updated active browser profile resolution so the referenced browser
+    profile now also wins over conflicting
+    `runtimeProfiles.<name>.browser` values for:
+    - `blockingProfileAction`
+    - `headless`
+    - `hideWindow`
+    - `remoteChrome`
+  - widened the typed browser-profile layer and compatibility
+    `applyBrowserProfileOverrides(...)` defaults so those fields now follow
+    the same ownership model as the rest of the browser-family lane
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - migration was already hoisting these fields into the referenced browser
+    profile
+  - leaving active resolution behind that contract would keep one last
+    avoidable target-vs-runtime mismatch in the browser-family refactor lane

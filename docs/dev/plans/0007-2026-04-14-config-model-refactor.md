@@ -177,19 +177,20 @@ Current diagnostic checkpoint:
   - active broad browser-owned precedence is now partially narrowed:
     - the referenced browser profile now wins over conflicting
       `runtimeProfiles.<name>.browser` values for:
+      - `blockingProfileAction`
       - `chromePath`
       - `display`
       - debug-port controls
+      - `headless`
+      - `hideWindow`
+      - `remoteChrome`
       - tab/window cleanup controls
       - `managedProfileRoot`
       - source-profile and cookie-source wiring
       - `wslChromePreference`
     - the remaining broad runtime browser override block is still live
       advanced residue for now, including fields such as:
-      - `blockingProfileAction`
-      - `headless`
-      - `hideWindow`
-      - `remoteChrome`
+      - none in the browser-owned launch/browser-family class
     - that is why doctor still frames the broader class as advanced escape
       hatches rather than fully dead config
 - `config doctor` now splits service-scoped runtime browser fields into two
@@ -257,19 +258,20 @@ Current migration checkpoint:
       `runtimeProfiles.<name>.keepBrowser` when both exist
   - active resolution now also makes a bounded browser-profile-first rewrite
     for:
+    - `blockingProfileAction`
     - `chromePath`
     - `display`
     - debug-port controls
+    - `headless`
+    - `hideWindow`
+    - `remoteChrome`
     - tab/window cleanup controls
     - `managedProfileRoot`
     - source-profile and cookie-source wiring
     - `wslChromePreference`
   - active resolution does not yet make the same rewrite for the remaining
     broad browser-owned fields such as:
-    - `blockingProfileAction`
-    - `headless`
-    - `hideWindow`
-    - `remoteChrome`
+    - none in the current browser-owned launch/browser-family field class
   - relocatable service fields such as:
     - `modelStrategy`
     - `thinkingTime`

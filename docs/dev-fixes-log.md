@@ -12950,8 +12950,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-18: Narrow the broad runtime-profile browser block one field class at
   a time instead of treating it as all-or-nothing. In this repo, the
   referenced browser profile should now win over conflicting
-  `runtimeProfiles.<name>.browser` values for `chromePath`, `display`,
-  debug-port controls, tab/window cleanup controls, `managedProfileRoot`,
-  source browser profile / cookie-source wiring, and `wslChromePreference`,
-  while `blockingProfileAction`, `headless`, `hideWindow`, and `remoteChrome`
-  remain live advanced runtime overrides until a later slice narrows them too.
+  `runtimeProfiles.<name>.browser` values for `blockingProfileAction`,
+  `chromePath`, `display`, debug-port controls, `headless`, `hideWindow`,
+  `remoteChrome`, tab/window cleanup controls, `managedProfileRoot`, source
+  browser profile / cookie-source wiring, and `wslChromePreference`. The
+  browser-owned launch/browser-family field class no longer has a live
+  runtime-profile precedence carveout in active resolution.

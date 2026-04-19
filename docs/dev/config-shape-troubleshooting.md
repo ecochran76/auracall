@@ -348,17 +348,20 @@ Action:
 - compatibility bridge output keeps that browser-owned field on
   `browserFamilies.<name>`, not on `profiles.<name>`
 - active resolution now also gives browser profiles precedence for:
+  - `blockingProfileAction`
   - `chromePath`
   - `display`
   - debug-port controls
+  - `headless`
+  - `hideWindow`
+  - `remoteChrome`
   - tab/window cleanup controls
   - `managedProfileRoot`
   - source-profile and cookie-source wiring
   - `wslChromePreference`
 - the rest of the broad browser-owned override block is still different:
-  - conflicting `runtimeProfiles.<name>.browser` values for fields such as
-    `blockingProfileAction`, `headless`, `hideWindow`, and `remoteChrome`
-    still win in active resolution today
+  - there is no remaining browser-owned launch/browser-family field in this
+    block that still outranks the referenced browser profile
 - conflicting runtime-profile values are preserved instead of being rewritten
   silently
 - relocatable service fields such as:
