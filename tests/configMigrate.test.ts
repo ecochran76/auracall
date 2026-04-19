@@ -54,6 +54,56 @@ describe('config migrate bridge helpers', () => {
     expect(result.auracallProfile).toBe('consulting');
   });
 
+  it('fills root model and browser defaults from llmDefaults only when those target values are absent', () => {
+    const result = normalizeConfigV1toV2({
+      version: 3,
+      llmDefaults: {
+        model: 'gpt-5.1',
+        modelStrategy: 'current',
+        defaultProjectName: 'Legacy Project',
+        defaultProjectId: 'g-p-legacy-project',
+      },
+    } as any);
+
+    expect(result.model).toBe('gpt-5.1');
+    expect(result.browser).toMatchObject({
+      modelStrategy: 'current',
+      projectName: 'Legacy Project',
+      projectId: 'g-p-legacy-project',
+    });
+  });
+
+  it('keeps explicit root model and browser defaults ahead of llmDefaults during normalization', () => {
+    const result = normalizeConfigV1toV2({
+      version: 3,
+      model: 'gpt-5.2',
+      browser: {
+        modelStrategy: 'select',
+        projectName: 'Root Project',
+        projectId: 'g-p-root-project',
+      },
+      llmDefaults: {
+        model: 'gpt-5.1',
+        modelStrategy: 'current',
+        defaultProjectName: 'Legacy Project',
+        defaultProjectId: 'g-p-legacy-project',
+      },
+    } as any);
+
+    expect(result.model).toBe('gpt-5.2');
+    expect(result.browser).toMatchObject({
+      modelStrategy: 'select',
+      projectName: 'Root Project',
+      projectId: 'g-p-root-project',
+    });
+    expect(result.llmDefaults).toMatchObject({
+      model: 'gpt-5.1',
+      modelStrategy: 'current',
+      defaultProjectName: 'Legacy Project',
+      defaultProjectId: 'g-p-legacy-project',
+    });
+  });
+
   it('materializes legacy auracallProfiles back into profiles without losing browserFamily', () => {
     const result = materializeConfigV2({
       version: 2,

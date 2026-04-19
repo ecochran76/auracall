@@ -17687,3 +17687,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     defaults beat root-browser aliases
   - one older profile-config test was still asserting the superseded
     pre-tightening precedence
+## 2026-04-18 - llmDefaults normalize precedence is now regression-locked
+
+- Added focused migrate/normalize coverage for the live `llmDefaults` bridge
+  seam:
+  - `normalizeConfigV1toV2(...)` now has explicit tests proving
+    `llmDefaults` fills root `model` / `browser.modelStrategy` /
+    `browser.projectName` / `browser.projectId` only when those target values
+    are absent
+  - explicit root `model` and root `browser` values stay authoritative over
+    `llmDefaults` during normalization
+- Reason:
+  - the plan already classified `llmDefaults` as a compatibility bridge, not
+    a preferred active authoring surface
+  - the normalize path implemented that precedence, but the repo did not yet
+    lock it with a focused regression

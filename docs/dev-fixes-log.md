@@ -13002,3 +13002,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   outranked stale root-browser aliases, `applyBrowserProfileOverrides(...)`
   needed matching regression coverage and stale expectations had to be
   corrected immediately.
+- 2026-04-18: When a compatibility bridge stays live on the normalize path,
+  lock its precedence explicitly. In this repo, `llmDefaults` should only
+  backfill root `model` / `browser.modelStrategy` /
+  `browser.projectName` / `browser.projectId` when those target values are
+  absent; explicit root values must stay authoritative over `llmDefaults`
+  during normalization.
