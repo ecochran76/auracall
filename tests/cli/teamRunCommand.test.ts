@@ -16,12 +16,14 @@ import {
 import type { ExecutionRuntimeControlContract } from '../../src/runtime/contract.js';
 import { createExecutionRuntimeControl } from '../../src/runtime/control.js';
 import {
+  createExecutionRunnerRecord,
   createExecutionRun,
   createExecutionRunRecordBundle,
   createExecutionRunSharedState,
   createExecutionRunStep,
 } from '../../src/runtime/model.js';
 import { createExecutionRunnerControl } from '../../src/runtime/runnersControl.js';
+import { createExecutionServiceHost } from '../../src/runtime/serviceHost.js';
 import type { TaskRunSpecRecordStore } from '../../src/teams/store.js';
 import type { TeamRuntimeBridge } from '../../src/teams/runtimeBridge.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../../src/teams/types.js';
@@ -362,6 +364,202 @@ describe('team run CLI helpers', () => {
     ]);
     expect(storedRunner?.runner.lastHeartbeatAt).not.toBe('2026-04-19T15:00:00.000Z');
     expect(storedRunner?.runner.status).toBe('stale');
+  });
+
+  it('hands a CLI-generated paused team run off to a later active runner after approval and resume', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-team-run-cli-pause-handoff-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let secondStepExecuted = false;
+    const result = await executeConfiguredTeamRun({
+      config: {
+        defaultRuntimeProfile: 'default',
+        services: {
+          chatgpt: {
+            identity: {
+              email: 'operator@example.com',
+            },
+          },
+        },
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          orchestrator: { runtimeProfile: 'default' },
+          reviewer: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: { agents: ['orchestrator', 'reviewer'] },
+        },
+      },
+      teamId: 'ops',
+      objective: 'Pause for approval, then finish after operator follow-through.',
+      now: () => '2026-04-19T16:00:00.000Z',
+      randomId: () => 'pausehandoff',
+      localActionPolicy: {
+        mode: 'approval-required',
+        allowedShellCommands: ['node'],
+        allowedCwdRoots: [process.cwd()],
+      },
+      executeStoredRunStep: async ({ step }) => {
+        if (step.order === 1) {
+          return {
+            output: {
+              summary: 'queue one approval-gated shell action',
+              artifacts: [],
+              structuredData: {
+                localActionRequests: [
+                  {
+                    kind: 'shell',
+                    summary: 'Queue one bounded node command for operator approval.',
+                    command: 'node',
+                    args: ['-e', 'process.stdout.write("cli-pending")'],
+                    structuredPayload: {
+                      cwd: process.cwd(),
+                    },
+                  },
+                ],
+              },
+              notes: [],
+            },
+          };
+        }
+
+        secondStepExecuted = true;
+        return {
+          output: {
+            summary: 'resumed after operator approval',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const runtimeControl = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = result.payload.runtimeRunId;
+    const cliRunnerId = 'runner:teams-run:ops:pausehandoff';
+
+    expect(result.payload.runtimeRunStatus).toBe('cancelled');
+    expect(result.payload.finalOutputSummary).toBe('paused for human escalation');
+
+    const pausedRecord = await runtimeControl.readRun(runId);
+    const storedCliRunner = await runnersControl.readRunner(cliRunnerId);
+    const requestId = pausedRecord?.bundle.localActionRequests[0]?.id;
+
+    expect(requestId).toBeTruthy();
+    expect(pausedRecord?.bundle.run.status).toBe('cancelled');
+    expect(pausedRecord?.bundle.steps[1]?.status).toBe('cancelled');
+    expect(pausedRecord?.bundle.leases.every((lease) => lease.status === 'released')).toBe(true);
+    expect(storedCliRunner).toMatchObject({
+      runnerId: cliRunnerId,
+      runner: {
+        id: cliRunnerId,
+        status: 'stale',
+        lastClaimedRunId: runId,
+      },
+    });
+
+    const replacementRunnerId = 'runner:resume-host';
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: replacementRunnerId,
+        hostId: 'host:resume-host',
+        startedAt: '2026-04-19T16:05:00.000Z',
+        lastHeartbeatAt: '2026-04-19T16:05:00.000Z',
+        expiresAt: '2026-04-19T16:05:15.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+        browserCapable: true,
+      }),
+    });
+
+    const replacementHost = createExecutionServiceHost({
+      control: runtimeControl,
+      runnersControl,
+      ownerId: replacementRunnerId,
+      runnerId: replacementRunnerId,
+      now: () => '2026-04-19T16:05:00.000Z',
+      executeStoredRunStep: async ({ step }) => {
+        if (step.order === 2) {
+          secondStepExecuted = true;
+          return {
+            output: {
+              summary: 'resumed after operator approval',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          };
+        }
+        throw new Error(`unexpected resumed step order ${step.order}`);
+      },
+    });
+
+    const resolved = await replacementHost.resolveLocalActionRequest(runId, requestId!, 'approved');
+    expect(resolved).toMatchObject({
+      action: 'resolve-local-action-request',
+      runId,
+      requestId,
+      resolution: 'approved',
+      status: 'resolved',
+      resolved: true,
+    });
+
+    const resumed = await replacementHost.resumeHumanEscalation(runId, {
+      note: 'resume after CLI approval handoff',
+    });
+    expect(resumed).toMatchObject({
+      action: 'resume-human-escalation',
+      runId,
+      status: 'resumed',
+      resumed: true,
+      resumedStepId: `${runId}:step:2`,
+    });
+
+    const drained = await replacementHost.drainRun(runId);
+    expect(drained).toMatchObject({
+      action: 'drain-run',
+      runId,
+      status: 'executed',
+      drained: true,
+    });
+    expect(secondStepExecuted).toBe(true);
+
+    const finalRecord = await runtimeControl.readRun(runId);
+    const replacementRunner = await runnersControl.readRunner(replacementRunnerId);
+
+    expect(finalRecord?.bundle.run.status).toBe('succeeded');
+    expect(finalRecord?.bundle.steps[1]).toMatchObject({
+      status: 'succeeded',
+      output: {
+        summary: 'resumed after operator approval',
+      },
+    });
+    expect(finalRecord?.bundle.leases).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          ownerId: replacementRunnerId,
+          status: 'released',
+        }),
+      ]),
+    );
+    expect(replacementRunner).toMatchObject({
+      runnerId: replacementRunnerId,
+      runner: {
+        id: replacementRunnerId,
+        status: 'active',
+        lastClaimedRunId: runId,
+      },
+    });
   });
 
   it('inspects persisted linkage by task run spec id', async () => {

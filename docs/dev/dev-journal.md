@@ -17934,3 +17934,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   startup/background-drain/readback paths during this audit.
 - Updated `0004`, `0001`, and `ROADMAP.md` so this sub-lane is now
   maintenance-only unless a fresh mismatch is demonstrated.
+## 2026-04-19 - Locked CLI paused-run handoff to later active runner
+
+- Added a focused `teams run` regression for the bounded CLI path when a
+  short-lived local runner exits after leaving a team run paused for
+  operator-controlled follow-through.
+- The runtime already behaved correctly:
+  - the CLI runner is marked stale on exit
+  - its lease ownership stays historical only
+  - after local-action approval and human resume, a later eligible active
+    runner can claim and drain the resumed run to completion
+- Recorded that handoff rule in `0004` as an explicit bounded implication for
+  the current single-host execution lane.

@@ -271,6 +271,12 @@ Team config should not directly encode:
 
 Current bounded implication:
 
+- a bounded `auracall teams run` CLI pass may end with the short-lived local
+  runner already marked stale while the stored team run remains paused for
+  operator-controlled follow-through
+- in that posture, the stale CLI runner is historical ownership only:
+  - after operator local-action approval and human resume, a later eligible
+    active runner should claim and drain the resumed run
 - a resumed paused run is claimable by any currently eligible active runner
 - resumed execution should not be pinned implicitly to the runner identity
   that originally paused the step

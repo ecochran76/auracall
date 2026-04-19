@@ -13093,3 +13093,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/status?recovery=true` all reflected current claimant semantics correctly,
   the right move was to mark that sub-lane maintenance-only unless a new
   concrete mismatch appears.
+- 2026-04-19: Treat the short-lived `auracall teams run` local runner as
+  historical ownership only once it exits, even when the stored run still
+  needs operator-controlled follow-through. In this repo, a CLI-generated team
+  run that pauses for approval/human escalation should still be claimable by a
+  later eligible active runner after local-action approval and resume, rather
+  than staying implicitly pinned to the stale CLI runner.
