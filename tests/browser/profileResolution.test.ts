@@ -166,11 +166,11 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile).toMatchObject({
       target: 'grok',
       chromeProfile: 'Profile 2',
-      manualLoginProfileDir: '/tmp/managed-root/mixed/grok',
       debugPort: 45555,
       debugPortStrategy: 'auto',
       wslChromePreference: 'windows',
     });
+    expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
   });
 
   test('drops manual-login profile path when manual login is explicitly disabled', () => {
@@ -455,9 +455,9 @@ describe('resolveBrowserProfileResolution', () => {
 
     expect(result.launchProfile).toMatchObject({
       target: 'chatgpt',
-      manualLoginProfileDir: managedProfileDir,
       chromeProfile: 'Profile 1',
     });
+    expect(result.launchProfile.manualLoginProfileDir).toBeUndefined();
   });
 
   test('merges named browser-family defaults before profile-local browser overrides', () => {

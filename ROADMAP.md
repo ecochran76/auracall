@@ -137,6 +137,9 @@ Current note:
         ownership boundary is narrowed further
       - browser execution overrides still win over service fallback
       - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+      - resolved service-binding / launch-profile layers should suppress
+        `manualLoginProfileDir` unless `manualLogin` is active for that same
+        scope
       - default-equivalent derived managed-profile paths should be treated as
         redundant config noise
       - `config migrate` may now remove those default-equivalent explicit

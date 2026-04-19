@@ -459,10 +459,12 @@ export function resolveBrowserProfileResolution(input: {
   };
 
   const serviceBindingManualLogin = asBoolean(browser.manualLogin) ?? asBoolean(serviceConfig.manualLogin);
+  const resolvedManagedProfileDir =
+    asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir);
   const serviceBindingManualLoginProfileDir =
-    serviceBindingManualLogin === false
-      ? undefined
-      : asNonEmptyString(browser.manualLoginProfileDir) ?? asNonEmptyString(serviceConfig.manualLoginProfileDir);
+    serviceBindingManualLogin === true
+      ? resolvedManagedProfileDir
+      : undefined;
 
   const serviceBinding: ResolvedServiceBinding = {
     serviceId: defaultService,
@@ -486,8 +488,8 @@ export function resolveBrowserProfileResolution(input: {
 
   const configuredLaunchProfileName = asNonEmptyString(browser.chromeProfile) ?? browserProfile.sourceProfileName;
   const effectiveLaunchProfileName =
-    serviceBinding.manualLoginProfileDir && configuredLaunchProfileName
-      ? resolveManagedProfileName(serviceBinding.manualLoginProfileDir, configuredLaunchProfileName)
+    resolvedManagedProfileDir && configuredLaunchProfileName
+      ? resolveManagedProfileName(resolvedManagedProfileDir, configuredLaunchProfileName)
       : configuredLaunchProfileName;
 
   const launchProfile: ResolvedBrowserLaunchProfile = {

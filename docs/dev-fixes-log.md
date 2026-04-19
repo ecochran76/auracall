@@ -12962,3 +12962,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   hatches. If no browser profile is referenced yet, say directly that those
   same runtime fields are still active only because browser-profile ownership
   has not been completed for that runtime profile.
+- 2026-04-18: Keep lower-level resolved launch layers aligned with the
+  managed-profile escape-hatch contract. In this repo,
+  `manualLoginProfileDir` should not appear in resolved service-binding or
+  launch-profile state unless `manualLogin` is explicitly active for that
+  same scope; deriving the internal managed browser profile directory is a
+  separate concern and should stay separate.

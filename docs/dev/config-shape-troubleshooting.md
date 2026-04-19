@@ -501,6 +501,9 @@ Action:
 - do not expect `config migrate` to relocate them casually
 - browser execution overrides still win over service fallback for these fields
 - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+- resolved service-binding / launch-profile layers should not expose
+  `manualLoginProfileDir` at all unless `manualLogin` is active for that same
+  scope
 - narrow their ownership boundary further before automating any rewrite
 
 ### `runtime-profile-manual-login-profile-dir-inactive`

@@ -233,6 +233,9 @@ Current diagnostic checkpoint:
   - current escape-hatch contract:
     - browser execution overrides still win over service fallback
     - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
+    - resolved service-binding / launch-profile layers should suppress
+      `manualLoginProfileDir` entirely when `manualLogin` is not active for
+      that same scope
     - doctor should also warn when `manualLoginProfileDir` is set without
       active `manualLogin`, because that path is otherwise inert config noise
     - doctor should treat default-equivalent derived managed-profile paths as

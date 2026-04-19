@@ -17590,3 +17590,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - after closing the browser-family precedence lane, the old
     “intentional advanced escape hatch” wording was too vague for the common
     residue case
+## 2026-04-18 - inactive manual-login profile paths no longer leak through resolved launch layers
+
+- Tightened the managed-profile escape-hatch contract without changing the
+  broader precedence policy:
+  - `resolveBrowserProfileResolution(...)` now only surfaces
+    `manualLoginProfileDir` in service-binding and launch-profile layers when
+    `manualLogin` is explicitly active for that same scope
+  - managed browser launch context derivation still computes the underlying
+    managed profile directory separately, so browser launch internals keep
+    working without treating the inactive escape hatch as live service config
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - doctor and user-facing docs already described
+    `manualLoginProfileDir` as inert unless `manualLogin` is true
+  - the lower-level resolved launch layers were still leaking that path even
+    when interactive login was not active, which made the internal contract
+    looser than the documented operator behavior
