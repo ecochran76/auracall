@@ -319,6 +319,12 @@ Current bounded implication:
   historical paused-owner lease posture
 - this bounded operator-facing readback hardening sub-lane is now
   maintenance-only unless a new concrete claimant/reporting mismatch is found
+- the narrower `api serve` server-local-runner ownership/readback sub-lane is
+  also maintenance-only unless a new concrete mismatch is reproduced across:
+  - startup recovery
+  - background drain
+  - aggregate `/status?recovery=1`
+  - `/v1/runtime-runs/inspect`
 
 ## MVP recommendation
 

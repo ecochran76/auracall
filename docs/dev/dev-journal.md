@@ -17987,3 +17987,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added a focused HTTP regression proving both `localClaimSummary` and
   `recoverySummary.localClaim` stay keyed to the persisted server local runner
   even when another eligible runner record is fresher.
+## 2026-04-19 - Parked api-serve server-local-runner ownership/readback lane
+
+- Re-audited the remaining adjacent `api serve` ownership/reporting surfaces
+  after locking startup recovery and `/status` readback to the persisted server
+  local runner.
+- Confirmed there is no new reproduced mismatch in the remaining bounded
+  surfaces:
+  - startup recovery/background drain still execute through the pinned
+    server-owned `serviceHost`
+  - aggregate `/status?recovery=1` still projects claim posture for that same
+    persisted server local runner
+  - `/v1/runtime-runs/inspect` still selects an explicitly queried runner or
+    the active lease owner rather than performing fleet arbitration
+- Marked this narrower `0004` `api serve` server-local-runner
+  ownership/readback sub-lane maintenance-only unless a fresh mismatch is
+  reproduced.

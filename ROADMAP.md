@@ -15,6 +15,8 @@ Current State:
 - planning-authority migration is complete and the next decision is product sequencing
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
+- the narrower `api serve` server-local-runner ownership/readback checkpoint is
+  also maintenance-only unless a fresh mismatch is reproduced
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 

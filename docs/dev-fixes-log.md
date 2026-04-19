@@ -13118,3 +13118,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runner. In this repo, `localClaimSummary` and recovery-summary claim buckets
   should project eligibility for `runner:http-responses:<host>:<port>`, not
   imply that some other fresher eligible runner has become the selected owner.
+- 2026-04-19: Stop mining the narrower `api serve` server-local-runner
+  ownership/readback seam once startup recovery, aggregate `/status`, and
+  runtime inspection all match the same pinned server-runner contract. In this
+  repo, further work in that sub-lane should require a freshly reproduced
+  mismatch, not more contract-only hardening by inertia.
