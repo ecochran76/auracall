@@ -5,7 +5,12 @@ import {
   createExecutionRunSharedState,
   createExecutionRunStep,
 } from '../src/runtime/model.js';
-import { createTeamRunReviewLedgerFromBundle } from '../src/teams/reviewLedger.js';
+import type { ExecutionRuntimeControlContract } from '../src/runtime/contract.js';
+import {
+  createTeamRunReviewLedgerFromBundle,
+  reviewTeamRunLedger,
+} from '../src/teams/reviewLedger.js';
+import type { TaskRunSpecRecordStore } from '../src/teams/store.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 
 describe('team run review ledger', () => {
@@ -682,5 +687,271 @@ describe('team run review ledger', () => {
         confidence: 'high',
       },
     ]);
+  });
+
+  it('keeps taskRunSpecId review lookup scoped to team-run history', async () => {
+    const taskRunSpecId = 'task_review_team_only';
+    const teamRunId = 'teamrun_review_team_only';
+    const olderTeamRun = createExecutionRunRecordBundle({
+      run: createExecutionRun({
+        id: 'runtime_review_team_only_old',
+        sourceKind: 'team-run',
+        sourceId: teamRunId,
+        taskRunSpecId,
+        status: 'failed',
+        createdAt: '2026-04-19T14:00:00.000Z',
+        updatedAt: '2026-04-19T14:01:00.000Z',
+        trigger: 'cli',
+        requestedBy: 'auracall teams run',
+        entryPrompt: null,
+        initialInputs: {},
+        sharedStateId: 'runtime_review_team_only_old:state',
+        stepIds: ['runtime_review_team_only_old:step:1'],
+        policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+      }),
+      steps: [
+        createExecutionRunStep({
+          id: 'runtime_review_team_only_old:step:1',
+          runId: 'runtime_review_team_only_old',
+          sourceStepId: `${teamRunId}:step:1`,
+          agentId: 'analyst',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          kind: 'analysis',
+          status: 'failed',
+          order: 1,
+          dependsOnStepIds: [],
+          input: {
+            prompt: 'First attempt.',
+            handoffIds: [],
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      ],
+      sharedState: createExecutionRunSharedState({
+        id: 'runtime_review_team_only_old:state',
+        runId: 'runtime_review_team_only_old',
+        status: 'failed',
+        artifacts: [],
+        structuredOutputs: [],
+        notes: [],
+        history: [],
+        lastUpdatedAt: '2026-04-19T14:01:00.000Z',
+      }),
+      events: [],
+    });
+    const newerDirectRun = createExecutionRunRecordBundle({
+      run: createExecutionRun({
+        id: 'runtime_review_team_only_direct',
+        sourceKind: 'direct',
+        sourceId: null,
+        taskRunSpecId,
+        status: 'succeeded',
+        createdAt: '2026-04-19T14:05:00.000Z',
+        updatedAt: '2026-04-19T14:06:00.000Z',
+        trigger: 'cli',
+        requestedBy: 'operator',
+        entryPrompt: 'Direct retry.',
+        initialInputs: {},
+        sharedStateId: 'runtime_review_team_only_direct:state',
+        stepIds: ['runtime_review_team_only_direct:step:1'],
+        policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+      }),
+      steps: [
+        createExecutionRunStep({
+          id: 'runtime_review_team_only_direct:step:1',
+          runId: 'runtime_review_team_only_direct',
+          sourceStepId: 'runtime_review_team_only_direct:step:1',
+          agentId: 'analyst',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          kind: 'analysis',
+          status: 'succeeded',
+          order: 1,
+          dependsOnStepIds: [],
+          input: {
+            prompt: 'Direct attempt.',
+            handoffIds: [],
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      ],
+      sharedState: createExecutionRunSharedState({
+        id: 'runtime_review_team_only_direct:state',
+        runId: 'runtime_review_team_only_direct',
+        status: 'succeeded',
+        artifacts: [],
+        structuredOutputs: [],
+        notes: [],
+        history: [],
+        lastUpdatedAt: '2026-04-19T14:06:00.000Z',
+      }),
+      events: [],
+    });
+    const newerTeamRetry = createExecutionRunRecordBundle({
+      run: createExecutionRun({
+        id: 'runtime_review_team_only_retry',
+        sourceKind: 'team-run',
+        sourceId: teamRunId,
+        taskRunSpecId,
+        status: 'succeeded',
+        createdAt: '2026-04-19T14:07:00.000Z',
+        updatedAt: '2026-04-19T14:08:00.000Z',
+        trigger: 'cli',
+        requestedBy: 'auracall teams run',
+        entryPrompt: null,
+        initialInputs: {},
+        sharedStateId: 'runtime_review_team_only_retry:state',
+        stepIds: ['runtime_review_team_only_retry:step:1'],
+        policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+      }),
+      steps: [
+        createExecutionRunStep({
+          id: 'runtime_review_team_only_retry:step:1',
+          runId: 'runtime_review_team_only_retry',
+          sourceStepId: `${teamRunId}:step:1`,
+          agentId: 'reviewer',
+          runtimeProfileId: 'default',
+          browserProfileId: 'default',
+          service: 'chatgpt',
+          kind: 'review',
+          status: 'succeeded',
+          order: 1,
+          dependsOnStepIds: [],
+          input: {
+            prompt: 'Retried team attempt.',
+            handoffIds: [],
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      ],
+      sharedState: createExecutionRunSharedState({
+        id: 'runtime_review_team_only_retry:state',
+        runId: 'runtime_review_team_only_retry',
+        status: 'succeeded',
+        artifacts: [],
+        structuredOutputs: [],
+        notes: [],
+        history: [],
+        lastUpdatedAt: '2026-04-19T14:08:00.000Z',
+      }),
+      events: [],
+    });
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun() {
+        throw new Error('not used');
+      },
+      async inspectRun() {
+        throw new Error('not used');
+      },
+      async listRuns(options) {
+        expect(options).toEqual({ sourceKind: 'team-run' });
+        return [
+          {
+            runId: olderTeamRun.run.id,
+            revision: 1,
+            persistedAt: olderTeamRun.run.updatedAt,
+            bundle: olderTeamRun,
+          },
+          {
+            runId: newerTeamRetry.run.id,
+            revision: 1,
+            persistedAt: newerTeamRetry.run.updatedAt,
+            bundle: newerTeamRetry,
+          },
+        ];
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+    const taskRunSpecStore: TaskRunSpecRecordStore = {
+      async ensureStorage() {
+        throw new Error('not used');
+      },
+      async writeSpec() {
+        throw new Error('not used');
+      },
+      async readSpec() {
+        throw new Error('not used');
+      },
+      async readRecord(candidateTaskRunSpecId) {
+        if (candidateTaskRunSpecId !== taskRunSpecId) {
+          return null;
+        }
+        return {
+          taskRunSpecId,
+          revision: 1,
+          persistedAt: '2026-04-19T13:59:00.000Z',
+          spec: {
+            id: taskRunSpecId,
+            teamId: 'auracall-solo',
+            title: 'Review selection lock',
+            objective: 'Keep review lookup team scoped.',
+            createdAt: '2026-04-19T13:58:00.000Z',
+            successCriteria: [],
+            requestedOutputs: [],
+            inputArtifacts: [],
+            context: {},
+            overrides: {},
+            requestedBy: { kind: 'cli', label: 'auracall teams run' },
+            trigger: 'cli',
+          } as never,
+        };
+      },
+      async writeRecord() {
+        throw new Error('not used');
+      },
+    };
+
+    const payload = await reviewTeamRunLedger({
+      taskRunSpecId,
+      control,
+      taskRunSpecStore,
+    });
+
+    expect(newerDirectRun.run.sourceKind).toBe('direct');
+    expect(payload).toMatchObject({
+      resolvedBy: 'task-run-spec-id',
+      queryId: taskRunSpecId,
+      matchingRuntimeRunCount: 2,
+      matchingRuntimeRunIds: ['runtime_review_team_only_retry', 'runtime_review_team_only_old'],
+      taskRunSpecSummary: {
+        id: taskRunSpecId,
+        teamId: 'auracall-solo',
+      },
+      ledger: {
+        teamRunId,
+        runtimeRunId: 'runtime_review_team_only_retry',
+        taskRunSpecId,
+        status: 'succeeded',
+      },
+    });
   });
 });

@@ -18032,3 +18032,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   when a newer direct run shares the same `taskRunSpecId` on:
   - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
   - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+## 2026-04-19 - Review ledger task-run-spec lookup contract lock
+
+- Audited the adjacent review-ledger selection seam after the runtime
+  inspection fix.
+- Did not find a new implementation bug in
+  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts):
+  the lookup was already scoped to `sourceKind = team-run`.
+- The remaining gap was durability: the repo did not yet have a focused
+  regression proving review-ledger lookup keeps `taskRunSpecId` aliases inside
+  team-run history even when a newer direct run shares the same id.
+- Added that regression in
+  [tests/teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.reviewLedger.test.ts)
+  and updated the active `0004` authority to state the same rule explicitly.

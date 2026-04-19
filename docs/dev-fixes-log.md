@@ -13134,3 +13134,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `taskRunSpec -> teamRun -> runtime` chain, so `/v1/runtime-runs/inspect`
   should not let a newer direct run with the same `taskRunSpecId` displace the
   actual team-backed runtime attempt on that alias surface.
+- 2026-04-19: Keep review-ledger `taskRunSpecId` aliases on that same
+  team-run-only history rule. In this repo, review-ledger lookup should not
+  let a newer direct run with the same `taskRunSpecId` displace the actual
+  team-backed runtime/review attempt, even if the implementation already
+  appears scoped correctly today.
