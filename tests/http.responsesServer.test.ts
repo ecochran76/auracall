@@ -7330,6 +7330,149 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('projects resumed runs into recovery summary local-claim buckets instead of historical paused-owner state', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-summary-resumed-claim-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'status_recovery_summary_resumed_claim';
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      runId,
+      '2026-04-19T12:40:00.000Z',
+      '2026-04-19T12:45:00.000Z',
+      'team-run',
+    );
+
+    const pausedRecord = await control.readRun(runId);
+    if (!pausedRecord) {
+      throw new Error(`expected paused run ${runId}`);
+    }
+    await control.persistRun({
+      runId,
+      expectedRevision: pausedRecord.revision,
+      bundle: {
+        ...pausedRecord.bundle,
+        localActionRequests: [
+          {
+            id: `${runId}:action:${runId}:step:1:1`,
+            teamRunId: runId,
+            ownerStepId: `${runId}:step:1`,
+            kind: 'shell',
+            summary: 'Validate resumed recovery summary claim projection.',
+            command: 'pnpm',
+            args: ['vitest', 'run'],
+            structuredPayload: {},
+            notes: [],
+            status: 'requested',
+            createdAt: '2026-04-19T12:44:00.000Z',
+            approvedAt: null,
+            completedAt: null,
+            resultSummary: null,
+            resultPayload: null,
+          },
+        ],
+      },
+    });
+    await control.acquireLease({
+      runId,
+      leaseId: `${runId}:lease:origin`,
+      ownerId: 'runner:origin',
+      acquiredAt: '2026-04-19T12:44:00.000Z',
+      heartbeatAt: '2026-04-19T12:45:00.000Z',
+      expiresAt: '2026-04-19T12:46:00.000Z',
+    });
+    await control.releaseLease({
+      runId,
+      leaseId: `${runId}:lease:origin`,
+      releasedAt: '2026-04-19T12:45:00.000Z',
+      releaseReason: 'cancelled',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:origin',
+        hostId: 'host:origin',
+        status: 'stale',
+        startedAt: '2026-04-19T12:35:00.000Z',
+        lastHeartbeatAt: '2026-04-19T12:45:00.000Z',
+        expiresAt: '2026-04-19T12:45:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        serviceAccountIds: [],
+        browserCapable: true,
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-19T12:50:00.000Z'),
+      },
+    );
+
+    try {
+      const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+
+      const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localActionControl: {
+            action: 'resolve-request',
+            runId,
+            requestId: `${runId}:action:${runId}:step:1:1`,
+            resolution: 'approved',
+          },
+        }),
+      });
+      expect(resolveResponse.status).toBe(200);
+
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId,
+            note: 'resume for recovery summary local-claim audit',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+
+      const recoverySummaryResponse = await fetch(
+        `http://127.0.0.1:${server.port}/status?recovery=true&sourceKind=all`,
+      );
+      expect(recoverySummaryResponse.status).toBe(200);
+      const recoverySummaryPayload = (await recoverySummaryResponse.json()) as Record<string, any>;
+      expect(recoverySummaryPayload).toMatchObject({
+        recoverySummary: {
+          reclaimableRunIds: [runId],
+          activeLeaseRunIds: [],
+          localClaim: {
+            sourceKind: 'direct',
+            runnerId,
+            selectedRunIds: [runId],
+            blockedRunIds: [],
+            notReadyRunIds: [],
+            unavailableRunIds: [],
+            statusByRunId: {
+              [runId]: 'eligible',
+            },
+            reasonsByRunId: {},
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('inspects resumed operator-controlled runs against the current queried runner, not the historical paused owner', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-resumed-runner-'));
     cleanup.push(homeDir);

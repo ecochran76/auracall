@@ -13080,3 +13080,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/status/recovery/{run_id}` should report `activeLease = null` and project
   the current local runner's runnable/claimable posture instead of leaving the
   historical paused owner implied as still active.
+- 2026-04-19: Keep resumed-run HTTP recovery summary keyed to current
+  reclaimable/local-claim buckets, not historical paused ownership. In this
+  repo, once local-action resolution and human resume clear the old active
+  lease, `/status?recovery=true` should move the run into `reclaimableRunIds`
+  and the current runner's `selectedRunIds` instead of leaving it counted
+  under active-lease posture.

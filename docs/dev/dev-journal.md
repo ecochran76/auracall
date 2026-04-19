@@ -17904,3 +17904,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - once status readback and runtime inspection were both locked to current
     claimant semantics, recovery detail needed the same explicit proof to keep
     the operator-facing ownership story coherent across all three surfaces
+## 2026-04-19 - HTTP recovery summary now locks resumed local-claim buckets
+
+- Continued the same ownership/readback audit onto aggregate recovery summary:
+  - `summarizeRecoveryState(...)` already recomputed local-claim and lease
+    posture after liveness/repair evaluation
+  - but the HTTP `/status?recovery=true` surface did not yet have a focused
+    regression proving that a resumed run leaves historical paused-owner lease
+    posture and moves into reclaimable/current-runner local-claim buckets
+- Added one focused HTTP regression proving:
+  - after local-action resolution and human resume, the resumed run appears
+    under `reclaimableRunIds`
+  - the same run appears under the current HTTP runner's `selectedRunIds`
+  - `activeLeaseRunIds` stays clear once the historical lease is released
+- Reason:
+  - once recovery detail was locked to current local-claim projection, the
+    aggregate recovery summary needed the same explicit proof so operators do
+    not get divergent ownership stories between summary and per-run detail

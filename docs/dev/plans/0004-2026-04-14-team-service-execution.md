@@ -277,6 +277,9 @@ Current bounded implication:
 - bounded HTTP recovery detail after operator resume should project current
   local-claim posture and no active lease when the historical paused-owner
   lease has already been released
+- bounded HTTP recovery summary after operator resume should classify the run
+  under reclaimable/current local-claim buckets, not leave it counted under
+  historical paused-owner lease posture
 
 ## MVP recommendation
 
