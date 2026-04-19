@@ -13109,3 +13109,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runner is fresher, the host should keep lease ownership on its configured
   runner and leave multi-runner ordering to the candidate inspection/evaluation
   seam.
+- 2026-04-19: Keep `api serve` recovery ownership on the server local runner.
+  In this repo, startup recovery and background drain both execute through the
+  server-owned local `serviceHost`, so recovered runs should be claimed by the
+  persisted `runner:http-responses:<host>:<port>` record rather than silently
+  moving to some other fresher eligible runner record.

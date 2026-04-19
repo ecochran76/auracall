@@ -9586,6 +9586,67 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('keeps startup recovery scoped to the server local runner even when another eligible runner is fresher', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-runner-scope-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const createdAt = '2026-04-08T13:00:00.000Z';
+    const runId = 'resp_recover_runner_scope_1';
+
+    await seedPlannedDirectRun(control, runId, createdAt, 'Recover this run with server-owned runner.');
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:alternate-fresh',
+        hostId: 'host:alternate',
+        startedAt: '2026-04-08T12:58:00.000Z',
+        lastHeartbeatAt: '2026-04-08T13:00:55.000Z',
+        expiresAt: '2026-04-08T13:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      {
+        host: '127.0.0.1',
+        port: 0,
+        recoverRunsOnStart: true,
+      },
+      { control, runnersControl },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        id: runId,
+        object: 'response',
+        status: 'completed',
+      });
+
+      const localRunnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+      const storedRecord = await control.readRun(runId);
+      expect(storedRecord?.bundle.leases[0]).toMatchObject({
+        ownerId: localRunnerId,
+        status: 'released',
+        releaseReason: 'completed',
+      });
+
+      const localRunner = await runnersControl.readRunner(localRunnerId);
+      const alternateRunner = await runnersControl.readRunner('runner:alternate-fresh');
+      expect(localRunner?.runner.lastClaimedRunId).toBe(runId);
+      expect(localRunner?.runner.lastActivityAt).not.toBeNull();
+      expect(alternateRunner?.runner.lastClaimedRunId).toBeNull();
+      expect(alternateRunner?.runner.lastActivityAt).toBeNull();
+    } finally {
+      await server.close();
+    }
+  });
+
   it('recovers a persisted runnable direct run through background drain when startup recovery is disabled', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-background-drain-'));
     cleanup.push(homeDir);

@@ -17971,3 +17971,12 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added a focused regression proving a configured older-but-eligible runner
   still owns the drain even when another eligible runner has a fresher
   heartbeat.
+## 2026-04-19 - Locked api-serve startup recovery to the server local runner
+
+- Audited the adjacent startup-recovery/background-drain seam after locking
+  runner-scoped `serviceHost` behavior.
+- Confirmed the server path reuses one pinned local `serviceHost`, so the
+  remaining risk was only whether that contract stayed explicit at startup.
+- Added an HTTP-level regression proving startup recovery claims the recovered
+  run through the persisted server local runner even when another eligible
+  runner record has a fresher heartbeat.

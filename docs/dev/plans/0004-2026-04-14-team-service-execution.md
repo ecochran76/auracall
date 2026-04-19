@@ -285,6 +285,12 @@ Current bounded implication:
   - the deterministic multi-runner tie-break currently applies to candidate
     inspection/evaluation surfaces, not to a host rewriting its configured
     execution owner
+- bounded `api serve` startup recovery and background drain inherit that same
+  runner-scoped ownership rule through the server-owned local host:
+  - they should recover and drain work through the persisted server local
+    runner record
+  - they should not silently promote a different fresher eligible runner
+    record during server-owned execution
 - a bounded `auracall teams run` CLI pass may end with the short-lived local
   runner already marked stale while the stored team run remains paused for
   operator-controlled follow-through
