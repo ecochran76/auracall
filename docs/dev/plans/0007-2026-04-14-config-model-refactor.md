@@ -231,6 +231,8 @@ Current diagnostic checkpoint:
   - keep `manualLogin` and `manualLoginProfileDir` only as intentional escape
     hatches until their ownership boundary is narrowed further
   - current escape-hatch contract:
+    - browser mode still defaults to managed-profile interactive-login posture
+      unless `manualLogin: false` is set explicitly
     - browser execution overrides still win over service fallback
     - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
     - resolved service-binding / launch-profile layers should suppress

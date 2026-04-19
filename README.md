@@ -84,6 +84,14 @@ auracall tui
 
 Engine auto-picks API when `OPENAI_API_KEY` is set, otherwise browser; browser is stable on macOS and works on Linux and Windows. On Linux pass `--browser-chrome-path/--browser-cookie-path` if detection fails; on Windows prefer `--browser-manual-login` or inline cookies if decryption is blocked. From WSL, integrated Windows Chrome runs now use an auto-assigned DevTools port plus Aura-Call’s built-in `windows-loopback` relay by default, so firewall rules and `portproxy` are only for manual direct-CDP debugging.
 
+Current browser-mode default posture:
+- browser runs still default to Aura-Call-managed profile launch
+- if you do not set `manualLogin` explicitly, browser config resolution still
+  treats interactive login as on and derives
+  `manualLoginProfileDir = managedProfileRoot + auracallProfile + service`
+- set `manualLogin: false` explicitly when you need to suppress that managed
+  profile path
+
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 
 Terminology note:

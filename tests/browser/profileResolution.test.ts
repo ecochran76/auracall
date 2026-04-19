@@ -684,6 +684,7 @@ describe('resolveBrowserProfileResolution', () => {
       target: 'chatgpt',
       chromePath: '/usr/bin/google-chrome',
       chromeProfile: 'Default',
+      manualLogin: true,
       manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
       wslChromePreference: 'wsl',
     });

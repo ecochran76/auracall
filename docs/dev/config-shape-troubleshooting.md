@@ -499,6 +499,8 @@ Meaning:
 Action:
 - keep them only when the managed-profile/account coupling is intentional
 - do not expect `config migrate` to relocate them casually
+- browser mode still defaults to managed-profile interactive-login posture
+  unless `manualLogin: false` is set explicitly
 - browser execution overrides still win over service fallback for these fields
 - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
 - resolved service-binding / launch-profile layers should not expose

@@ -136,6 +136,8 @@ Current note:
       - keep the managed-profile escape hatches conservative until their
         ownership boundary is narrowed further
       - browser execution overrides still win over service fallback
+      - browser mode still defaults to managed-profile interactive-login
+        posture unless `manualLogin: false` is set explicitly
       - `manualLoginProfileDir` is only meaningful when `manualLogin` is true
       - resolved service-binding / launch-profile layers should suppress
         `manualLoginProfileDir` unless `manualLogin` is active for that same

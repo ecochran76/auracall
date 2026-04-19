@@ -507,6 +507,13 @@ Within each file, later CLI flags still override config, and environment variabl
   - If you already use `projectId`/`projectName` in profile service blocks, you can keep that path and avoid URL pinning entirely.
   - URL pinning is most useful when you want a literal target route (for example, a specific non-project chat folder URL) instead of config-driven project resolution.
 - `services.<service>.interactiveLogin` can set a global login mode default; `runtimeProfiles.<name>.services.<service>.interactiveLogin` overrides it per runtime profile (legacy `manualLogin` still works).
+- Current browser-mode default posture is still managed-profile interactive
+  login:
+  - if you do not set `manualLogin` explicitly, `resolveBrowserConfig(...)`
+    still defaults browser runs to `manualLogin: true`
+  - Aura-Call then derives a managed browser profile dir from
+    `browser.managedProfileRoot + auracallProfile + service`
+  - set `manualLogin: false` explicitly when you need a non-managed path
 - `services.<service>.manualLoginProfileDir` (and its per-runtime-profile override) controls the persistent managed browser profile dir used for interactive login.
   - Treat this as an advanced override. The default path is derived from `browser.managedProfileRoot + auracallProfile + service`.
   - It is only meaningful when `manualLogin` / `interactiveLogin` is enabled

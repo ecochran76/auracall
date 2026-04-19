@@ -17608,3 +17608,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the lower-level resolved launch layers were still leaking that path even
     when interactive login was not active, which made the internal contract
     looser than the documented operator behavior
+## 2026-04-18 - browser mode now explicitly documents the current manual-login default
+
+- Locked and documented the current managed-profile toggle posture instead of
+  changing behavior speculatively:
+  - confirmed that `resolveBrowserConfig(...)` still defaults browser mode to
+    `manualLogin: true`
+  - confirmed that direct browser runs, managed login, and reattach paths all
+    continue to assume AuraCall-managed profile launch
+  - updated focused resolver coverage plus the matching README / config /
+    roadmap / plan docs so the default is explicit
+- Reason:
+  - the code path was internally consistent, but operator-facing docs still
+    talked mostly about the toggle and override path, not the default posture
+  - that made the remaining policy ambiguity look larger than it really was

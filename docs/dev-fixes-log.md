@@ -12968,3 +12968,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   launch-profile state unless `manualLogin` is explicitly active for that
   same scope; deriving the internal managed browser profile directory is a
   separate concern and should stay separate.
+- 2026-04-18: When browser mode still depends on managed AuraCall profiles by
+  default, document that default explicitly instead of implying the toggle is
+  neutral. In this repo, `resolveBrowserConfig(...)` still defaults browser
+  runs to `manualLogin: true`, and direct browser run / login / reattach flows
+  still assume a managed profile unless `manualLogin: false` is set
+  deliberately.
