@@ -12995,3 +12995,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   non-conflicting case, the remaining “these fields remain in
   runtimeProfiles.<name>.browser” checkpoint wording became stale and needed
   to be corrected immediately.
+- 2026-04-18: When a precedence rewrite lands, update the browser-facing merge
+  tests to the same contract instead of leaving older pre-refactor
+  expectations in place. In this repo, once browser profiles became
+  authoritative for tab/window cleanup controls and service-scoped defaults
+  outranked stale root-browser aliases, `applyBrowserProfileOverrides(...)`
+  needed matching regression coverage and stale expectations had to be
+  corrected immediately.

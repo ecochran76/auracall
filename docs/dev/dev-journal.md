@@ -17671,3 +17671,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the migrate implementation, doctor wording, and recent journal/history
     were already aligned, but the active plan/troubleshooting checkpoint still
     preserved older “remain in runtime browser” wording
+## 2026-04-18 - browser-facing merge tests now match browser-profile-first launch control semantics
+
+- Tightened the browser-facing merge contract around the already-landed
+  browser-profile-first launch/browser-family rewrite:
+  - corrected the stale `applyBrowserProfileOverrides(...)` expectation that
+    still treated runtime-profile `browser.serviceTabLimit` /
+    `browser.blankTabLimit` as beating the referenced browser profile
+  - added a focused regression proving the browser-facing merge path also
+    keeps service-scoped project/conversation/model defaults ahead of stale
+    root-browser compatibility aliases
+- Reason:
+  - the live resolver and the `0007` authority already said browser-profile
+    defaults own the narrowed launch-control field class and service-scoped
+    defaults beat root-browser aliases
+  - one older profile-config test was still asserting the superseded
+    pre-tightening precedence

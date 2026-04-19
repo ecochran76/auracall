@@ -89,7 +89,7 @@ describe('applyBrowserProfileOverrides', () => {
     });
   });
 
-  test('applies named browser-family defaults before profile-local browser overrides', () => {
+  test('prefers named browser-profile defaults for narrowed browser-owned launch controls', () => {
     const merged = {
       auracallProfile: 'wsl-chrome-2',
       engine: 'browser',
@@ -139,8 +139,8 @@ describe('applyBrowserProfileOverrides', () => {
     expect(browser.bootstrapCookiePath).toBe('/home/test/.config/google-chrome/Default/Network/Cookies');
     expect(browser.managedProfileRoot).toBe('/home/test/.auracall/browser-profiles');
     expect(browser.wslChromePreference).toBe('wsl');
-    expect(browser.serviceTabLimit).toBe(5);
-    expect(browser.blankTabLimit).toBe(0);
+    expect(browser.serviceTabLimit).toBe(3);
+    expect(browser.blankTabLimit).toBe(1);
     expect(browser.collapseDisposableWindows).toBe(true);
     expect(browser.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
   });
@@ -229,5 +229,60 @@ describe('applyBrowserProfileOverrides', () => {
     expect(browser.target).toBe('chatgpt');
     expect(browser.manualLoginProfileDir).toBe('/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt');
     expect(browser.debugPort).toBe(45013);
+  });
+
+  test('selected AuraCall runtime profile service defaults override stale top-level browser service aliases', () => {
+    const merged = {
+      auracallProfile: 'default',
+      engine: 'browser',
+      services: {
+        chatgpt: { url: 'https://chatgpt.com/' },
+      },
+      browser: {
+        target: 'chatgpt',
+        projectId: 'g-p-root-project',
+        projectName: 'Root Project',
+        conversationId: 'conv-root',
+        conversationName: 'Root Conversation',
+        modelStrategy: 'current',
+        thinkingTime: 'extended',
+        composerTool: 'canvas',
+      },
+    };
+    const profile = {
+      defaultService: 'chatgpt',
+      services: {
+        chatgpt: {
+          projectId: 'g-p-service-project',
+          projectName: 'Service Project',
+          conversationId: 'conv-service',
+          conversationName: 'Service Conversation',
+          modelStrategy: 'select',
+          thinkingTime: 'light',
+          composerTool: 'deep-research',
+        },
+      },
+    };
+    const browser: Record<string, unknown> = {
+      target: 'chatgpt',
+      projectId: 'g-p-root-project',
+      projectName: 'Root Project',
+      conversationId: 'conv-root',
+      conversationName: 'Root Conversation',
+      modelStrategy: 'current',
+      thinkingTime: 'extended',
+      composerTool: 'canvas',
+    };
+
+    applyBrowserProfileOverrides(merged, profile, browser, { overrideExisting: true });
+
+    expect(browser.target).toBe('chatgpt');
+    expect(browser.projectId).toBe('g-p-service-project');
+    expect(browser.projectName).toBe('Service Project');
+    expect(browser.conversationId).toBe('conv-service');
+    expect(browser.conversationName).toBe('Service Conversation');
+    expect(browser.modelStrategy).toBe('select');
+    expect(browser.thinkingTime).toBe('light');
+    expect(browser.composerTool).toBe('deep-research');
   });
 });
