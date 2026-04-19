@@ -18080,3 +18080,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   explicitly team-run-only on both:
   - `taskRunSpecId`
   - `runtimeRunId`
+## 2026-04-19 - Team review runtime-run-id contract lock
+
+- Audited the adjacent team-review surface after fixing team inspection
+  `runtimeRunId` handling.
+- Did not find a new implementation bug in
+  [src/teams/reviewLedger.ts](/home/ecochran76/workspace.local/oracle/src/teams/reviewLedger.ts):
+  direct runtime runs were already rejected on the `runtimeRunId` path.
+- The remaining gap was durability on the public helper surface: the repo did
+  not yet prove that
+  [reviewConfiguredTeamRun(...)](/home/ecochran76/workspace.local/oracle/src/cli/teamRunCommand.ts)
+  preserves that same team-run-only boundary.
+- Added a focused CLI regression in
+  [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+  and updated the active `0004` authority to state the same rule explicitly.

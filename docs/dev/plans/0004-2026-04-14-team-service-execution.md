@@ -333,6 +333,10 @@ Current bounded implication:
   team-run-only history rule
   - a newer direct run carrying the same `taskRunSpecId` should not displace
     the task-backed team review/runtime attempt on that alias surface
+- bounded team review-ledger lookup by `runtimeRunId` should stay team-run
+  only too
+  - the matching CLI review helper should reject a direct runtime run instead
+    of projecting it through a team review surface
 - bounded HTTP recovery detail after operator resume should project current
   local-claim posture and no active lease when the historical paused-owner
   lease has already been released

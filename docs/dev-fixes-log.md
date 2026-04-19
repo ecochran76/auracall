@@ -13148,3 +13148,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   too. In this repo, `inspectConfiguredTeamRun(...)` and
   `/v1/team-runs/inspect` should reject a direct runtime run instead of
   projecting it through a team-run inspection payload.
+- 2026-04-19: Keep the team review `runtimeRunId` surface team-run-only too.
+  In this repo, `reviewConfiguredTeamRun(...)` should reject a direct runtime
+  run instead of projecting it through a team review ledger payload.

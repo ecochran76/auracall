@@ -1683,6 +1683,88 @@ describe('team run CLI helpers', () => {
     expect(text).toContain('evidence=https://google.com/sorry/index');
   });
 
+  it('rejects direct runtime runs on the team review runtime-run-id surface', async () => {
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun(runId) {
+        if (runId !== 'direct_review_runtime_1') {
+          return null;
+        }
+        return {
+          runId: 'direct_review_runtime_1',
+          revision: 1,
+          persistedAt: '2026-04-19T21:30:00.000Z',
+          bundle: {
+            run: {
+              id: 'direct_review_runtime_1',
+              sourceKind: 'direct',
+              sourceId: null,
+              taskRunSpecId: null,
+              status: 'succeeded',
+              createdAt: '2026-04-19T21:25:00.000Z',
+              updatedAt: '2026-04-19T21:30:00.000Z',
+              trigger: 'cli',
+              requestedBy: 'operator',
+              entryPrompt: 'Direct run.',
+              initialInputs: {},
+              sharedStateId: 'shared_direct_review_1',
+              stepIds: [],
+              policy: { failPolicy: 'fail-fast' },
+            },
+            steps: [],
+            handoffs: [],
+            localActionRequests: [],
+            sharedState: {
+              id: 'shared_direct_review_1',
+              runId: 'direct_review_runtime_1',
+              status: 'succeeded',
+              artifacts: [],
+              structuredOutputs: [],
+              notes: [],
+              history: [],
+              lastUpdatedAt: '2026-04-19T21:30:00.000Z',
+            },
+            events: [],
+            leases: [],
+          },
+        } as never;
+      },
+      async inspectRun() {
+        throw new Error('not used');
+      },
+      async listRuns() {
+        throw new Error('not used');
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+
+    await expect(
+      reviewConfiguredTeamRun({
+        runtimeRunId: 'direct_review_runtime_1',
+        control,
+      }),
+    ).rejects.toThrow('Runtime run direct_review_runtime_1 is not a team run.');
+  });
+
   it('rejects ambiguous team run review lookups', async () => {
     await expect(
       reviewConfiguredTeamRun({
