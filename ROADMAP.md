@@ -13,6 +13,8 @@ Current State:
 - low-signal loose execution pointers now live under
   `docs/dev/plans/legacy-archive/`
 - planning-authority migration is complete and the next decision is product sequencing
+- the bounded `0004` operator-facing claimant/readback hardening sub-lane is
+  now maintenance-only unless a new concrete mismatch is demonstrated
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 

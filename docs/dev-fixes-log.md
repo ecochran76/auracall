@@ -13086,3 +13086,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   lease, `/status?recovery=true` should move the run into `reclaimableRunIds`
   and the current runner's `selectedRunIds` instead of leaving it counted
   under active-lease posture.
+- 2026-04-19: When the bounded operator-facing claimant/readback seams are all
+  explicitly locked, stop mining that `0004` lane for more contract-only
+  slices by default. In this repo, once `POST /status`,
+  `/v1/runtime-runs/inspect`, `/status/recovery/{run_id}`, and aggregate
+  `/status?recovery=true` all reflected current claimant semantics correctly,
+  the right move was to mark that sub-lane maintenance-only unless a new
+  concrete mismatch appears.

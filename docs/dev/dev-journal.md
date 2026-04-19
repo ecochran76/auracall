@@ -17921,3 +17921,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - once recovery detail was locked to current local-claim projection, the
     aggregate recovery summary needed the same explicit proof so operators do
     not get divergent ownership stories between summary and per-run detail
+## 2026-04-19 - Parked 0004 operator-facing readback hardening sub-lane
+
+- Audited the remaining bounded `0004` operator-facing reporting surfaces after
+  the recovery-summary local-claim checkpoint.
+- Current claimant/ownership semantics are now explicitly locked across:
+  - `POST /status`
+  - `/v1/runtime-runs/inspect`
+  - `/status/recovery/{run_id}`
+  - aggregate `/status?recovery=true`
+- No new concrete claimant/reporting mismatch was found in the adjacent
+  startup/background-drain/readback paths during this audit.
+- Updated `0004`, `0001`, and `ROADMAP.md` so this sub-lane is now
+  maintenance-only unless a fresh mismatch is demonstrated.

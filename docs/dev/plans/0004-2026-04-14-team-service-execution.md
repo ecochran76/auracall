@@ -19,6 +19,13 @@ Lane: P01
   on top of that same bounded single-host local-runner bridge
   - the bounded local runner now stays heartbeated while active multi-step CLI
     execution is still draining
+- the bounded operator-facing ownership/readback checkpoint is now materially
+  sufficient across:
+  - service-host reassignment semantics
+  - immediate `POST /status` readback
+  - `/v1/runtime-runs/inspect`
+  - `/status/recovery/{run_id}`
+  - aggregate `/status?recovery=true`
 - broader public team execution writes remain paused on HTTP/MCP surfaces
 
 # Team Service Execution Plan
@@ -280,6 +287,8 @@ Current bounded implication:
 - bounded HTTP recovery summary after operator resume should classify the run
   under reclaimable/current local-claim buckets, not leave it counted under
   historical paused-owner lease posture
+- this bounded operator-facing readback hardening sub-lane is now
+  maintenance-only unless a new concrete claimant/reporting mismatch is found
 
 ## MVP recommendation
 
