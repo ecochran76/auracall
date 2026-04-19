@@ -297,7 +297,7 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile.keepBrowser).toBe(false);
   });
 
-  test('prefers browser-profile launch defaults for the narrowed broad browser-owned field set', () => {
+  test('prefers browser-profile launch defaults for the narrowed browser-owned field set', () => {
     const result = resolveBrowserProfileResolution({
       merged: {
         browserProfiles: {
@@ -305,6 +305,12 @@ describe('resolveBrowserProfileResolution', () => {
             chromePath: '/browser/chrome',
             display: ':9.0',
             managedProfileRoot: '/browser/managed',
+            debugPort: 45555,
+            debugPortStrategy: 'auto',
+            debugPortRange: [45550, 45560],
+            serviceTabLimit: 3,
+            blankTabLimit: 1,
+            collapseDisposableWindows: true,
             wslChromePreference: 'wsl',
           },
         },
@@ -317,6 +323,12 @@ describe('resolveBrowserProfileResolution', () => {
           chromePath: '/runtime/chrome',
           display: ':0.0',
           managedProfileRoot: '/runtime/managed',
+          debugPort: 49999,
+          debugPortStrategy: 'fixed',
+          debugPortRange: [49990, 50010],
+          serviceTabLimit: 7,
+          blankTabLimit: 0,
+          collapseDisposableWindows: false,
           wslChromePreference: 'windows',
         },
       },
@@ -327,12 +339,23 @@ describe('resolveBrowserProfileResolution', () => {
       chromePath: '/browser/chrome',
       display: ':9.0',
       managedProfileRoot: '/browser/managed',
+      debugPort: 45555,
+      debugPortStrategy: 'auto',
+      debugPortRange: [45550, 45560],
+      serviceTabLimit: 3,
+      blankTabLimit: 1,
+      collapseDisposableWindows: true,
       wslChromePreference: 'wsl',
     });
     expect(result.launchProfile).toMatchObject({
       chromePath: '/browser/chrome',
       display: ':9.0',
       managedProfileRoot: '/browser/managed',
+      debugPort: 45555,
+      debugPortStrategy: 'auto',
+      serviceTabLimit: 3,
+      blankTabLimit: 1,
+      collapseDisposableWindows: true,
       wslChromePreference: 'wsl',
     });
   });
@@ -470,8 +493,8 @@ describe('resolveBrowserProfileResolution', () => {
       bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
       wslChromePreference: 'wsl',
       debugPortRange: [45000, 45100],
-      serviceTabLimit: 5,
-      blankTabLimit: 0,
+      serviceTabLimit: 3,
+      blankTabLimit: 1,
       collapseDisposableWindows: true,
     });
     expect(result.launchProfile).toMatchObject({
@@ -483,8 +506,8 @@ describe('resolveBrowserProfileResolution', () => {
       chromeCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
       bootstrapCookiePath: '/home/test/.config/google-chrome/Default/Network/Cookies',
       wslChromePreference: 'wsl',
-      serviceTabLimit: 5,
-      blankTabLimit: 0,
+      serviceTabLimit: 3,
+      blankTabLimit: 1,
       collapseDisposableWindows: true,
     });
   });

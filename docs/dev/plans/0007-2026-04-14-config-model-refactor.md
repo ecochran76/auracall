@@ -179,12 +179,17 @@ Current diagnostic checkpoint:
       `runtimeProfiles.<name>.browser` values for:
       - `chromePath`
       - `display`
+      - debug-port controls
+      - tab/window cleanup controls
       - `managedProfileRoot`
       - source-profile and cookie-source wiring
       - `wslChromePreference`
     - the remaining broad runtime browser override block is still live
       advanced residue for now, including fields such as:
-      - debug-port and tab/window cleanup controls
+      - `blockingProfileAction`
+      - `headless`
+      - `hideWindow`
+      - `remoteChrome`
     - that is why doctor still frames the broader class as advanced escape
       hatches rather than fully dead config
 - `config doctor` now splits service-scoped runtime browser fields into two
@@ -254,12 +259,17 @@ Current migration checkpoint:
     for:
     - `chromePath`
     - `display`
+    - debug-port controls
+    - tab/window cleanup controls
     - `managedProfileRoot`
     - source-profile and cookie-source wiring
     - `wslChromePreference`
   - active resolution does not yet make the same rewrite for the remaining
     broad browser-owned fields such as:
-    - debug-port and tab/window cleanup controls
+    - `blockingProfileAction`
+    - `headless`
+    - `hideWindow`
+    - `remoteChrome`
   - relocatable service fields such as:
     - `modelStrategy`
     - `thinkingTime`

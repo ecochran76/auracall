@@ -525,11 +525,17 @@ Within each file, later CLI flags still override config, and environment variabl
   over conflicting runtime-profile browser aliases for:
   - `chromePath`
   - `display`
+  - debug-port controls
+  - tab/window cleanup controls
   - `managedProfileRoot`
   - source browser profile / cookie-source wiring
   - `wslChromePreference`
 - the remaining live runtime-profile `browser` advanced override surface is now
-  the debug-port and tab/window cleanup controls.
+  the narrower launch-control set:
+  - `blockingProfileAction`
+  - `headless`
+  - `hideWindow`
+  - `remoteChrome`
 - `runtimeProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
 - `agents` and `teams` are reserved top-level config blocks for the future config-model refactor.
   - Aura-Call now lets `--agent <name>` resolve through `agents.<name>.runtimeProfile` for selection semantics only.

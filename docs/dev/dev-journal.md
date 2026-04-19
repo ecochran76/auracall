@@ -17539,3 +17539,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     browser-owned runtime residue
   - keeping active resolution behind that ownership model would leave another
     avoidable target-vs-runtime mismatch in the browser family lane
+## 2026-04-18 - browser profiles now also win for debug-port and cleanup controls
+
+- Continued the same bounded broad-browser precedence lane:
+  - updated active browser profile resolution so the referenced browser
+    profile now also wins over conflicting
+    `runtimeProfiles.<name>.browser` values for:
+    - debug-port controls
+    - tab/window cleanup controls
+  - kept the remaining broad runtime browser override surface unchanged:
+    `blockingProfileAction`, `headless`, `hideWindow`, and `remoteChrome`
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - migration already treats these fields as browser-owned runtime residue
+  - keeping active resolution behind that ownership model would leave one more
+    avoidable target-vs-runtime mismatch in the browser family lane

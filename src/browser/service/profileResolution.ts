@@ -427,16 +427,27 @@ export function resolveBrowserProfileResolution(input: {
     sourceProfileName,
     sourceCookiePath,
     bootstrapCookiePath,
-    debugPort: asFiniteNumber(effectiveProfileBrowser.debugPort),
-    debugPortStrategy: asDebugPortStrategy(effectiveProfileBrowser.debugPortStrategy),
-    debugPortRange: asDebugPortRange(effectiveProfileBrowser.debugPortRange),
+    debugPort:
+      asFiniteNumber(selectedBrowserProfile.debugPort) ?? asFiniteNumber(profileBrowser.debugPort),
+    debugPortStrategy:
+      asDebugPortStrategy(selectedBrowserProfile.debugPortStrategy) ??
+      asDebugPortStrategy(profileBrowser.debugPortStrategy),
+    debugPortRange:
+      asDebugPortRange(selectedBrowserProfile.debugPortRange) ??
+      asDebugPortRange(profileBrowser.debugPortRange),
     blockingProfileAction: asBlockingProfileAction(effectiveProfileBrowser.blockingProfileAction),
     wslChromePreference:
       asWslPreference(selectedBrowserProfile.wslChromePreference) ??
       asWslPreference(profileBrowser.wslChromePreference),
-    serviceTabLimit: asFiniteNumber(effectiveProfileBrowser.serviceTabLimit),
-    blankTabLimit: asFiniteNumber(effectiveProfileBrowser.blankTabLimit),
-    collapseDisposableWindows: asBoolean(effectiveProfileBrowser.collapseDisposableWindows),
+    serviceTabLimit:
+      asFiniteNumber(selectedBrowserProfile.serviceTabLimit) ??
+      asFiniteNumber(profileBrowser.serviceTabLimit),
+    blankTabLimit:
+      asFiniteNumber(selectedBrowserProfile.blankTabLimit) ??
+      asFiniteNumber(profileBrowser.blankTabLimit),
+    collapseDisposableWindows:
+      asBoolean(selectedBrowserProfile.collapseDisposableWindows) ??
+      asBoolean(profileBrowser.collapseDisposableWindows),
   };
 
   const serviceBindingManualLogin = asBoolean(browser.manualLogin) ?? asBoolean(serviceConfig.manualLogin);
