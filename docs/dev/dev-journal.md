@@ -1,3 +1,26 @@
+## 2026-04-19 - Runner local-action request normalization
+
+- Audited the next enforcement seam after the deterministic readback contract
+  checkpoint and found a real runner-side vocabulary drift:
+  - the configured browser/tooling executor already tolerated bounded local
+    action request aliases such as `actionType` / `type` plus `payload`
+  - the runtime runner still harvested `step.output.structuredData.localActionRequests`
+    with a narrower ad hoc check that only honored canonical `kind`
+- Tightened
+  [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  so runner-side local-action harvesting now normalizes the same bounded alias
+  vocabulary before policy evaluation and persistence:
+  - `kind` / `actionType` / `type`
+  - `structuredPayload` / `payload`
+  - canonical fallback summary when the producer omits `summary`
+- Added focused regression coverage in
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  proving `actionType`-style requests are still policy-checked, persisted,
+  and executed through the canonical request shape.
+- Updated the active `0004` authority so local-action requests are explicitly
+  normalized before policy evaluation/persistence instead of being treated as
+  raw model/provider contract.
+
 ## 2026-04-19 - Response readback direct-run task-spec suppression
 
 - Audited the next adjacent readback seam after the recovery-detail fix and

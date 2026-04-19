@@ -224,6 +224,10 @@ Rule:
 
 - provider/browser adapters may add evidence
 - they must project into this envelope rather than redefine it
+- local-action requests must be normalized into one canonical request shape
+  before policy evaluation and persistence
+  - accept bounded producer aliases where needed
+  - but do not let raw prompt/provider field drift become stored contract
 
 ### Readback envelope
 

@@ -13107,6 +13107,15 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   run that pauses for approval/human escalation should still be claimable by a
   later eligible active runner after local-action approval and resume, rather
   than staying implicitly pinned to the stale CLI runner.
+- 2026-04-19: Normalize bounded local-action request aliases before runner
+  policy evaluation and persistence. In this repo, the runtime runner should
+  accept the same bounded local-action request vocabulary already tolerated by
+  the configured executor path:
+  - `kind` / `actionType` / `type`
+  - `structuredPayload` / `payload`
+  - canonical fallback summary when one is omitted
+  Do not let raw producer field drift become stored contract just because the
+  request arrived through `step.output.structuredData.localActionRequests`.
 - 2026-04-19: Do not leave equally eligible runner selection to storage order.
   In this repo, bounded claim-candidate ordering now has an explicit tie-break:
   claim status rank first, then fresher runner heartbeat, then runner id as a

@@ -1355,6 +1355,76 @@ describe('runtime runner', () => {
     expect(executed.bundle.events.map((event) => event.note)).toContain('executed shell');
   });
 
+  it('normalizes actionType-style local action requests before policy evaluation and persistence', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const bundle = createDirectBundle('run_local_action_alias');
+    bundle.steps[0] = {
+      ...bundle.steps[0]!,
+      input: {
+        ...bundle.steps[0]!.input,
+        structuredData: {
+          localActionPolicy: {
+            mode: 'allowed',
+            allowedActionKinds: ['shell'],
+          },
+        },
+      },
+    };
+    await control.createRun(bundle);
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId: 'run_local_action_alias',
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:03:30.000Z',
+      control,
+      executeStep: async () => ({
+        output: {
+          summary: 'request one shell action through actionType aliasing',
+          artifacts: [],
+          structuredData: {
+            localActionRequests: [
+              {
+                actionType: 'shell',
+                command: 'pnpm',
+                args: ['vitest', 'run'],
+                payload: {
+                  cwd: process.cwd(),
+                },
+              },
+            ],
+          },
+          notes: [],
+        },
+      }),
+      executeLocalActionRequest: async ({ request }) => ({
+        status: 'executed',
+        summary: `executed ${request.kind}`,
+        payload: { exitCode: 0, cwd: request.structuredPayload.cwd ?? null },
+      }),
+    });
+
+    expect(executed.bundle.localActionRequests).toHaveLength(1);
+    expect(executed.bundle.localActionRequests[0]).toMatchObject({
+      kind: 'shell',
+      summary: 'Run bounded shell action: pnpm',
+      command: 'pnpm',
+      args: ['vitest', 'run'],
+      structuredPayload: {
+        cwd: process.cwd(),
+      },
+      status: 'executed',
+      resultSummary: 'executed shell',
+      resultPayload: {
+        exitCode: 0,
+        cwd: process.cwd(),
+      },
+    });
+  });
+
   it('rejects local action requests when step policy forbids host actions', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
     cleanup.push(homeDir);
@@ -2248,14 +2318,14 @@ describe('runtime runner', () => {
 
     expect(executed.bundle.steps[1]?.status).toBe('succeeded');
     expect(observedPrompt).toContain(
-      'Dependency local action decision guidance: STEER - dependency host actions are partial, pending, or inconclusive',
+      'Dependency local action decision guidance: STEER - dependency host actions are approved but not yet executed',
     );
     expect(observedPrompt).toContain('Dependency local action steer contract:');
     expect(observedPrompt).toContain('continue-with-caution');
     expect(observedContext).toMatchObject({
       dependencyLocalActionDecisionGuidance: {
         action: 'steer',
-        rationale: 'dependency host actions are partial, pending, or inconclusive',
+        rationale: 'dependency host actions are approved but not yet executed',
         counts: {
           requested: 0,
           approved: 1,
@@ -2290,7 +2360,7 @@ describe('runtime runner', () => {
         },
       },
       dependencyLocalActionDecisionPromptContext:
-        'Dependency local action decision guidance: STEER - dependency host actions are partial, pending, or inconclusive',
+        'Dependency local action decision guidance: STEER - dependency host actions are approved but not yet executed',
       dependencyLocalActionSteerPromptContext:
         'Dependency local action steer contract:\n- recommendedAction: continue-with-caution\n- promptAppend: Dependency host actions are not yet complete. Account for pending or approved-only host work before proceeding.\n- structuredContext: {"pendingHostActions":1,"approvedCount":1,"requestedCount":0,"cancelledCount":0}',
     });
@@ -2333,7 +2403,7 @@ describe('runtime runner', () => {
         },
         localActionDecisionGuidance: {
           action: 'steer',
-          rationale: 'dependency host actions are partial, pending, or inconclusive',
+          rationale: 'dependency host actions are approved but not yet executed',
           counts: {
             requested: 0,
             approved: 1,

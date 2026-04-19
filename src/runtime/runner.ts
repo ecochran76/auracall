@@ -2019,7 +2019,19 @@ function deriveLocalActionRequestsFromStepOutput(input: {
       : null;
 
   return localActionRequests.flatMap((candidate, index) => {
-    if (!isRecord(candidate) || typeof candidate.kind !== 'string' || typeof candidate.summary !== 'string') {
+    if (!isRecord(candidate)) {
+      return [];
+    }
+
+    const kind =
+      candidate.kind === 'shell'
+        ? 'shell'
+        : candidate.actionType === 'shell'
+          ? 'shell'
+          : candidate.type === 'shell'
+            ? 'shell'
+            : null;
+    if (kind !== 'shell') {
       return [];
     }
 
@@ -2027,8 +2039,13 @@ function deriveLocalActionRequestsFromStepOutput(input: {
       id: `${input.bundle.run.id}:action:${input.step.id}:${index + 1}`,
       teamRunId: input.bundle.run.id,
       ownerStepId: input.step.id,
-      kind: candidate.kind,
-      summary: candidate.summary,
+      kind,
+      summary:
+        typeof candidate.summary === 'string' && candidate.summary.trim().length > 0
+          ? candidate.summary
+          : typeof candidate.command === 'string'
+            ? `Run bounded shell action: ${candidate.command}`
+            : 'Run bounded shell action.',
       command: typeof candidate.command === 'string' ? candidate.command : null,
       args:
         Array.isArray(candidate.args) && candidate.args.every((value) => typeof value === 'string')
