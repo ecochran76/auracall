@@ -17865,3 +17865,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - once reassignment semantics were locked in runtime tests, leaving the
     immediate HTTP operator-control response on stale runner-state cache would
     have made the operator surface lag the real ownership model
+## 2026-04-19 - HTTP runtime inspection now locks resumed-run runner selection
+
+- Audited the next adjacent readback seam after fixing immediate `POST /status`
+  runner-state freshness:
+  - the stored runtime-inspection code already selected either:
+    - an explicitly queried runner id
+    - or the current active-lease owner
+  - but the HTTP surface did not yet have a regression proving that, after
+    local-action resolution and human resume clear the old lease, inspection
+    does not implicitly reuse the historical paused owner
+- Added one focused HTTP regression proving:
+  - default runtime inspection on the resumed run reports no selected runner
+    when the old paused-owner lease is gone
+  - explicitly querying the replacement runner evaluates the resumed run
+    against that current eligible runner and returns claimable/eligible
+    posture
+- Reason:
+  - once resumed-run and local-action reassignment semantics were locked in the
+    service host, the adjacent HTTP runtime-inspection surface needed its own
+    proof that it reflects current claimant eligibility rather than historical
+    ownership residue

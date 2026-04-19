@@ -271,6 +271,9 @@ Current bounded implication:
   precedes the later human resume and targeted drain
 - bounded HTTP/status readback should report the runner that actually claimed
   the later targeted drain, not stale pre-drain runner state
+- bounded HTTP runtime inspection after operator resume should evaluate the
+  current queried runner when no active lease exists, not implicitly fall back
+  to the historical paused owner
 
 ## MVP recommendation
 

@@ -13068,3 +13068,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   status payload should sync runner state from store before responding so
   `runner.lastClaimedRunId` reflects the actual post-drain claimant instead of
   stale pre-drain cache.
+- 2026-04-19: Keep resumed-run HTTP runtime inspection keyed to current
+  claimant selection, not historical paused ownership. In this repo, once
+  local-action resolution and human resume clear the old active lease,
+  `/v1/runtime-runs/inspect` should show no implicit selected runner by
+  default, and a queried replacement runner should be evaluated on current
+  eligibility rather than inheriting the stale paused owner.
