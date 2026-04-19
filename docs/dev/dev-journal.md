@@ -17781,3 +17781,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - closing that gap keeps the bounded CLI surface aligned with the current
     single-host runner/lease ownership model without widening into HTTP/MCP
     team execution writes
+## 2026-04-19 - bounded CLI team-run runner now stays heartbeated while work is active
+
+- Tightened the bounded `auracall teams run` local-runner bridge again:
+  - the short-lived persisted runner now heartbeats around the stored-step
+    execution path instead of only being registered at start and marked stale
+    on exit
+  - this keeps local-claim eligibility fresh across slower multi-step CLI
+    runs, rather than letting the runner age past its own TTL between passes
+- Reconciled the narrow execution authority docs:
+  - `0001-2026-04-14-execution.md`
+  - `0004-2026-04-14-team-service-execution.md`
+- Reason:
+  - the previous slice closed the anonymous-host ownership gap, but a
+    remaining liveness gap meant a slow first step could make the same bounded
+    CLI runner reject its later steps as `stale-runner`

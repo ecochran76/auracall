@@ -283,6 +283,87 @@ describe('team run CLI helpers', () => {
     ]);
   });
 
+  it('keeps the bounded CLI runner heartbeated across multi-step execution passes', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-team-run-cli-heartbeat-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const timestamps = [
+      '2026-04-19T15:00:00.000Z',
+      '2026-04-19T15:00:00.000Z',
+      '2026-04-19T15:00:00.000Z',
+      '2026-04-19T15:00:00.000Z',
+      '2026-04-19T15:00:20.000Z',
+      '2026-04-19T15:00:20.000Z',
+      '2026-04-19T15:00:20.000Z',
+      '2026-04-19T15:00:40.000Z',
+      '2026-04-19T15:00:40.000Z',
+      '2026-04-19T15:00:40.000Z',
+      '2026-04-19T15:00:50.000Z',
+    ];
+    let timestampIndex = 0;
+    const now = () => {
+      const current = timestamps[Math.min(timestampIndex, timestamps.length - 1)];
+      timestampIndex += 1;
+      return current ?? '2026-04-19T15:00:50.000Z';
+    };
+    let executionCount = 0;
+
+    const result = await executeConfiguredTeamRun({
+      config: {
+        defaultRuntimeProfile: 'default',
+        services: {
+          chatgpt: {
+            identity: {
+              email: 'operator@example.com',
+            },
+          },
+        },
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'default' },
+          reviewer: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: { agents: ['analyst', 'reviewer'] },
+        },
+      },
+      teamId: 'ops',
+      objective: 'Complete both ordered team steps.',
+      now,
+      randomId: () => 'heartbeats12',
+      executeStoredRunStep: async () => {
+        executionCount += 1;
+        return {
+          output: {
+            summary: `step ${executionCount} complete`,
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const runnersControl = createExecutionRunnerControl();
+    const storedRunner = await runnersControl.readRunner('runner:teams-run:ops:heartbeats12');
+
+    expect(executionCount).toBe(2);
+    expect(result.payload.runtimeRunStatus).toBe('succeeded');
+    expect(result.payload.stepSummaries).toHaveLength(2);
+    expect(result.payload.stepSummaries.map((step) => step.runtimeStepStatus)).toEqual([
+      'succeeded',
+      'succeeded',
+    ]);
+    expect(storedRunner?.runner.lastHeartbeatAt).not.toBe('2026-04-19T15:00:00.000Z');
+    expect(storedRunner?.runner.status).toBe('stale');
+  });
+
   it('inspects persisted linkage by task run spec id', async () => {
     const control: ExecutionRuntimeControlContract = {
       async createRun() {

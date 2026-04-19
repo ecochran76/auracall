@@ -13039,3 +13039,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   short-lived local runner, execute with `runnerId`-backed lease ownership and
   configured account-affinity semantics, and mark that runner stale on exit
   instead of continuing to run through an anonymous `host:*` bridge owner.
+- 2026-04-19: When a bounded CLI run uses a persisted local runner, keep that
+  runner heartbeated while active multi-step work is still draining. In this
+  repo, registering the runner only at startup was not enough because the
+  service host re-evaluates local claim eligibility between passes; a slow
+  first step could otherwise make later CLI steps fail as `stale-runner`
+  against the runner's own short TTL.

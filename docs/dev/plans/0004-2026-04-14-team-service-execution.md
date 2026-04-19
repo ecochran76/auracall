@@ -17,6 +17,8 @@ Lane: P01
   and `sharedState` records
 - the bounded CLI write surface is also now live through `auracall teams run`
   on top of that same bounded single-host local-runner bridge
+  - the bounded local runner now stays heartbeated while active multi-step CLI
+    execution is still draining
 - broader public team execution writes remain paused on HTTP/MCP surfaces
 
 # Team Service Execution Plan

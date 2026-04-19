@@ -70,6 +70,8 @@ export interface ExecuteConfiguredTeamRunResult {
   payload: TeamRunCliExecutionPayload;
 }
 
+const CLI_LOCAL_RUNNER_HEARTBEAT_TTL_MS = 15_000;
+
 export function buildCliTaskRunSpec(input: {
   nowIso: string;
   taskRunSpecId: string;
@@ -338,12 +340,67 @@ export async function executeConfiguredTeamRun(
     : (() => {
       const control = createExecutionRuntimeControl();
       const runnersControl = createExecutionRunnerControl();
-      const executeStoredRunStep =
+      const baseExecuteStoredRunStep =
         input.executeStoredRunStep ?? createConfiguredStoredStepExecutor(input.config);
       const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(input.config);
       const teamSlug = teamId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32) || 'team';
       const runnerId = `runner:teams-run:${teamSlug}:${suffix}`;
       const hostId = `host:teams-run:${teamSlug}:${suffix}`;
+      const heartbeatRunner = async (phase: 'heartbeat' | 'shutdown' | 'register') => {
+        const heartbeatAt = now();
+        const expiresAt = new Date(Date.parse(heartbeatAt) + CLI_LOCAL_RUNNER_HEARTBEAT_TTL_MS).toISOString();
+        if (phase === 'register') {
+          await runnersControl.registerRunner({
+            runner: createExecutionRunnerRecord({
+              id: runnerId,
+              hostId,
+              startedAt: heartbeatAt,
+              expiresAt,
+              serviceIds: localRunnerCapabilitySummary.serviceIds,
+              runtimeProfileIds: localRunnerCapabilitySummary.runtimeProfileIds,
+              browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
+              serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
+              browserCapable: localRunnerCapabilitySummary.browserCapable,
+              eligibilityNote: createLocalRunnerEligibilityNote({
+                phase,
+                baseLabel: 'cli teams run local runner',
+                capabilitySummary: localRunnerCapabilitySummary,
+              }),
+            }),
+          });
+          return;
+        }
+        if (phase === 'shutdown') {
+          await runnersControl.markRunnerStale({
+            runnerId,
+            staleAt: heartbeatAt,
+            eligibilityNote: createLocalRunnerEligibilityNote({
+              phase,
+              baseLabel: 'cli teams run local runner',
+              capabilitySummary: localRunnerCapabilitySummary,
+            }),
+          });
+          return;
+        }
+        await runnersControl.heartbeatRunner({
+          runnerId,
+          heartbeatAt,
+          expiresAt,
+          eligibilityNote: createLocalRunnerEligibilityNote({
+            phase,
+            baseLabel: 'cli teams run local runner',
+            capabilitySummary: localRunnerCapabilitySummary,
+          }),
+        });
+      };
+      const executeStoredRunStep: ExecutionServiceHostDeps['executeStoredRunStep'] = async (context) => {
+        await heartbeatRunner('heartbeat');
+        try {
+          return await baseExecuteStoredRunStep?.(context);
+        } finally {
+          await heartbeatRunner('heartbeat');
+        }
+      };
       const host = createExecutionServiceHost({
         control,
         runnersControl,
@@ -362,37 +419,10 @@ export async function executeConfiguredTeamRun(
           now,
         }),
         async registerRunner() {
-          const startedAt = now();
-          const expiresAt = new Date(Date.parse(startedAt) + 15 * 60 * 1000).toISOString();
-          await runnersControl.registerRunner({
-            runner: createExecutionRunnerRecord({
-              id: runnerId,
-              hostId,
-              startedAt,
-              expiresAt,
-              serviceIds: localRunnerCapabilitySummary.serviceIds,
-              runtimeProfileIds: localRunnerCapabilitySummary.runtimeProfileIds,
-              browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
-              serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
-              browserCapable: localRunnerCapabilitySummary.browserCapable,
-              eligibilityNote: createLocalRunnerEligibilityNote({
-                phase: 'register',
-                baseLabel: 'cli teams run local runner',
-                capabilitySummary: localRunnerCapabilitySummary,
-              }),
-            }),
-          });
+          await heartbeatRunner('register');
         },
         async markRunnerStale() {
-          await runnersControl.markRunnerStale({
-            runnerId,
-            staleAt: now(),
-            eligibilityNote: createLocalRunnerEligibilityNote({
-              phase: 'shutdown',
-              baseLabel: 'cli teams run local runner',
-              capabilitySummary: localRunnerCapabilitySummary,
-            }),
-          });
+          await heartbeatRunner('shutdown');
         },
       };
     })();
