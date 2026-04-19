@@ -6985,6 +6985,197 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('updates POST /status runner readback after local-action resolution, resume, and targeted drain', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-runner-sync-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'status_operator_runner_sync';
+    await seedPausedHumanEscalationDirectRun(
+      control,
+      runId,
+      '2026-04-19T11:30:00.000Z',
+      '2026-04-19T11:35:00.000Z',
+      'team-run',
+    );
+
+    const pausedRecord = await control.readRun(runId);
+    if (!pausedRecord) {
+      throw new Error(`expected paused run ${runId}`);
+    }
+    await control.persistRun({
+      runId,
+      expectedRevision: pausedRecord.revision,
+      bundle: {
+        ...pausedRecord.bundle,
+        localActionRequests: [
+          {
+            id: `${runId}:action:${runId}:step:1:1`,
+            teamRunId: runId,
+            ownerStepId: `${runId}:step:1`,
+            kind: 'shell',
+            summary: 'Run bounded host verification before resume.',
+            command: 'pnpm',
+            args: ['vitest', 'run'],
+            structuredPayload: {},
+            notes: [],
+            status: 'requested',
+            createdAt: '2026-04-19T11:34:00.000Z',
+            approvedAt: null,
+            completedAt: null,
+            resultSummary: null,
+            resultPayload: null,
+          },
+        ],
+      },
+    });
+    await control.acquireLease({
+      runId,
+      leaseId: `${runId}:lease:origin`,
+      ownerId: 'runner:origin',
+      acquiredAt: '2026-04-19T11:34:00.000Z',
+      heartbeatAt: '2026-04-19T11:35:00.000Z',
+      expiresAt: '2026-04-19T11:36:00.000Z',
+    });
+    await control.releaseLease({
+      runId,
+      leaseId: `${runId}:lease:origin`,
+      releasedAt: '2026-04-19T11:35:00.000Z',
+      releaseReason: 'cancelled',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:origin',
+        hostId: 'host:origin',
+        status: 'stale',
+        startedAt: '2026-04-19T11:25:00.000Z',
+        lastHeartbeatAt: '2026-04-19T11:35:00.000Z',
+        expiresAt: '2026-04-19T11:35:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: [],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-19T11:40:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'server runner completed resumed team step',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+
+      const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          localActionControl: {
+            action: 'resolve-request',
+            runId,
+            requestId: `${runId}:action:${runId}:step:1:1`,
+            resolution: 'rejected',
+          },
+        }),
+      });
+      expect(resolveResponse.status).toBe(200);
+
+      const resumeResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'resume-human-escalation',
+            runId,
+            note: 'server runner resumed after local-action rejection',
+          },
+        }),
+      });
+      expect(resumeResponse.status).toBe(200);
+
+      const drainResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          runControl: {
+            action: 'drain-run',
+            runId,
+          },
+        }),
+      });
+      expect(drainResponse.status).toBe(200);
+      const drainPayload = (await drainResponse.json()) as Record<string, any>;
+      expect(drainPayload).toMatchObject({
+        controlResult: {
+          kind: 'run-control',
+          action: 'drain-run',
+          runId,
+          status: 'executed',
+          drained: true,
+          reason: 'run executed through targeted host drain',
+          skipReason: null,
+        },
+        runner: {
+          id: runnerId,
+          lastClaimedRunId: runId,
+        },
+      });
+
+      const reread = await fetch(`http://127.0.0.1:${server.port}/v1/responses/${runId}`);
+      expect(reread.status).toBe(200);
+      const rereadPayload = (await reread.json()) as Record<string, any>;
+      expect(rereadPayload).toMatchObject({
+        id: runId,
+        status: 'completed',
+        metadata: {
+          executionSummary: {
+            localActionSummary: {
+              ownerStepId: `${runId}:step:1`,
+              counts: {
+                requested: 0,
+                approved: 0,
+                rejected: 1,
+                executed: 0,
+                failed: 0,
+                cancelled: 0,
+              },
+            },
+            operatorControlSummary: {
+              humanEscalationResume: {
+                resumedAt: '2026-04-19T11:40:00.000Z',
+                note: 'server runner resumed after local-action rejection',
+              },
+              targetedDrain: {
+                requestedAt: '2026-04-19T11:40:00.000Z',
+                status: 'executed',
+                reason: 'run executed through targeted host drain',
+                skipReason: null,
+              },
+            },
+          },
+        },
+      });
+
+      const storedRunner = await runnersControl.readRunner(runnerId);
+      expect(storedRunner?.runner.lastClaimedRunId).toBe(runId);
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces bounded skipped targeted-drain summary through the same responses surface', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-operator-summary-skipped-'));
     cleanup.push(homeDir);

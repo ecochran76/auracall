@@ -13062,3 +13062,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   paused run should not re-bind later targeted drain to the historical runner;
   after local-action resolution and human resume, reclaim still belongs to the
   current eligible active runner.
+- 2026-04-19: Refresh immediate HTTP status runner readback after operator
+  control changes that can claim work. In this repo, once `POST /status`
+  resolves local-action state, resumes a run, or drains it, the returned
+  status payload should sync runner state from store before responding so
+  `runner.lastClaimedRunId` reflects the actual post-drain claimant instead of
+  stale pre-drain cache.

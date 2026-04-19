@@ -269,6 +269,8 @@ Current bounded implication:
   that originally paused the step
 - the same reassignment rule applies when operator-resolved local-action state
   precedes the later human resume and targeted drain
+- bounded HTTP/status readback should report the runner that actually claimed
+  the later targeted drain, not stale pre-drain runner state
 
 ## MVP recommendation
 

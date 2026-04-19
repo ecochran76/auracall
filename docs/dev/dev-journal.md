@@ -17846,3 +17846,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     adjacent operator-control chain still needed one end-to-end proof through
     local-action resolution before this ownership seam could be considered
     explicit enough
+## 2026-04-19 - HTTP status readback now refreshes runner claim state after operator drain
+
+- Re-audited the adjacent reporting seam after the operator-control ownership
+  locks:
+  - runtime and service-host behavior already allowed reassignment correctly
+  - the `POST /status` response path was still building its status payload from
+    cached runner state unless a later `GET /status` refreshed it
+- Tightened the server path and added one focused HTTP regression proving:
+  - after local-action resolution, human resume, and targeted drain, the
+    immediate `POST /status` response now reports the server runner's updated
+    `lastClaimedRunId`
+  - response readback stays aligned with that same executed targeted-drain
+    outcome
+- Updated the active `0004` authority note to make that readback expectation
+  explicit.
+- Reason:
+  - once reassignment semantics were locked in runtime tests, leaving the
+    immediate HTTP operator-control response on stale runner-state cache would
+    have made the operator surface lag the real ownership model

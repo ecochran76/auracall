@@ -535,6 +535,7 @@ export async function createResponsesHttpServer(
         }
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        await syncRunnerStateFromStore();
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
