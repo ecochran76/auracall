@@ -13020,3 +13020,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   explicitly in the governing plan and roadmap. In this repo, the `0007`
   config-boundary hardening sub-lane is now maintenance-only unless a new
   resolver or migrate mismatch is demonstrated.
+- 2026-04-18: When a canonical execution owner doc still points at a closed
+  implementation lane, reconcile it immediately instead of starting work from
+  stale sequencing. In this repo, `0001-2026-04-14-execution.md` had to stop
+  naming closed `0017`/`0018` service-state work as the next finite lane and
+  point to the unresolved internal `taskRunSpec -> teamRun` execution slice
+  instead.

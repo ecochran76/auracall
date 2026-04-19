@@ -17732,3 +17732,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     contract” slices than actual behavior corrections
   - the governing docs should say that directly instead of implying there is
     still an obvious stream of unresolved `0007` behavior work here
+## 2026-04-18 - execution owner doc now points at the next unresolved team/task lane
+
+- Reconciled the active execution owner document with the current roadmap:
+  - `0001-2026-04-14-execution.md` no longer names the already-closed
+    `0017`/`0018` service-state lane as the next finite implementation lane
+  - the next unresolved execution frontier is now stated directly as the
+    internal team/task execution MVP under:
+    - `0002-2026-04-14-task-run-spec.md`
+    - `0003-2026-04-14-team-run-data-model.md`
+    - `0004-2026-04-14-team-service-execution.md`
+- Reason:
+  - the roadmap and supporting plans had already moved past service-state
+    probing, but the execution owner doc was still pointing at closed work
