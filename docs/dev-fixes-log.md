@@ -13151,3 +13151,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-19: Keep the team review `runtimeRunId` surface team-run-only too.
   In this repo, `reviewConfiguredTeamRun(...)` should reject a direct runtime
   run instead of projecting it through a team review ledger payload.
+- 2026-04-19: Stop mining the narrower team review/inspection boundary lane
+  once helper/runtime-id and alias-selection rules all agree. In this repo,
+  further work in that sub-lane should require a freshly reproduced mismatch,
+  not more contract-only hardening by inertia.
