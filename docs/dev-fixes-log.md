@@ -13122,6 +13122,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   server-owned local `serviceHost`, so recovered runs should be claimed by the
   persisted `runner:http-responses:<host>:<port>` record rather than silently
   moving to some other fresher eligible runner record.
+- 2026-04-19: Keep response readback task-spec identity team-run scoped too.
+  In this repo, `GET /v1/responses/{response_id}` should suppress
+  `metadata.taskRunSpecId` and `metadata.taskRunSpecSummary` for direct runs
+  even if a legacy or malformed stored run record still carries a persisted
+  `taskRunSpecId`.
 - 2026-04-19: Keep `api serve` status/readback keyed to the same server local
   runner. In this repo, `localClaimSummary` and recovery-summary claim buckets
   should project eligibility for `runner:http-responses:<host>:<port>`, not

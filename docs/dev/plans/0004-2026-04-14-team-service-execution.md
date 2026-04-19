@@ -281,6 +281,10 @@ Important rule:
 - persisted presence alone is not sufficient justification for exposure
 - direct runs must not project team assignment identity just because a legacy
   or malformed record still carries a stored `taskRunSpecId`
+- `GET /v1/responses/{response_id}` must apply that same rule:
+  - `metadata.taskRunSpecId` and `metadata.taskRunSpecSummary` stay `null`
+    for direct runs even if storage still carries a stale or malformed
+    `taskRunSpecId`
 
 ### Artifact and host-action parity
 

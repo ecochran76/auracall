@@ -1470,6 +1470,143 @@ describe('runtime responses service', () => {
     });
   });
 
+  it('suppresses task-run-spec identity on response readback for direct runs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'resp_service_direct_task_hidden_1';
+    const stepId = `${runId}:step:1`;
+
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_runtime_direct_hidden_1',
+      teamId: 'team_template_runtime_direct_hidden_1',
+      title: 'Do not expose direct response assignment identity',
+      objective: 'Response readback should keep assignment identity team-run scoped.',
+      successCriteria: [],
+      requestedOutputs: [],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 12,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: null,
+      trigger: 'service',
+      createdAt: '2026-04-19T22:50:00.000Z',
+    });
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          taskRunSpecId: 'task_spec_runtime_direct_hidden_1',
+          status: 'succeeded',
+          createdAt: '2026-04-19T22:51:00.000Z',
+          updatedAt: '2026-04-19T22:52:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Return a direct-run response.',
+          initialInputs: {
+            model: 'gpt-5.2',
+            runtimeProfile: 'default',
+            service: 'chatgpt',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Return a direct-run response.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-19T22:51:10.000Z',
+            completedAt: '2026-04-19T22:52:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-19T22:52:00.000Z',
+        }),
+        events: [
+          createExecutionRunEvent({
+            id: `${runId}:event:run-created`,
+            runId,
+            type: 'run-created',
+            createdAt: '2026-04-19T22:51:00.000Z',
+            note: 'direct runtime record carries a stale task-run-spec id',
+          }),
+        ],
+      }),
+    );
+
+    const service = createExecutionResponsesService({
+      control,
+      now: () => new Date('2026-04-19T22:53:00.000Z'),
+    });
+
+    const reread = await service.readResponse(runId);
+    expect(reread).toMatchObject({
+      id: runId,
+      status: 'completed',
+      metadata: {
+        runId,
+        taskRunSpecId: null,
+        taskRunSpecSummary: null,
+        runtimeProfile: 'default',
+        service: 'chatgpt',
+      },
+    });
+  });
+
   it('surfaces bounded per-step routing summary on response readback for mixed-provider team-run-backed records', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
     cleanup.push(homeDir);

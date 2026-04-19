@@ -119,7 +119,8 @@ export async function createExecutionResponseForStoredRecord(
   bundle: ExecutionRunRecordBundle,
   taskRunSpecStore: TaskRunSpecRecordStore = createTaskRunSpecRecordStore(),
 ): Promise<ExecutionResponse> {
-  const taskRunSpecSummary = await readStoredTaskRunSpecSummary(taskRunSpecStore, bundle.run.taskRunSpecId ?? null);
+  const taskRunSpecId = bundle.run.sourceKind === 'team-run' ? bundle.run.taskRunSpecId ?? null : null;
+  const taskRunSpecSummary = await readStoredTaskRunSpecSummary(taskRunSpecStore, taskRunSpecId);
   return createExecutionResponseFromRunRecord({
     responseId: bundle.run.id,
     runRecord: bundle,

@@ -1,3 +1,26 @@
+## 2026-04-19 - Response readback direct-run task-spec suppression
+
+- Audited the next adjacent readback seam after the recovery-detail fix and
+  found the same bug class still live on `GET /v1/responses/{response_id}`:
+  - runtime response readback still trusted persisted `taskRunSpecId` on any
+    stored run record
+  - that meant a legacy or malformed direct run could still project
+    `metadata.taskRunSpecId` / `metadata.taskRunSpecSummary` even though
+    assignment identity belongs only to the
+    `taskRunSpec -> teamRun -> runtime` chain
+- Tightened
+  [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+  and
+  [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  so response readback now suppresses `taskRunSpecId` and
+  `taskRunSpecSummary` unless `sourceKind = team-run`.
+- Added focused regressions proving the suppression on:
+  - [tests/runtime.responsesService.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.responsesService.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Updated the active `0004` authority and public response-readback docs so the
+  bounded response contract now states the same team-run-only assignment rule
+  explicitly.
+
 ## 2026-04-16 - Runtime inspection service-state probe contract
 
 - Current focus:

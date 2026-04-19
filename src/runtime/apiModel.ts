@@ -79,6 +79,9 @@ export function createExecutionResponseFromRunRecord(
   input: ExecutionResponseFromRunRecordInput,
 ): ExecutionResponse {
   const parsed = ExecutionResponseFromRunRecordInputSchema.parse(input);
+  const taskRunSpecId =
+    parsed.runRecord.run.sourceKind === 'team-run' ? parsed.runRecord.run.taskRunSpecId ?? null : null;
+  const taskRunSpecSummary = taskRunSpecId ? parsed.taskRunSpecSummary ?? null : null;
   const terminalStep =
     parsed.runRecord.steps.find((step) => step.status === 'failed') ??
     parsed.runRecord.steps
@@ -98,8 +101,8 @@ export function createExecutionResponseFromRunRecord(
     output: parsed.output,
     metadata: {
       runId: parsed.runRecord.run.id,
-      taskRunSpecId: parsed.runRecord.run.taskRunSpecId ?? null,
-      taskRunSpecSummary: parsed.taskRunSpecSummary ?? null,
+      taskRunSpecId,
+      taskRunSpecSummary,
       runtimeProfile: parsed.runtimeProfile ?? null,
       service: parsed.service ?? null,
       executionSummary: {

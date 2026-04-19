@@ -284,6 +284,8 @@ Current response readback note:
   top-level metadata only when the runtime run is task-backed:
   - `taskRunSpecId`
   - bounded `taskRunSpecSummary`
+- direct runs suppress those fields even if a legacy or malformed stored run
+  record still carries a persisted `taskRunSpecId`
 - current fields are:
   - `terminalStepId`
   - `completedAt`
