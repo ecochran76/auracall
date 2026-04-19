@@ -202,6 +202,48 @@ type TeamRunHandoff = {
 - handoffs must reference durable artifacts or structured payloads, not live browser state
 - inter-agent transfers should prefer explicit handoffs over hidden step-output coupling
 
+## Artifact and handoff transport rules
+
+The first logical execution model should use one artifact reference contract
+everywhere instead of inventing separate envelopes per surface.
+
+The same bounded artifact shape should be reused for:
+
+- step input artifacts
+- step output artifacts
+- handoff artifacts
+- shared-state artifact inventory
+- local host action inputs/outputs when the host participates in the same run
+
+Important rule:
+
+- local host execution is another producer/consumer in the run graph, not a
+  second artifact system
+
+Minimum durable artifact-ref responsibilities:
+
+- stable `id`
+- durable locator:
+  - `path`
+  - `uri`
+- bounded classification:
+  - `kind`
+  - `title`
+- transport safety across:
+  - agent-to-agent handoff
+  - agent-to-host handoff
+  - host-to-agent handoff
+
+Default transport rules:
+
+- pass artifact refs by id/path/uri, not embedded file payloads, by default
+- use `structuredData` only for bounded machine-readable payloads that should
+  survive serialization without a separate artifact object
+- do not require open browser tabs, in-memory handles, or host-local hidden
+  state to understand a handoff
+- do not create a host-only artifact mirror or a second handoff model for
+  local actions
+
 ## `sharedState`
 
 `sharedState` is the append-only run-scoped coordination record for one
@@ -321,6 +363,13 @@ Important rule:
 - runner-owned fields should not be required to understand the logical team run
 - assignment-owned fields should not be duplicated into `teamRun` just for convenience
 - runner metadata may be attached later as operational metadata, not as part of the logical execution contract
+
+Execution-envelope rule:
+
+- local-action requests, host-produced artifacts, and agent-produced artifacts
+  all belong to the same logical execution envelope
+- downstream surfaces should not need a second host-specific artifact or
+  handoff vocabulary before they can route, inspect, or replay the run
 
 ## Serialization guidance
 

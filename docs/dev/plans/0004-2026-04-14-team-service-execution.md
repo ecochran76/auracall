@@ -169,6 +169,138 @@ For unattended multi-turn teams, handoffs may also include:
 
 Those should remain explicit payload fields, not informal prompt prose.
 
+## Deterministic execution and readback contract
+
+AuraCall needs one deterministic machine-handling shape for:
+
+- routing
+- retry/error handling
+- local-action orchestration
+- artifact passing
+- inter-agent handoff
+- agent-to-host and host-to-agent exchange
+
+Important split:
+
+- logical execution contract
+  - the durable run/step/handoff/shared-state model
+- readback contract
+  - bounded inspection and response surfaces projected from that model
+- provider detail
+  - adapter-owned evidence and provider-specific output that must not define
+    the machine contract by accident
+
+### Logical execution envelope
+
+The logical execution envelope should stay stable even when the provider or
+transport changes.
+
+Minimum stable categories:
+
+- run identity
+  - `runId`
+  - `sourceKind`
+  - `sourceId`
+  - team-only assignment identity such as `taskRunSpecId`
+- execution status
+  - planned/running/succeeded/failed/cancelled/needs-human style state
+  - one bounded failure object with code/message/owner when failure exists
+- control state
+  - lease/claim/runner facts on operational surfaces
+  - latest operator-control actions and outcomes
+- local-action state
+  - requested action
+  - approval posture
+  - execution result
+  - owning step
+- artifact state
+  - stable artifact refs
+  - producer/consumer linkage through steps and handoffs
+- handoff state
+  - explicit transfer payloads between steps
+  - durable structured payloads and artifact refs
+
+Rule:
+
+- provider/browser adapters may add evidence
+- they must project into this envelope rather than redefine it
+
+### Readback envelope
+
+The route-neutral `responses` readback should stay compatibility-first, but
+its machine-readable shape must still be deterministic.
+
+Current stable split:
+
+- `output[]`
+  - ordered user-visible result timeline
+  - `message` items for assistant prose
+  - sibling `artifact` items for durable non-text outputs
+- `metadata.executionSummary`
+  - canonical machine-handling summary
+  - stable home for:
+    - step summaries
+    - local-action summaries
+    - requested-output summaries and policy
+    - input-artifact and handoff-transfer summaries
+    - provider-usage summary
+    - cancellation summary
+    - operator-control summary
+    - orchestration timeline summary
+    - failure summary
+
+Rule:
+
+- route handlers should adapt from one shared runtime/readback model
+- do not let individual HTTP/CLI/MCP surfaces invent parallel summary
+  vocabularies for the same underlying run state
+
+### Team-only versus general runtime fields
+
+Not every persisted runtime field is safe to expose on every readback surface.
+
+The exposure rule should be explicit:
+
+- general runtime fields
+  - valid for direct and team-backed runs
+  - examples:
+    - `runId`
+    - `sourceKind`
+    - status/failure/control/local-action summaries
+    - produced artifacts
+    - orchestration timeline
+- team-only fields
+  - valid only when the run is actually backed by the
+    `taskRunSpec -> teamRun -> runtime` chain
+  - examples:
+    - `taskRunSpecId`
+    - `taskRunSpecSummary`
+
+Important rule:
+
+- persisted presence alone is not sufficient justification for exposure
+- direct runs must not project team assignment identity just because a legacy
+  or malformed record still carries a stored `taskRunSpecId`
+
+### Artifact and host-action parity
+
+Local host execution should use the same deterministic artifact/handoff
+contract as agent steps.
+
+That means:
+
+- local actions consume artifact refs, not a second host-only payload model
+- local actions may emit durable artifacts through the same run envelope
+- host-produced artifacts should be handoff-safe to later agent steps
+- agent-to-host and host-to-agent exchange should reuse the same artifact ids
+  and bounded structured payload model
+
+Do not create:
+
+- one artifact contract for agent steps
+- another artifact contract for host actions
+- a third transport-only artifact mirror in route handlers
+
 ## Shared run state
 
 One future team run should own one shared state object with append-only

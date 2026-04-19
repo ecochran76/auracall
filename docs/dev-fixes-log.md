@@ -13163,3 +13163,22 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   once helper/runtime-id and alias-selection rules all agree. In this repo,
   further work in that sub-lane should require a freshly reproduced mismatch,
   not more contract-only hardening by inertia.
+- 2026-04-19: Keep one deterministic execution/readback envelope and do not
+  let provider output, route handlers, or local-host transport redefine it by
+  surface.
+  - the logical execution contract should stay stable around:
+    - run identity
+    - execution status/failure
+    - local-action state
+    - artifact refs
+    - handoff payloads
+    - append-only orchestration history
+  - the readback contract should keep:
+    - `output[]` as the ordered visible result timeline
+    - `metadata.executionSummary` as the bounded machine-handling summary
+  - team-only assignment identity such as `taskRunSpecId` /
+    `taskRunSpecSummary` should be exposed only for task-backed team-run
+    execution, not for direct runs just because storage contains a stale id
+  - local host actions should consume and emit the same artifact/handoff
+    references as agent steps; do not create a second host-only artifact or
+    handoff vocabulary

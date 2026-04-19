@@ -18128,3 +18128,31 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Updated the active `0004` authority and testing docs so the bounded recovery
   detail contract now states the same team-run-only assignment rule
   explicitly.
+
+## 2026-04-19 - Deterministic execution/readback contract checkpoint
+
+- Re-audited the broader `0003` / `0004` execution authority after the recent
+  direct-run assignment-identity leak and tightened the governing contract
+  instead of opening another ad hoc surface-specific lane.
+- Clarified in
+  [0003-2026-04-14-team-run-data-model.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0003-2026-04-14-team-run-data-model.md)
+  that artifact refs and handoff payloads must stay on one logical execution
+  envelope across:
+  - step input/output
+  - handoffs
+  - shared-state inventory
+  - local host action exchange
+- Clarified in
+  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+  that AuraCall needs one deterministic machine-handling contract split into:
+  - logical execution envelope
+  - bounded readback envelope
+  - provider-owned detail
+- Locked the current readback rule directly:
+  - `output[]` is the ordered visible result timeline
+  - `metadata.executionSummary` is the bounded machine-handling summary
+  - `taskRunSpecId` / `taskRunSpecSummary` remain team-only identity fields,
+    not general runtime metadata
+- Updated
+  [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
+  so the public dev-server contract now reflects that same split.

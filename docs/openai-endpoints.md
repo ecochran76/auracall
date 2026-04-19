@@ -270,10 +270,20 @@ Current direct-run behavior:
 Current response readback note:
 
 - AuraCall now adds a bounded `metadata.executionSummary` object on the same
-  response body for runtime-backed direct runs
-- AuraCall response readback now also includes bounded assignment identity at
-  top-level metadata:
+  response body as the canonical machine-handling summary
+- AuraCall keeps the user-visible result timeline and machine summary split
+  explicit:
+  - `output[]`
+    - ordered visible result timeline
+    - `message` items for assistant prose
+    - sibling `artifact` items for durable non-text outputs
+  - `metadata.executionSummary`
+    - bounded machine-handling summary for routing, retries, local actions,
+      artifacts, handoffs, and failure/readback inspection
+- AuraCall response readback also includes bounded assignment identity at
+  top-level metadata only when the runtime run is task-backed:
   - `taskRunSpecId`
+  - bounded `taskRunSpecSummary`
 - current fields are:
   - `terminalStepId`
   - `completedAt`
