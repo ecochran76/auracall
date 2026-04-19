@@ -381,7 +381,11 @@ Action:
 - managed-profile escape hatches such as:
   - `manualLogin`
   - `manualLoginProfileDir`
-  remain in `runtimeProfiles.<name>.browser`
+  remain in `runtimeProfiles.<name>.browser` by default, but bounded migrate
+  cleanup may relocate them into
+  `runtimeProfiles.<name>.services.<defaultService>` when one concrete
+  `defaultService` makes the destination explicit and no conflicting
+  service-level value already exists
 - if those conditions are not met, they remain in the runtime profile
 
 ### `runtime-profile-service-scoped-overrides-relocatable-present`

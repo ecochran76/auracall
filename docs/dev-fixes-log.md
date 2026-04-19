@@ -12988,3 +12988,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   are never auto-relocated; it should say that relocation happens only when
   one concrete `defaultService` makes the destination unambiguous and no
   conflicting service-level value already exists.
+- 2026-04-18: After a bounded migrate rule lands, update the active plan and
+  troubleshooting authority in the same lane. In this repo, once
+  `manualLogin` / `manualLoginProfileDir` started relocating into
+  `runtimeProfiles.<name>.services.<defaultService>` for the unambiguous
+  non-conflicting case, the remaining “these fields remain in
+  runtimeProfiles.<name>.browser” checkpoint wording became stale and needed
+  to be corrected immediately.

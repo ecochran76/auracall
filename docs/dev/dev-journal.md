@@ -17654,3 +17654,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - after enabling bounded migrate relocation for those fields, the old
     “do not auto-relocate them casually” doctor wording had become stale and
     misleading
+## 2026-04-18 - active 0007 authority now matches managed-profile migrate behavior
+
+- Closed the remaining doc-authority drift left after the managed-profile
+  escape-hatch migrate slice:
+  - updated the active `0007` plan checkpoint to say `manualLogin` /
+    `manualLoginProfileDir` remain intentional runtime-browser residue by
+    default, but bounded migrate cleanup now relocates them into
+    `runtimeProfiles.<name>.services.<defaultService>` when one concrete
+    `defaultService` exists and no conflicting service-level value is already
+    present
+  - updated the troubleshooting authority to reflect the same bounded
+    relocation rule instead of saying those fields simply remain in
+    `runtimeProfiles.<name>.browser`
+- Reason:
+  - the migrate implementation, doctor wording, and recent journal/history
+    were already aligned, but the active plan/troubleshooting checkpoint still
+    preserved older “remain in runtime browser” wording

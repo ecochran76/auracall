@@ -297,7 +297,10 @@ Current migration checkpoint:
   - managed-profile escape hatches:
     - `manualLogin`
     - `manualLoginProfileDir`
-    remain in `runtimeProfiles.<name>.browser`
+    remain intentional runtime-browser residue by default, but now also move
+    into `runtimeProfiles.<name>.services.<defaultService>` when one concrete
+    `defaultService` makes the destination explicit and no conflicting
+    service-level value already exists
   - `config migrate` may now also remove default-equivalent
     `manualLoginProfileDir` values when they exactly match the managed profile
     path Aura-Call would derive for the same AuraCall runtime profile +
