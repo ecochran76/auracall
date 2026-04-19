@@ -4458,6 +4458,164 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('resolves task-run-spec runtime inspection against team-run sources only over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-task-spec-team-only-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const taskRunSpecId = 'task_spec_http_runtime_team_only';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: 'runtime_http_team_task_spec_old',
+          sourceKind: 'team-run',
+          sourceId: 'teamrun_http_runtime_team_only',
+          taskRunSpecId,
+          status: 'running',
+          createdAt: '2026-04-15T12:50:00.000Z',
+          updatedAt: '2026-04-15T12:55:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'auracall teams run',
+          entryPrompt: 'HTTP task-run-spec team source.',
+          initialInputs: {},
+          sharedStateId: 'runtime_http_team_task_spec_old:state',
+          stepIds: ['runtime_http_team_task_spec_old:step:1'],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: 'runtime_http_team_task_spec_old:step:1',
+            runId: 'runtime_http_team_task_spec_old',
+            sourceStepId: 'teamrun_http_runtime_team_only:step:1',
+            agentId: 'agent:http-inspect-team-only',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'HTTP task-run-spec team source.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-15T12:51:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: 'runtime_http_team_task_spec_old:state',
+          runId: 'runtime_http_team_task_spec_old',
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-15T12:55:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: 'runtime_http_direct_task_spec_new',
+          sourceKind: 'direct',
+          sourceId: null,
+          taskRunSpecId,
+          status: 'planned',
+          createdAt: '2026-04-15T13:00:00.000Z',
+          updatedAt: '2026-04-15T13:10:00.000Z',
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Direct run should not win HTTP task-run-spec lookup.',
+          initialInputs: {},
+          sharedStateId: 'runtime_http_direct_task_spec_new:state',
+          stepIds: ['runtime_http_direct_task_spec_new:step:1'],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: 'runtime_http_direct_task_spec_new:step:1',
+            runId: 'runtime_http_direct_task_spec_new',
+            agentId: 'api-responses',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Direct run should not win HTTP task-run-spec lookup.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: 'runtime_http_direct_task_spec_new:state',
+          runId: 'runtime_http_direct_task_spec_new',
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-15T13:10:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?taskRunSpecId=${taskRunSpecId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          queryRunId: string;
+          matchingRuntimeRunCount: number;
+          matchingRuntimeRunIds: string[];
+          runtime: {
+            runId: string;
+            teamRunId: string | null;
+            taskRunSpecId: string | null;
+            sourceKind: string;
+            runStatus: string;
+          };
+        };
+      };
+
+      expect(payload.inspection).toMatchObject({
+        resolvedBy: 'task-run-spec-id',
+        queryId: taskRunSpecId,
+        queryRunId: 'runtime_http_team_task_spec_old',
+        matchingRuntimeRunCount: 1,
+        matchingRuntimeRunIds: ['runtime_http_team_task_spec_old'],
+        runtime: {
+          runId: 'runtime_http_team_task_spec_old',
+          teamRunId: 'teamrun_http_runtime_team_only',
+          taskRunSpecId,
+          sourceKind: 'team-run',
+          runStatus: 'running',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces taskRunSpecId on recovery detail for stored team-run-backed runs', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
     cleanup.push(homeDir);

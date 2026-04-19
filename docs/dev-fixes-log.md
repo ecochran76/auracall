@@ -13129,3 +13129,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   it stale and then report blocked/stale posture instead of reading it back as
   implicitly active/eligible just because the persisted runner record has not
   been swept yet.
+- 2026-04-19: Keep runtime inspection `taskRunSpecId` aliases scoped to
+  team-run history. In this repo, `taskRunSpecId` belongs to the
+  `taskRunSpec -> teamRun -> runtime` chain, so `/v1/runtime-runs/inspect`
+  should not let a newer direct run with the same `taskRunSpecId` displace the
+  actual team-backed runtime attempt on that alias surface.

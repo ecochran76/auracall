@@ -18017,3 +18017,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   on:
   - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
   - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+## 2026-04-19 - Runtime inspection task-run-spec aliases now stay team-run scoped
+
+- Audited the next inspection-selection seam after the runner-liveness fix and
+  found an actual source-boundary mismatch:
+  - team inspection and review-ledger treat `taskRunSpecId` as team-run-only
+  - runtime inspection was still searching all runtime runs for the same alias
+- That meant a newer direct run carrying the same `taskRunSpecId` could
+  displace the task-backed team runtime attempt on
+  `/v1/runtime-runs/inspect?taskRunSpecId=...`.
+- Tightened runtime inspection to resolve `taskRunSpecId` aliases against
+  `sourceKind = team-run` history only.
+- Added focused regressions proving the team-run-backed runtime still wins even
+  when a newer direct run shares the same `taskRunSpecId` on:
+  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
+  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)

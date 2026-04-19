@@ -315,6 +315,10 @@ Current bounded implication:
   queried runner or active-lease owner for affinity/claim posture
   - an expired-but-unswept runner should read back as `stale`, not as an
     implicitly active/eligible claimant
+- bounded runtime inspection lookup by `taskRunSpecId` should resolve against
+  team-run runtime history only
+  - a newer direct run carrying the same `taskRunSpecId` should not displace
+    the task-backed team runtime attempt on that alias surface
 - bounded HTTP recovery detail after operator resume should project current
   local-claim posture and no active lease when the historical paused-owner
   lease has already been released

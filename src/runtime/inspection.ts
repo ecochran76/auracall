@@ -387,7 +387,7 @@ async function resolveRuntimeRunIdForTaskRunSpec(
   taskRunSpecId: string | null,
 ): Promise<{ queryRunId: string; matchingRuntimeRunIds: string[] } | null> {
   if (!taskRunSpecId) return null;
-  const runtimeRecords = (await control.listRuns())
+  const runtimeRecords = (await control.listRuns({ sourceKind: 'team-run' }))
     .filter((record) => record.bundle.run.taskRunSpecId === taskRunSpecId)
     .sort((left, right) => right.bundle.run.updatedAt.localeCompare(left.bundle.run.updatedAt));
   const matchingRuntimeRunIds = runtimeRecords.slice(0, 10).map((record) => record.runId);
