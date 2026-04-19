@@ -319,6 +319,11 @@ Current bounded implication:
   team-run runtime history only
   - a newer direct run carrying the same `taskRunSpecId` should not displace
     the task-backed team runtime attempt on that alias surface
+- bounded team inspection lookup by `taskRunSpecId` should keep that same
+  team-run-only history rule
+  - a newer direct run carrying the same `taskRunSpecId` should not displace
+    the task-backed team runtime attempt on `/v1/team-runs/inspect` or the
+    matching CLI inspection helper
 - bounded team review-ledger lookup by `taskRunSpecId` should keep that same
   team-run-only history rule
   - a newer direct run carrying the same `taskRunSpecId` should not displace

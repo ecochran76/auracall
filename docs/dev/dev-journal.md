@@ -18045,3 +18045,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added that regression in
   [tests/teams.reviewLedger.test.ts](/home/ecochran76/workspace.local/oracle/tests/teams.reviewLedger.test.ts)
   and updated the active `0004` authority to state the same rule explicitly.
+## 2026-04-19 - Team inspection task-run-spec lookup contract lock
+
+- Audited the next adjacent team-run inspection selection seam after locking
+  review-ledger lookup.
+- Did not find a new implementation bug in
+  [src/teams/inspection.ts](/home/ecochran76/workspace.local/oracle/src/teams/inspection.ts):
+  the lookup was already scoped to `sourceKind = team-run`.
+- The remaining gap was public-surface durability: the CLI inspection helper
+  and `/v1/team-runs/inspect?taskRunSpecId=...` route did not yet have a
+  focused regression proving a newer direct run with the same `taskRunSpecId`
+  cannot displace the task-backed team attempt.
+- Added that mixed-history regression on:
+  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Updated the active `0004` authority so team inspection now states the same
+  team-run-only alias rule as runtime inspection and review-ledger lookup.

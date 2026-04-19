@@ -563,6 +563,8 @@ describe('team run CLI helpers', () => {
   });
 
   it('inspects persisted linkage by task run spec id', async () => {
+    const taskRunSpecId = 'task_spec_1';
+    const teamRunId = 'teamrun_1';
     const control: ExecutionRuntimeControlContract = {
       async createRun() {
         throw new Error('not used');
@@ -571,54 +573,54 @@ describe('team run CLI helpers', () => {
         throw new Error('not used');
       },
       async inspectRun(runId) {
-        if (runId !== 'teamrun_1') {
+        if (runId !== 'teamrun_1_retry') {
           return null;
         }
         return {
           record: {
-            runId: 'teamrun_1',
+            runId: 'teamrun_1_retry',
             revision: 2,
-            persistedAt: '2026-04-14T16:05:00.000Z',
+            persistedAt: '2026-04-14T16:20:00.000Z',
             bundle: {
               run: {
-                id: 'teamrun_1',
+                id: 'teamrun_1_retry',
                 sourceKind: 'team-run',
-                sourceId: 'teamrun_1',
-                taskRunSpecId: 'task_spec_1',
+                sourceId: teamRunId,
+                taskRunSpecId,
                 status: 'running',
-                createdAt: '2026-04-14T16:00:00.000Z',
-                updatedAt: '2026-04-14T16:05:00.000Z',
+                createdAt: '2026-04-14T16:15:00.000Z',
+                updatedAt: '2026-04-14T16:20:00.000Z',
                 trigger: 'cli',
                 requestedBy: 'auracall teams run',
                 entryPrompt: null,
                 initialInputs: {},
-                sharedStateId: 'shared_1',
-                stepIds: ['step_1', 'step_2'],
+                sharedStateId: 'shared_retry',
+                stepIds: ['step_retry_1', 'step_retry_2'],
                 policy: { failPolicy: 'fail-fast' },
               },
               steps: [],
               handoffs: [{ id: 'handoff_1' }],
               localActionRequests: [{ id: 'request_1' }],
               sharedState: {
-                id: 'shared_1',
-                runId: 'teamrun_1',
+                id: 'shared_retry',
+                runId: 'teamrun_1_retry',
                 status: 'active',
                 artifacts: [],
                 structuredOutputs: [],
                 notes: [],
                 history: [],
-                lastUpdatedAt: '2026-04-14T16:05:00.000Z',
+                lastUpdatedAt: '2026-04-14T16:20:00.000Z',
               },
               events: [],
               leases: [
                 {
-                  id: 'lease_1',
-                  runId: 'teamrun_1',
+                  id: 'lease_retry_1',
+                  runId: 'teamrun_1_retry',
                   ownerId: 'host:inspect',
                   status: 'active',
-                  acquiredAt: '2026-04-14T16:01:00.000Z',
-                  heartbeatAt: '2026-04-14T16:05:00.000Z',
-                  expiresAt: '2026-04-14T16:10:00.000Z',
+                  acquiredAt: '2026-04-14T16:16:00.000Z',
+                  heartbeatAt: '2026-04-14T16:20:00.000Z',
+                  expiresAt: '2026-04-14T16:25:00.000Z',
                 },
               ],
             },
@@ -640,7 +642,8 @@ describe('team run CLI helpers', () => {
           },
         } as never;
       },
-      async listRuns() {
+      async listRuns(options) {
+        expect(options).toEqual({ sourceKind: 'team-run' });
         return [
           {
             runId: 'teamrun_1',
@@ -680,6 +683,44 @@ describe('team run CLI helpers', () => {
               leases: [],
             },
           },
+          {
+            runId: 'teamrun_1_retry',
+            revision: 3,
+            persistedAt: '2026-04-14T16:20:00.000Z',
+            bundle: {
+              run: {
+                id: 'teamrun_1_retry',
+                sourceKind: 'team-run',
+                sourceId: teamRunId,
+                taskRunSpecId,
+                status: 'running',
+                createdAt: '2026-04-14T16:15:00.000Z',
+                updatedAt: '2026-04-14T16:20:00.000Z',
+                trigger: 'cli',
+                requestedBy: 'auracall teams run',
+                entryPrompt: null,
+                initialInputs: {},
+                sharedStateId: 'shared_retry',
+                stepIds: [],
+                policy: { failPolicy: 'fail-fast' },
+              },
+              steps: [],
+              handoffs: [],
+              localActionRequests: [],
+              sharedState: {
+                id: 'shared_retry',
+                runId: 'teamrun_1_retry',
+                status: 'active',
+                artifacts: [],
+                structuredOutputs: [],
+                notes: [],
+                history: [],
+                lastUpdatedAt: '2026-04-14T16:20:00.000Z',
+              },
+              events: [],
+              leases: [],
+            },
+          },
         ] as never;
       },
       async acquireLease() {
@@ -711,16 +752,16 @@ describe('team run CLI helpers', () => {
       async readSpec() {
         throw new Error('not used');
       },
-      async readRecord(taskRunSpecId) {
-        if (taskRunSpecId !== 'task_spec_1') {
+      async readRecord(candidateTaskRunSpecId) {
+        if (candidateTaskRunSpecId !== taskRunSpecId) {
           return null;
         }
         return {
-          taskRunSpecId: 'task_spec_1',
+          taskRunSpecId,
           revision: 1,
           persistedAt: '2026-04-14T16:00:00.000Z',
           spec: {
-            id: 'task_spec_1',
+            id: taskRunSpecId,
             teamId: 'auracall-solo',
             title: 'Runtime smoke',
             objective: 'Reply exactly with OK.',
@@ -741,26 +782,26 @@ describe('team run CLI helpers', () => {
     };
 
     const result = await inspectConfiguredTeamRun({
-      taskRunSpecId: 'task_spec_1',
+      taskRunSpecId,
       control,
       taskRunSpecStore,
     });
 
     expect(result).toMatchObject({
       resolvedBy: 'task-run-spec-id',
-      queryId: 'task_spec_1',
-      matchingRuntimeRunCount: 1,
-      matchingRuntimeRunIds: ['teamrun_1'],
+      queryId: taskRunSpecId,
+      matchingRuntimeRunCount: 2,
+      matchingRuntimeRunIds: ['teamrun_1_retry', 'teamrun_1'],
       taskRunSpecSummary: {
-        id: 'task_spec_1',
+        id: taskRunSpecId,
         teamId: 'auracall-solo',
         title: 'Runtime smoke',
         objective: 'Reply exactly with OK.',
       },
       runtime: {
-        runtimeRunId: 'teamrun_1',
-        teamRunId: 'teamrun_1',
-        taskRunSpecId: 'task_spec_1',
+        runtimeRunId: 'teamrun_1_retry',
+        teamRunId,
+        taskRunSpecId,
         runtimeRunStatus: 'running',
         nextRunnableStepId: 'step_2',
         activeLeaseOwnerId: 'host:inspect',

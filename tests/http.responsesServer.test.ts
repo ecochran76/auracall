@@ -2680,9 +2680,12 @@ describe('http responses adapter', () => {
 
     const control = createExecutionRuntimeControl();
     const createdAt = '2026-04-14T16:00:00.000Z';
-    const runId = 'teamrun_http_inspect_task_1';
+    const teamRunId = 'teamrun_http_inspect_task_1';
+    const olderRunId = 'teamrun_http_inspect_task_1';
+    const retryRunId = 'teamrun_http_inspect_task_1_retry';
+    const taskRunSpecId = 'task_spec_http_inspect_1';
     await writeTaskRunSpecStoredRecord({
-      id: 'task_spec_http_inspect_1',
+      id: taskRunSpecId,
       teamId: 'auracall-solo',
       title: 'Inspect HTTP task',
       objective: 'Reply exactly with OK.',
@@ -2727,32 +2730,32 @@ describe('http responses adapter', () => {
     await control.createRun(
       createExecutionRunRecordBundle({
         run: createExecutionRun({
-          id: runId,
+          id: olderRunId,
           sourceKind: 'team-run',
-          sourceId: runId,
-          taskRunSpecId: 'task_spec_http_inspect_1',
-          status: 'running',
+          sourceId: teamRunId,
+          taskRunSpecId,
+          status: 'failed',
           createdAt,
           updatedAt: '2026-04-14T16:05:00.000Z',
           trigger: 'cli',
           requestedBy: 'auracall teams run',
           entryPrompt: 'Inspect this team run.',
           initialInputs: {},
-          sharedStateId: `${runId}:state`,
-          stepIds: [`${runId}:step:1`],
+          sharedStateId: `${olderRunId}:state`,
+          stepIds: [`${olderRunId}:step:1`],
           policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
         }),
         steps: [
           createExecutionRunStep({
-            id: `${runId}:step:1`,
-            runId,
-            sourceStepId: `${runId}:step:1`,
+            id: `${olderRunId}:step:1`,
+            runId: olderRunId,
+            sourceStepId: `${teamRunId}:step:1`,
             agentId: 'auracall-solo:agent:1',
             runtimeProfileId: 'auracall-grok-auto',
             browserProfileId: 'default',
             service: 'grok',
             kind: 'prompt',
-            status: 'running',
+            status: 'failed',
             order: 1,
             dependsOnStepIds: [],
             input: {
@@ -2766,9 +2769,9 @@ describe('http responses adapter', () => {
           }),
         ],
         sharedState: createExecutionRunSharedState({
-          id: `${runId}:state`,
-          runId,
-          status: 'active',
+          id: `${olderRunId}:state`,
+          runId: olderRunId,
+          status: 'failed',
           artifacts: [],
           structuredOutputs: [],
           notes: [],
@@ -2778,39 +2781,160 @@ describe('http responses adapter', () => {
         events: [],
       }),
     );
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: 'runtime_http_inspect_direct_1',
+          sourceKind: 'direct',
+          sourceId: null,
+          taskRunSpecId,
+          status: 'succeeded',
+          createdAt: '2026-04-14T16:06:00.000Z',
+          updatedAt: '2026-04-14T16:10:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'operator',
+          entryPrompt: 'Direct run with overlapping task spec.',
+          initialInputs: {},
+          sharedStateId: 'runtime_http_inspect_direct_1:state',
+          stepIds: ['runtime_http_inspect_direct_1:step:1'],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: 'runtime_http_inspect_direct_1:step:1',
+            runId: 'runtime_http_inspect_direct_1',
+            sourceStepId: 'runtime_http_inspect_direct_1:step:1',
+            agentId: 'auracall-solo:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Direct run with overlapping task spec.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            completedAt: '2026-04-14T16:10:00.000Z',
+            output: {
+              summary: 'direct run done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: 'runtime_http_inspect_direct_1:state',
+          runId: 'runtime_http_inspect_direct_1',
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T16:10:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: retryRunId,
+          sourceKind: 'team-run',
+          sourceId: teamRunId,
+          taskRunSpecId,
+          status: 'running',
+          createdAt: '2026-04-14T16:11:00.000Z',
+          updatedAt: '2026-04-14T16:12:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'auracall teams run',
+          entryPrompt: 'Inspect this team run retry.',
+          initialInputs: {},
+          sharedStateId: `${retryRunId}:state`,
+          stepIds: [`${retryRunId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${retryRunId}:step:1`,
+            runId: retryRunId,
+            sourceStepId: `${teamRunId}:step:1`,
+            agentId: 'auracall-solo:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect this team run retry.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: '2026-04-14T16:11:00.000Z',
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${retryRunId}:state`,
+          runId: retryRunId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-14T16:12:00.000Z',
+        }),
+        events: [],
+      }),
+    );
     await control.acquireLease({
-      runId,
-      leaseId: `${runId}:lease:1`,
+      runId: retryRunId,
+      leaseId: `${retryRunId}:lease:1`,
       ownerId: 'host:http-inspect',
-      acquiredAt: '2026-04-14T16:01:00.000Z',
-      heartbeatAt: '2026-04-14T16:05:00.000Z',
-      expiresAt: '2026-04-14T16:10:00.000Z',
+      acquiredAt: '2026-04-14T16:11:00.000Z',
+      heartbeatAt: '2026-04-14T16:12:00.000Z',
+      expiresAt: '2026-04-14T16:17:00.000Z',
     });
 
     const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
     try {
       const response = await fetch(
-        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?taskRunSpecId=task_spec_http_inspect_1`,
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?taskRunSpecId=${taskRunSpecId}`,
       );
       expect(response.status).toBe(200);
       const payload = (await response.json()) as {
         object: string;
         inspection: {
           resolvedBy: string;
+          queryId: string;
+          matchingRuntimeRunCount: number;
+          matchingRuntimeRunIds: string[];
           taskRunSpecSummary: { id: string; teamId: string };
-          runtime: { runtimeRunId: string; runtimeRunStatus: string; activeLeaseOwnerId: string | null };
+          runtime: { runtimeRunId: string; runtimeRunStatus: string; activeLeaseOwnerId: string | null; teamRunId: string | null };
         };
       };
       expect(payload).toMatchObject({
         object: 'team_run_inspection',
         inspection: {
           resolvedBy: 'task-run-spec-id',
+          queryId: taskRunSpecId,
+          matchingRuntimeRunCount: 2,
+          matchingRuntimeRunIds: [retryRunId, olderRunId],
           taskRunSpecSummary: {
-            id: 'task_spec_http_inspect_1',
+            id: taskRunSpecId,
             teamId: 'auracall-solo',
           },
           runtime: {
-            runtimeRunId: runId,
+            runtimeRunId: retryRunId,
+            teamRunId,
             runtimeRunStatus: 'running',
             activeLeaseOwnerId: 'host:http-inspect',
           },

@@ -13139,3 +13139,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   let a newer direct run with the same `taskRunSpecId` displace the actual
   team-backed runtime/review attempt, even if the implementation already
   appears scoped correctly today.
+- 2026-04-19: Keep team inspection `taskRunSpecId` aliases on that same
+  team-run-only history rule. In this repo, `inspectConfiguredTeamRun(...)`
+  and `/v1/team-runs/inspect` should not let a newer direct run with the same
+  `taskRunSpecId` displace the actual team-backed runtime attempt, even if the
+  current implementation already appears scoped correctly today.
