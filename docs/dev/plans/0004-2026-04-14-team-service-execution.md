@@ -311,6 +311,10 @@ Current bounded implication:
 - bounded HTTP runtime inspection after operator resume should evaluate the
   current queried runner when no active lease exists, not implicitly fall back
   to the historical paused owner
+- bounded runtime inspection should expire runner liveness before evaluating a
+  queried runner or active-lease owner for affinity/claim posture
+  - an expired-but-unswept runner should read back as `stale`, not as an
+    implicitly active/eligible claimant
 - bounded HTTP recovery detail after operator resume should project current
   local-claim posture and no active lease when the historical paused-owner
   lease has already been released

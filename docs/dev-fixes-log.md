@@ -13123,3 +13123,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runtime inspection all match the same pinned server-runner contract. In this
   repo, further work in that sub-lane should require a freshly reproduced
   mismatch, not more contract-only hardening by inertia.
+- 2026-04-19: Keep runtime inspection runner evaluation on the same liveness
+  contract as service-host local claim. In this repo, if a queried runner or
+  active-lease owner heartbeat is expired, runtime inspection should first mark
+  it stale and then report blocked/stale posture instead of reading it back as
+  implicitly active/eligible just because the persisted runner record has not
+  been swept yet.

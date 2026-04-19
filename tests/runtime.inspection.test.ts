@@ -122,7 +122,7 @@ describe('runtime inspection', () => {
         hostId: 'host:runtime-inspect',
         startedAt: createdAt,
         lastHeartbeatAt: '2026-04-15T13:01:00.000Z',
-        expiresAt: '2026-04-15T13:05:00.000Z',
+        expiresAt: '2099-04-15T13:05:00.000Z',
         serviceIds: ['chatgpt'],
         runtimeProfileIds: ['default'],
         browserProfileIds: ['default'],
@@ -135,7 +135,7 @@ describe('runtime inspection', () => {
         hostId: 'host:runtime-inspect',
         startedAt: createdAt,
         lastHeartbeatAt: '2026-04-15T13:01:00.000Z',
-        expiresAt: '2026-04-15T13:05:00.000Z',
+        expiresAt: '2099-04-15T13:05:00.000Z',
         serviceIds: ['chatgpt'],
         runtimeProfileIds: ['default'],
         browserProfileIds: ['default'],
@@ -323,6 +323,56 @@ describe('runtime inspection', () => {
       evidenceRef: 'chatgpt-placeholder-turn',
       confidence: 'high',
       reason: null,
+    });
+  });
+
+  it('expires an inspected runner heartbeat before evaluating runtime inspection affinity', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-expired-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_inspect_expired_runner';
+    const createdAt = '2026-04-16T18:30:00.000Z';
+    const runnerId = 'runner:runtime-inspect-expired';
+
+    await control.createRun(createBrowserBackedRuntimeBundle(runId, createdAt));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: runnerId,
+        hostId: 'host:runtime-inspect',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-16T18:31:00.000Z',
+        expiresAt: '2026-04-16T18:32:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        browserCapable: true,
+      }),
+    });
+
+    const payload = await inspectRuntimeRun({
+      runId,
+      runnerId,
+      now: '2026-04-16T18:35:00.000Z',
+      control,
+      runnersControl,
+    });
+
+    expect(payload.runtime.queueProjection).toMatchObject({
+      queueState: 'runnable',
+      claimState: 'blocked-affinity',
+      affinity: {
+        status: 'blocked-mismatch',
+        reason: `runner ${runnerId} heartbeat is not active`,
+      },
+    });
+    expect(payload.runner).toMatchObject({
+      selectedBy: 'query-runner-id',
+      runnerId,
+      status: 'stale',
+      eligibilityNote: 'runtime inspection liveness sweep',
     });
   });
 });

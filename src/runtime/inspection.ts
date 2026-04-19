@@ -20,6 +20,7 @@ export interface InspectRuntimeRunInput {
   teamRunId?: string | null;
   taskRunSpecId?: string | null;
   runnerId?: string | null;
+  now?: string | null;
   includeServiceState?: boolean;
   probeServiceState?: (input: ProbeRuntimeRunServiceStateInput) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
   control?: ExecutionRuntimeControlContract;
@@ -119,6 +120,7 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
   const control = input.control ?? createExecutionRuntimeControl();
   const runnersControl = input.runnersControl ?? createExecutionRunnerControl();
   const taskRunSpecStore = input.taskRunSpecStore ?? createTaskRunSpecRecordStore();
+  const inspectedAt = normalizeOptionalId(input.now) ?? new Date().toISOString();
   const runId = normalizeOptionalId(input.runId);
   const runtimeRunId = normalizeOptionalId(input.runtimeRunId);
   const teamRunId = normalizeOptionalId(input.teamRunId);
@@ -191,6 +193,11 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
   if (!runtimeInspection) {
     throw new RuntimeRunInspectionError('not-found', `Runtime run ${resolvedRunId} was not found.`);
   }
+
+  await runnersControl.expireRunners({
+    now: inspectedAt,
+    eligibilityNote: 'runtime inspection liveness sweep',
+  });
 
   const selectedRunner = await selectInspectionRunner(runtimeInspection.record, {
     requestedRunnerId,

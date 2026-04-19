@@ -3194,7 +3194,7 @@ describe('http responses adapter', () => {
         status: 'active',
         startedAt: createdAt,
         lastHeartbeatAt: '2026-04-15T12:01:00.000Z',
-        expiresAt: '2026-04-15T12:05:00.000Z',
+        expiresAt: '2099-04-15T12:05:00.000Z',
         serviceIds: ['chatgpt'],
         runtimeProfileIds: ['default'],
       }),
@@ -4083,7 +4083,7 @@ describe('http responses adapter', () => {
         status: 'active',
         startedAt: createdAt,
         lastHeartbeatAt: '2026-04-15T12:31:00.000Z',
-        expiresAt: '2026-04-15T12:35:00.000Z',
+        expiresAt: '2099-04-15T12:35:00.000Z',
         serviceIds: ['chatgpt'],
         runtimeProfileIds: ['default'],
         browserProfileIds: ['default'],
@@ -4098,7 +4098,7 @@ describe('http responses adapter', () => {
         status: 'active',
         startedAt: createdAt,
         lastHeartbeatAt: '2026-04-15T12:31:00.000Z',
-        expiresAt: '2026-04-15T12:35:00.000Z',
+        expiresAt: '2099-04-15T12:35:00.000Z',
         serviceIds: ['chatgpt'],
         runtimeProfileIds: ['default'],
         browserProfileIds: ['default'],
@@ -4175,6 +4175,130 @@ describe('http responses adapter', () => {
         },
       });
     } finally {
+      await server.close();
+    }
+  });
+
+  it('expires an inspected runner heartbeat before evaluating runtime inspection over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-expired-runner-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_http_inspect_expired_runner';
+    const createdAt = '2026-04-15T12:40:00.000Z';
+    const runnerId = 'runner:http-runtime-expired';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'teamrun_http_runtime_expired_runner',
+          status: 'planned',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect expired runtime runner.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: 'teamrun_http_runtime_expired_runner:step:1',
+            agentId: 'agent:inspect-expired-runner',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect expired runtime runner.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: runnerId,
+        hostId: 'host:http-runtime-expired',
+        status: 'active',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-15T12:41:00.000Z',
+        expiresAt: '2026-04-15T12:42:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const realDateNow = Date.now;
+    Date.now = () => new Date('2026-04-15T12:45:00.000Z').getTime();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { control, runnersControl },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=${runnerId}`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as {
+        inspection: {
+          runtime: {
+            queueProjection: {
+              queueState: string;
+              claimState: string;
+              affinity: { status: string; reason: string | null };
+            };
+          };
+          runner: {
+            runnerId: string;
+            status: string;
+            eligibilityNote: string | null;
+          } | null;
+        };
+      };
+
+      expect(payload.inspection.runtime.queueProjection).toMatchObject({
+        queueState: 'runnable',
+        claimState: 'blocked-affinity',
+        affinity: {
+          status: 'blocked-mismatch',
+          reason: `runner ${runnerId} heartbeat is not active`,
+        },
+      });
+      expect(payload.inspection.runner).toMatchObject({
+        runnerId,
+        status: 'stale',
+        eligibilityNote: 'runtime inspection liveness sweep',
+      });
+    } finally {
+      Date.now = realDateNow;
       await server.close();
     }
   });
@@ -7635,13 +7759,11 @@ describe('http responses adapter', () => {
       {
         control,
         runnersControl,
-        now: () => new Date('2026-04-19T12:10:00.000Z'),
       },
     );
 
     try {
       const runnerId = `runner:http-responses:127.0.0.1:${server.port}`;
-
       const resolveResponse = await fetch(`http://127.0.0.1:${server.port}/status`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

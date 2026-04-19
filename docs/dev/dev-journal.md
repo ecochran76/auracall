@@ -18003,3 +18003,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Marked this narrower `0004` `api serve` server-local-runner
   ownership/readback sub-lane maintenance-only unless a fresh mismatch is
   reproduced.
+## 2026-04-19 - Runtime inspection now expires runner liveness before evaluation
+
+- Audited the next real `0004` behavior seam and found a mismatch between:
+  - runtime inspection runner evaluation
+  - service-host/local-claim liveness handling
+- `inspectRuntimeRun(...)` previously read the selected runner record directly,
+  so an expired-but-unswept runner could still look active/eligible on runtime
+  inspection surfaces.
+- Tightened the shared inspection seam to expire runner liveness before
+  selecting/evaluating the queried runner or active-lease owner.
+- Added focused regressions proving the same stale-heartbeat posture now holds
+  on:
+  - [runtime.inspection.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.inspection.test.ts)
+  - [http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
