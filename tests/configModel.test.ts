@@ -1353,7 +1353,7 @@ describe('config model helpers', () => {
           severity: 'info',
           auracallRuntimeProfile: 'default',
           message:
-            'AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.',
+            'AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional. Bounded migrate cleanup may relocate them only when one concrete defaultService makes the destination unambiguous and no conflicting service-level value already exists.',
         }),
       ],
     });

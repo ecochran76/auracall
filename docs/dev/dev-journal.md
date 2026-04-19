@@ -17640,3 +17640,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     destination was unambiguous
   - the migrate implementation was still lagging that contract and only moved
     the relocatable service knobs
+## 2026-04-18 - doctor now matches the bounded managed-profile migrate cleanup
+
+- Tightened the `config doctor` wording for managed-profile escape hatches:
+  - the doctor info message for `browser.manualLogin` /
+    `browser.manualLoginProfileDir` now says those fields remain intentional
+    escape hatches, but bounded migrate cleanup may relocate them when one
+    concrete `defaultService` makes the destination unambiguous and no
+    conflicting service-level value already exists
+  - updated focused config-model and CLI doctor coverage so doctor no longer
+    contradicts the migrate behavior from the previous slice
+- Reason:
+  - after enabling bounded migrate relocation for those fields, the old
+    “do not auto-relocate them casually” doctor wording had become stale and
+    misleading

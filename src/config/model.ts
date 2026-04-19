@@ -1270,7 +1270,7 @@ export function analyzeConfigModelBridgeHealth(
         issues.push({
           code: 'runtime-profile-service-scoped-escape-hatches-present',
           severity: 'info',
-          message: `AuraCall runtime profile "${name}" still defines service-scoped browser escape hatches (${serviceScopedEscapeHatches.join(', ')}); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.`,
+          message: `AuraCall runtime profile "${name}" still defines service-scoped browser escape hatches (${serviceScopedEscapeHatches.join(', ')}); keep them only when the managed-profile/account coupling is intentional. Bounded migrate cleanup may relocate them only when one concrete defaultService makes the destination unambiguous and no conflicting service-level value already exists.`,
           auracallRuntimeProfile: name,
         });
       }

@@ -12982,3 +12982,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `runtimeProfiles.<name>.browser` into
   `runtimeProfiles.<name>.services.<defaultService>` instead of leaving them
   behind as stale runtime-browser residue.
+- 2026-04-18: When bounded migrate cleanup starts relocating a config seam,
+  doctor messaging must be updated in the same lane. In this repo, the
+  managed-profile escape-hatch doctor note should no longer imply those fields
+  are never auto-relocated; it should say that relocation happens only when
+  one concrete `defaultService` makes the destination unambiguous and no
+  conflicting service-level value already exists.

@@ -1219,7 +1219,7 @@ describe('config show helpers', () => {
       '[info] AuraCall runtime profile "default" still defines relocatable service-scoped browser overrides (browser.modelStrategy, browser.thinkingTime); prefer runtimeProfiles.<name>.services.chatgpt, and keep runtimeProfiles.<name>.browser for non-service escape hatches only.',
     );
     expect(text).toContain(
-      '[info] AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional, and do not auto-relocate them casually.',
+      '[info] AuraCall runtime profile "default" still defines service-scoped browser escape hatches (browser.manualLogin, browser.manualLoginProfileDir); keep them only when the managed-profile/account coupling is intentional. Bounded migrate cleanup may relocate them only when one concrete defaultService makes the destination unambiguous and no conflicting service-level value already exists.',
     );
   });
 
