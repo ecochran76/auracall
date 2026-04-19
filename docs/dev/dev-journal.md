@@ -17702,3 +17702,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     a preferred active authoring surface
   - the normalize path implemented that precedence, but the repo did not yet
     lock it with a focused regression
+## 2026-04-18 - root-browser compatibility aliases stay out of automatic migrate relocation
+
+- Added a focused migrate regression for the remaining root-browser
+  compatibility-alias inventory:
+  - `materializeConfigV2(..., { targetShape: true })` now has explicit
+    coverage proving it does not auto-move root `browser` service/project
+    aliases into `runtimeProfiles.<name>.services.<service>`, even when one
+    concrete `defaultService` exists
+  - the root-browser alias layer remains intact while service-scoped values
+    stay the preferred authoring surface and active precedence winner when
+    both exist
+- Reason:
+  - `0007` already classified the root-browser alias inventory as
+    diagnostics-only for migration, but that no-rewrite posture was still
+    implicit in the test surface

@@ -13008,3 +13008,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `browser.projectName` / `browser.projectId` when those target values are
   absent; explicit root values must stay authoritative over `llmDefaults`
   during normalization.
+- 2026-04-18: When a config seam is intentionally diagnostics-only for migrate,
+  lock the no-rewrite rule explicitly. In this repo, the root-browser
+  compatibility-alias inventory (`browser.modelStrategy`,
+  `browser.thinkingTime`, `browser.composerTool`, `browser.projectName`,
+  `browser.projectId`, `browser.conversationName`, `browser.conversationId`)
+  should not be auto-relocated into `runtimeProfiles.<name>.services.<service>`
+  during target-shape cleanup, even when a concrete `defaultService` exists.

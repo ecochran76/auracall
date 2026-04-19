@@ -263,6 +263,48 @@ describe('config migrate bridge helpers', () => {
     });
   });
 
+  it('does not auto-relocate root-browser compatibility aliases into service defaults during target-shape cleanup', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        browser: {
+          modelStrategy: 'current',
+          thinkingTime: 'extended',
+          composerTool: 'canvas',
+          projectName: 'Root Project',
+          projectId: 'g-p-root-project',
+          conversationName: 'Root Conversation',
+          conversationId: 'conv-root',
+        },
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+          },
+        },
+      } as any,
+      { targetShape: true },
+    );
+
+    expect(result.browser).toEqual({
+      modelStrategy: 'current',
+      thinkingTime: 'extended',
+      composerTool: 'canvas',
+      projectName: 'Root Project',
+      projectId: 'g-p-root-project',
+      conversationName: 'Root Conversation',
+      conversationId: 'conv-root',
+    });
+    expect(result.runtimeProfiles?.consulting?.services).toBeUndefined();
+  });
+
   it('keeps conflicting managed-profile escape hatches in the runtime browser block during target-shape cleanup', () => {
     const result = materializeConfigV2(
       {
