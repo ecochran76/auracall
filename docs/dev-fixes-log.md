@@ -1046,6 +1046,14 @@
   - do not add a second assignment-summary vocabulary
   This keeps detailed operator inspection rich without turning the recovery
   summary into a bulky debug payload.
+- 2026-04-19: Recovery detail must keep assignment identity scoped to the
+  `taskRunSpec -> teamRun -> runtime` chain.
+  - `GET /status/recovery/{run_id}` may expose `taskRunSpecId` and
+    `taskRunSpecSummary` for team-run-backed runtime records
+  - direct runs must suppress both fields even if a legacy or malformed
+    record still carries a persisted `taskRunSpecId`
+  - do not let direct-run recovery detail project team assignment metadata
+    just because storage contains a stale id
 - 2026-04-11: After `taskRunSpecId` is preserved onto runtime run records, the
   first response/readback follow-through should stay narrow:
   - expose `metadata.taskRunSpecId` on `GET /v1/responses/{response_id}`

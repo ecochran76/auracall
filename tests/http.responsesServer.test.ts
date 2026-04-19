@@ -2594,6 +2594,99 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('suppresses task-run-spec linkage on direct recovery detail over HTTP', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-recovery-detail-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_http_direct_recovery_hidden_1',
+      teamId: 'team_template_http_direct_recovery_hidden_1',
+      title: 'Do not project direct recovery assignment identity over HTTP',
+      objective: 'Recovery detail should keep task spec identity team-run scoped over HTTP.',
+      successCriteria: [],
+      requestedOutputs: [],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 8,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: {
+        kind: 'service',
+        label: 'http responses test',
+      },
+      trigger: 'service',
+      createdAt: '2026-04-12T19:09:00.000Z',
+    });
+
+    const control = createExecutionRuntimeControl();
+    await seedPlannedDirectRun(
+      control,
+      'status_detail_direct_task_spec_hidden',
+      '2026-04-12T19:10:00.000Z',
+      'Do not expose direct recovery assignment identity.',
+    );
+    const record = await control.readRun('status_detail_direct_task_spec_hidden');
+    await control.persistRun({
+      runId: 'status_detail_direct_task_spec_hidden',
+      expectedRevision: record!.revision,
+      bundle: {
+        ...record!.bundle,
+        run: {
+          ...record!.bundle.run,
+          taskRunSpecId: 'task_spec_http_direct_recovery_hidden_1',
+        },
+      },
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        now: () => new Date('2026-04-12T19:15:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/status/recovery/status_detail_direct_task_spec_hidden`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        object: 'recovery_detail',
+        detail: {
+          runId: 'status_detail_direct_task_spec_hidden',
+          sourceKind: 'direct',
+          taskRunSpecId: null,
+          taskRunSpecSummary: null,
+          hostState: 'runnable',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces suspiciously-idle attention on bounded recovery detail over HTTP', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-recovery-detail-idle-'));
     cleanup.push(homeDir);

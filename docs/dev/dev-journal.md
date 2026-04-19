@@ -18107,3 +18107,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Marked this narrower sub-lane maintenance-only in the active `0004`
   authority so the next execution slice has to start from a newly reproduced
   mismatch instead of more local hardening by inertia.
+
+## 2026-04-19 - Recovery detail direct-run task-spec suppression
+
+- Audited the next adjacent `0004` readback seam outside the parked team
+  review/inspection lane and found a real behavior mismatch:
+  - `readRecoveryDetail(...)` still trusted persisted `taskRunSpecId` on any
+    runtime record
+  - that meant a legacy or malformed direct run could project
+    `taskRunSpecId` / `taskRunSpecSummary` through `/status/recovery/{run_id}`
+    even though assignment identity belongs to the
+    `taskRunSpec -> teamRun -> runtime` chain
+- Tightened
+  [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+  so recovery detail now suppresses `taskRunSpecId` and
+  `taskRunSpecSummary` unless `sourceKind = team-run`.
+- Added focused regressions proving the suppression on:
+  - [tests/runtime.serviceHost.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.serviceHost.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Updated the active `0004` authority and testing docs so the bounded recovery
+  detail contract now states the same team-run-only assignment rule
+  explicitly.

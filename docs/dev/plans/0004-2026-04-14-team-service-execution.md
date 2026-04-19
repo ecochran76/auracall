@@ -337,6 +337,11 @@ Current bounded implication:
   only too
   - the matching CLI review helper should reject a direct runtime run instead
     of projecting it through a team review surface
+- bounded recovery detail should keep `taskRunSpec` identity team-run scoped
+  too
+  - `/status/recovery/{run_id}` should suppress `taskRunSpecId` and
+    `taskRunSpecSummary` for direct runs even if a legacy or malformed direct
+    record still carries a persisted `taskRunSpecId`
 - this narrower team review/inspection boundary sub-lane is now
   maintenance-only unless a new concrete mismatch is reproduced across:
   - team inspection alias/runtime-run selection

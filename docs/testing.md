@@ -298,7 +298,8 @@
       - runtime-backed response/recovery readback now also includes bounded
         persisted task assignment identity when a stored `taskRunSpec` exists:
         - response: `metadata.taskRunSpecSummary`
-        - recovery detail: `taskRunSpecSummary`
+        - recovery detail: `taskRunSpecSummary` on team-run-backed recovery
+          detail only
         - public team inspection: `inspection.taskRunSpecSummary`
         - fields:
           - `id`

@@ -756,15 +756,16 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         now: detailAt,
       });
       const cancellation = readExecutionRunCancellation(inspection.record);
-      const taskRunSpecSummary = await readStoredTaskRunSpecSummary(
-        taskRunSpecStore,
-        inspection.record.bundle.run.taskRunSpecId ?? null,
-      );
+      const taskRunSpecId =
+        inspection.record.bundle.run.sourceKind === 'team-run'
+          ? inspection.record.bundle.run.taskRunSpecId ?? null
+          : null;
+      const taskRunSpecSummary = await readStoredTaskRunSpecSummary(taskRunSpecStore, taskRunSpecId);
 
       return {
         runId,
         sourceKind: inspection.record.bundle.run.sourceKind,
-        taskRunSpecId: inspection.record.bundle.run.taskRunSpecId ?? null,
+        taskRunSpecId,
         taskRunSpecSummary,
         orchestrationTimelineSummary: readExecutionRunOrchestrationTimelineSummaryForRecoveryDetail(
           inspection.record,

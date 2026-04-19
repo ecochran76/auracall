@@ -2377,6 +2377,72 @@ describe('runtime service host', () => {
     expect(storedRecord?.bundle.leases[0]?.status).toBe('active');
   });
 
+  it('suppresses task-run-spec linkage on recovery detail for direct runs', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    await writeTaskRunSpecStoredRecord({
+      id: 'task_spec_direct_recovery_hidden_1',
+      teamId: 'team_template_direct_recovery_hidden_1',
+      title: 'Do not project direct recovery assignment identity',
+      objective: 'Recovery detail should keep task spec identity team-run scoped.',
+      successCriteria: [],
+      requestedOutputs: [],
+      inputArtifacts: [],
+      context: {},
+      constraints: {},
+      overrides: {},
+      turnPolicy: {
+        maxTurns: 8,
+        stopOnStatus: ['succeeded', 'failed', 'cancelled', 'needs-human'],
+        allowTeamInitiatedStop: true,
+        allowHumanEscalation: true,
+      },
+      humanInteractionPolicy: {
+        requiredOn: ['needs-approval', 'missing-info', 'needs-human'],
+        allowClarificationRequests: true,
+        allowApprovalRequests: true,
+        defaultBehavior: 'pause',
+      },
+      localActionPolicy: {
+        mode: 'forbidden',
+        complexityStage: 'bounded-command',
+        allowedActionKinds: [],
+        allowedCommands: [],
+        allowedCwdRoots: [],
+        resultReportingMode: 'summary-only',
+      },
+      requestedBy: {
+        kind: 'service',
+        label: 'runtime service host test',
+      },
+      trigger: 'service',
+      createdAt: '2026-04-12T18:59:00.000Z',
+    });
+
+    const control = createExecutionRuntimeControl();
+    const bundle = createDirectBundle('run_detail_direct_task_spec_hidden', '2026-04-12T19:00:00.000Z');
+    bundle.run.taskRunSpecId = 'task_spec_direct_recovery_hidden_1';
+    await control.createRun(bundle);
+
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test',
+      now: () => '2026-04-12T19:05:00.000Z',
+    });
+
+    const detail = await host.readRecoveryDetail('run_detail_direct_task_spec_hidden');
+
+    expect(detail).toMatchObject({
+      runId: 'run_detail_direct_task_spec_hidden',
+      sourceKind: 'direct',
+      taskRunSpecId: null,
+      taskRunSpecSummary: null,
+      hostState: 'runnable',
+    });
+  });
+
   it('surfaces cancelled runs separately in recovery summary and detail', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
