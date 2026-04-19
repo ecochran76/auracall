@@ -12950,6 +12950,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
 - 2026-04-18: Narrow the broad runtime-profile browser block one field class at
   a time instead of treating it as all-or-nothing. In this repo, the
   referenced browser profile should now win over conflicting
-  `runtimeProfiles.<name>.browser` values for `chromePath` and `display`,
-  while fields such as `managedProfileRoot` and `wslChromePreference` remain
-  live advanced runtime overrides until a later slice narrows them too.
+  `runtimeProfiles.<name>.browser` values for `chromePath`, `display`,
+  `managedProfileRoot`, and `wslChromePreference`, while source-profile /
+  cookie-source wiring and debug/tab cleanup controls remain live advanced
+  runtime overrides until a later slice narrows them too.

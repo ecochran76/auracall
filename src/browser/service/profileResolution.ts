@@ -405,7 +405,9 @@ export function resolveBrowserProfileResolution(input: {
   const browserProfile: ResolvedBrowserProfile = {
     chromePath: asNonEmptyString(selectedBrowserProfile.chromePath) ?? asNonEmptyString(profileBrowser.chromePath),
     display: asNonEmptyString(selectedBrowserProfile.display) ?? asNonEmptyString(profileBrowser.display),
-    managedProfileRoot: asNonEmptyString(effectiveProfileBrowser.managedProfileRoot),
+    managedProfileRoot:
+      asNonEmptyString(selectedBrowserProfile.managedProfileRoot) ??
+      asNonEmptyString(profileBrowser.managedProfileRoot),
     sourceProfilePath,
     sourceProfileName,
     sourceCookiePath,
@@ -414,7 +416,9 @@ export function resolveBrowserProfileResolution(input: {
     debugPortStrategy: asDebugPortStrategy(effectiveProfileBrowser.debugPortStrategy),
     debugPortRange: asDebugPortRange(effectiveProfileBrowser.debugPortRange),
     blockingProfileAction: asBlockingProfileAction(effectiveProfileBrowser.blockingProfileAction),
-    wslChromePreference: asWslPreference(effectiveProfileBrowser.wslChromePreference),
+    wslChromePreference:
+      asWslPreference(selectedBrowserProfile.wslChromePreference) ??
+      asWslPreference(profileBrowser.wslChromePreference),
     serviceTabLimit: asFiniteNumber(effectiveProfileBrowser.serviceTabLimit),
     blankTabLimit: asFiniteNumber(effectiveProfileBrowser.blankTabLimit),
     collapseDisposableWindows: asBoolean(effectiveProfileBrowser.collapseDisposableWindows),

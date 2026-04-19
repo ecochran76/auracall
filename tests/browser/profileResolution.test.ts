@@ -297,7 +297,7 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile.keepBrowser).toBe(false);
   });
 
-  test('prefers browser-profile chromePath and display while leaving the remaining broad runtime overrides live', () => {
+  test('prefers browser-profile launch defaults for the narrowed broad browser-owned field set', () => {
     const result = resolveBrowserProfileResolution({
       merged: {
         browserProfiles: {
@@ -326,14 +326,14 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.browserProfile).toMatchObject({
       chromePath: '/browser/chrome',
       display: ':9.0',
-      managedProfileRoot: '/runtime/managed',
-      wslChromePreference: 'windows',
+      managedProfileRoot: '/browser/managed',
+      wslChromePreference: 'wsl',
     });
     expect(result.launchProfile).toMatchObject({
       chromePath: '/browser/chrome',
       display: ':9.0',
-      managedProfileRoot: '/runtime/managed',
-      wslChromePreference: 'windows',
+      managedProfileRoot: '/browser/managed',
+      wslChromePreference: 'wsl',
     });
   });
 

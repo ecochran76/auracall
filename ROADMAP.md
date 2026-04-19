@@ -229,9 +229,11 @@ Current note:
           - active resolution now prefers the referenced browser profile for:
             - `chromePath`
             - `display`
-          - conflicting runtime-profile `browser` values for fields such as
-            `managedProfileRoot` and `wslChromePreference` still win in active
-            resolution today
+            - `managedProfileRoot`
+            - `wslChromePreference`
+          - conflicting runtime-profile `browser` values for source-profile /
+            cookie-source wiring and debug/tab cleanup controls still win in
+            active resolution today
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough

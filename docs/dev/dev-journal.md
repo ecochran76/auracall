@@ -17504,3 +17504,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     least defensible long-term runtime-profile overrides
   - narrowing those two first advances `0007` without pretending the whole
     broad runtime browser block is ready for the same rewrite
+
+## 2026-04-18 - browser profiles now also win for managedProfileRoot and wsl preference
+
+- Continued the same bounded broad-browser precedence lane:
+  - updated active browser profile resolution so the referenced browser
+    profile now also wins over conflicting
+    `runtimeProfiles.<name>.browser` values for:
+    - `managedProfileRoot`
+    - `wslChromePreference`
+  - kept the remaining broad runtime browser override surface unchanged,
+    especially source/cookie wiring and debug/tab cleanup controls
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - these two fields are still browser-family launch concerns and already move
+    toward browser profiles in migration cleanup
+  - narrowing them in the same bounded family keeps `0007` moving without
+    widening into the more sensitive source-profile and debug-control fields
