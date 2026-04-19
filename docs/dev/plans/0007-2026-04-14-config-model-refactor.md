@@ -247,6 +247,12 @@ Current diagnostic checkpoint:
     - the destination `runtimeProfiles.<name>.services.<service>` slot is
       unambiguous
     - no conflicting service-level value already exists
+    - current bounded cleanup now covers:
+      - `manualLogin`
+      - `manualLoginProfileDir`
+      - `modelStrategy`
+      - `thinkingTime`
+      - `composerTool`
 
 Current migration checkpoint:
 

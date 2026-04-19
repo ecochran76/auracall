@@ -12974,3 +12974,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   runs to `manualLogin: true`, and direct browser run / login / reattach flows
   still assume a managed profile unless `manualLogin: false` is set
   deliberately.
+- 2026-04-18: Keep migrate behavior aligned with the managed-profile
+  escape-hatch plan, not just the resolver policy. In this repo, when one
+  concrete `defaultService` exists and no conflicting service-level value is
+  already present, `config migrate` should relocate
+  `manualLogin` / `manualLoginProfileDir` from
+  `runtimeProfiles.<name>.browser` into
+  `runtimeProfiles.<name>.services.<defaultService>` instead of leaving them
+  behind as stale runtime-browser residue.

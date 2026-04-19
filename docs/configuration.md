@@ -521,6 +521,16 @@ Within each file, later CLI flags still override config, and environment variabl
   - Resolved service-binding and launch-profile layers should only surface it
     when interactive login is actually enabled; do not treat it as general
     always-live service config.
+- Migration note for runtime-profile browser escape hatches:
+  - when a runtime profile declares one concrete `defaultService` and there is
+    no conflicting service-level value already present, `auracall config
+    migrate` may now move:
+    - `browser.manualLogin`
+    - `browser.manualLoginProfileDir`
+    - `browser.modelStrategy`
+    - `browser.thinkingTime`
+    - `browser.composerTool`
+    into `runtimeProfiles.<name>.services.<defaultService>`
 - `interactiveLogin` is the preferred name; legacy `manualLogin` keys keep working with deprecation warnings.
 - `services.<service>.features` holds provider-specific feature flags. Typical keys:
   - `chatgpt`: `web_search`, `deep_research`, `company_knowledge`, `apps`

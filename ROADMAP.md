@@ -146,6 +146,14 @@ Current note:
         redundant config noise
       - `config migrate` may now remove those default-equivalent explicit
         paths conservatively, while preserving real external overrides
+      - when one concrete `defaultService` exists and no conflicting
+        service-level value is already present, `config migrate` may now also
+        move:
+        - `manualLogin`
+        - `manualLoginProfileDir`
+        - `modelStrategy`
+        - `thinkingTime`
+        - `composerTool`
       - runtime-profile service overrides that exactly mirror inherited
         top-level `services.<service>` defaults should also be treated as
         redundant noise

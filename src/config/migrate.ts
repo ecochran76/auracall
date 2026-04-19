@@ -45,6 +45,10 @@ const RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS = new Set([
   'thinkingTime',
   'composerTool',
 ]);
+const RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS = new Set([
+  'manualLogin',
+  'manualLoginProfileDir',
+]);
 
 const mapProfileConflictAction = (value: unknown): unknown => {
   if (value === 'terminate-existing') return 'restart';
@@ -139,6 +143,40 @@ function normalizeRuntimeProfileServiceScopedOverrides(runtimeProfiles: Record<s
 
     for (const [key, value] of Object.entries(browserOverrides)) {
       if (!RUNTIME_SERVICE_SCOPED_OVERRIDE_KEYS.has(key)) continue;
+      if (serviceConfig[key] === undefined) {
+        serviceConfig[key] = value;
+      }
+      if (valuesEquivalent(serviceConfig[key], value)) {
+        delete browserOverrides[key];
+      }
+    }
+
+    if (Object.keys(serviceConfig).length > 0) {
+      runtimeServices[defaultService] = serviceConfig;
+      runtimeProfileValue.services = runtimeServices;
+    }
+    if (Object.keys(browserOverrides).length === 0) {
+      delete runtimeProfileValue.browser;
+    }
+  }
+}
+
+function normalizeRuntimeProfileServiceEscapeHatchOverrides(runtimeProfiles: Record<string, unknown>): void {
+  for (const runtimeProfileValue of Object.values(runtimeProfiles)) {
+    if (!isRecord(runtimeProfileValue)) continue;
+    const defaultService = asString(runtimeProfileValue.defaultService);
+    if (!defaultService || !KNOWN_SERVICES.has(defaultService)) continue;
+
+    const browserOverrides = isRecord(runtimeProfileValue.browser) ? runtimeProfileValue.browser : null;
+    if (!browserOverrides) continue;
+
+    const runtimeServices = isRecord(runtimeProfileValue.services) ? runtimeProfileValue.services : {};
+    const serviceConfig = isRecord(runtimeServices[defaultService])
+      ? (runtimeServices[defaultService] as Record<string, unknown>)
+      : {};
+
+    for (const [key, value] of Object.entries(browserOverrides)) {
+      if (!RUNTIME_SERVICE_SCOPED_ESCAPE_HATCH_KEYS.has(key)) continue;
       if (serviceConfig[key] === undefined) {
         serviceConfig[key] = value;
       }
@@ -632,6 +670,7 @@ export function materializeConfigV2(
         runtimeProfiles: result.runtimeProfiles as Record<string, unknown>,
       });
       normalizeRuntimeProfileServiceScopedOverrides(result.runtimeProfiles as Record<string, unknown>);
+      normalizeRuntimeProfileServiceEscapeHatchOverrides(result.runtimeProfiles as Record<string, unknown>);
       normalizeRedundantManagedProfileDirOverrides({
         config: result,
         browserProfiles: result.browserProfiles as Record<string, unknown>,
@@ -665,6 +704,7 @@ export function materializeConfigV2(
         runtimeProfiles: result.profiles as Record<string, unknown>,
       });
       normalizeRuntimeProfileServiceScopedOverrides(result.profiles as Record<string, unknown>);
+      normalizeRuntimeProfileServiceEscapeHatchOverrides(result.profiles as Record<string, unknown>);
       normalizeRedundantManagedProfileDirOverrides({
         config: result,
         browserProfiles: result.browserFamilies as Record<string, unknown>,

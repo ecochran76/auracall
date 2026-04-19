@@ -506,6 +506,11 @@ Action:
 - resolved service-binding / launch-profile layers should not expose
   `manualLoginProfileDir` at all unless `manualLogin` is active for that same
   scope
+- when one concrete `defaultService` exists and there is no conflicting
+  service-level value already present, `config migrate` may now move
+  `manualLogin` / `manualLoginProfileDir` into
+  `runtimeProfiles.<name>.services.<service>` instead of leaving them under
+  `runtimeProfiles.<name>.browser`
 - narrow their ownership boundary further before automating any rewrite
 
 ### `runtime-profile-manual-login-profile-dir-inactive`

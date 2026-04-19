@@ -203,14 +203,54 @@ describe('config migrate bridge helpers', () => {
       { targetShape: true },
     );
 
-    expect(result.runtimeProfiles?.consulting?.browser).toEqual({
+    expect(result.runtimeProfiles?.consulting?.browser).toBeUndefined();
+    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
       manualLogin: true,
       manualLoginProfileDir: '/tmp/managed/chatgpt',
-    });
-    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
       modelStrategy: 'current',
       thinkingTime: 'extended',
       composerTool: 'canvas',
+    });
+  });
+
+  it('keeps conflicting managed-profile escape hatches in the runtime browser block during target-shape cleanup', () => {
+    const result = materializeConfigV2(
+      {
+        version: 3,
+        defaultRuntimeProfile: 'consulting',
+        browserProfiles: {
+          consulting: {
+            chromePath: '/usr/bin/google-chrome',
+          },
+        },
+        runtimeProfiles: {
+          consulting: {
+            engine: 'browser',
+            browserProfile: 'consulting',
+            defaultService: 'chatgpt',
+            browser: {
+              manualLogin: true,
+              manualLoginProfileDir: '/tmp/runtime/chatgpt',
+            },
+            services: {
+              chatgpt: {
+                manualLogin: false,
+                manualLoginProfileDir: '/tmp/service/chatgpt',
+              },
+            },
+          },
+        },
+      } as any,
+      { targetShape: true },
+    );
+
+    expect(result.runtimeProfiles?.consulting?.browser).toEqual({
+      manualLogin: true,
+      manualLoginProfileDir: '/tmp/runtime/chatgpt',
+    });
+    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
+      manualLogin: false,
+      manualLoginProfileDir: '/tmp/service/chatgpt',
     });
   });
 
@@ -247,7 +287,8 @@ describe('config migrate bridge helpers', () => {
       { targetShape: true },
     );
 
-    expect(result.runtimeProfiles?.consulting?.browser).toEqual({
+    expect(result.runtimeProfiles?.consulting?.browser).toBeUndefined();
+    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
       manualLogin: true,
     });
     expect(result.runtimeProfiles?.consulting?.services?.grok).toBeUndefined();
@@ -286,7 +327,8 @@ describe('config migrate bridge helpers', () => {
       { targetShape: true },
     );
 
-    expect(result.runtimeProfiles?.consulting?.browser).toEqual({
+    expect(result.runtimeProfiles?.consulting?.browser).toBeUndefined();
+    expect(result.runtimeProfiles?.consulting?.services?.chatgpt).toEqual({
       manualLogin: true,
       manualLoginProfileDir: '/tmp/external/chatgpt',
     });
@@ -622,10 +664,9 @@ describe('config migrate bridge helpers', () => {
       { targetShape: false },
     );
 
-    expect(result.profiles?.consulting?.browser).toEqual({
-      manualLogin: true,
-    });
+    expect(result.profiles?.consulting?.browser).toBeUndefined();
     expect(result.profiles?.consulting?.services?.chatgpt).toEqual({
+      manualLogin: true,
       modelStrategy: 'current',
     });
   });
@@ -663,7 +704,8 @@ describe('config migrate bridge helpers', () => {
       { targetShape: false },
     );
 
-    expect(result.profiles?.consulting?.browser).toEqual({
+    expect(result.profiles?.consulting?.browser).toBeUndefined();
+    expect(result.profiles?.consulting?.services?.chatgpt).toEqual({
       manualLogin: true,
     });
     expect(result.profiles?.consulting?.services?.gemini).toBeUndefined();

@@ -17622,3 +17622,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the code path was internally consistent, but operator-facing docs still
     talked mostly about the toggle and override path, not the default posture
   - that made the remaining policy ambiguity look larger than it really was
+## 2026-04-18 - migrate now relocates unambiguous managed-profile escape hatches
+
+- Closed the remaining migrate-vs-plan gap for the managed-profile escape-hatch
+  family:
+  - `config migrate` now also moves `manualLogin` and
+    `manualLoginProfileDir` from `runtimeProfiles.<name>.browser` into
+    `runtimeProfiles.<name>.services.<defaultService>` when one concrete
+    `defaultService` exists and no conflicting service-level value is already
+    present
+  - conflicting service-level values are still preserved and keep the runtime
+    browser escape hatch in place
+  - updated focused migration coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - the governing plan already said those escape hatches could move when the
+    destination was unambiguous
+  - the migrate implementation was still lagging that contract and only moved
+    the relocatable service knobs
