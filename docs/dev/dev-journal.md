@@ -17485,3 +17485,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the repo needed an explicit, test-backed statement that the current
     resolver still treats that broader field class as intentional advanced
     runtime override surface for now
+
+## 2026-04-18 - browser profiles now win for chromePath and display
+
+- Returned to the first real behavior rewrite inside the remaining broad
+  browser-owned runtime override block:
+  - updated active browser profile resolution so the referenced browser
+    profile now wins over conflicting `runtimeProfiles.<name>.browser` values
+    for:
+    - `chromePath`
+    - `display`
+  - kept the rest of the broad override block unchanged for now, including
+    `managedProfileRoot` and `wslChromePreference`
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - `chromePath` and `display` are the clearest browser-family fields and the
+    least defensible long-term runtime-profile overrides
+  - narrowing those two first advances `0007` without pretending the whole
+    broad runtime browser block is ready for the same rewrite

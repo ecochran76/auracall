@@ -226,9 +226,12 @@ Current note:
             no browser-profile-level value exists
         - the broader browser-owned runtime override block still remains
           partially transitional:
-          - conflicting runtime-profile `browser` values for broad launch
-            fields such as `chromePath`, `display`, `managedProfileRoot`, and
-            `wslChromePreference` still win in active resolution today
+          - active resolution now prefers the referenced browser profile for:
+            - `chromePath`
+            - `display`
+          - conflicting runtime-profile `browser` values for fields such as
+            `managedProfileRoot` and `wslChromePreference` still win in active
+            resolution today
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough

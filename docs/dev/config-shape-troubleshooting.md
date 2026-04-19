@@ -347,10 +347,13 @@ Action:
     browser-profile-level value exists
 - compatibility bridge output keeps that browser-owned field on
   `browserFamilies.<name>`, not on `profiles.<name>`
+- active resolution now also gives browser profiles precedence for:
+  - `chromePath`
+  - `display`
 - the rest of the broad browser-owned override block is still different:
   - conflicting `runtimeProfiles.<name>.browser` values for fields such as
-    `chromePath`, `display`, `managedProfileRoot`, and
-    `wslChromePreference` still win in active resolution today
+    `managedProfileRoot` and `wslChromePreference` still win in active
+    resolution today
 - conflicting runtime-profile values are preserved instead of being rewritten
   silently
 - relocatable service fields such as:

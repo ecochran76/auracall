@@ -174,13 +174,17 @@ Current diagnostic checkpoint:
       `runtimeProfiles.<name>.keepBrowser`
     - legacy runtime-profile `keepBrowser` remains only as fallback residue
       when no browser-profile-level value exists
-  - the remaining broad browser-owned override block is still live runtime
-    residue for now:
-    - conflicting `runtimeProfiles.<name>.browser` values for fields such as
-      `chromePath`, `display`, `managedProfileRoot`, and
-      `wslChromePreference` still win in active resolution today
-    - that is why doctor continues to frame them as advanced escape hatches
-      rather than fully dead config
+  - active broad browser-owned precedence is now partially narrowed:
+    - the referenced browser profile now wins over conflicting
+      `runtimeProfiles.<name>.browser` values for:
+      - `chromePath`
+      - `display`
+    - the remaining broad runtime browser override block is still live
+      advanced residue for now, including fields such as:
+      - `managedProfileRoot`
+      - `wslChromePreference`
+    - that is why doctor still frames the broader class as advanced escape
+      hatches rather than fully dead config
 - `config doctor` now splits service-scoped runtime browser fields into two
   advisory classes when they are still defined under
   `runtimeProfiles.<name>.browser`:
@@ -244,10 +248,14 @@ Current migration checkpoint:
     `keepBrowser`:
     - `browserProfiles.<name>.keepBrowser` wins over legacy
       `runtimeProfiles.<name>.keepBrowser` when both exist
+  - active resolution now also makes a bounded browser-profile-first rewrite
+    for:
+    - `chromePath`
+    - `display`
   - active resolution does not yet make the same rewrite for the remaining
-    broad browser-owned fields:
-    - conflicting runtime-profile `browser` values still override the
-      referenced browser profile for now
+    broad browser-owned fields such as:
+    - `managedProfileRoot`
+    - `wslChromePreference`
   - relocatable service fields such as:
     - `modelStrategy`
     - `thinkingTime`

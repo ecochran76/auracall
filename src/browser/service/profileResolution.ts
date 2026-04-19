@@ -403,8 +403,8 @@ export function resolveBrowserProfileResolution(input: {
   };
 
   const browserProfile: ResolvedBrowserProfile = {
-    chromePath: asNonEmptyString(effectiveProfileBrowser.chromePath),
-    display: asNonEmptyString(effectiveProfileBrowser.display),
+    chromePath: asNonEmptyString(selectedBrowserProfile.chromePath) ?? asNonEmptyString(profileBrowser.chromePath),
+    display: asNonEmptyString(selectedBrowserProfile.display) ?? asNonEmptyString(profileBrowser.display),
     managedProfileRoot: asNonEmptyString(effectiveProfileBrowser.managedProfileRoot),
     sourceProfilePath,
     sourceProfileName,
