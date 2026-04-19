@@ -291,6 +291,10 @@ Current bounded implication:
     runner record
   - they should not silently promote a different fresher eligible runner
     record during server-owned execution
+- bounded `/status` and recovery-summary readback should project claimability
+  for that same persisted server local runner
+  - they should not imply that a fresher alternate runner becomes the selected
+    owner just because it is also eligible
 - a bounded `auracall teams run` CLI pass may end with the short-lived local
   runner already marked stale while the stored team run remains paused for
   operator-controlled follow-through

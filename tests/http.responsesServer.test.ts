@@ -1011,6 +1011,88 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('keeps /status local-claim projection scoped to the server local runner even when another eligible runner is fresher', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-runner-scope-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(
+      control,
+      'status_runner_scope_direct',
+      '2026-04-08T16:20:00.000Z',
+      'Status runner scope direct',
+    );
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:alternate-fresh',
+        hostId: 'host:alternate',
+        startedAt: '2026-04-08T16:18:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:20:55.000Z',
+        expiresAt: '2026-04-08T16:30:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T16:21:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=1`);
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      const localRunnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+
+      expect(payload).toMatchObject({
+        runner: {
+          id: localRunnerId,
+          hostId: `host:http-responses:127.0.0.1:${server.port}`,
+          status: 'active',
+        },
+        localClaimSummary: {
+          sourceKind: 'direct',
+          runnerId: localRunnerId,
+          selectedRunIds: ['status_runner_scope_direct'],
+          blockedRunIds: [],
+          notReadyRunIds: [],
+          unavailableRunIds: [],
+          statusByRunId: {
+            status_runner_scope_direct: 'eligible',
+          },
+          reasonsByRunId: {},
+        },
+        recoverySummary: {
+          localClaim: {
+            runnerId: localRunnerId,
+            selectedRunIds: ['status_runner_scope_direct'],
+            blockedRunIds: [],
+            notReadyRunIds: [],
+            unavailableRunIds: [],
+            statusByRunId: {
+              status_runner_scope_direct: 'eligible',
+            },
+            reasonsByRunId: {},
+          },
+          reclaimableRunIds: ['status_runner_scope_direct'],
+        },
+      });
+
+      const alternateRunner = await runnersControl.readRunner('runner:alternate-fresh');
+      expect(alternateRunner?.runner.lastClaimedRunId).toBeNull();
+      expect(alternateRunner?.runner.lastActivityAt).toBeNull();
+    } finally {
+      await server.close();
+    }
+  });
+
   it('registers and reports a live persisted runner for api serve status', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runner-status-'));
     cleanup.push(homeDir);

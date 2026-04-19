@@ -17980,3 +17980,10 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Added an HTTP-level regression proving startup recovery claims the recovered
   run through the persisted server local runner even when another eligible
   runner record has a fresher heartbeat.
+## 2026-04-19 - Locked status readback to the server local runner
+
+- Audited the adjacent `/status?recovery=1` readback after locking startup
+  recovery ownership.
+- Added a focused HTTP regression proving both `localClaimSummary` and
+  `recoverySummary.localClaim` stay keyed to the persisted server local runner
+  even when another eligible runner record is fresher.
