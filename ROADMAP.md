@@ -273,6 +273,11 @@ Current note:
   - current semantic checkpoint:
     - the next design question is still broader execution/orchestration
       boundary, not more selection plumbing
+    - current reassessment decision:
+      - the config-boundary hardening sub-lane is now maintenance-mode unless
+        a new concrete resolver or migrate mismatch is found
+      - most remaining work at this layer is now contract locking rather than
+        fresh behavior correction
     - the current bounded doctor seams above runtime profiles are now:
       - agent-default ownership integrity:
         - non-empty `agents.<name>.defaults` should surface as a placeholder

@@ -17717,3 +17717,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `0007` already classified the root-browser alias inventory as
     diagnostics-only for migration, but that no-rewrite posture was still
     implicit in the test surface
+## 2026-04-18 - 0007 config-boundary hardening is now an explicit maintenance-mode sub-lane
+
+- Reassessed the active `0007` checkpoint after the recent contract-lock
+  slices:
+  - the browser/runtime/bridge ownership seams at this layer are now aligned
+    closely enough across resolver, migrate, doctor/reporting, docs, and
+    focused regressions
+  - updated the plan and roadmap to say that this config-boundary hardening
+    sub-lane should stay in maintenance mode unless a new concrete resolver or
+    migrate mismatch is found
+- Reason:
+  - continuing automatically was starting to produce more “lock the current
+    contract” slices than actual behavior corrections
+  - the governing docs should say that directly instead of implying there is
+    still an obvious stream of unresolved `0007` behavior work here

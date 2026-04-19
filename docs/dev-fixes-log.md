@@ -13015,3 +13015,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `browser.projectId`, `browser.conversationName`, `browser.conversationId`)
   should not be auto-relocated into `runtimeProfiles.<name>.services.<service>`
   during target-shape cleanup, even when a concrete `defaultService` exists.
+- 2026-04-18: When an active plan lane starts yielding mostly contract-lock
+  slices instead of new behavior fixes, record the maintenance-mode decision
+  explicitly in the governing plan and roadmap. In this repo, the `0007`
+  config-boundary hardening sub-lane is now maintenance-only unless a new
+  resolver or migrate mismatch is demonstrated.

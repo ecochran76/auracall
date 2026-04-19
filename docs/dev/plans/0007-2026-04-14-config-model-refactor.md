@@ -456,6 +456,15 @@ Current bounded follow-through at this layer:
 
 - keep root-browser compatibility-alias work in maintenance mode unless a
   later slice explicitly chooses deprecation/reporting scope
+- keep the config-boundary hardening sub-lane in maintenance mode unless a
+  new concrete resolver or migrate mismatch is found:
+  - the browser/runtime/bridge ownership seams at this layer are now aligned
+    closely enough across resolver, migrate, doctor/reporting, governing
+    docs, and focused regression coverage
+  - follow-up work in this lane should now default to:
+    - bounded contract locks when a live rule is still implicit
+    - or a new bounded behavior slice only when a concrete code-vs-plan gap is
+      demonstrated
 - continue doctor/report hardening for the next compositional layers above
   runtime profiles:
   - agent boundary:
@@ -520,6 +529,8 @@ See:
 - keep the dual-read config shape stable enough for troubleshooting and
   compatibility use
 - continue small reliability and browser hardening work in maintenance mode
+- keep config-model bridge/boundary work in maintenance mode unless a new
+  concrete resolver or migrate mismatch appears
 - avoid broad symbol renames in code
 - move the active design pressure up to:
   - `agents`
