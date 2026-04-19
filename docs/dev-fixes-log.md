@@ -13045,3 +13045,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   service host re-evaluates local claim eligibility between passes; a slow
   first step could otherwise make later CLI steps fail as `stale-runner`
   against the runner's own short TTL.
+- 2026-04-19: Keep provider live-state observability separate from runner
+  control unless a new execution policy explicitly says otherwise. In this
+  repo, passive observations and live service-state probes are adapter-owned
+  evidence and read-only inspection surfaces; the runner/service layer still
+  decides control flow from lease state and executor success/failure, not from
+  a generic passive-state watcher loop.

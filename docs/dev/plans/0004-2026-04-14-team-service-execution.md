@@ -202,6 +202,31 @@ Possible future exceptions, but not MVP:
 - partial completion policies
 - compensating rollback behavior
 
+## Provider state boundary
+
+Provider passive/live state is intentionally not a generic runner-control
+channel in the current architecture.
+
+Current split:
+
+- provider/browser adapters own:
+  - passive observation emission during execution
+  - live service-state detection for read-only runtime inspection
+- the service/runners layer owns:
+  - lease ownership
+  - queueing
+  - retry/cancel behavior
+  - step success/failure handling once the executor returns or throws
+
+Important rule:
+
+- runners may expose provider live state for inspection
+- runners should not run a generic passive-state watcher loop that translates
+  provider UI state directly into execution control decisions
+- if a future provider state should become actionable runner control, that
+  needs a separate explicit policy slice rather than being inferred from the
+  inspection seam
+
 ## Parallelism boundary
 
 Parallelism should not be inferred from:

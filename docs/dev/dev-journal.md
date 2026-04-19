@@ -17796,3 +17796,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the previous slice closed the anonymous-host ownership gap, but a
     remaining liveness gap meant a slow first step could make the same bounded
     CLI runner reject its later steps as `stale-runner`
+## 2026-04-19 - execution authority now makes provider live state observability-only explicit
+
+- Re-audited the runner/control boundary after the passive-state question:
+  - `runner.ts` still acquires/heartbeats leases and waits for executor
+    completion or failure rather than running a generic provider-state watcher
+  - provider/browser adapters still own passive observation emission and live
+    service-state evidence for inspection
+  - `0016` and `0017` already captured that split, but the active execution
+    authority docs did not say it directly
+- Reconciled the active execution authorities accordingly:
+  - `0001-2026-04-14-execution.md`
+  - `0004-2026-04-14-team-service-execution.md`
+- Reason:
+  - the repo already shipped the observability-vs-control split, but the live
+    execution lane still left that boundary implicit enough to invite the
+    wrong assumption that runners were supervising provider state directly
