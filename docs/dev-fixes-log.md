@@ -12951,6 +12951,6 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   a time instead of treating it as all-or-nothing. In this repo, the
   referenced browser profile should now win over conflicting
   `runtimeProfiles.<name>.browser` values for `chromePath`, `display`,
-  `managedProfileRoot`, and `wslChromePreference`, while source-profile /
-  cookie-source wiring and debug/tab cleanup controls remain live advanced
+  `managedProfileRoot`, source browser profile / cookie-source wiring, and
+  `wslChromePreference`, while debug/tab cleanup controls remain live advanced
   runtime overrides until a later slice narrows them too.

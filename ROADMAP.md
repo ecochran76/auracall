@@ -230,10 +230,10 @@ Current note:
             - `chromePath`
             - `display`
             - `managedProfileRoot`
+            - source-profile and cookie-source wiring
             - `wslChromePreference`
-          - conflicting runtime-profile `browser` values for source-profile /
-            cookie-source wiring and debug/tab cleanup controls still win in
-            active resolution today
+          - conflicting runtime-profile `browser` values for debug/tab cleanup
+            controls still win in active resolution today
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
             complete enough

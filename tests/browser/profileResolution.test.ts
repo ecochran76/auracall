@@ -337,6 +337,45 @@ describe('resolveBrowserProfileResolution', () => {
     });
   });
 
+  test('prefers browser-profile source browser and cookie defaults over legacy runtime-profile aliases', () => {
+    const result = resolveBrowserProfileResolution({
+      merged: {
+        browserProfiles: {
+          default: {
+            sourceProfilePath: '/browser/source',
+            sourceProfileName: 'Profile 7',
+            sourceCookiePath: '/browser/source/Profile 7/Network/Cookies',
+            bootstrapCookiePath: '/browser/source/Profile 7/Network/Cookies',
+          },
+        },
+        browser: {},
+      },
+      profileName: 'default',
+      profile: {
+        browserProfile: 'default',
+        browser: {
+          profilePath: '/runtime/source',
+          profileName: 'Profile 2',
+          cookiePath: '/runtime/source/Profile 2/Network/Cookies',
+          bootstrapCookiePath: '/runtime/source/Profile 2/Network/Cookies',
+        },
+      },
+      browser: {},
+    });
+
+    expect(result.browserProfile).toMatchObject({
+      sourceProfilePath: '/browser/source',
+      sourceProfileName: 'Profile 7',
+      sourceCookiePath: '/browser/source/Profile 7/Network/Cookies',
+      bootstrapCookiePath: '/browser/source/Profile 7/Network/Cookies',
+    });
+    expect(result.launchProfile).toMatchObject({
+      chromeProfile: 'Profile 7',
+      chromeCookiePath: '/browser/source/Profile 7/Network/Cookies',
+      bootstrapCookiePath: '/browser/source/Profile 7/Network/Cookies',
+    });
+  });
+
   test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
     const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
     cleanup.push(managedRoot);

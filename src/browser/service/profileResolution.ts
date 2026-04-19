@@ -351,22 +351,37 @@ export function resolveBrowserProfileResolution(input: {
       ? defaultServiceRaw
       : null;
 
-  const sourceProfilePath = asNonEmptyString(effectiveProfileBrowser.profilePath);
+  const sourceProfilePath =
+    asNonEmptyString(selectedBrowserProfile.sourceProfilePath) ??
+    asNonEmptyString(selectedBrowserProfile.profilePath) ??
+    asNonEmptyString(profileBrowser.sourceProfilePath) ??
+    asNonEmptyString(profileBrowser.profilePath);
   const sourceProfileNameCandidate =
-    asNonEmptyString(effectiveProfileBrowser.profileName) ?? asNonEmptyString(effectiveProfileBrowser.chromeProfile);
+    asNonEmptyString(selectedBrowserProfile.sourceProfileName) ??
+    asNonEmptyString(selectedBrowserProfile.profileName) ??
+    asNonEmptyString(selectedBrowserProfile.chromeProfile) ??
+    asNonEmptyString(profileBrowser.sourceProfileName) ??
+    asNonEmptyString(profileBrowser.profileName) ??
+    asNonEmptyString(profileBrowser.chromeProfile);
   const currentChromeProfile = asNonEmptyString(browser.chromeProfile);
   const sourceProfileName =
     sourceProfilePath && currentChromeProfile
       ? resolveProfileDirectoryName(sourceProfilePath, currentChromeProfile)
       : currentChromeProfile ?? sourceProfileNameCandidate;
   const sourceCookiePath =
-    asNonEmptyString(effectiveProfileBrowser.cookiePath) ??
-    asNonEmptyString(effectiveProfileBrowser.chromeCookiePath) ??
+    asNonEmptyString(selectedBrowserProfile.sourceCookiePath) ??
+    asNonEmptyString(selectedBrowserProfile.cookiePath) ??
+    asNonEmptyString(selectedBrowserProfile.chromeCookiePath) ??
+    asNonEmptyString(profileBrowser.sourceCookiePath) ??
+    asNonEmptyString(profileBrowser.cookiePath) ??
+    asNonEmptyString(profileBrowser.chromeCookiePath) ??
     (sourceProfilePath
       ? resolveCookiePath(sourceProfilePath, sourceProfileName ?? sourceProfileNameCandidate ?? currentChromeProfile ?? 'Default')
       : undefined);
   const bootstrapCookiePath =
-    asNonEmptyString(effectiveProfileBrowser.bootstrapCookiePath) ?? sourceCookiePath;
+    asNonEmptyString(selectedBrowserProfile.bootstrapCookiePath) ??
+    asNonEmptyString(profileBrowser.bootstrapCookiePath) ??
+    sourceCookiePath;
 
   const resolveUrl = (service: ServiceId): string | undefined => {
     const profileConfig = isRecord(profileServices[service]) ? profileServices[service] : {};

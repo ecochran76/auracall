@@ -17522,3 +17522,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     toward browser profiles in migration cleanup
   - narrowing them in the same bounded family keeps `0007` moving without
     widening into the more sensitive source-profile and debug-control fields
+## 2026-04-18 - browser profiles now also win for source browser and cookie-source wiring
+
+- Continued the same bounded broad-browser precedence lane:
+  - updated active browser profile resolution so the referenced browser
+    profile now also wins over conflicting
+    `runtimeProfiles.<name>.browser` aliases for:
+    - source browser profile selection
+    - cookie/bootstrap source wiring
+  - kept the remaining broad runtime browser override surface unchanged,
+    specifically the debug-port and tab/window cleanup controls
+  - updated focused resolver coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - migration already treats source-profile and cookie/bootstrap fields as
+    browser-owned runtime residue
+  - keeping active resolution behind that ownership model would leave another
+    avoidable target-vs-runtime mismatch in the browser family lane

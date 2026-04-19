@@ -521,6 +521,15 @@ Within each file, later CLI flags still override config, and environment variabl
 - `services.<service>.thinkingTime` can set a per-service default for ChatGPT Thinking/Pro models (overrides `profiles.<name>.browser.thinkingTime` when set).
 - `runtimeProfiles.<name>.services.<service>.identity` sets the username/email used for cache identity; auto-scraping is disabled unless `runtimeProfiles.<name>.cache.useDetectedIdentity` is set.
 - `runtimeProfiles.<name>.browser.profilePath` + `profileName` define the source browser profile; `cookiePath` overrides the derived Cookies DB location. `profileName` accepts either the on-disk Chromium directory (for example `Profile 1`) or the friendly UI label.
+- when both exist, active resolution now prefers the referenced browser profile
+  over conflicting runtime-profile browser aliases for:
+  - `chromePath`
+  - `display`
+  - `managedProfileRoot`
+  - source browser profile / cookie-source wiring
+  - `wslChromePreference`
+- the remaining live runtime-profile `browser` advanced override surface is now
+  the debug-port and tab/window cleanup controls.
 - `runtimeProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
 - `agents` and `teams` are reserved top-level config blocks for the future config-model refactor.
   - Aura-Call now lets `--agent <name>` resolve through `agents.<name>.runtimeProfile` for selection semantics only.

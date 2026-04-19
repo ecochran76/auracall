@@ -180,10 +180,10 @@ Current diagnostic checkpoint:
       - `chromePath`
       - `display`
       - `managedProfileRoot`
+      - source-profile and cookie-source wiring
       - `wslChromePreference`
     - the remaining broad runtime browser override block is still live
       advanced residue for now, including fields such as:
-      - source-profile and cookie-source wiring
       - debug-port and tab/window cleanup controls
     - that is why doctor still frames the broader class as advanced escape
       hatches rather than fully dead config
@@ -255,10 +255,10 @@ Current migration checkpoint:
     - `chromePath`
     - `display`
     - `managedProfileRoot`
+    - source-profile and cookie-source wiring
     - `wslChromePreference`
   - active resolution does not yet make the same rewrite for the remaining
     broad browser-owned fields such as:
-    - source-profile and cookie-source wiring
     - debug-port and tab/window cleanup controls
   - relocatable service fields such as:
     - `modelStrategy`
