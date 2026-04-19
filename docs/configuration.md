@@ -471,6 +471,9 @@ Within each file, later CLI flags still override config, and environment variabl
   - when both are present, `browserProfiles.<name>.keepBrowser` wins over legacy `runtimeProfiles.<name>.keepBrowser`
   - `runtimeProfiles.<name>.keepBrowser` remains fallback-compatible only when no browser-profile value exists
   - compatibility bridge output keeps browser-owned `keepBrowser` on `browserFamilies.<name>`, not on `profiles.<name>`
+- Other broad browser-owned overrides under `runtimeProfiles.<name>.browser` are still treated more conservatively for now.
+  - conflicting runtime-profile values for fields such as `chromePath`, `display`, `managedProfileRoot`, and `wslChromePreference` still win in active resolution today
+  - keep using that path only as an intentional advanced escape hatch, not as the preferred public authoring surface
 - Compatibility bridge equivalents are:
   - `browserFamilies.<name>`
   - `profiles.<name>.browserFamily`

@@ -297,6 +297,46 @@ describe('resolveBrowserProfileResolution', () => {
     expect(result.launchProfile.keepBrowser).toBe(false);
   });
 
+  test('keeps conflicting broad runtime-profile browser overrides ahead of the referenced browser profile for now', () => {
+    const result = resolveBrowserProfileResolution({
+      merged: {
+        browserProfiles: {
+          default: {
+            chromePath: '/browser/chrome',
+            display: ':9.0',
+            managedProfileRoot: '/browser/managed',
+            wslChromePreference: 'wsl',
+          },
+        },
+        browser: {},
+      },
+      profileName: 'default',
+      profile: {
+        browserProfile: 'default',
+        browser: {
+          chromePath: '/runtime/chrome',
+          display: ':0.0',
+          managedProfileRoot: '/runtime/managed',
+          wslChromePreference: 'windows',
+        },
+      },
+      browser: {},
+    });
+
+    expect(result.browserProfile).toMatchObject({
+      chromePath: '/runtime/chrome',
+      display: ':0.0',
+      managedProfileRoot: '/runtime/managed',
+      wslChromePreference: 'windows',
+    });
+    expect(result.launchProfile).toMatchObject({
+      chromePath: '/runtime/chrome',
+      display: ':0.0',
+      managedProfileRoot: '/runtime/managed',
+      wslChromePreference: 'windows',
+    });
+  });
+
   test('prefers the active signed-in managed subprofile for launchProfile.chromeProfile', async () => {
     const managedRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-launch-profile-'));
     cleanup.push(managedRoot);

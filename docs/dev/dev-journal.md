@@ -17469,3 +17469,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the failed follow-up hypothesis was useful: it exposed that bridge
     `keepBrowser` already belongs to the browser-family side, and that this
     contract was worth locking in the test suite instead of leaving implicit
+
+## 2026-04-18 - broad runtime browser overrides are still live escape hatches
+
+- Returned to the remaining browser-owned runtime residue seam after locking
+  the `keepBrowser` path:
+  - added focused browser resolution coverage proving that conflicting
+    `runtimeProfiles.<name>.browser` values for broad launch fields still win
+    over the referenced browser profile today
+  - updated the config-model plan, troubleshooting guide, roadmap, and
+    operator docs to state that boundary explicitly
+- Reason:
+  - migrate already treats those fields conservatively and preserves
+    conflicting runtime-profile values in place
+  - the repo needed an explicit, test-backed statement that the current
+    resolver still treats that broader field class as intentional advanced
+    runtime override surface for now

@@ -12940,3 +12940,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   target-shaped config writes compatibility bridge output,
   `browserProfiles.<name>.keepBrowser` should materialize back onto
   `browserFamilies.<name>`, not `profiles.<name>`.
+- 2026-04-18: Do not over-generalize the `keepBrowser` precedence rewrite to
+  the whole runtime-profile browser block without evidence. In this repo,
+  conflicting broad browser-owned overrides under
+  `runtimeProfiles.<name>.browser` such as `chromePath`, `display`,
+  `managedProfileRoot`, and `wslChromePreference` are still live advanced
+  escape hatches in active resolution unless a later slice narrows them
+  explicitly.
