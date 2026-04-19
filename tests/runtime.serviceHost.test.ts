@@ -1355,6 +1355,118 @@ describe('runtime service host', () => {
     });
   });
 
+  it('allows a resumed team run to be reclaimed by a different compatible active runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(
+      createPausedHumanEscalationBundle(
+        'run_host_team_resume_other_runner',
+        '2026-04-19T10:00:00.000Z',
+        '2026-04-19T10:05:00.000Z',
+        'team-run',
+      ),
+    );
+
+    await control.acquireLease({
+      runId: 'run_host_team_resume_other_runner',
+      leaseId: 'run_host_team_resume_other_runner:lease:origin',
+      ownerId: 'runner:origin',
+      acquiredAt: '2026-04-19T10:04:00.000Z',
+      heartbeatAt: '2026-04-19T10:05:00.000Z',
+      expiresAt: '2026-04-19T10:06:00.000Z',
+    });
+    await control.releaseLease({
+      runId: 'run_host_team_resume_other_runner',
+      leaseId: 'run_host_team_resume_other_runner:lease:origin',
+      releasedAt: '2026-04-19T10:05:00.000Z',
+      releaseReason: 'cancelled',
+    });
+
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:origin',
+        hostId: 'host:origin',
+        status: 'stale',
+        startedAt: '2026-04-19T09:55:00.000Z',
+        lastHeartbeatAt: '2026-04-19T10:05:00.000Z',
+        expiresAt: '2026-04-19T10:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:replacement',
+        hostId: 'host:replacement',
+        startedAt: '2026-04-19T10:09:00.000Z',
+        lastHeartbeatAt: '2026-04-19T10:10:00.000Z',
+        expiresAt: '2026-04-19T10:20:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+
+    let executedStepCount = 0;
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      runnerId: 'runner:replacement',
+      now: () => '2026-04-19T10:10:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+      executeStoredRunStep: async () => {
+        executedStepCount += 1;
+        return {
+          output: {
+            summary: 'replacement runner completed resumed team step',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const resumed = await host.resumeHumanEscalation('run_host_team_resume_other_runner', {
+      note: 'replacement runner resumed team run',
+    });
+    expect(resumed.status).toBe('resumed');
+
+    const drained = await host.drainRun('run_host_team_resume_other_runner');
+    expect(drained).toMatchObject({
+      action: 'drain-run',
+      runId: 'run_host_team_resume_other_runner',
+      status: 'executed',
+      drained: true,
+      reason: 'run executed through targeted host drain',
+      skipReason: null,
+    });
+    expect(executedStepCount).toBe(1);
+
+    const storedRecord = await control.readRun('run_host_team_resume_other_runner');
+    expect(storedRecord?.bundle.run.status).toBe('succeeded');
+    expect(storedRecord?.bundle.steps[1]).toMatchObject({
+      id: 'run_host_team_resume_other_runner:step:2',
+      status: 'succeeded',
+      output: {
+        summary: 'replacement runner completed resumed team step',
+      },
+    });
+    expect(storedRecord?.bundle.leases.map((lease) => ({ ownerId: lease.ownerId, releaseReason: lease.releaseReason }))).toEqual(
+      expect.arrayContaining([
+        { ownerId: 'runner:origin', releaseReason: 'cancelled' },
+        { ownerId: 'runner:replacement', releaseReason: 'completed' },
+      ]),
+    );
+  });
+
   it('surfaces claim-owner-unavailable when targeted drain cannot safely claim a team run', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

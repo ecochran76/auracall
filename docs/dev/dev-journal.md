@@ -17812,3 +17812,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the repo already shipped the observability-vs-control split, but the live
     execution lane still left that boundary implicit enough to invite the
     wrong assumption that runners were supervising provider state directly
+## 2026-04-19 - resumed team runs are now test-locked to current eligible runner ownership
+
+- Re-audited the paused/resumed team-run seam after the bounded CLI runner and
+  heartbeat fixes:
+  - `resumeHumanEscalation(...)` only rewrites the stored run back to runnable
+    state; actual reclaim still happens through the current service-host local
+    claim path
+  - the code already evaluates claimability from current affinity and current
+    active runner state, not from the identity of the runner that originally
+    paused the run
+- Added focused service-host regression coverage proving:
+  - a resumed paused team run can be reclaimed by a different compatible
+    active runner
+  - historical lease ownership from the original paused runner does not pin
+    resumed execution to that runner identity
+- Updated the active `0004` execution authority to say that directly.
+- Reason:
+  - this was the concrete ownership question left open after the earlier
+    runner identity and liveness fixes, and the repo needed a durable
+    regression plus authority note rather than another implicit assumption

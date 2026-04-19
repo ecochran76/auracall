@@ -262,6 +262,12 @@ Team config should not directly encode:
 - runner leases
 - service topology
 
+Current bounded implication:
+
+- a resumed paused run is claimable by any currently eligible active runner
+- resumed execution should not be pinned implicitly to the runner identity
+  that originally paused the step
+
 ## MVP recommendation
 
 The first real team execution MVP should be:

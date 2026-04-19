@@ -13051,3 +13051,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   evidence and read-only inspection surfaces; the runner/service layer still
   decides control flow from lease state and executor success/failure, not from
   a generic passive-state watcher loop.
+- 2026-04-19: Do not pin resumed paused runs to the runner that originally
+  paused them unless the affinity layer explicitly requires it. In this repo,
+  `resumeHumanEscalation(...)` should only restore runnable state; subsequent
+  targeted drain or service-host reclaim should be based on current eligible
+  runner affinity and active runner liveness, not historical paused-run lease
+  ownership.
