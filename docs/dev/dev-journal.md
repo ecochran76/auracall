@@ -17946,3 +17946,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     runner can claim and drain the resumed run to completion
 - Recorded that handoff rule in `0004` as an explicit bounded implication for
   the current single-host execution lane.
+## 2026-04-19 - Made multi-runner claim ordering explicit
+
+- Audited the next `0004` ownership seam after the CLI paused-run handoff
+  checkpoint and found that equally eligible claim candidates were only
+  implicitly ordered by runner-store listing behavior.
+- Tightened bounded claim-candidate ordering in `runtime/claims.ts` so the
+  current rule is explicit and deterministic:
+  - claim status rank first
+  - then fresher heartbeat
+  - then runner id as the stable fallback
+- Added focused claims regressions for:
+  - freshest eligible runner winning ahead of an older equally eligible runner
+  - stable runner-id fallback when heartbeats are identical

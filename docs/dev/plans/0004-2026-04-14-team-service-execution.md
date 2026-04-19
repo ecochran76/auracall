@@ -271,6 +271,13 @@ Team config should not directly encode:
 
 Current bounded implication:
 
+- when more than one active runner is equally eligible for the same bounded
+  claim, selection should be deterministic rather than inherited from storage
+  listing order
+- current deterministic tie-break for bounded claim-candidate ordering is:
+  - claim status rank first
+  - then fresher runner heartbeat
+  - then runner id as a stable fallback
 - a bounded `auracall teams run` CLI pass may end with the short-lived local
   runner already marked stale while the stored team run remains paused for
   operator-controlled follow-through

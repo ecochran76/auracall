@@ -126,6 +126,126 @@ describe('runtime claim candidates', () => {
     ]);
   });
 
+  it('prefers the freshest eligible runner before older equally eligible runners', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-claims-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createRunnableBundle('team_run_claims_freshest'));
+
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:eligible-older',
+        hostId: 'host:wsl-dev-1',
+        startedAt: '2026-04-11T10:20:00.000Z',
+        lastHeartbeatAt: '2026-04-11T10:29:30.000Z',
+        expiresAt: '2026-04-11T10:31:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['wsl-chrome-2'],
+        serviceAccountIds: ['acct_chatgpt_default'],
+        browserCapable: true,
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:eligible-fresh',
+        hostId: 'host:wsl-dev-1',
+        startedAt: '2026-04-11T10:21:00.000Z',
+        lastHeartbeatAt: '2026-04-11T10:30:30.000Z',
+        expiresAt: '2026-04-11T10:31:30.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['wsl-chrome-2'],
+        serviceAccountIds: ['acct_chatgpt_default'],
+        browserCapable: true,
+      }),
+    });
+
+    const result = await evaluateStoredExecutionRunClaimCandidates(
+      {
+        runId: 'team_run_claims_freshest',
+        affinity: createExecutionRunAffinityRecord({
+          service: 'chatgpt',
+          serviceAccountId: 'acct_chatgpt_default',
+          browserRequired: true,
+          runtimeProfileId: 'default',
+          browserProfileId: 'wsl-chrome-2',
+          hostRequirement: 'same-host',
+          requiredHostId: 'host:wsl-dev-1',
+        }),
+      },
+      { control, runnersControl },
+    );
+
+    expect(result?.candidates.map((entry) => ({ runnerId: entry.runnerId, status: entry.status }))).toEqual([
+      { runnerId: 'runner:eligible-fresh', status: 'eligible' },
+      { runnerId: 'runner:eligible-older', status: 'eligible' },
+    ]);
+  });
+
+  it('uses runner id as a stable tie-break when eligible runners share the same heartbeat', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-claims-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createRunnableBundle('team_run_claims_equal_heartbeat'));
+
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:zeta',
+        hostId: 'host:wsl-dev-1',
+        startedAt: '2026-04-11T10:20:00.000Z',
+        lastHeartbeatAt: '2026-04-11T10:30:00.000Z',
+        expiresAt: '2026-04-11T10:31:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['wsl-chrome-2'],
+        serviceAccountIds: ['acct_chatgpt_default'],
+        browserCapable: true,
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:alpha',
+        hostId: 'host:wsl-dev-1',
+        startedAt: '2026-04-11T10:20:00.000Z',
+        lastHeartbeatAt: '2026-04-11T10:30:00.000Z',
+        expiresAt: '2026-04-11T10:31:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['wsl-chrome-2'],
+        serviceAccountIds: ['acct_chatgpt_default'],
+        browserCapable: true,
+      }),
+    });
+
+    const result = await evaluateStoredExecutionRunClaimCandidates(
+      {
+        runId: 'team_run_claims_equal_heartbeat',
+        affinity: createExecutionRunAffinityRecord({
+          service: 'chatgpt',
+          serviceAccountId: 'acct_chatgpt_default',
+          browserRequired: true,
+          runtimeProfileId: 'default',
+          browserProfileId: 'wsl-chrome-2',
+          hostRequirement: 'same-host',
+          requiredHostId: 'host:wsl-dev-1',
+        }),
+      },
+      { control, runnersControl },
+    );
+
+    expect(result?.candidates.map((entry) => ({ runnerId: entry.runnerId, status: entry.status }))).toEqual([
+      { runnerId: 'runner:alpha', status: 'eligible' },
+      { runnerId: 'runner:zeta', status: 'eligible' },
+    ]);
+  });
+
   it('returns not-ready candidates when the run itself is not claimable', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-claims-'));
     cleanup.push(homeDir);

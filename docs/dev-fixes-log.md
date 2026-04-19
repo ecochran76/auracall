@@ -13099,3 +13099,7 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   run that pauses for approval/human escalation should still be claimable by a
   later eligible active runner after local-action approval and resume, rather
   than staying implicitly pinned to the stale CLI runner.
+- 2026-04-19: Do not leave equally eligible runner selection to storage order.
+  In this repo, bounded claim-candidate ordering now has an explicit tie-break:
+  claim status rank first, then fresher runner heartbeat, then runner id as a
+  stable fallback when heartbeats are equal.

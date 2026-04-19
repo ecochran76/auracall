@@ -9,6 +9,7 @@ export type ExecutionRunClaimCandidateStatus = 'eligible' | 'blocked-affinity' |
 export interface ExecutionRunClaimCandidate {
   runnerId: string;
   hostId: string;
+  runnerLastHeartbeatAt: string;
   status: ExecutionRunClaimCandidateStatus;
   reason: string | null;
   queueState: ExecutionRunQueueProjection['queueState'];
@@ -86,6 +87,7 @@ export function createExecutionRunClaimCandidates(
       return {
         runnerId: runner.id,
         hostId: runner.hostId,
+        runnerLastHeartbeatAt: runner.lastHeartbeatAt,
         status: classifyExecutionRunClaimCandidateStatus(queue, runner, projection),
         reason: createExecutionRunClaimCandidateReason(queue, runner, projection),
         queueState: projection.queueState,
@@ -224,7 +226,17 @@ function compareExecutionRunClaimCandidates(
   left: ExecutionRunClaimCandidate,
   right: ExecutionRunClaimCandidate,
 ): number {
-  return claimCandidateRank(left.status) - claimCandidateRank(right.status);
+  const rankDifference = claimCandidateRank(left.status) - claimCandidateRank(right.status);
+  if (rankDifference !== 0) {
+    return rankDifference;
+  }
+
+  const heartbeatDifference = right.runnerLastHeartbeatAt.localeCompare(left.runnerLastHeartbeatAt);
+  if (heartbeatDifference !== 0) {
+    return heartbeatDifference;
+  }
+
+  return left.runnerId.localeCompare(right.runnerId);
 }
 
 function claimCandidateRank(status: ExecutionRunClaimCandidateStatus): number {
