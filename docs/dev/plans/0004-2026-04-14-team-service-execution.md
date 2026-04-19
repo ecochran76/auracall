@@ -16,7 +16,7 @@ Lane: P01
   persisted `taskRunSpec` into one sequential `teamRun` with initial `step`
   and `sharedState` records
 - the bounded CLI write surface is also now live through `auracall teams run`
-  on top of that same single-host bridge
+  on top of that same bounded single-host local-runner bridge
 - broader public team execution writes remain paused on HTTP/MCP surfaces
 
 # Team Service Execution Plan
@@ -340,7 +340,8 @@ Important rule:
 - initial `step` and `sharedState` records are created deterministically
 - the slice remains sequential and fail-fast
 - no assignment-intent fields are duplicated onto `teamRun`
-- the bounded CLI write surface stays on the same sequential single-host bridge
+- the bounded CLI write surface stays on the same sequential bounded
+  single-host local-runner bridge
 - no broader public HTTP/MCP team-execution write surface is introduced
 
 ### Verification target

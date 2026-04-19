@@ -4,15 +4,7 @@ import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
 import { loadUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
-import {
-  getCurrentRuntimeProfiles,
-  projectConfigModel,
-  resolveHostLocalActionExecutionPolicy,
-} from '../config/model.js';
-import {
-  createConfiguredServiceAccountId,
-  resolveConfiguredServiceAccountId,
-} from '../config/serviceAccountIdentity.js';
+import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
   inspectTeamRunLinkage,
   TeamRunInspectionError,
@@ -33,6 +25,10 @@ import {
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
+import {
+  createLocalRunnerCapabilitySummary,
+  createLocalRunnerEligibilityNote,
+} from '../runtime/localRunnerCapabilities.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
 import {
   createExecutionResponsesService,
@@ -210,133 +206,6 @@ interface HttpStatusResponse {
     | ({
         kind: 'lease-repair';
       } & ExecutionServiceHostStaleHeartbeatActionResult);
-}
-
-type RunnerServiceId = 'chatgpt' | 'gemini' | 'grok';
-
-const KNOWN_RUNNER_SERVICE_IDS: RunnerServiceId[] = ['chatgpt', 'gemini', 'grok'];
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
-}
-
-function addConfiguredServiceAccountId(input: {
-  accountIds: Set<string>;
-  serviceId: RunnerServiceId;
-  serviceConfig: unknown;
-}): void {
-  const serviceAccountId = createConfiguredServiceAccountId(input.serviceId, input.serviceConfig);
-  if (serviceAccountId) {
-    input.accountIds.add(serviceAccountId);
-  }
-}
-
-function createLocalRunnerCapabilitySummary(config: Record<string, unknown> | undefined): {
-  serviceIds: RunnerServiceId[];
-  runtimeProfileIds: string[];
-  browserProfileIds: string[];
-  serviceAccountIds: string[];
-  browserCapable: boolean;
-} {
-  const configRecord = config ?? {};
-  const projectedModel = projectConfigModel(configRecord);
-  if (projectedModel.runtimeProfiles.length === 0) {
-    return {
-      serviceIds: [...KNOWN_RUNNER_SERVICE_IDS],
-      runtimeProfileIds: ['default'],
-      browserProfileIds: [],
-      serviceAccountIds: [],
-      browserCapable: true,
-    };
-  }
-
-  const serviceIds = new Set<RunnerServiceId>();
-  const browserProfileIds = new Set<string>();
-  const serviceAccountIds = new Set<string>();
-  const globalServices = isRecord(configRecord.services) ? configRecord.services : {};
-  const runtimeProfiles = getCurrentRuntimeProfiles(configRecord);
-  let browserCapable = false;
-
-  for (const runtimeProfile of projectedModel.runtimeProfiles) {
-    if (runtimeProfile.defaultService) {
-      serviceIds.add(runtimeProfile.defaultService);
-      const serviceAccountId = resolveConfiguredServiceAccountId(configRecord, {
-        serviceId: runtimeProfile.defaultService,
-        runtimeProfileId: runtimeProfile.id,
-      });
-      if (serviceAccountId) {
-        serviceAccountIds.add(serviceAccountId);
-      }
-    }
-    if (runtimeProfile.browserProfileId) {
-      browserProfileIds.add(runtimeProfile.browserProfileId);
-      browserCapable = true;
-    }
-
-    const rawRuntimeProfile = runtimeProfiles[runtimeProfile.id];
-    if (!isRecord(rawRuntimeProfile)) {
-      continue;
-    }
-    if (rawRuntimeProfile.engine === 'browser' || isRecord(rawRuntimeProfile.browser)) {
-      browserCapable = true;
-    }
-    const rawServices = isRecord(rawRuntimeProfile.services) ? rawRuntimeProfile.services : null;
-    if (!rawServices) {
-      continue;
-    }
-    for (const serviceId of KNOWN_RUNNER_SERVICE_IDS) {
-      if (isRecord(rawServices[serviceId])) {
-        serviceIds.add(serviceId);
-        addConfiguredServiceAccountId({
-          accountIds: serviceAccountIds,
-          serviceId,
-          serviceConfig: globalServices[serviceId],
-        });
-        addConfiguredServiceAccountId({
-          accountIds: serviceAccountIds,
-          serviceId,
-          serviceConfig: rawServices[serviceId],
-        });
-      }
-    }
-  }
-
-  return {
-    serviceIds: [...serviceIds].sort(),
-    runtimeProfileIds: projectedModel.runtimeProfiles.map((runtimeProfile) => runtimeProfile.id),
-    browserProfileIds: [...browserProfileIds].sort(),
-    serviceAccountIds: [...serviceAccountIds].sort(),
-    browserCapable,
-  };
-}
-
-function createLocalRunnerEligibilityNote(input: {
-  phase: 'register' | 'heartbeat' | 'shutdown';
-  capabilitySummary: {
-    serviceIds: RunnerServiceId[];
-    serviceAccountIds: string[];
-    browserCapable: boolean;
-  };
-}): string {
-  const base =
-    input.phase === 'register'
-      ? 'api serve local runner'
-      : input.phase === 'heartbeat'
-        ? 'api serve runner heartbeat'
-        : 'api serve shutdown';
-  if (!input.capabilitySummary.browserCapable) {
-    return base;
-  }
-  if (input.capabilitySummary.serviceAccountIds.length === 0) {
-    return `${base}; service-account affinity not projected`;
-  }
-  const accountServices = new Set(
-    input.capabilitySummary.serviceAccountIds
-      .map((accountId) => accountId.match(/^service-account:([^:]+):/)?.[1])
-      .filter((serviceId): serviceId is RunnerServiceId => KNOWN_RUNNER_SERVICE_IDS.includes(serviceId as RunnerServiceId)),
-  );
-  const missingAccountService = input.capabilitySummary.serviceIds.find((serviceId) => !accountServices.has(serviceId));
-  return missingAccountService ? `${base}; service-account affinity partially projected` : base;
 }
 
 export async function createResponsesHttpServer(
@@ -806,6 +675,9 @@ export async function createResponsesHttpServer(
         expiresAt,
         eligibilityNote: createLocalRunnerEligibilityNote({
           phase: 'register',
+          baseLabel: 'api serve local runner',
+          heartbeatLabel: 'api serve runner heartbeat',
+          shutdownLabel: 'api serve shutdown',
           capabilitySummary: localRunnerCapabilitySummary,
         }),
       });
@@ -833,6 +705,9 @@ export async function createResponsesHttpServer(
           browserCapable: localRunnerCapabilitySummary.browserCapable,
           eligibilityNote: createLocalRunnerEligibilityNote({
             phase: 'register',
+            baseLabel: 'api serve local runner',
+            heartbeatLabel: 'api serve runner heartbeat',
+            shutdownLabel: 'api serve shutdown',
             capabilitySummary: localRunnerCapabilitySummary,
           }),
         }),
@@ -858,6 +733,9 @@ export async function createResponsesHttpServer(
       expiresAt,
       eligibilityNote: createLocalRunnerEligibilityNote({
         phase: 'heartbeat',
+        baseLabel: 'api serve local runner',
+        heartbeatLabel: 'api serve runner heartbeat',
+        shutdownLabel: 'api serve shutdown',
         capabilitySummary: localRunnerCapabilitySummary,
       }),
     });
@@ -961,6 +839,9 @@ export async function createResponsesHttpServer(
           staleAt,
           eligibilityNote: createLocalRunnerEligibilityNote({
             phase: 'shutdown',
+            baseLabel: 'api serve local runner',
+            heartbeatLabel: 'api serve runner heartbeat',
+            shutdownLabel: 'api serve shutdown',
             capabilitySummary: localRunnerCapabilitySummary,
           }),
         });

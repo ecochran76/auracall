@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { createTeamRuntimeBridge, type TeamRuntimeBridge, type TeamRuntimeBridgeResult } from '../teams/runtimeBridge.js';
 import { createTaskRunSpec, type CreateTaskRunSpecInput } from '../teams/model.js';
+import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
   inspectTeamRunLinkage,
   type InspectTeamRunLinkageInput,
@@ -12,7 +13,17 @@ import {
   type TeamRunReviewLedgerPayload,
 } from '../teams/reviewLedger.js';
 import type { TaskRunSpec } from '../teams/types.js';
+import { createExecutionRuntimeControl } from '../runtime/control.js';
+import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
+import {
+  createLocalRunnerCapabilitySummary,
+  createLocalRunnerEligibilityNote,
+} from '../runtime/localRunnerCapabilities.js';
+import { createExecutionRunnerRecord } from '../runtime/model.js';
+import { createExecutionRunnerControl } from '../runtime/runnersControl.js';
+import type { ExecutionServiceHostDeps } from '../runtime/serviceHost.js';
+import { createExecutionServiceHost } from '../runtime/serviceHost.js';
 
 export type TeamRunCliResponseFormat = 'text' | 'markdown' | 'json';
 
@@ -35,6 +46,7 @@ export interface ExecuteConfiguredTeamRunInput {
   bridge?: TeamRuntimeBridge;
   now?: () => string;
   randomId?: () => string;
+  executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
 }
 
 export interface TeamRunCliExecutionPayload {
@@ -302,7 +314,8 @@ export async function executeConfiguredTeamRun(
   input: ExecuteConfiguredTeamRunInput,
 ): Promise<ExecuteConfiguredTeamRunResult> {
   const teamId = input.teamId.trim();
-  const nowIso = input.now?.() ?? new Date().toISOString();
+  const now = input.now ?? (() => new Date().toISOString());
+  const nowIso = now();
   const randomId = input.randomId?.() ?? randomUUID();
   const suffix = randomId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'run';
   const taskRunSpecId = `taskrun_${teamId}_${suffix}`;
@@ -319,20 +332,92 @@ export async function executeConfiguredTeamRun(
     maxTurns: input.maxTurns,
     localActionPolicy: input.localActionPolicy,
   });
-  const configuredBridge =
-    input.bridge ??
-    createTeamRuntimeBridge({
-      executeStoredRunStep: createConfiguredStoredStepExecutor(input.config),
+  const configuredBridge = input.bridge;
+  const registeredLocalRunner = configuredBridge
+    ? null
+    : (() => {
+      const control = createExecutionRuntimeControl();
+      const runnersControl = createExecutionRunnerControl();
+      const executeStoredRunStep =
+        input.executeStoredRunStep ?? createConfiguredStoredStepExecutor(input.config);
+      const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(input.config);
+      const teamSlug = teamId.replace(/[^a-zA-Z0-9_-]/g, '-').slice(0, 32) || 'team';
+      const runnerId = `runner:teams-run:${teamSlug}:${suffix}`;
+      const hostId = `host:teams-run:${teamSlug}:${suffix}`;
+      const host = createExecutionServiceHost({
+        control,
+        runnersControl,
+        now,
+        ownerId: runnerId,
+        runnerId,
+        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
+        createRunAffinity: (inspection) => createConfiguredExecutionRunAffinity(input.config, inspection),
+        executeStoredRunStep,
+      });
+
+      return {
+        bridge: createTeamRuntimeBridge({
+          control,
+          host,
+          now,
+        }),
+        async registerRunner() {
+          const startedAt = now();
+          const expiresAt = new Date(Date.parse(startedAt) + 15 * 60 * 1000).toISOString();
+          await runnersControl.registerRunner({
+            runner: createExecutionRunnerRecord({
+              id: runnerId,
+              hostId,
+              startedAt,
+              expiresAt,
+              serviceIds: localRunnerCapabilitySummary.serviceIds,
+              runtimeProfileIds: localRunnerCapabilitySummary.runtimeProfileIds,
+              browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
+              serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
+              browserCapable: localRunnerCapabilitySummary.browserCapable,
+              eligibilityNote: createLocalRunnerEligibilityNote({
+                phase: 'register',
+                baseLabel: 'cli teams run local runner',
+                capabilitySummary: localRunnerCapabilitySummary,
+              }),
+            }),
+          });
+        },
+        async markRunnerStale() {
+          await runnersControl.markRunnerStale({
+            runnerId,
+            staleAt: now(),
+            eligibilityNote: createLocalRunnerEligibilityNote({
+              phase: 'shutdown',
+              baseLabel: 'cli teams run local runner',
+              capabilitySummary: localRunnerCapabilitySummary,
+            }),
+          });
+        },
+      };
+    })();
+
+  const execution = async () =>
+    (configuredBridge ?? registeredLocalRunner!.bridge).executeFromConfigTaskRunSpec({
+      config: input.config,
+      teamId,
+      runId,
+      createdAt: nowIso,
+      trigger: 'cli',
+      requestedBy: 'auracall teams run',
+      taskRunSpec,
     });
-  const bridgeResult = await configuredBridge.executeFromConfigTaskRunSpec({
-    config: input.config,
-    teamId,
-    runId,
-    createdAt: nowIso,
-    trigger: 'cli',
-    requestedBy: 'auracall teams run',
-    taskRunSpec,
-  });
+
+  const bridgeResult = configuredBridge
+    ? await execution()
+    : await (async () => {
+        await registeredLocalRunner!.registerRunner();
+        try {
+          return await execution();
+        } finally {
+          await registeredLocalRunner!.markRunnerStale();
+        }
+      })();
 
   return {
     taskRunSpec,
@@ -344,7 +429,6 @@ export async function executeConfiguredTeamRun(
     }),
   };
 }
-
 
 export async function inspectConfiguredTeamRun(input: InspectTeamRunLinkageInput): Promise<TeamRunInspectionPayload> {
   return inspectTeamRunLinkage(input);

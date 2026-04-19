@@ -1,4 +1,8 @@
-import { describe, expect, it } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { afterEach, describe, expect, it } from 'vitest';
+import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
 import {
   buildCliTaskRunSpec,
   buildTeamRunCliExecutionPayload,
@@ -10,17 +14,26 @@ import {
   reviewConfiguredTeamRun,
 } from '../../src/cli/teamRunCommand.js';
 import type { ExecutionRuntimeControlContract } from '../../src/runtime/contract.js';
+import { createExecutionRuntimeControl } from '../../src/runtime/control.js';
 import {
   createExecutionRun,
   createExecutionRunRecordBundle,
   createExecutionRunSharedState,
   createExecutionRunStep,
 } from '../../src/runtime/model.js';
+import { createExecutionRunnerControl } from '../../src/runtime/runnersControl.js';
 import type { TaskRunSpecRecordStore } from '../../src/teams/store.js';
 import type { TeamRuntimeBridge } from '../../src/teams/runtimeBridge.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../../src/teams/types.js';
 
 describe('team run CLI helpers', () => {
+  const cleanup: string[] = [];
+
+  afterEach(async () => {
+    setAuracallHomeDirOverrideForTest(null);
+    await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+  });
+
   it('builds a bounded CLI task-run-spec with final-response defaults', () => {
     const taskRunSpec = buildCliTaskRunSpec({
       nowIso: '2026-04-12T20:00:00.000Z',
@@ -196,6 +209,78 @@ describe('team run CLI helpers', () => {
       sharedStateStatus: 'succeeded',
       sharedStateNotes: ['run completed'],
     });
+  });
+
+  it('executes the default CLI path through a persisted local runner and releases runner-backed leases', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-team-run-cli-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const result = await executeConfiguredTeamRun({
+      config: {
+        defaultRuntimeProfile: 'default',
+        services: {
+          chatgpt: {
+            identity: {
+              email: 'operator@example.com',
+            },
+          },
+        },
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: { agents: ['analyst'] },
+        },
+      },
+      teamId: 'ops',
+      objective: 'Reply with one bounded result.',
+      now: () => '2026-04-18T15:00:00.000Z',
+      randomId: () => 'runnerpass123',
+      executeStoredRunStep: async () => ({
+        output: {
+          summary: 'cli runner-backed bridge completed',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      }),
+    });
+
+    const runnersControl = createExecutionRunnerControl();
+    const runtimeControl = createExecutionRuntimeControl();
+    const runnerId = 'runner:teams-run:ops:runnerpass12';
+    const storedRunner = await runnersControl.readRunner(runnerId);
+    const storedRun = await runtimeControl.readRun(result.payload.runtimeRunId);
+
+    expect(result.payload.runtimeRunId).toBe('teamrun_ops_runnerpass12');
+    expect(storedRunner).toMatchObject({
+      runnerId,
+      runner: {
+        id: runnerId,
+        hostId: 'host:teams-run:ops:runnerpass12',
+        status: 'stale',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+        browserCapable: true,
+        lastClaimedRunId: 'teamrun_ops_runnerpass12',
+      },
+    });
+    expect(storedRun?.bundle.leases).toEqual([
+      expect.objectContaining({
+        runId: 'teamrun_ops_runnerpass12',
+        ownerId: runnerId,
+        status: 'released',
+      }),
+    ]);
   });
 
   it('inspects persisted linkage by task run spec id', async () => {

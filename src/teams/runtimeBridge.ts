@@ -87,6 +87,7 @@ export interface TeamRuntimeExecutionSummary {
 export interface TeamRuntimeBridgeDeps {
   control?: ExecutionRuntimeControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
+  host?: ExecutionServiceHost;
   now?: () => string;
   ownerId?: string;
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
@@ -105,13 +106,15 @@ export interface TeamRuntimeBridge {
 export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamRuntimeBridge {
   const control = deps.control ?? createExecutionRuntimeControl();
   const taskRunSpecStore = deps.taskRunSpecStore ?? createTaskRunSpecRecordStore();
-  const defaultHost = createExecutionServiceHost({
-    control,
-    now: deps.now,
-    ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
-    executeStoredRunStep: deps.executeStoredRunStep,
-    executeLocalActionRequest: deps.executeLocalActionRequest,
-  });
+  const defaultHost =
+    deps.host ??
+    createExecutionServiceHost({
+      control,
+      now: deps.now,
+      ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
+      executeStoredRunStep: deps.executeStoredRunStep,
+      executeLocalActionRequest: deps.executeLocalActionRequest,
+    });
 
   return {
     async executeFromConfig(input) {
@@ -126,14 +129,16 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         entryPrompt: input.entryPrompt,
         initialInputs: input.initialInputs,
       });
-      const host = createExecutionServiceHost({
-        control,
-        now: deps.now,
-        ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
-        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
-        executeStoredRunStep: deps.executeStoredRunStep,
-        executeLocalActionRequest: deps.executeLocalActionRequest,
-      });
+      const host =
+        deps.host ??
+        createExecutionServiceHost({
+          control,
+          now: deps.now,
+          ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
+          localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
+          executeStoredRunStep: deps.executeStoredRunStep,
+          executeLocalActionRequest: deps.executeLocalActionRequest,
+        });
       return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
     },
 
@@ -148,14 +153,16 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         trigger: input.trigger,
         requestedBy: input.requestedBy,
       });
-      const host = createExecutionServiceHost({
-        control,
-        now: deps.now,
-        ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
-        localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
-        executeStoredRunStep: deps.executeStoredRunStep,
-        executeLocalActionRequest: deps.executeLocalActionRequest,
-      });
+      const host =
+        deps.host ??
+        createExecutionServiceHost({
+          control,
+          now: deps.now,
+          ownerId: deps.ownerId ?? 'host:team-runtime-bridge',
+          localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(input.config),
+          executeStoredRunStep: deps.executeStoredRunStep,
+          executeLocalActionRequest: deps.executeLocalActionRequest,
+        });
       return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
     },
 

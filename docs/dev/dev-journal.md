@@ -17761,3 +17761,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - the roadmap and README already reflected the live CLI surface, but the
     canonical execution plans still spoke as if no public team-run surface
     existed at all
+## 2026-04-18 - bounded `teams run` now executes through persisted local-runner ownership
+
+- Tightened the live CLI execution path beyond the earlier anonymous
+  host-backed bridge:
+  - `executeConfiguredTeamRun(...)` now registers one persisted local runner
+    for the bounded `auracall teams run` invocation
+  - the shared execution host now runs with `runnerId`-backed local-claim and
+    lease ownership semantics instead of only `host:*` ownership
+  - the runner is marked stale after the bounded CLI run completes
+- Reconciled the execution authority docs accordingly:
+  - `0001-2026-04-14-execution.md`
+  - `0004-2026-04-14-team-service-execution.md`
+  - `ROADMAP.md`
+- Reason:
+  - the next real execution seam after the earlier doc audit was the CLI path
+    still bypassing the persisted runner/account-affinity substrate already
+    used by `api serve`
+  - closing that gap keeps the bounded CLI surface aligned with the current
+    single-host runner/lease ownership model without widening into HTTP/MCP
+    team execution writes

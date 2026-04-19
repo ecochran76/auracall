@@ -350,7 +350,7 @@ Next recommendation:
 - the concrete `teamRun` execution contract is now defined in the canonical team-run plan
 - the first internal implementation slice is now live for durable `taskRunSpec` persistence plus `taskRunSpec -> teamRun -> runtime` projection
 - the bounded CLI write surface is now live as `auracall teams run` on top of
-  that same sequential single-host bridge
+  that same sequential bounded single-host local-runner bridge
 - the bounded internal inspection/readback seam for that persisted linkage is now live on existing response/recovery surfaces
 - the narrow internal debug/inspection command is now live as `auracall teams inspect`
 - the first bounded public read-only team inspection surface is now live as `GET /v1/team-runs/inspect`
@@ -368,7 +368,7 @@ Next recommendation:
     - `runnerId`
 - next, keep broader public team execution writes paused on HTTP/MCP surfaces
   while tightening runner/service-mode ownership and preserving the current
-  bounded CLI bridge
+  bounded CLI local-runner bridge
 
 Browser reliability maintenance note:
 - current ChatGPT hardening/proof checkpoint is substantially better than it

@@ -13033,3 +13033,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `0001`, `0004`, and `ROADMAP.md` had to stop saying no public team-run
   surface existed at all and instead say that broader HTTP/MCP team execution
   writes remain paused.
+- 2026-04-18: Once a bounded CLI execution path starts depending on the same
+  service-host substrate as `api serve`, stop letting it bypass persisted
+  runner identity. In this repo, `auracall teams run` had to register one
+  short-lived local runner, execute with `runnerId`-backed lease ownership and
+  configured account-affinity semantics, and mark that runner stale on exit
+  instead of continuing to run through an anonymous `host:*` bridge owner.
