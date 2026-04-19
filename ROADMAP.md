@@ -240,9 +240,13 @@ Current note:
             - `wslChromePreference`
           - no browser-owned launch/browser-family field in that block now
             outranks the referenced browser profile during active resolution
+          - next contract-tightening checkpoint:
+            - doctor should now distinguish shadowed compatibility residue
+              from still-active runtime ownership when a runtime profile lacks
+              any browser profile reference
         - reassessment decision:
           - the first bounded root-browser compatibility-alias pass is now
-            complete enough
+          complete enough
           - keep further alias work in maintenance mode unless a later slice
             explicitly chooses deprecation/reporting scope
   - current team-ready checkpoint:

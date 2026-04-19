@@ -12956,3 +12956,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   browser profile / cookie-source wiring, and `wslChromePreference`. The
   browser-owned launch/browser-family field class no longer has a live
   runtime-profile precedence carveout in active resolution.
+- 2026-04-18: Once a runtime profile already references a browser profile,
+  browser-owned fields left under `runtimeProfiles.<name>.browser` should be
+  described as compatibility residue, not as vague “maybe-active” escape
+  hatches. If no browser profile is referenced yet, say directly that those
+  same runtime fields are still active only because browser-profile ownership
+  has not been completed for that runtime profile.

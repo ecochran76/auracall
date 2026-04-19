@@ -191,8 +191,13 @@ Current diagnostic checkpoint:
     - the remaining broad runtime browser override block is still live
       advanced residue for now, including fields such as:
       - none in the browser-owned launch/browser-family class
-    - that is why doctor still frames the broader class as advanced escape
-      hatches rather than fully dead config
+    - doctor should now distinguish two cases for any remaining
+      runtime-profile browser-owned fields:
+      - when a browser profile is already referenced, treat the runtime value
+        as compatibility residue because the browser profile is authoritative
+      - when no browser profile is referenced yet, say directly that the
+        runtime value is still active only because the runtime profile has not
+        been moved onto an explicit browser profile
 - `config doctor` now splits service-scoped runtime browser fields into two
   advisory classes when they are still defined under
   `runtimeProfiles.<name>.browser`:

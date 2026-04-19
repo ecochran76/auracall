@@ -17575,3 +17575,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     profile
   - leaving active resolution behind that contract would keep one last
     avoidable target-vs-runtime mismatch in the browser-family refactor lane
+## 2026-04-18 - doctor now distinguishes shadowed browser residue from still-active runtime ownership
+
+- Tightened the `config doctor` contract for browser-owned runtime residue:
+  - if a runtime profile already references a browser profile, the doctor
+    warning now says those runtime fields are compatibility residue because
+    the browser profile is authoritative
+  - if no browser profile is referenced yet, the warning now says those
+    runtime fields are still active only because browser-profile ownership has
+    not been completed
+  - updated focused doctor coverage plus the matching plan / roadmap /
+    troubleshooting / operator docs
+- Reason:
+  - after closing the browser-family precedence lane, the old
+    “intentional advanced escape hatch” wording was too vague for the common
+    residue case

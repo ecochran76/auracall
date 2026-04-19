@@ -1243,10 +1243,13 @@ export function analyzeConfigModelBridgeHealth(
     if (isRecord(runtimeProfile)) {
       const browserOwnedOverrides = describeRuntimeProfileBrowserOwnedOverrides(runtimeProfile);
       if (browserOwnedOverrides.length > 0) {
+        const runtimeBrowserProfileId = getRuntimeProfileBrowserProfileId(runtimeProfile);
         issues.push({
           code: 'runtime-profile-browser-owned-overrides-present',
           severity: 'warning',
-          message: `AuraCall runtime profile "${name}" still defines browser-owned override fields (${browserOwnedOverrides.join(', ')}); move them to the referenced browser profile unless this is an intentional advanced escape hatch.`,
+          message: runtimeBrowserProfileId
+            ? `AuraCall runtime profile "${name}" still defines browser-owned override fields (${browserOwnedOverrides.join(', ')}); the referenced browser profile "${runtimeBrowserProfileId}" is now authoritative for that field class, so treat these runtime values as compatibility residue and move or remove them.`
+            : `AuraCall runtime profile "${name}" still defines browser-owned override fields (${browserOwnedOverrides.join(', ')}); these values stay active only because no browser profile is referenced yet, so move them into a browser profile and point this runtime profile at it.`,
           auracallRuntimeProfile: name,
         });
       }

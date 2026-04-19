@@ -1169,7 +1169,7 @@ describe('config show helpers', () => {
 
     const text = formatConfigDoctorReport(report);
     expect(text).toContain(
-      '[warning] AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, keepBrowser); move them to the referenced browser profile unless this is an intentional advanced escape hatch.',
+      '[warning] AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, keepBrowser); the referenced browser profile "default" is now authoritative for that field class, so treat these runtime values as compatibility residue and move or remove them.',
     );
   });
 

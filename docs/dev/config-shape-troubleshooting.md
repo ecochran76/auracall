@@ -333,6 +333,12 @@ Action:
   escape hatch and the coupling is understood
 - prefer leaving runtime profiles with Aura-Call workflow defaults and browser
   profile references, not broad browser configuration blocks
+- when a runtime profile already references a browser profile:
+  - treat browser-owned runtime fields as compatibility residue, not as the
+    authoritative live source anymore
+- when a runtime profile does not reference a browser profile yet:
+  - treat those runtime fields as still live only because browser-profile
+    ownership has not been completed for that runtime profile
 
 `config migrate` behavior:
 - when the runtime profile already references a real browser profile, migrate

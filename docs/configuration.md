@@ -536,6 +536,12 @@ Within each file, later CLI flags still override config, and environment variabl
   - `wslChromePreference`
 - the remaining live runtime-profile `browser` advanced override surface is now
   empty for the browser-owned launch/browser-family field class in this lane.
+- if a runtime profile still carries browser-owned fields after that rewrite:
+  - with a referenced browser profile, those runtime values are compatibility
+    residue and should be removed or migrated
+  - without a referenced browser profile, those values are still live only
+    because the runtime profile has not been moved onto an explicit browser
+    profile yet
 - `runtimeProfiles.<name>.defaultService` chooses the default browser target when no explicit model or `--target` is set.
 - `agents` and `teams` are reserved top-level config blocks for the future config-model refactor.
   - Aura-Call now lets `--agent <name>` resolve through `agents.<name>.runtimeProfile` for selection semantics only.

@@ -1252,7 +1252,55 @@ describe('config model helpers', () => {
           severity: 'warning',
           auracallRuntimeProfile: 'default',
           message:
-            'AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, browser.display, keepBrowser); move them to the referenced browser profile unless this is an intentional advanced escape hatch.',
+            'AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, browser.display, keepBrowser); the referenced browser profile "default" is now authoritative for that field class, so treat these runtime values as compatibility residue and move or remove them.',
+        }),
+      ],
+    });
+  });
+
+  it('warns more explicitly when browser-owned runtime fields stay active only because no browser profile is referenced', () => {
+    const config = {
+      defaultRuntimeProfile: 'default',
+      runtimeProfiles: {
+        default: {
+          defaultService: 'chatgpt',
+          browser: {
+            chromePath: '/custom/chrome',
+            display: ':0.0',
+          },
+        },
+      },
+    };
+
+    expect(analyzeConfigModelBridgeHealth(config, { explicitProfileName: 'default' })).toEqual({
+      ok: false,
+      activeAuracallRuntimeProfile: 'default',
+      activeBrowserProfile: null,
+      targetState: {
+        browserProfilesPresent: false,
+        runtimeProfilesPresent: true,
+      },
+      precedence: {
+        browserProfiles: 'bridge',
+        runtimeProfiles: 'target',
+        runtimeProfileBrowserProfileReference: 'target',
+      },
+      issueCount: 3,
+      issues: [
+        expect.objectContaining({
+          code: 'runtime-profile-browser-owned-overrides-present',
+          severity: 'warning',
+          auracallRuntimeProfile: 'default',
+          message:
+            'AuraCall runtime profile "default" still defines browser-owned override fields (browser.chromePath, browser.display); these values stay active only because no browser profile is referenced yet, so move them into a browser profile and point this runtime profile at it.',
+        }),
+        expect.objectContaining({
+          code: 'runtime-profile-missing-browser-profile',
+          auracallRuntimeProfile: 'default',
+        }),
+        expect.objectContaining({
+          code: 'active-runtime-profile-missing-browser-profile',
+          auracallRuntimeProfile: 'default',
         }),
       ],
     });
