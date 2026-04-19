@@ -961,6 +961,105 @@ describe('team run CLI helpers', () => {
     });
   });
 
+  it('rejects direct runtime runs on the team inspection runtime-run-id surface', async () => {
+    const control: ExecutionRuntimeControlContract = {
+      async createRun() {
+        throw new Error('not used');
+      },
+      async readRun() {
+        throw new Error('not used');
+      },
+      async inspectRun(runId) {
+        if (runId !== 'direct_runtime_1') {
+          return null;
+        }
+        return {
+          record: {
+            runId: 'direct_runtime_1',
+            revision: 1,
+            persistedAt: '2026-04-19T21:15:00.000Z',
+            bundle: {
+              run: {
+                id: 'direct_runtime_1',
+                sourceKind: 'direct',
+                sourceId: null,
+                taskRunSpecId: null,
+                status: 'succeeded',
+                createdAt: '2026-04-19T21:10:00.000Z',
+                updatedAt: '2026-04-19T21:15:00.000Z',
+                trigger: 'cli',
+                requestedBy: 'operator',
+                entryPrompt: 'Direct run.',
+                initialInputs: {},
+                sharedStateId: 'shared_direct_1',
+                stepIds: [],
+                policy: { failPolicy: 'fail-fast' },
+              },
+              steps: [],
+              handoffs: [],
+              localActionRequests: [],
+              sharedState: {
+                id: 'shared_direct_1',
+                runId: 'direct_runtime_1',
+                status: 'succeeded',
+                artifacts: [],
+                structuredOutputs: [],
+                notes: [],
+                history: [],
+                lastUpdatedAt: '2026-04-19T21:15:00.000Z',
+              },
+              events: [],
+              leases: [],
+            },
+          },
+          dispatchPlan: {
+            run: {} as never,
+            sharedState: {} as never,
+            steps: [],
+            stepsById: {},
+            nextRunnableStepId: null,
+            runnableStepIds: [],
+            deferredStepIds: [],
+            waitingStepIds: [],
+            blockedStepIds: [],
+            blockedByFailureStepIds: [],
+            terminalStepIds: [],
+            runningStepIds: [],
+            missingDependencyStepIds: [],
+          },
+        } as never;
+      },
+      async listRuns() {
+        throw new Error('not used');
+      },
+      async acquireLease() {
+        throw new Error('not used');
+      },
+      async heartbeatLease() {
+        throw new Error('not used');
+      },
+      async releaseLease() {
+        throw new Error('not used');
+      },
+      async expireLeases() {
+        throw new Error('not used');
+      },
+      async persistRun() {
+        throw new Error('not used');
+      },
+      async resumeHumanEscalation() {
+        throw new Error('not used');
+      },
+    };
+
+    await expect(
+      inspectConfiguredTeamRun({
+        runtimeRunId: 'direct_runtime_1',
+        control,
+      }),
+    ).rejects.toThrow('Runtime run direct_runtime_1 is not a team run.');
+  });
+
   it('inspects persisted linkage by team run id', async () => {
     const control: ExecutionRuntimeControlContract = {
       async createRun() {

@@ -86,6 +86,9 @@ export async function inspectTeamRunLinkage(
     if (!runtimeInspection) {
       throw new TeamRunInspectionError('not-found', `Runtime run ${runtimeRunId} was not found.`);
     }
+    if (runtimeInspection.record.bundle.run.sourceKind !== 'team-run') {
+      throw new TeamRunInspectionError('not-found', `Runtime run ${runtimeRunId} is not a team run.`);
+    }
     const taskRunSpecSummary = runtimeInspection.record.bundle.run.taskRunSpecId
       ? await readStoredTaskRunSpecSummary(taskRunSpecStore, runtimeInspection.record.bundle.run.taskRunSpecId)
       : null;

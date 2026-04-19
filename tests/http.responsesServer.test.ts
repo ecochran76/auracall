@@ -3088,6 +3088,94 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('rejects direct runtime runs on the team inspection runtime-run-id route', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-runtime-direct-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'direct_http_inspect_runtime_1';
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          taskRunSpecId: null,
+          status: 'succeeded',
+          createdAt: '2026-04-19T21:20:00.000Z',
+          updatedAt: '2026-04-19T21:21:00.000Z',
+          trigger: 'cli',
+          requestedBy: 'operator',
+          entryPrompt: 'Direct run.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: `${runId}:step:1`,
+            agentId: 'auracall-solo:agent:1',
+            runtimeProfileId: 'auracall-grok-auto',
+            browserProfileId: 'default',
+            service: 'grok',
+            kind: 'prompt',
+            status: 'succeeded',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Direct run.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            completedAt: '2026-04-19T21:21:00.000Z',
+            output: {
+              summary: 'done',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'succeeded',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: '2026-04-19T21:21:00.000Z',
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 }, { control });
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?runtimeRunId=${runId}`,
+      );
+      expect(response.status).toBe(404);
+      const payload = (await response.json()) as {
+        error: { message: string; type: string };
+      };
+      expect(payload).toMatchObject({
+        error: {
+          message: `Runtime run ${runId} is not a team run.`,
+          type: 'not_found_error',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
   it('surfaces bounded team-run inspection by team run id over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-teamrun-'));
     cleanup.push(tmp);

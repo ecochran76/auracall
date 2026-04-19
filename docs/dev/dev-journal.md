@@ -18061,3 +18061,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
 - Updated the active `0004` authority so team inspection now states the same
   team-run-only alias rule as runtime inspection and review-ledger lookup.
+## 2026-04-19 - Team inspection runtime-run-id direct-run rejection
+
+- Audited the next adjacent team-inspection seam after locking the
+  `taskRunSpecId` alias path and found a real behavior mismatch:
+  - `reviewLedger` already rejected direct runtime runs on its
+    `runtimeRunId` lookup path
+  - `inspectTeamRunLinkage(...)` still projected a direct run through the
+    team-run inspection surface
+- Tightened
+  [src/teams/inspection.ts](/home/ecochran76/workspace.local/oracle/src/teams/inspection.ts)
+  so `runtimeRunId` lookup now rejects non-team runtime runs instead of
+  returning them as team inspection payloads.
+- Added focused regressions proving the direct-run rejection on:
+  - [tests/cli/teamRunCommand.test.ts](/home/ecochran76/workspace.local/oracle/tests/cli/teamRunCommand.test.ts)
+  - [tests/http.responsesServer.test.ts](/home/ecochran76/workspace.local/oracle/tests/http.responsesServer.test.ts)
+- Updated the active `0004` authority so the team-inspection surface is now
+  explicitly team-run-only on both:
+  - `taskRunSpecId`
+  - `runtimeRunId`

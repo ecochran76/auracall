@@ -324,6 +324,11 @@ Current bounded implication:
   - a newer direct run carrying the same `taskRunSpecId` should not displace
     the task-backed team runtime attempt on `/v1/team-runs/inspect` or the
     matching CLI inspection helper
+- bounded team inspection lookup by `runtimeRunId` should also stay team-run
+  only
+  - `/v1/team-runs/inspect` and the matching CLI inspection helper should
+    reject a direct runtime run instead of projecting it through a team-run
+    surface
 - bounded team review-ledger lookup by `taskRunSpecId` should keep that same
   team-run-only history rule
   - a newer direct run carrying the same `taskRunSpecId` should not displace
