@@ -13057,3 +13057,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   targeted drain or service-host reclaim should be based on current eligible
   runner affinity and active runner liveness, not historical paused-run lease
   ownership.
+- 2026-04-19: Keep the same reassignment rule after operator local-action
+  control updates. In this repo, resolving a pending local action request on a
+  paused run should not re-bind later targeted drain to the historical runner;
+  after local-action resolution and human resume, reclaim still belongs to the
+  current eligible active runner.

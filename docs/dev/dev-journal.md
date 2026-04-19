@@ -17832,3 +17832,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - this was the concrete ownership question left open after the earlier
     runner identity and liveness fixes, and the repo needed a durable
     regression plus authority note rather than another implicit assumption
+## 2026-04-19 - local-action resolution plus resume/drain now keeps the same reassignment contract
+
+- Extended the bounded operator-control audit one step further:
+  - resolving a pending local action on a paused team run does not re-pin later
+    execution to the historical pausing runner
+  - after operator local-action resolution and later human resume, targeted
+    drain still reclaims work through the current eligible active runner
+- Added focused service-host regression coverage for that full chain and
+  tightened the `0004` authority note accordingly.
+- Reason:
+  - the prior slice locked resumed-run reassignment in isolation, but the
+    adjacent operator-control chain still needed one end-to-end proof through
+    local-action resolution before this ownership seam could be considered
+    explicit enough

@@ -267,6 +267,8 @@ Current bounded implication:
 - a resumed paused run is claimable by any currently eligible active runner
 - resumed execution should not be pinned implicitly to the runner identity
   that originally paused the step
+- the same reassignment rule applies when operator-resolved local-action state
+  precedes the later human resume and targeted drain
 
 ## MVP recommendation
 

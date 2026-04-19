@@ -1467,6 +1467,158 @@ describe('runtime service host', () => {
     );
   });
 
+  it('keeps current eligible runner ownership after local-action resolution and human resume', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const bundle = createPausedHumanEscalationBundle(
+      'run_host_team_local_action_resume_other_runner',
+      '2026-04-19T11:00:00.000Z',
+      '2026-04-19T11:05:00.000Z',
+      'team-run',
+    );
+    bundle.localActionRequests = [
+      {
+        id: 'run_host_team_local_action_resume_other_runner:action:run_host_team_local_action_resume_other_runner:step:1:1',
+        teamRunId: 'run_host_team_local_action_resume_other_runner',
+        ownerStepId: 'run_host_team_local_action_resume_other_runner:step:1',
+        kind: 'shell',
+        summary: 'Run one bounded verification command before resuming.',
+        command: 'pnpm',
+        args: ['vitest', 'run'],
+        structuredPayload: {},
+        notes: [],
+        status: 'requested',
+        createdAt: '2026-04-19T11:04:00.000Z',
+        approvedAt: null,
+        completedAt: null,
+        resultSummary: null,
+        resultPayload: null,
+      },
+    ];
+    await control.createRun(bundle);
+
+    await control.acquireLease({
+      runId: 'run_host_team_local_action_resume_other_runner',
+      leaseId: 'run_host_team_local_action_resume_other_runner:lease:origin',
+      ownerId: 'runner:origin',
+      acquiredAt: '2026-04-19T11:04:00.000Z',
+      heartbeatAt: '2026-04-19T11:05:00.000Z',
+      expiresAt: '2026-04-19T11:06:00.000Z',
+    });
+    await control.releaseLease({
+      runId: 'run_host_team_local_action_resume_other_runner',
+      leaseId: 'run_host_team_local_action_resume_other_runner:lease:origin',
+      releasedAt: '2026-04-19T11:05:00.000Z',
+      releaseReason: 'cancelled',
+    });
+
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:origin',
+        hostId: 'host:origin',
+        status: 'stale',
+        startedAt: '2026-04-19T10:55:00.000Z',
+        lastHeartbeatAt: '2026-04-19T11:05:00.000Z',
+        expiresAt: '2026-04-19T11:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:replacement',
+        hostId: 'host:replacement',
+        startedAt: '2026-04-19T11:09:00.000Z',
+        lastHeartbeatAt: '2026-04-19T11:10:00.000Z',
+        expiresAt: '2026-04-19T11:20:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+
+    let executedStepCount = 0;
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      ownerId: 'host:test',
+      runnerId: 'runner:replacement',
+      now: () => '2026-04-19T11:10:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+      executeStoredRunStep: async () => {
+        executedStepCount += 1;
+        return {
+          output: {
+            summary: 'replacement runner completed post-resolution resumed team step',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const resolved = await host.resolveLocalActionRequest(
+      'run_host_team_local_action_resume_other_runner',
+      'run_host_team_local_action_resume_other_runner:action:run_host_team_local_action_resume_other_runner:step:1:1',
+      'rejected',
+    );
+    expect(resolved).toMatchObject({
+      action: 'resolve-local-action-request',
+      runId: 'run_host_team_local_action_resume_other_runner',
+      resolution: 'rejected',
+      status: 'resolved',
+      resolved: true,
+      reason: 'local action rejected by service host operator control',
+      ownerStepId: 'run_host_team_local_action_resume_other_runner:step:1',
+    });
+
+    const resumed = await host.resumeHumanEscalation('run_host_team_local_action_resume_other_runner', {
+      note: 'replacement runner resumed after local-action rejection',
+    });
+    expect(resumed.status).toBe('resumed');
+
+    const drained = await host.drainRun('run_host_team_local_action_resume_other_runner');
+    expect(drained).toMatchObject({
+      action: 'drain-run',
+      runId: 'run_host_team_local_action_resume_other_runner',
+      status: 'executed',
+      drained: true,
+      reason: 'run executed through targeted host drain',
+      skipReason: null,
+    });
+    expect(executedStepCount).toBe(1);
+
+    const storedRecord = await control.readRun('run_host_team_local_action_resume_other_runner');
+    expect(storedRecord?.bundle.run.status).toBe('succeeded');
+    expect(storedRecord?.bundle.localActionRequests[0]).toMatchObject({
+      status: 'rejected',
+      resultSummary: 'local action rejected by service host operator control',
+      resultPayload: {
+        source: 'operator',
+      },
+    });
+    expect(storedRecord?.bundle.steps[1]).toMatchObject({
+      id: 'run_host_team_local_action_resume_other_runner:step:2',
+      status: 'succeeded',
+      output: {
+        summary: 'replacement runner completed post-resolution resumed team step',
+      },
+    });
+    expect(storedRecord?.bundle.leases.map((lease) => ({ ownerId: lease.ownerId, releaseReason: lease.releaseReason }))).toEqual(
+      expect.arrayContaining([
+        { ownerId: 'runner:origin', releaseReason: 'cancelled' },
+        { ownerId: 'runner:replacement', releaseReason: 'completed' },
+      ]),
+    );
+  });
+
   it('surfaces claim-owner-unavailable when targeted drain cannot safely claim a team run', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
