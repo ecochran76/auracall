@@ -13074,3 +13074,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/v1/runtime-runs/inspect` should show no implicit selected runner by
   default, and a queried replacement runner should be evaluated on current
   eligibility rather than inheriting the stale paused owner.
+- 2026-04-19: Keep resumed-run HTTP recovery detail keyed to current
+  local-claim projection, not historical paused ownership. In this repo, once
+  local-action resolution and human resume clear the old active lease,
+  `/status/recovery/{run_id}` should report `activeLease = null` and project
+  the current local runner's runnable/claimable posture instead of leaving the
+  historical paused owner implied as still active.

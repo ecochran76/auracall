@@ -274,6 +274,9 @@ Current bounded implication:
 - bounded HTTP runtime inspection after operator resume should evaluate the
   current queried runner when no active lease exists, not implicitly fall back
   to the historical paused owner
+- bounded HTTP recovery detail after operator resume should project current
+  local-claim posture and no active lease when the historical paused-owner
+  lease has already been released
 
 ## MVP recommendation
 

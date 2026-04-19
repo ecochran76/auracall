@@ -17886,3 +17886,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     service host, the adjacent HTTP runtime-inspection surface needed its own
     proof that it reflects current claimant eligibility rather than historical
     ownership residue
+## 2026-04-19 - HTTP recovery detail now locks resumed local-claim projection
+
+- Continued the adjacent operator-facing readback audit onto
+  `/status/recovery/{run_id}`:
+  - service-host recovery detail already recomputed `localClaim`
+  - but the HTTP surface did not yet have a focused regression proving that,
+    after local-action resolution and human resume, recovery detail no longer
+    presents the released historical paused-owner lease as if it were still the
+    active ownership source
+- Added one focused HTTP regression proving:
+  - resumed recovery detail reports `activeLease = null` once the historical
+    paused-owner lease has been released
+  - recovery detail projects the current HTTP runner as the local claimant with
+    runnable/claimable/eligible posture
+- Reason:
+  - once status readback and runtime inspection were both locked to current
+    claimant semantics, recovery detail needed the same explicit proof to keep
+    the operator-facing ownership story coherent across all three surfaces
