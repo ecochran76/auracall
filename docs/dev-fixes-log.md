@@ -13125,6 +13125,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - canonical fallback summary when one is omitted
   Do not let raw producer field drift become stored contract just because the
   request arrived through `step.output.structuredData.localActionRequests`.
+- 2026-04-20: Do not start another implementation lane while the execution
+  board still overstates active work. The 360 review found that several plans
+  are effectively maintenance-only or parked, while many remain `OPEN` and
+  `0001` still records the old `keep = 14` plan-audit count. In this repo, the
+  next roadmap slice should prune/classify plan state before widening service,
+  runner, API, MCP, provider, or retrieval work.
 - 2026-04-20: Stop the response-shape normalization lane at the written
   checkpoint unless there is a new reproduced mismatch. In this repo,
   `output[]`, `metadata.executionSummary`, team-only assignment identity,

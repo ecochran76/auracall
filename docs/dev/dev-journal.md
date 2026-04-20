@@ -1,3 +1,28 @@
+## 2026-04-20 - Project and roadmap 360 review
+
+- Performed a broad code/docs/roadmap review across:
+  - `ROADMAP.md`
+  - `RUNBOOK.md`
+  - canonical plans under `docs/dev/plans/`
+  - runtime/team/config/http implementation seams
+  - test and live-test posture
+- Added
+  [2026-04-20-project-roadmap-360.md](/home/ecochran76/workspace.local/oracle/docs/dev/reviews/2026-04-20-project-roadmap-360.md)
+  as the durable review artifact.
+- Main review conclusion:
+  - Aura-Call has enough runtime/team/task/readback foundation to stop
+    contract-mining by inertia
+  - the next best slice is roadmap pruning and sequencing, not another
+    implementation slice
+- Highest-impact findings:
+  - too many canonical plans remain `OPEN` despite maintenance-only or parked
+    checkpoints
+  - `0001` still records the old plan-audit `keep = 14` result while the
+    current audit reports 18 candidates kept
+  - runtime orchestration is coherent but concentrated in large files that
+    should be split before multi-runner expansion
+  - validation breadth is strong but needs clearer change-class targets
+
 ## 2026-04-20 - Response-shape enforcement checkpoint
 
 - Reassessed the active `0004` response-shape contract after the recent
