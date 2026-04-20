@@ -617,6 +617,15 @@ describe('http responses adapter', () => {
               reconciliationReason: null,
             };
           },
+          async controlRun(input) {
+            if (input.action === 'resume-human-escalation') {
+              return this.resumeHumanEscalation(input.runId);
+            }
+            if (input.action === 'drain-run') {
+              return this.drainRun(input.runId);
+            }
+            return this.cancelOwnedRun(input.runId);
+          },
           async cancelOwnedRun(runId) {
             return {
               action: 'cancel-run' as const,
@@ -816,6 +825,15 @@ describe('http responses adapter', () => {
               repairPosture: null,
               reconciliationReason: null,
             };
+          },
+          async controlRun(input) {
+            if (input.action === 'resume-human-escalation') {
+              return this.resumeHumanEscalation(input.runId);
+            }
+            if (input.action === 'drain-run') {
+              return this.drainRun(input.runId);
+            }
+            return this.cancelOwnedRun(input.runId);
           },
           async cancelOwnedRun(runId) {
             return {
@@ -1304,6 +1322,15 @@ describe('http responses adapter', () => {
               repairPosture: null,
               reconciliationReason: null,
             };
+          },
+          async controlRun(input) {
+            if (input.action === 'resume-human-escalation') {
+              return this.resumeHumanEscalation(input.runId);
+            }
+            if (input.action === 'drain-run') {
+              return this.drainRun(input.runId);
+            }
+            return this.cancelOwnedRun(input.runId);
           },
           async cancelOwnedRun(runId) {
             return {

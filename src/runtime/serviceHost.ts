@@ -278,6 +278,32 @@ export interface ExecutionServiceHostDrainActionResult {
   skipReason: DrainedStoredExecutionRunResult['reason'] | null;
 }
 
+export type ExecutionServiceHostRunControlInput =
+  | {
+      action: 'cancel-run';
+      runId: string;
+      note?: string | null;
+    }
+  | {
+      action: 'drain-run';
+      runId: string;
+    }
+  | {
+      action: 'resume-human-escalation';
+      runId: string;
+      note?: string | null;
+      guidance?: Record<string, unknown> | null;
+      override?: {
+        promptAppend?: string | null;
+        structuredContext?: Record<string, unknown> | null;
+      } | null;
+    };
+
+export type ExecutionServiceHostRunControlResult =
+  | ExecutionServiceHostCancelActionResult
+  | ExecutionServiceHostDrainActionResult
+  | ExecutionServiceHostResumeHumanEscalationResult;
+
 export interface ExecutionServiceHostLocalActionResolveResult {
   action: 'resolve-local-action-request';
   runId: string;
@@ -387,6 +413,7 @@ export interface ExecutionServiceHost {
   summarizeLocalClaimState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostLocalClaimSummary>;
   readRecoveryDetail(runId: string): Promise<ExecutionServiceHostRecoveryDetail | null>;
   repairStaleHeartbeatLease(runId: string): Promise<ExecutionServiceHostStaleHeartbeatActionResult>;
+  controlRun(input: ExecutionServiceHostRunControlInput): Promise<ExecutionServiceHostRunControlResult>;
   cancelOwnedRun(runId: string, note?: string | null): Promise<ExecutionServiceHostCancelActionResult>;
   resumeHumanEscalation(
     runId: string,
@@ -968,6 +995,20 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           repairAt,
         })
       ).action;
+    },
+
+    async controlRun(input: ExecutionServiceHostRunControlInput) {
+      if (input.action === 'resume-human-escalation') {
+        return this.resumeHumanEscalation(input.runId, {
+          note: input.note ?? null,
+          guidance: input.guidance ?? null,
+          override: input.override ?? null,
+        });
+      }
+      if (input.action === 'drain-run') {
+        return this.drainRun(input.runId);
+      }
+      return this.cancelOwnedRun(input.runId, input.note ?? null);
     },
 
     async cancelOwnedRun(runId: string, note: string | null = null) {

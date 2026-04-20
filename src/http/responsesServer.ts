@@ -493,16 +493,7 @@ export async function createResponsesHttpServer(
               ...result,
             };
           } else {
-            const result =
-              payload.runControl.action === 'resume-human-escalation'
-                ? await host.resumeHumanEscalation(payload.runControl.runId, {
-                    note: payload.runControl.note ?? null,
-                    guidance: payload.runControl.guidance ?? null,
-                    override: payload.runControl.override ?? null,
-                  })
-                : payload.runControl.action === 'drain-run'
-                  ? await host.drainRun(payload.runControl.runId)
-                : await host.cancelOwnedRun(payload.runControl.runId, payload.runControl.note ?? null);
+            const result = await host.controlRun(payload.runControl);
             if (
               !(
                 (result.action === 'cancel-run' && result.status === 'cancelled') ||

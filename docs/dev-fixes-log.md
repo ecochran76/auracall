@@ -1,3 +1,15 @@
+- 2026-04-20: Keep run-control dispatch beside the service-host mutations, not
+  in HTTP route code.
+  - The durable rule for the current service/runner lane is:
+    - `ExecutionServiceHost.controlRun(...)` owns action selection for
+      `cancel-run`, `resume-human-escalation`, and targeted `drain-run`
+    - HTTP status controls own request validation, transport error mapping,
+      and status readback
+    - background-drain pause/resume remains HTTP server state because it is a
+      server timer/status concern, not a stored runtime-run mutation
+  - This keeps operator controls route-neutral without moving HTTP-only
+    scheduling semantics into the runtime layer.
+
 - 2026-04-20: Keep serial drain queue ownership in the service host while
   leaving HTTP timer/status behavior at the HTTP boundary.
   - The durable rule for the current service/runner lane is:

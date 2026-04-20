@@ -1,3 +1,22 @@
+## 2026-04-20 - Service-host run-control dispatcher
+
+- Continued the service/runner ownership lane after the queued drain seam.
+- Re-audited `POST /status` control paths and found that the underlying
+  mutations already lived on `ExecutionServiceHost`, but HTTP still selected
+  the run-control action implementation directly for:
+  - `cancel-run`
+  - `resume-human-escalation`
+  - `drain-run`
+- Added a route-neutral `ExecutionServiceHost.controlRun(...)` dispatcher so
+  run-control action selection now lives beside the service-host mutations.
+- Kept `api serve` responsible for transport work only:
+  - status-control schema validation
+  - HTTP status/error mapping
+  - background-drain pause/resume state
+  - status projection/readback
+- Updated the active `0001` and `0004` authorities to record the third
+  service/runner ownership increment.
+
 ## 2026-04-20 - Service-host drain queue ownership
 
 - Audited background-drain ownership after moving runner lifecycle writes into

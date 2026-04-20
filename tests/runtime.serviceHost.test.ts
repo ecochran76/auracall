@@ -1455,7 +1455,7 @@ describe('runtime service host', () => {
     });
   });
 
-  it('drains one resumed direct run through the targeted host drain seam', async () => {
+  it('routes resumed direct run controls through the service host dispatcher', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
@@ -1487,12 +1487,17 @@ describe('runtime service host', () => {
       },
     });
 
-    const resumed = await host.resumeHumanEscalation('run_host_targeted_drain', {
+    const resumed = await host.controlRun({
+      action: 'resume-human-escalation',
+      runId: 'run_host_targeted_drain',
       note: 'human approved resume',
     });
     expect(resumed.status).toBe('resumed');
 
-    const drained = await host.drainRun('run_host_targeted_drain');
+    const drained = await host.controlRun({
+      action: 'drain-run',
+      runId: 'run_host_targeted_drain',
+    });
     expect(drained).toMatchObject({
       action: 'drain-run',
       runId: 'run_host_targeted_drain',

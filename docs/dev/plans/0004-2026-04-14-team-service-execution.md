@@ -41,6 +41,11 @@ Lane: P01
     host instance
   - `api serve` still owns background-drain timer scheduling, pause/resume
     state, and `/status` projection
+- the third ownership increment is now live:
+  - `ExecutionServiceHost` owns the route-neutral run-control dispatcher for
+    `cancel-run`, `resume-human-escalation`, and `drain-run`
+  - `api serve` still owns request validation, HTTP error/status mapping,
+    background-drain pause/resume state, and status projection
 - the deterministic response-shape enforcement checkpoint is now complete for
   the currently reproduced contract seams:
   - team-only assignment identity
