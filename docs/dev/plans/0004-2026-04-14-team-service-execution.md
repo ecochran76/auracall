@@ -74,6 +74,13 @@ Lane: P01
   - handoff transfer payloads
   - provider/local-host artifact refs
   - persisted `response.output` item projection
+- next checkpoint:
+  - `0019-2026-04-20-public-team-execution-write-surface.md`
+  - define and then implement the first bounded HTTP team execution write
+    surface
+  - reuse the current task/team/runtime bridge instead of adding a route-only
+    execution model
+  - keep MCP write parity and multi-runner execution out of the first slice
 
 # Team Service Execution Plan
 

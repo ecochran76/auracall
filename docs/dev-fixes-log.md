@@ -1,3 +1,16 @@
+- 2026-04-20: Public team execution writes must reuse the existing
+  task/team/runtime chain instead of inventing route-local execution state.
+  - The durable rule for the next checkpoint is:
+    - first bounded HTTP write target is `POST /v1/team-runs`
+    - the route should construct or accept one bounded `TaskRunSpec`
+    - execution should flow through `TeamRun` and `TeamRuntimeBridge`
+    - response/readback should expose `taskRunSpecId`, `teamRunId`, and
+      `runtimeRunId` without duplicating assignment intent into route-only
+      metadata
+    - MCP write parity waits until the HTTP contract is stable
+  - Do not use the public write surface as a shortcut to add multi-runner,
+    parallel execution, or a second team-run vocabulary.
+
 - 2026-04-20: Stop extracting `api serve` service-host ownership after the
   remaining boundary is transport-only.
   - The durable rule for the current service/runner lane is:

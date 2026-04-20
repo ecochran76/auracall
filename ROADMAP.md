@@ -465,6 +465,15 @@ Current sequencing gate:
   - public team execution can be stated without relying on current internal
     member-order MVP projection
 
+Next checkpoint:
+- public team execution write preflight is now open under
+  [docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md)
+- this checkpoint should define and then implement the first bounded HTTP
+  `POST /v1/team-runs` write surface by reusing the existing
+  `TaskRunSpec -> TeamRun -> TeamRuntimeBridge` chain
+- MCP write parity remains deferred until the HTTP contract is stable
+- multi-runner/background-worker expansion remains out of scope
+
 Sequencing rule:
 - do not expand this layer into multi-runner/background worker service mode until the
   durable state and account model are explicit enough to support replay,

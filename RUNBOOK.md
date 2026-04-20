@@ -615,3 +615,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - `pnpm run plans:audit`
   - `git diff --check`
+
+## Turn 23 | 2026-04-20
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- New checkpoint plan:
+  `docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md`
+- Goal: select the next bounded checkpoint after completing the immediate
+  `api serve` service-host ownership extraction/reassessment.
+- Decision:
+  - stop extracting more from `api serve` by default because remaining state is
+    transport/listener scoped
+  - open a public team execution write preflight plan
+  - candidate first write endpoint is `POST /v1/team-runs`
+  - the first implementation should reuse the existing
+    `TaskRunSpec -> TeamRun -> TeamRuntimeBridge` chain
+  - MCP write parity and multi-runner/background-worker expansion stay
+    deferred
+- Scope:
+  - docs-only checkpoint selection
+  - no runtime or operator behavior changes
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`

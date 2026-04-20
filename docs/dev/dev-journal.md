@@ -1,3 +1,20 @@
+## 2026-04-20 - Public team execution write preflight selected
+
+- Reassessed the next roadmap move after parking the immediate `api serve`
+  service-host ownership extraction lane.
+- Selected a bounded public team execution write preflight as the next
+  checkpoint under the primary service/runner orchestration lane.
+- Added
+  `docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md`
+  to define the first HTTP write contract before implementation.
+- Current decision:
+  - candidate endpoint is `POST /v1/team-runs`
+  - first write surface should reuse the existing
+    `TaskRunSpec -> TeamRun -> TeamRuntimeBridge` chain
+  - implementation should not invent a route-only team execution model
+  - MCP write parity waits until the HTTP contract is stable
+  - multi-runner/background-worker expansion remains out of scope
+
 ## 2026-04-20 - Api serve ownership boundary reassessment
 
 - Re-audited the remaining `api serve` lifecycle/status code after the fourth
