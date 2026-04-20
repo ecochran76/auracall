@@ -457,22 +457,22 @@ Current checkpoint:
 - `auracall api serve` now recovers stale runs at startup and reports bounded
   recovery counts
 
-Current sequencing gate:
-- do not widen beyond the current bounded `auracall teams run` CLI surface
-  into broader HTTP/MCP team execution writes until:
-  - team semantics are frozen
-  - the task / run-spec layer exists
-  - public team execution can be stated without relying on current internal
-    member-order MVP projection
-
-Next checkpoint:
-- public team execution write preflight is now open under
+Current checkpoint:
+- the first bounded public HTTP team execution write is now live under
   [docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md)
-- this checkpoint should define and then implement the first bounded HTTP
-  `POST /v1/team-runs` write surface by reusing the existing
-  `TaskRunSpec -> TeamRun -> TeamRuntimeBridge` chain
-- MCP write parity remains deferred until the HTTP contract is stable
-- multi-runner/background-worker expansion remains out of scope
+- `POST /v1/team-runs` constructs one bounded `TaskRunSpec` from request
+  fields and executes through the existing
+  `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun` chain
+- the response returns deterministic `taskRunSpecId`, `teamRunId`,
+  `runtimeRunId`, status, and links for team inspection, runtime inspection,
+  and response readback
+
+Current sequencing gate:
+- keep broader team execution writes paused beyond this first bounded HTTP
+  route:
+  - arbitrary prebuilt `taskRunSpec` JSON remains deferred
+  - MCP write parity remains deferred until the HTTP contract proves stable
+  - multi-runner/background-worker expansion remains out of scope
 
 Sequencing rule:
 - do not expand this layer into multi-runner/background worker service mode until the

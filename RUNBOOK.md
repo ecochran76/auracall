@@ -635,6 +635,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Scope:
   - docs-only checkpoint selection
   - no runtime or operator behavior changes
+
+## Turn 24 | 2026-04-20
+
+- Active plan: `docs/dev/plans/0019-2026-04-20-public-team-execution-write-surface.md`
+- Goal: land the first bounded public HTTP team execution write surface.
+- Completed:
+  - added `POST /v1/team-runs`
+  - shared the bounded task-run-spec builder and team execution payload between
+    CLI and HTTP
+  - routed HTTP creation through the existing
+    `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> ExecutionServiceHost`
+    chain
+  - returned `object = "team_run"` with generated `taskRunSpec`,
+    deterministic execution ids/status, and links for team inspection, runtime
+    inspection, and `/v1/responses/{runtimeRunId}` readback
+  - kept arbitrary prebuilt `taskRunSpec` JSON, MCP write parity,
+    multi-runner scheduling, and parallel team execution deferred
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run plans:audit`
+  - `git diff --check`
 - Verification target:
   - `pnpm run plans:audit`
   - `git diff --check`

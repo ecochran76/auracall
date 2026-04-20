@@ -27,6 +27,7 @@ Current endpoints:
 
 - `GET /status`
 - `GET /status/recovery/{run_id}`
+- `POST /v1/team-runs`
 - `GET /v1/team-runs/inspect`
 - `GET /v1/runtime-runs/inspect`
 - `GET /v1/models`
@@ -40,6 +41,17 @@ Current limits:
   runs
   - direct browser-backed `/v1/responses` runs now execute through the same
     configured stored-step executor path as normal Aura-Call runtime work
+- `POST /v1/team-runs` creates one bounded task-backed team execution through
+  the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
+  chain
+  - accepted fields are `teamId`, `objective`, and optional `title`,
+    `promptAppend`, `structuredContext`, `responseFormat`, `maxTurns`, and
+    bounded `localActionPolicy`
+  - response shape is `object = "team_run"` with the generated `taskRunSpec`,
+    deterministic `execution` ids/status, and `links` for team inspection,
+    runtime inspection, and response readback
+  - arbitrary prebuilt `taskRunSpec` JSON, MCP write parity, background worker
+    pools, and parallel team execution are intentionally deferred
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`

@@ -1,3 +1,25 @@
+## 2026-04-20 - Public team execution write route
+
+- Implemented the bounded `POST /v1/team-runs` HTTP write surface selected in
+  plan `0019`.
+- The route now:
+  - validates a compact request with `teamId`, `objective`, optional prompt
+    shaping fields, response format, max turns, and bounded local-action policy
+  - constructs one route-neutral bounded `TaskRunSpec`
+  - executes through `TeamRuntimeBridge` on the server-owned
+    `ExecutionServiceHost`
+  - returns `object = "team_run"` with the generated `taskRunSpec`,
+    deterministic execution ids/status, and links to team inspection, runtime
+    inspection, and `/v1/responses/{runtimeRunId}` readback
+- Refactored the former CLI-only task-run-spec and execution-payload helpers
+  into shared team helpers so HTTP and CLI use the same execution envelope.
+- Updated `README.md`, `docs/openai-endpoints.md`, `docs/testing.md`, and
+  `0019` to record the landed contract and the deferred scope:
+  - no arbitrary prebuilt `taskRunSpec` JSON yet
+  - no MCP write tool yet
+  - no background team worker, multi-runner scheduler, or parallel team
+    execution
+
 ## 2026-04-20 - Public team execution write preflight selected
 
 - Reassessed the next roadmap move after parking the immediate `api serve`

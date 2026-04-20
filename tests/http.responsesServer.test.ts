@@ -3319,6 +3319,232 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('creates a bounded team run over HTTP and returns inspectable execution links', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          defaultRuntimeProfile: 'default',
+          services: {
+            chatgpt: {
+              identity: {
+                email: 'operator@example.com',
+              },
+            },
+          },
+          browserProfiles: {
+            default: {},
+          },
+          runtimeProfiles: {
+            default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          },
+          agents: {
+            analyst: { runtimeProfile: 'default' },
+          },
+          teams: {
+            ops: { agents: ['analyst'] },
+          },
+        },
+        now: () => new Date('2026-04-20T12:00:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'api-created team run completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+          sharedState: {
+            structuredOutputs: [
+              {
+                key: 'response.output',
+                value: [
+                  {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'output_text', text: 'api-created team run completed' }],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: 'ops',
+          objective: 'Produce one API-created team result.',
+          title: 'API team create',
+          promptAppend: 'Keep it brief.',
+          structuredContext: { source: 'http-test' },
+          responseFormat: 'markdown',
+          maxTurns: 2,
+        }),
+      });
+
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as {
+        object: string;
+        taskRunSpec: {
+          id: string;
+          teamId: string;
+          title: string;
+          trigger: string;
+          requestedBy: { kind: string; label: string };
+          context: { command: string };
+          overrides: { promptAppend: string; structuredContext: { source: string } };
+        };
+        execution: {
+          teamId: string;
+          teamRunId: string;
+          taskRunSpecId: string;
+          runtimeRunId: string;
+          runtimeSourceKind: string;
+          runtimeRunStatus: string;
+          finalOutputSummary: string | null;
+          sharedStateStatus: string;
+        };
+        links: {
+          teamInspection: string;
+          runtimeInspection: string;
+          responseReadback: string;
+        };
+      };
+
+      expect(created).toMatchObject({
+        object: 'team_run',
+        taskRunSpec: {
+          teamId: 'ops',
+          title: 'API team create',
+          trigger: 'api',
+          requestedBy: {
+            kind: 'api',
+            label: 'auracall api serve',
+          },
+          context: {
+            command: 'auracall api serve',
+          },
+          overrides: {
+            promptAppend: 'Keep it brief.',
+            structuredContext: { source: 'http-test' },
+          },
+        },
+        execution: {
+          teamId: 'ops',
+          taskRunSpecId: created.taskRunSpec.id,
+          teamRunId: expect.stringMatching(/^teamrun_ops_[a-zA-Z0-9_-]+$/),
+          runtimeRunId: created.execution.teamRunId,
+          runtimeSourceKind: 'team-run',
+          runtimeRunStatus: 'succeeded',
+          finalOutputSummary: 'api-created team run completed',
+          sharedStateStatus: 'succeeded',
+        },
+      });
+      expect(created.taskRunSpec.id).toMatch(/^taskrun_ops_[a-zA-Z0-9_-]+$/);
+      expect(created.links.teamInspection).toBe(
+        `http://127.0.0.1:${server.port}/v1/team-runs/inspect?teamRunId=${created.execution.teamRunId}`,
+      );
+      expect(created.links.runtimeInspection).toBe(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runtimeRunId=${created.execution.runtimeRunId}`,
+      );
+      expect(created.links.responseReadback).toBe(
+        `http://127.0.0.1:${server.port}/v1/responses/${created.execution.runtimeRunId}`,
+      );
+
+      const teamInspection = await fetch(created.links.teamInspection);
+      expect(teamInspection.status).toBe(200);
+      const teamInspectionPayload = (await teamInspection.json()) as {
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          taskRunSpecSummary: { id: string };
+          runtime: { runtimeRunId: string; runtimeRunStatus: string };
+        };
+      };
+      expect(teamInspectionPayload.inspection).toMatchObject({
+        resolvedBy: 'team-run-id',
+        queryId: created.execution.teamRunId,
+        taskRunSpecSummary: { id: created.taskRunSpec.id },
+        runtime: {
+          runtimeRunId: created.execution.runtimeRunId,
+          runtimeRunStatus: 'succeeded',
+        },
+      });
+
+      const runtimeInspection = await fetch(created.links.runtimeInspection);
+      expect(runtimeInspection.status).toBe(200);
+      const runtimeInspectionPayload = (await runtimeInspection.json()) as {
+        inspection: {
+          resolvedBy: string;
+          queryId: string;
+          queryRunId: string;
+          matchingRuntimeRunIds: string[];
+          runtime: { runId: string; teamRunId: string | null; runStatus: string };
+        };
+      };
+      expect(runtimeInspectionPayload.inspection).toMatchObject({
+        resolvedBy: 'runtime-run-id',
+        queryId: created.execution.runtimeRunId,
+        queryRunId: created.execution.runtimeRunId,
+        matchingRuntimeRunIds: [created.execution.runtimeRunId],
+        runtime: {
+          runId: created.execution.runtimeRunId,
+          teamRunId: created.execution.teamRunId,
+          runStatus: 'succeeded',
+        },
+      });
+
+      const readBack = await fetch(created.links.responseReadback);
+      expect(readBack.status).toBe(200);
+      const readBackPayload = (await readBack.json()) as {
+        id: string;
+        status: string;
+        output: Array<{ type: string; content?: Array<{ type: string; text: string }> }>;
+      };
+      expect(readBackPayload).toMatchObject({
+        id: created.execution.runtimeRunId,
+        status: 'completed',
+        output: [
+          {
+            type: 'message',
+            content: [{ type: 'output_text', text: 'api-created team run completed' }],
+          },
+        ],
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects invalid team-run create request bodies over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-invalid-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ teamId: 'ops' }),
+      });
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: { type: string; message: string } };
+      expect(payload.error.type).toBe('invalid_request_error');
+      expect(payload.error.message).toContain('objective');
+    } finally {
+      await server.close();
+    }
+  });
+
   it('rejects direct runtime runs on the team inspection runtime-run-id route', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-inspect-runtime-direct-'));
     cleanup.push(tmp);

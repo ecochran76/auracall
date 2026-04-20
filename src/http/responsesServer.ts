@@ -1,4 +1,5 @@
 import http from 'node:http';
+import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
@@ -10,6 +11,10 @@ import {
   TeamRunInspectionError,
   type TeamRunInspectionPayload,
 } from '../teams/inspection.js';
+import { createTeamRuntimeBridge, type TeamRuntimeBridge } from '../teams/runtimeBridge.js';
+import { buildBoundedTeamTaskRunSpec } from '../teams/taskRunSpecBuilder.js';
+import { buildTeamRunExecutionPayload, type TeamRunExecutionPayload } from '../teams/executionPayload.js';
+import type { TaskRunSpec } from '../teams/types.js';
 import type {
   ExecutionRequest,
   ExecutionRequestExtensionHints,
@@ -126,6 +131,17 @@ interface HttpTeamRunInspectionResponse {
   inspection: TeamRunInspectionPayload;
 }
 
+interface HttpTeamRunCreateResponse {
+  object: 'team_run';
+  taskRunSpec: TaskRunSpec;
+  execution: TeamRunExecutionPayload;
+  links: {
+    teamInspection: string;
+    runtimeInspection: string;
+    responseReadback: string;
+  };
+}
+
 interface HttpRuntimeRunInspectionResponse {
   object: 'runtime_run_inspection';
   inspection: RuntimeRunInspectionPayload;
@@ -145,6 +161,7 @@ interface HttpStatusResponse {
   routes: {
     status: string;
     recoveryDetailTemplate: string;
+    teamRunsCreate: string;
     teamRunInspection: string;
     runtimeRunInspection: string;
     models: string;
@@ -212,6 +229,7 @@ export async function createResponsesHttpServer(
   const runnerHeartbeatTtlMs = 15_000;
   let host: ExecutionServiceHost;
   let responsesService: ReturnType<typeof createExecutionResponsesService>;
+  let teamRuntimeBridge: TeamRuntimeBridge;
   const runnerState: HttpStatusResponse['runner'] = {
     id: null,
     hostId: null,
@@ -474,6 +492,64 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
+        const body = await readRequestBody(req);
+        const payload = TeamRunCreateRequestSchema.parse(JSON.parse(body || '{}'));
+        const teamId = payload.teamId.trim();
+        const nowIso = now().toISOString();
+        const suffix = createTeamRunIdSuffix();
+        const taskRunSpecId = `taskrun_${teamId}_${suffix}`;
+        const teamRunId = `teamrun_${teamId}_${suffix}`;
+        const taskRunSpec = buildBoundedTeamTaskRunSpec({
+          nowIso,
+          taskRunSpecId,
+          teamId,
+          objective: payload.objective,
+          title: payload.title,
+          promptAppend: payload.promptAppend,
+          structuredContext: payload.structuredContext,
+          responseFormat: payload.responseFormat,
+          maxTurns: payload.maxTurns,
+          localActionPolicy: payload.localActionPolicy,
+          context: {
+            command: 'auracall api serve',
+          },
+          requestedBy: {
+            kind: 'api',
+            label: 'auracall api serve',
+          },
+          trigger: 'api',
+        });
+        const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
+          config: configuredRuntimeConfig ?? {},
+          teamId,
+          runId: teamRunId,
+          createdAt: nowIso,
+          trigger: 'api',
+          requestedBy: 'auracall api serve',
+          taskRunSpec,
+        });
+        const execution = buildTeamRunExecutionPayload({
+          teamId,
+          bridgeResult,
+          taskRunSpec,
+        });
+        const address = server.address();
+        const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
+        sendJson(res, 200, {
+          object: 'team_run',
+          taskRunSpec,
+          execution,
+          links: createTeamRunCreateLinks({
+            host: boundHost,
+            port: boundPort,
+            teamRunId: execution.teamRunId,
+            runtimeRunId: execution.runtimeRunId,
+          }),
+        } satisfies HttpTeamRunCreateResponse);
+        return;
+      }
+
       if (req.method === 'POST' && url.pathname === '/v1/responses') {
         const body = await readRequestBody(req);
         const parsedBody = JSON.parse(body) as ExecutionRequest;
@@ -640,6 +716,11 @@ export async function createResponsesHttpServer(
           }
         : undefined,
     });
+  teamRuntimeBridge = createTeamRuntimeBridge({
+    control,
+    host,
+    now: () => now().toISOString(),
+  });
   responsesService = createExecutionResponsesService({
     control,
     now,
@@ -752,7 +833,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -900,6 +981,7 @@ function createHttpStatusResponse(input: {
     routes: {
       status: '/status',
       recoveryDetailTemplate: '/status/recovery/{run_id}',
+      teamRunsCreate: '/v1/team-runs',
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       runtimeRunInspection:
@@ -994,6 +1076,24 @@ function createStartupRecoveryLog(
 
   return parts.join(' ');
 }
+
+const TeamRunCreateRequestSchema = z.object({
+  teamId: z.string().min(1),
+  objective: z.string().min(1),
+  title: z.string().min(1).nullable().optional(),
+  promptAppend: z.string().min(1).nullable().optional(),
+  structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
+  responseFormat: z.enum(['text', 'markdown', 'json']).optional(),
+  maxTurns: z.number().int().positive().nullable().optional(),
+  localActionPolicy: z
+    .object({
+      allowedShellCommands: z.array(z.string().min(1)).optional(),
+      allowedCwdRoots: z.array(z.string().min(1)).optional(),
+      mode: z.enum(['allowed', 'approval-required']).optional(),
+    })
+    .nullable()
+    .optional(),
+});
 
 const StatusControlRequestSchema = z.union([
   z.object({
@@ -1128,6 +1228,24 @@ function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRunti
 
   return {
     probe: parsed.probe,
+  };
+}
+
+function createTeamRunIdSuffix(): string {
+  return randomUUID().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'run';
+}
+
+function createTeamRunCreateLinks(input: {
+  host: string;
+  port: number;
+  teamRunId: string;
+  runtimeRunId: string;
+}): HttpTeamRunCreateResponse['links'] {
+  const baseUrl = `http://${localProbeHost(input.host)}:${input.port}`;
+  return {
+    teamInspection: `${baseUrl}/v1/team-runs/inspect?teamRunId=${encodeURIComponent(input.teamRunId)}`,
+    runtimeInspection: `${baseUrl}/v1/runtime-runs/inspect?runtimeRunId=${encodeURIComponent(input.runtimeRunId)}`,
+    responseReadback: `${baseUrl}/v1/responses/${encodeURIComponent(input.runtimeRunId)}`,
   };
 }
 

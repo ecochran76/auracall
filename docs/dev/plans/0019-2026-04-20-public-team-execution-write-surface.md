@@ -1,6 +1,6 @@
 # Public Team Execution Write Surface | 0019-2026-04-20
 
-State: OPEN
+State: CLOSED
 Lane: P01
 
 ## Current State
@@ -25,6 +25,12 @@ Lane: P01
   - uses one local runner/host path
 - broader public team execution writes remain paused until this plan defines
   the first write contract and acceptance bar
+- implementation checkpoint:
+  - `POST /v1/team-runs` is live on the local development HTTP server
+  - the route constructs one bounded `TaskRunSpec` from request fields
+  - execution flows through the existing `TeamRuntimeBridge` and
+    server-owned `ExecutionServiceHost`
+  - arbitrary prebuilt `taskRunSpec` JSON remains deferred
 
 ## Scope
 
@@ -125,12 +131,12 @@ unless a concrete reason requires divergence:
 
 Drain behavior:
 
-- if background drain is enabled, the route may return after persistence with
-  `runtimeRunStatus = in_progress`
-- if background drain is disabled, the route may perform one bounded
-  synchronous host drain consistent with direct `/v1/responses`
-- the exact synchronous/asynchronous choice must be documented in the
-  implementation slice and covered by tests
+- the first implementation uses the existing bounded synchronous
+  `TeamRuntimeBridge.executeFromConfigTaskRunSpec(...)` drain path
+- the response returns after the bridge reaches its bounded final stored
+  runtime record or fails the run
+- this does not introduce a new background team worker, multi-runner
+  scheduler, or parallel execution path
 
 ## Surface Sequencing
 
@@ -146,22 +152,22 @@ Drain behavior:
 
 ## Acceptance Criteria
 
-- `POST /v1/team-runs` creates exactly one bounded `TaskRunSpec`
-- the route creates exactly one `TeamRun` bound to that `TaskRunSpec`
-- the route creates exactly one runtime run with `sourceKind = team-run`
-- the route response exposes the same core ids as CLI team execution:
+- [x] `POST /v1/team-runs` creates exactly one bounded `TaskRunSpec`
+- [x] the route creates exactly one `TeamRun` bound to that `TaskRunSpec`
+- [x] the route creates exactly one runtime run with `sourceKind = team-run`
+- [x] the route response exposes the same core ids as CLI team execution:
   - `taskRunSpecId`
   - `teamRunId`
   - `runtimeRunId`
-- existing read-only surfaces can inspect the created run:
+- [x] existing read-only surfaces can inspect the created run:
   - `GET /v1/team-runs/inspect`
   - `GET /v1/runtime-runs/inspect`
   - `GET /status/recovery/{run_id}`
-- no assignment intent is duplicated into `TeamRun` or route-only runtime
+- [x] no assignment intent is duplicated into `TeamRun` or route-only runtime
   metadata
-- direct `/v1/responses` behavior is unchanged
-- no MCP write surface is introduced in the first implementation slice
-- no multi-runner or parallel execution behavior is introduced
+- [x] direct `/v1/responses` behavior is unchanged
+- [x] no MCP write surface is introduced in the first implementation slice
+- [x] no multi-runner or parallel execution behavior is introduced
 
 ## Verification Target
 
@@ -179,10 +185,10 @@ Minimum implementation proof:
 
 ## Definition Of Done
 
-- the first HTTP team execution write surface is implemented or explicitly
+- [x] the first HTTP team execution write surface is implemented or explicitly
   deferred with a concrete blocker
-- the public write route reuses the existing task/team/runtime bridge
-- the readback/inspection chain remains deterministic
-- the MCP write surface remains deferred until the HTTP contract is stable
-- roadmap, runbook, testing docs, and user-facing local API docs are updated
+- [x] the public write route reuses the existing task/team/runtime bridge
+- [x] the readback/inspection chain remains deterministic
+- [x] the MCP write surface remains deferred until the HTTP contract is stable
+- [x] roadmap, runbook, testing docs, and user-facing local API docs are updated
   when the route implementation lands

@@ -1,3 +1,12 @@
+- 2026-04-20: Keep the implemented public team execution write on the same
+  route-neutral bounded contract as CLI team execution. In this repo,
+  `POST /v1/team-runs` constructs one validated bounded `TaskRunSpec` from
+  request fields, executes through `TeamRuntimeBridge` and the server-owned
+  `ExecutionServiceHost`, and returns deterministic ids/links for inspection
+  and response readback. Do not introduce route-only assignment vocabulary,
+  arbitrary prebuilt `taskRunSpec` JSON, MCP write parity, or
+  multi-runner/parallel execution in this first write slice.
+
 - 2026-04-20: Public team execution writes must reuse the existing
   task/team/runtime chain instead of inventing route-local execution state.
   - The durable rule for the next checkpoint is:

@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 import { createTeamRuntimeBridge, type TeamRuntimeBridge, type TeamRuntimeBridgeResult } from '../teams/runtimeBridge.js';
-import { createTaskRunSpec, type CreateTaskRunSpecInput } from '../teams/model.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
   inspectTeamRunLinkage,
@@ -13,6 +12,15 @@ import {
   type TeamRunReviewLedgerPayload,
 } from '../teams/reviewLedger.js';
 import type { TaskRunSpec } from '../teams/types.js';
+import {
+  buildBoundedTeamTaskRunSpec,
+  type TeamRunLocalActionPolicyInput,
+  type TeamRunResponseFormat,
+} from '../teams/taskRunSpecBuilder.js';
+import {
+  buildTeamRunExecutionPayload,
+  type TeamRunExecutionPayload,
+} from '../teams/executionPayload.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
@@ -25,13 +33,9 @@ import { createExecutionRunnerControl } from '../runtime/runnersControl.js';
 import type { ExecutionServiceHostDeps } from '../runtime/serviceHost.js';
 import { createExecutionServiceHost } from '../runtime/serviceHost.js';
 
-export type TeamRunCliResponseFormat = 'text' | 'markdown' | 'json';
+export type TeamRunCliResponseFormat = TeamRunResponseFormat;
 
-export interface TeamRunCliLocalActionPolicyInput {
-  allowedShellCommands?: string[];
-  allowedCwdRoots?: string[];
-  mode?: 'allowed' | 'approval-required';
-}
+export type TeamRunCliLocalActionPolicyInput = TeamRunLocalActionPolicyInput;
 
 export interface ExecuteConfiguredTeamRunInput {
   config: Record<string, unknown>;
@@ -49,20 +53,7 @@ export interface ExecuteConfiguredTeamRunInput {
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
 }
 
-export interface TeamRunCliExecutionPayload {
-  teamId: string;
-  taskRunSpecId: string;
-  teamRunId: string;
-  runtimeRunId: string;
-  runtimeSourceKind: TeamRuntimeBridgeResult['executionSummary']['runtimeSourceKind'];
-  runtimeRunStatus: TeamRuntimeBridgeResult['executionSummary']['runtimeRunStatus'];
-  runtimeUpdatedAt: string;
-  terminalStepCount: number;
-  finalOutputSummary: string | null;
-  sharedStateStatus: TeamRuntimeBridgeResult['finalRuntimeRecord']['bundle']['sharedState']['status'];
-  sharedStateNotes: string[];
-  stepSummaries: TeamRuntimeBridgeResult['executionSummary']['stepSummaries'];
-}
+export type TeamRunCliExecutionPayload = TeamRunExecutionPayload;
 
 export interface ExecuteConfiguredTeamRunResult {
   taskRunSpec: TaskRunSpec;
@@ -84,64 +75,17 @@ export function buildCliTaskRunSpec(input: {
   maxTurns?: number | null;
   localActionPolicy?: TeamRunCliLocalActionPolicyInput | null;
 }): TaskRunSpec {
-  const objective = input.objective.trim();
-  const title =
-    typeof input.title === 'string' && input.title.trim().length > 0
-      ? input.title.trim()
-      : objective.length <= 80
-        ? objective
-        : `${objective.slice(0, 77)}...`;
-  const responseFormat = input.responseFormat ?? 'markdown';
-
-  const taskRunSpecInput: CreateTaskRunSpecInput = {
-    id: input.taskRunSpecId,
-    teamId: input.teamId,
-    title,
-    objective,
-    createdAt: input.nowIso,
-    successCriteria: [`Complete the assignment objective: ${objective}`],
-    requestedOutputs: [
-      {
-        kind: 'final-response',
-        label: 'final-response',
-        format: responseFormat,
-        required: true,
-        destination: 'response-body',
-      },
-    ],
-    inputArtifacts: [],
+  return buildBoundedTeamTaskRunSpec({
+    ...input,
     context: {
       command: 'auracall teams run',
     },
-    overrides: {
-      promptAppend: input.promptAppend ?? null,
-      structuredContext: input.structuredContext ?? null,
-    },
-    turnPolicy:
-      typeof input.maxTurns === 'number' && Number.isFinite(input.maxTurns) && input.maxTurns > 0
-        ? { maxTurns: Math.trunc(input.maxTurns) }
-        : undefined,
-    localActionPolicy:
-      input.localActionPolicy &&
-      Array.isArray(input.localActionPolicy.allowedShellCommands) &&
-      input.localActionPolicy.allowedShellCommands.length > 0
-        ? {
-            mode: input.localActionPolicy.mode === 'approval-required' ? 'approval-required' : 'allowed',
-            complexityStage: 'bounded-command',
-            allowedActionKinds: ['shell'],
-            allowedCommands: input.localActionPolicy.allowedShellCommands,
-            allowedCwdRoots: input.localActionPolicy.allowedCwdRoots ?? [],
-            resultReportingMode: 'summary-only',
-          }
-        : undefined,
     requestedBy: {
       kind: 'cli',
       label: 'auracall teams run',
     },
     trigger: 'cli',
-  };
-
-  return createTaskRunSpec(taskRunSpecInput);
+  });
 }
 
 export function buildTeamRunCliExecutionPayload(input: {
@@ -149,25 +93,7 @@ export function buildTeamRunCliExecutionPayload(input: {
   bridgeResult: TeamRuntimeBridgeResult;
   taskRunSpec: TaskRunSpec;
 }): TeamRunCliExecutionPayload {
-  const finalStep = input.bridgeResult.finalRuntimeRecord.bundle.steps
-    .slice()
-    .sort((left, right) => left.order - right.order)
-    .at(-1);
-
-  return {
-    teamId: input.teamId,
-    taskRunSpecId: input.taskRunSpec.id,
-    teamRunId: input.bridgeResult.executionSummary.teamRunId,
-    runtimeRunId: input.bridgeResult.executionSummary.runtimeRunId,
-    runtimeSourceKind: input.bridgeResult.executionSummary.runtimeSourceKind,
-    runtimeRunStatus: input.bridgeResult.executionSummary.runtimeRunStatus,
-    runtimeUpdatedAt: input.bridgeResult.executionSummary.runtimeUpdatedAt,
-    terminalStepCount: input.bridgeResult.executionSummary.terminalStepCount,
-    finalOutputSummary: finalStep?.output?.summary ?? null,
-    sharedStateStatus: input.bridgeResult.finalRuntimeRecord.bundle.sharedState.status,
-    sharedStateNotes: input.bridgeResult.finalRuntimeRecord.bundle.sharedState.notes,
-    stepSummaries: input.bridgeResult.executionSummary.stepSummaries,
-  };
+  return buildTeamRunExecutionPayload(input);
 }
 
 export function formatTeamRunCliExecutionPayload(payload: TeamRunCliExecutionPayload): string {

@@ -165,9 +165,18 @@
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
+  - create bounded team run:
+    - `curl -s http://127.0.0.1:8080/v1/team-runs -H 'Content-Type: application/json' -d '{"teamId":"ops","objective":"Reply with one bounded team result.","responseFormat":"markdown","maxTurns":2}'`
+  - read/inspect the team run:
+    - copy `execution.teamRunId`, then run `curl "http://127.0.0.1:8080/v1/team-runs/inspect?teamRunId=<team_run_id>"`
+    - copy `execution.runtimeRunId`, then run `curl "http://127.0.0.1:8080/v1/runtime-runs/inspect?runtimeRunId=<runtime_run_id>"`
+    - response readback is also available at `GET /v1/responses/<runtime_run_id>`
   - current expected posture:
     - `POST /v1/responses` persists the run and the server-owned background
       drain advances it
+    - `POST /v1/team-runs` constructs one bounded `TaskRunSpec`, projects one
+      `TeamRun`, and executes one `sourceKind = team-run` runtime through the
+      same server-owned host/runner path
     - direct browser-backed `/v1/responses` runs now use the configured
       stored-step executor path instead of a no-op wrapper path
     - `api serve` now also persists one bounded local runner record and keeps

@@ -109,6 +109,7 @@ Terminology note:
   development through `auracall api serve`. Current endpoints are:
   - `GET /status`
   - `GET /status/recovery/{run_id}`
+  - `POST /v1/team-runs`
   - `GET /v1/team-runs/inspect`
   - `GET /v1/runtime-runs/inspect`
   - `GET /v1/models`
@@ -122,6 +123,17 @@ Terminology note:
     - poll `GET /v1/responses/{response_id}` for terminal readback
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
+  - `POST /v1/team-runs` creates one bounded task-backed team execution:
+    - request fields are `teamId`, `objective`, and optional `title`,
+      `promptAppend`, `structuredContext`, `responseFormat`, `maxTurns`, and
+      bounded `localActionPolicy`
+    - the server constructs exactly one `TaskRunSpec`, one `TeamRun`, and one
+      `sourceKind = team-run` runtime run through `TeamRuntimeBridge`
+    - the response envelope is `object = "team_run"` with `taskRunSpec`,
+      deterministic `execution` ids/status, and links for team inspection,
+      runtime inspection, and `/v1/responses/{runtimeRunId}` readback
+    - arbitrary prebuilt `taskRunSpec` JSON, MCP write parity, background
+      worker pools, and parallel team execution remain out of scope
   - startup recovery default source can be tuned with
     `--recover-runs-on-start-source <direct|team-run|all>`
     (`direct` by default)
