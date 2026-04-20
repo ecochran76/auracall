@@ -1,3 +1,16 @@
+- 2026-04-20: Keep serial drain queue ownership in the service host while
+  leaving HTTP timer/status behavior at the HTTP boundary.
+  - The durable rule for the current service/runner lane is:
+    - `ExecutionServiceHost` owns serializing `drainRunsUntilIdle` work for one
+      host instance
+    - HTTP servers own when to schedule a drain, whether background drain is
+      paused, and how that state is projected on `/status`
+    - direct response creation and background timers should delegate actual
+      queued drain execution through the service-host seam
+  - Do not move `/status` state or HTTP timer controls into runtime just to
+    centralize code; that would blur transport-specific operator behavior with
+    runner ownership.
+
 - 2026-04-20: Keep local runner lifecycle writes behind the service host, not
   scattered across HTTP wrappers.
   - The durable rule for the current service/runner lane is:

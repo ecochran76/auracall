@@ -227,7 +227,6 @@ export async function createResponsesHttpServer(
   const runnerHeartbeatTtlMs = 15_000;
   let host: ExecutionServiceHost;
   let responsesService: ReturnType<typeof createExecutionResponsesService>;
-  let drainQueue = Promise.resolve<DrainStoredExecutionRunsUntilIdleResult | null>(null);
   const runnerState: HttpStatusResponse['runner'] = {
     id: null,
     hostId: null,
@@ -255,27 +254,23 @@ export async function createResponsesHttpServer(
     if (backgroundDrainState.state !== 'disabled') {
       backgroundDrainState.state = 'scheduled';
     }
-    const nextDrain = drainQueue.catch(() => null).then(async () => {
-      if (backgroundDrainState.state !== 'disabled') {
-        backgroundDrainState.state = 'running';
-        backgroundDrainState.lastTrigger = drainOptions.trigger ?? null;
-        backgroundDrainState.lastStartedAt = now().toISOString();
-      }
-      try {
-        return await host.drainRunsUntilIdle({
-          runId: drainOptions.runId,
-          sourceKind: drainOptions.sourceKind,
-          maxRuns: drainOptions.maxRuns,
-        });
-      } finally {
+    return host.drainRunsUntilIdleQueued({
+      runId: drainOptions.runId,
+      sourceKind: drainOptions.sourceKind,
+      maxRuns: drainOptions.maxRuns,
+      onStart: () => {
         if (backgroundDrainState.state !== 'disabled') {
-          backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
-          backgroundDrainState.lastCompletedAt = now().toISOString();
+          backgroundDrainState.state = 'running';
+          backgroundDrainState.lastTrigger = drainOptions.trigger ?? null;
+          backgroundDrainState.lastStartedAt = now().toISOString();
         }
+      },
+    }).finally(() => {
+      if (backgroundDrainState.state !== 'disabled') {
+        backgroundDrainState.state = closed ? 'disabled' : backgroundDrainPaused ? 'paused' : 'idle';
+        backgroundDrainState.lastCompletedAt = now().toISOString();
       }
     });
-    drainQueue = nextDrain.then((result) => result, () => null);
-    return nextDrain;
   };
   let backgroundDrainTimer: NodeJS.Timeout | null = null;
   let backgroundDrainScheduled = false;
@@ -766,7 +761,7 @@ export async function createResponsesHttpServer(
       backgroundDrainPaused = false;
       backgroundDrainState.paused = false;
       backgroundDrainState.state = 'disabled';
-      await drainQueue.catch(() => null);
+      await host.waitForDrainQueue().catch(() => null);
       if (!deps.executionHost && runnerState.id) {
         const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions);
         if (staleRunner) {

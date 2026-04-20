@@ -36,6 +36,11 @@ Lane: P01
     and shutdown/stale marking
   - `api serve` still owns timer scheduling and status projection, but no
     longer writes runner lifecycle records directly
+- the second ownership increment is now live:
+  - `ExecutionServiceHost` owns serializing drain-until-idle calls for one
+    host instance
+  - `api serve` still owns background-drain timer scheduling, pause/resume
+    state, and `/status` projection
 - the deterministic response-shape enforcement checkpoint is now complete for
   the currently reproduced contract seams:
   - team-only assignment identity

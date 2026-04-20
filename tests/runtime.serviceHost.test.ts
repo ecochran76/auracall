@@ -595,6 +595,50 @@ describe('runtime service host', () => {
     expect(stored?.runner.eligibilityNote).toBe('test local runner');
   });
 
+  it('serializes queued drain-until-idle calls through the service-host seam', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_host_queue_1', '2026-04-20T09:05:00.000Z'));
+    await control.createRun(createDirectBundle('run_host_queue_2', '2026-04-20T09:05:01.000Z'));
+
+    let inFlight = 0;
+    let maxInFlight = 0;
+    const host = createExecutionServiceHost({
+      control,
+      ownerId: 'host:test-queued-drain',
+      now: () => '2026-04-20T09:06:00.000Z',
+      executeStoredRunStep: async () => {
+        inFlight += 1;
+        maxInFlight = Math.max(maxInFlight, inFlight);
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        inFlight -= 1;
+        return {
+          output: {
+            summary: 'queued drain completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const [first, second] = await Promise.all([
+      host.drainRunsUntilIdleQueued({ runId: 'run_host_queue_1', maxRuns: 1 }),
+      host.drainRunsUntilIdleQueued({ runId: 'run_host_queue_2', maxRuns: 1 }),
+    ]);
+
+    expect(first.executedRunIds).toEqual(['run_host_queue_1']);
+    expect(second.executedRunIds).toEqual(['run_host_queue_2']);
+    expect(maxInFlight).toBe(1);
+    expect(await host.waitForDrainQueue()).toMatchObject({
+      executedRunIds: ['run_host_queue_2'],
+    });
+  });
+
   it('drains one targeted stored direct run through the host seam', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);

@@ -595,3 +595,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - `pnpm run plans:audit`
   - `git diff --check`
+
+## Turn 22 | 2026-04-20
+
+- Active plan: `docs/dev/plans/0004-2026-04-14-team-service-execution.md`
+- Goal: continue the service/runner ownership lane by auditing background
+  drain scheduling and extracting only the runtime-owned part.
+- Decision:
+  - keep background-drain timers, pause/resume state, and `/status`
+    projection in `api serve`
+  - move serial drain queue ownership into `ExecutionServiceHost`
+  - do not create a public endpoint or widen team execution writes
+- Change:
+  - added `ExecutionServiceHost.drainRunsUntilIdleQueued(...)`
+  - added `ExecutionServiceHost.waitForDrainQueue()`
+  - rewired `api serve` to delegate queued drain execution to the service host
+- Verification target:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run plans:audit`
+  - `git diff --check`

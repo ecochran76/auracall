@@ -1,3 +1,19 @@
+## 2026-04-20 - Service-host drain queue ownership
+
+- Audited background-drain ownership after moving runner lifecycle writes into
+  `ExecutionServiceHost`.
+- Kept HTTP-specific responsibilities in `api serve`:
+  - timer scheduling
+  - pause/resume state
+  - `/status` projection
+- Moved serial drain queue ownership behind `ExecutionServiceHost`:
+  - `drainRunsUntilIdleQueued(...)`
+  - `waitForDrainQueue()`
+- Added service-host coverage proving queued drain calls serialize, and adjusted
+  HTTP coverage so concurrent response creation delegates through the queued
+  host seam.
+- No public endpoint, provider/browser, or multi-runner behavior changed.
+
 ## 2026-04-20 - Service-host runner lifecycle ownership
 
 - Landed the first service/runner ownership increment after roadmap pruning.

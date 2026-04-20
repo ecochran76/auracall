@@ -329,6 +329,10 @@ export interface DrainStoredExecutionRunsUntilIdleResult extends DrainStoredExec
   iterations: number;
 }
 
+export interface QueuedDrainStoredExecutionRunsUntilIdleOptions extends DrainStoredExecutionRunsUntilIdleOptions {
+  onStart?: () => void;
+}
+
 export interface ExecutionServiceHostDeps {
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
@@ -375,6 +379,10 @@ export interface ExecutionServiceHost {
   drainRunsUntilIdle(
     options?: DrainStoredExecutionRunsUntilIdleOptions,
   ): Promise<DrainStoredExecutionRunsUntilIdleResult>;
+  drainRunsUntilIdleQueued(
+    options?: QueuedDrainStoredExecutionRunsUntilIdleOptions,
+  ): Promise<DrainStoredExecutionRunsUntilIdleResult>;
+  waitForDrainQueue(): Promise<DrainStoredExecutionRunsUntilIdleResult | null>;
   summarizeRecoveryState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostRecoverySummary>;
   summarizeLocalClaimState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostLocalClaimSummary>;
   readRecoveryDetail(runId: string): Promise<ExecutionServiceHostRecoveryDetail | null>;
@@ -419,6 +427,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         : executeBuiltInLocalActionRequest(context, localActionExecutionPolicy));
   const createRunAffinity = deps.createRunAffinity ?? (() => null);
   let leaseSequence = 0;
+  let drainQueue = Promise.resolve<DrainStoredExecutionRunsUntilIdleResult | null>(null);
 
   return {
     async registerLocalRunner(options: ExecutionServiceHostRunnerLifecycleOptions) {
@@ -1507,6 +1516,20 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         drained: drained.filter((entry): entry is DrainedStoredExecutionRunResult => entry !== null),
         iterations,
       };
+    },
+
+    async drainRunsUntilIdleQueued(options: QueuedDrainStoredExecutionRunsUntilIdleOptions = {}) {
+      const { onStart, ...drainOptions } = options;
+      const nextDrain = drainQueue.catch(() => null).then(() => {
+        onStart?.();
+        return this.drainRunsUntilIdle(drainOptions);
+      });
+      drainQueue = nextDrain.then((result) => result, () => null);
+      return nextDrain;
+    },
+
+    async waitForDrainQueue() {
+      return drainQueue;
     },
   };
 }

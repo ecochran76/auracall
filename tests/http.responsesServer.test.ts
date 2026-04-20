@@ -580,14 +580,12 @@ describe('http responses adapter', () => {
     }
   });
 
-  it('serializes server-owned drain calls across concurrent response creates', async () => {
+  it('delegates concurrent response creates through the queued host drain seam', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-responses-'));
     cleanup.push(homeDir);
     setAuracallHomeDirOverrideForTest(homeDir);
 
     const drainRunIds: string[] = [];
-    let inFlight = 0;
-    let maxInFlight = 0;
     let responseSequence = 0;
     const server = await createResponsesHttpServer(
       { host: '127.0.0.1', port: 0 },
@@ -727,14 +725,15 @@ describe('http responses adapter', () => {
               },
             };
           },
-          async drainRunsUntilIdle(options = {}) {
-            inFlight += 1;
-            maxInFlight = Math.max(maxInFlight, inFlight);
+          async drainRunsUntilIdle() {
+            throw new Error('unexpected unqueued drain call');
+          },
+          async drainRunsUntilIdleQueued(options = {}) {
+            options.onStart?.();
             if (options.runId) {
               drainRunIds.push(options.runId);
             }
             await delay(25);
-            inFlight -= 1;
             return {
               ownerId: 'host:test-serialized-drain',
               expiredLeaseRunIds: [],
@@ -742,6 +741,9 @@ describe('http responses adapter', () => {
               drained: [],
               iterations: 1,
             };
+          },
+          async waitForDrainQueue() {
+            return null;
           },
         },
       },
@@ -769,7 +771,6 @@ describe('http responses adapter', () => {
 
       expect(firstResponse.status).toBe(200);
       expect(secondResponse.status).toBe(200);
-      expect(maxInFlight).toBe(1);
       expect([...drainRunIds].sort()).toEqual(['resp_serial_1', 'resp_serial_2']);
 
       const firstPayload = (await firstResponse.json()) as Record<string, unknown>;
@@ -933,6 +934,13 @@ describe('http responses adapter', () => {
               drained: [],
               iterations: 1,
             };
+          },
+          async drainRunsUntilIdleQueued(options = {}) {
+            options.onStart?.();
+            return this.drainRunsUntilIdle(options);
+          },
+          async waitForDrainQueue() {
+            return null;
           },
         },
       },
@@ -1415,6 +1423,13 @@ describe('http responses adapter', () => {
               drained: [],
               iterations: 1,
             };
+          },
+          async drainRunsUntilIdleQueued(options = {}) {
+            options.onStart?.();
+            return this.drainRunsUntilIdle(options);
+          },
+          async waitForDrainQueue() {
+            return null;
           },
         },
       },
