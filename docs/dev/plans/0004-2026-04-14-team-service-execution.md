@@ -27,6 +27,13 @@ Lane: P01
   - `/status/recovery/{run_id}`
   - aggregate `/status?recovery=true`
 - broader public team execution writes remain paused on HTTP/MCP surfaces
+- the deterministic response-shape enforcement checkpoint is now complete for
+  the currently reproduced contract seams:
+  - team-only assignment identity
+  - local-action request aliases
+  - handoff transfer payloads
+  - provider/local-host artifact refs
+  - persisted `response.output` item projection
 
 # Team Service Execution Plan
 
@@ -325,6 +332,59 @@ Do not create:
 - one artifact contract for agent steps
 - another artifact contract for host actions
 - a third transport-only artifact mirror in route handlers
+
+### Response-shape checkpoint | 2026-04-20
+
+The current normalization pass should stop here unless a new reproduced
+contract mismatch appears. The deterministic execution/readback envelope now
+has enough enforcement for routing, error handling, local actions, artifacts,
+handoffs, and basic response readback.
+
+Enforced contract:
+
+- `output[]`
+  - visible result timeline only
+  - item-normalized `message` / `artifact` siblings
+  - malformed persisted siblings are dropped without discarding valid siblings
+- `metadata.executionSummary`
+  - bounded machine-handling home for status, failure, requested-output,
+    local-action, input-artifact, handoff-transfer, provider-usage,
+    operator-control, cancellation, and orchestration-timeline summaries
+- assignment identity
+  - `taskRunSpecId` and `taskRunSpecSummary` remain team-run-only readback
+    fields
+- local-action requests
+  - canonicalized before policy evaluation and persistence
+  - bounded aliases are accepted only at ingress
+- handoff transfer payloads
+  - normalized before downstream prompt injection or readback counts
+- artifact refs
+  - provider- and host-produced refs use the same `id` / `kind` / `path` /
+    `uri` / `title` shape before storage/readback projection
+
+Intentionally open:
+
+- local-action `resultPayload`
+  - remains a bounded `Record<string, unknown>` because host tools need
+    action-specific result detail
+  - do not invent a second host-result schema unless a concrete consumer needs
+    one
+- structured output values other than `response.output`
+  - remain key-scoped payloads owned by their producer/consumer pair
+  - normalize a key only when it becomes a cross-surface routing/readback
+    contract
+- provider-owned evidence
+  - browser/API adapters may preserve provider-specific diagnostics under
+    bounded structured data
+  - adapters must not redefine the route-neutral readback envelope
+
+Next implementation work in this lane should start only from one of:
+
+- a reproduced stored-record or readback mismatch
+- a new public routing/error-handling requirement
+- a local-host handoff requirement that cannot be expressed through existing
+  artifact refs, handoff transfers, local-action summaries, or structured
+  output keys
 
 ## Shared run state
 

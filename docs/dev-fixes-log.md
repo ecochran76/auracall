@@ -13125,6 +13125,13 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - canonical fallback summary when one is omitted
   Do not let raw producer field drift become stored contract just because the
   request arrived through `step.output.structuredData.localActionRequests`.
+- 2026-04-20: Stop the response-shape normalization lane at the written
+  checkpoint unless there is a new reproduced mismatch. In this repo,
+  `output[]`, `metadata.executionSummary`, team-only assignment identity,
+  local-action requests, handoff transfers, and artifact refs now have explicit
+  deterministic enforcement; local-action `resultPayload`, non-`response.output`
+  structured outputs, and provider-owned evidence should remain intentionally
+  open until a concrete routing/readback consumer requires more shape.
 - 2026-04-20: Normalize persisted `response.output` item by item. In this
   repo, one malformed stored output item should not discard the whole visible
   response timeline or force readback to fall back to artifact-derived output;

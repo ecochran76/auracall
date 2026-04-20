@@ -1,3 +1,22 @@
+## 2026-04-20 - Response-shape enforcement checkpoint
+
+- Reassessed the active `0004` response-shape contract after the recent
+  normalization slices for:
+  - local-action request aliases
+  - handoff transfer payloads
+  - provider/local-host artifact refs
+  - persisted `response.output` items
+- Did not add another runtime normalization path in this slice.
+- Updated
+  [0004-2026-04-14-team-service-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0004-2026-04-14-team-service-execution.md)
+  with an explicit checkpoint that:
+  - records the enforced deterministic envelope for routing/error handling,
+    local actions, artifacts, handoffs, assignment identity, and readback
+  - keeps local-action `resultPayload`, non-`response.output` structured
+    outputs, and provider-owned evidence intentionally open
+  - requires a newly reproduced mismatch or new public routing requirement
+    before more implementation work in this normalization lane
+
 ## 2026-04-20 - Response output item normalization
 
 - Audited the structured response-output seam after artifact-ref ingress
