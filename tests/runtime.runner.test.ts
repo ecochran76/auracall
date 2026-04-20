@@ -1496,6 +1496,23 @@ describe('runtime runner', () => {
                 title: 'invalid shared artifact',
               },
             ],
+            structuredOutputs: [
+              {
+                key: 'response.output',
+                value: [
+                  {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'output_text', text: 'Normalized response output.' }],
+                  },
+                  {
+                    type: 'message',
+                    role: 'assistant',
+                    content: [{ type: 'bad_content', text: 'drop malformed item' }],
+                  },
+                ],
+              },
+            ],
           },
         }) as unknown as ExecuteStoredRunStepResult,
       executeLocalActionRequest: async () =>
@@ -1543,6 +1560,16 @@ describe('runtime runner', () => {
         uri: null,
       },
     ]);
+    expect(executed.bundle.sharedState.structuredOutputs).toContainEqual({
+      key: 'response.output',
+      value: [
+        {
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'Normalized response output.' }],
+        },
+      ],
+    });
   });
 
   it('rejects local action requests when step policy forbids host actions', async () => {

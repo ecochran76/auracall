@@ -1,3 +1,25 @@
+## 2026-04-20 - Response output item normalization
+
+- Audited the structured response-output seam after artifact-ref ingress
+  normalization and found an all-or-nothing readback mismatch:
+  - persisted `sharedState.structuredOutputs` can carry a `response.output`
+    value with mixed valid and malformed items
+  - readback previously parsed the whole array at once, so one malformed item
+    discarded the full visible response timeline and fell back to
+    artifact-derived output
+- Added
+  [src/runtime/responseOutput.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responseOutput.ts)
+  as the shared normalizer for deterministic response-output items and
+  response-output structured outputs.
+- Rewired:
+  - [src/runtime/responsesService.ts](/home/ecochran76/workspace.local/oracle/src/runtime/responsesService.ts)
+  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+- Added focused coverage proving malformed `response.output` siblings are
+  ignored while valid `message` / `artifact` siblings remain visible in order
+  through service and HTTP readback.
+- Updated the active `0004` authority so `output[]` readback explicitly stays
+  item-normalized instead of all-or-nothing.
+
 ## 2026-04-20 - Runtime artifact-ref ingress normalization
 
 - Audited the artifact-reference seam after handoff transfer normalization and

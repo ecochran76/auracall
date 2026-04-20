@@ -13125,6 +13125,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - canonical fallback summary when one is omitted
   Do not let raw producer field drift become stored contract just because the
   request arrived through `step.output.structuredData.localActionRequests`.
+- 2026-04-20: Normalize persisted `response.output` item by item. In this
+  repo, one malformed stored output item should not discard the whole visible
+  response timeline or force readback to fall back to artifact-derived output;
+  valid `message` / `artifact` siblings should remain visible in order while
+  malformed siblings are ignored.
 - 2026-04-20: Normalize runtime artifact refs at provider and local-host
   ingress. In this repo, `executeStep` and `executeLocalActionRequest`
   producers may emit durable artifacts, but those refs must enter storage only

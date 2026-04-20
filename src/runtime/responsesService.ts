@@ -12,7 +12,7 @@ import {
   createExecutionResponseArtifact,
   createExecutionResponseFromRunRecord,
 } from './apiModel.js';
-import { ExecutionResponseOutputItemSchema } from './apiSchema.js';
+import { normalizeExecutionResponseOutputItems } from './responseOutput.js';
 import type {
   ExecutionRequest,
   ExecutionResponse,
@@ -35,8 +35,6 @@ import { createExecutionServiceHost } from './serviceHost.js';
 import type { ExecutionServiceHost } from './serviceHost.js';
 import type { LocalActionExecutionPolicy } from './localActions.js';
 import type { ExecutionRunRecordBundle, ExecutionRunServiceId } from './types.js';
-
-const StructuredResponseOutputSchema = ExecutionResponseOutputItemSchema.array();
 
 export interface ExecutionResponsesServiceDeps {
   control?: ExecutionRuntimeControlContract;
@@ -250,8 +248,8 @@ function createDirectExecutionBundle(input: {
 function getStoredResponseOutput(bundle: ExecutionRunRecordBundle): ExecutionResponseOutputItem[] {
   const structured = bundle.sharedState.structuredOutputs.find((entry) => entry.key === 'response.output');
   if (structured) {
-    const parsed = StructuredResponseOutputSchema.safeParse(structured.value);
-    if (parsed.success) return parsed.data;
+    const output = normalizeExecutionResponseOutputItems(structured.value);
+    if (output.length > 0) return output;
   }
 
   return bundle.sharedState.artifacts.map((artifact) =>

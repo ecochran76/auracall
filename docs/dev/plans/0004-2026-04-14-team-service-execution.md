@@ -237,6 +237,10 @@ Rule:
   - malformed artifact-ref entries should not satisfy artifact-output
     requirements, poison stored run bundles, or create a second host-only
     artifact shape
+- persisted `response.output` structured outputs must be normalized item by
+  item before storage/readback projection
+  - malformed output items should be ignored rather than causing the whole
+    visible response timeline to fall back to artifact-only output
 
 ### Readback envelope
 
@@ -249,6 +253,8 @@ Current stable split:
   - ordered user-visible result timeline
   - `message` items for assistant prose
   - sibling `artifact` items for durable non-text outputs
+  - malformed persisted output items are ignored while valid sibling items
+    remain visible in order
 - `metadata.executionSummary`
   - canonical machine-handling summary
   - stable home for:

@@ -1854,6 +1854,12 @@ describe('runtime responses service', () => {
                   content: [{ type: 'output_text', text: 'I created a plan and a canvas.' }],
                 },
                 {
+                  type: 'message',
+                  role: 'assistant',
+                  content: [{ type: 'not_output_text', text: 'drop malformed content part' }],
+                },
+                'drop malformed output item',
+                {
                   type: 'artifact',
                   id: 'art_seeded_1',
                   artifact_type: 'canvas',

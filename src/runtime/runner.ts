@@ -5,6 +5,7 @@ import { ExecutionRunRecordBundleSchema } from './schema.js';
 import { createExecutionRunRecordStore, type ExecutionRunRecordStore, type ExecutionRunStoredRecord } from './store.js';
 import { getActiveExecutionRunLease } from './contract.js';
 import { normalizeTeamRunArtifactRefs } from './artifactRef.js';
+import { normalizeRuntimeStructuredOutputs } from './responseOutput.js';
 import { normalizeTaskTransfer, type NormalizedTaskTransfer } from './taskTransfer.js';
 import type { TeamRunStructuredOutput } from '../teams/types.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
@@ -611,7 +612,10 @@ export function succeedExecutionRunStep(input: {
     sharedStateAppender: (sharedState) => ({
       ...sharedState,
       artifacts: [...sharedState.artifacts, ...normalizeTeamRunArtifactRefs(input.sharedState?.artifacts)],
-      structuredOutputs: [...sharedState.structuredOutputs, ...(input.sharedState?.structuredOutputs ?? [])],
+      structuredOutputs: [
+        ...sharedState.structuredOutputs,
+        ...normalizeRuntimeStructuredOutputs(input.sharedState?.structuredOutputs),
+      ],
       notes: [...sharedState.notes, ...(input.sharedState?.notes ?? [])],
     }),
   });
@@ -691,7 +695,10 @@ export function failExecutionRunStep(input: {
     sharedStateAppender: (sharedState) => ({
       ...sharedState,
       artifacts: [...sharedState.artifacts, ...normalizeTeamRunArtifactRefs(input.sharedState?.artifacts)],
-      structuredOutputs: [...sharedState.structuredOutputs, ...(input.sharedState?.structuredOutputs ?? [])],
+      structuredOutputs: [
+        ...sharedState.structuredOutputs,
+        ...normalizeRuntimeStructuredOutputs(input.sharedState?.structuredOutputs),
+      ],
       notes: [...sharedState.notes, ...(input.sharedState?.notes ?? [])],
     }),
   });
@@ -938,7 +945,10 @@ function mergeSharedStatePatch(
       ...normalizeTeamRunArtifactRefs(left?.artifacts),
       ...normalizeTeamRunArtifactRefs(right?.artifacts),
     ],
-    structuredOutputs: [...(left?.structuredOutputs ?? []), ...(right?.structuredOutputs ?? [])],
+    structuredOutputs: [
+      ...normalizeRuntimeStructuredOutputs(left?.structuredOutputs),
+      ...normalizeRuntimeStructuredOutputs(right?.structuredOutputs),
+    ],
     notes: [...(left?.notes ?? []), ...(right?.notes ?? [])],
   };
 }
@@ -1961,7 +1971,9 @@ async function resolveLocalActionRequests(input: {
     };
     resolvedRequests.push(resolvedRequest);
     sharedState.artifacts?.push(...normalizeTeamRunArtifactRefs(callbackResult.sharedState?.artifacts));
-    sharedState.structuredOutputs?.push(...(callbackResult.sharedState?.structuredOutputs ?? []));
+    sharedState.structuredOutputs?.push(
+      ...normalizeRuntimeStructuredOutputs(callbackResult.sharedState?.structuredOutputs),
+    );
     sharedState.notes?.push(...(callbackResult.sharedState?.notes ?? []));
     const resolutionEvent = createExecutionRunEvent({
       id: `${input.record.runId}:event:${request.id}:${resolvedRequest.status}`,
