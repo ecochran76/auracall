@@ -228,6 +228,10 @@ Rule:
   before policy evaluation and persistence
   - accept bounded producer aliases where needed
   - but do not let raw prompt/provider field drift become stored contract
+- handoff transfer payloads must also be normalized before runner context
+  injection or readback summarization
+  - malformed persisted transfer array entries should not inflate counts
+  - malformed transfer entries should not leak into downstream step prompts
 
 ### Readback envelope
 

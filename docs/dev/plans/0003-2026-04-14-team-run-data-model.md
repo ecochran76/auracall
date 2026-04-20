@@ -239,6 +239,10 @@ Default transport rules:
 - pass artifact refs by id/path/uri, not embedded file payloads, by default
 - use `structuredData` only for bounded machine-readable payloads that should
   survive serialization without a separate artifact object
+- normalize persisted handoff transfer payloads before later steps or readback
+  surfaces consume them
+  - invalid `requestedOutputs` / `inputArtifacts` entries should be ignored
+    rather than counted or injected into prompts
 - do not require open browser tabs, in-memory handles, or host-local hidden
   state to understand a handoff
 - do not create a host-only artifact mirror or a second handoff model for

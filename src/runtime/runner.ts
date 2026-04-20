@@ -4,6 +4,7 @@ import { createExecutionRunEvent } from './model.js';
 import { ExecutionRunRecordBundleSchema } from './schema.js';
 import { createExecutionRunRecordStore, type ExecutionRunRecordStore, type ExecutionRunStoredRecord } from './store.js';
 import { getActiveExecutionRunLease } from './contract.js';
+import { normalizeTaskTransfer, type NormalizedTaskTransfer } from './taskTransfer.js';
 import type { TeamRunStructuredOutput } from '../teams/types.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionRunEvent, ExecutionRunRecordBundle, ExecutionRunSharedState, ExecutionRunStep } from './types.js';
@@ -996,19 +997,15 @@ function buildConsumedTaskTransfersSharedStatePatch(input: {
           generatedAt: input.generatedAt,
           total: dependencyTaskTransfers.length,
           items: dependencyTaskTransfers.map((transfer) => {
-            const taskTransfer = isRecord(transfer.taskTransfer) ? transfer.taskTransfer : {};
-            const requestedOutputs = Array.isArray(taskTransfer.requestedOutputs)
-              ? taskTransfer.requestedOutputs
-              : [];
-            const inputArtifacts = Array.isArray(taskTransfer.inputArtifacts) ? taskTransfer.inputArtifacts : [];
+            const taskTransfer = normalizeTaskTransfer(transfer.taskTransfer);
             return {
               handoffId: typeof transfer.handoffId === 'string' ? transfer.handoffId : null,
               fromStepId: typeof transfer.fromStepId === 'string' ? transfer.fromStepId : null,
               fromAgentId: typeof transfer.fromAgentId === 'string' ? transfer.fromAgentId : null,
-              title: typeof taskTransfer.title === 'string' ? taskTransfer.title : null,
-              objective: typeof taskTransfer.objective === 'string' ? taskTransfer.objective : null,
-              requestedOutputCount: requestedOutputs.length,
-              inputArtifactCount: inputArtifacts.length,
+              title: taskTransfer?.title ?? null,
+              objective: taskTransfer?.objective ?? null,
+              requestedOutputCount: taskTransfer?.requestedOutputs.length ?? 0,
+              inputArtifactCount: taskTransfer?.inputArtifacts.length ?? 0,
             };
           }),
         },
@@ -1440,22 +1437,27 @@ function extractDependencyTaskTransfers(input: {
   fromStepId: string;
   fromAgentId: string | null;
   summary: string | null;
-  taskTransfer: Record<string, unknown>;
+  taskTransfer: NormalizedTaskTransfer;
 }> {
   return input.handoffs
-    .filter(
-      (handoff) =>
-        handoff.toStepId === input.step.id &&
-        input.step.dependsOnStepIds.includes(handoff.fromStepId) &&
-        isRecord(handoff.structuredData.taskTransfer),
-    )
-    .map((handoff) => ({
-      handoffId: handoff.id,
-      fromStepId: handoff.fromStepId,
-      fromAgentId: handoff.fromAgentId,
-      summary: handoff.summary,
-      taskTransfer: handoff.structuredData.taskTransfer as Record<string, unknown>,
-    }));
+    .flatMap((handoff) => {
+      if (handoff.toStepId !== input.step.id || !input.step.dependsOnStepIds.includes(handoff.fromStepId)) {
+        return [];
+      }
+      const taskTransfer = normalizeTaskTransfer(handoff.structuredData.taskTransfer);
+      if (!taskTransfer) {
+        return [];
+      }
+      return [
+        {
+          handoffId: handoff.id,
+          fromStepId: handoff.fromStepId,
+          fromAgentId: handoff.fromAgentId,
+          summary: handoff.summary,
+          taskTransfer,
+        },
+      ];
+    });
 }
 
 function formatDependencyTaskTransferPromptContext(
@@ -1464,7 +1466,7 @@ function formatDependencyTaskTransferPromptContext(
     fromStepId: string;
     fromAgentId: string | null;
     summary: string | null;
-    taskTransfer: Record<string, unknown>;
+    taskTransfer: NormalizedTaskTransfer;
   }>,
 ): string | null {
   if (dependencyTaskTransfers.length === 0) {
@@ -1473,27 +1475,17 @@ function formatDependencyTaskTransferPromptContext(
 
   const lines = ['Dependency task transfers:'];
   for (const transfer of dependencyTaskTransfers) {
-    const title =
-      typeof transfer.taskTransfer.title === 'string' ? transfer.taskTransfer.title : null;
-    const objective =
-      typeof transfer.taskTransfer.objective === 'string' ? transfer.taskTransfer.objective : null;
-    const requestedOutputs = Array.isArray(transfer.taskTransfer.requestedOutputs)
-      ? transfer.taskTransfer.requestedOutputs
-      : [];
-    const inputArtifacts = Array.isArray(transfer.taskTransfer.inputArtifacts)
-      ? transfer.taskTransfer.inputArtifacts
-      : [];
     lines.push(
-      `- ${transfer.fromStepId}${transfer.fromAgentId ? ` (${transfer.fromAgentId})` : ''}: ${title ?? transfer.summary ?? 'task transfer'}`,
+      `- ${transfer.fromStepId}${transfer.fromAgentId ? ` (${transfer.fromAgentId})` : ''}: ${transfer.taskTransfer.title ?? transfer.summary ?? 'task transfer'}`,
     );
-    if (objective) {
-      lines.push(`  objective: ${objective}`);
+    if (transfer.taskTransfer.objective) {
+      lines.push(`  objective: ${transfer.taskTransfer.objective}`);
     }
-    if (requestedOutputs.length > 0) {
-      lines.push(`  requestedOutputs: ${JSON.stringify(requestedOutputs)}`);
+    if (transfer.taskTransfer.requestedOutputs.length > 0) {
+      lines.push(`  requestedOutputs: ${JSON.stringify(transfer.taskTransfer.requestedOutputs)}`);
     }
-    if (inputArtifacts.length > 0) {
-      lines.push(`  inputArtifacts: ${JSON.stringify(inputArtifacts)}`);
+    if (transfer.taskTransfer.inputArtifacts.length > 0) {
+      lines.push(`  inputArtifacts: ${JSON.stringify(transfer.taskTransfer.inputArtifacts)}`);
     }
   }
   return lines.join('\n');

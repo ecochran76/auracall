@@ -1639,8 +1639,9 @@ describe('runtime runner', () => {
               taskTransfer: {
                 title: 'Carry dependency task context',
                 objective: 'Pass bounded requested-output and artifact refs to the next step.',
-                successCriteria: ['handoff consumed'],
+                successCriteria: ['handoff consumed', 42],
                 requestedOutputs: [
+                  'ignore malformed output',
                   {
                     label: 'handoff-summary',
                     kind: 'structured-report',
@@ -1649,6 +1650,7 @@ describe('runtime runner', () => {
                   },
                 ],
                 inputArtifacts: [
+                  123,
                   {
                     id: 'artifact-spec',
                     kind: 'file',
@@ -1758,8 +1760,9 @@ describe('runtime runner', () => {
         taskTransfer: {
           title: 'Carry dependency task context',
           objective: 'Pass bounded requested-output and artifact refs to the next step.',
-          successCriteria: ['handoff consumed'],
+          successCriteria: ['handoff consumed', 42],
           requestedOutputs: [
+            'ignore malformed output',
             {
               label: 'handoff-summary',
               kind: 'structured-report',
@@ -1768,6 +1771,7 @@ describe('runtime runner', () => {
             },
           ],
           inputArtifacts: [
+            123,
             {
               id: 'artifact-spec',
               kind: 'file',

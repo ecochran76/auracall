@@ -5,6 +5,7 @@ import {
   ExecutionResponseMessageOutputItemSchema,
   ExecutionResponseSchema,
 } from './apiSchema.js';
+import { normalizeTaskTransfer } from './taskTransfer.js';
 import type {
   ExecutionRequest,
   ExecutionResponse,
@@ -328,17 +329,20 @@ function readExecutionRunHandoffTransferSummary(
   }
 
   const items = runRecord.handoffs
-    .filter((handoff) => handoff.toStepId === selectedStep.id && isRecord(handoff.structuredData.taskTransfer))
-    .map((handoff) => {
-      const taskTransfer = handoff.structuredData.taskTransfer as Record<string, unknown>;
+    .filter((handoff) => handoff.toStepId === selectedStep.id)
+    .flatMap((handoff) => {
+      const taskTransfer = normalizeTaskTransfer(handoff.structuredData.taskTransfer);
+      if (!taskTransfer) {
+        return [];
+      }
       return {
         handoffId: handoff.id ?? null,
         fromStepId: handoff.fromStepId ?? null,
         fromAgentId: handoff.fromAgentId ?? null,
-        title: typeof taskTransfer.title === 'string' ? taskTransfer.title : null,
-        objective: typeof taskTransfer.objective === 'string' ? taskTransfer.objective : null,
-        requestedOutputCount: Array.isArray(taskTransfer.requestedOutputs) ? taskTransfer.requestedOutputs.length : 0,
-        inputArtifactCount: Array.isArray(taskTransfer.inputArtifacts) ? taskTransfer.inputArtifacts.length : 0,
+        title: taskTransfer.title,
+        objective: taskTransfer.objective,
+        requestedOutputCount: taskTransfer.requestedOutputs.length,
+        inputArtifactCount: taskTransfer.inputArtifacts.length,
       };
     });
 

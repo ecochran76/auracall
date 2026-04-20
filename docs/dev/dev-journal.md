@@ -1,3 +1,26 @@
+## 2026-04-19 - Handoff transfer payload normalization
+
+- Audited the adjacent handoff payload seam after local-action request
+  normalization and found repeated raw `taskTransfer` projection:
+  - runner context injection read persisted `handoff.structuredData.taskTransfer`
+    directly
+  - response readback and recovery-detail fallback summaries independently
+    recounted `requestedOutputs` / `inputArtifacts` from raw arrays
+- Added
+  [src/runtime/taskTransfer.ts](/home/ecochran76/workspace.local/oracle/src/runtime/taskTransfer.ts)
+  as the shared bounded normalizer for persisted task-transfer payloads.
+- Rewired:
+  - [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  - [src/runtime/apiModel.ts](/home/ecochran76/workspace.local/oracle/src/runtime/apiModel.ts)
+  - [src/runtime/serviceHost.ts](/home/ecochran76/workspace.local/oracle/src/runtime/serviceHost.ts)
+- Added focused regression coverage in
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  proving malformed persisted transfer entries are not injected into downstream
+  prompts or counted in consumed-transfer summaries.
+- Updated the `0003` / `0004` execution authorities so handoff transfer
+  payloads must be normalized before runner context injection or readback
+  summarization.
+
 ## 2026-04-19 - Runner local-action request normalization
 
 - Audited the next enforcement seam after the deterministic readback contract

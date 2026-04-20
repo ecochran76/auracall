@@ -13107,6 +13107,15 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   run that pauses for approval/human escalation should still be claimable by a
   later eligible active runner after local-action approval and resume, rather
   than staying implicitly pinned to the stale CLI runner.
+- 2026-04-19: Normalize persisted handoff transfer payloads before runner
+  context injection and readback summarization. In this repo, consumers should
+  not recount raw `handoff.structuredData.taskTransfer` arrays directly:
+  - malformed `requestedOutputs` entries should be ignored before prompt
+    injection or summary counts
+  - malformed `inputArtifacts` entries should be ignored before prompt
+    injection or summary counts
+  - response readback and recovery-detail fallback summaries should use the
+    same bounded projection as runner context injection
 - 2026-04-19: Normalize bounded local-action request aliases before runner
   policy evaluation and persistence. In this repo, the runtime runner should
   accept the same bounded local-action request vocabulary already tolerated by
