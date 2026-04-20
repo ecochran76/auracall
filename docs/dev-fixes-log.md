@@ -13125,6 +13125,12 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - canonical fallback summary when one is omitted
   Do not let raw producer field drift become stored contract just because the
   request arrived through `step.output.structuredData.localActionRequests`.
+- 2026-04-20: Normalize runtime artifact refs at provider and local-host
+  ingress. In this repo, `executeStep` and `executeLocalActionRequest`
+  producers may emit durable artifacts, but those refs must enter storage only
+  through the canonical `id` / `kind` / `path` / `uri` / `title` shape; malformed
+  artifact-ref entries should be dropped before persistence, requested-output
+  enforcement, or response readback can treat them as produced artifacts.
 - 2026-04-19: Do not leave equally eligible runner selection to storage order.
   In this repo, bounded claim-candidate ordering now has an explicit tie-break:
   claim status rank first, then fresher runner heartbeat, then runner id as a

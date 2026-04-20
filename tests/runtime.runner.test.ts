@@ -12,6 +12,7 @@ import {
   createExecutionRunStep,
 } from '../src/runtime/model.js';
 import { cancelExecutionRun, executeStoredExecutionRunOnce } from '../src/runtime/runner.js';
+import type { ExecuteLocalActionRequestResult, ExecuteStoredRunStepResult } from '../src/runtime/runner.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 
 function createDirectBundle(runId: string) {
@@ -1423,6 +1424,125 @@ describe('runtime runner', () => {
         cwd: process.cwd(),
       },
     });
+  });
+
+  it('normalizes provider and local-action artifact refs before persistence', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const bundle = createDirectBundle('run_artifact_ref_normalization');
+    bundle.steps[0] = {
+      ...bundle.steps[0]!,
+      input: {
+        ...bundle.steps[0]!.input,
+        structuredData: {
+          localActionPolicy: {
+            mode: 'allowed',
+            allowedActionKinds: ['shell'],
+          },
+        },
+      },
+    };
+    await control.createRun(bundle);
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId: 'run_artifact_ref_normalization',
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:03:45.000Z',
+      control,
+      executeStep: async () =>
+        ({
+          output: {
+            summary: 'request one shell action and emit artifact refs',
+            artifacts: [
+              123,
+              {
+                id: 'provider-artifact',
+                kind: 'file',
+                title: 'Provider artifact',
+                path: '/tmp/provider.txt',
+                uri: 42,
+              },
+              {
+                id: 'missing-kind',
+                title: 'invalid artifact',
+              },
+            ],
+            structuredData: {
+              localActionRequests: [
+                {
+                  kind: 'shell',
+                  summary: 'Run the focused verification command.',
+                  command: 'pnpm',
+                  args: ['vitest', 'run'],
+                },
+              ],
+            },
+            notes: [],
+          },
+          sharedState: {
+            artifacts: [
+              {
+                id: 'provider-shared-artifact',
+                kind: 'bundle',
+                title: 'Provider shared artifact',
+                path: '/tmp/provider.zip',
+                uri: null,
+              },
+              {
+                kind: 'missing-id',
+                title: 'invalid shared artifact',
+              },
+            ],
+          },
+        }) as unknown as ExecuteStoredRunStepResult,
+      executeLocalActionRequest: async () =>
+        ({
+          status: 'executed',
+          summary: 'executed shell',
+          payload: { exitCode: 0 },
+          sharedState: {
+            artifacts: [
+              {
+                id: 'host-artifact',
+                kind: 'file',
+                title: 'Host artifact',
+                path: '/tmp/host.txt',
+                uri: null,
+              },
+              'invalid-host-artifact',
+            ],
+          },
+        }) as unknown as ExecuteLocalActionRequestResult,
+    });
+
+    expect(executed.bundle.steps[0]?.output?.artifacts).toEqual([
+      {
+        id: 'provider-artifact',
+        kind: 'file',
+        title: 'Provider artifact',
+        path: '/tmp/provider.txt',
+        uri: null,
+      },
+    ]);
+    expect(executed.bundle.sharedState.artifacts).toEqual([
+      {
+        id: 'provider-shared-artifact',
+        kind: 'bundle',
+        title: 'Provider shared artifact',
+        path: '/tmp/provider.zip',
+        uri: null,
+      },
+      {
+        id: 'host-artifact',
+        kind: 'file',
+        title: 'Host artifact',
+        path: '/tmp/host.txt',
+        uri: null,
+      },
+    ]);
   });
 
   it('rejects local action requests when step policy forbids host actions', async () => {

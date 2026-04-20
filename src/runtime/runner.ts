@@ -4,6 +4,7 @@ import { createExecutionRunEvent } from './model.js';
 import { ExecutionRunRecordBundleSchema } from './schema.js';
 import { createExecutionRunRecordStore, type ExecutionRunRecordStore, type ExecutionRunStoredRecord } from './store.js';
 import { getActiveExecutionRunLease } from './contract.js';
+import { normalizeTeamRunArtifactRefs } from './artifactRef.js';
 import { normalizeTaskTransfer, type NormalizedTaskTransfer } from './taskTransfer.js';
 import type { TeamRunStructuredOutput } from '../teams/types.js';
 import type { ExecutionRuntimeControlContract } from './contract.js';
@@ -249,12 +250,12 @@ export async function executeStoredExecutionRunOnce(
           notes: [],
         },
       };
-    const output = result.output ?? {
+    const output = normalizeExecutionRunStepOutput(result.output ?? {
       summary: 'bounded local runner pass completed',
       artifacts: [],
       structuredData: {},
       notes: [],
-    };
+    });
 
     await leaseHeartbeat.stop();
     currentRecord = (await control.readRun(options.runId)) ?? currentRecord;
@@ -609,7 +610,7 @@ export function succeedExecutionRunStep(input: {
         : candidate,
     sharedStateAppender: (sharedState) => ({
       ...sharedState,
-      artifacts: [...sharedState.artifacts, ...(input.sharedState?.artifacts ?? [])],
+      artifacts: [...sharedState.artifacts, ...normalizeTeamRunArtifactRefs(input.sharedState?.artifacts)],
       structuredOutputs: [...sharedState.structuredOutputs, ...(input.sharedState?.structuredOutputs ?? [])],
       notes: [...sharedState.notes, ...(input.sharedState?.notes ?? [])],
     }),
@@ -689,7 +690,7 @@ export function failExecutionRunStep(input: {
         : candidate,
     sharedStateAppender: (sharedState) => ({
       ...sharedState,
-      artifacts: [...sharedState.artifacts, ...(input.sharedState?.artifacts ?? [])],
+      artifacts: [...sharedState.artifacts, ...normalizeTeamRunArtifactRefs(input.sharedState?.artifacts)],
       structuredOutputs: [...sharedState.structuredOutputs, ...(input.sharedState?.structuredOutputs ?? [])],
       notes: [...sharedState.notes, ...(input.sharedState?.notes ?? [])],
     }),
@@ -933,9 +934,21 @@ function mergeSharedStatePatch(
 ): Partial<Pick<ExecutionRunSharedState, 'artifacts' | 'structuredOutputs' | 'notes'>> | undefined {
   if (!left && !right) return undefined;
   return {
-    artifacts: [...(left?.artifacts ?? []), ...(right?.artifacts ?? [])],
+    artifacts: [
+      ...normalizeTeamRunArtifactRefs(left?.artifacts),
+      ...normalizeTeamRunArtifactRefs(right?.artifacts),
+    ],
     structuredOutputs: [...(left?.structuredOutputs ?? []), ...(right?.structuredOutputs ?? [])],
     notes: [...(left?.notes ?? []), ...(right?.notes ?? [])],
+  };
+}
+
+function normalizeExecutionRunStepOutput(
+  output: NonNullable<ExecutionRunStep['output']>,
+): NonNullable<ExecutionRunStep['output']> {
+  return {
+    ...output,
+    artifacts: normalizeTeamRunArtifactRefs(output.artifacts),
   };
 }
 
@@ -1947,7 +1960,7 @@ async function resolveLocalActionRequests(input: {
       notes: [...request.notes, ...(callbackResult.notes ?? [])],
     };
     resolvedRequests.push(resolvedRequest);
-    sharedState.artifacts?.push(...(callbackResult.sharedState?.artifacts ?? []));
+    sharedState.artifacts?.push(...normalizeTeamRunArtifactRefs(callbackResult.sharedState?.artifacts));
     sharedState.structuredOutputs?.push(...(callbackResult.sharedState?.structuredOutputs ?? []));
     sharedState.notes?.push(...(callbackResult.sharedState?.notes ?? []));
     const resolutionEvent = createExecutionRunEvent({

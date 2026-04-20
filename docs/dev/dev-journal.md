@@ -1,3 +1,30 @@
+## 2026-04-20 - Runtime artifact-ref ingress normalization
+
+- Audited the artifact-reference seam after handoff transfer normalization and
+  found a real host/provider ingress mismatch:
+  - `executeStep` could return `output.artifacts` or `sharedState.artifacts`
+    with raw provider-shaped entries
+  - `executeLocalActionRequest` could return host-produced
+    `sharedState.artifacts` with the same raw shape
+  - the runner appended those refs directly and relied on full bundle schema
+    validation to fail late instead of dropping malformed entries at ingress
+- Added
+  [src/runtime/artifactRef.ts](/home/ecochran76/workspace.local/oracle/src/runtime/artifactRef.ts)
+  as the shared bounded artifact-ref normalizer for runtime ingress.
+- Rewired
+  [src/runtime/runner.ts](/home/ecochran76/workspace.local/oracle/src/runtime/runner.ts)
+  so provider output artifacts, provider shared-state artifacts, and
+  local-action shared-state artifacts are normalized before persistence and
+  requested-output enforcement.
+- Added focused regression coverage in
+  [tests/runtime.runner.test.ts](/home/ecochran76/workspace.local/oracle/tests/runtime.runner.test.ts)
+  proving malformed provider/host artifact refs are ignored while valid refs
+  persist in the same canonical `id` / `kind` / `path` / `uri` / `title`
+  shape.
+- Updated the `0003` / `0004` execution authorities so host-produced artifacts
+  explicitly use the same normalized artifact-ref contract as provider-produced
+  artifacts.
+
 ## 2026-04-19 - Handoff transfer payload normalization
 
 - Audited the adjacent handoff payload seam after local-action request

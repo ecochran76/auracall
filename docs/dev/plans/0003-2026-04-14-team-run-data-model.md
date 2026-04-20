@@ -239,6 +239,11 @@ Default transport rules:
 - pass artifact refs by id/path/uri, not embedded file payloads, by default
 - use `structuredData` only for bounded machine-readable payloads that should
   survive serialization without a separate artifact object
+- normalize provider- and host-produced artifact refs at runtime ingress before
+  storing or projecting them
+  - invalid artifact-ref entries should be ignored rather than persisted,
+    counted as produced artifacts, or allowed to fail unrelated local-action
+    resolution
 - normalize persisted handoff transfer payloads before later steps or readback
   surfaces consume them
   - invalid `requestedOutputs` / `inputArtifacts` entries should be ignored

@@ -232,6 +232,11 @@ Rule:
   injection or readback summarization
   - malformed persisted transfer array entries should not inflate counts
   - malformed transfer entries should not leak into downstream step prompts
+- provider- and local-host-produced artifact refs must be normalized before
+  persistence or readback projection
+  - malformed artifact-ref entries should not satisfy artifact-output
+    requirements, poison stored run bundles, or create a second host-only
+    artifact shape
 
 ### Readback envelope
 
@@ -303,6 +308,8 @@ That means:
 
 - local actions consume artifact refs, not a second host-only payload model
 - local actions may emit durable artifacts through the same run envelope
+- host-produced artifact refs are normalized through the same `id` / `kind` /
+  `path` / `uri` / `title` contract as provider-produced refs before storage
 - host-produced artifacts should be handoff-safe to later agent steps
 - agent-to-host and host-to-agent exchange should reuse the same artifact ids
   and bounded structured payload model
