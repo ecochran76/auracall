@@ -572,3 +572,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run plans:audit`
   - `pnpm exec tsc -p tsconfig.json --noEmit`
   - `git diff --check`
+
+## Turn 21 | 2026-04-20
+
+- Active plan: `docs/dev/plans/0004-2026-04-14-team-service-execution.md`
+- Goal: land the smallest service/runner ownership increment after roadmap
+  pruning without widening public team execution writes or multi-runner scope.
+- Change:
+  - `ExecutionServiceHost` now owns local runner lifecycle writes:
+    - register existing-or-new local runner
+    - heartbeat the local runner
+    - mark the local runner stale on shutdown
+  - `api serve` still owns timers, HTTP status projection, and server shutdown
+    ordering, but delegates runner lifecycle mutations to the service host.
+- Scope:
+  - no public endpoint changes
+  - no provider/browser behavior changes
+  - no multi-runner expansion
+- Verification target:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts`
+  - `pnpm vitest run tests/http.responsesServer.test.ts`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `pnpm run plans:audit`
+  - `git diff --check`

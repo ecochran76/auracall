@@ -1,3 +1,16 @@
+## 2026-04-20 - Service-host runner lifecycle ownership
+
+- Landed the first service/runner ownership increment after roadmap pruning.
+- Moved local runner lifecycle writes behind `ExecutionServiceHost`:
+  - local runner registration
+  - heartbeat refresh
+  - shutdown/stale marking
+- Rewired `api serve` so it still owns HTTP timers and status projection, but
+  delegates runner lifecycle mutations to the service host.
+- Added focused service-host lifecycle coverage and kept existing HTTP server
+  behavior covered by the responses-server suite.
+- No public endpoint, provider/browser, or multi-runner behavior changed.
+
 ## 2026-04-20 - Roadmap execution-board pruning
 
 - Pruned the execution board after the 360 review so the repo has exactly one

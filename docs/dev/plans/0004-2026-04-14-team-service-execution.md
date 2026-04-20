@@ -30,6 +30,12 @@ Lane: P01
   - `/status/recovery/{run_id}`
   - aggregate `/status?recovery=true`
 - broader public team execution writes remain paused on HTTP/MCP surfaces
+- the first service/runner ownership increment beyond the bounded local-runner
+  bridge is now live:
+  - `ExecutionServiceHost` owns local runner registration, heartbeat refresh,
+    and shutdown/stale marking
+  - `api serve` still owns timer scheduling and status projection, but no
+    longer writes runner lifecycle records directly
 - the deterministic response-shape enforcement checkpoint is now complete for
   the currently reproduced contract seams:
   - team-only assignment identity

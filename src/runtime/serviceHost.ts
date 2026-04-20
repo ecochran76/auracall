@@ -20,7 +20,11 @@ import {
   type ExecuteLocalActionRequestResult,
   type ExecuteStoredRunStepResult,
 } from './runner.js';
-import { createExecutionRunEvent } from './model.js';
+import { createExecutionRunnerRecord, createExecutionRunEvent } from './model.js';
+import {
+  createLocalRunnerEligibilityNote,
+  type LocalRunnerCapabilitySummary,
+} from './localRunnerCapabilities.js';
 import {
   evaluateStoredExecutionRunRepairClassification,
   repairStoredExecutionRunLease,
@@ -37,7 +41,7 @@ import {
 } from '../teams/store.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { ExecuteStoredRunStepContext } from './runner.js';
-import type { ExecutionRunAffinityRecord, ExecutionRunSourceKind } from './types.js';
+import type { ExecutionRunAffinityRecord, ExecutionRunnerRecord, ExecutionRunSourceKind } from './types.js';
 
 async function readStoredTaskRunSpecSummary(
   store: TaskRunSpecRecordStore,
@@ -286,6 +290,25 @@ export interface ExecutionServiceHostLocalActionResolveResult {
   ownerStepId: string | null;
 }
 
+export interface ExecutionServiceHostRunnerLifecycleOptions {
+  hostId: string;
+  heartbeatTtlMs: number;
+  capabilitySummary: LocalRunnerCapabilitySummary;
+  baseLabel?: string;
+  heartbeatLabel?: string;
+  shutdownLabel?: string;
+}
+
+export interface ExecutionServiceHostRunnerLifecycleState {
+  id: string;
+  hostId: string;
+  status: ExecutionRunnerRecord['status'];
+  lastHeartbeatAt: string;
+  expiresAt: string;
+  lastActivityAt: string | null;
+  lastClaimedRunId: string | null;
+}
+
 interface EvaluatedStaleHeartbeatRepair {
   action: ExecutionServiceHostStaleHeartbeatActionResult;
   repair: Awaited<ReturnType<typeof evaluateStoredExecutionRunRepairClassification>> | null;
@@ -339,6 +362,15 @@ interface HostDrainCandidateInspection {
 }
 
 export interface ExecutionServiceHost {
+  registerLocalRunner(
+    options: ExecutionServiceHostRunnerLifecycleOptions,
+  ): Promise<ExecutionServiceHostRunnerLifecycleState | null>;
+  heartbeatLocalRunner(
+    options: ExecutionServiceHostRunnerLifecycleOptions,
+  ): Promise<ExecutionServiceHostRunnerLifecycleState | null>;
+  markLocalRunnerStale(
+    options: Omit<ExecutionServiceHostRunnerLifecycleOptions, 'heartbeatTtlMs'>,
+  ): Promise<ExecutionServiceHostRunnerLifecycleState | null>;
   drainRunsOnce(options?: DrainStoredExecutionRunsOnceOptions): Promise<DrainStoredExecutionRunsOnceResult>;
   drainRunsUntilIdle(
     options?: DrainStoredExecutionRunsUntilIdleOptions,
@@ -389,6 +421,78 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
   let leaseSequence = 0;
 
   return {
+    async registerLocalRunner(options: ExecutionServiceHostRunnerLifecycleOptions) {
+      if (!runnerId) return null;
+      const heartbeatAt = now();
+      const expiresAt = addMillisecondsToIsoTimestamp(heartbeatAt, options.heartbeatTtlMs);
+      const eligibilityNote = createLocalRunnerEligibilityNote({
+        phase: 'register',
+        baseLabel: options.baseLabel ?? 'service host local runner',
+        heartbeatLabel: options.heartbeatLabel,
+        shutdownLabel: options.shutdownLabel,
+        capabilitySummary: options.capabilitySummary,
+      });
+      const existingRunner = await runnersControl.readRunner(runnerId);
+      const record = existingRunner
+        ? await runnersControl.heartbeatRunner({
+            runnerId,
+            heartbeatAt,
+            expiresAt,
+            eligibilityNote,
+          })
+        : await runnersControl.registerRunner({
+            runner: createExecutionRunnerRecord({
+              id: runnerId,
+              hostId: options.hostId,
+              startedAt: heartbeatAt,
+              lastHeartbeatAt: heartbeatAt,
+              expiresAt,
+              serviceIds: options.capabilitySummary.serviceIds,
+              runtimeProfileIds: options.capabilitySummary.runtimeProfileIds,
+              browserProfileIds: options.capabilitySummary.browserProfileIds,
+              serviceAccountIds: options.capabilitySummary.serviceAccountIds,
+              browserCapable: options.capabilitySummary.browserCapable,
+              eligibilityNote,
+            }),
+          });
+      return projectRunnerLifecycleState(record.runner);
+    },
+
+    async heartbeatLocalRunner(options: ExecutionServiceHostRunnerLifecycleOptions) {
+      if (!runnerId) return null;
+      const heartbeatAt = now();
+      const expiresAt = addMillisecondsToIsoTimestamp(heartbeatAt, options.heartbeatTtlMs);
+      const record = await runnersControl.heartbeatRunner({
+        runnerId,
+        heartbeatAt,
+        expiresAt,
+        eligibilityNote: createLocalRunnerEligibilityNote({
+          phase: 'heartbeat',
+          baseLabel: options.baseLabel ?? 'service host local runner',
+          heartbeatLabel: options.heartbeatLabel,
+          shutdownLabel: options.shutdownLabel,
+          capabilitySummary: options.capabilitySummary,
+        }),
+      });
+      return projectRunnerLifecycleState(record.runner);
+    },
+
+    async markLocalRunnerStale(options: Omit<ExecutionServiceHostRunnerLifecycleOptions, 'heartbeatTtlMs'>) {
+      if (!runnerId) return null;
+      const record = await runnersControl.markRunnerStale({
+        runnerId,
+        staleAt: now(),
+        eligibilityNote: createLocalRunnerEligibilityNote({
+          phase: 'shutdown',
+          baseLabel: options.baseLabel ?? 'service host local runner',
+          heartbeatLabel: options.heartbeatLabel,
+          shutdownLabel: options.shutdownLabel,
+          capabilitySummary: options.capabilitySummary,
+        }),
+      });
+      return projectRunnerLifecycleState(record.runner);
+    },
+
     async summarizeRecoveryState(options: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'> = {}) {
       const summary: ExecutionServiceHostRecoverySummary = {
         totalRuns: 0,
@@ -2002,6 +2106,26 @@ function tryRecoverStrandedRun(
   now: () => string,
 ): Promise<boolean> {
   return recoverAndPersistStrandedRun(control, record, now, 2);
+}
+
+function projectRunnerLifecycleState(runner: ExecutionRunnerRecord): ExecutionServiceHostRunnerLifecycleState {
+  return {
+    id: runner.id,
+    hostId: runner.hostId,
+    status: runner.status,
+    lastHeartbeatAt: runner.lastHeartbeatAt,
+    expiresAt: runner.expiresAt,
+    lastActivityAt: runner.lastActivityAt,
+    lastClaimedRunId: runner.lastClaimedRunId,
+  };
+}
+
+function addMillisecondsToIsoTimestamp(timestamp: string, milliseconds: number): string {
+  const parsed = Date.parse(timestamp);
+  if (Number.isNaN(parsed)) {
+    return timestamp;
+  }
+  return new Date(parsed + milliseconds).toISOString();
 }
 
 function canRecoverStrandedRun(record: ExecutionRunStoredRecord, now: () => string): boolean {

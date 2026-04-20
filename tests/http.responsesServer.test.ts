@@ -595,6 +595,15 @@ describe('http responses adapter', () => {
         now: () => new Date('2026-04-08T12:05:00.000Z'),
         generateResponseId: () => `resp_serial_${++responseSequence}`,
         executionHost: {
+          async registerLocalRunner() {
+            return null;
+          },
+          async heartbeatLocalRunner() {
+            return null;
+          },
+          async markLocalRunnerStale() {
+            return null;
+          },
           async drainRunsOnce() {
             throw new Error('unexpected direct drain call');
           },
@@ -783,6 +792,15 @@ describe('http responses adapter', () => {
       { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
       {
         executionHost: {
+          async registerLocalRunner() {
+            return null;
+          },
+          async heartbeatLocalRunner() {
+            return null;
+          },
+          async markLocalRunnerStale() {
+            return null;
+          },
           async drainRunsOnce() {
             throw new Error('unexpected direct drain call');
           },
@@ -1255,6 +1273,15 @@ describe('http responses adapter', () => {
       { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 25 },
       {
         executionHost: {
+          async registerLocalRunner() {
+            return null;
+          },
+          async heartbeatLocalRunner() {
+            return null;
+          },
+          async markLocalRunnerStale() {
+            return null;
+          },
           async drainRunsOnce() {
             throw new Error('unexpected direct drain call');
           },

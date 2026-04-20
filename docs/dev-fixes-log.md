@@ -1,3 +1,15 @@
+- 2026-04-20: Keep local runner lifecycle writes behind the service host, not
+  scattered across HTTP wrappers.
+  - The durable rule for the current service/runner lane is:
+    - `ExecutionServiceHost` owns local runner registration, heartbeat refresh,
+      and shutdown/stale marking
+    - HTTP servers may own timers, request routing, and status projection
+    - HTTP servers should not directly write runner lifecycle records unless a
+      future service-host seam cannot express the required mutation
+  - This keeps the next runner ownership increments inside the runtime service
+    layer before any public HTTP/MCP team execution writes or multi-runner
+    expansion.
+
 - 2026-04-20: Keep the roadmap execution board pruned to one primary active
   implementation lane after broad planning reassessments.
   - The durable rule for the current phase is:

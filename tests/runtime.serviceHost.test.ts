@@ -16,7 +16,10 @@ import {
 import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
 import { cancelExecutionRun } from '../src/runtime/runner.js';
 import { createConfiguredExecutionRunAffinity } from '../src/runtime/configuredAffinity.js';
-import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
+import {
+  createExecutionServiceHost,
+  type ExecutionServiceHostRunnerLifecycleOptions,
+} from '../src/runtime/serviceHost.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 
 const CHATGPT_ACCOUNT_AFFINITY_CONFIG = {
@@ -470,6 +473,126 @@ describe('runtime service host', () => {
   afterEach(async () => {
     setAuracallHomeDirOverrideForTest(null);
     await Promise.all(cleanup.splice(0).map((entry) => fs.rm(entry, { recursive: true, force: true })));
+  });
+
+  it('owns local runner registration heartbeat and shutdown lifecycle', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runnersControl = createExecutionRunnerControl();
+    const ticks = [
+      '2026-04-20T09:00:00.000Z',
+      '2026-04-20T09:00:10.000Z',
+      '2026-04-20T09:00:20.000Z',
+    ];
+    const host = createExecutionServiceHost({
+      runnersControl,
+      runnerId: 'runner:lifecycle-local',
+      now: () => ticks.shift() ?? '2026-04-20T09:00:30.000Z',
+    });
+    const lifecycleOptions: ExecutionServiceHostRunnerLifecycleOptions = {
+      hostId: 'host:lifecycle-local',
+      heartbeatTtlMs: 15_000,
+      capabilitySummary: {
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['browser-default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+        browserCapable: true,
+      },
+      baseLabel: 'test local runner',
+      heartbeatLabel: 'test local runner heartbeat',
+      shutdownLabel: 'test local runner shutdown',
+    };
+
+    const registered = await host.registerLocalRunner(lifecycleOptions);
+    expect(registered).toMatchObject({
+      id: 'runner:lifecycle-local',
+      hostId: 'host:lifecycle-local',
+      status: 'active',
+      lastHeartbeatAt: '2026-04-20T09:00:00.000Z',
+      expiresAt: '2026-04-20T09:00:15.000Z',
+      lastActivityAt: null,
+      lastClaimedRunId: null,
+    });
+
+    const heartbeated = await host.heartbeatLocalRunner(lifecycleOptions);
+    expect(heartbeated).toMatchObject({
+      id: 'runner:lifecycle-local',
+      status: 'active',
+      lastHeartbeatAt: '2026-04-20T09:00:10.000Z',
+      expiresAt: '2026-04-20T09:00:25.000Z',
+    });
+
+    const stale = await host.markLocalRunnerStale(lifecycleOptions);
+    expect(stale).toMatchObject({
+      id: 'runner:lifecycle-local',
+      status: 'stale',
+      expiresAt: '2026-04-20T09:00:20.000Z',
+    });
+
+    const stored = await runnersControl.readRunner('runner:lifecycle-local');
+    expect(stored?.runner).toMatchObject({
+      id: 'runner:lifecycle-local',
+      hostId: 'host:lifecycle-local',
+      status: 'stale',
+      serviceIds: ['chatgpt'],
+      runtimeProfileIds: ['default'],
+      browserProfileIds: ['browser-default'],
+      serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      browserCapable: true,
+      eligibilityNote: 'test local runner shutdown',
+    });
+  });
+
+  it('re-registers an existing local runner through heartbeat instead of replacing the record', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runnersControl = createExecutionRunnerControl();
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:lifecycle-existing',
+        hostId: 'host:lifecycle-existing',
+        startedAt: '2026-04-20T08:59:00.000Z',
+        lastHeartbeatAt: '2026-04-20T08:59:00.000Z',
+        expiresAt: '2026-04-20T08:59:15.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        eligibilityNote: 'old runner note',
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      runnersControl,
+      runnerId: 'runner:lifecycle-existing',
+      now: () => '2026-04-20T09:00:00.000Z',
+    });
+    const registered = await host.registerLocalRunner({
+      hostId: 'host:lifecycle-existing',
+      heartbeatTtlMs: 15_000,
+      capabilitySummary: {
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: [],
+        serviceAccountIds: [],
+        browserCapable: false,
+      },
+      baseLabel: 'test local runner',
+    });
+
+    expect(registered).toMatchObject({
+      id: 'runner:lifecycle-existing',
+      status: 'active',
+      lastHeartbeatAt: '2026-04-20T09:00:00.000Z',
+      expiresAt: '2026-04-20T09:00:15.000Z',
+    });
+    const stored = await runnersControl.readRunner('runner:lifecycle-existing');
+    expect(stored?.revision).toBe(2);
+    expect(stored?.runner.startedAt).toBe('2026-04-20T08:59:00.000Z');
+    expect(stored?.runner.eligibilityNote).toBe('test local runner');
   });
 
   it('drains one targeted stored direct run through the host seam', async () => {

@@ -25,10 +25,7 @@ import {
 import type { ExecutionRuntimeControlContract } from '../runtime/contract.js';
 import { createExecutionRuntimeControl } from '../runtime/control.js';
 import { createConfiguredExecutionRunAffinity } from '../runtime/configuredAffinity.js';
-import {
-  createLocalRunnerCapabilitySummary,
-  createLocalRunnerEligibilityNote,
-} from '../runtime/localRunnerCapabilities.js';
+import { createLocalRunnerCapabilitySummary } from '../runtime/localRunnerCapabilities.js';
 import { createExecutionRequest } from '../runtime/apiModel.js';
 import {
   createExecutionResponsesService,
@@ -36,7 +33,6 @@ import {
   type ExecutionResponsesServiceDeps,
 } from '../runtime/responsesService.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
-import { createExecutionRunnerRecord } from '../runtime/model.js';
 import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
 import {
   createExecutionRunnerControl,
@@ -627,6 +623,14 @@ export async function createResponsesHttpServer(
 
   const localRunnerId = `runner:http-responses:${boundHost}:${address.port}`;
   const localRunnerHostId = `host:http-responses:${boundHost}:${address.port}`;
+  const localRunnerLifecycleOptions = {
+    hostId: localRunnerHostId,
+    heartbeatTtlMs: runnerHeartbeatTtlMs,
+    capabilitySummary: localRunnerCapabilitySummary,
+    baseLabel: 'api serve local runner',
+    heartbeatLabel: 'api serve runner heartbeat',
+    shutdownLabel: 'api serve shutdown',
+  };
   const updateRunnerState = (
     runner: {
       id: string;
@@ -668,87 +672,17 @@ export async function createResponsesHttpServer(
     runnerState.status = 'registering';
     runnerState.lastHeartbeatAt = heartbeatAt;
     runnerState.expiresAt = expiresAt;
-    const existingRunner = await runnersControl.readRunner(localRunnerId);
-    if (existingRunner) {
-      const heartbeatedRunner = await runnersControl.heartbeatRunner({
-        runnerId: localRunnerId,
-        heartbeatAt,
-        expiresAt,
-        eligibilityNote: createLocalRunnerEligibilityNote({
-          phase: 'register',
-          baseLabel: 'api serve local runner',
-          heartbeatLabel: 'api serve runner heartbeat',
-          shutdownLabel: 'api serve shutdown',
-          capabilitySummary: localRunnerCapabilitySummary,
-        }),
-      });
-      updateRunnerState({
-        id: heartbeatedRunner.runner.id,
-        hostId: heartbeatedRunner.runner.hostId,
-        status: heartbeatedRunner.runner.status,
-        lastHeartbeatAt: heartbeatedRunner.runner.lastHeartbeatAt,
-        expiresAt: heartbeatedRunner.runner.expiresAt,
-        lastActivityAt: heartbeatedRunner.runner.lastActivityAt,
-        lastClaimedRunId: heartbeatedRunner.runner.lastClaimedRunId,
-      });
-    } else {
-      const registeredRunner = await runnersControl.registerRunner({
-        runner: createExecutionRunnerRecord({
-          id: localRunnerId,
-          hostId: localRunnerHostId,
-          startedAt: heartbeatAt,
-          lastHeartbeatAt: heartbeatAt,
-          expiresAt,
-          serviceIds: localRunnerCapabilitySummary.serviceIds,
-          runtimeProfileIds: localRunnerCapabilitySummary.runtimeProfileIds,
-          browserProfileIds: localRunnerCapabilitySummary.browserProfileIds,
-          serviceAccountIds: localRunnerCapabilitySummary.serviceAccountIds,
-          browserCapable: localRunnerCapabilitySummary.browserCapable,
-          eligibilityNote: createLocalRunnerEligibilityNote({
-            phase: 'register',
-            baseLabel: 'api serve local runner',
-            heartbeatLabel: 'api serve runner heartbeat',
-            shutdownLabel: 'api serve shutdown',
-            capabilitySummary: localRunnerCapabilitySummary,
-          }),
-        }),
-      });
-      updateRunnerState({
-        id: registeredRunner.runner.id,
-        hostId: registeredRunner.runner.hostId,
-        status: registeredRunner.runner.status,
-        lastHeartbeatAt: registeredRunner.runner.lastHeartbeatAt,
-        expiresAt: registeredRunner.runner.expiresAt,
-        lastActivityAt: registeredRunner.runner.lastActivityAt,
-        lastClaimedRunId: registeredRunner.runner.lastClaimedRunId,
-      });
+    const registeredRunner = await host.registerLocalRunner(localRunnerLifecycleOptions);
+    if (registeredRunner) {
+      updateRunnerState(registeredRunner);
     }
   };
   const heartbeatLocalRunner = async () => {
     if (closed || !runnerState.id) return;
-    const heartbeatAt = now().toISOString();
-    const expiresAt = new Date(now().getTime() + runnerHeartbeatTtlMs).toISOString();
-    const heartbeatedRunner = await runnersControl.heartbeatRunner({
-      runnerId: localRunnerId,
-      heartbeatAt,
-      expiresAt,
-      eligibilityNote: createLocalRunnerEligibilityNote({
-        phase: 'heartbeat',
-        baseLabel: 'api serve local runner',
-        heartbeatLabel: 'api serve runner heartbeat',
-        shutdownLabel: 'api serve shutdown',
-        capabilitySummary: localRunnerCapabilitySummary,
-      }),
-    });
-    updateRunnerState({
-      id: heartbeatedRunner.runner.id,
-      hostId: heartbeatedRunner.runner.hostId,
-      status: heartbeatedRunner.runner.status,
-      lastHeartbeatAt: heartbeatedRunner.runner.lastHeartbeatAt,
-      expiresAt: heartbeatedRunner.runner.expiresAt,
-      lastActivityAt: heartbeatedRunner.runner.lastActivityAt,
-      lastClaimedRunId: heartbeatedRunner.runner.lastClaimedRunId,
-    });
+    const heartbeatedRunner = await host.heartbeatLocalRunner(localRunnerLifecycleOptions);
+    if (heartbeatedRunner) {
+      updateRunnerState(heartbeatedRunner);
+    }
   };
   const scheduleRunnerHeartbeat = () => {
     if (closed) return;
@@ -834,27 +768,10 @@ export async function createResponsesHttpServer(
       backgroundDrainState.state = 'disabled';
       await drainQueue.catch(() => null);
       if (!deps.executionHost && runnerState.id) {
-        const staleAt = now().toISOString();
-        const staleRunner = await runnersControl.markRunnerStale({
-          runnerId: localRunnerId,
-          staleAt,
-          eligibilityNote: createLocalRunnerEligibilityNote({
-            phase: 'shutdown',
-            baseLabel: 'api serve local runner',
-            heartbeatLabel: 'api serve runner heartbeat',
-            shutdownLabel: 'api serve shutdown',
-            capabilitySummary: localRunnerCapabilitySummary,
-          }),
-        });
-        updateRunnerState({
-          id: staleRunner.runner.id,
-          hostId: staleRunner.runner.hostId,
-          status: staleRunner.runner.status,
-          lastHeartbeatAt: staleRunner.runner.lastHeartbeatAt,
-          expiresAt: staleRunner.runner.expiresAt,
-          lastActivityAt: staleRunner.runner.lastActivityAt,
-          lastClaimedRunId: staleRunner.runner.lastClaimedRunId,
-        });
+        const staleRunner = await host.markLocalRunnerStale(localRunnerLifecycleOptions);
+        if (staleRunner) {
+          updateRunnerState(staleRunner);
+        }
       }
       await new Promise<void>((resolve, reject) => {
         server.close((error) => (error ? reject(error) : resolve()));
