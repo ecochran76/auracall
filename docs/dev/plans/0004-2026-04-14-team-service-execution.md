@@ -51,6 +51,22 @@ Lane: P01
     for lease repair, local-action resolution, and run control
   - `api serve` still maps validated `POST /status` payloads into that
     service-host control shape and keeps HTTP-only status/error projection
+- the remaining `api serve` ownership boundary has been re-audited:
+  - keep HTTP-owned:
+    - listener lifecycle and signal handling
+    - background-drain timer scheduling, pause/resume flags, and `/status`
+      projection
+    - runner status readback projection from the persisted local runner record
+    - request parsing, transport error mapping, and endpoint response shapes
+    - live `probe=service-state` routing into provider/browser inspection
+  - keep service-host-owned:
+    - local runner lifecycle mutations
+    - queued drain serialization and targeted drain execution
+    - startup recovery drain execution
+    - local-claim and recovery summaries/details
+    - stored-runtime operator-control dispatch and mutations
+  - do not extract more from `api serve` without a newly reproduced
+    route-neutral runtime mutation still living in HTTP
 - the deterministic response-shape enforcement checkpoint is now complete for
   the currently reproduced contract seams:
   - team-only assignment identity

@@ -1,3 +1,17 @@
+- 2026-04-20: Stop extracting `api serve` service-host ownership after the
+  remaining boundary is transport-only.
+  - The durable rule for the current service/runner lane is:
+    - keep listener lifecycle, background-drain timers/pause state,
+      request parsing, transport error/status projection, runner readback
+      projection, and live service-state probe routing in HTTP
+    - keep local runner lifecycle mutations, queued drain execution, startup
+      recovery drain execution, recovery/local-claim summaries, and
+      operator-control mutations in `ExecutionServiceHost`
+    - do not move HTTP timer/status state into runtime just to make the
+      server file smaller
+  - Further extraction should require a newly reproduced route-neutral runtime
+    mutation still living in HTTP, not continuation by inertia.
+
 - 2026-04-20: Keep stored-runtime operator-control family dispatch in the
   service host, not in `POST /status` route code.
   - The durable rule for the current service/runner lane is:

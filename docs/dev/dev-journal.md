@@ -1,3 +1,24 @@
+## 2026-04-20 - Api serve ownership boundary reassessment
+
+- Re-audited the remaining `api serve` lifecycle/status code after the fourth
+  service-host ownership increment.
+- Found no remaining direct stored-runtime mutation in HTTP:
+  - local runner lifecycle writes go through `ExecutionServiceHost`
+  - queued drain and startup recovery execution go through `ExecutionServiceHost`
+  - recovery/local-claim summaries and details go through `ExecutionServiceHost`
+  - operator controls go through `ExecutionServiceHost.controlOperatorAction(...)`
+- Classified the remaining HTTP-owned surfaces as intentionally transport or
+  listener scoped:
+  - server listener lifecycle and signal handling
+  - background-drain timer scheduling, pause/resume flags, and `/status`
+    projection
+  - request parsing and HTTP error/status mapping
+  - persisted runner readback projection
+  - live `probe=service-state` routing into provider/browser inspection
+- Updated `0001` and `0004` with the stop rule: do not extract more from
+  `api serve` unless a newly reproduced route-neutral runtime mutation is
+  still living in HTTP.
+
 ## 2026-04-20 - Service-host operator-control dispatcher
 
 - Continued the `POST /status` ownership audit after moving run-control
