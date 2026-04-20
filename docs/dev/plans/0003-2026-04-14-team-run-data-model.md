@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: active supporting authority for the primary
+  service/runner orchestration lane
 - the repo already has a bounded team-run data-model direction recorded in the
   loose planning docs and referenced from the roadmap
 - the adjacent assignment-layer plan is now canonical under:

@@ -5,6 +5,9 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: maintenance-only unless a concrete reattach or
+  registry-liveness mismatch blocks current behavior or the primary
+  service/runner lane
 - this remains the live focused reliability slice under the canonical browser-service roadmap
 - the long-running browser-service roadmap is already canonical under:
   - `docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md`

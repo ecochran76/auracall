@@ -12,7 +12,20 @@ Current State:
   `docs/dev/plans/0001-2026-04-14-execution.md`
 - low-signal loose execution pointers now live under
   `docs/dev/plans/legacy-archive/`
-- planning-authority migration is complete and the next decision is product sequencing
+- planning-authority migration is complete
+- the current product sequence is now pruned to one primary active
+  implementation lane:
+  - service/runner orchestration beyond the current single-host bounded
+    local-runner bridge
+- supporting maintenance work is allowed only when it directly protects that
+  lane or fixes a newly reproduced mismatch
+- parked lanes should not resume from inertia:
+  - response-shape normalization is parked unless a new public routing or
+    readback mismatch is reproduced
+  - service-state/passive monitoring is maintenance-only unless a new
+    provider-owned evidence seam appears
+  - config/browser/provider work stays bounded maintenance or side-track work
+    until explicitly selected as the primary lane
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is
@@ -20,12 +33,13 @@ Current State:
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 
-- the active team/service-foundation work
-- any bounded config-model follow-through
-- any bounded browser reliability maintenance follow-ups
+- the primary active service/runner orchestration lane
+- bounded config/team-service follow-through required by that lane
+- bounded browser/provider reliability maintenance only when a reproduced
+  blocker exists
 
 ### Browser Profile Family Refactor
-Status: in progress
+Status: maintenance
 
 Aura-Call's browser/profile model still blends logical runtime profiles,
 browser-family selection, service binding, and managed-profile path derivation
@@ -47,7 +61,7 @@ Current note:
 - named secondary browser profiles, dual-profile live smokes, and reattach/doctor boundary fixes are now green enough that this track can remain in maintenance mode while the larger config-model refactor becomes the active architecture track
 
 ### Config Model Refactor
-Status: in progress
+Status: maintenance
 
 Aura-Call now has clearer semantics in docs, but the config shape is still
 transitional. Browser concerns, AuraCall runtime concerns, and future higher
@@ -457,7 +471,7 @@ Sequencing rule:
   postmortem, and multi-process coordination
 
 ### Team Run Review And Observability
-Status: in progress
+Status: maintenance
 
 The next higher-level capability is whole-sequence review for team tasks.
 Aura-Call should not rely on individual provider chat caches as the only way to
@@ -536,7 +550,7 @@ Execution docs:
 - Service-state quality follow-up: [docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0018-2026-04-17-service-state-quality-follow-up.md)
 
 ### Durable State And Account Mirroring
-Status: in progress
+Status: maintenance
 
 The future runner/service layer will need storage beyond the current
 single-process/session model. That includes both orchestration state and a
@@ -675,29 +689,34 @@ Safety note:
 
 ### Now
 
-- Service mode and runner orchestration
-- Durable state and account mirroring
-- bounded config/team-service foundation work that supports those layers
+- Primary active lane: service mode and runner orchestration beyond the current
+  single-host bounded local-runner bridge
+- Supporting maintenance: bounded config/team-service corrections only when
+  they are required to preserve the primary lane's existing semantics
+- Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
+  the execution board deterministic
 
 ### Soon
 
-- External control surfaces:
-  - API
-  - MCP
-- Agent orchestration and local actions
+- External control surfaces read-only parity and auth/audit review, after the
+  runner ownership seam is explicit
+- Agent orchestration and local actions, after handoff/artifact routing has a
+  stable runner-owned transport boundary
 
 ### Later
 
-- Retrieval and search
+- Retrieval and search:
   - provider-side search
   - local lexical/semantic search
-- Provider expansion
+- Provider expansion:
   - full Gemini
   - Claude
   - Grok image
+- Broad public HTTP/MCP team execution writes and multi-runner expansion until
+  the service/runner ownership checkpoint is complete
 
 ### Service Volatility Externalization
-Status: planned
+Status: parked
 
 Aura-Call currently keeps too much volatile service knowledge in TypeScript: model aliases, picker labels, route patterns, selector families, feature/app fingerprints, artifact classification hints, and rate-limit knobs. That makes normal upstream service churn look like product code churn.
 

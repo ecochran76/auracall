@@ -1,3 +1,21 @@
+## 2026-04-20 - Roadmap execution-board pruning
+
+- Pruned the execution board after the 360 review so the repo has exactly one
+  primary active implementation lane:
+  - service/runner orchestration beyond the current single-host bounded
+    local-runner bridge
+- Updated `ROADMAP.md` and the primary execution plan so parked and
+  maintenance-only lanes do not compete with the primary lane by default.
+- Added first-block roadmap classification to the remaining `OPEN` plans:
+  - active supporting authorities for task/team/agent semantics
+  - maintenance-only config/browser/volatility/reliability plans
+  - Gemini as a provider-expansion side track
+- Updated `0001` to match the current deterministic plan-audit count:
+  - `keep = 18`
+  - `merge = 0`
+  - `retire = 0`
+- No runtime or operator behavior changed in this slice.
+
 ## 2026-04-20 - Project and roadmap 360 review
 
 - Performed a broad code/docs/roadmap review across:

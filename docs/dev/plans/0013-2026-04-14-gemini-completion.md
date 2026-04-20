@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: side-track provider-expansion plan; not primary
+  sequencing authority
 - this remains the live bounded Gemini provider-expansion track referenced from the roadmap
 - the current need is stable canonical placement for the Gemini side track, not a broad semantic rewrite of provider scope
 - the old loose path will remain searchable in the legacy archive once the canonical plan is wired

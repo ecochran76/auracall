@@ -547,3 +547,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit`
   - `git diff --check`
+
+## Turn 20 | 2026-04-20
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- Goal: prune the roadmap execution board after the 360 review so product work
+  has one primary active lane instead of many competing `OPEN` plans.
+- Decision:
+  - primary active implementation lane is service/runner orchestration beyond
+    the current single-host bounded local-runner bridge
+  - `0002`, `0003`, `0004`, `0006`, and `0009` remain active supporting
+    authorities only where they preserve that lane's team/task/agent semantics
+  - config, browser, volatility, and reattach tracks are maintenance-only
+    unless a concrete mismatch is reproduced
+  - Gemini remains a provider-expansion side track, not the primary sequencing
+    authority
+  - response-shape normalization and service-state probing stay parked unless
+    a new public routing/readback mismatch or provider-owned evidence seam is
+    demonstrated
+- Scope:
+  - docs-only roadmap and plan-authority pruning
+  - no runtime or operator behavior changes
+- Verification target:
+  - `pnpm run plans:audit`
+  - `pnpm exec tsc -p tsconfig.json --noEmit`
+  - `git diff --check`

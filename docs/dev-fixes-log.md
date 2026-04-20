@@ -1,3 +1,18 @@
+- 2026-04-20: Keep the roadmap execution board pruned to one primary active
+  implementation lane after broad planning reassessments.
+  - The durable rule for the current phase is:
+    - primary active lane is service/runner orchestration beyond the current
+      single-host bounded local-runner bridge
+    - task/team/agent plans can support that lane, but should not independently
+      reopen broad implementation scope
+    - config, browser, volatility, and provider-expansion plans stay
+      maintenance-only or side-track work unless explicitly selected or a
+      concrete mismatch is reproduced
+    - response-shape and service-state work stays parked unless a new public
+      routing/readback mismatch or provider-owned evidence seam appears
+  - Do not treat an `OPEN` plan state alone as permission to resume that lane.
+    Read the plan's current roadmap classification first.
+
 - 2026-04-16: `auracall api serve` must wire the configured stored-step
   executor by default if direct `/v1/responses` runs are expected to exercise
   the real browser/API execution path.

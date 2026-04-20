@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: maintenance-only unless a concrete config resolver,
+  migration, or diagnostics mismatch is reproduced
 - the repo-wide config architecture plan is still directly referenced from the
   roadmap and continues to govern the remaining browser/runtime/agent/team
   boundary work

@@ -5,6 +5,9 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: maintenance-only unless a concrete ChatGPT service
+  volatility mismatch blocks current behavior or the primary service/runner
+  lane
 - the ChatGPT volatility pilot is still the live per-service execution plan for
   the broader service-volatility roadmap
 - workflow-specific follow-on planning is already archived and this document is

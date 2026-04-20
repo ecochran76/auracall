@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: active supporting authority for the primary
+  service/runner orchestration lane
 - the repo still uses the team boundary as a governing architecture document
   from both the roadmap and the adjacent canonical team/task plans
 - the planning-compliance framework is green, so this slice is promoting the

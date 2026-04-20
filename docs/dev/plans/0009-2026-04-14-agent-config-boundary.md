@@ -5,6 +5,9 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: active supporting authority for the primary
+  service/runner orchestration lane when agent selection semantics affect
+  runner-owned execution
 - the agent boundary is still referenced directly from the roadmap and from the
   canonical config umbrella plan
 - the broader config architecture is now canonical under:

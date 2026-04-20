@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: parked unless a concrete service-volatility mismatch
+  blocks current behavior or the primary service/runner lane
 - this is still the live repo-wide volatility umbrella plan referenced from the main roadmap and testing guidance
 - the ChatGPT pilot is already canonical under:
   - `docs/dev/plans/0010-2026-04-14-service-volatility-chatgpt.md`

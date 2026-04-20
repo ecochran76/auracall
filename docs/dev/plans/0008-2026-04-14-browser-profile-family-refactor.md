@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: maintenance-only unless a concrete browser-profile
+  family mismatch blocks the primary service/runner lane
 - this browser-profile refactor plan is still a live authority document from
   both the roadmap and `AGENTS.md`
 - the config architecture umbrella is now canonical under:

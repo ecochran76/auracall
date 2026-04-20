@@ -5,6 +5,9 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: active supporting authority for the primary
+  service/runner orchestration lane; response-shape and claimant/readback
+  hardening remain parked unless a new concrete mismatch is reproduced
 - the repo already has a bounded team service-execution contract recorded in
   the loose planning docs and referenced from the roadmap
 - the adjacent canonical planning cluster now exists under `docs/dev/plans/`:

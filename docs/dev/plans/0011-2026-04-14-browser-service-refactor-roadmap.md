@@ -5,6 +5,8 @@ Lane: P01
 
 ## Current State
 
+- roadmap classification: maintenance-only unless a concrete browser-service
+  substrate mismatch blocks current behavior or the primary service/runner lane
 - this roadmap is still the live long-running browser-service architecture track referenced from the main roadmap
 - the browser-profile family subtrack is now canonical under:
   - `docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md`
