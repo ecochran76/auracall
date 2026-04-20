@@ -1,3 +1,22 @@
+## 2026-04-20 - Service-host operator-control dispatcher
+
+- Continued the `POST /status` ownership audit after moving run-control
+  dispatch into `ExecutionServiceHost`.
+- Found one remaining family-level route branch in HTTP for stored-runtime
+  operator controls:
+  - lease repair
+  - local-action resolution
+  - run control
+- Added `ExecutionServiceHost.controlOperatorAction(...)` so the service host
+  now owns route-neutral operator-control dispatch across those families.
+- Kept `api serve` responsible for:
+  - status-control schema validation
+  - mapping the validated payload into the service-host control input shape
+  - HTTP status/error projection
+  - background-drain pause/resume timer state
+- Updated the active `0001` and `0004` authorities to record the fourth
+  service/runner ownership increment.
+
 ## 2026-04-20 - Service-host run-control dispatcher
 
 - Continued the service/runner ownership lane after the queued drain seam.

@@ -304,6 +304,36 @@ export type ExecutionServiceHostRunControlResult =
   | ExecutionServiceHostDrainActionResult
   | ExecutionServiceHostResumeHumanEscalationResult;
 
+export type ExecutionServiceHostOperatorControlInput =
+  | {
+      kind: 'lease-repair';
+      action: 'repair-stale-heartbeat';
+      runId: string;
+    }
+  | {
+      kind: 'local-action-control';
+      action: 'resolve-request';
+      runId: string;
+      requestId: string;
+      resolution: 'approved' | 'rejected' | 'cancelled';
+      note?: string | null;
+    }
+  | {
+      kind: 'run-control';
+      control: ExecutionServiceHostRunControlInput;
+    };
+
+export type ExecutionServiceHostOperatorControlResult =
+  | ({
+      kind: 'lease-repair';
+    } & ExecutionServiceHostStaleHeartbeatActionResult)
+  | ({
+      kind: 'local-action-control';
+    } & ExecutionServiceHostLocalActionResolveResult)
+  | ({
+      kind: 'run-control';
+    } & ExecutionServiceHostRunControlResult);
+
 export interface ExecutionServiceHostLocalActionResolveResult {
   action: 'resolve-local-action-request';
   runId: string;
@@ -413,6 +443,9 @@ export interface ExecutionServiceHost {
   summarizeLocalClaimState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostLocalClaimSummary>;
   readRecoveryDetail(runId: string): Promise<ExecutionServiceHostRecoveryDetail | null>;
   repairStaleHeartbeatLease(runId: string): Promise<ExecutionServiceHostStaleHeartbeatActionResult>;
+  controlOperatorAction(
+    input: ExecutionServiceHostOperatorControlInput,
+  ): Promise<ExecutionServiceHostOperatorControlResult>;
   controlRun(input: ExecutionServiceHostRunControlInput): Promise<ExecutionServiceHostRunControlResult>;
   cancelOwnedRun(runId: string, note?: string | null): Promise<ExecutionServiceHostCancelActionResult>;
   resumeHumanEscalation(
@@ -995,6 +1028,30 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           repairAt,
         })
       ).action;
+    },
+
+    async controlOperatorAction(input: ExecutionServiceHostOperatorControlInput) {
+      if (input.kind === 'lease-repair') {
+        return {
+          kind: input.kind,
+          ...(await this.repairStaleHeartbeatLease(input.runId)),
+        };
+      }
+      if (input.kind === 'local-action-control') {
+        return {
+          kind: input.kind,
+          ...(await this.resolveLocalActionRequest(
+            input.runId,
+            input.requestId,
+            input.resolution,
+            input.note ?? null,
+          )),
+        };
+      }
+      return {
+        kind: input.kind,
+        ...(await this.controlRun(input.control)),
+      };
     },
 
     async controlRun(input: ExecutionServiceHostRunControlInput) {

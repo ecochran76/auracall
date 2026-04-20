@@ -46,6 +46,11 @@ Lane: P01
     `cancel-run`, `resume-human-escalation`, and `drain-run`
   - `api serve` still owns request validation, HTTP error/status mapping,
     background-drain pause/resume state, and status projection
+- the fourth ownership increment is now live:
+  - `ExecutionServiceHost` owns the route-neutral operator-control dispatcher
+    for lease repair, local-action resolution, and run control
+  - `api serve` still maps validated `POST /status` payloads into that
+    service-host control shape and keeps HTTP-only status/error projection
 - the deterministic response-shape enforcement checkpoint is now complete for
   the currently reproduced contract seams:
   - team-only assignment identity

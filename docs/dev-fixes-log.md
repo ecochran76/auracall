@@ -1,3 +1,14 @@
+- 2026-04-20: Keep stored-runtime operator-control family dispatch in the
+  service host, not in `POST /status` route code.
+  - The durable rule for the current service/runner lane is:
+    - `ExecutionServiceHost.controlOperatorAction(...)` owns route-neutral
+      dispatch across lease repair, local-action resolution, and run control
+    - HTTP may map a validated payload into that service-host input shape
+    - HTTP still owns transport status/error projection and background-drain
+      pause/resume timer state
+  - Do not make `api serve` choose between stored-runtime mutation families
+    just because those controls happen to share the `/status` endpoint.
+
 - 2026-04-20: Keep run-control dispatch beside the service-host mutations, not
   in HTTP route code.
   - The durable rule for the current service/runner lane is:

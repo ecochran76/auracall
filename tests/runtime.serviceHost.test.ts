@@ -1152,11 +1152,13 @@ describe('runtime service host', () => {
       now: () => '2026-04-11T18:05:00.000Z',
     });
 
-    const result = await host.resolveLocalActionRequest(
-      'run_host_local_action_control',
-      'run_host_local_action_control:action:run_host_local_action_control:step:1:1',
-      'approved',
-    );
+    const result = await host.controlOperatorAction({
+      kind: 'local-action-control',
+      action: 'resolve-request',
+      runId: 'run_host_local_action_control',
+      requestId: 'run_host_local_action_control:action:run_host_local_action_control:step:1:1',
+      resolution: 'approved',
+    });
 
     expect(result).toMatchObject({
       action: 'resolve-local-action-request',
@@ -3864,9 +3866,14 @@ describe('runtime service host', () => {
       now: () => '2026-04-08T15:02:00.000Z',
     });
 
-    const result = await host.repairStaleHeartbeatLease('run_detail_repairable_stale');
+    const result = await host.controlOperatorAction({
+      kind: 'lease-repair',
+      action: 'repair-stale-heartbeat',
+      runId: 'run_detail_repairable_stale',
+    });
 
     expect(result).toEqual({
+      kind: 'lease-repair',
       action: 'repair-stale-heartbeat',
       runId: 'run_detail_repairable_stale',
       status: 'repaired',

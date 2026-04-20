@@ -40,14 +40,11 @@ import {
 } from '../runtime/runnersControl.js';
 import {
   createExecutionServiceHost,
-  type ExecutionServiceHostCancelActionResult,
-  type ExecutionServiceHostDrainActionResult,
-  type ExecutionServiceHostLocalActionResolveResult,
-  type ExecutionServiceHostResumeHumanEscalationResult,
+  type ExecutionServiceHostOperatorControlInput,
+  type ExecutionServiceHostOperatorControlResult,
   type ExecutionServiceHostRecoveryDetail,
   type ExecutionServiceHostRecoverySummary,
   type ExecutionServiceHostLocalClaimSummary,
-  type ExecutionServiceHostStaleHeartbeatActionResult,
   type DrainStoredExecutionRunsUntilIdleResult,
   type ExecutionServiceHost,
   type ExecutionServiceHostDeps,
@@ -189,19 +186,7 @@ interface HttpStatusResponse {
         kind: 'background-drain';
         action: 'pause' | 'resume';
       }
-    | ({
-        kind: 'local-action-control';
-      } & ExecutionServiceHostLocalActionResolveResult)
-    | ({
-        kind: 'run-control';
-      } & (
-        | ExecutionServiceHostCancelActionResult
-        | ExecutionServiceHostResumeHumanEscalationResult
-        | ExecutionServiceHostDrainActionResult
-      ))
-    | ({
-        kind: 'lease-repair';
-      } & ExecutionServiceHostStaleHeartbeatActionResult);
+    | ExecutionServiceHostOperatorControlResult;
 }
 
 export async function createResponsesHttpServer(
@@ -457,63 +442,17 @@ export async function createResponsesHttpServer(
             action,
           };
         } else {
-          if ('leaseRepair' in payload) {
-            const result = await host.repairStaleHeartbeatLease(payload.leaseRepair.runId);
-            if (result.status !== 'repaired') {
-              sendJson(res, result.status === 'not-found' ? 404 : 409, {
-                error: {
-                  message: result.reason,
-                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-            controlResult = {
-              kind: 'lease-repair',
-              ...result,
-            };
-          } else if ('localActionControl' in payload) {
-            const result = await host.resolveLocalActionRequest(
-              payload.localActionControl.runId,
-              payload.localActionControl.requestId,
-              payload.localActionControl.resolution,
-              payload.localActionControl.note ?? null,
-            );
-            if (result.status !== 'resolved') {
-              sendJson(res, result.status === 'not-found' ? 404 : 409, {
-                error: {
-                  message: result.reason,
-                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-            controlResult = {
-              kind: 'local-action-control',
-              ...result,
-            };
-          } else {
-            const result = await host.controlRun(payload.runControl);
-            if (
-              !(
-                (result.action === 'cancel-run' && result.status === 'cancelled') ||
-                (result.action === 'resume-human-escalation' && result.status === 'resumed') ||
-                (result.action === 'drain-run' && result.status === 'executed')
-              )
-            ) {
-              sendJson(res, result.status === 'not-found' ? 404 : 409, {
-                error: {
-                  message: result.reason,
-                  type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
-                },
-              } satisfies HttpErrorPayload);
-              return;
-            }
-            controlResult = {
-              kind: 'run-control',
-              ...result,
-            };
+          const result = await host.controlOperatorAction(createServiceHostOperatorControlInput(payload));
+          if (!isSuccessfulServiceHostOperatorControlResult(result)) {
+            sendJson(res, result.status === 'not-found' ? 404 : 409, {
+              error: {
+                message: result.reason,
+                type: result.status === 'not-found' ? 'not_found_error' : 'invalid_request_error',
+              },
+            } satisfies HttpErrorPayload);
+            return;
           }
+          controlResult = result;
         }
         const address = server.address();
         const boundPort = address && typeof address !== 'string' ? address.port : options.port ?? 0;
@@ -1104,6 +1043,46 @@ const StatusControlRequestSchema = z.union([
     }),
   }),
 ]);
+
+type StatusControlRequest = z.infer<typeof StatusControlRequestSchema>;
+
+function createServiceHostOperatorControlInput(payload: Exclude<StatusControlRequest, { backgroundDrain: unknown }>): ExecutionServiceHostOperatorControlInput {
+  if ('leaseRepair' in payload) {
+    return {
+      kind: 'lease-repair',
+      action: payload.leaseRepair.action,
+      runId: payload.leaseRepair.runId,
+    };
+  }
+  if ('localActionControl' in payload) {
+    return {
+      kind: 'local-action-control',
+      action: payload.localActionControl.action,
+      runId: payload.localActionControl.runId,
+      requestId: payload.localActionControl.requestId,
+      resolution: payload.localActionControl.resolution,
+      note: payload.localActionControl.note ?? null,
+    };
+  }
+  return {
+    kind: 'run-control',
+    control: payload.runControl,
+  };
+}
+
+function isSuccessfulServiceHostOperatorControlResult(result: ExecutionServiceHostOperatorControlResult): boolean {
+  if (result.kind === 'lease-repair') {
+    return result.status === 'repaired';
+  }
+  if (result.kind === 'local-action-control') {
+    return result.status === 'resolved';
+  }
+  return (
+    (result.action === 'cancel-run' && result.status === 'cancelled') ||
+    (result.action === 'resume-human-escalation' && result.status === 'resumed') ||
+    (result.action === 'drain-run' && result.status === 'executed')
+  );
+}
 
 interface ParsedStatusQuery {
   recovery: boolean;

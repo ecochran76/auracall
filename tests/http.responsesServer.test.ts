@@ -617,6 +617,29 @@ describe('http responses adapter', () => {
               reconciliationReason: null,
             };
           },
+          async controlOperatorAction(input) {
+            if (input.kind === 'lease-repair') {
+              return {
+                kind: input.kind,
+                ...(await this.repairStaleHeartbeatLease(input.runId)),
+              };
+            }
+            if (input.kind === 'local-action-control') {
+              return {
+                kind: input.kind,
+                ...(await this.resolveLocalActionRequest(
+                  input.runId,
+                  input.requestId,
+                  input.resolution,
+                  input.note ?? null,
+                )),
+              };
+            }
+            return {
+              kind: input.kind,
+              ...(await this.controlRun(input.control)),
+            };
+          },
           async controlRun(input) {
             if (input.action === 'resume-human-escalation') {
               return this.resumeHumanEscalation(input.runId);
@@ -824,6 +847,29 @@ describe('http responses adapter', () => {
               leaseHealthStatus: null,
               repairPosture: null,
               reconciliationReason: null,
+            };
+          },
+          async controlOperatorAction(input) {
+            if (input.kind === 'lease-repair') {
+              return {
+                kind: input.kind,
+                ...(await this.repairStaleHeartbeatLease(input.runId)),
+              };
+            }
+            if (input.kind === 'local-action-control') {
+              return {
+                kind: input.kind,
+                ...(await this.resolveLocalActionRequest(
+                  input.runId,
+                  input.requestId,
+                  input.resolution,
+                  input.note ?? null,
+                )),
+              };
+            }
+            return {
+              kind: input.kind,
+              ...(await this.controlRun(input.control)),
             };
           },
           async controlRun(input) {
@@ -1321,6 +1367,29 @@ describe('http responses adapter', () => {
               leaseHealthStatus: null,
               repairPosture: null,
               reconciliationReason: null,
+            };
+          },
+          async controlOperatorAction(input) {
+            if (input.kind === 'lease-repair') {
+              return {
+                kind: input.kind,
+                ...(await this.repairStaleHeartbeatLease(input.runId)),
+              };
+            }
+            if (input.kind === 'local-action-control') {
+              return {
+                kind: input.kind,
+                ...(await this.resolveLocalActionRequest(
+                  input.runId,
+                  input.requestId,
+                  input.resolution,
+                  input.note ?? null,
+                )),
+              };
+            }
+            return {
+              kind: input.kind,
+              ...(await this.controlRun(input.control)),
             };
           },
           async controlRun(input) {
