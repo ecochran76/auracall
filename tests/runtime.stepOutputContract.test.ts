@@ -17,6 +17,13 @@ describe('AuraCall step output contract', () => {
         },
       }),
     ).toBe(true);
+    expect(
+      shouldUseAuraCallStepOutputContract({
+        taskOverrideStructuredContext: {
+          outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        },
+      }),
+    ).toBe(true);
     expect(shouldUseAuraCallStepOutputContract({ responseShape: { format: 'json' } })).toBe(false);
 
     const prompt = prependAuraCallStepOutputContractPrompt('Do the work.');

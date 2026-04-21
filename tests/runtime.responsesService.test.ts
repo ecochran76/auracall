@@ -18,6 +18,7 @@ import { cancelExecutionRun } from '../src/runtime/runner.js';
 import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
 import { BrowserAutomationError } from '../src/oracle/errors.js';
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
 
 describe('runtime responses service', () => {
   const cleanup: string[] = [];
@@ -147,6 +148,7 @@ describe('runtime responses service', () => {
 
     let capturedRequest: ExecutionRequest | null = null;
     let capturedStepId: string | null = null;
+    let capturedStepStructuredData: Record<string, unknown> | null = null;
 
     const service = createExecutionResponsesService({
       now: () => new Date('2026-04-08T14:10:00.000Z'),
@@ -154,6 +156,7 @@ describe('runtime responses service', () => {
       executeStoredRunStep: async (request, context) => {
         capturedRequest = request;
         capturedStepId = context.step.id;
+        capturedStepStructuredData = context.step.input.structuredData;
       },
     });
 
@@ -165,6 +168,7 @@ describe('runtime responses service', () => {
         runtimeProfile: 'default',
         service: 'chatgpt',
         agent: 'planner',
+        outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
       },
     });
 
@@ -189,9 +193,13 @@ describe('runtime responses service', () => {
         runtimeProfile: 'default',
         agent: 'planner',
         service: 'chatgpt',
+        outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
       },
     });
     expect(capturedStepId).toBe('resp_service_ctx_1:step:1');
+    expect(capturedStepStructuredData).toMatchObject({
+      outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+    });
   });
 
   it('returns bounded provider usage summary on response readback when stored execution reports usage', async () => {

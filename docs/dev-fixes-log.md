@@ -13433,3 +13433,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   mismatches must fail the step with machine-readable prompt-validation
   details so runners, API clients, and team handoffs can route failure without
   prose scraping.
+- 2026-04-21: Put public response-contract opt-in on the existing request
+  seams instead of adding another route. In this repo, `/v1/team-runs` should
+  use top-level `outputContract: "auracall.step-output.v1"` and direct
+  `/v1/responses` should use `auracall.outputContract`; both converge on stored
+  step structured data so the configured executor can apply the same
+  prompt-prefix and runtime validation path.

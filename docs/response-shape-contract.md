@@ -43,6 +43,33 @@ Equivalent accepted selectors:
 - `responseShape.format`
 - `structuredData.outputContract`
 - `structuredData.contract`
+- `structuredData.taskOverrideStructuredContext.outputContract`
+- `structuredData.taskOverrideStructuredContext.contract`
+
+Public API callers can request the same contract without editing team role
+config:
+
+```json
+{
+  "teamId": "auracall-chatgpt-solo",
+  "objective": "Produce the requested result.",
+  "outputContract": "auracall.step-output.v1"
+}
+```
+
+For direct `/v1/responses` requests, place the selector under `auracall`:
+
+```json
+{
+  "model": "gpt-5.2",
+  "input": "Produce the requested result.",
+  "auracall": {
+    "runtimeProfile": "default",
+    "service": "chatgpt",
+    "outputContract": "auracall.step-output.v1"
+  }
+}
+```
 
 Legacy steps without one of those selectors keep plain-text behavior.
 

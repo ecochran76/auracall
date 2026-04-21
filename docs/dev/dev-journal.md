@@ -18729,3 +18729,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check` passed
 - Current state: the contract exists as opt-in runtime behavior. It is not yet
   the default for team-run roles or public API requests.
+
+## 2026-04-21 - Response contract API opt-in wired
+
+- Added request-level `outputContract: "auracall.step-output.v1"` support for
+  `POST /v1/team-runs`.
+- Added direct `/v1/responses` support for
+  `auracall.outputContract: "auracall.step-output.v1"`.
+- The team-run path stores the selector in
+  `TaskRunSpec.overrides.structuredContext` so planned steps receive it as
+  `taskOverrideStructuredContext.outputContract`.
+- The direct responses path stores the selector in direct step structured data
+  and reconstructs it for configured stored-step execution.
+- Validation:
+  - `pnpm vitest run tests/runtime.stepOutputContract.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.responsesService.test.ts tests/cli/teamRunCommand.test.ts tests/http.responsesServer.test.ts`
+    passed: 5 files, 168 tests
+  - `pnpm exec tsc -p tsconfig.json --noEmit` passed
+  - `git diff --check` passed
+- Current state: API clients can now opt into the deterministic model-output
+  contract without editing team role config. The contract is still not the
+  default for legacy/plain-text runs.

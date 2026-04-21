@@ -15,6 +15,7 @@ import type { TaskRunSpec } from '../teams/types.js';
 import {
   buildBoundedTeamTaskRunSpec,
   type TeamRunLocalActionPolicyInput,
+  type TeamRunOutputContract,
   type TeamRunResponseFormat,
 } from '../teams/taskRunSpecBuilder.js';
 import {
@@ -45,6 +46,7 @@ export interface ExecuteConfiguredTeamRunInput {
   promptAppend?: string | null;
   structuredContext?: Record<string, unknown> | null;
   responseFormat?: TeamRunCliResponseFormat;
+  outputContract?: TeamRunOutputContract | null;
   maxTurns?: number | null;
   localActionPolicy?: TeamRunCliLocalActionPolicyInput | null;
   bridge?: TeamRuntimeBridge;
@@ -72,6 +74,7 @@ export function buildCliTaskRunSpec(input: {
   promptAppend?: string | null;
   structuredContext?: Record<string, unknown> | null;
   responseFormat?: TeamRunCliResponseFormat;
+  outputContract?: TeamRunOutputContract | null;
   maxTurns?: number | null;
   localActionPolicy?: TeamRunCliLocalActionPolicyInput | null;
 }): TaskRunSpec {
@@ -257,6 +260,7 @@ export async function executeConfiguredTeamRun(
     promptAppend: input.promptAppend,
     structuredContext: input.structuredContext,
     responseFormat: input.responseFormat,
+    outputContract: input.outputContract,
     maxTurns: input.maxTurns,
     localActionPolicy: input.localActionPolicy,
   });

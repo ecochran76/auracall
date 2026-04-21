@@ -27,6 +27,7 @@ import { createExecutionServiceHost } from '../../src/runtime/serviceHost.js';
 import type { TaskRunSpecRecordStore } from '../../src/teams/store.js';
 import type { TeamRuntimeBridge } from '../../src/teams/runtimeBridge.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../../src/teams/types.js';
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../../src/runtime/stepOutputContract.js';
 
 describe('team run CLI helpers', () => {
   const cleanup: string[] = [];
@@ -46,6 +47,7 @@ describe('team run CLI helpers', () => {
       promptAppend: 'Keep the answer short.',
       structuredContext: { lane: 'smoke' },
       responseFormat: 'markdown',
+      outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
       maxTurns: 3,
     });
 
@@ -65,7 +67,10 @@ describe('team run CLI helpers', () => {
       ],
       overrides: {
         promptAppend: 'Keep the answer short.',
-        structuredContext: { lane: 'smoke' },
+        structuredContext: {
+          lane: 'smoke',
+          outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        },
       },
       turnPolicy: {
         maxTurns: 3,

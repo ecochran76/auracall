@@ -3,6 +3,8 @@ import type { TaskRunSpec } from './types.js';
 
 export type TeamRunResponseFormat = 'text' | 'markdown' | 'json';
 
+export type TeamRunOutputContract = 'auracall.step-output.v1';
+
 export interface TeamRunLocalActionPolicyInput {
   allowedShellCommands?: string[];
   allowedCwdRoots?: string[];
@@ -18,6 +20,7 @@ export interface BuildBoundedTeamTaskRunSpecInput {
   promptAppend?: string | null;
   structuredContext?: Record<string, unknown> | null;
   responseFormat?: TeamRunResponseFormat;
+  outputContract?: TeamRunOutputContract | null;
   maxTurns?: number | null;
   localActionPolicy?: TeamRunLocalActionPolicyInput | null;
   context?: Record<string, unknown>;
@@ -36,6 +39,10 @@ export function buildBoundedTeamTaskRunSpec(
         ? objective
         : `${objective.slice(0, 77)}...`;
   const responseFormat = input.responseFormat ?? 'markdown';
+  const structuredContext = mergeStructuredContextWithOutputContract({
+    structuredContext: input.structuredContext,
+    outputContract: input.outputContract,
+  });
 
   const taskRunSpecInput: CreateTaskRunSpecInput = {
     id: input.taskRunSpecId,
@@ -57,7 +64,7 @@ export function buildBoundedTeamTaskRunSpec(
     context: input.context ?? {},
     overrides: {
       promptAppend: input.promptAppend ?? null,
-      structuredContext: input.structuredContext ?? null,
+      structuredContext,
     },
     turnPolicy:
       typeof input.maxTurns === 'number' && Number.isFinite(input.maxTurns) && input.maxTurns > 0
@@ -81,4 +88,17 @@ export function buildBoundedTeamTaskRunSpec(
   };
 
   return createTaskRunSpec(taskRunSpecInput);
+}
+
+function mergeStructuredContextWithOutputContract(input: {
+  structuredContext?: Record<string, unknown> | null;
+  outputContract?: TeamRunOutputContract | null;
+}): Record<string, unknown> | null {
+  if (!input.outputContract) {
+    return input.structuredContext ?? null;
+  }
+  return {
+    ...(input.structuredContext ?? {}),
+    outputContract: input.outputContract,
+  };
 }

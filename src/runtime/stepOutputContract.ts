@@ -95,9 +95,14 @@ export interface AuraCallStepOutputContractResult {
 
 export function shouldUseAuraCallStepOutputContract(structuredData: Record<string, unknown>): boolean {
   const responseShape = isRecord(structuredData.responseShape) ? structuredData.responseShape : null;
+  const taskOverrideStructuredContext = isRecord(structuredData.taskOverrideStructuredContext)
+    ? structuredData.taskOverrideStructuredContext
+    : null;
   return (
     structuredData.outputContract === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
     structuredData.contract === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
+    taskOverrideStructuredContext?.outputContract === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
+    taskOverrideStructuredContext?.contract === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
     responseShape?.contract === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
     responseShape?.version === AURACALL_STEP_OUTPUT_CONTRACT_VERSION ||
     responseShape?.format === AURACALL_STEP_OUTPUT_CONTRACT_VERSION

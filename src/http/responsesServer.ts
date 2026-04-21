@@ -39,6 +39,7 @@ import {
 } from '../runtime/responsesService.js';
 import { createConfiguredStoredStepExecutor } from '../runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState } from '../runtime/liveServiceStateRegistry.js';
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../runtime/stepOutputContract.js';
 import {
   createExecutionRunnerControl,
   type ExecutionRunnerControlContract,
@@ -509,6 +510,7 @@ export async function createResponsesHttpServer(
           promptAppend: payload.promptAppend,
           structuredContext: payload.structuredContext,
           responseFormat: payload.responseFormat,
+          outputContract: payload.outputContract,
           maxTurns: payload.maxTurns,
           localActionPolicy: payload.localActionPolicy,
           context: {
@@ -1084,6 +1086,7 @@ const TeamRunCreateRequestSchema = z.object({
   promptAppend: z.string().min(1).nullable().optional(),
   structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
   responseFormat: z.enum(['text', 'markdown', 'json']).optional(),
+  outputContract: z.literal(AURACALL_STEP_OUTPUT_CONTRACT_VERSION).nullable().optional(),
   maxTurns: z.number().int().positive().nullable().optional(),
   localActionPolicy: z
     .object({

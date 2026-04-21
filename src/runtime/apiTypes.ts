@@ -23,6 +23,7 @@ export interface ExecutionRequestExtensionHints {
   team?: string | null;
   service?: string | null;
   transport?: ExecutionTransport | null;
+  outputContract?: string | null;
 }
 
 export interface ExecutionRequestInputMessage {

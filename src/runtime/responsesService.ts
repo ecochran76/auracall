@@ -172,6 +172,7 @@ function createDirectExecutionBundle(input: {
       service,
       agent: input.request.auracall?.agent ?? null,
       team: input.request.auracall?.team ?? null,
+      outputContract: input.request.auracall?.outputContract ?? null,
     },
     sharedStateId,
     stepIds: [stepId],
@@ -197,6 +198,9 @@ function createDirectExecutionBundle(input: {
         requestInput: input.request.input,
         metadata: input.request.metadata ?? {},
         tools: input.request.tools ?? [],
+        ...(typeof input.request.auracall?.outputContract === 'string'
+          ? { outputContract: input.request.auracall.outputContract }
+          : {}),
       },
       notes: input.request.instructions ? [input.request.instructions] : [],
     },
@@ -346,6 +350,9 @@ function normalizeAuracallFromRecord(input: unknown): NonNullable<ExecutionReque
 
   const transport = normalizeExecutionTransport(input.transport);
   if (transport !== null) next.transport = transport;
+
+  const outputContract = normalizeNullableString(input.outputContract);
+  if (outputContract !== null) next.outputContract = outputContract;
 
   return next;
 }

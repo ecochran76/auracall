@@ -24,6 +24,7 @@ import {
   createExecutionRunStep,
 } from '../src/runtime/model.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
 
 vi.setConfig({ testTimeout: 10000 });
 
@@ -3386,6 +3387,7 @@ describe('http responses adapter', () => {
           promptAppend: 'Keep it brief.',
           structuredContext: { source: 'http-test' },
           responseFormat: 'markdown',
+          outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
           maxTurns: 2,
         }),
       });
@@ -3400,7 +3402,10 @@ describe('http responses adapter', () => {
           trigger: string;
           requestedBy: { kind: string; label: string };
           context: { command: string };
-          overrides: { promptAppend: string; structuredContext: { source: string } };
+          overrides: {
+            promptAppend: string;
+            structuredContext: { source: string; outputContract: string };
+          };
         };
         execution: {
           teamId: string;
@@ -3434,7 +3439,10 @@ describe('http responses adapter', () => {
           },
           overrides: {
             promptAppend: 'Keep it brief.',
-            structuredContext: { source: 'http-test' },
+            structuredContext: {
+              source: 'http-test',
+              outputContract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+            },
           },
         },
         execution: {

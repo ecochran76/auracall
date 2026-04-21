@@ -41,12 +41,17 @@ Current limits:
   runs
   - direct browser-backed `/v1/responses` runs now execute through the same
     configured stored-step executor path as normal Aura-Call runtime work
+  - direct `/v1/responses` requests can opt into deterministic model output
+    with `auracall.outputContract: "auracall.step-output.v1"`
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
   - accepted fields are `teamId`, `objective`, and optional `title`,
-    `promptAppend`, `structuredContext`, `responseFormat`, `maxTurns`, and
-    bounded `localActionPolicy`
+    `promptAppend`, `structuredContext`, `responseFormat`, `outputContract`,
+    `maxTurns`, and bounded `localActionPolicy`
+  - `outputContract: "auracall.step-output.v1"` opts the planned stored steps
+    into the deterministic model-emitted envelope documented in
+    `docs/response-shape-contract.md`
   - response shape is `object = "team_run"` with the generated `taskRunSpec`,
     deterministic `execution` ids/status, and `links` for team inspection,
     runtime inspection, and response readback

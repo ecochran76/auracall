@@ -37,6 +37,7 @@ export const ExecutionRequestExtensionHintsSchema: z.ZodType<ExecutionRequestExt
   team: z.string().nullable().optional(),
   service: z.string().nullable().optional(),
   transport: ExecutionTransportSchema.nullable().optional(),
+  outputContract: z.string().nullable().optional(),
 });
 
 export const ExecutionRequestInputMessageSchema: z.ZodType<ExecutionRequestInputMessage> = z.object({
