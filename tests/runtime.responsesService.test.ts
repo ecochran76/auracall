@@ -17,6 +17,7 @@ import { createExecutionResponsesService } from '../src/runtime/responsesService
 import { cancelExecutionRun } from '../src/runtime/runner.js';
 import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+import { BrowserAutomationError } from '../src/oracle/errors.js';
 
 describe('runtime responses service', () => {
   const cleanup: string[] = [];
@@ -102,6 +103,39 @@ describe('runtime responses service', () => {
             message: 'service seam failed',
           },
         },
+      },
+    });
+  });
+
+  it('exposes browser auth recovery details in failure summary', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-responses-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const service = createExecutionResponsesService({
+      now: () => new Date('2026-04-08T14:05:30.000Z'),
+      generateResponseId: () => 'resp_service_browser_auth_1',
+      executeStoredRunStep: async () => {
+        throw new BrowserAutomationError('ChatGPT session not detected. Login button detected on page.', {
+          providerState: 'login-required',
+          authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
+          managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+        });
+      },
+    });
+
+    const created = await service.createResponse({
+      model: 'gpt-5.2',
+      input: 'Fail with browser auth detail.',
+    });
+
+    expect(created.metadata?.executionSummary?.failureSummary).toMatchObject({
+      code: 'runner_execution_failed',
+      message: 'ChatGPT session not detected. Login button detected on page.',
+      details: {
+        providerState: 'login-required',
+        authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
+        managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
       },
     });
   });

@@ -12,6 +12,7 @@ import type { ExecutionRuntimeControlContract } from './contract.js';
 import type { ExecutionRunEvent, ExecutionRunRecordBundle, ExecutionRunSharedState, ExecutionRunStep } from './types.js';
 import { createTeamRunLocalActionRequest } from '../teams/model.js';
 import type { TeamRunLocalActionRequest, TeamRunLocalActionRequestStatus } from '../teams/types.js';
+import { asOracleUserError } from '../oracle/errors.js';
 
 export interface ExecuteStoredRunStepResult {
   output?: ExecutionRunStep['output'];
@@ -349,6 +350,7 @@ export async function executeStoredExecutionRunOnce(
     }
     releaseReason = 'failed';
     const failedAt = now();
+    const userError = asOracleUserError(error);
     const failedBundle = failExecutionRunStep({
       bundle: currentRecord.bundle,
       stepId,
@@ -357,7 +359,7 @@ export async function executeStoredExecutionRunOnce(
         code: 'runner_execution_failed',
         message: error instanceof Error ? error.message : String(error),
         ownerStepId: stepId,
-        details: null,
+        details: userError?.details ?? null,
       },
     });
     currentRecord = await store.writeRecord(failedBundle, { expectedRevision: currentRecord.revision });

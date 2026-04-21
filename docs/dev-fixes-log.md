@@ -13328,3 +13328,100 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   - local host actions should consume and emit the same artifact/handoff
     references as agent steps; do not create a second host-only artifact or
     handoff vocabulary
+- 2026-04-20: Treat public team-run create as two separate gates:
+  route/readback durability and live execution observability. In this repo,
+  `POST /v1/team-runs` can correctly create and persist the
+  `taskRunSpec -> teamRun -> runtime` chain while still being operationally
+  unsafe if the synchronous provider step keeps the HTTP request open, service
+  state probing blocks, and recovery detail can only infer
+  `suspiciously-idle` from missing runner activity. The next hardening slice
+  should make long-running step activity, timeout posture, and passive
+  service-state readback bounded and machine-readable before declaring the live
+  route green.
+- 2026-04-20: Keep basic keyring support on the generic managed Chrome launch
+  path. In this repo, managed browser profile launches should pass
+  `--password-store=basic` on non-Windows Chrome, including WSL visible
+  auth-mode launches, otherwise a desktop keyring modal can block Chrome
+  before DevTools and provider pages fully load. If Chrome is not visible even
+  though the process/window exists, first check WSLg/session health and
+  `DISPLAY` propagation before weakening the keyring bypass.
+- 2026-04-20: Separate Chrome launch health from provider account health in
+  live smoke triage. In this repo, a successful WSL Chrome launch with
+  `--password-store=basic` and `readyState=complete` can still be unusable for
+  ChatGPT automation if the managed browser profile is logged out. Before
+  classifying a team-run route or executor failure, inspect the selected
+  provider page for authenticated UI state and refresh the managed browser
+  profile login when `authStatus` is `logged_out`.
+- 2026-04-20: Do not let stored/API ChatGPT browser execution wait silently
+  for interactive login. In this repo, configured stored execution runs in a
+  hidden/minimized automation context, so a logged-out ChatGPT page should fail
+  fast with `providerState: "login-required"`, the managed browser profile
+  path, and an auth-mode recovery command (`auracall --profile <name> login
+  --target chatgpt`) instead of entering the long manual-login wait loop.
+  Preserve those fields on the stored step failure and expose them through
+  `metadata.executionSummary.failureSummary.details` so API clients can route
+  auth recovery without scraping the human-readable message.
+- 2026-04-20: Keep WSL display defaults wired through auth/login launches, not
+  only normal browser execution. In this repo, `resolveBrowserConfig(...)`
+  correctly chooses `display: ":0.0"` for WSL Linux Chrome, but `auracall
+  login` must carry that resolved value into the browser-service manual-login
+  launcher; otherwise a login browser can exist on DevTools while no visible
+  WSLg/X11 window appears for the user.
+- 2026-04-20: Anchor visible manual-login Chrome windows on screen. In this
+  repo, a WSLg/X11 Chrome window can be technically open but placed at an
+  off-screen coordinate from previous browser state. Visible, non-minimized
+  launches should include `--window-position=0,0`; minimal login launches
+  should also include an explicit window size so auth recovery opens where a
+  human can actually find it.
+- 2026-04-20: Distinguish "Chrome window exists in X11" from "window is
+  visible to the human." In this repo, if both an AuraCall-owned
+  Chrome window and a simple `xmessage` probe appear in `xwininfo` but the user
+  cannot see either, the likely failure is WSLg/RAIL presentation for the
+  current session. Keep the selected runtime on WSL Chrome; do not silently
+  switch browser families as a recovery path. Treat the full fix as
+  WSLg/runtime environment work rather than more provider automation.
+- 2026-04-20: Clear stale managed-profile Chrome singleton state before WSL
+  auth-mode relaunch. In this repo, a dead `SingletonLock`/`SingletonSocket`
+  plus stale `DevToolsActivePort` under
+  `~/.auracall/browser-profiles/<auracallProfile>/<service>` can make a
+  hand-launched or AuraCall-launched WSL Chrome exit immediately even though
+  fresh WSL Chrome works. Before launching a managed browser profile, clear
+  stale DevTools hints and remove Chrome lock files when the recorded profile
+  PID is dead.
+- 2026-04-20: Treat fresh WSLg Wayland Chrome launch stalls as environment
+  state, not browser-family selection. In this repo, if an existing imcli
+  Wayland Chrome remains visible but every new Wayland Chrome launch from the
+  current session stalls at parent + zygote with no renderer, no DevTools, and
+  `drmGetDevices2() has not found any devices`, do not switch to Windows
+  Chrome. Clean up the failed control processes and reset/repair the WSLg
+  session before retrying AuraCall auth-mode launch.
+- 2026-04-20: Confirm managed ChatGPT auth with page-state evidence after
+  login. In this repo, after opening
+  `~/.auracall/browser-profiles/wsl-chrome-2/chatgpt` with WSL Chrome and
+  `--password-store=basic`, validate the restored session through DevTools by
+  checking the ChatGPT tab is `readyState=complete`, visible, has a composer
+  surface, and exposes `__Secure-next-auth.session-token.*` cookies before
+  rerunning browser/team smokes.
+- 2026-04-20: Validate restored WSL ChatGPT auth with a direct browser smoke
+  before returning to team-run debugging. In this repo, once
+  `wsl-chrome-2/chatgpt` is logged in, a narrow `auracall --profile
+  wsl-chrome-2 --engine browser` exact-response smoke should pass before
+  diagnosing stored/team surfaces. The root browser-run command does not
+  accept setup/login-only flags such as `--browser-wsl-chrome` or
+  `--browser-display`; use the selected runtime profile plus
+  `AURACALL_BROWSER_DISPLAY=:0.0` when a display override is needed.
+- 2026-04-20: Prove ChatGPT team-run execution through the server-owned
+  recovery/drain path after direct browser auth is green. In this repo,
+  `auracall teams run` persists a planned team/runtime run; execution occurs
+  through the service host/background drain. If the usual dev port is occupied
+  by another service, start `api serve` on an alternate local port with
+  `--recover-runs-on-start-source team-run`, then verify `/v1/team-runs`,
+  `/v1/runtime-runs/inspect`, and `/v1/responses/<teamRunId>` all converge on
+  `succeeded`/`completed` with requested outputs satisfied.
+- 2026-04-20: Use the public `/v1/team-runs` route as the final proof for a
+  restored ChatGPT team-run slice. In this repo, CLI `teams run` plus
+  startup recovery proves the durable plan/drain path, but the API client
+  contract is only proven after a direct `POST /v1/team-runs` returns a
+  terminal run with `runtimeRunStatus: "succeeded"` and
+  `/v1/responses/<teamRunId>` returns `status: "completed"` with the requested
+  output policy satisfied.

@@ -13,6 +13,9 @@ Terminology for this runbook:
 - Oracle defaults to the Windows host IP for DevTools on WSL; override to localhost for WSL Chrome with `AURACALL_BROWSER_REMOTE_DEBUG_HOST=127.0.0.1`.
 - AuraCall now defaults browser `DISPLAY` to `:0.0` on WSL unless you set `browser.display`, `AURACALL_BROWSER_DISPLAY`, or explicitly target Windows-hosted Chrome.
 - Aura-Call now uses a managed persistent profile under `~/.auracall/browser-profiles/<auracallProfile>/<service>` and bootstraps it from your existing Chrome profile on first use, so you only sign in once.
+- Aura-Call uses `--password-store=basic` for WSL Chrome managed-browser
+  launches, including visible auth-mode launches, so managed browser profiles
+  do not block behind a Linux desktop keyring prompt.
 
 ## Recommended setup
 0) Quick bootstrap (installs Node 22 + Chrome + repo deps):
@@ -132,6 +135,14 @@ oracle --profile wsl-chrome-2 --engine browser -p "Say hello from second profile
 - **WSL Chrome fails with `Missing X server` / blank `DISPLAY`**:
   - AuraCall now defaults to `:0.0` on WSL.
   - Override only if your X server uses another display or you intentionally want Windows-hosted Chrome.
+- **Chrome stalls behind a keyring prompt**:
+  - Current Aura-Call WSL Chrome managed-browser launches include
+    `--password-store=basic`.
+  - If an older Chrome process is already running without that flag, close that
+    managed browser profile's Chrome process and rerun so Aura-Call can relaunch
+    it with the basic password store.
+  - For visible auth recovery, use `auracall --profile <name> login --target chatgpt`;
+    auth-mode opens on `DISPLAY=:0.0` by default.
 - **Using Windows Chrome from WSL**:
   - Keep `manualLoginProfileDir` as a WSL path if you override it; Aura-Call converts it to the `\\wsl.localhost\...` path for Windows Chrome.
   - If DevTools can’t be reached, open the Windows firewall for the chosen port or pin a port with `AURACALL_BROWSER_PORT`.

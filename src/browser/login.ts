@@ -73,6 +73,7 @@ export interface BrowserLoginOptions {
   chromePath: string;
   chromeProfile: string;
   manualLoginProfileDir: string;
+  display?: string | null;
   cookiePath?: string;
   bootstrapCookiePath?: string;
   chatgptUrl?: string | null;
@@ -111,6 +112,7 @@ export function resolveBrowserLoginOptionsFromUserConfig(
     chromePath: launchProfile.chromePath,
     chromeProfile: managedLaunchContext.configuredChromeProfile,
     manualLoginProfileDir: managedLaunchContext.managedProfileDir,
+    display: launchProfile.display ?? resolved.display,
     cookiePath: launchProfile.chromeCookiePath,
     bootstrapCookiePath: managedLaunchContext.bootstrapCookiePath ?? undefined,
     chatgptUrl: resolved.chatgptUrl,
@@ -131,6 +133,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     chromePath,
     chromeProfile,
     manualLoginProfileDir,
+    display,
     cookiePath,
     bootstrapCookiePath,
     chatgptUrl,
@@ -177,6 +180,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     chromePath,
     chromeProfile,
     manualLoginProfileDir,
+    display,
     cookiePath,
     loginUrl: resolvedUrl,
     compatibleHosts,
@@ -212,6 +216,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       userDataDir,
       url,
       compatibleHosts,
+      display,
       hideWindow,
       debugPort,
       debugPortStrategy,
@@ -225,6 +230,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
         userDataDir,
         url,
         compatibleHosts,
+        display,
         hideWindow,
         debugPort,
         debugPortStrategy,

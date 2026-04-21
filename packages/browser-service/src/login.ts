@@ -11,6 +11,7 @@ export interface BrowserLoginOptions {
   chromeProfile: string;
   manualLoginProfileDir: string;
   cookiePath?: string;
+  display?: string | null;
   loginUrl: string;
   compatibleHosts?: string[];
   loginLabel?: string;
@@ -43,6 +44,7 @@ export interface BrowserLoginOptions {
     userDataDir: string;
     url: string;
     compatibleHosts?: string[];
+    display?: string | null;
     hideWindow?: boolean;
     debugPort?: number;
     debugPortStrategy?: DebugPortStrategy | null;
@@ -65,6 +67,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     chromeProfile,
     manualLoginProfileDir,
     cookiePath,
+    display,
     loginUrl,
     compatibleHosts,
     loginLabel,
@@ -111,6 +114,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
       userDataDir,
       url: loginUrl,
       compatibleHosts,
+      display,
       hideWindow,
       debugPort,
       debugPortStrategy: effectiveDebugPortStrategy,
@@ -163,6 +167,7 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
     userDataDir,
     url: loginUrl,
     compatibleHosts,
+    display,
     hideWindow,
     debugPort,
     debugPortStrategy: effectiveDebugPortStrategy,

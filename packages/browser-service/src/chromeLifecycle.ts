@@ -210,6 +210,15 @@ export async function launchChrome(
     }
   }
   const minimalFlags = Boolean(config.manualLogin);
+  const managedProfileRootForCleanup = config.managedProfileRoot
+    ? path.resolve(config.managedProfileRoot)
+    : null;
+  const isManagedProfileForCleanup = managedProfileRootForCleanup
+    ? path.resolve(userDataDir).startsWith(managedProfileRootForCleanup + path.sep)
+    : false;
+  await cleanupStaleProfileState(userDataDir, logger, {
+    lockRemovalMode: isManagedProfileForCleanup ? 'if_recorded_pid_dead' : 'never',
+  });
   const probeHost = resolveRemoteDebugHost(config.chromePath ?? undefined);
   const debugBindAddress =
     probeHost && probeHost !== '127.0.0.1' && !isWindowsLoopbackRemoteHost(probeHost) ? '0.0.0.0' : undefined;
@@ -1369,7 +1378,7 @@ export function buildChromeFlags(
     flags.push(`--profile-directory=${chromeProfile}`);
   }
 
-  if (!options.minimal && process.platform !== 'win32' && !isWsl()) {
+  if (process.platform !== 'win32') {
     flags.push('--password-store=basic');
     if (process.platform === 'darwin') {
       flags.push('--use-mock-keychain');
@@ -1386,6 +1395,13 @@ export function buildChromeFlags(
 
   if (!headless && options.startMinimized) {
     flags.push('--start-minimized');
+  }
+
+  if (!headless && !options.startMinimized) {
+    flags.push('--window-position=0,0');
+    if (options.minimal) {
+      flags.push('--window-size=1400,1000');
+    }
   }
 
   return flags;

@@ -293,6 +293,7 @@ export const ExecutionResponseSchema: z.ZodType<ExecutionResponse> = z.object({
             .object({
               code: z.string().nullable().optional(),
               message: z.string().nullable().optional(),
+              details: z.record(z.string(), z.unknown()).nullable().optional(),
             })
             .nullable()
             .optional(),

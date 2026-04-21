@@ -1146,7 +1146,16 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     );
     // Learned: login checks must happen on the base domain before jumping into project URLs.
     await raceWithDisconnect(
-      waitForLogin({ runtime: Runtime, logger, appliedCookies, manualLogin, timeoutMs: config.timeoutMs }),
+      waitForLogin({
+        runtime: Runtime,
+        logger,
+        appliedCookies,
+        manualLogin,
+        manualLoginWaitForSession: config.manualLoginWaitForSession,
+        timeoutMs: config.timeoutMs,
+        authRecoveryCommand: buildAuthModeCommand(config),
+        managedProfileDir: config.manualLoginProfileDir,
+      }),
     );
 
     if (config.url !== baseUrl) {
@@ -1828,29 +1837,38 @@ async function waitForLogin({
   logger,
   appliedCookies,
   manualLogin,
+  manualLoginWaitForSession,
   timeoutMs,
+  authRecoveryCommand,
+  managedProfileDir,
 }: {
   runtime: ChromeClient['Runtime'];
   logger: BrowserLogger;
   appliedCookies: number;
   manualLogin: boolean;
+  manualLoginWaitForSession: boolean;
   timeoutMs: number;
+  authRecoveryCommand?: string | null;
+  managedProfileDir?: string | null;
 }): Promise<void> {
   if (!manualLogin) {
-    await ensureLoggedIn(runtime, logger, { appliedCookies });
+    await ensureLoggedIn(runtime, logger, { appliedCookies, authRecoveryCommand, managedProfileDir });
     return;
   }
   const deadline = Date.now() + Math.min(timeoutMs ?? 1_200_000, 20 * 60_000);
   let lastNotice = 0;
   while (Date.now() < deadline) {
     try {
-      await ensureLoggedIn(runtime, logger, { appliedCookies });
+      await ensureLoggedIn(runtime, logger, { appliedCookies, authRecoveryCommand, managedProfileDir });
       return;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       const loginDetected = message?.toLowerCase().includes('login button');
       const sessionMissing = message?.toLowerCase().includes('session not detected');
       if (!loginDetected && !sessionMissing) {
+        throw error;
+      }
+      if (!manualLoginWaitForSession) {
         throw error;
       }
       const now = Date.now();
@@ -1863,7 +1881,28 @@ async function waitForLogin({
       await delay(1000);
     }
   }
-  throw new Error('Manual login mode timed out waiting for ChatGPT session; please sign in and retry.');
+  const authHint = authRecoveryCommand ? ` Open auth mode with: ${authRecoveryCommand}` : '';
+  const profileHint = managedProfileDir ? ` Managed browser profile: ${managedProfileDir}.` : '';
+  throw new BrowserAutomationError(
+    `Manual login mode timed out waiting for ChatGPT session; please sign in and retry.${authHint}${profileHint}`,
+    {
+      stage: 'chatgpt-login-required',
+      providerState: 'login-required',
+      authRecoveryCommand: authRecoveryCommand ?? null,
+      managedProfileDir: managedProfileDir ?? null,
+    },
+  );
+}
+
+function buildAuthModeCommand(config: ReturnType<typeof resolveBrowserConfig>): string {
+  const target = config.target ?? 'chatgpt';
+  const profileName = config.auracallProfileName?.trim();
+  const profileArg = profileName ? ` --profile ${shellQuote(profileName)}` : '';
+  return `auracall${profileArg} login --target ${shellQuote(target)}`;
+}
+
+function shellQuote(value: string): string {
+  return /^[A-Za-z0-9_./:@-]+$/.test(value) ? value : `'${value.replace(/'/g, `'\\''`)}'`;
 }
 
 async function _assertNavigatedToHttp(

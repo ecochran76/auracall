@@ -334,6 +334,7 @@ export function createConfiguredStoredStepExecutor(
           asNonEmptyString(browserProfileConfig?.managedProfileRoot) ??
           asNonEmptyString(browserConfigRecord?.managedProfileRoot),
         allowCookieErrors: true,
+        manualLoginWaitForSession: false,
       },
       log: (() => undefined) as typeof console.log,
       verbose: false,

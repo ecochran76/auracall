@@ -18463,3 +18463,244 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Updated
   [docs/openai-endpoints.md](/home/ecochran76/workspace.local/oracle/docs/openai-endpoints.md)
   so the public dev-server contract now reflects that same split.
+
+## 2026-04-20 - Public team-run route live-smoke result
+
+- Ran a live HTTP smoke against `POST /v1/team-runs` on
+  `auracall-chatgpt-solo` with objective
+  `Reply exactly with: TEAM_ROUTE_SMOKE_OK`.
+- Verified the route surface itself is wired and durable:
+  - `/status` advertised `teamRunsCreate: /v1/team-runs`
+  - the request created
+    `taskrun_auracall-chatgpt-solo_5987a811-fab`
+  - the request created runtime/team run
+    `teamrun_auracall-chatgpt-solo_5987a811-fab`
+  - `/v1/team-runs/inspect?teamRunId=...` resolved by team-run id and read
+    back the expected `taskRunSpec -> teamRun -> runtime` chain
+- The live provider step did not complete within the 300 second client window:
+  - the synchronous `POST /v1/team-runs` request timed out with no response
+  - recovery detail reported the active lease as `suspiciously-idle` because
+    runner and lease heartbeats continued but `runnerLastActivityAt` stayed
+    null after step start
+  - a concurrent `probe=service-state` runtime inspection also blocked and had
+    to be interrupted
+- Cancelled the run through `/status` run control; persisted state moved to
+  `cancelled`, step 1 was marked `cancelled`, and the active lease was
+  released with reason `cancelled`.
+- Current blocker: operational readiness for public team-run create now needs a
+  bounded live-execution observability slice, not more route/persistence
+  plumbing.
+
+## 2026-04-20 - WSL managed Chrome basic keyring support
+
+- Root-caused the prior ChatGPT live-smoke stall to a Linux keyring modal that
+  blocked full Chrome loading for the managed browser profile.
+- Fixed the generic Chrome launch flags so non-Windows managed Chrome launches
+  include `--password-store=basic`, including WSL visible auth-mode launches,
+  and avoid a desktop keyring prompt before DevTools/provider pages fully load.
+- Added focused browser-service coverage for minimal managed launches and WSL
+  launches.
+- Updated README and the WSL ChatGPT runbook so operators know existing Chrome
+  processes may need to be closed once to pick up the basic password-store flag.
+- Live rerun evidence on `auracall-chatgpt-solo`:
+  - managed WSL Chrome launched with `--password-store=basic`
+  - ChatGPT reached `readyState=complete` without the keyring modal
+  - DOM inspection showed visible `Log in` controls and embedded
+    `authStatus: "logged_out"`
+  - the team run was cancelled as
+    `teamrun_auracall-chatgpt-solo_3e12355a-bda`
+- Current blocker moved from keyring launch to managed browser profile auth:
+  refresh/login the `wsl-chrome-2/chatgpt` managed browser profile before the
+  next public team-route live smoke.
+
+## 2026-04-20 - Stored ChatGPT auth-required fast fail
+
+- Opened the managed ChatGPT auth browser explicitly for the current blocker:
+  `auracall --profile wsl-chrome-2 login --target chatgpt`.
+  - Managed browser profile:
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+  - Debug endpoint: `127.0.0.1:9222`
+- Added `manualLoginWaitForSession` to the browser config contract.
+  - Direct browser/login/setup behavior keeps the default interactive wait.
+  - Configured stored team/API browser execution sets
+    `manualLoginWaitForSession: false`.
+- Tightened ChatGPT login-required errors so they include:
+  - `providerState: "login-required"`
+  - the managed browser profile path
+  - an auth-mode recovery command such as
+    `auracall --profile wsl-chrome-2 login --target chatgpt`
+- Preserved those browser automation error details through runtime failure
+  persistence and exposed non-null details in
+  `metadata.executionSummary.failureSummary.details`.
+- Added focused coverage for auth-mode recovery guidance and for configured
+  ChatGPT stored steps passing the non-interactive login setting.
+
+## 2026-04-20 - Auth login display propagation
+
+- Found that `resolveBrowserConfig(...)` already defaults WSL Linux Chrome to
+  `display: ":0.0"`, but the `auracall login` wrapper dropped that resolved
+  value before calling the browser-service manual-login launcher.
+- Wired `display` through:
+  - AuraCall login option resolution
+  - browser-service `runBrowserLogin(...)`
+  - the manual-login session wrapper/base config
+- Relaunched the current ChatGPT auth browser with `DISPLAY=:0` to unblock the
+  live login attempt and confirmed X11 sees the window as
+  `ChatGPT - Google Chrome`.
+- Follow-up: X11 still placed the window at `+1860+719`, which can be
+  invisible on a narrower WSLg desktop. Added visible-window launch flags for
+  non-minimized Chrome (`--window-position=0,0`; minimal login windows also
+  get `--window-size=1400,1000`), killed the old `9222` instance, and
+  relaunched. X11 now reports `ChatGPT - Google Chrome` at `1400x1000+0+0`.
+- Follow-up: the user still could not see either the AuraCall-owned Chrome
+  window or an `xmessage` visibility probe even though X11 listed both. That
+  points to a WSLg/Windows RAIL presentation issue for this agent session, not
+  a missing Chrome process. The selected runtime remains WSL Chrome; do not
+  switch to Windows Chrome or host-browser auth as recovery for this browser
+  profile.
+- Follow-up: a forced WSLg Wayland launch attempt with the same managed
+  browser profile did not stay up or expose DevTools; Chrome continued to use
+  X11 on normal AuraCall launches. The immediate blocker remains WSLg
+  presentation for X11 windows from this agent session.
+- Added coverage so WSL login options carry `display: ":0.0"` and the
+  browser-service login core passes `display` to the manual-login launcher.
+
+## 2026-04-20 - WSL auth-mode Chrome visibility recovery
+
+- Rechecked the `wsl-chrome-2/chatgpt` managed browser profile after the user
+  reported that WSL Chrome had worked before the keyring change.
+- Found stale Chrome singleton state in the managed browser profile:
+  `SingletonLock -> cooper-2585` while PID `2585` was dead, plus stale
+  `DevToolsActivePort` state.
+- Added startup cleanup for Aura-Call-managed profiles before launching Chrome:
+  stale DevTools hints are removed, and Chrome lock files are removed when the
+  recorded managed-profile PID is dead.
+- Reassessed the keyring change after the user confirmed WSL itself had been
+  locked up. The original basic password-store bypass was correct; the valid
+  additional fixes are WSL `DISPLAY` propagation, visible-window anchoring,
+  and stale managed-profile lock cleanup.
+- Validated the real ChatGPT team browser profile with:
+  `DISPLAY=:0.0 pnpm tsx bin/auracall.ts --profile wsl-chrome-2 login --target chatgpt --browser-wsl-chrome wsl --browser-display :0.0 --browser-chrome-profile 'Profile 1'`
+  - opened `/usr/bin/google-chrome` / `/opt/google/chrome/chrome`
+  - managed browser profile:
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+  - DevTools endpoint: `127.0.0.1:45000`
+  - X11 reports `ChatGPT - Google Chrome` at `1400x1000+0+0`
+  - process flags include `--password-store=basic`
+
+## 2026-04-20 - WSLg launch presentation follow-up
+
+- User reported that the only visible Chrome window was imcli's existing
+  Google Messages browser, despite AuraCall's X11 Chrome process and
+  `xwininfo` window being present.
+- Confirmed imcli's visible Chrome is an existing WSLg Wayland Chrome launched
+  with `--ozone-platform=wayland`.
+- Tried fresh AuraCall/Chrome Wayland launches from the current session with:
+  - the `wsl-chrome-2/chatgpt` managed browser profile
+  - a fresh temporary control profile
+  - fixed DevTools port and `--remote-debugging-port=0`
+  - direct `setsid` launch and `systemd-run --user`
+  - `--password-store=basic` and GPU-disabled variants
+- All fresh Wayland launches from this session stalled at the Chrome parent +
+  zygote stage, did not create renderer/GPU processes, and did not expose
+  DevTools; stderr consistently reported
+  `drmGetDevices2() has not found any devices`.
+- Cleaned up the failed control Chrome processes. Current blocker is now
+  WSLg/Chrome presentation/runtime launch state for new browser windows from
+  this session, not AuraCall selecting Windows Chrome or losing the managed
+  browser profile.
+
+## 2026-04-20 - WSL ChatGPT managed profile login restored
+
+- Opened the `wsl-chrome-2/chatgpt` managed browser profile directly with WSL
+  Chrome, `DISPLAY=:0.0`, and `--password-store=basic`.
+- User completed ChatGPT login in that window.
+- Verified through DevTools on `127.0.0.1:45000`:
+  - selected ChatGPT tab URL: `https://chatgpt.com/`
+  - `readyState: "complete"`
+  - `visibilityState: "visible"`
+  - visible composer surface exists (`contenteditables: 1`)
+  - ChatGPT cookies include `__Secure-next-auth.session-token.0` and
+    `__Secure-next-auth.session-token.1`
+- Current state: managed browser profile auth is restored; next validation can
+  be a bounded ChatGPT browser/team smoke.
+
+## 2026-04-20 - WSL ChatGPT browser smoke green
+
+- Ran a bounded browser smoke against the authenticated `wsl-chrome-2` managed
+  ChatGPT profile:
+  `DISPLAY=:0.0 AURACALL_BROWSER_DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts --profile wsl-chrome-2 --engine browser --model gpt-5.2 --prompt "Reply exactly with: WSL_CHROME_LOGIN_OK" --browser-keep-browser --force --verbose`
+- Initial attempts with unsupported root flags failed before launch:
+  `--browser-wsl-chrome` and `--browser-display` are setup/login options, not
+  root browser-run options.
+- Successful run evidence:
+  - selected `wsl-chrome-2` runtime profile
+  - resolved WSL Chrome at `/usr/bin/google-chrome`
+  - resolved `display: ":0.0"`
+  - reused managed browser profile
+    `/home/ecochran76/.auracall/browser-profiles/wsl-chrome-2/chatgpt`
+  - reused live DevTools port `45013`
+  - ChatGPT login check passed
+  - prompt was submitted to new conversation
+    `https://chatgpt.com/c/69e6c565-dfc0-83ea-aa0b-e7873b113a96`
+  - exact answer returned: `WSL_CHROME_LOGIN_OK`
+- Current state: direct WSL ChatGPT browser execution is green after login.
+  Next validation should move back to the stored/team-run surface.
+
+## 2026-04-20 - WSL ChatGPT team smoke green
+
+- Ran the documented bounded ChatGPT team smoke:
+  `DISPLAY=:0.0 AURACALL_BROWSER_DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts teams run auracall-chatgpt-solo "Reply exactly with: AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK" --title "AuraCall ChatGPT team live smoke" --prompt-append "Do not use tools. Reply with exactly AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK and nothing else." --max-turns 1 --json`
+- CLI `teams run` created durable planned records:
+  - task run spec: `taskrun_auracall-chatgpt-solo_cbbbf386-626`
+  - team/runtime run: `teamrun_auracall-chatgpt-solo_cbbbf386-626`
+  - step runtime/browser profile: `wsl-chrome-2`
+  - service: `chatgpt`
+- Started a temporary local API server on `127.0.0.1:8081` with
+  `--recover-runs-on-start-source team-run` because port `8080` was occupied
+  by Apache/WordPress.
+- Startup recovery claimed the planned run with
+  `runner:http-responses:127.0.0.1:8081` and executed the ChatGPT step.
+- Readback evidence:
+  - `/v1/team-runs/inspect?teamRunId=...` returned `runtimeRunStatus:
+    "succeeded"`
+  - `/v1/runtime-runs/inspect?runtimeRunId=...` returned `runStatus:
+    "succeeded"` and idle queue projection
+  - `/v1/responses/teamrun_auracall-chatgpt-solo_cbbbf386-626` returned
+    `status: "completed"`
+  - output text: `AURACALL_CHATGPT_TEAM_LIVE_SMOKE_OK`
+  - requested output policy: `status: "satisfied"`
+- Stopped the temporary API server after readback.
+- Current state: direct WSL ChatGPT browser execution and server-owned
+  ChatGPT team execution are green.
+
+## 2026-04-20 - Public ChatGPT team-run route smoke green
+
+- Started a temporary local API server on `127.0.0.1:8081` with
+  `--recover-runs-on-start-source team-run` because port `8080` is owned by
+  Apache/WordPress in this environment.
+- Posted a bounded live request to `/v1/team-runs`:
+  - team: `auracall-chatgpt-solo`
+  - objective: `Reply exactly with: AURACALL_CHATGPT_TEAM_ROUTE_OK`
+  - `maxTurns: 1`
+  - response format: `markdown`
+- Synchronous route response completed in about 9 seconds with:
+  - task run spec: `taskrun_auracall-chatgpt-solo_a7af1404-ba9`
+  - team/runtime run: `teamrun_auracall-chatgpt-solo_a7af1404-ba9`
+  - `runtimeRunStatus: "succeeded"`
+  - `finalOutputSummary: "AURACALL_CHATGPT_TEAM_ROUTE_OK"`
+  - step runtime/browser profile: `wsl-chrome-2`
+  - service: `chatgpt`
+- Readback evidence:
+  - `/v1/team-runs/inspect?teamRunId=teamrun_auracall-chatgpt-solo_a7af1404-ba9`
+    returned `runtimeRunStatus: "succeeded"` with no active lease
+  - `/v1/runtime-runs/inspect?runtimeRunId=teamrun_auracall-chatgpt-solo_a7af1404-ba9`
+    returned `runStatus: "succeeded"` and idle queue projection
+  - `/v1/responses/teamrun_auracall-chatgpt-solo_a7af1404-ba9` returned
+    `status: "completed"` with output
+    `AURACALL_CHATGPT_TEAM_ROUTE_OK`
+  - requested output policy returned `status: "satisfied"`
+- Stopped the temporary API server after readback; `127.0.0.1:8081` is clear.
+- Current state: direct browser execution, CLI-planned/server-drained team
+  execution, and the public `/v1/team-runs` route are green on the WSL
+  ChatGPT managed browser profile.

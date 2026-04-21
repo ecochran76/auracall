@@ -88,6 +88,7 @@ export interface BrowserAutomationConfig {
   manualLogin?: boolean;
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
+  manualLoginWaitForSession?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
   managedProfileRoot?: string | null;
   serviceTabLimit?: number | null;
@@ -157,6 +158,7 @@ export type ResolvedBrowserConfig = Required<
   manualLogin?: boolean;
   manualLoginProfileDir?: string | null;
   manualLoginCookieSync?: boolean;
+  manualLoginWaitForSession?: boolean;
   wslChromePreference?: 'auto' | 'wsl' | 'windows';
   managedProfileRoot?: string | null;
   serviceTabLimit?: number | null;

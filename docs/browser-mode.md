@@ -63,6 +63,12 @@ You can pass the same payload inline (`--browser-inline-cookies '<json or base64
     reCAPTCHA, Cloudflare, or another human-verification surface, the command
     now exits nonzero with manual-clear guidance instead of treating that as a
     successful ordinary login result
+- Stored/API ChatGPT browser runs do not wait for interactive login. If the
+  managed ChatGPT page shows `Log in` or otherwise probes as signed out, the
+  run fails fast with auth recovery guidance and an auth-mode command such as
+  `auracall --profile <name> login --target chatgpt`. API readback exposes the
+  same machine-readable recovery fields under
+  `metadata.executionSummary.failureSummary.details`.
 - `auracall login --target grok`: opens the configured browser profile for Grok sign-in.
 - `auracall wizard`: guided first-run onboarding. It detects candidate local/WSL/Windows Chromium profiles, writes a profile-scoped Aura-Call config entry, then runs the same managed-profile setup flow described below. On WSL, prefer the WSL Chrome path first unless you are intentionally testing the Windows relay path; for the primary WSL setup, keep that profile on Aura-Call `default`.
 - `auracall setup --target <chatgpt|gemini|grok>`: inspect the managed Aura-Call profile, open the managed login browser when needed, then send a real verification prompt through that same profile. Use `--skip-login` when the managed profile is already signed in and `--skip-verify` when you only want inspection/bootstrap.

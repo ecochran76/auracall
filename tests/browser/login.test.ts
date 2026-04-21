@@ -1,7 +1,11 @@
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { resolveBrowserLoginOptionsFromUserConfig } from '../../src/browser/login.js';
 
 describe('resolveBrowserLoginOptionsFromUserConfig', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
   test('derives login prep from the resolved launch profile', () => {
     const options = resolveBrowserLoginOptionsFromUserConfig(
       {
@@ -39,6 +43,31 @@ describe('resolveBrowserLoginOptionsFromUserConfig', () => {
       blankTabLimit: 0,
       collapseDisposableWindows: false,
       managedProfileSeedPolicy: 'reseed-if-source-newer',
+    });
+  });
+
+  test('carries the resolved WSL display into login options', () => {
+    vi.stubEnv('WSL_DISTRO_NAME', 'Ubuntu');
+
+    const options = resolveBrowserLoginOptionsFromUserConfig(
+      {
+        auracallProfile: 'wsl-chrome-2',
+        browser: {
+          target: 'chatgpt',
+          chromePath: '/usr/bin/google-chrome',
+          chromeProfile: 'Profile 1',
+          chromeCookiePath: '/home/test/.config/google-chrome/Profile 1/Network/Cookies',
+          managedProfileRoot: '/home/test/.auracall/browser-profiles',
+        } as never,
+      },
+      { target: 'chatgpt' },
+    );
+
+    expect(options).toMatchObject({
+      target: 'chatgpt',
+      chromePath: '/usr/bin/google-chrome',
+      manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      display: ':0.0',
     });
   });
 });

@@ -91,6 +91,14 @@ Current browser-mode default posture:
   `manualLoginProfileDir = managedProfileRoot + auracallProfile + service`
 - set `manualLogin: false` explicitly when you need to suppress that managed
   profile path
+- non-Windows managed Chrome launches include `--password-store=basic` so
+  Linux/WSL automation profiles do not block behind desktop keyring prompts,
+  including visible auth-mode launches
+- stored team/API browser runs are non-interactive: if ChatGPT shows a logged
+  out surface, Aura-Call fails fast and prints an auth-mode command such as
+  `auracall --profile <name> login --target chatgpt` instead of waiting in the
+  hidden/minimized automation window; API readback also includes those
+  recovery fields in `metadata.executionSummary.failureSummary.details`
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

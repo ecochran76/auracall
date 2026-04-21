@@ -45,4 +45,38 @@ describe('chromeLifecycle (package)', () => {
     expect(buildChromeFlags(false, null, 'Default', { startMinimized: true })).toContain('--start-minimized');
     expect(buildChromeFlags(true, null, 'Default', { startMinimized: true })).not.toContain('--start-minimized');
   });
+
+  test('buildChromeFlags anchors visible minimal login windows on screen', () => {
+    const visibleFlags = buildChromeFlags(false, null, 'Profile 1', { minimal: true });
+    expect(visibleFlags).toContain('--window-position=0,0');
+    expect(visibleFlags).toContain('--window-size=1400,1000');
+
+    const minimizedFlags = buildChromeFlags(false, null, 'Profile 1', {
+      minimal: true,
+      startMinimized: true,
+    });
+    expect(minimizedFlags).toContain('--start-minimized');
+    expect(minimizedFlags).not.toContain('--window-position=0,0');
+  });
+
+  test.runIf(process.platform !== 'win32')(
+    'buildChromeFlags uses the basic password store for minimal managed launches',
+    () => {
+      const flags = buildChromeFlags(false, null, 'Profile 1', { minimal: true });
+
+      expect(flags).toContain('--password-store=basic');
+      expect(flags.filter((flag) => flag === '--password-store=basic')).toHaveLength(1);
+    },
+  );
+
+  test.runIf(process.platform !== 'win32')(
+    'buildChromeFlags keeps basic password store enabled inside WSL',
+    () => {
+      process.env.WSL_DISTRO_NAME = 'Ubuntu';
+
+      const flags = buildChromeFlags(false, null, 'Profile 1', { minimal: true });
+
+      expect(flags).toContain('--password-store=basic');
+    },
+  );
 });

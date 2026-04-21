@@ -37,4 +37,33 @@ describe('browser-service runBrowserLogin', () => {
     });
     expect(consoleSpy).toHaveBeenCalledWith('Debug endpoint: windows-loopback:45920');
   });
+
+  it('passes display through to the manual login launcher', async () => {
+    const launchManualLoginSession = vi.fn(async () => ({
+      chrome: {
+        pid: 4321,
+        host: '127.0.0.1',
+        port: 45000,
+        process: { unref: () => undefined },
+      },
+    }));
+    vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    await runBrowserLogin({
+      chromePath: '/usr/bin/google-chrome',
+      chromeProfile: 'Profile 1',
+      manualLoginProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      display: ':0.0',
+      loginUrl: 'https://chatgpt.com/',
+      loginLabel: 'chatgpt',
+      preferCookieProfile: false,
+      launchManualLoginSession,
+    });
+
+    expect(launchManualLoginSession).toHaveBeenCalledWith(
+      expect.objectContaining({
+        display: ':0.0',
+      }),
+    );
+  });
 });

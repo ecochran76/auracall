@@ -125,6 +125,7 @@ export function createExecutionResponseFromRunRecord(
             ? {
                 code: terminalStep.failure.code ?? null,
                 message: terminalStep.failure.message ?? null,
+                ...(terminalStep.failure.details ? { details: terminalStep.failure.details } : {}),
               }
             : requestedOutputPolicy?.status === 'missing-required'
               ? {

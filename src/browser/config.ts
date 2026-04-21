@@ -50,6 +50,7 @@ export const DEFAULT_BROWSER_CONFIG: ResolvedBrowserConfig = {
   manualLogin: true,
   manualLoginProfileDir: null,
   manualLoginCookieSync: false,
+  manualLoginWaitForSession: true,
   wslChromePreference: 'auto',
   serviceTabLimit: 3,
   blankTabLimit: 1,
@@ -250,6 +251,8 @@ export function resolveBrowserConfig(
     manualLoginProfileDir:
       manualLogin ? launchProfile.manualLoginProfileDir ?? resolvedProfileDir : null,
     manualLoginCookieSync: config?.manualLoginCookieSync ?? DEFAULT_BROWSER_CONFIG.manualLoginCookieSync,
+    manualLoginWaitForSession:
+      config?.manualLoginWaitForSession ?? DEFAULT_BROWSER_CONFIG.manualLoginWaitForSession,
     wslChromePreference: launchProfile.wslChromePreference ?? wslChromePreference,
     serviceTabLimit: launchProfile.serviceTabLimit ?? serviceTabLimit,
     blankTabLimit: launchProfile.blankTabLimit ?? blankTabLimit,

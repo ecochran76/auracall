@@ -663,6 +663,14 @@ describe('configured stored-step executor', () => {
       } as never,
     });
 
+    expect(runBrowserModeImpl).toHaveBeenCalledWith(
+      expect.objectContaining({
+        config: expect.objectContaining({
+          manualLogin: true,
+          manualLoginWaitForSession: false,
+        }),
+      }),
+    );
     expect(result?.output?.structuredData?.browserRun).toMatchObject({
       provider: 'chatgpt',
       service: 'chatgpt',

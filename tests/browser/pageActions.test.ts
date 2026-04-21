@@ -183,6 +183,21 @@ describe('ensureLoggedIn', () => {
     await expect(ensureLoggedIn(runtime, logger, { appliedCookies: 0 })).rejects.toThrow(/inline cookies/i);
   });
 
+  test('includes auth-mode recovery guidance when provided', async () => {
+    const runtime = {
+      evaluate: vi.fn().mockResolvedValue({
+        result: { value: { ok: false, status: 401, url: '/backend-api/me', domLoginCta: true } },
+      }),
+    } as unknown as ChromeClient['Runtime'];
+    await expect(
+      ensureLoggedIn(runtime, logger, {
+        appliedCookies: 2,
+        authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
+        managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      }),
+    ).rejects.toThrow(/Open the browser in auth mode with: auracall --profile wsl-chrome-2 login --target chatgpt/);
+  });
+
   test('uses remote hint for remote sessions', async () => {
     const runtime = {
       evaluate: vi.fn().mockResolvedValue({ result: { value: { ok: false, status: 401, url: '/backend-api/me' } } }),

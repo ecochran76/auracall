@@ -208,6 +208,7 @@ export interface ExecutionResponse {
       failureSummary?: {
         code?: string | null;
         message?: string | null;
+        details?: Record<string, unknown> | null;
       } | null;
     } | null;
   };

@@ -14,6 +14,7 @@ import {
 import { cancelExecutionRun, executeStoredExecutionRunOnce } from '../src/runtime/runner.js';
 import type { ExecuteLocalActionRequestResult, ExecuteStoredRunStepResult } from '../src/runtime/runner.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../src/teams/types.js';
+import { BrowserAutomationError } from '../src/oracle/errors.js';
 
 function createDirectBundle(runId: string) {
   const createdAt = '2026-04-08T13:00:00.000Z';
@@ -147,6 +148,41 @@ describe('runtime runner', () => {
       'lease-released',
     ]);
     expect(executed.bundle.leases[0]?.releaseReason).toBe('failed');
+  });
+
+  it('preserves browser automation failure details for operator recovery', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-runner-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    await control.createRun(createDirectBundle('run_browser_failure_details'));
+
+    const executed = await executeStoredExecutionRunOnce({
+      runId: 'run_browser_failure_details',
+      ownerId: 'runner:local-test',
+      now: () => '2026-04-08T13:02:10.000Z',
+      control,
+      executeStep: async () => {
+        throw new BrowserAutomationError('ChatGPT session not detected. Login button detected on page.', {
+          stage: 'chatgpt-login-required',
+          providerState: 'login-required',
+          authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
+          managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+        });
+      },
+    });
+
+    expect(executed.bundle.run.status).toBe('failed');
+    expect(executed.bundle.steps[0]?.failure).toMatchObject({
+      code: 'runner_execution_failed',
+      message: 'ChatGPT session not detected. Login button detected on page.',
+      details: {
+        providerState: 'login-required',
+        authRecoveryCommand: 'auracall --profile wsl-chrome-2 login --target chatgpt',
+        managedProfileDir: '/home/test/.auracall/browser-profiles/wsl-chrome-2/chatgpt',
+      },
+    });
   });
 
   it('fails before executing a step that exceeds the task turn limit', async () => {

@@ -30,6 +30,7 @@ export interface BrowserPassiveObservation {
 type LlmBrowserFields = {
   selectedAgentId?: string | null;
   target?: 'chatgpt' | 'gemini' | 'grok';
+  auracallProfileName?: string | null;
   projectId?: string | null;
   conversationId?: string | null;
   geminiUrl?: string | null;
@@ -53,13 +54,11 @@ type BrowserBlockingProfileAction =
 
 export type BrowserSessionConfig = Omit<BaseTypes.BrowserSessionConfig, 'blockingProfileAction'> &
   LlmBrowserFields & {
-    auracallProfileName?: string | null;
     blockingProfileAction?: BrowserBlockingProfileAction;
   };
 
 export type BrowserAutomationConfig = Omit<BaseTypes.BrowserAutomationConfig, 'blockingProfileAction'> &
   LlmBrowserFields & {
-    auracallProfileName?: string | null;
     blockingProfileAction?: BrowserBlockingProfileAction;
   };
 

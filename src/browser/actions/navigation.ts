@@ -190,7 +190,12 @@ const LOGIN_CHECK_TIMEOUT_MS = 5_000;
 export async function ensureLoggedIn(
   Runtime: ChromeClient['Runtime'],
   logger: BrowserLogger,
-  options: { appliedCookies?: number | null; remoteSession?: boolean } = {},
+  options: {
+    appliedCookies?: number | null;
+    authRecoveryCommand?: string | null;
+    managedProfileDir?: string | null;
+    remoteSession?: boolean;
+  } = {},
 ) {
   // Learned: ChatGPT can render the UI (project view) while auth silently failed.
   // A backend-api probe plus DOM login CTA check catches both cases.
@@ -234,13 +239,28 @@ export async function ensureLoggedIn(
   );
 
   const domLabel = probe.domLoginCta ? ' Login button detected on page.' : '';
+  const authRecoveryHint = options.authRecoveryCommand
+    ? ` Open the browser in auth mode with: ${options.authRecoveryCommand}`
+    : '';
+  const managedProfileHint = options.managedProfileDir
+    ? ` Managed browser profile: ${options.managedProfileDir}.`
+    : '';
   const cookieHint = options.remoteSession
     ? 'The remote Chrome session is not signed into ChatGPT. Sign in there, then rerun.'
     : (options.appliedCookies ?? 0) === 0
-      ? 'No ChatGPT cookies were applied; sign in to chatgpt.com in Chrome or pass inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).'
-      : 'ChatGPT login appears missing; open chatgpt.com in Chrome to refresh the session or provide inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).';
+      ? `No ChatGPT cookies were applied; sign in to chatgpt.com in Chrome or pass inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).${authRecoveryHint}${managedProfileHint}`
+      : `ChatGPT login appears missing; open chatgpt.com in Chrome to refresh the session or provide inline cookies (--browser-inline-cookies[(-file)] / AURACALL_BROWSER_COOKIES_JSON).${authRecoveryHint}${managedProfileHint}`;
 
-  throw new Error(`ChatGPT session not detected.${domLabel} ${cookieHint}`);
+  throw new BrowserAutomationError(`ChatGPT session not detected.${domLabel} ${cookieHint}`, {
+    stage: 'chatgpt-login-required',
+    providerState: 'login-required',
+    authRecoveryCommand: options.authRecoveryCommand ?? null,
+    managedProfileDir: options.managedProfileDir ?? null,
+    status: probe.status,
+    domLoginCta: Boolean(probe.domLoginCta),
+    onAuthPage: Boolean(probe.onAuthPage),
+    pageUrl: probe.pageUrl ?? null,
+  });
 }
 
 async function attemptWelcomeBackLogin(Runtime: ChromeClient['Runtime'], logger: BrowserLogger): Promise<boolean> {

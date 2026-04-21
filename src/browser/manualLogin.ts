@@ -10,6 +10,7 @@ export async function launchManualLoginSession(options: {
   userDataDir: string;
   url: string;
   compatibleHosts?: string[];
+  display?: string | null;
   logger: BrowserLogger;
   hideWindow?: boolean;
   debugPort?: number;
@@ -25,6 +26,7 @@ export async function launchManualLoginSession(options: {
     baseConfig: {
       ...DEFAULT_BROWSER_CONFIG,
       hideWindow: options.hideWindow ?? DEFAULT_BROWSER_CONFIG.hideWindow,
+      display: options.display ?? DEFAULT_BROWSER_CONFIG.display,
       serviceTabLimit: options.serviceTabLimit ?? DEFAULT_BROWSER_CONFIG.serviceTabLimit,
       blankTabLimit: options.blankTabLimit ?? DEFAULT_BROWSER_CONFIG.blankTabLimit,
       collapseDisposableWindows:
