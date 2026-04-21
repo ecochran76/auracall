@@ -13425,3 +13425,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   terminal run with `runtimeRunStatus: "succeeded"` and
   `/v1/responses/<teamRunId>` returns `status: "completed"` with the requested
   output policy satisfied.
+- 2026-04-21: Treat deterministic model-output shape as a model-emitted step
+  envelope, not as a replacement for OpenAI-compatible HTTP response objects.
+  In this repo, `auracall.step-output.v1` should be prepended as an execution
+  prompt only for opted-in steps and then enforced by runtime schema
+  validation. Prompt-only enforcement is not sufficient; invalid JSON or schema
+  mismatches must fail the step with machine-readable prompt-validation
+  details so runners, API clients, and team handoffs can route failure without
+  prose scraping.

@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { BrowserPassiveObservation } from '../src/browser/types.js';
 import { createConfiguredStoredStepExecutor } from '../src/runtime/configuredExecutor.js';
 import { readLiveRuntimeRunServiceState, resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
+import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../src/runtime/stepOutputContract.js';
 
 describe('configured stored-step executor', () => {
   beforeEach(() => {
@@ -242,6 +243,155 @@ describe('configured stored-step executor', () => {
         notes: [],
       },
     ]);
+  });
+
+  it('enforces opt-in AuraCall step output contract for browser-backed steps', async () => {
+    const runBrowserModeImpl = vi.fn(async () => ({
+      answerText: JSON.stringify({
+        version: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        status: 'needs_local_action',
+        routing: { action: 'local_action' },
+        message: { markdown: 'Need one host command.' },
+        localActionRequests: [
+          {
+            kind: 'shell',
+            summary: 'Print contract token',
+            command: 'node',
+            args: ['-e', "process.stdout.write('contract-ok')"],
+            structuredPayload: {
+              cwd: process.cwd(),
+            },
+          },
+        ],
+        artifacts: [],
+        handoffs: [],
+      }),
+      answerMarkdown: JSON.stringify({
+        version: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+        status: 'needs_local_action',
+        routing: { action: 'local_action' },
+        message: { markdown: 'Need one host command.' },
+        localActionRequests: [
+          {
+            kind: 'shell',
+            summary: 'Print contract token',
+            command: 'node',
+            args: ['-e', "process.stdout.write('contract-ok')"],
+            structuredPayload: {
+              cwd: process.cwd(),
+            },
+          },
+        ],
+        artifacts: [],
+        handoffs: [],
+      }),
+      tookMs: 1200,
+      answerTokens: 21,
+      answerChars: 331,
+      tabUrl: 'https://grok.com/c/contract-conversation',
+      conversationId: 'contract-conversation',
+    }));
+
+    const executeStoredRunStep = createConfiguredStoredStepExecutor(
+      {
+        browser: {
+          chromePath: '/usr/bin/google-chrome',
+          chromeProfile: 'Default',
+          chromeCookiePath: '/tmp/source/Cookies',
+          bootstrapCookiePath: '/tmp/source/Cookies',
+          managedProfileRoot: '/tmp/auracall/browser-profiles',
+        },
+        services: {
+          grok: {
+            url: 'https://grok.com/',
+          },
+        },
+        runtimeProfiles: {
+          'auracall-grok-auto': {
+            engine: 'browser',
+            defaultService: 'grok',
+            browserProfile: 'default',
+            browser: {
+              hideWindow: true,
+            },
+            services: {
+              grok: {
+                model: 'Auto',
+                projectId: 'project_123',
+                manualLoginProfileDir: '/tmp/auracall/browser-profiles/default/grok',
+              },
+            },
+          },
+        },
+      },
+      { runBrowserModeImpl },
+    );
+
+    const result = await executeStoredRunStep?.({
+      record: {
+        runId: 'teamrun_contract_1',
+        revision: 1,
+        bundle: {
+          run: {
+            id: 'teamrun_contract_1',
+          },
+        },
+      } as never,
+      step: {
+        id: 'teamrun_contract_1:step:1',
+        agentId: 'auracall-contract-agent',
+        runtimeProfileId: 'auracall-grok-auto',
+        browserProfileId: 'default',
+        service: 'grok',
+        input: {
+          prompt: 'Use the contract.',
+          artifacts: [],
+          structuredData: {
+            responseShape: {
+              contract: AURACALL_STEP_OUTPUT_CONTRACT_VERSION,
+            },
+          },
+          notes: [],
+        },
+      } as never,
+    });
+
+    expect(runBrowserModeImpl).toHaveBeenCalledTimes(1);
+    const browserOptions = (runBrowserModeImpl as unknown as { mock: { calls: Array<[{ prompt: string }]> } }).mock
+      .calls[0]?.[0];
+    expect(browserOptions?.prompt).toContain(`version "${AURACALL_STEP_OUTPUT_CONTRACT_VERSION}"`);
+    expect(browserOptions?.prompt).toContain('User assignment:\nUse the contract.');
+    expect(result?.output).toMatchObject({
+      summary: 'Need one host command.',
+      structuredData: {
+        routing: { action: 'local_action' },
+        localActionRequests: [
+          {
+            kind: 'shell',
+            summary: 'Print contract token',
+            command: 'node',
+            args: ['-e', "process.stdout.write('contract-ok')"],
+            structuredPayload: {
+              cwd: process.cwd(),
+            },
+          },
+        ],
+        browserRun: {
+          provider: 'grok',
+          conversationId: 'contract-conversation',
+        },
+      },
+    });
+    expect(result?.sharedState?.structuredOutputs).toContainEqual({
+      key: 'response.output',
+      value: [
+        {
+          type: 'message',
+          role: 'assistant',
+          content: [{ type: 'output_text', text: 'Need one host command.' }],
+        },
+      ],
+    });
   });
 
   it('executes a Gemini browser-backed step through the Gemini web executor path', async () => {

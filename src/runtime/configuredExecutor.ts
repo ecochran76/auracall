@@ -13,6 +13,12 @@ import {
   clearLiveRuntimeRunServiceState,
   recordLiveRuntimeRunServiceState,
 } from './liveServiceStateRegistry.js';
+import {
+  createStepOutputContractResult,
+  parseAuraCallStepOutputEnvelope,
+  prependAuraCallStepOutputContractPrompt,
+  shouldUseAuraCallStepOutputContract,
+} from './stepOutputContract.js';
 
 type MutableRecord = Record<string, unknown>;
 
@@ -277,9 +283,13 @@ export function createConfiguredStoredStepExecutor(
     if (!prompt) {
       throw new Error(`Stored team step ${context.step.id} has no runnable prompt text.`);
     }
+    const useStepOutputContract = shouldUseAuraCallStepOutputContract(context.step.input.structuredData);
+    const effectivePrompt = useStepOutputContract
+      ? prependAuraCallStepOutputContractPrompt(prompt)
+      : prompt;
 
     const browserRunOptions: BrowserRunOptions = {
-      prompt,
+      prompt: effectivePrompt,
       attachments: buildBrowserAttachments(context),
       config: {
         auracallProfileName: browserFamilyProfileName ?? runtimeSelection.runtimeProfileId,
@@ -373,6 +383,42 @@ export function createConfiguredStoredStepExecutor(
     const responseText = browserResult.answerMarkdown.trim().length > 0
       ? browserResult.answerMarkdown
       : browserResult.answerText;
+    const contractResult = useStepOutputContract
+      ? createStepOutputContractResult(parseAuraCallStepOutputEnvelope(responseText))
+      : null;
+    if (contractResult) {
+      return {
+        output: {
+          ...contractResult.output,
+          structuredData: {
+            ...contractResult.output.structuredData,
+            browserRun: {
+              provider: service,
+              service,
+              conversationId: browserResult.conversationId ?? null,
+              tabUrl: browserResult.tabUrl ?? null,
+              runtimeProfileId: runtimeSelection.runtimeProfileId,
+              browserProfileId: runtimeSelection.browserProfileId,
+              agentId: context.step.agentId,
+              projectId,
+              configuredUrl: targetUrl,
+              desiredModel,
+              cachePath: null,
+              cachePathStatus: 'unavailable',
+              cachePathReason: 'provider cache identity is not resolved during stored-step execution',
+              passiveObservations: browserResult.passiveObservations ?? [],
+              answerChars: browserResult.answerChars,
+              answerTokens: browserResult.answerTokens,
+            },
+          },
+          notes: [
+            ...(contractResult.output.notes ?? []),
+            ...(browserResult.tabUrl ? [`browser conversation: ${browserResult.tabUrl}`] : []),
+          ],
+        },
+        sharedState: contractResult.sharedState,
+      };
+    }
     const localActionRequests = parseConfiguredExecutorLocalActionRequests(responseText);
     return {
       output: {

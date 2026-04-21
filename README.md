@@ -99,6 +99,9 @@ Current browser-mode default posture:
   `auracall --profile <name> login --target chatgpt` instead of waiting in the
   hidden/minimized automation window; API readback also includes those
   recovery fields in `metadata.executionSummary.failureSummary.details`
+- steps can opt into the deterministic `auracall.step-output.v1` model-output
+  envelope for routing, local actions, artifacts, handoffs, and structured
+  failures; see `docs/response-shape-contract.md`
 
 WSL quick start: run `./scripts/bootstrap-wsl.sh` to install Node 22 + WSL Chrome + deps, then follow `docs/wsl-chatgpt-runbook.md` for the ChatGPT browser setup. If you are choosing between WSL Chrome and Windows Chrome from WSL, prefer WSL Chrome first and keep it as the primary browser profile; the Windows relay path is still more brittle and is better kept in a separate named browser profile.
 

@@ -18704,3 +18704,28 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current state: direct browser execution, CLI-planned/server-drained team
   execution, and the public `/v1/team-runs` route are green on the WSL
   ChatGPT managed browser profile.
+
+## 2026-04-21 - Deterministic step-output contract opened
+
+- Opened plan
+  `docs/dev/plans/0020-2026-04-21-deterministic-response-shape-contract.md`.
+- Added opt-in `auracall.step-output.v1` model-output validation in
+  `src/runtime/stepOutputContract.ts`.
+- Configured browser-backed stored-step execution now prepends the contract
+  prompt and validates returned JSON only when a step opts in through
+  `responseShape.contract`, `responseShape.version`, `responseShape.format`,
+  `structuredData.outputContract`, or `structuredData.contract`.
+- Valid envelopes map into the existing runtime surfaces:
+  - `message` -> `response.output`
+  - `artifacts[]` -> step output and shared state
+  - `localActionRequests[]` -> existing local-action request extraction
+  - `handoffs[]` -> structured step output for follow-on handoff handling
+  - `failed` -> deterministic prompt-validation failure
+- Added operator-facing contract docs in `docs/response-shape-contract.md`.
+- Validation so far:
+  - `pnpm vitest run tests/runtime.stepOutputContract.test.ts tests/runtime.configuredExecutor.test.ts tests/runtime.runner.test.ts tests/runtime.responsesService.test.ts`
+    passed: 4 files, 67 tests
+  - `pnpm exec tsc -p tsconfig.json --noEmit` passed
+  - `git diff --check` passed
+- Current state: the contract exists as opt-in runtime behavior. It is not yet
+  the default for team-run roles or public API requests.
