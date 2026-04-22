@@ -853,8 +853,10 @@ Safety note:
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
   the execution board deterministic
 - Current transition: user-scoped installed-runtime dogfood is green enough for
-  daily operator use from `~/.local/bin/auracall`; defer publish/release work
-  until that installed copy has carried normal use for a short period
+  daily operator use from `~/.local/bin/auracall`; plain `/status` now keeps
+  runner topology readable in long-lived dogfood environments while preserving
+  `?runnerTopology=full` for forensic debugging; defer publish/release work
+  until the installed copy has carried normal use for a short period
 
 ### Soon
 
@@ -919,6 +921,7 @@ Current focused reliability slice:
 - [docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md) (closed)
 - [docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md) (closed)
 - [docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md) (closed)
+- [docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

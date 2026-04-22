@@ -1373,3 +1373,24 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - installed runtime commands listed in Plan 0046
   - `pnpm run plans:audit -- --keep 46`
   - `git diff --check`
+
+## Turn 55 | 2026-04-22
+
+- Closed implementation plan:
+  `docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md`
+- Goal: keep installed-runtime `/status` readable after long-lived dogfood
+  environments accumulate stale runner records.
+- Change:
+  - plain `/status` now lists only the local execution owner plus fresh/active
+    runners under `runnerTopology.runners`
+  - `runnerTopology.metrics` still counts all stored runners and now reports
+    displayed/omitted runner counts
+  - `GET /status?runnerTopology=full` preserves the full stored runner list for
+    forensic debugging
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.serviceHost.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 47`
+  - `git diff --check`
+  - installed runtime `/status` and `/status?runnerTopology=full` smoke on
+    port 8099

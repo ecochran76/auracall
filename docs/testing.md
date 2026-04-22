@@ -103,6 +103,13 @@
       - `runnerTopology.metrics.freshRunnerCount`
       - `runnerTopology.metrics.expiredRunnerCount`
       - `runnerTopology.metrics.browserCapableRunnerCount`
+      - `runnerTopology.metrics.displayedRunnerCount`
+      - `runnerTopology.metrics.omittedRunnerCount`
+      - plain `/status` compacts `runnerTopology.runners` to the local owner
+        plus fresh/active runners so long-lived dogfood environments do not
+        dump stale runner history by default
+      - use `GET /status?runnerTopology=full` when forensic debugging needs
+        every stored runner entry
       - `runnerTopology.runners[].runnerId`
       - `runnerTopology.runners[].selectedAsLocalExecutionOwner`
       - topology readback must not select claims, acquire leases, execute

@@ -332,7 +332,10 @@ export async function createResponsesHttpServer(
         const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
           sourceKind: 'direct',
         });
-        const runnerTopology = await host.summarizeRunnerTopology();
+        const runnerTopology = compactRunnerTopologyForStatus(
+          await host.summarizeRunnerTopology(),
+          statusQuery.runnerTopologyMode,
+        );
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
@@ -1270,6 +1273,7 @@ function isSuccessfulServiceHostOperatorControlResult(result: ExecutionServiceHo
 interface ParsedStatusQuery {
   recovery: boolean;
   sourceKindSummary?: ExecutionRunSourceKind | 'all';
+  runnerTopologyMode: 'compact' | 'full';
 }
 
 interface ParsedRuntimeInspectionQuery {
@@ -1286,6 +1290,7 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
         .transform((value) => value === '1' || value.toLowerCase() === 'true')
         .optional(),
       sourceKind: z.enum(['direct', 'team-run', 'all']).optional(),
+      runnerTopology: z.enum(['compact', 'full']).optional(),
     })
     .superRefine((value, ctx) => {
       if (!value.recovery && value.sourceKind !== undefined) {
@@ -1301,6 +1306,51 @@ function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
   return {
     recovery: parsed.recovery ?? false,
     sourceKindSummary: parsed.sourceKind,
+    runnerTopologyMode: parsed.runnerTopology ?? 'compact',
+  };
+}
+
+function compactRunnerTopologyForStatus(
+  topology: ExecutionServiceHostRunnerTopologySummary,
+  mode: ParsedStatusQuery['runnerTopologyMode'],
+): ExecutionServiceHostRunnerTopologySummary {
+  if (mode === 'full') {
+    return {
+      ...topology,
+      metrics: {
+        ...topology.metrics,
+        displayedRunnerCount: topology.runners.length,
+        omittedRunnerCount: 0,
+        omittedStaleRunnerCount: 0,
+        omittedExpiredRunnerCount: 0,
+      },
+    };
+  }
+
+  const runners: ExecutionServiceHostRunnerTopologySummary['runners'] = [];
+  const omitted: ExecutionServiceHostRunnerTopologySummary['runners'] = [];
+  for (const runner of topology.runners) {
+    if (
+      runner.selectedAsLocalExecutionOwner ||
+      runner.freshness === 'fresh' ||
+      runner.status === 'active'
+    ) {
+      runners.push(runner);
+    } else {
+      omitted.push(runner);
+    }
+  }
+
+  return {
+    ...topology,
+    runners,
+    metrics: {
+      ...topology.metrics,
+      displayedRunnerCount: runners.length,
+      omittedRunnerCount: omitted.length,
+      omittedStaleRunnerCount: omitted.filter((runner) => runner.freshness === 'stale').length,
+      omittedExpiredRunnerCount: omitted.filter((runner) => runner.freshness === 'expired').length,
+    },
   };
 }
 

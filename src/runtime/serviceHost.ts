@@ -434,6 +434,10 @@ export interface ExecutionServiceHostRunnerTopologySummary {
     freshRunnerCount: number;
     expiredRunnerCount: number;
     browserCapableRunnerCount: number;
+    displayedRunnerCount?: number;
+    omittedRunnerCount?: number;
+    omittedStaleRunnerCount?: number;
+    omittedExpiredRunnerCount?: number;
   };
 }
 

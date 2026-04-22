@@ -19576,3 +19576,20 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - installed runtime commands listed in Plan 0046
   - `pnpm run plans:audit -- --keep 46`
   - `git diff --check`
+
+## 2026-04-22 - Status runner topology compaction
+
+- Opened and closed
+  `docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md`.
+- Plain `/status` now compacts `runnerTopology.runners` to the local execution
+  owner plus fresh/active runners.
+- `runnerTopology.metrics` still counts all stored runners and adds
+  displayed/omitted counts so operators can see when stale history was omitted.
+- `GET /status?runnerTopology=full` remains the forensic escape hatch for the
+  complete stored runner list.
+- Validation target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/runtime.serviceHost.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 47`
+  - `git diff --check`
+  - installed runtime `/status` smoke

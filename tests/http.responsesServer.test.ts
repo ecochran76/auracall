@@ -1162,6 +1162,10 @@ describe('http responses adapter', () => {
             freshRunnerCount: 1,
             expiredRunnerCount: 0,
             browserCapableRunnerCount: 1,
+            displayedRunnerCount: 1,
+            omittedRunnerCount: 0,
+            omittedStaleRunnerCount: 0,
+            omittedExpiredRunnerCount: 0,
           },
           runners: [
             expect.objectContaining({
@@ -1284,6 +1288,10 @@ describe('http responses adapter', () => {
             freshRunnerCount: 2,
             expiredRunnerCount: 0,
             browserCapableRunnerCount: 1,
+            displayedRunnerCount: 2,
+            omittedRunnerCount: 0,
+            omittedStaleRunnerCount: 0,
+            omittedExpiredRunnerCount: 0,
           },
           runners: expect.arrayContaining([
             expect.objectContaining({
@@ -1303,6 +1311,93 @@ describe('http responses adapter', () => {
       const alternateRunner = await runnersControl.readRunner('runner:alternate-fresh');
       expect(alternateRunner?.runner.lastClaimedRunId).toBeNull();
       expect(alternateRunner?.runner.lastActivityAt).toBeNull();
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('compacts stale runner topology entries on /status unless full topology is requested', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-topology-compact-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runnersControl = createExecutionRunnerControl();
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:stale-old',
+        hostId: 'host:stale-old',
+        status: 'stale',
+        startedAt: '2026-04-08T16:10:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:10:05.000Z',
+        expiresAt: '2026-04-08T16:10:20.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: [],
+        browserCapable: true,
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:fresh-alternate',
+        hostId: 'host:fresh-alternate',
+        startedAt: '2026-04-08T16:19:00.000Z',
+        lastHeartbeatAt: '2026-04-08T16:20:55.000Z',
+        expiresAt: '2026-04-08T16:30:00.000Z',
+        serviceIds: ['grok'],
+        runtimeProfileIds: ['grok-runtime'],
+        browserProfileIds: ['browser-default'],
+        browserCapable: true,
+      }),
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        runnersControl,
+        now: () => new Date('2026-04-08T16:21:00.000Z'),
+      },
+    );
+
+    try {
+      const compactResponse = await fetch(`http://127.0.0.1:${server.port}/status`);
+      expect(compactResponse.status).toBe(200);
+      const compactPayload = (await compactResponse.json()) as {
+        runnerTopology: {
+          metrics: Record<string, number>;
+          runners: Array<{ runnerId: string }>;
+        };
+      };
+      expect(compactPayload.runnerTopology.metrics).toMatchObject({
+        totalRunnerCount: 3,
+        staleRunnerCount: 1,
+        displayedRunnerCount: 2,
+        omittedRunnerCount: 1,
+        omittedStaleRunnerCount: 1,
+        omittedExpiredRunnerCount: 0,
+      });
+      expect(compactPayload.runnerTopology.runners.map((runner) => runner.runnerId)).toEqual([
+        `runner:http-responses:127.0.0.1:${server.port}`,
+        'runner:fresh-alternate',
+      ]);
+
+      const fullResponse = await fetch(`http://127.0.0.1:${server.port}/status?runnerTopology=full`);
+      expect(fullResponse.status).toBe(200);
+      const fullPayload = (await fullResponse.json()) as {
+        runnerTopology: {
+          metrics: Record<string, number>;
+          runners: Array<{ runnerId: string }>;
+        };
+      };
+      expect(fullPayload.runnerTopology.metrics).toMatchObject({
+        totalRunnerCount: 3,
+        displayedRunnerCount: 3,
+        omittedRunnerCount: 0,
+      });
+      expect(fullPayload.runnerTopology.runners.map((runner) => runner.runnerId)).toEqual([
+        `runner:http-responses:127.0.0.1:${server.port}`,
+        'runner:fresh-alternate',
+        'runner:stale-old',
+      ]);
     } finally {
       await server.close();
     }

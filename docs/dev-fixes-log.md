@@ -13728,3 +13728,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   startup from outside the checkout. A noisy `/status` caused by accumulated
   stale runner records is an operator-readability follow-up, not a runtime
   install failure by itself.
+- 2026-04-22: Keep `/status` readable without deleting runner history. In this
+  repo, long-lived dogfood environments can accumulate hundreds of stale runner
+  records. Plain `/status` should compact the topology list to local/fresh/active
+  runners, keep all-runner counts in `runnerTopology.metrics`, and provide
+  `?runnerTopology=full` for forensic debugging.
