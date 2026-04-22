@@ -619,6 +619,24 @@ describe('http responses adapter', () => {
               reconciliationReason: null,
             };
           },
+          async claimLocalRunWithSchedulerAuthority(input) {
+            return {
+              action: input.action,
+              runId: input.runId,
+              schedulerId: input.schedulerId,
+              status: 'blocked' as const,
+              claimed: false,
+              mutationAllowed: false,
+              reason: 'scheduler control is not available in this test host',
+              decision: null,
+              selectedRunnerId: null,
+              localRunnerId: null,
+              previousLeaseId: null,
+              previousLeaseOwnerId: null,
+              newLeaseId: null,
+              newLeaseOwnerId: null,
+            };
+          },
           async controlOperatorAction(input) {
             if (input.kind === 'lease-repair') {
               return {
@@ -635,6 +653,12 @@ describe('http responses adapter', () => {
                   input.resolution,
                   input.note ?? null,
                 )),
+              };
+            }
+            if (input.kind === 'scheduler-control') {
+              return {
+                kind: input.kind,
+                ...(await this.claimLocalRunWithSchedulerAuthority(input.control)),
               };
             }
             return {
@@ -699,6 +723,21 @@ describe('http responses adapter', () => {
           },
           async summarizeLocalClaimState() {
             return null;
+          },
+          async summarizeRunnerTopology() {
+            return {
+              localExecutionOwnerRunnerId: null,
+              generatedAt: '2026-04-08T12:05:00.000Z',
+              runners: [],
+              metrics: {
+                totalRunnerCount: 0,
+                activeRunnerCount: 0,
+                staleRunnerCount: 0,
+                freshRunnerCount: 0,
+                expiredRunnerCount: 0,
+                browserCapableRunnerCount: 0,
+              },
+            };
           },
           async summarizeRecoveryState() {
             return {
@@ -851,6 +890,24 @@ describe('http responses adapter', () => {
               reconciliationReason: null,
             };
           },
+          async claimLocalRunWithSchedulerAuthority(input) {
+            return {
+              action: input.action,
+              runId: input.runId,
+              schedulerId: input.schedulerId,
+              status: 'blocked' as const,
+              claimed: false,
+              mutationAllowed: false,
+              reason: 'scheduler control is not available in this test host',
+              decision: null,
+              selectedRunnerId: null,
+              localRunnerId: null,
+              previousLeaseId: null,
+              previousLeaseOwnerId: null,
+              newLeaseId: null,
+              newLeaseOwnerId: null,
+            };
+          },
           async controlOperatorAction(input) {
             if (input.kind === 'lease-repair') {
               return {
@@ -867,6 +924,12 @@ describe('http responses adapter', () => {
                   input.resolution,
                   input.note ?? null,
                 )),
+              };
+            }
+            if (input.kind === 'scheduler-control') {
+              return {
+                kind: input.kind,
+                ...(await this.claimLocalRunWithSchedulerAuthority(input.control)),
               };
             }
             return {
@@ -931,6 +994,21 @@ describe('http responses adapter', () => {
           },
           async summarizeLocalClaimState() {
             return null;
+          },
+          async summarizeRunnerTopology() {
+            return {
+              localExecutionOwnerRunnerId: null,
+              generatedAt: '2026-04-08T12:05:00.000Z',
+              runners: [],
+              metrics: {
+                totalRunnerCount: 0,
+                activeRunnerCount: 0,
+                staleRunnerCount: 0,
+                freshRunnerCount: 0,
+                expiredRunnerCount: 0,
+                browserCapableRunnerCount: 0,
+              },
+            };
           },
           async summarizeRecoveryState() {
             return {
@@ -1030,7 +1108,9 @@ describe('http responses adapter', () => {
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as {
+        executionHints: { headerNames: string[] };
+      } & Record<string, unknown>;
       expect(payload).toMatchObject({
         object: 'status',
         ok: true,
@@ -1073,6 +1153,26 @@ describe('http responses adapter', () => {
           lastActivityAt: null,
           lastClaimedRunId: null,
         },
+        runnerTopology: {
+          localExecutionOwnerRunnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+          metrics: {
+            totalRunnerCount: 1,
+            activeRunnerCount: 1,
+            staleRunnerCount: 0,
+            freshRunnerCount: 1,
+            expiredRunnerCount: 0,
+            browserCapableRunnerCount: 1,
+          },
+          runners: [
+            expect.objectContaining({
+              runnerId: `runner:http-responses:127.0.0.1:${server.port}`,
+              hostId: `host:http-responses:127.0.0.1:${server.port}`,
+              status: 'active',
+              freshness: 'fresh',
+              selectedAsLocalExecutionOwner: true,
+            }),
+          ],
+        },
         backgroundDrain: {
           enabled: false,
           intervalMs: null,
@@ -1085,7 +1185,7 @@ describe('http responses adapter', () => {
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
           runtimeRunInspection:
-            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state]',
+            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&authority=scheduler]',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -1140,7 +1240,7 @@ describe('http responses adapter', () => {
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status?recovery=1`);
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as Record<string, unknown>;
       const localRunnerId = `runner:http-responses:127.0.0.1:${server.port}`;
 
       expect(payload).toMatchObject({
@@ -1203,7 +1303,7 @@ describe('http responses adapter', () => {
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status`);
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as { controlResult?: Record<string, unknown> };
       expect(payload).toMatchObject({
         runner: {
           id: `runner:http-responses:127.0.0.1:${server.port}`,
@@ -1371,6 +1471,24 @@ describe('http responses adapter', () => {
               reconciliationReason: null,
             };
           },
+          async claimLocalRunWithSchedulerAuthority(input) {
+            return {
+              action: input.action,
+              runId: input.runId,
+              schedulerId: input.schedulerId,
+              status: 'blocked' as const,
+              claimed: false,
+              mutationAllowed: false,
+              reason: 'scheduler control is not available in this test host',
+              decision: null,
+              selectedRunnerId: null,
+              localRunnerId: null,
+              previousLeaseId: null,
+              previousLeaseOwnerId: null,
+              newLeaseId: null,
+              newLeaseOwnerId: null,
+            };
+          },
           async controlOperatorAction(input) {
             if (input.kind === 'lease-repair') {
               return {
@@ -1387,6 +1505,12 @@ describe('http responses adapter', () => {
                   input.resolution,
                   input.note ?? null,
                 )),
+              };
+            }
+            if (input.kind === 'scheduler-control') {
+              return {
+                kind: input.kind,
+                ...(await this.claimLocalRunWithSchedulerAuthority(input.control)),
               };
             }
             return {
@@ -1451,6 +1575,21 @@ describe('http responses adapter', () => {
           },
           async summarizeLocalClaimState() {
             return null;
+          },
+          async summarizeRunnerTopology() {
+            return {
+              localExecutionOwnerRunnerId: null,
+              generatedAt: '2026-04-08T12:05:00.000Z',
+              runners: [],
+              metrics: {
+                totalRunnerCount: 0,
+                activeRunnerCount: 0,
+                staleRunnerCount: 0,
+                freshRunnerCount: 0,
+                expiredRunnerCount: 0,
+                browserCapableRunnerCount: 0,
+              },
+            };
           },
           async summarizeRecoveryState() {
             return {
@@ -1694,6 +1833,58 @@ describe('http responses adapter', () => {
       const repairedRecord = await control.readRun('status_repair_stale');
       expect(repairedRecord?.bundle.leases[0]?.status).toBe('expired');
       expect(repairedRecord?.bundle.leases[0]?.releaseReason).toBe('lease expired');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('claims a scheduler-authorized local run through POST /status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-status-scheduler-claim-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await seedPlannedDirectRun(control, 'status_scheduler_claim', '2026-04-08T16:10:00.000Z', 'Claim locally.');
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, recoverRunsOnStart: false },
+      {
+        control,
+        runnersControl,
+        now: () => new Date('2026-04-08T16:12:00.000Z'),
+      },
+    );
+
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/status`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          schedulerControl: {
+            action: 'claim-local-run',
+            runId: 'status_scheduler_claim',
+            schedulerId: 'operator:http-test',
+          },
+        }),
+      });
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      const localRunnerId = `runner:http-responses:127.0.0.1:${server.port}`;
+      expect(payload.controlResult).toMatchObject({
+        kind: 'scheduler-control',
+        action: 'claim-local-run',
+        runId: 'status_scheduler_claim',
+        schedulerId: 'operator:http-test',
+        status: 'claimed',
+        claimed: true,
+        selectedRunnerId: localRunnerId,
+        newLeaseOwnerId: localRunnerId,
+      });
+      const stored = await control.readRun('status_scheduler_claim');
+      expect(stored?.bundle.leases.find((lease) => lease.status === 'active')).toMatchObject({
+        ownerId: localRunnerId,
+      });
     } finally {
       await server.close();
     }
@@ -5100,6 +5291,154 @@ describe('http responses adapter', () => {
         runnerId,
         status: 'stale',
         eligibilityNote: 'runtime inspection liveness sweep',
+      });
+    } finally {
+      Date.now = realDateNow;
+      await server.close();
+    }
+  });
+
+  it('returns read-only scheduler authority on runtime inspection without mutating leases', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-scheduler-authority-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    const runId = 'runtime_http_inspect_scheduler_authority';
+    const createdAt = '2026-04-21T15:00:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'team-run',
+          sourceId: 'teamrun_http_runtime_scheduler_authority',
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Inspect scheduler authority.',
+          initialInputs: {},
+          sharedStateId: `${runId}:state`,
+          stepIds: [`${runId}:step:1`],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: `${runId}:step:1`,
+            runId,
+            sourceStepId: 'teamrun_http_runtime_scheduler_authority:step:1',
+            agentId: 'agent:inspect-scheduler-authority',
+            runtimeProfileId: 'default',
+            browserProfileId: null,
+            service: 'chatgpt',
+            kind: 'prompt',
+            status: 'runnable',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Inspect scheduler authority.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+    await control.acquireLease({
+      runId,
+      leaseId: 'lease:http-runtime-scheduler-expired',
+      ownerId: 'runner:http-runtime-stale-owner',
+      acquiredAt: '2026-04-21T15:00:00.000Z',
+      heartbeatAt: '2026-04-21T15:00:00.000Z',
+      expiresAt: '2026-04-21T15:00:10.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:http-runtime-stale-owner',
+        hostId: 'host:http-runtime-scheduler',
+        status: 'stale',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-21T15:00:00.000Z',
+        expiresAt: '2026-04-21T15:00:10.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:http-runtime-alternate',
+        hostId: 'host:http-runtime-scheduler',
+        status: 'active',
+        startedAt: createdAt,
+        lastHeartbeatAt: '2026-04-21T15:00:40.000Z',
+        expiresAt: '2099-04-21T15:05:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    const before = await control.readRun(runId);
+
+    const realDateNow = Date.now;
+    Date.now = () => new Date('2026-04-21T15:00:45.000Z').getTime();
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      { control, runnersControl },
+    );
+
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&runnerId=runner:http-runtime-alternate&authority=scheduler`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, unknown>;
+      expect(payload).toMatchObject({
+        inspection: {
+          queryRunId: runId,
+          runtime: {
+            queueProjection: {
+              queueState: 'active-lease',
+              activeLeaseId: 'lease:http-runtime-scheduler-expired',
+              activeLeaseOwnerId: 'runner:http-runtime-stale-owner',
+            },
+          },
+          schedulerAuthority: {
+            runId,
+            decision: 'reassignable-after-expired-lease',
+            mutationAllowed: false,
+            selectedRunnerId: expect.any(String),
+            localRunnerId: 'runner:http-runtime-alternate',
+            futureMutation: 'scheduler-reassign-expired-lease',
+            activeLease: {
+              leaseId: 'lease:http-runtime-scheduler-expired',
+              ownerId: 'runner:http-runtime-stale-owner',
+              ownerStatus: 'stale',
+              ownerFreshness: 'stale',
+            },
+          },
+        },
+      });
+
+      const after = await control.readRun(runId);
+      expect(after?.revision).toBe(before?.revision);
+      expect(after?.bundle.leases[0]).toMatchObject({
+        id: 'lease:http-runtime-scheduler-expired',
+        status: 'active',
       });
     } finally {
       Date.now = realDateNow;

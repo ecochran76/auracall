@@ -51,6 +51,7 @@ import {
   type ExecutionServiceHostRecoveryDetail,
   type ExecutionServiceHostRecoverySummary,
   type ExecutionServiceHostLocalClaimSummary,
+  type ExecutionServiceHostRunnerTopologySummary,
   type DrainStoredExecutionRunsUntilIdleResult,
   type ExecutionServiceHost,
   type ExecutionServiceHostDeps,
@@ -177,6 +178,7 @@ interface HttpStatusResponse {
   };
   recoverySummary?: ExecutionServiceHostRecoverySummary;
   localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+  runnerTopology: ExecutionServiceHostRunnerTopologySummary;
   runner: {
     id: string | null;
     hostId: string | null;
@@ -330,11 +332,13 @@ export async function createResponsesHttpServer(
         const statusResponseLocalClaimSummary = await host.summarizeLocalClaimState({
           sourceKind: 'direct',
         });
+        const runnerTopology = await host.summarizeRunnerTopology();
         const statusResponse = await createHttpStatusResponse({
           host: boundHost,
           port: boundPort,
           recoverySummary: statusResponseRecoverySummary,
           localClaimSummary: statusResponseLocalClaimSummary,
+          runnerTopology,
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
         });
@@ -398,6 +402,8 @@ export async function createResponsesHttpServer(
             taskRunSpecId: url.searchParams.get('taskRunSpecId'),
             runnerId: url.searchParams.get('runnerId'),
             includeServiceState: runtimeInspectQuery.probe === 'service-state',
+            includeSchedulerAuthority: runtimeInspectQuery.authority === 'scheduler',
+            schedulerAuthorityLocalRunnerId: url.searchParams.get('runnerId') ?? runnerState.id,
             probeServiceState: deps.probeRuntimeRunServiceState,
             control,
             runnersControl,
@@ -480,6 +486,7 @@ export async function createResponsesHttpServer(
           host: boundHost,
           port: boundPort,
           localClaimSummary: await host.summarizeLocalClaimState({ sourceKind: 'direct' }),
+          runnerTopology: await host.summarizeRunnerTopology(),
           runner: runnerState,
           backgroundDrain: backgroundDrainState,
           controlResult,
@@ -967,6 +974,7 @@ function createHttpStatusResponse(input: {
   port: number;
   recoverySummary?: ExecutionServiceHostRecoverySummary;
   localClaimSummary?: ExecutionServiceHostLocalClaimSummary;
+  runnerTopology: ExecutionServiceHostRunnerTopologySummary;
   runner: HttpStatusResponse['runner'];
   backgroundDrain: HttpStatusResponse['backgroundDrain'];
   controlResult?: HttpStatusResponse['controlResult'];
@@ -989,7 +997,7 @@ function createHttpStatusResponse(input: {
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       runtimeRunInspection:
-        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state]',
+        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&authority=scheduler]',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
@@ -1002,6 +1010,7 @@ function createHttpStatusResponse(input: {
     },
     recoverySummary: input.recoverySummary,
     localClaimSummary: input.localClaimSummary,
+    runnerTopology: input.runnerTopology,
     runner: input.runner,
     backgroundDrain: input.backgroundDrain,
     executionHints: {
@@ -1196,6 +1205,13 @@ const StatusControlRequestSchema = z.union([
       runId: z.string().min(1),
     }),
   }),
+  z.object({
+    schedulerControl: z.object({
+      action: z.literal('claim-local-run'),
+      runId: z.string().min(1),
+      schedulerId: z.string().min(1).default('operator'),
+    }),
+  }),
 ]);
 
 type StatusControlRequest = z.infer<typeof StatusControlRequestSchema>;
@@ -1218,6 +1234,12 @@ function createServiceHostOperatorControlInput(payload: Exclude<StatusControlReq
       note: payload.localActionControl.note ?? null,
     };
   }
+  if ('schedulerControl' in payload) {
+    return {
+      kind: 'scheduler-control',
+      control: payload.schedulerControl,
+    };
+  }
   return {
     kind: 'run-control',
     control: payload.runControl,
@@ -1230,6 +1252,9 @@ function isSuccessfulServiceHostOperatorControlResult(result: ExecutionServiceHo
   }
   if (result.kind === 'local-action-control') {
     return result.status === 'resolved';
+  }
+  if (result.kind === 'scheduler-control') {
+    return result.status === 'claimed' || result.status === 'reassigned';
   }
   return (
     (result.action === 'cancel-run' && result.status === 'cancelled') ||
@@ -1245,6 +1270,7 @@ interface ParsedStatusQuery {
 
 interface ParsedRuntimeInspectionQuery {
   probe?: 'service-state';
+  authority?: 'scheduler';
 }
 
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
@@ -1278,10 +1304,12 @@ function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRunti
   const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
   const parsed = z.object({
     probe: z.enum(['service-state']).optional(),
+    authority: z.enum(['scheduler']).optional(),
   }).parse(raw);
 
   return {
     probe: parsed.probe,
+    authority: parsed.authority,
   };
 }
 

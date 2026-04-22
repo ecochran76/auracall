@@ -48,6 +48,7 @@ export interface ExecuteStoredRunOnceOptions {
   runId: string;
   ownerId: string;
   leaseId?: string;
+  existingLeaseId?: string | null;
   now?: () => string;
   leaseHeartbeatIntervalMs?: number;
   leaseHeartbeatTtlMs?: number;
@@ -168,18 +169,37 @@ export async function executeStoredExecutionRunOnce(
     return store.writeRecord(failedBundle, { expectedRevision: inspection.record.revision });
   }
 
-  const leaseId = options.leaseId ?? `${options.runId}:lease:local-runner`;
-  const acquiredAt = now();
-  const acquired = await control.acquireLease({
-    runId: options.runId,
-    leaseId,
-    ownerId: options.ownerId,
-    acquiredAt,
-    heartbeatAt: acquiredAt,
-    expiresAt: addMillisecondsToIsoTimestamp(acquiredAt, leaseHeartbeatTtlMs),
-  });
+  const existingLeaseId = options.existingLeaseId ?? null;
+  const leaseId = existingLeaseId ?? options.leaseId ?? `${options.runId}:lease:local-runner`;
+  let currentRecord: ExecutionRunStoredRecord;
 
-  let currentRecord = acquired;
+  if (existingLeaseId) {
+    const activeLease = getActiveExecutionRunLease(inspection.record);
+    if (!activeLease || activeLease.id !== existingLeaseId) {
+      throw new Error(`Execution run ${options.runId} does not have active lease ${existingLeaseId}`);
+    }
+    if (activeLease.ownerId !== options.ownerId) {
+      throw new Error(`Execution run ${options.runId} active lease ${existingLeaseId} is owned by ${activeLease.ownerId}`);
+    }
+    const heartbeatAt = now();
+    currentRecord = await control.heartbeatLease({
+      runId: options.runId,
+      leaseId: existingLeaseId,
+      heartbeatAt,
+      expiresAt: addMillisecondsToIsoTimestamp(heartbeatAt, leaseHeartbeatTtlMs),
+    });
+  } else {
+    const acquiredAt = now();
+    currentRecord = await control.acquireLease({
+      runId: options.runId,
+      leaseId,
+      ownerId: options.ownerId,
+      acquiredAt,
+      heartbeatAt: acquiredAt,
+      expiresAt: addMillisecondsToIsoTimestamp(acquiredAt, leaseHeartbeatTtlMs),
+    });
+  }
+
   let releaseReason: string | null = 'completed';
   let finalRecord: ExecutionRunStoredRecord | null = null;
   const leaseHeartbeat = startExecutionLeaseHeartbeatLoop({

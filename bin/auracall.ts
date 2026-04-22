@@ -953,6 +953,16 @@ apiCommand
       throw new Error('Invalid --probe value. Use service-state.');
     },
   )
+  .option(
+    '--authority <scheduler>',
+    'Optionally request one bounded authority evaluation. Current value: scheduler.',
+    (value) => {
+      if (value === 'scheduler') {
+        return value;
+      }
+      throw new Error('Invalid --authority value. Use scheduler.');
+    },
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
     const payload = await inspectConfiguredRuntimeRun({
@@ -974,6 +984,11 @@ apiCommand
           ? commandOptions.runnerId.trim()
           : null,
       includeServiceState: commandOptions.probe === 'service-state',
+      includeSchedulerAuthority: commandOptions.authority === 'scheduler',
+      schedulerAuthorityLocalRunnerId:
+        typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
+          ? commandOptions.runnerId.trim()
+          : null,
     });
 
     if (commandOptions.json) {

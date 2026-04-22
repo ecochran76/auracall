@@ -80,5 +80,23 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
     lines.push(`  - Reason: ${payload.serviceState.reason ?? '(none)'}`);
   }
 
+  if (payload.schedulerAuthority) {
+    lines.push('- Scheduler authority:');
+    lines.push(`  - Decision: ${payload.schedulerAuthority.decision}`);
+    lines.push(`  - Reason: ${payload.schedulerAuthority.reason}`);
+    lines.push(`  - Mutation allowed: ${payload.schedulerAuthority.mutationAllowed ? 'yes' : 'no'}`);
+    lines.push(`  - Selected runner: ${payload.schedulerAuthority.selectedRunnerId ?? '(none)'}`);
+    lines.push(`  - Local runner: ${payload.schedulerAuthority.localRunnerId ?? '(none)'}`);
+    lines.push(`  - Future mutation: ${payload.schedulerAuthority.futureMutation}`);
+    lines.push(`  - Candidate count: ${payload.schedulerAuthority.candidates.length}`);
+    if (payload.schedulerAuthority.activeLease) {
+      lines.push(`  - Active lease id: ${payload.schedulerAuthority.activeLease.leaseId}`);
+      lines.push(`  - Active lease owner: ${payload.schedulerAuthority.activeLease.ownerId}`);
+      lines.push(`  - Active lease owner status: ${payload.schedulerAuthority.activeLease.ownerStatus}`);
+      lines.push(`  - Active lease owner freshness: ${payload.schedulerAuthority.activeLease.ownerFreshness}`);
+      lines.push(`  - Active lease expires: ${payload.schedulerAuthority.activeLease.expiresAt}`);
+    }
+  }
+
   return lines.join('\n');
 }

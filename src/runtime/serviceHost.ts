@@ -15,12 +15,13 @@ import {
   formatLocalActionOutcomeNote,
   recoverStrandedRunningExecutionRun,
   summarizeLocalActionRequestsForSharedState,
-  type RecoveredExecutionRun,
   type ExecuteLocalActionRequestContext,
   type ExecuteLocalActionRequestResult,
   type ExecuteStoredRunStepResult,
 } from './runner.js';
+import { acquireExecutionRunLease, expireExecutionRunLeases } from './lease.js';
 import { createExecutionRunnerRecord, createExecutionRunEvent } from './model.js';
+import { ExecutionRunRecordBundleSchema } from './schema.js';
 import {
   createLocalRunnerEligibilityNote,
   type LocalRunnerCapabilitySummary,
@@ -31,8 +32,13 @@ import {
   type ExecutionRunRepairPosture,
 } from './repair.js';
 import { selectStoredExecutionRunLocalClaim, type ExecutionRunLocalClaimResult } from './claims.js';
+import {
+  evaluateStoredExecutionRunSchedulerAuthority,
+  type ExecutionRunSchedulerAuthorityDecision,
+} from './schedulerAuthority.js';
 import { normalizeTaskTransfer } from './taskTransfer.js';
 import { createExecutionRunnerControl, type ExecutionRunnerControlContract } from './runnersControl.js';
+import { createExecutionRunQueueProjection } from './projection.js';
 import {
   createTaskRunSpecRecordStore,
   type TaskRunSpecInspectionSummary,
@@ -41,7 +47,13 @@ import {
 } from '../teams/store.js';
 import type { ExecutionRunStoredRecord } from './store.js';
 import type { ExecuteStoredRunStepContext } from './runner.js';
-import type { ExecutionRunAffinityRecord, ExecutionRunnerRecord, ExecutionRunSourceKind } from './types.js';
+import type {
+  ExecutionRunAffinityRecord,
+  ExecutionRunLease,
+  ExecutionRunnerRecord,
+  ExecutionRunRecordBundle,
+  ExecutionRunSourceKind,
+} from './types.js';
 
 async function readStoredTaskRunSpecSummary(
   store: TaskRunSpecRecordStore,
@@ -278,6 +290,23 @@ export interface ExecutionServiceHostDrainActionResult {
   skipReason: DrainedStoredExecutionRunResult['reason'] | null;
 }
 
+export interface ExecutionServiceHostSchedulerClaimLocalRunResult {
+  action: 'claim-local-run';
+  runId: string;
+  schedulerId: string;
+  status: 'claimed' | 'reassigned' | 'blocked' | 'conflict' | 'not-found';
+  claimed: boolean;
+  mutationAllowed: boolean;
+  reason: string;
+  decision: ExecutionRunSchedulerAuthorityDecision | null;
+  selectedRunnerId: string | null;
+  localRunnerId: string | null;
+  previousLeaseId: string | null;
+  previousLeaseOwnerId: string | null;
+  newLeaseId: string | null;
+  newLeaseOwnerId: string | null;
+}
+
 export type ExecutionServiceHostRunControlInput =
   | {
       action: 'cancel-run';
@@ -304,6 +333,12 @@ export type ExecutionServiceHostRunControlResult =
   | ExecutionServiceHostDrainActionResult
   | ExecutionServiceHostResumeHumanEscalationResult;
 
+export interface ExecutionServiceHostSchedulerControlInput {
+  action: 'claim-local-run';
+  runId: string;
+  schedulerId: string;
+}
+
 export type ExecutionServiceHostOperatorControlInput =
   | {
       kind: 'lease-repair';
@@ -321,6 +356,10 @@ export type ExecutionServiceHostOperatorControlInput =
   | {
       kind: 'run-control';
       control: ExecutionServiceHostRunControlInput;
+    }
+  | {
+      kind: 'scheduler-control';
+      control: ExecutionServiceHostSchedulerControlInput;
     };
 
 export type ExecutionServiceHostOperatorControlResult =
@@ -332,7 +371,10 @@ export type ExecutionServiceHostOperatorControlResult =
     } & ExecutionServiceHostLocalActionResolveResult)
   | ({
       kind: 'run-control';
-    } & ExecutionServiceHostRunControlResult);
+    } & ExecutionServiceHostRunControlResult)
+  | ({
+      kind: 'scheduler-control';
+    } & ExecutionServiceHostSchedulerClaimLocalRunResult);
 
 export interface ExecutionServiceHostLocalActionResolveResult {
   action: 'resolve-local-action-request';
@@ -363,6 +405,36 @@ export interface ExecutionServiceHostRunnerLifecycleState {
   expiresAt: string;
   lastActivityAt: string | null;
   lastClaimedRunId: string | null;
+}
+
+export interface ExecutionServiceHostRunnerTopologySummary {
+  localExecutionOwnerRunnerId: string | null;
+  generatedAt: string;
+  runners: Array<{
+    runnerId: string;
+    hostId: string;
+    status: ExecutionRunnerRecord['status'];
+    freshness: 'fresh' | 'expired' | 'stale';
+    selectedAsLocalExecutionOwner: boolean;
+    lastHeartbeatAt: string;
+    expiresAt: string;
+    lastActivityAt: string | null;
+    lastClaimedRunId: string | null;
+    serviceIds: string[];
+    runtimeProfileIds: string[];
+    browserProfileIds: string[];
+    serviceAccountIds: string[];
+    browserCapable: boolean;
+    eligibilityNote: string | null;
+  }>;
+  metrics: {
+    totalRunnerCount: number;
+    activeRunnerCount: number;
+    staleRunnerCount: number;
+    freshRunnerCount: number;
+    expiredRunnerCount: number;
+    browserCapableRunnerCount: number;
+  };
 }
 
 interface EvaluatedStaleHeartbeatRepair {
@@ -439,10 +511,14 @@ export interface ExecutionServiceHost {
     options?: QueuedDrainStoredExecutionRunsUntilIdleOptions,
   ): Promise<DrainStoredExecutionRunsUntilIdleResult>;
   waitForDrainQueue(): Promise<DrainStoredExecutionRunsUntilIdleResult | null>;
+  summarizeRunnerTopology(): Promise<ExecutionServiceHostRunnerTopologySummary>;
   summarizeRecoveryState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostRecoverySummary>;
   summarizeLocalClaimState(options?: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'>): Promise<ExecutionServiceHostLocalClaimSummary>;
   readRecoveryDetail(runId: string): Promise<ExecutionServiceHostRecoveryDetail | null>;
   repairStaleHeartbeatLease(runId: string): Promise<ExecutionServiceHostStaleHeartbeatActionResult>;
+  claimLocalRunWithSchedulerAuthority(
+    input: ExecutionServiceHostSchedulerControlInput,
+  ): Promise<ExecutionServiceHostSchedulerClaimLocalRunResult>;
   controlOperatorAction(
     input: ExecutionServiceHostOperatorControlInput,
   ): Promise<ExecutionServiceHostOperatorControlResult>;
@@ -560,6 +636,45 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         }),
       });
       return projectRunnerLifecycleState(record.runner);
+    },
+
+    async summarizeRunnerTopology() {
+      const generatedAt = now();
+      const records = await runnersControl.listRunners();
+      const runners = records.map((record) => {
+        const freshness = classifyRunnerFreshness(record.runner, generatedAt);
+        return {
+          runnerId: record.runner.id,
+          hostId: record.runner.hostId,
+          status: record.runner.status,
+          freshness,
+          selectedAsLocalExecutionOwner: runnerId !== null && record.runner.id === runnerId,
+          lastHeartbeatAt: record.runner.lastHeartbeatAt,
+          expiresAt: record.runner.expiresAt,
+          lastActivityAt: record.runner.lastActivityAt,
+          lastClaimedRunId: record.runner.lastClaimedRunId,
+          serviceIds: record.runner.serviceIds,
+          runtimeProfileIds: record.runner.runtimeProfileIds,
+          browserProfileIds: record.runner.browserProfileIds,
+          serviceAccountIds: record.runner.serviceAccountIds,
+          browserCapable: record.runner.browserCapable,
+          eligibilityNote: record.runner.eligibilityNote,
+        };
+      });
+
+      return {
+        localExecutionOwnerRunnerId: runnerId,
+        generatedAt,
+        runners,
+        metrics: {
+          totalRunnerCount: runners.length,
+          activeRunnerCount: runners.filter((runner) => runner.status === 'active').length,
+          staleRunnerCount: runners.filter((runner) => runner.status === 'stale').length,
+          freshRunnerCount: runners.filter((runner) => runner.freshness === 'fresh').length,
+          expiredRunnerCount: runners.filter((runner) => runner.freshness === 'expired').length,
+          browserCapableRunnerCount: runners.filter((runner) => runner.browserCapable).length,
+        },
+      };
     },
 
     async summarizeRecoveryState(options: Omit<DrainStoredExecutionRunsOnceOptions, 'maxRuns'> = {}) {
@@ -1030,6 +1145,236 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
       ).action;
     },
 
+    async claimLocalRunWithSchedulerAuthority(input: ExecutionServiceHostSchedulerControlInput) {
+      const localRunnerId = runnerId;
+      if (!localRunnerId) {
+        return {
+          action: input.action,
+          runId: input.runId,
+          schedulerId: input.schedulerId,
+          status: 'blocked',
+          claimed: false,
+          mutationAllowed: false,
+          reason: 'scheduler claim requires a configured server-local runner',
+          decision: null,
+          selectedRunnerId: null,
+          localRunnerId: null,
+          previousLeaseId: null,
+          previousLeaseOwnerId: null,
+          newLeaseId: null,
+          newLeaseOwnerId: null,
+        };
+      }
+
+      const claimAt = now();
+      await runnersControl.expireRunners({
+        now: claimAt,
+        eligibilityNote: 'service host scheduler claim liveness sweep',
+      });
+
+      const inspection = await control.inspectRun(input.runId);
+      if (!inspection) {
+        return {
+          action: input.action,
+          runId: input.runId,
+          schedulerId: input.schedulerId,
+          status: 'not-found',
+          claimed: false,
+          mutationAllowed: false,
+          reason: `run ${input.runId} was not found`,
+          decision: null,
+          selectedRunnerId: null,
+          localRunnerId,
+          previousLeaseId: null,
+          previousLeaseOwnerId: null,
+          newLeaseId: null,
+          newLeaseOwnerId: null,
+        };
+      }
+
+      const evaluation = await evaluateStoredExecutionRunSchedulerAuthority(
+        {
+          runId: input.runId,
+          now: claimAt,
+          localRunnerId,
+          affinity: createRunAffinity(inspection),
+        },
+        {
+          control,
+          runnersControl,
+        },
+      );
+      if (!evaluation) {
+        return {
+          action: input.action,
+          runId: input.runId,
+          schedulerId: input.schedulerId,
+          status: 'not-found',
+          claimed: false,
+          mutationAllowed: false,
+          reason: `run ${input.runId} was not found`,
+          decision: null,
+          selectedRunnerId: null,
+          localRunnerId,
+          previousLeaseId: null,
+          previousLeaseOwnerId: null,
+          newLeaseId: null,
+          newLeaseOwnerId: null,
+        };
+      }
+
+      const previousLease = getActiveExecutionRunLease(inspection.record);
+      const selectedRunnerId = evaluation.selectedRunnerId;
+      const claimFutureMutation =
+        evaluation.futureMutation === 'local-claim' ||
+        evaluation.futureMutation === 'scheduler-reassign-expired-lease'
+          ? evaluation.futureMutation
+          : null;
+
+      if (!claimFutureMutation || selectedRunnerId !== localRunnerId) {
+        const reason = selectedRunnerId && selectedRunnerId !== localRunnerId
+          ? `scheduler authority selected ${selectedRunnerId ?? 'no runner'}, but v1 can only claim local runner ${localRunnerId}`
+          : evaluation.reason;
+        return createBlockedSchedulerClaimResult({
+          input,
+          evaluation,
+          localRunnerId,
+          previousLease,
+          reason,
+        });
+      }
+
+      const latestRecord = await control.readRun(input.runId);
+      if (!latestRecord) {
+        return {
+          action: input.action,
+          runId: input.runId,
+          schedulerId: input.schedulerId,
+          status: 'not-found',
+          claimed: false,
+          mutationAllowed: false,
+          reason: `run ${input.runId} was not found`,
+          decision: evaluation.decision,
+          selectedRunnerId: evaluation.selectedRunnerId,
+          localRunnerId,
+          previousLeaseId: previousLease?.id ?? null,
+          previousLeaseOwnerId: previousLease?.ownerId ?? null,
+          newLeaseId: null,
+          newLeaseOwnerId: null,
+        };
+      }
+
+      if (latestRecord.revision !== inspection.record.revision) {
+        return createConflictSchedulerClaimResult({
+          input,
+          evaluation,
+          localRunnerId,
+          previousLease,
+          reason: `run ${input.runId} changed from revision ${inspection.record.revision} to ${latestRecord.revision} before scheduler claim`,
+        });
+      }
+
+      const latestActiveLease = getActiveExecutionRunLease(latestRecord);
+      if (!activeLeasesMatch(previousLease, latestActiveLease)) {
+        return createConflictSchedulerClaimResult({
+          input,
+          evaluation,
+          localRunnerId,
+          previousLease,
+          reason: `run ${input.runId} active lease changed before scheduler claim`,
+        });
+      }
+
+      let nextBundle = latestRecord.bundle;
+      if (claimFutureMutation === 'scheduler-reassign-expired-lease') {
+        if (!previousLease || previousLease.expiresAt > claimAt) {
+          return createConflictSchedulerClaimResult({
+            input,
+            evaluation,
+            localRunnerId,
+            previousLease,
+            reason: `run ${input.runId} no longer has an expired active lease to reassign`,
+          });
+        }
+        const expired = expireExecutionRunLeases({
+          bundle: nextBundle,
+          now: claimAt,
+        });
+        if (!expired.expiredLeaseIds.includes(previousLease.id)) {
+          return createConflictSchedulerClaimResult({
+            input,
+            evaluation,
+            localRunnerId,
+            previousLease,
+            reason: `run ${input.runId} active lease ${previousLease.id} could not be expired for scheduler reassignment`,
+          });
+        }
+        nextBundle = expired.bundle;
+      }
+
+      const leaseId = `${input.runId}:lease:scheduler:${sanitizeIdFragment(input.schedulerId)}:${latestRecord.revision + 1}`;
+      const acquired = acquireExecutionRunLease({
+        bundle: nextBundle,
+        leaseId,
+        ownerId: localRunnerId,
+        acquiredAt: claimAt,
+        expiresAt: addMillisecondsToIsoTimestamp(claimAt, deps.leaseHeartbeatTtlMs ?? 15_000),
+      });
+      nextBundle = appendExecutionRunSchedulerControlEvent({
+        bundle: acquired.bundle,
+        input,
+        claimAt,
+        previousLease,
+        newLease: acquired.lease,
+        decision: evaluation.decision,
+        futureMutation: claimFutureMutation,
+      });
+
+      let persisted: ExecutionRunStoredRecord;
+      try {
+        persisted = await control.persistRun({
+          runId: input.runId,
+          bundle: nextBundle,
+          expectedRevision: latestRecord.revision,
+        });
+      } catch (error) {
+        return createConflictSchedulerClaimResult({
+          input,
+          evaluation,
+          localRunnerId,
+          previousLease,
+          reason: error instanceof Error ? error.message : `run ${input.runId} changed before scheduler claim persisted`,
+        });
+      }
+
+      await runnersControl.recordRunnerActivity({
+        runnerId: localRunnerId,
+        runId: persisted.runId,
+        activityAt: claimAt,
+        eligibilityNote: 'service host scheduler claimed local run',
+      });
+
+      return {
+        action: input.action,
+        runId: input.runId,
+        schedulerId: input.schedulerId,
+        status: claimFutureMutation === 'scheduler-reassign-expired-lease' ? 'reassigned' : 'claimed',
+        claimed: true,
+        mutationAllowed: true,
+        reason:
+          claimFutureMutation === 'scheduler-reassign-expired-lease'
+            ? `scheduler reassigned expired lease ${previousLease?.id ?? 'unknown'} to local runner ${localRunnerId}`
+            : `scheduler claimed run for local runner ${localRunnerId}`,
+        decision: evaluation.decision,
+        selectedRunnerId: evaluation.selectedRunnerId,
+        localRunnerId,
+        previousLeaseId: previousLease?.id ?? null,
+        previousLeaseOwnerId: previousLease?.ownerId ?? null,
+        newLeaseId: acquired.lease.id,
+        newLeaseOwnerId: acquired.lease.ownerId,
+      };
+    },
+
     async controlOperatorAction(input: ExecutionServiceHostOperatorControlInput) {
       if (input.kind === 'lease-repair') {
         return {
@@ -1046,6 +1391,12 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
             input.resolution,
             input.note ?? null,
           )),
+        };
+      }
+      if (input.kind === 'scheduler-control') {
+        return {
+          kind: input.kind,
+          ...(await this.claimLocalRunWithSchedulerAuthority(input.control)),
         };
       }
       return {
@@ -1109,7 +1460,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         note: note ?? 'run cancelled by service host operator control',
         source: 'operator',
       });
-      const cancelledRecord = await control.persistRun({
+      await control.persistRun({
         runId,
         bundle: cancelledBundle,
         expectedRevision: record.revision,
@@ -1399,7 +1750,13 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         let inspection = candidate.inspection;
         const currentRecord = inspection.record;
 
-        if (getActiveExecutionRunLease(inspection.record)) {
+        const activeLease = getActiveExecutionRunLease(inspection.record);
+        const existingLocalLeaseId =
+          activeLease?.ownerId === executionOwnerId && inspection.dispatchPlan.nextRunnableStepId
+            ? activeLease.id
+            : null;
+
+        if (activeLease && !existingLocalLeaseId) {
           const repair = await evaluateStoredExecutionRunRepairClassification(
             {
               runId: currentRecord.runId,
@@ -1452,7 +1809,7 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
           continue;
         }
 
-        if (runnerId) {
+        if (runnerId && !existingLocalLeaseId) {
           const localClaim = await selectStoredExecutionRunLocalClaim(
             {
               runId: currentRecord.runId,
@@ -1471,6 +1828,26 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
               result: 'skipped',
               reason: 'claim-owner-unavailable',
               detailReason: localClaim?.reason ?? 'claim-owner-unavailable',
+              record: inspection.record,
+            });
+            continue;
+          }
+        }
+
+        if (runnerId && existingLocalLeaseId) {
+          const localLeaseReadiness = await evaluateLocalOwnedActiveLeaseReadiness({
+            inspection,
+            runnersControl,
+            runnerId,
+            now: now(),
+            affinity: createRunAffinity(inspection),
+          });
+          if (!localLeaseReadiness.ready) {
+            drained.push({
+              runId: currentRecord.runId,
+              result: 'skipped',
+              reason: 'claim-owner-unavailable',
+              detailReason: localLeaseReadiness.reason,
               record: inspection.record,
             });
             continue;
@@ -1518,7 +1895,10 @@ export function createExecutionServiceHost(deps: ExecutionServiceHostDeps = {}):
         const executed = await executeStoredExecutionRunOnce({
           runId: currentRecord.runId,
           ownerId: runnerId ?? ownerId,
-          leaseId: `${currentRecord.runId}:lease:${executionOwnerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`,
+          leaseId: existingLocalLeaseId
+            ? undefined
+            : `${currentRecord.runId}:lease:${executionOwnerId.replace(/[^a-z0-9:_-]+/gi, '-')}:${++leaseSequence}`,
+          existingLeaseId: existingLocalLeaseId,
           now,
           leaseHeartbeatIntervalMs: deps.leaseHeartbeatIntervalMs,
           leaseHeartbeatTtlMs: deps.leaseHeartbeatTtlMs,
@@ -1688,6 +2068,50 @@ async function inspectHostDrainCandidates(
     const byPriority = compareHostDrainCandidatePriority(left.kind, right.kind);
     return byPriority !== 0 ? byPriority : left.createdAt.localeCompare(right.createdAt);
   });
+}
+
+async function evaluateLocalOwnedActiveLeaseReadiness(input: {
+  inspection: ExecutionRunInspection;
+  runnersControl: ExecutionRunnerControlContract;
+  runnerId: string;
+  now: string;
+  affinity: ExecutionRunAffinityRecord | null;
+}): Promise<{ ready: true; reason: null } | { ready: false; reason: string }> {
+  const runnerRecord = await input.runnersControl.readRunner(input.runnerId);
+  if (!runnerRecord) {
+    return {
+      ready: false,
+      reason: `runner ${input.runnerId} has no persisted runner record`,
+    };
+  }
+  if (runnerRecord.runner.status !== 'active') {
+    return {
+      ready: false,
+      reason: `runner ${input.runnerId} heartbeat is not active`,
+    };
+  }
+  if (runnerRecord.runner.expiresAt <= input.now) {
+    return {
+      ready: false,
+      reason: `runner ${input.runnerId} heartbeat expired at ${runnerRecord.runner.expiresAt}`,
+    };
+  }
+
+  const projection = createExecutionRunQueueProjection(input.inspection, {
+    affinity: input.affinity,
+    runner: runnerRecord.runner,
+  });
+  if (projection.affinity.status === 'blocked-mismatch') {
+    return {
+      ready: false,
+      reason: projection.affinity.reason ?? `runner ${input.runnerId} does not match run affinity`,
+    };
+  }
+
+  return {
+    ready: true,
+    reason: null,
+  };
 }
 
 async function repairLocallyReclaimableLease(input: {
@@ -2241,12 +2665,123 @@ function projectRunnerLifecycleState(runner: ExecutionRunnerRecord): ExecutionSe
   };
 }
 
+function classifyRunnerFreshness(
+  runner: ExecutionRunnerRecord,
+  nowIso: string,
+): ExecutionServiceHostRunnerTopologySummary['runners'][number]['freshness'] {
+  if (runner.status === 'stale') return 'stale';
+  return runner.expiresAt <= nowIso ? 'expired' : 'fresh';
+}
+
 function addMillisecondsToIsoTimestamp(timestamp: string, milliseconds: number): string {
   const parsed = Date.parse(timestamp);
   if (Number.isNaN(parsed)) {
     return timestamp;
   }
   return new Date(parsed + milliseconds).toISOString();
+}
+
+function sanitizeIdFragment(value: string): string {
+  const sanitized = value.replace(/[^a-z0-9:_-]+/gi, '-').replace(/^-+|-+$/g, '');
+  return sanitized || 'scheduler';
+}
+
+function activeLeasesMatch(left: ExecutionRunLease | null, right: ExecutionRunLease | null): boolean {
+  if (!left || !right) return left === right;
+  return (
+    left.id === right.id &&
+    left.ownerId === right.ownerId &&
+    left.status === right.status &&
+    left.expiresAt === right.expiresAt
+  );
+}
+
+function createBlockedSchedulerClaimResult(input: {
+  input: ExecutionServiceHostSchedulerControlInput;
+  evaluation: NonNullable<Awaited<ReturnType<typeof evaluateStoredExecutionRunSchedulerAuthority>>>;
+  localRunnerId: string;
+  previousLease: ExecutionRunLease | null;
+  reason: string;
+}): ExecutionServiceHostSchedulerClaimLocalRunResult {
+  return {
+    action: input.input.action,
+    runId: input.input.runId,
+    schedulerId: input.input.schedulerId,
+    status: 'blocked',
+    claimed: false,
+    mutationAllowed: false,
+    reason: input.reason,
+    decision: input.evaluation.decision,
+    selectedRunnerId: input.evaluation.selectedRunnerId,
+    localRunnerId: input.localRunnerId,
+    previousLeaseId: input.previousLease?.id ?? null,
+    previousLeaseOwnerId: input.previousLease?.ownerId ?? null,
+    newLeaseId: null,
+    newLeaseOwnerId: null,
+  };
+}
+
+function createConflictSchedulerClaimResult(input: {
+  input: ExecutionServiceHostSchedulerControlInput;
+  evaluation: NonNullable<Awaited<ReturnType<typeof evaluateStoredExecutionRunSchedulerAuthority>>>;
+  localRunnerId: string;
+  previousLease: ExecutionRunLease | null;
+  reason: string;
+}): ExecutionServiceHostSchedulerClaimLocalRunResult {
+  return {
+    ...createBlockedSchedulerClaimResult(input),
+    status: 'conflict',
+  };
+}
+
+function appendExecutionRunSchedulerControlEvent(input: {
+  bundle: ExecutionRunRecordBundle;
+  input: ExecutionServiceHostSchedulerControlInput;
+  claimAt: string;
+  previousLease: ExecutionRunLease | null;
+  newLease: ExecutionRunLease;
+  decision: ExecutionRunSchedulerAuthorityDecision;
+  futureMutation: 'local-claim' | 'scheduler-reassign-expired-lease';
+}): ExecutionRunRecordBundle {
+  const event = createExecutionRunEvent({
+    id: `${input.bundle.run.id}:event:scheduler:${sanitizeIdFragment(input.input.schedulerId)}:${input.newLease.id}:claim-local-run`,
+    runId: input.bundle.run.id,
+    type: 'note-added',
+    createdAt: input.claimAt,
+    leaseId: input.newLease.id,
+    note:
+      input.futureMutation === 'scheduler-reassign-expired-lease'
+        ? `scheduler reassigned expired lease to ${input.newLease.ownerId}`
+        : `scheduler claimed local run for ${input.newLease.ownerId}`,
+    payload: {
+      source: 'service-host',
+      operatorControl: 'scheduler-control',
+      action: input.input.action,
+      schedulerId: input.input.schedulerId,
+      decision: input.decision,
+      futureMutation: input.futureMutation,
+      previousLeaseId: input.previousLease?.id ?? null,
+      previousLeaseOwnerId: input.previousLease?.ownerId ?? null,
+      previousLeaseExpiresAt: input.previousLease?.expiresAt ?? null,
+      newLeaseId: input.newLease.id,
+      newLeaseOwnerId: input.newLease.ownerId,
+      newLeaseExpiresAt: input.newLease.expiresAt,
+    },
+  });
+
+  return ExecutionRunRecordBundleSchema.parse({
+    ...input.bundle,
+    run: {
+      ...input.bundle.run,
+      updatedAt: input.claimAt,
+    },
+    events: [...input.bundle.events, event],
+    sharedState: {
+      ...input.bundle.sharedState,
+      history: [...input.bundle.sharedState.history, event],
+      lastUpdatedAt: input.claimAt,
+    },
+  });
 }
 
 function canRecoverStrandedRun(record: ExecutionRunStoredRecord, now: () => string): boolean {

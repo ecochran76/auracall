@@ -595,6 +595,108 @@ describe('runtime service host', () => {
     expect(stored?.runner.eligibilityNote).toBe('test local runner');
   });
 
+  it('projects runner topology readiness without mutating runner records', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-topology-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const runnersControl = createExecutionRunnerControl();
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:local-owner',
+        hostId: 'host:local-owner',
+        startedAt: '2026-04-20T08:59:00.000Z',
+        lastHeartbeatAt: '2026-04-20T09:00:00.000Z',
+        expiresAt: '2026-04-20T09:00:30.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        browserProfileIds: ['browser-default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+        browserCapable: true,
+        eligibilityNote: 'local owner ready',
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:expired-active',
+        hostId: 'host:expired-active',
+        startedAt: '2026-04-20T08:58:00.000Z',
+        lastHeartbeatAt: '2026-04-20T08:59:00.000Z',
+        expiresAt: '2026-04-20T08:59:30.000Z',
+        serviceIds: ['gemini'],
+        runtimeProfileIds: ['gemini-runtime'],
+        browserProfileIds: ['browser-gemini'],
+        browserCapable: true,
+        eligibilityNote: 'expired but not mutated by topology projection',
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:stale',
+        hostId: 'host:stale',
+        status: 'stale',
+        startedAt: '2026-04-20T08:57:00.000Z',
+        lastHeartbeatAt: '2026-04-20T08:57:00.000Z',
+        expiresAt: '2026-04-20T08:57:30.000Z',
+        serviceIds: ['grok'],
+        runtimeProfileIds: ['grok-runtime'],
+        browserProfileIds: [],
+        browserCapable: false,
+      }),
+    });
+
+    const beforeExpired = await runnersControl.readRunner('runner:expired-active');
+    const host = createExecutionServiceHost({
+      runnersControl,
+      runnerId: 'runner:local-owner',
+      now: () => '2026-04-20T09:00:10.000Z',
+    });
+
+    const topology = await host.summarizeRunnerTopology();
+
+    expect(topology).toMatchObject({
+      localExecutionOwnerRunnerId: 'runner:local-owner',
+      generatedAt: '2026-04-20T09:00:10.000Z',
+      metrics: {
+        totalRunnerCount: 3,
+        activeRunnerCount: 2,
+        staleRunnerCount: 1,
+        freshRunnerCount: 1,
+        expiredRunnerCount: 1,
+        browserCapableRunnerCount: 2,
+      },
+    });
+    expect(topology.runners).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          runnerId: 'runner:local-owner',
+          freshness: 'fresh',
+          selectedAsLocalExecutionOwner: true,
+          serviceIds: ['chatgpt'],
+          runtimeProfileIds: ['default'],
+          browserProfileIds: ['browser-default'],
+          serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+          browserCapable: true,
+        }),
+        expect.objectContaining({
+          runnerId: 'runner:expired-active',
+          status: 'active',
+          freshness: 'expired',
+          selectedAsLocalExecutionOwner: false,
+        }),
+        expect.objectContaining({
+          runnerId: 'runner:stale',
+          status: 'stale',
+          freshness: 'stale',
+        }),
+      ]),
+    );
+
+    const afterExpired = await runnersControl.readRunner('runner:expired-active');
+    expect(afterExpired?.revision).toBe(beforeExpired?.revision);
+    expect(afterExpired?.runner.status).toBe('active');
+  });
+
   it('serializes queued drain-until-idle calls through the service-host seam', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
     cleanup.push(homeDir);
@@ -2906,6 +3008,457 @@ describe('runtime service host', () => {
         unavailableCount: 0,
       },
     });
+  });
+
+  it('claims a scheduler-authorized local runnable run without draining it', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_scheduler_local_claim', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      leaseHeartbeatTtlMs: 30_000,
+    });
+
+    const result = await host.controlOperatorAction({
+      kind: 'scheduler-control',
+      control: {
+        action: 'claim-local-run',
+        runId: 'run_scheduler_local_claim',
+        schedulerId: 'operator:test',
+      },
+    });
+
+    expect(result).toMatchObject({
+      kind: 'scheduler-control',
+      action: 'claim-local-run',
+      runId: 'run_scheduler_local_claim',
+      schedulerId: 'operator:test',
+      status: 'claimed',
+      claimed: true,
+      mutationAllowed: true,
+      decision: 'claimable-by-local-runner',
+      selectedRunnerId: 'runner:scheduler-local',
+      previousLeaseId: null,
+      newLeaseOwnerId: 'runner:scheduler-local',
+    });
+    const stored = await control.readRun('run_scheduler_local_claim');
+    const activeLease = stored?.bundle.leases.find((lease) => lease.status === 'active');
+    expect(activeLease).toMatchObject({
+      ownerId: 'runner:scheduler-local',
+      expiresAt: '2026-04-08T15:05:30.000Z',
+    });
+    expect(stored?.bundle.steps[0]?.status).toBe('runnable');
+    expect(stored?.bundle.events.at(-1)).toMatchObject({
+      type: 'note-added',
+      payload: {
+        source: 'service-host',
+        operatorControl: 'scheduler-control',
+        action: 'claim-local-run',
+        schedulerId: 'operator:test',
+        decision: 'claimable-by-local-runner',
+      },
+    });
+  });
+
+  it('drains a scheduler-claimed run through the existing local-owned lease', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_scheduler_claim_then_drain', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      leaseHeartbeatTtlMs: 30_000,
+      executeStoredRunStep: async () => ({
+        output: {
+          summary: 'scheduler-claimed run completed',
+          artifacts: [],
+          structuredData: {},
+          notes: [],
+        },
+      }),
+    });
+
+    const claimed = await host.claimLocalRunWithSchedulerAuthority({
+      action: 'claim-local-run',
+      runId: 'run_scheduler_claim_then_drain',
+      schedulerId: 'operator:test',
+    });
+    expect(claimed).toMatchObject({
+      status: 'claimed',
+      claimed: true,
+      newLeaseOwnerId: 'runner:scheduler-local',
+    });
+
+    const drained = await host.drainRun('run_scheduler_claim_then_drain');
+    expect(drained).toMatchObject({
+      action: 'drain-run',
+      runId: 'run_scheduler_claim_then_drain',
+      status: 'executed',
+      drained: true,
+      reason: 'run executed through targeted host drain',
+      skipReason: null,
+    });
+
+    const stored = await control.readRun('run_scheduler_claim_then_drain');
+    expect(stored?.bundle.run.status).toBe('succeeded');
+    expect(stored?.bundle.steps[0]).toMatchObject({
+      status: 'succeeded',
+      output: {
+        summary: 'scheduler-claimed run completed',
+      },
+    });
+    expect(stored?.bundle.leases).toEqual([
+      expect.objectContaining({
+        ownerId: 'runner:scheduler-local',
+        status: 'released',
+        releaseReason: 'completed',
+      }),
+    ]);
+  });
+
+  it('keeps targeted drain blocked by a foreign active lease', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_foreign_active_lease_drain', '2026-04-08T15:00:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_foreign_active_lease_drain',
+      leaseId: 'lease:foreign-owner',
+      ownerId: 'runner:foreign',
+      acquiredAt: '2026-04-08T15:01:00.000Z',
+      heartbeatAt: '2026-04-08T15:01:00.000Z',
+      expiresAt: '2026-04-08T15:10:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:foreign',
+        hostId: 'host:foreign',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const drained = await host.drainRun('run_foreign_active_lease_drain');
+    expect(drained).toMatchObject({
+      action: 'drain-run',
+      runId: 'run_foreign_active_lease_drain',
+      status: 'skipped',
+      drained: false,
+      skipReason: 'active-lease',
+    });
+
+    const stored = await control.readRun('run_foreign_active_lease_drain');
+    expect(stored?.bundle.run.status).toBe('planned');
+    expect(stored?.bundle.leases).toEqual([
+      expect.objectContaining({
+        id: 'lease:foreign-owner',
+        ownerId: 'runner:foreign',
+        status: 'active',
+      }),
+    ]);
+  });
+
+  it('reassigns an expired stale-owner lease to the scheduler-selected local runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_scheduler_reassign_stale', '2026-04-08T15:00:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_scheduler_reassign_stale',
+      leaseId: 'lease:stale-owner',
+      ownerId: 'runner:stale-owner',
+      acquiredAt: '2026-04-08T15:01:00.000Z',
+      expiresAt: '2026-04-08T15:02:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:stale-owner',
+        hostId: 'host:old',
+        status: 'stale',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:00.000Z',
+        expiresAt: '2026-04-08T15:01:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T15:03:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.claimLocalRunWithSchedulerAuthority({
+      action: 'claim-local-run',
+      runId: 'run_scheduler_reassign_stale',
+      schedulerId: 'operator:test',
+    });
+
+    expect(result).toMatchObject({
+      status: 'reassigned',
+      claimed: true,
+      decision: 'reassignable-after-expired-lease',
+      previousLeaseId: 'lease:stale-owner',
+      previousLeaseOwnerId: 'runner:stale-owner',
+      newLeaseOwnerId: 'runner:scheduler-local',
+    });
+    const stored = await control.readRun('run_scheduler_reassign_stale');
+    expect(stored?.bundle.leases.find((lease) => lease.id === 'lease:stale-owner')?.status).toBe('expired');
+    expect(stored?.bundle.leases.find((lease) => lease.status === 'active')?.ownerId).toBe('runner:scheduler-local');
+  });
+
+  it('rejects scheduler claim when authority selects a non-local runner', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_scheduler_non_local', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:local-missing-account',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:other-matching-account',
+        hostId: 'host:other',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+        serviceAccountIds: ['service-account:chatgpt:operator@example.com'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:local-missing-account',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+      createRunAffinity: (inspection) =>
+        createConfiguredExecutionRunAffinity(CHATGPT_ACCOUNT_AFFINITY_CONFIG, inspection),
+    });
+
+    const result = await host.claimLocalRunWithSchedulerAuthority({
+      action: 'claim-local-run',
+      runId: 'run_scheduler_non_local',
+      schedulerId: 'operator:test',
+    });
+
+    expect(result).toMatchObject({
+      status: 'blocked',
+      claimed: false,
+      decision: 'claimable-by-other-runner',
+      selectedRunnerId: 'runner:other-matching-account',
+      newLeaseId: null,
+    });
+    expect(result.reason).toContain('v1 can only claim local runner runner:local-missing-account');
+    expect((await control.readRun('run_scheduler_non_local'))?.bundle.leases).toHaveLength(0);
+  });
+
+  it('rejects scheduler claim when a fresh active lease exists', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await control.createRun(createDirectBundle('run_scheduler_fresh_lease', '2026-04-08T15:00:00.000Z'));
+    await control.acquireLease({
+      runId: 'run_scheduler_fresh_lease',
+      leaseId: 'lease:fresh',
+      ownerId: 'runner:fresh-owner',
+      acquiredAt: '2026-04-08T15:01:00.000Z',
+      expiresAt: '2026-04-08T15:10:00.000Z',
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:fresh-owner',
+        hostId: 'host:fresh',
+        startedAt: '2026-04-08T15:00:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T15:00:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:04:00.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const host = createExecutionServiceHost({
+      control,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.claimLocalRunWithSchedulerAuthority({
+      action: 'claim-local-run',
+      runId: 'run_scheduler_fresh_lease',
+      schedulerId: 'operator:test',
+    });
+
+    expect(result).toMatchObject({
+      status: 'blocked',
+      claimed: false,
+      decision: 'blocked-active-lease',
+      previousLeaseId: 'lease:fresh',
+      newLeaseId: null,
+    });
+  });
+
+  it('returns conflict when scheduler claim loses the persist revision check', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-service-host-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const baseControl = createExecutionRuntimeControl();
+    const runnersControl = createExecutionRunnerControl();
+    await baseControl.createRun(createDirectBundle('run_scheduler_revision_conflict', '2026-04-08T15:00:00.000Z'));
+    await runnersControl.registerRunner({
+      runner: createExecutionRunnerRecord({
+        id: 'runner:scheduler-local',
+        hostId: 'host:test',
+        startedAt: '2026-04-08T14:59:00.000Z',
+        lastHeartbeatAt: '2026-04-08T15:00:30.000Z',
+        expiresAt: '2026-04-08T15:10:00.000Z',
+        serviceIds: ['chatgpt'],
+        runtimeProfileIds: ['default'],
+      }),
+    });
+
+    const conflictControl: typeof baseControl = {
+      ...baseControl,
+      async persistRun(input) {
+        if (input.runId === 'run_scheduler_revision_conflict') {
+          throw new Error('simulated revision mismatch');
+        }
+        return baseControl.persistRun(input);
+      },
+    };
+    const host = createExecutionServiceHost({
+      control: conflictControl,
+      runnersControl,
+      runnerId: 'runner:scheduler-local',
+      ownerId: 'host:test',
+      now: () => '2026-04-08T15:05:00.000Z',
+    });
+
+    const result = await host.claimLocalRunWithSchedulerAuthority({
+      action: 'claim-local-run',
+      runId: 'run_scheduler_revision_conflict',
+      schedulerId: 'operator:test',
+    });
+
+    expect(result).toMatchObject({
+      status: 'conflict',
+      claimed: false,
+      decision: 'claimable-by-local-runner',
+      newLeaseId: null,
+    });
+    expect(result.reason).toContain('simulated revision mismatch');
+    expect((await baseControl.readRun('run_scheduler_revision_conflict'))?.bundle.leases).toHaveLength(0);
   });
 
   it('preserves configured service account mismatch details on targeted drain skip', async () => {

@@ -4,6 +4,10 @@ import type { ExecutionRunInspection, ExecutionRuntimeControlContract } from './
 import { getActiveExecutionRunLease } from './contract.js';
 import { createExecutionRunQueueProjection, type ExecutionRunQueueProjection } from './projection.js';
 import { createExecutionRunnerControl, type ExecutionRunnerControlContract } from './runnersControl.js';
+import {
+  evaluateStoredExecutionRunSchedulerAuthority,
+  type ExecutionRunSchedulerAuthorityEvaluation,
+} from './schedulerAuthority.js';
 import type {
   ExecutionRunAffinityRecord,
   ExecutionRunSourceKind,
@@ -22,6 +26,8 @@ export interface InspectRuntimeRunInput {
   runnerId?: string | null;
   now?: string | null;
   includeServiceState?: boolean;
+  includeSchedulerAuthority?: boolean;
+  schedulerAuthorityLocalRunnerId?: string | null;
   probeServiceState?: (input: ProbeRuntimeRunServiceStateInput) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
@@ -104,6 +110,7 @@ export interface RuntimeRunInspectionPayload {
   runtime: RuntimeRunInspectionRuntimeSummary;
   runner: RuntimeRunInspectionRunnerSummary | null;
   serviceState?: RuntimeRunInspectionServiceStateSummary;
+  schedulerAuthority?: ExecutionRunSchedulerAuthorityEvaluation | null;
 }
 
 export class RuntimeRunInspectionError extends Error {
@@ -126,6 +133,8 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
   const teamRunId = normalizeOptionalId(input.teamRunId);
   const taskRunSpecId = normalizeOptionalId(input.taskRunSpecId);
   const requestedRunnerId = normalizeOptionalId(input.runnerId);
+  const schedulerAuthorityLocalRunnerId =
+    normalizeOptionalId(input.schedulerAuthorityLocalRunnerId) ?? requestedRunnerId;
 
   const providedLookupCount = [runId, runtimeRunId, teamRunId, taskRunSpecId].filter(Boolean).length;
 
@@ -203,8 +212,9 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
     requestedRunnerId,
     runnersControl,
   });
+  const affinity = input.createRunAffinity?.(runtimeInspection) ?? null;
   const queueProjection = createExecutionRunQueueProjection(runtimeInspection, {
-    affinity: input.createRunAffinity?.(runtimeInspection) ?? null,
+    affinity,
     runner: selectedRunner?.runner.runner ?? null,
   });
   const taskRunSpecSummary = runtimeInspection.record.bundle.run.taskRunSpecId
@@ -216,6 +226,17 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
         runner: selectedRunner?.runner ?? null,
         probeServiceState: input.probeServiceState,
       })
+    : undefined;
+  const schedulerAuthority = input.includeSchedulerAuthority
+    ? await evaluateStoredExecutionRunSchedulerAuthority(
+        {
+          runId: resolvedRunId,
+          now: inspectedAt,
+          localRunnerId: schedulerAuthorityLocalRunnerId,
+          affinity,
+        },
+        { control, runnersControl },
+      )
     : undefined;
 
   return {
@@ -256,6 +277,7 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
         }
       : null,
     serviceState,
+    schedulerAuthority,
   };
 }
 
