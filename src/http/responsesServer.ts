@@ -62,6 +62,11 @@ import {
   probeGeminiBrowserServiceState,
   probeGrokBrowserServiceState,
 } from '../browser/liveServiceState.js';
+import {
+  createMediaGenerationService,
+  type MediaGenerationServiceDeps,
+} from '../media/service.js';
+import type { MediaGenerationRequest } from '../media/types.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -80,6 +85,7 @@ export interface ResponsesHttpServerDeps {
   now?: () => Date;
   generateResponseId?: () => string;
   executeStoredRunStep?: ExecutionResponsesServiceDeps['executeStoredRunStep'];
+  mediaGenerationExecutor?: MediaGenerationServiceDeps['executor'];
   executionHost?: ExecutionServiceHost;
   localActionExecutionPolicy?: ExecutionServiceHostDeps['localActionExecutionPolicy'];
   probeRuntimeRunServiceState?: (
@@ -169,6 +175,8 @@ interface HttpStatusResponse {
     models: string;
     responsesCreate: string;
     responsesGetTemplate: string;
+    mediaGenerationsCreate: string;
+    mediaGenerationsGetTemplate: string;
   };
   compatibility: {
     openai: true;
@@ -223,6 +231,10 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const configuredRuntimeConfig = deps.config;
+  const mediaGenerationService = createMediaGenerationService({
+    now,
+    executor: deps.mediaGenerationExecutor,
+  });
   const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
   const createRunAffinity = configuredRuntimeConfig
     ? (inspection: Parameters<typeof createConfiguredExecutionRunAffinity>[1]) =>
@@ -587,6 +599,33 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      if (req.method === 'POST' && url.pathname === '/v1/media-generations') {
+        const body = await readRequestBody(req);
+        const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest;
+        const response = await mediaGenerationService.createGeneration({
+          ...parsedBody,
+          source: parsedBody.source ?? 'api',
+        });
+        sendJson(res, response.status === 'failed' ? 502 : 200, response);
+        return;
+      }
+
+      const mediaGenerationId = matchMediaGenerationRoute(url.pathname);
+      if (req.method === 'GET' && mediaGenerationId) {
+        const response = await mediaGenerationService.readGeneration(mediaGenerationId);
+        if (!response) {
+          sendJson(res, 404, {
+            error: {
+              message: `Media generation ${mediaGenerationId} was not found`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, response);
+        return;
+      }
+
       const responseId = matchResponseRoute(url.pathname);
       if (req.method === 'GET' && responseId) {
         const response = await responsesService.readResponse(responseId);
@@ -851,7 +890,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
   logger(
-    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}',
+    'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}',
   );
   logger(`Local probe: curl ${probeUrl}/status`);
   logger('Leave this terminal running; press Ctrl+C to stop auracall api serve.');
@@ -1008,6 +1047,8 @@ function createHttpStatusResponse(input: {
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
+      mediaGenerationsCreate: '/v1/media-generations',
+      mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
     },
     compatibility: {
       openai: true,
@@ -1435,6 +1476,11 @@ function isLoopbackHost(host: string): boolean {
 
 function matchResponseRoute(pathname: string): string | null {
   const match = /^\/v1\/responses\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchMediaGenerationRoute(pathname: string): string | null {
+  const match = /^\/v1\/media-generations\/([^/]+)$/.exec(pathname);
   return match?.[1] ?? null;
 }
 

@@ -195,6 +195,11 @@
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
+  - create/read media-generation contract record:
+    - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
+    - until provider adapters are wired, default execution returns a persisted
+      `failed` response with `failure.code = media_provider_not_implemented`
+    - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
   - create bounded team run:
     - `curl -s http://127.0.0.1:8080/v1/team-runs -H 'Content-Type: application/json' -d '{"teamId":"ops","objective":"Reply with one bounded team result.","responseFormat":"markdown","maxTurns":2}'`
     - with background drain enabled, creation returns after persistence and

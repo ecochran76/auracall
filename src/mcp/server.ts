@@ -8,6 +8,7 @@ import { registerConsultTool } from './tools/consult.js';
 import { registerSessionsTool } from './tools/sessions.js';
 import { registerSessionResources } from './tools/sessionResources.js';
 import { registerTeamRunTool } from './tools/teamRun.js';
+import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 
 export async function startMcpServer(): Promise<void> {
   const server = new McpServer(
@@ -24,6 +25,7 @@ export async function startMcpServer(): Promise<void> {
 
   registerConsultTool(server);
   registerTeamRunTool(server);
+  registerMediaGenerationTool(server);
   registerSessionsTool(server);
   registerSessionResources(server);
 

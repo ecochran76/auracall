@@ -19,8 +19,9 @@ helpers.
 - Grok Imagine image/video generation is not implemented.
 - The generic API text path does not produce media artifacts for Gemini or
   Grok.
-- The local `api serve` and MCP surfaces do not yet expose a durable
-  media-generation request/response contract.
+- The local `api serve` and MCP surfaces now expose the shared durable
+  media-generation request/response contract and fake-provider test seams.
+  Provider-backed Gemini/Grok execution is still gated on adapter wiring.
 
 ## Target Contract
 
@@ -63,9 +64,10 @@ helpers.
 - Gemini API image generation works when the configured API key/model supports
   image output, with browser `Create Image` retained as a separate provider
   path.
-- Local API can create and read back one media generation request with durable
-  artifact metadata.
-- MCP exposes equivalent media generation/readback for agents.
+- [x] Local API can create and read back one media generation request with durable
+  artifact metadata through an injected fake executor.
+- [x] MCP exposes equivalent media generation execution for agents through the
+  same contract and service handler.
 - Gemini image generation selects the explicit `Create Image` tool path when
   using the browser surface.
 - Grok Imagine implementation is either green for image generation or remains
@@ -75,11 +77,11 @@ helpers.
 
 ## Validation Plan
 
-- Unit tests for media request schema, routing, and artifact readback.
+- [x] Unit tests for media request schema, routing, and artifact readback.
 - Provider-adapter tests for Gemini tool-selection intent and Grok Imagine
   request mapping.
-- Local API smoke for create/readback on a fake provider.
-- MCP smoke for the same fake provider path.
+- [x] Local API smoke for create/readback on a fake provider.
+- [x] MCP smoke for the same fake provider path.
 - Live Gemini image smoke only after managed-profile state is clear of
   `google.com/sorry` or captcha pages.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated

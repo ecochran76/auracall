@@ -131,6 +131,8 @@ Terminology note:
   - `GET /v1/models`
   - `POST /v1/responses`
   - `GET /v1/responses/{response_id}`
+  - `POST /v1/media-generations`
+  - `GET /v1/media-generations/{media_generation_id}`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
@@ -139,6 +141,11 @@ Terminology note:
     - poll `GET /v1/responses/{response_id}` for terminal readback
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
+  - `POST /v1/media-generations` accepts the shared media-generation contract
+    for `provider = gemini|grok`, `mediaType = image|video`, prompt, optional
+    `model`, `transport`, `count`, `size`, `aspectRatio`, and metadata. The
+    route persists request/readback records now; provider-backed Gemini/Grok
+    media execution is still gated until the adapters are wired.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,
@@ -638,8 +645,8 @@ Terminology note:
 **MCP**
 - Run the stdio server via `auracall-mcp`.
 - Configure clients via [steipete/mcporter](https://github.com/steipete/mcporter) or `.mcp.json`; see [docs/mcp.md](docs/mcp.md) for connection examples.
-- MCP tools include `consult`, `sessions`, and bounded team execution through
-  `team_run`.
+- MCP tools include `consult`, `sessions`, bounded team execution through
+  `team_run`, and the shared media contract through `media_generation`.
 ```bash
 npx -y auracall auracall-mcp
 ```

@@ -13739,3 +13739,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   canonicalization still collapsed plain `grok` to legacy `grok-4.1`. Keep
   explicit legacy keys available, but make plain provider aliases point at the
   current provider model and record unimplemented media surfaces separately.
+- 2026-04-22: Add media-generation surfaces contract-first, before provider
+  adapter claims. In this repo, Gemini/Grok image prompts can look like normal
+  text completions unless media has a first-class request/readback resource.
+  Expose the shared `media_generation` contract through local API and MCP,
+  persist records under runtime ownership, and let unwired providers fail
+  durably with `media_provider_not_implemented` until Gemini image and Grok
+  Imagine adapters are implemented and live-smoked.
