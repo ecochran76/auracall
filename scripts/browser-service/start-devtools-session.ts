@@ -1,4 +1,4 @@
 #!/usr/bin/env tsx
-await import("../start-devtools-session.ts");
+await import("../start-devtools-session");
 
 export {};

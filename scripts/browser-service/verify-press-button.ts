@@ -1,4 +1,4 @@
 #!/usr/bin/env tsx
-await import("../verify-press-button.ts");
+await import("../verify-press-button");
 
 export {};

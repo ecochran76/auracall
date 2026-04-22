@@ -1,4 +1,4 @@
 #!/usr/bin/env tsx
-await import("../verify-grok-project-menu-clone.ts");
+await import("../verify-grok-project-menu-clone");
 
 export {};

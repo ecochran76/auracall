@@ -1,4 +1,4 @@
 #!/usr/bin/env tsx
-await import("../open-grok-history.ts");
+await import("../open-grok-history");
 
 export {};

@@ -52,7 +52,8 @@ describe('browser-service script wrappers', () => {
         const sourcePath = path.join(repoRoot, 'scripts', scriptName);
         await expect(fs.stat(sourcePath)).resolves.toBeTruthy();
         const wrapper = await fs.readFile(wrapperPath, 'utf8');
-        expect(wrapper).toBe(`#!/usr/bin/env tsx\nawait import("../${scriptName}");\n\nexport {};\n`);
+        const importName = scriptName.replace(/\.ts$/, '');
+        expect(wrapper).toBe(`#!/usr/bin/env tsx\nawait import("../${importName}");\n\nexport {};\n`);
       }),
     );
   });

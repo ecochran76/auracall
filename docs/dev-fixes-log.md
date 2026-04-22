@@ -13696,3 +13696,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   later closed plans ship the work. Before starting another slice, update the
   open plan current-state notes so agents do not reopen scheduler-control,
   service/runner, or browser-service work by inertia.
+- 2026-04-22: Wrapper scripts must satisfy both the dev and build tsconfigs.
+  In this repo, `pnpm run check` uses the base no-emit tsconfig with
+  `allowImportingTsExtensions`, while `pnpm run build` disables that option.
+  Thin TypeScript wrappers under `scripts/` should use extensionless dynamic
+  imports so they work with `tsx` and emitted-build typechecking.

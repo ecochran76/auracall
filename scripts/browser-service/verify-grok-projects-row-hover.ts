@@ -1,4 +1,4 @@
 #!/usr/bin/env tsx
-await import("../verify-grok-projects-row-hover.ts");
+await import("../verify-grok-projects-row-hover");
 
 export {};

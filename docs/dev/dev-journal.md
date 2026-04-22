@@ -19456,3 +19456,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm run plans:audit -- --keep 42`
   - `git diff --check`
+
+## 2026-04-22 - Browser-service wrapper build compatibility
+
+- Opened and closed
+  `docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md`.
+- Integration pass found that browser-service wrapper scripts passed
+  `pnpm run check` but failed the emitted build through `pnpm run test:mcp`.
+- Root cause:
+  - wrappers used explicit `.ts` dynamic imports
+  - base `tsconfig.json` allows that shape for no-emit typecheck
+  - `tsconfig.build.json` disables `allowImportingTsExtensions`
+- Fixed all `scripts/browser-service/*.ts` wrappers to use extensionless
+  dynamic imports and updated wrapper-shape tests to enforce that contract.
+- Validation target:
+  - `pnpm vitest run tests/scripts/browserServiceWrappers.test.ts tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
+  - `pnpm tsx scripts/browser-service/browser-tools.ts --help`
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit -- --keep 43`
+  - `git diff --check`

@@ -1244,3 +1244,28 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 42`
   - `git diff --check`
+
+## Turn 50 | 2026-04-22
+
+- Closed integration fix:
+  `docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md`
+- Goal: finish the integration/review pass selected by Plan 0042.
+- Finding:
+  - `pnpm run check` passed, but `pnpm run test:mcp` failed in its build step
+    because wrapper scripts imported root scripts with explicit `.ts`
+    extensions
+  - base `tsconfig.json` permits those imports for no-emit typecheck, while
+    `tsconfig.build.json` does not permit them for emitted builds
+- Change:
+  - changed `scripts/browser-service/*.ts` wrappers to extensionless dynamic
+    imports
+  - updated wrapper-shape tests to require extensionless imports
+- Verification target:
+  - `pnpm vitest run tests/scripts/browserServiceWrappers.test.ts tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
+  - `pnpm tsx scripts/browser-service/browser-tools.ts --help`
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit -- --keep 43`
+  - `git diff --check`

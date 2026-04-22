@@ -912,6 +912,7 @@ Current focused reliability slice:
 - [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md) (closed)
 - [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0041-2026-04-22-browser-service-script-family.md) (closed)
 - [docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md) (closed)
+- [docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0043-2026-04-22-browser-service-wrapper-build-compatibility.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).
