@@ -1347,3 +1347,29 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run test:mcp`
   - `pnpm run plans:audit -- --keep 45`
   - `git diff --check`
+
+## Turn 54 | 2026-04-22
+
+- Closed dogfood plan:
+  `docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md`
+- Goal: prove the user-scoped installed runtime works from a neutral working
+  directory and is suitable for daily operator use.
+- Result:
+  - installed config/profile/status reads passed from
+    `/tmp/auracall-installed-dogfood`
+  - installed Grok doctor passed on the default managed browser profile
+  - installed ChatGPT `wsl-chrome-2` doctor attached to the active managed
+    browser profile
+  - installed ChatGPT team run returned `AURACALL_INSTALLED_CHATGPT_OK`
+  - installed Gemini doctor stayed passive and confirmed signed-in managed
+    profile state
+  - installed `api serve --port 8099` returned `/status.ok = true` and stopped
+    cleanly
+- Follow-up:
+  - `/status` is useful but too noisy after accumulated stale runner records;
+    keep that as a bounded operator-readability improvement, not a blocker for
+    installed-runtime dogfooding.
+- Verification target:
+  - installed runtime commands listed in Plan 0046
+  - `pnpm run plans:audit -- --keep 46`
+  - `git diff --check`

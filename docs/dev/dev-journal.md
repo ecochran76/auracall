@@ -19553,3 +19553,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run test:mcp`
   - `pnpm run plans:audit -- --keep 45`
   - `git diff --check`
+
+## 2026-04-22 - Installed runtime dogfood
+
+- Opened and closed
+  `docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md`.
+- Installed runtime dogfood from `/tmp/auracall-installed-dogfood` passed:
+  - config/profile/status reads through `~/.local/bin/auracall`
+  - Grok doctor on the default managed browser profile
+  - ChatGPT `wsl-chrome-2` doctor on the active managed browser profile
+  - ChatGPT team run with `AURACALL_INSTALLED_CHATGPT_OK`
+  - passive Gemini doctor confirming signed-in managed-profile state
+  - local `api serve --port 8099` with `/status.ok = true`
+- The default ChatGPT doctor had no active default DevTools session, but the
+  explicit `wsl-chrome-2` path and real team run proved installed-runtime
+  browser execution works.
+- Follow-up:
+  - `/status` reports hundreds of stale runner records in this long-lived
+    dogfood environment; treat status compaction/readability as the next small
+    operator hygiene target when it starts obscuring useful state.
+- Validation target:
+  - installed runtime commands listed in Plan 0046
+  - `pnpm run plans:audit -- --keep 46`
+  - `git diff --check`

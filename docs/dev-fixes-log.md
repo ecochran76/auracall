@@ -13721,3 +13721,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   packaged runtime independently from the checkout without changing global npm
   state, requiring sudo, or implying the build is ready for npm/Homebrew
   release.
+- 2026-04-22: Dogfood installed runtimes from a neutral working directory
+  before treating them as daily-driver candidates. In this repo,
+  `~/.local/bin/auracall` should prove config/profile reads, at least one
+  browser-backed team run, passive Gemini state checks, and local `api serve`
+  startup from outside the checkout. A noisy `/status` caused by accumulated
+  stale runner records is an operator-readability follow-up, not a runtime
+  install failure by itself.
