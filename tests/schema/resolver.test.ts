@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { resolveConfig } from '../../src/schema/resolver.js';
+import { projectConfigModel } from '../../src/config/model.js';
 import * as configModule from '../../src/config.js';
 
 describe('Config Resolver', () => {
@@ -193,6 +194,61 @@ describe('Config Resolver', () => {
     expect(result.browser.projectName).toBe('CLI Project');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.projectId).toBe('cli-project-id');
     expect(result.runtimeProfiles?.default?.services?.chatgpt?.projectName).toBe('CLI Project');
+  });
+
+  it('should mirror transitional cli service aliases into bridge profiles without shadowing them', async () => {
+    vi.spyOn(configModule, 'loadUserConfig').mockResolvedValue({
+      config: {
+        version: 3,
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        services: {
+          chatgpt: { url: 'https://chatgpt.com/' },
+          gemini: { url: 'https://gemini.google.com/app' },
+          grok: { url: 'https://grok.com/' },
+        },
+        browserFamilies: {
+          default: {},
+        },
+        profiles: {
+          default: {
+            browserFamily: 'default',
+            defaultService: 'grok',
+          },
+          'auracall-grok-auto': {
+            browserFamily: 'default',
+            defaultService: 'grok',
+          },
+        },
+        agents: {
+          orchestrator: {
+            runtimeProfile: 'auracall-grok-auto',
+          },
+        },
+        teams: {
+          solo: {
+            agents: ['orchestrator'],
+          },
+        },
+      } as any,
+      path: '/tmp/config.json',
+      loaded: true,
+    });
+
+    const result = await resolveConfig({
+      browserModelStrategy: 'select',
+      projectId: 'cli-project-id',
+    });
+    const projected = projectConfigModel(result as any);
+
+    expect(result.runtimeProfiles).toBeUndefined();
+    expect(result.profiles?.default?.services?.grok?.projectId).toBe('cli-project-id');
+    expect(projected.runtimeProfiles.map((profile) => profile.id)).toEqual(['auracall-grok-auto', 'default']);
+    expect(projected.teams.find((team) => team.id === 'solo')?.members[0]).toMatchObject({
+      runtimeProfileId: 'auracall-grok-auto',
+      browserProfileId: 'default',
+      defaultService: 'grok',
+    });
   });
 
   it('should also mirror cli conversation selectors into the selected runtime-profile service block', async () => {

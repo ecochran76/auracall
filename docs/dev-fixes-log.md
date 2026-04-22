@@ -13706,3 +13706,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   integration checkpoints or before changing lanes, and treat `main` being
   more than 10 commits ahead as a handoff risk unless there is a recorded
   blocker.
+- 2026-04-22: Transitional CLI service aliases must stay in the config's
+  existing runtime-profile key family. In this repo, Commander can pass global
+  browser defaults such as `browserModelStrategy = select` even for
+  `teams run`; writing those aliases into target `runtimeProfiles` while the
+  user config still uses bridge `profiles` creates a partial
+  `runtimeProfiles.default` that shadows browser-backed team profiles such as
+  `auracall-grok-auto`. Write aliases to `profiles` for bridge-shaped configs
+  and reserve `runtimeProfiles` for target-shaped configs.

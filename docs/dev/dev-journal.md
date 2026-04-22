@@ -19493,3 +19493,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm run plans:audit -- --keep 43`
   - `git diff --check`
+
+## 2026-04-22 - Team-run CLI resolver shadow fix
+
+- Opened and closed
+  `docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md`.
+- Repo dogfood found that `auracall teams run auracall-solo ... --json`
+  returned `runtimeRunStatus = planned` without claiming the runnable browser
+  step.
+- Root cause:
+  - Commander supplied the global default `browserModelStrategy = select`
+  - the resolver treated it as a transitional service alias
+  - bridge-shaped user config under `profiles` was shadowed by a newly created
+    partial target `runtimeProfiles.default`
+  - CLI local-runner capability projection no longer saw
+    `auracall-grok-auto`, the `default` browser profile, or service-account
+    affinity
+- Fixed transitional CLI service aliases so they write into the runtime-profile
+  key family already used by the config: target `runtimeProfiles` for target
+  configs, bridge `profiles` for bridge configs.
+- Added resolver regression coverage for bridge-shaped configs with
+  Commander-style browser defaults plus concrete project selectors.
+- Validation target:
+  - `pnpm vitest run tests/schema/resolver.test.ts tests/cli/teamRunCommand.test.ts`
+  - narrow Grok CLI dogfood run returned `runtimeRunStatus = succeeded` and
+    `finalOutputSummary = AURACALL_DOGFOOD_DEBUG_OK`
+  - `pnpm run test:live:team:baseline`

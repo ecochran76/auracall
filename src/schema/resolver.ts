@@ -220,10 +220,11 @@ function applyTransitionalCliServiceAliases(merged: MutableConfig, cliOptions: O
   const defaultService = selection.defaultService;
   if (!runtimeProfileId || !defaultService) return;
 
-  if (!isRecord(merged.runtimeProfiles)) {
-    merged.runtimeProfiles = {};
+  const runtimeProfileKey = isRecord(merged.runtimeProfiles) ? 'runtimeProfiles' : 'profiles';
+  if (!isRecord(merged[runtimeProfileKey])) {
+    merged[runtimeProfileKey] = {};
   }
-  const runtimeProfiles = merged.runtimeProfiles as Record<string, unknown>;
+  const runtimeProfiles = merged[runtimeProfileKey] as Record<string, unknown>;
   if (!isRecord(runtimeProfiles[runtimeProfileId])) {
     runtimeProfiles[runtimeProfileId] = {};
   }
