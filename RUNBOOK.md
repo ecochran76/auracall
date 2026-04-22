@@ -660,3 +660,502 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit`
   - `git diff --check`
+
+## Turn 25 | 2026-04-21
+
+- Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`
+- New browser reliability plan:
+  `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`
+- Goal: record the roadmap/plan decision after default tenant account-health
+  checks exposed a managed-profile CDP ownership problem.
+- Evidence:
+  - default Grok, ChatGPT, and Gemini login checks all eventually confirmed
+    when run one provider at a time
+  - earlier overlapping auth-mode launches reused fixed DevTools port
+    `127.0.0.1:9222`
+  - live doctor/probe evidence could mix tabs and account state across
+    providers unless the operator manually serialized the checks
+  - a separate `wsl-chrome-2/chatgpt` session also remained live, proving
+    profile boundary evidence must stay explicit
+- Decision:
+  - open a bounded browser-service dispatcher slice instead of widening the
+    runtime service/runner lane
+  - first target is one operation owner per managed browser profile/service
+  - login/manual-verification, browser execution, doctor, features, setup, and
+    managed-profile `browser-tools` calls should acquire that operation owner
+  - busy/blocked outcomes should be structured and operator-actionable
+  - shared read paths remain deferred until a specific path proves it does not
+    focus, select, navigate, or mutate page state
+- Scope:
+  - docs/roadmap/plan update only in this turn
+  - no runtime or operator behavior changes yet
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 26 | 2026-04-21
+
+- Closed browser reliability plan:
+  `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`
+- New browser reliability plan:
+  `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
+- Goal: reassess Plan 0021 after implementation and serial live smoke, then
+  open only the next bounded browser-service reliability slice.
+- Evidence:
+  - dispatcher implementation and focused tests cover login, setup, doctor,
+    features, browser execution, and managed-profile `browser-tools`
+  - serial live smoke proved default Grok, ChatGPT, and Gemini managed browser
+    profile separation on auto-assigned ports without shared `9222`
+    contamination
+  - default ChatGPT stayed distinct from the live `wsl-chrome-2/chatgpt`
+    session on port `45013`
+  - Grok and ChatGPT doctor commands still exited nonzero because selector
+    diagnosis expected conversation-output selectors on home/new-chat surfaces
+- Decision:
+  - close Plan 0021 as dispatcher-proofed
+  - open Plan 0022 for Grok/ChatGPT selector-diagnosis hardening
+  - keep the follow-up narrow: account/profile health vs
+    conversation-output readiness, not prompt sending or broader provider
+    automation
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 27 | 2026-04-21
+
+- Closed browser reliability plan:
+  `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
+- Goal: implement the narrow Grok/ChatGPT selector-diagnosis fix opened after
+  the dispatcher smoke.
+- Change:
+  - `src/inspector/doctor.ts` now classifies selected provider surfaces as
+    `conversation` or `non-conversation`
+  - non-conversation surfaces defer prompt-dependent `sendButton` checks and
+    conversation-output checks (`assistantBubble`, `assistantRole`,
+    `copyButton`)
+  - diagnosis reports now include `surface` metadata and
+    `failedRequiredChecks`
+  - ChatGPT and Grok home/new-chat surfaces can pass doctor when account,
+    composer, model/menu, file, and attachment evidence are present
+  - conversation surfaces still require prompt/conversation-output selectors
+- Live proof:
+  - Grok default managed browser profile on port `45040` selected
+    `https://grok.com/`, saw no blocking state, identified the expected Grok
+    account, and returned selector `allPassed: true`
+  - ChatGPT default managed browser profile on port `45065` selected
+    `https://chatgpt.com/`, saw no blocking state, identified
+    `ecochran76@gmail.com`, and returned selector `allPassed: true`
+  - smoke Chrome roots were killed and two dead browser-state entries were
+    pruned; `wsl-chrome-2/chatgpt` on port `45013` remained live
+- Verification target:
+  - `pnpm vitest run tests/inspector/doctor.test.ts tests/browser/profileDoctor.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 28 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md`
+- Goal: land the bounded MCP team-run write parity slice after the HTTP
+  `/v1/team-runs` contract stabilized.
+- Change:
+  - `auracall-mcp` now registers `team_run`
+  - the tool accepts the same bounded team-run create shape as HTTP:
+    `teamId`, `objective`, optional prompt shaping fields, output contract,
+    max turns, and bounded local-action policy
+  - MCP-created runs use the existing configured team-run executor and the
+    existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun` path
+  - team/task schemas now accept `trigger = "mcp"`
+  - MCP-created task specs are stamped with `requestedBy.kind = "mcp"` and
+    `auracall-mcp team_run` context
+  - build output now copies `configs/` into `dist/configs/` so the built MCP
+    server can import configured executor/provider registry code
+- Verification target:
+  - `pnpm vitest run tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 29 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md`
+- Goal: reassess the roadmap after HTTP and MCP team-run write parity and
+  select the next bounded checkpoint.
+- Decision:
+  - do not widen into multi-runner/background-worker work yet
+  - use the live flattened `TaskRunSpec` schema as the first public full-spec
+    compatibility target
+  - defer sectioned public envelopes until a versioned compatibility layer is
+    justified
+  - keep compact HTTP and MCP team-run create requests unchanged
+  - next implementation slice should accept a prebuilt `taskRunSpec` only after
+    `TaskRunSpecSchema` validation and conflict checks
+- Scope:
+  - roadmap/plan reassessment only
+  - no runtime or operator behavior changes
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 30 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md`
+- Goal: implement public prebuilt `taskRunSpec` acceptance against the live
+  flattened schema selected in Plan 0024.
+- Change:
+  - HTTP `POST /v1/team-runs` now accepts either compact assignment fields or
+    a prebuilt flattened `taskRunSpec`
+  - MCP `team_run` now accepts the same prebuilt flattened `taskRunSpec`
+  - prebuilt specs validate through `TaskRunSpecSchema`
+  - top-level `teamId` may accompany a prebuilt spec only when it matches
+    `taskRunSpec.teamId`
+  - compact assignment fields cannot be mixed with `taskRunSpec`
+  - prebuilt specs preserve assignment fields, ids, policies, trigger, and
+    requested-by provenance through the existing
+    `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun` chain
+- Verification target:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 31 | 2026-04-21
+
+- Closed service/runner reassessment plan:
+  `docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md`
+- Goal: choose the next bounded checkpoint after compact and prebuilt public
+  team-run writes landed on HTTP and MCP.
+- Decision:
+  - do not jump directly into multi-runner/background-worker execution
+  - the current `ExecutionServiceHost` remains deliberately runner-scoped
+  - existing claim-candidate ordering is read/evaluation support, not fleet
+    scheduler authority
+  - next implementation should add a read-only runner topology/readiness seam
+    owned by `ExecutionServiceHost`
+  - `/status` may project bounded local-server topology/readiness state, but
+    `api serve` should still execute only through its configured local runner
+  - keep reassignment loops, worker pools, and parallel execution deferred
+- Scope:
+  - roadmap/plan reassessment only
+  - no runtime or operator behavior changes
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 32 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md`
+- Goal: implement the read-only runner topology/readiness checkpoint selected
+  by Plan 0026.
+- Change:
+  - added `ExecutionServiceHost.summarizeRunnerTopology()`
+  - added `/status.runnerTopology`
+  - topology readback reports the local execution owner, runner freshness,
+    runner capability summaries, and aggregate active/stale/fresh/expired
+    counts
+  - topology readback is read-only and does not select claims, acquire leases,
+    execute steps, or reassign work to another runner
+- Verification target:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 33 | 2026-04-21
+
+- Closed service/runner preflight plan:
+  `docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md`
+- Goal: define scheduler authority before adding any background worker loop,
+  reassignment mutation, or multi-runner execution behavior.
+- Decision:
+  - topology visibility is not assignment authority
+  - claim-candidate ordering is not assignment authority
+  - `api serve` remains a local runner, not a fleet scheduler
+  - fresh active leases owned by active fresh runners block reassignment
+  - expired stale/missing lease owners may be classified as potentially
+    reassignable only by an explicit future scheduler-authority decision
+  - browser-backed assignment must respect browser-service dispatcher
+    exclusivity
+  - parallelism still requires explicit orchestration semantics and remains
+    out of scope
+- Next implementation target:
+  - read-only scheduler-authority evaluator
+  - no persistence, scheduler mutation, worker loop, or automatic reassignment
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 34 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md`
+- Goal: implement the read-only scheduler-authority evaluator selected by
+  Plan 0028 without adding assignment mutation, reassignment, a worker loop, or
+  a public HTTP surface.
+- Change:
+  - added `src/runtime/schedulerAuthority.ts`
+  - added `evaluateStoredExecutionRunSchedulerAuthority(...)`
+  - evaluator consumes queue projection, active lease state, persisted runner
+    records, deterministic claim candidates, configured affinity, and optional
+    local runner identity
+  - evaluator returns one deterministic decision, reason, candidate evidence,
+    selected runner evidence, active lease posture, future mutation label, and
+    `mutationAllowed: false`
+- Verification target:
+  - `pnpm vitest run tests/runtime.schedulerAuthority.test.ts tests/runtime.claims.test.ts tests/runtime.inspection.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm exec biome lint src/runtime/schedulerAuthority.ts tests/runtime.schedulerAuthority.test.ts --max-diagnostics 80`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 35 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md`
+- Goal: expose the Plan 0029 scheduler-authority evaluator through existing
+  runtime inspection without adding scheduler mutation, worker loops,
+  reassignment, lease acquisition, or a new route.
+- Change:
+  - added `authority=scheduler` to `GET /v1/runtime-runs/inspect`
+  - added optional `inspection.schedulerAuthority`
+  - runtime inspection passes the queried `runnerId` as local scheduler
+    context when provided, otherwise the server-local runner id when available
+  - user-facing endpoint/testing docs now describe the opt-in and read-only
+    posture
+- Verification target:
+  - `pnpm vitest run tests/runtime.schedulerAuthority.test.ts tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 36 | 2026-04-21
+
+- Closed service/runner plan:
+  `docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md`
+- Goal: expose existing read-only scheduler-authority evidence through the
+  operator CLI before designing any mutation.
+- Change:
+  - added `--authority scheduler` to `auracall api inspect-run`
+  - passed `includeSchedulerAuthority` into runtime inspection
+  - formatter now renders a compact `Scheduler authority` section with
+    decision, reason, mutation posture, selected/local runner, future mutation,
+    candidate count, and active lease posture
+  - JSON output remains the full underlying payload
+- Verification target:
+  - `pnpm vitest run tests/cli/runtimeInspectionCommand.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm exec biome lint src/cli/runtimeInspectionCommand.ts tests/cli/runtimeInspectionCommand.test.ts bin/auracall.ts --max-diagnostics 40`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 37 | 2026-04-21
+
+- Closed service/runner design plan:
+  `docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md`
+- Goal: define the first scheduler-mutation shape before adding assignment or
+  reassignment behavior.
+- Decision:
+  - first mutation target is explicit single-run operator control:
+    `schedulerControl.action = "claim-local-run"`
+  - implementation should live under `ExecutionServiceHost`; HTTP should only
+    map `POST /status` payload/result
+  - mutation must be gated by the read-only scheduler-authority evaluator
+  - v1 may claim or reassign only to the server-local runner
+  - fresh active leases, still-active expired owners, non-local selected
+    runners, capability mismatches, and not-ready/human-blocked runs must
+    reject
+  - browser-backed claims still execute through the normal stored-step
+    executor and browser-service dispatcher path
+- Verification target:
+  - `pnpm run plans:audit`
+  - `git diff --check`
+
+## Turn 38 | 2026-04-21
+
+- Closed implementation plan:
+  `docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md`
+- Goal: implement the first bounded scheduler mutation without adding fleet
+  scheduling.
+- Changes:
+  - `ExecutionServiceHost` now supports
+    `schedulerControl.action = "claim-local-run"`
+  - existing `POST /status` maps `schedulerControl` payloads/results
+  - local claim acquires a lease only when scheduler authority selects the
+    server-local runner
+  - expired stale/missing-owner leases may be reassigned only to the
+    server-local runner
+  - successful mutation emits a bounded scheduler-control runtime event
+  - revision-check conflicts return `status = "conflict"` without mutation
+- Validation so far:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts --testNamePattern "scheduler"`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "scheduler-authorized local run through POST /status|scheduler authority"`
+- Closeout target:
+  - focused scheduler/runtime/http suites without filters
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 33`
+  - `git diff --check`
+
+## Turn 39 | 2026-04-21
+
+- Goal: broaden closeout validation after Plan 0033.
+- Findings:
+  - scheduler/runtime/http focused suites were already green
+  - full `pnpm test` initially exposed deterministic non-scheduler failures in
+    stale browser Pro alias expectations, dry-run cookie-copy copy, Windows
+    Chrome lifecycle ownership test isolation, mocked llmService file-cache
+    write-spacing, and cache-only Gemini CLI target resolution
+- Fixes:
+  - aligned the stale browser Pro alias test with the current stable ChatGPT
+    Pro browser label
+  - aligned dry-run cookie-copy expectation with current source-profile copy
+    wording
+  - isolated the Windows Chrome ownership test from real managed profile state
+  - disabled live provider guard delays in mocked file-cache unit tests
+  - kept cache-only CLI context/export paths from resolving live browser
+    targets
+- Validation:
+  - `pnpm test`
+  - `pnpm run check`
+- Remaining closeout:
+  - `pnpm run plans:audit -- --keep 33`
+  - `git diff --check`
+
+## Turn 40 | 2026-04-21
+
+- Closed checkpoint:
+  `docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md`
+- Goal: decide the next scheduler slice after `claim-local-run`.
+- Decision:
+  - keep `claim-local-run` as explicit single-run operator control
+  - do not add fleet scheduling, background worker loops, non-local assignment,
+    or release-and-reclaim follow-through
+  - next implementation should let targeted drain execute a run whose active
+    lease is already owned by the same server-local runner
+  - preserve the existing `ExecutionServiceHost -> stored-step executor ->
+    browser-service dispatcher` ownership path
+- Verification target:
+  - `pnpm run plans:audit -- --keep 34`
+  - `git diff --check`
+
+## Turn 41 | 2026-04-21
+
+- Closed implementation plan:
+  `docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md`
+- Goal: add the explicit execution follow-through for a scheduler-claimed local
+  run without adding a scheduler loop.
+- Change:
+  - `executeStoredExecutionRunOnce(...)` can now reuse an existing active lease
+    when the lease is still present and owned by the requested execution owner
+  - existing-lease execution heartbeats that lease before step execution and
+    releases the same lease on completion/failure/cancellation
+  - `ExecutionServiceHost` targeted drain now executes runnable work when the
+    active lease owner is the configured server-local runner
+  - foreign active leases still skip
+- Verification so far:
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts --testNamePattern "scheduler-claimed|foreign active lease|scheduler" --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.serviceHost.test.ts tests/http.responsesServer.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/runtime.runner.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser-service/portSelection.test.ts --maxWorkers 1`
+  - `pnpm test`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 35`
+  - `git diff --check`
+
+## Turn 42 | 2026-04-21
+
+- Closed checkpoint:
+  `docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md`
+- Goal: decide whether to add a compound claim-and-drain scheduler control
+  after Plan 0035 made targeted drain consume local-owned active leases.
+- Decision:
+  - do not add `claim-and-drain-local-run` now
+  - keep the explicit operator flow:
+    inspect scheduler authority, `claim-local-run`, then targeted `drain-run`
+    when immediate execution is desired
+  - treat the scheduler local-control phase as closed unless a concrete
+    operator workflow shows the two-step control is too noisy or error-prone
+  - keep fleet scheduling, background worker loops, non-local assignment,
+    parallel execution, and browser dispatcher bypass deferred
+- Verification target:
+  - `pnpm run plans:audit -- --keep 36`
+  - `git diff --check`
+
+## Turn 43 | 2026-04-21
+
+- Closed implementation plan:
+  `docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md`
+- Goal: return to the non-scheduler service/runner lane and remove the
+  remaining synchronous team-run execution coupling from HTTP background-drain
+  mode.
+- Change:
+  - `TeamRuntimeBridge` now supports `drainAfterCreate = false`
+  - default bridge behavior remains synchronous for CLI/MCP and existing tests
+  - `api serve` constructs the team runtime without draining when background
+    drain is enabled
+  - HTTP `POST /v1/team-runs` then schedules the existing server-owned
+    background drain, matching direct `/v1/responses`
+  - background-drain disabled mode keeps the existing synchronous one-request
+    behavior
+- Verification so far:
+  - `pnpm vitest run tests/teams.runtimeBridge.test.ts --testNamePattern "without draining" --maxWorkers 1`
+  - `pnpm vitest run tests/http.responsesServer.test.ts --testNamePattern "team-run create before execution|bounded team run over HTTP" --maxWorkers 1`
+  - `pnpm run check`
+- Closeout target:
+  - broader HTTP/team-runtime tests
+  - `pnpm run plans:audit -- --keep 37`
+  - `git diff --check`
+
+## Turn 44 | 2026-04-21
+
+- Closed roadmap checkpoint:
+  `docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md`
+- Goal: decide whether to open another service/runner implementation slice
+  after scheduler local-control closeout and HTTP team-run background-drain
+  parity.
+- Decision:
+  - do not open another service/runner architecture implementation slice now
+  - no fresh route-neutral runtime mutation was found still owned directly by
+    HTTP
+  - keep HTTP responsible for listener lifecycle, request parsing,
+    background-drain timer state, pause/resume control mapping, and response
+    projection
+  - keep route-neutral runner lifecycle, queued drain, recovery, operator
+    controls, scheduler-local claim, and targeted drain under
+    `ExecutionServiceHost`
+  - pause multi-runner execution, background worker pools, non-local
+    assignment, parallel team execution, and compound scheduler controls
+- Verification target:
+  - `pnpm run plans:audit -- --keep 38`
+  - `git diff --check`
+- Next action: integration hygiene over the accumulated dirty worktree before
+  selecting the next implementation lane.
+
+## Turn 45 | 2026-04-21
+
+- Goal: run the integration-hygiene pass selected by Plan 0038.
+- Worktree inventory:
+  - current branch is `main`
+  - dirty state spans policy/closeout docs, browser-service dispatcher and
+    selector diagnosis, MCP/team-run writes, public `TaskRunSpec`
+    compatibility, scheduler/service-host ownership, HTTP team-run
+    background-drain parity, and roadmap/runbook hygiene
+  - review should not treat the entire dirty worktree as one logical change
+- Validation:
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 38`
+  - `git diff --check`
+- Recommended review/commit sequence:
+  - closeout policy/docs contract
+  - browser-service operation dispatcher and selector diagnosis
+  - MCP/team-run write parity and public `TaskRunSpec` acceptance
+  - runner topology, scheduler authority, local claim, and local-owned drain
+  - HTTP team-run background-drain parity
+  - roadmap/runbook/journal/fixes-log reconciliation

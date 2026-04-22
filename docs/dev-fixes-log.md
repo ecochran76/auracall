@@ -1,3 +1,33 @@
+- 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
+  flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
+  `team_run` may now accept `{ taskRunSpec }`, but must validate with
+  `TaskRunSpecSchema`, reject compact/prebuilt assignment conflicts, and
+  require top-level `teamId` to match `taskRunSpec.teamId` when both are
+  present. Preserve spec provenance unless a compact request builds a new spec.
+
+- 2026-04-21: Use the live flattened `TaskRunSpec` schema as the first public
+  full-spec compatibility target. In this repo, compact HTTP/MCP team-run
+  create requests build one bounded internal spec from known fields, while
+  public prebuilt-spec input should validate with `TaskRunSpecSchema` and
+  conflict-check transport fields before execution. Do not introduce a
+  sectioned public envelope until a versioned compatibility layer is justified,
+  and do not use full-spec input as a shortcut into multi-runner or parallel
+  execution.
+
+- 2026-04-21: Stamp MCP-created team runs with MCP provenance instead of
+  reusing CLI labels. In this repo, MCP team execution should still use the
+  existing bounded `TaskRunSpec -> TeamRun -> TeamRuntimeBridge` path, but
+  readback and inspection need to show `trigger = "mcp"` and
+  `requestedBy.kind = "mcp"` so operators can distinguish MCP-created work
+  from CLI and HTTP-created runs. Keep arbitrary prebuilt `taskRunSpec` JSON
+  and multi-runner/parallel execution out of this parity slice.
+
+- 2026-04-21: Treat bundled service registry files as build assets, not
+  source-only development files. In this repo, any built entrypoint that imports
+  configured executor/provider code may resolve `dist/configs/auracall.services.json`;
+  the build must copy `configs/` into `dist/configs/` before MCP or packaged CLI
+  smokes can be trusted.
+
 - 2026-04-20: Keep the implemented public team execution write on the same
   route-neutral bounded contract as CLI team execution. In this repo,
   `POST /v1/team-runs` constructs one validated bounded `TaskRunSpec` from
@@ -13439,3 +13469,199 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `/v1/responses` should use `auracall.outputContract`; both converge on stored
   step structured data so the configured executor can apply the same
   prompt-prefix and runtime validation path.
+- 2026-04-21: Do not trust cross-provider default managed-profile login
+  evidence when multiple auth-mode launches reuse the same fixed DevTools port.
+  In this repo, `auracall login --target ...` on the default AuraCall runtime
+  profile can open multiple provider windows on `127.0.0.1:9222`; browser
+  doctor then selects tabs by URL and can mix ChatGPT/Grok/Gemini evidence
+  across processes. For account-health confirmation, launch and validate one
+  provider at a time, prune stale browser-state entries after closing windows,
+  and treat any Grok/Gemini/Google human-verification page as a hard stop until
+  a human clears it.
+- 2026-04-21: Treat managed-profile CDP as a profile-scoped shared control
+  plane, not a stateless per-command endpoint. In this repo, even read-only
+  browser operations such as doctor/features can race when they select tabs,
+  inspect live DOM, or depend on focused-page state. The durable fix should be
+  a browser-service operation dispatcher keyed by managed browser profile and
+  service target, with exclusive ownership for login/manual-verification and
+  mutating browser execution. Do not model this first slice as a broad
+  multi-runner scheduler; keep it below the AuraCall runtime runner layer.
+- 2026-04-21: Keep end-of-turn closeouts decisive by ending on the best
+  recommendation. In this repo, the closeout contract should not always force a
+  ranked-alternatives section; include alternatives only when there is real
+  uncertainty or a materially different tradeoff. The final section should be
+  `Best Recommendation (Primary)` with exactly one next action. Keep the
+  default layout compact: status/verification, plan/audit, risks/blockers, then
+  the final recommendation. Prefer inline labels over standalone section
+  headers when the closeout content is short, and omit risks/blockers when
+  there is no actionable risk to report.
+- 2026-04-21: Put managed-profile login launch behind a browser-service
+  operation dispatcher before allocating DevTools resources. In this repo,
+  same-machine AuraCall processes can overlap on the same managed browser
+  profile, so the login path should acquire a dispatcher key of
+  `managed-profile:<absolute-managed-profile-dir>::service:<target>` and fail
+  with structured busy diagnostics before choosing a fixed debug port or
+  opening Chrome. Keep this in browser-service, not provider adapters, so
+  setup, doctor, features, browser execution, and managed-profile
+  `browser-tools` can join the same ownership model. Also default
+  managed-profile login launches with no explicit debug-port strategy to
+  auto-assigned ports; otherwise default Grok/ChatGPT/Gemini auth-mode launches
+  can still contend for `127.0.0.1:9222` even though they have different
+  managed browser profile keys.
+- 2026-04-21: Route live browser doctor/features probes through the same
+  operation dispatcher as login. In this repo, local browser-profile inspection
+  can remain lock-free, but any doctor/features path that calls browser-tools,
+  provider identity, feature probes, or selector diagnosis should hold one
+  `exclusive-probe` lease for the managed browser profile so tab selection and
+  DOM inspection cannot interleave with another CDP operation.
+- 2026-04-21: Route managed-profile browser execution through an
+  `exclusive-mutating` operation lease. In this repo, prompt send, navigation,
+  project/conversation context, uploads, and response capture are all CDP
+  mutating work; acquire the browser operation dispatcher after resolving the
+  managed browser profile and before launch/navigation so execution cannot
+  interleave with login or live doctor/features probes.
+- 2026-04-21: Treat `auracall setup` as an `exclusive-human` managed-profile
+  operation. In this repo, setup is more than a login alias: it performs live
+  identity checks, may open auth mode, can run browser verification, and
+  collects final doctor state. Hold one setup lease across that whole flow so
+  verification and final probes cannot interleave with another CDP owner.
+- 2026-04-21: Route AuraCall-managed `browser-tools` direct commands through
+  dispatcher ownership unless the operator supplies an explicit `--port`. In
+  this repo, `browser-tools ls/search/nav/eval/screenshot/pick/cookies` can
+  select tabs, focus pages, navigate, inject picker overlays, or otherwise
+  depend on shared CDP state even when used as diagnostics. When these commands
+  resolve an AuraCall managed browser profile, acquire an `exclusive-probe`
+  lease before resolving or launching the DevTools endpoint. Keep explicit
+  `--port` as the deliberate raw CDP/debug bypass.
+- 2026-04-21: Keep dispatcher/account-health smoke conclusions separate from
+  provider selector drift. In this repo, `auracall doctor --json` can prove the
+  active dispatcher key, managed browser profile, selected tab URL, blocking
+  state, identity, and feature evidence even when selector diagnosis exits
+  nonzero because the current home/non-conversation surface lacks conversation
+  selectors. For browser operation dispatcher validation, treat clean
+  dispatcher key + managed profile + selected URL + no blocking state + account
+  identity as the ownership proof, and open a separate selector-hardening slice
+  for Grok/ChatGPT selector-diagnosis drift.
+- 2026-04-21: Make provider selector diagnosis surface-aware instead of
+  requiring conversation-output selectors on every healthy account page. In
+  this repo, Grok and ChatGPT home/new-chat pages can be signed in and ready
+  for account/profile health checks without rendering assistant bubbles, copy
+  buttons, or a pre-input send button. Classify the selected surface first; on
+  non-conversation surfaces require account/composer/model/menu/file/attachment
+  evidence and defer `sendButton`, `assistantBubble`, `assistantRole`, and
+  `copyButton`. Keep those checks required on conversation routes so response
+  readiness remains strict.
+- 2026-04-21: Do not mistake runner-readiness primitives for a scheduler. In
+  this repo, durable runner records, heartbeat freshness, claim-candidate
+  ordering, queue projection, and recovery summaries are prerequisites for
+  multi-runner service mode, but `ExecutionServiceHost` is still scoped to its
+  configured `runnerId`. Before adding background workers or reassignment
+  loops, add a read-only service-host runner topology/readiness seam that makes
+  local-server ownership and fleet capacity explicit without changing claim or
+  lease authority.
+- 2026-04-21: Keep runner topology readback read-only. In this repo,
+  `/status.runnerTopology` may report active/stale/fresh/expired runner counts
+  and capability summaries for all known runners, but it must not expire runner
+  records, select a different local execution owner, acquire leases, execute
+  steps, or reassign work. The only selected execution owner for `api serve`
+  remains the configured server-local runner id.
+- 2026-04-21: Separate scheduler authority from runner evidence. In this repo,
+  runner topology, heartbeat freshness, and deterministic claim-candidate
+  ordering are evidence inputs only; they do not authorize fleet assignment.
+  Treat `api serve` as a local runner until a component has explicit
+  scheduler authority. Fresh active leases owned by active fresh runners block
+  reassignment. Expired stale/missing lease owners may only become
+  reassignable through a future explicit scheduler-authority decision, and
+  browser-backed assignment must still respect browser-service dispatcher
+  exclusivity.
+- 2026-04-21: Keep scheduler-authority evaluation read-only until it has an
+  operator-facing inspection surface. In this repo,
+  `evaluateStoredExecutionRunSchedulerAuthority(...)` may classify
+  `claimable-by-local-runner`, `claimable-by-other-runner`,
+  `reassignable-after-expired-lease`, active-lease blocks, affinity blocks,
+  and capability blocks, but it must return `mutationAllowed: false` and must
+  not persist runs, runners, leases, or steps. Expose that evidence through
+  read-only runtime inspection before adding any scheduler mutation, worker
+  loop, or reassignment path.
+- 2026-04-21: Keep runtime inspection scheduler authority opt-in and separate
+  from service-state probing. In this repo,
+  `GET /v1/runtime-runs/inspect?...&authority=scheduler` should return
+  optional `schedulerAuthority` evidence with `mutationAllowed: false`; it must
+  not acquire leases, reassign work, execute steps, or imply fleet scheduler
+  authority. Keep live provider/browser state under `probe=service-state` so
+  scheduler evidence and service-state evidence remain independently
+  requestable.
+- 2026-04-21: Keep CLI scheduler-authority readback as an inspection formatter,
+  not an operator-control shortcut. In this repo,
+  `auracall api inspect-run --authority scheduler` may request and render the
+  read-only `schedulerAuthority` payload, but it must not add assignment,
+  reassignment, lease acquisition, or step execution semantics. JSON output
+  should preserve the full payload for tooling, while human output should make
+  `mutationAllowed: false` visible.
+- 2026-04-21: Runtime inspection tests that expect an active runner must keep
+  fixture expiry dates future-stable. In this repo, runner liveness sweeps use
+  the current clock; old fixture dates such as 2026-04-15 can become stale and
+  flip expected affinity from eligible to blocked. Use a deliberately future
+  expiry when the test is not about liveness expiry.
+- 2026-04-21: Do not let first scheduler mutation become fleet scheduling. In
+  this repo, the first mutation shape should be explicit single-run operator
+  control under `ExecutionServiceHost`, gated by
+  `evaluateStoredExecutionRunSchedulerAuthority(...)`, and scoped to the
+  server-local runner. `schedulerControl.action = "claim-local-run"` may claim
+  local-eligible runs or reassign expired stale/missing-owner leases only when
+  the selected runner is the server-local runner. It must reject non-local
+  selected runners, fresh active leases, still-active lease owners, capability
+  mismatches, and not-ready/human-blocked runs.
+- 2026-04-21: Keep scheduler-control mutation atomic at the service-host layer.
+  In this repo, `schedulerControl.action = "claim-local-run"` should build the
+  lease expiration/reassignment, new local lease, and scheduler-control audit
+  event into one revision-checked persisted bundle. HTTP `/status` should only
+  map the payload/result. If persistence races, return `status = "conflict"`
+  and do not claim the run through a partial chained control call.
+- 2026-04-21: Keep cache-only CLI commands cache-only. In this repo,
+  `cache export`, `cache context list`, and `cache context get` should resolve
+  the configured provider cache identity without resolving or launching a live
+  browser target. Passing those paths through generic browser list-option
+  resolution can hang fixture-backed CLI tests and can wake browser state for
+  a read-only cache operation.
+- 2026-04-21: Unit tests for mocked provider file-cache writes should bypass
+  live provider write-spacing guards. In this repo, Grok/Gemini/ChatGPT
+  mutation spacing protects real accounts, but mocked `LlmService` unit tests
+  should override guard settings instead of spending seconds on persisted
+  profile cooldown state.
+- 2026-04-21: Browser-service lifecycle ownership tests must not point at a
+  real managed browser profile path. Use isolated synthetic WSL profile paths
+  so `readDevToolsPort(...)` cannot pick up a live local DevToolsActivePort and
+  turn an ownership unit test into environment-dependent behavior.
+- 2026-04-21: Do not solve scheduler claim follow-through by releasing and
+  reclaiming the lease. In this repo, `schedulerControl.action =
+  "claim-local-run"` establishes explicit server-local lease authority. The
+  next execution follow-through should teach targeted drain to consume a run
+  whose active lease is already owned by the configured server-local runner,
+  while foreign active leases remain blocked and expired stale/missing-owner
+  reassignment remains under scheduler control.
+- 2026-04-21: When targeted drain consumes a scheduler-claimed local run, reuse
+  the active local-owned lease instead of acquiring a second lease. Heartbeat
+  the existing lease before step execution, release that same lease on
+  completion/failure/cancellation, and keep foreign active leases skipped.
+- 2026-04-21: Port-selection tests must not assume an ephemeral port's next
+  integer is free. Compute the first actually bindable candidate inside the
+  test range before asserting `pickAvailableDebugPort(...)` behavior, because
+  local OS allocation or parallel tests can already occupy adjacent ports.
+- 2026-04-21: Do not add a compound scheduler control just because
+  `claim-local-run` and `drain-run` can now be chained. Keep the audit boundary
+  explicit until a concrete operator workflow proves the two-step flow is too
+  noisy or error-prone: scheduler control owns lease mutation, and run control
+  owns one targeted host execution pass.
+- 2026-04-21: Keep HTTP team-run create aligned with direct response create
+  when background drain is enabled. In this repo, `POST /v1/team-runs` should
+  persist the task/team/runtime records, return the inspectable payload, and
+  let the existing server-owned background drain execute the run; keep
+  synchronous one-request execution only when background drain is disabled.
+- 2026-04-21: Pause service/runner architecture expansion when the remaining
+  work is not tied to a concrete ownership gap. After route-neutral runner
+  lifecycle, queued drain, recovery, operator controls, scheduler-local claim,
+  targeted drain, and team-run background-drain parity are all under their
+  intended owners, do integration hygiene before opening another service/runner
+  implementation slice. Keep HTTP responsible for transport/timer projection,
+  not generic runtime mutation.

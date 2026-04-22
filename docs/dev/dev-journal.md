@@ -1,3 +1,201 @@
+## 2026-04-21 - Scheduler mutation design checkpoint
+
+- Opened and closed
+  `docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md`.
+- Decision:
+  - first scheduler mutation should be explicit single-run operator control:
+    `schedulerControl.action = "claim-local-run"`
+  - implementation should live under `ExecutionServiceHost`
+  - HTTP should only map `POST /status` payload/result
+  - the read-only scheduler-authority evaluator remains the required gate
+  - v1 may claim or reassign only to the server-local runner
+  - non-local runner assignment, fleet scheduling, worker loops, parallel
+    execution, and browser dispatcher bypass remain out of scope
+- Required mutation posture:
+  - re-read/evaluate before mutation
+  - persist with revision checks
+  - return conflict if state changes before persistence
+  - emit a bounded runtime event for claim/reassignment
+- Next checkpoint:
+  - implement `schedulerControl.action = "claim-local-run"` under
+    `ExecutionServiceHost`.
+
+## 2026-04-21 - CLI scheduler authority readback
+
+- Implemented and closed
+  `docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md`.
+- Added `--authority scheduler` to `auracall api inspect-run`.
+- The CLI formatter now renders a compact `Scheduler authority` section when
+  the read-only payload is present:
+  - decision
+  - reason
+  - mutation allowed
+  - selected runner
+  - local runner
+  - future mutation
+  - candidate count
+  - active lease posture
+- JSON output still returns the full runtime inspection payload.
+- Updated an old CLI test fixture to keep the registered runner expiry in the
+  future; the test was no longer time-stable on 2026-04-21.
+- Next checkpoint:
+  - reassess scheduler mutation design before adding assignment or
+    reassignment behavior.
+
+## 2026-04-21 - Runtime inspection scheduler authority readback
+
+- Implemented and closed
+  `docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md`.
+- Added `authority=scheduler` to `GET /v1/runtime-runs/inspect`.
+- Added optional `inspection.schedulerAuthority` with the read-only evaluator
+  result from `evaluateStoredExecutionRunSchedulerAuthority(...)`.
+- Runtime inspection now uses the queried `runnerId` as local scheduler context
+  when supplied, otherwise the server-local runner id when available.
+- The HTTP regression proves an expired stale active lease can be reported as
+  potentially reassignable while the stored lease remains `active` and the run
+  revision is unchanged.
+- Next checkpoint:
+  - reassess whether CLI formatting should show scheduler-authority evidence
+    before designing any assignment or reassignment mutation.
+
+## 2026-04-21 - Read-only scheduler authority evaluator
+
+- Implemented the read-only scheduler-authority evaluator selected by Plan
+  0028 and closed
+  `docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md`.
+- Added `evaluateStoredExecutionRunSchedulerAuthority(...)` in
+  `src/runtime/schedulerAuthority.ts`.
+- The evaluator classifies local claim, other-runner claim, active-lease
+  block, expired-stale/missing-owner reassignability, affinity/capability
+  block, idle, and not-ready states with `mutationAllowed: false`.
+- Tests prove that:
+  - eligible local runners are only local-claim candidates
+  - eligible alternate runners are reported without assignment
+  - fresh active leases block reassignment
+  - expired stale lease owners are only classified as potentially reassignable
+    without mutating the stored lease
+  - missing browser capability remains a capability block
+- Next bounded checkpoint:
+  - expose this evaluator through read-only runtime inspection before adding
+    scheduler mutation, worker loops, or reassignment behavior.
+
+## 2026-04-21 - Scheduler authority preflight
+
+- Opened and closed
+  `docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md`.
+- Decision:
+  - topology visibility is not assignment authority
+  - claim-candidate ordering is not assignment authority
+  - a local execution host is not fleet scheduler authority
+  - `api serve` remains scoped to its configured server-local `runnerId`
+  - fresh active leases owned by active fresh runners block reassignment
+  - expired stale/missing lease owners are only potentially reassignable after
+    an explicit future scheduler-authority decision
+  - browser-backed assignment must respect the browser-service dispatcher
+  - parallelism still requires explicit orchestration semantics and remains out
+    of scope
+- Next bounded implementation checkpoint:
+  - add a read-only scheduler-authority evaluator
+  - return deterministic decisions and reasons without persisting runs,
+    runners, leases, or steps
+
+## 2026-04-21 - Runner topology readiness status
+
+- Implemented the read-only topology/readiness seam selected by Plan 0026.
+- Added `ExecutionServiceHost.summarizeRunnerTopology()`.
+- Added `/status.runnerTopology` with:
+  - local execution owner runner id
+  - generated timestamp
+  - per-runner status, heartbeat freshness, activity, services,
+    runtime/browser profiles, service-account ids, browser capability, and
+    eligibility note
+  - aggregate total, active, stale, fresh, expired, and browser-capable counts
+- Tests prove:
+  - expired active runners are reported as expired without being marked stale
+  - alternate eligible runners remain topology evidence and are not selected as
+    the local server execution owner
+- Multi-runner scheduling, worker pools, reassignment loops, and parallel
+  execution remain deferred.
+
+## 2026-04-21 - Service/runner topology reassessment
+
+- Opened and closed
+  `docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md`
+  after compact and prebuilt public team-run writes were live on HTTP and MCP.
+- Inventory result:
+  - durable runner records, runner liveness, leases, local claim evaluation,
+    claim-candidate ordering, queue projection, and recovery surfaces already
+    exist
+  - those primitives do not yet constitute a fleet scheduler
+  - `ExecutionServiceHost` remains intentionally scoped to its configured
+    `runnerId`
+  - `api serve` background drain and startup recovery inherit that local
+    runner ownership rule
+- Decision:
+  - do not start broad multi-runner/background-worker execution next
+  - next implementation should add a read-only runner topology/readiness seam
+    owned by `ExecutionServiceHost`
+  - `/status` can project bounded runner readiness, but should not acquire
+    scheduler or reassignment authority
+  - keep worker pools, reassignment loops, and parallel execution deferred
+
+## 2026-04-21 - Prebuilt TaskRunSpec acceptance
+
+- Implemented the bounded prebuilt full-spec input slice selected by Plan
+  0024.
+- HTTP `POST /v1/team-runs` and MCP `team_run` now accept either compact
+  assignment fields or a prebuilt flattened `taskRunSpec`.
+- Prebuilt specs validate with `TaskRunSpecSchema`; compact assignment fields
+  cannot be mixed with a provided spec.
+- Top-level `teamId` may accompany a prebuilt spec only when it matches
+  `taskRunSpec.teamId`.
+- Prebuilt specs preserve assignment fields, ids, policies, trigger, and
+  requested-by provenance through the existing
+  `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun` chain.
+- Verification:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+  - `pnpm run check`
+
+## 2026-04-21 - TaskRunSpec public contract checkpoint selected
+
+- Reassessed the primary service/runner lane after bounded HTTP and MCP
+  team-run writes both landed.
+- Opened and closed
+  `docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md`
+  after inventorying the live `TaskRunSpec` contract.
+- Decision:
+  - keep compact `POST /v1/team-runs` and MCP `team_run` create requests
+    unchanged
+  - use the live flattened `TaskRunSpec` schema as the first public full-spec
+    compatibility target
+  - accept a future prebuilt `taskRunSpec` only after `TaskRunSpecSchema`
+    validation and conflict checks
+  - defer sectioned public envelopes until a versioned compatibility layer is
+    justified
+  - keep multi-runner/background-worker/parallel execution deferred until the
+    assignment contract is no longer ambiguous
+
+## 2026-04-21 - MCP team-run write parity
+
+- Implemented the bounded `team_run` MCP write tool selected after the
+  `/v1/team-runs` HTTP contract stabilized.
+- The MCP tool validates the same compact input shape as the HTTP create
+  route and executes through the existing configured team-run path:
+  `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`.
+- Added explicit MCP provenance to team/task schemas:
+  - `trigger = "mcp"`
+  - `requestedBy.kind = "mcp"`
+  - context command `auracall-mcp team_run`
+- Updated the build asset copy so `configs/` is present under `dist/configs/`;
+  the built MCP entrypoint can now import the configured executor/provider
+  registry path without crashing on missing bundled service config.
+- Kept arbitrary prebuilt `taskRunSpec` JSON, multi-runner scheduling,
+  background worker pools, and parallel team execution deferred.
+- Verification:
+  - `pnpm vitest run tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run test:mcp`
+
 ## 2026-04-20 - Public team execution write route
 
 - Implemented the bounded `POST /v1/team-runs` HTTP write surface selected in
@@ -18749,3 +18947,373 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Current state: API clients can now opt into the deterministic model-output
   contract without editing team role config. The contract is still not the
   default for legacy/plain-text runs.
+
+## 2026-04-21 - Default browser tenant login check paused
+
+- Ran default AuraCall runtime profile browser account checks for Grok,
+  ChatGPT, and Gemini.
+- Initial `doctor --target ... --json` checks showed the default managed
+  browser profiles exist, but Grok and ChatGPT had no live DevTools session.
+- Opened auth-mode windows for the default managed browser profiles; the
+  launches reused fixed DevTools port `9222`, which made the live doctor output
+  mix provider tabs and prevented a clean cross-provider conclusion.
+- ChatGPT default managed browser profile was reseeded from the source browser
+  profile during login and the live ChatGPT doctor observed an
+  `auth-session` identity, but the surrounding tab evidence was port-collided.
+- Gemini default managed browser profile local account state still reports the
+  Google account for `ecochran76@gmail.com`; live Gemini evidence was also
+  polluted by the same port collision.
+- Grok reached a human-verification screen during the read-only project probe.
+  Per the anti-bot/human-verification rule, automation on that managed browser
+  profile was stopped and the check is paused until a human clears it.
+- Current blocker: rerun one provider at a time after Grok verification is
+  cleared; avoid simultaneous auth-mode launches on the shared default `9222`
+  path.
+
+## 2026-04-21 - Default browser tenant login confirmed
+
+- Completed the default AuraCall runtime profile account-health check one
+  provider at a time after avoiding the shared `9222` evidence collision.
+- Confirmed Grok default managed browser profile:
+  - profile dir: `~/.auracall/browser-profiles/default/grok`
+  - live URL: `https://grok.com/`
+  - identity: `Eric C`, `@SwantonDoug`, `ez86944@gmail.com`
+  - cookies included `x-userid`, `sso`, and `sso-rw`
+- Confirmed ChatGPT default managed browser profile:
+  - profile dir: `~/.auracall/browser-profiles/default/chatgpt`
+  - live URL: `https://chatgpt.com/`
+  - identity: `user-PVyuqYSOU4adOEf6UCUK3eiK`,
+    `ecochran76@gmail.com`, source `auth-session`
+  - cookies included `__Secure-next-auth.session-token.0`
+  - noted that a separate `wsl-chrome-2/chatgpt` session remained live on
+    port `45013`, but the verified default session was the `9222` process with
+    `--user-data-dir=~/.auracall/browser-profiles/default/chatgpt`
+- Confirmed Gemini default managed browser profile:
+  - profile dir: `~/.auracall/browser-profiles/default/gemini`
+  - live URL: `https://gemini.google.com/app`
+  - identity: `Eric Cochran`, `ecochran76@gmail.com`, source
+    `google-account-label`
+  - feature probe detected Gemini authenticated UI including Deep Research and
+    Personal Intelligence
+- Current state: default tenant is logged in on Grok, ChatGPT, and Gemini.
+
+## 2026-04-21 - Browser operation dispatcher plan opened
+
+- Reassessed the `9222` default managed-profile collision as a generic
+  browser-service ownership problem rather than a provider-local login issue.
+- Opened
+  `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`.
+- Updated `ROADMAP.md`, `RUNBOOK.md`, `0011`, and `0014` to wire the plan as a
+  bounded browser reliability slice.
+- Current decision:
+  - managed-profile CDP work should route through a profile-scoped operation
+    dispatcher
+  - the first dispatcher key is the managed browser profile dir plus service
+    target
+  - login/manual-verification, browser execution, doctor, features, setup, and
+    managed-profile browser-tools calls should acquire the dispatcher
+  - busy/blocked outcomes should be machine-readable
+  - full multi-runner/background-worker scheduling remains out of scope
+
+## 2026-04-21 - End-of-turn closeout contract tightened
+
+- Updated `AGENTS.md` and `docs/dev/policies/0017-turn-closeout.md` so the
+  best recommendation is the final end-of-turn section.
+- Ranked alternatives are now conditional: include them only when there is
+  genuine doubt about the next best move or when alternatives materially change
+  risk, scope, or timing.
+- Current intent: reduce repetitive closeout noise while keeping the operator's
+  next action decisive.
+- Follow-up tightening condensed the required layout to:
+  - `Status + Verification`
+  - `Plan + Audit`
+  - `Risks/Blockers`
+  - `Best Recommendation (Primary)`
+- Second follow-up allows inline labels instead of standalone section headers
+  when closeout content is short.
+- Third follow-up makes `Risks/Blockers` optional when there are no material
+  blockers or actionable risks.
+
+## 2026-04-21 - Browser operation dispatcher first slice
+
+- Added `packages/browser-service/src/service/operationDispatcher.ts` with
+  managed-browser-profile dispatcher keys, in-process operation ownership,
+  file-backed same-machine locks, busy diagnostics, and stale owner cleanup.
+- Exported the dispatcher from the browser-service package and wired
+  `runBrowserLogin` to acquire `exclusive-human` ownership before debug-port
+  allocation or Chrome launch.
+- Wired the AuraCall browser login path to use a file-backed dispatcher under
+  `~/.auracall/browser-operations`.
+- Changed managed-profile login to default unresolved debug-port strategy to
+  auto-assigned ports while still honoring an explicit runtime-profile
+  `fixed` strategy, closing the default cross-provider `9222` auth-mode
+  collision.
+- Routed `auracall doctor` and `auracall features` live probes through
+  `exclusive-probe` dispatcher ownership. Local state inspection remains
+  lock-free; live identity, browser-tools, feature, and selector diagnostics now
+  run under one probe lease per command.
+- Added dispatcher evidence to AuraCall browser doctor/features contracts:
+  local reports expose `operationDispatcherKey`, and live JSON reports include
+  the active operation record under `runtime.operation`.
+- Routed managed-profile browser execution through `exclusive-mutating`
+  dispatcher ownership. Local ChatGPT/Grok runs acquire after managed browser
+  profile resolution and before rate limits, Chrome launch, navigation, or
+  prompt submission; remote browser runs acquire when a managed profile path is
+  configured.
+- Routed `auracall setup` through `exclusive-human` dispatcher ownership around
+  initial live identity checks, login launch, verification, and final doctor
+  collection.
+- Added focused coverage in
+  `tests/browser-service/operationDispatcher.test.ts` and extended
+  `tests/browser/browserLoginCore.test.ts` to prove a busy operation blocks the
+  login launcher.
+- Verification:
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserLoginCore.test.ts tests/browser/login.test.ts tests/browser/geminiLogin.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/profileDoctor.test.ts tests/browser/featureDiscovery.test.ts tests/cli/browserSetup.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserLoginCore.test.ts tests/browser/login.test.ts tests/browser/geminiLogin.test.ts tests/browser/profileDoctor.test.ts tests/browser/featureDiscovery.test.ts tests/cli/browserSetup.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts --maxWorkers 1`
+  - `pnpm vitest run tests/cli/browserSetup.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+- Remaining dispatcher work: route lower-level managed-profile `browser-tools`
+  direct commands through the same acquisition path before running a serial
+  live account-health smoke.
+
+## 2026-04-21 - Browser-tools joined managed-profile dispatcher ownership
+
+- Routed AuraCall-managed `browser-tools` direct commands through
+  `exclusive-probe` dispatcher ownership when they resolve an AuraCall managed
+  browser profile. Covered commands: `start`, `tabs`, `probe`, `doctor`, `ls`,
+  `search`, `nav`, `eval`, `screenshot`, `pick`, and `cookies`.
+- Preserved explicit `--port` as the raw operator/debug path; when a port is
+  specified, browser-tools bypasses the managed-profile dispatcher because the
+  operator already selected the CDP endpoint.
+- Added focused regression coverage proving a managed-profile browser-tools
+  command fails with a busy dispatcher result before resolving or launching a
+  DevTools port.
+- Verification:
+  - `pnpm vitest run tests/browser/browserTools.test.ts tests/browser-service/operationDispatcher.test.ts --maxWorkers 1`
+  - `pnpm run check`
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserLoginCore.test.ts tests/browser/login.test.ts tests/browser/geminiLogin.test.ts tests/browser/profileDoctor.test.ts tests/browser/featureDiscovery.test.ts tests/cli/browserSetup.test.ts tests/browser/browserModeExports.test.ts tests/browser/reattach.test.ts tests/browser/browserTools.test.ts --maxWorkers 1`
+  - `pnpm exec biome lint packages/browser-service/src/browserTools.ts scripts/browser-tools.ts tests/browser/browserTools.test.ts packages/browser-service/src/service/operationDispatcher.ts src/browser/index.ts src/browser/login.ts src/browser/profileDoctor.ts bin/auracall.ts tests/browser-service/operationDispatcher.test.ts tests/browser/browserLoginCore.test.ts tests/browser/browserModeExports.test.ts tests/browser/geminiLogin.test.ts tests/browser/profileDoctor.test.ts --max-diagnostics 80`
+  - `pnpm run plans:audit`
+  - `git diff --check`
+- Remaining dispatcher work: perform a serial live Grok/ChatGPT/Gemini smoke
+  if the managed profiles are clear.
+
+## 2026-04-21 - Browser dispatcher serial live smoke
+
+- Ran the Plan 0021 serial live smoke one provider at a time after the
+  dispatcher and browser-tools wiring landed.
+- Grok:
+  - Initial `pnpm tsx bin/auracall.ts doctor --target grok --json` acquired
+    the Grok dispatcher key but found no live default Grok DevTools session.
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target grok start`
+    launched the default Grok managed browser profile on auto-assigned port
+    `45040`.
+  - Follow-up doctor selected only `https://grok.com/`, reported
+    `managed-profile:/home/ecochran76/.auracall/browser-profiles/default/grok::service:grok`,
+    saw no blocking state, and identified `Eric C` / `@SwantonDoug` /
+    `ez86944@gmail.com`.
+  - Doctor exited nonzero because selector diagnosis found current Grok
+    selector drift on the home surface; account and dispatcher evidence were
+    still clean.
+- ChatGPT:
+  - Initial doctor acquired the default ChatGPT dispatcher key and correctly
+    did not attach to the live `wsl-chrome-2/chatgpt` session on port `45013`.
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target chatgpt start`
+    launched the default ChatGPT managed browser profile on auto-assigned port
+    `45065`.
+  - Follow-up doctor selected only `https://chatgpt.com/`, reported
+    `managed-profile:/home/ecochran76/.auracall/browser-profiles/default/chatgpt::service:chatgpt`,
+    saw no blocking state, detected ChatGPT feature evidence, and identified
+    `ecochran76@gmail.com` from `auth-session`.
+  - Doctor exited nonzero because selector diagnosis found current ChatGPT
+    selector drift for send/assistant surfaces on the home page; account and
+    dispatcher evidence were still clean.
+- Gemini:
+  - Initial doctor acquired the Gemini dispatcher key and found no live default
+    Gemini DevTools session.
+  - `pnpm tsx scripts/browser-tools.ts --auracall-profile default --browser-target gemini start`
+    launched the default Gemini managed browser profile on auto-assigned port
+    `45000`.
+  - Follow-up doctor passed, selected only `https://gemini.google.com/app`,
+    reported
+    `managed-profile:/home/ecochran76/.auracall/browser-profiles/default/gemini::service:gemini`,
+    saw no blocking state, identified `Eric Cochran` /
+    `ecochran76@gmail.com`, and detected Gemini feature evidence.
+- Current assessment: Plan 0021 has live evidence for dispatcher/account
+  separation and no shared `9222` contamination. The remaining failures are
+  provider selector-diagnosis drift, best handled as a separate browser-service
+  selector-hardening slice.
+- Cleanup: killed only the three smoke-launched Chrome roots (`45040`,
+  `45065`, `45000`) and pruned three dead browser-state entries. The
+  pre-existing `wsl-chrome-2/chatgpt` session on port `45013` remained live.
+
+## 2026-04-21 - Browser dispatcher plan closed and selector plan opened
+
+- Closed `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`
+  after implementation, targeted validation, and serial live proof.
+- Opened
+  `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
+  for the remaining Grok/ChatGPT doctor selector-diagnosis drift.
+- Updated `ROADMAP.md`, `RUNBOOK.md`, `0011`, and `0014` so the active
+  browser reliability exception now points at Plan 0022 while preserving Plan
+  0021 as closed history.
+- Current decision: selector diagnosis should distinguish account/profile
+  health on home/new-chat surfaces from conversation-output readiness on
+  surfaces where assistant turns are expected.
+
+## 2026-04-21 - Provider selector diagnosis hardening completed
+
+- Updated `src/inspector/doctor.ts` so selector diagnosis classifies the
+  selected provider surface as `conversation` or `non-conversation`.
+- Added diagnosis metadata:
+  - `surface.kind`
+  - `surface.reason`
+  - `surface.requiredChecks`
+  - `surface.deferredChecks`
+  - `failedRequiredChecks`
+- On non-conversation home/new-chat surfaces, doctor now defers
+  prompt-dependent `sendButton` and conversation-output checks
+  (`assistantBubble`, `assistantRole`, `copyButton`) instead of failing account
+  health.
+- Added focused tests in `tests/inspector/doctor.test.ts` for ChatGPT home,
+  Grok home, and ChatGPT conversation surfaces.
+- Live proof:
+  - Grok default managed browser profile on port `45040` selected
+    `https://grok.com/`, saw no blocking state, identified `Eric C` /
+    `@SwantonDoug` / `ez86944@gmail.com`, and returned selector
+    `allPassed: true`.
+  - ChatGPT default managed browser profile on port `45065` selected
+    `https://chatgpt.com/`, saw no blocking state, identified
+    `ecochran76@gmail.com`, and returned selector `allPassed: true`.
+  - Killed those two smoke Chrome roots and pruned two dead browser-state
+    entries; the pre-existing `wsl-chrome-2/chatgpt` session on port `45013`
+    remained live.
+- Closed
+  `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`.
+
+## 2026-04-21 - Scheduler local claim control implemented
+
+- Added `schedulerControl.action = "claim-local-run"` under
+  `ExecutionServiceHost`.
+- Existing `POST /status` now maps scheduler-control payloads and returns the
+  bounded scheduler-control result.
+- Local runnable claims acquire a lease only when scheduler authority selects
+  the server-local runner.
+- Expired stale/missing-owner active leases can be reassigned only to the
+  server-local runner.
+- Fresh active leases, still-active lease owners, non-local selected runners,
+  affinity/capability blocks, and revision races reject without mutation.
+- Added focused runtime and HTTP tests for the accepted and rejected paths.
+- Opened and closed
+  `docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md`.
+
+## 2026-04-21 - Scheduler closeout validation broadened
+
+- Ran full unit validation after Plan 0033.
+- Fixed deterministic non-scheduler failures found by the broad pass:
+  - cache-only Gemini CLI context/export paths no longer resolve a live browser
+    target
+  - mocked llmService file-cache tests no longer wait on live provider write
+    spacing
+  - Windows Chrome lifecycle ownership test no longer reads a real managed
+    profile state path
+  - stale browser Pro alias and dry-run cookie-copy expectations were aligned
+    with current behavior
+- Full `pnpm test` now passes: 187 files passed, 21 skipped; 1589 tests
+  passed, 65 skipped.
+
+## 2026-04-21 - Scheduler roadmap checkpoint closed
+
+- Opened and closed
+  `docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md`.
+- Decision: do not widen `claim-local-run` into fleet scheduling, background
+  worker loops, non-local assignment, or release-and-reclaim follow-through.
+- Next bounded implementation target: targeted drain should execute a run when
+  the active lease is already owned by the configured server-local runner.
+- Ownership boundary remains unchanged:
+  - `ExecutionServiceHost` owns route-neutral operator control
+  - stored-step execution owns runtime mutation
+  - browser-backed execution still routes through the browser-service
+    dispatcher
+
+## 2026-04-21 - Local-owned active lease drain implemented
+
+- Added existing active lease reuse to `executeStoredExecutionRunOnce(...)`.
+- Targeted host drain now executes a runnable run when the active lease is
+  already owned by the configured server-local runner.
+- Existing-lease execution heartbeats the lease before step execution and
+  releases the same lease at completion.
+- Foreign active leases remain blocked/skipped.
+- Opened and closed
+  `docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md`.
+- Full validation exposed and fixed a browser-service port-selection test
+  fragility: the test now computes the first actually bindable candidate
+  instead of assuming an ephemeral port's immediate successor is free.
+
+## 2026-04-21 - Scheduler local-control phase closed
+
+- Opened and closed
+  `docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md`.
+- Decision: do not add a compound `claim-and-drain-local-run` control now.
+- Current operator workflow remains explicit:
+  - inspect scheduler authority
+  - run `schedulerControl.action = "claim-local-run"`
+  - run `runControl.action = "drain-run"` when immediate execution is desired
+- Scheduler mutation work is paused unless a concrete operator workflow shows
+  the two-step control is too noisy or error-prone.
+
+## 2026-04-21 - Team-run background drain parity implemented
+
+- Added no-drain creation mode to `TeamRuntimeBridge`.
+- HTTP `POST /v1/team-runs` now uses no-drain creation when `api serve`
+  background drain is enabled, then schedules the existing server-owned drain
+  loop.
+- Synchronous one-request behavior remains when background drain is disabled.
+- This aligns team-run create with direct `/v1/responses` without adding a new
+  public input shape, scheduler mutation, multi-runner assignment, or parallel
+  team execution.
+- Opened and closed
+  `docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md`.
+
+## 2026-04-21 - Service/runner roadmap checkpoint closed
+
+- Opened and closed
+  `docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md`.
+- Source scan after Plans 0033-0037 found no fresh route-neutral runtime
+  mutation still owned directly by HTTP.
+- Current ownership boundary:
+  - HTTP owns listener lifecycle, request parsing, background-drain timer
+    state, pause/resume control mapping, and response projection.
+  - `ExecutionServiceHost` owns route-neutral runner lifecycle, queued drain,
+    recovery, operator controls, scheduler-local claim, and targeted drain.
+  - `TeamRuntimeBridge` owns team-runtime creation and optional synchronous
+    bridge drain.
+- Decision: pause service/runner architecture expansion until a concrete
+  mismatch is reproduced.
+- Next action: integration hygiene over the accumulated worktree before
+  selecting another implementation lane.
+
+## 2026-04-21 - Integration hygiene pass
+
+- Inventoried the dirty worktree on `main`.
+- Confirmed the batch spans multiple lanes and should not be reviewed as one
+  logical change:
+  - closeout policy/docs contract
+  - browser-service operation dispatcher and provider selector diagnosis
+  - MCP/team-run write parity and public `TaskRunSpec` acceptance
+  - runner topology, scheduler authority, local claim, and local-owned drain
+  - HTTP team-run background-drain parity
+  - roadmap/runbook/journal/fixes-log reconciliation
+- Broad validation is green:
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 38`
+  - `git diff --check`
+- Next action: split review/commit boundaries in dependency order, starting
+  with the small policy/docs closeout contract.

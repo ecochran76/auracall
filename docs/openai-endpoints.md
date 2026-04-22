@@ -46,17 +46,24 @@ Current limits:
 - `POST /v1/team-runs` creates one bounded task-backed team execution through
   the existing `TaskRunSpec -> TeamRun -> TeamRuntimeBridge -> runtimeRun`
   chain
-  - accepted fields are `teamId`, `objective`, and optional `title`,
-    `promptAppend`, `structuredContext`, `responseFormat`, `outputContract`,
-    `maxTurns`, and bounded `localActionPolicy`
+  - accepted input shapes are:
+    - compact fields: `teamId`, `objective`, and optional `title`,
+      `promptAppend`, `structuredContext`, `responseFormat`, `outputContract`,
+      `maxTurns`, and bounded `localActionPolicy`
+    - a prebuilt flattened `taskRunSpec` validated with Aura-Call's live
+      `TaskRunSpec` schema
   - `outputContract: "auracall.step-output.v1"` opts the planned stored steps
     into the deterministic model-emitted envelope documented in
     `docs/response-shape-contract.md`
-  - response shape is `object = "team_run"` with the generated `taskRunSpec`,
+  - response shape is `object = "team_run"` with the accepted `taskRunSpec`,
     deterministic `execution` ids/status, and `links` for team inspection,
     runtime inspection, and response readback
-  - arbitrary prebuilt `taskRunSpec` JSON, MCP write parity, background worker
-    pools, and parallel team execution are intentionally deferred
+  - when background drain is enabled, the route returns after persisting the
+    task/team/runtime records and schedules the existing server-owned drain;
+    when background drain is disabled, it keeps the synchronous one-request
+    behavior
+  - sectioned public task-run-spec envelopes, background worker pools, and
+    parallel team execution are intentionally deferred
 - startup recovery can re-run bounded stale persisted direct runs before readback; keep
   this enabled by default, or disable with `--no-recover-runs-on-start`.
   - control source scope with `--recover-runs-on-start-source <direct|team-run|all>`
@@ -75,6 +82,15 @@ Current limits:
     - `expiresAt`
     - `lastActivityAt`
     - `lastClaimedRunId`
+  - `/status.runnerTopology` reports read-only runner topology/readiness:
+    - `localExecutionOwnerRunnerId`
+    - `generatedAt`
+    - aggregate active/stale/fresh/expired/browser-capable runner counts
+    - bounded runner capability summaries for service ids, runtime profiles,
+      browser profiles, service-account ids, and browser capability
+    - `selectedAsLocalExecutionOwner`
+    - this surface does not select claims, acquire leases, execute steps, or
+      reassign work to another runner
   - plain `/status.localClaimSummary` now reports a compact direct-run local
     claim snapshot when a local runner is configured:
     - `sourceKind`
@@ -163,6 +179,7 @@ Current limits:
     - optional:
       - `runnerId`
       - `probe=service-state`
+      - `authority=scheduler`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -187,6 +204,12 @@ Current limits:
         - Grok API-backed runtime profiles still return honest `unavailable`
           posture on this seam
         - keep it separate from queue/lease posture and `/status`
+      - optional `schedulerAuthority` when explicitly requested with
+        `authority=scheduler`
+        - read-only authority evidence only
+        - includes decision, reason, active lease posture, candidates,
+          selected runner evidence, future mutation label, and
+          `mutationAllowed = false`
       - `runtime.queueProjection` with:
         - `queueState`
         - `claimState`
@@ -241,10 +264,20 @@ Current limits:
     - targeted drain:
       - `{"runControl":{"action":"drain-run","runId":"..."}}`
       - only succeeds for direct or team runs
+      - can execute runnable work already leased by the configured
+        server-local runner
     - local-action request resolution:
       - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
       - only succeeds for currently `requested` local action records on direct
         or team runs
+    - scheduler local claim:
+      - `{"schedulerControl":{"action":"claim-local-run","runId":"...","schedulerId":"operator:local-status"}}`
+      - only claims or reassigns to the server-local runner after read-only
+        scheduler authority selects that runner
+      - does not execute by itself; use targeted `drain-run` for immediate
+        follow-through
+      - fresh active leases, still-active lease owners, non-local selected
+        runners, and affinity/capability blocks reject without mutation
   - startup recovery logs now also emit:
     - `attention=stale-heartbeat-inspect-only:<count>`
     - `attention=suspiciously-idle:<count>`

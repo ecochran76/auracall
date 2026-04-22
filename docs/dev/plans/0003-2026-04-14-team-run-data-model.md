@@ -81,6 +81,11 @@ Current concrete dependency:
   - `requestedOutputs`
   - assignment-level `inputArtifacts`
   except as planned or derived execution material on specific steps
+- `0024-2026-04-21-taskrunspec-public-contract-reconciliation.md` chose the
+  live flattened `TaskRunSpec` schema as the first public full-spec
+  compatibility target
+- sectioned public envelopes remain deferred until a later versioned
+  normalizer is justified
 
 ## `teamRun`
 
@@ -97,7 +102,7 @@ type TeamRun = {
   status: 'planned' | 'running' | 'succeeded' | 'failed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
-  trigger: 'cli' | 'service' | 'api' | 'scheduled' | 'internal';
+  trigger: 'cli' | 'service' | 'api' | 'mcp' | 'scheduled' | 'internal';
   requestedBy?: {
     kind: 'user' | 'service' | 'schedule' | 'internal';
     id?: string | null;

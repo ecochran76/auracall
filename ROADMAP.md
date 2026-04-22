@@ -19,6 +19,16 @@ Current State:
     local-runner bridge
 - supporting maintenance work is allowed only when it directly protects that
   lane or fixes a newly reproduced mismatch
+- current browser reliability exception:
+  - the profile-scoped browser operation dispatcher in
+    [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md)
+    is closed after unit, targeted integration, and serial live proof for
+    default Grok/ChatGPT/Gemini managed browser profile separation
+  - the narrower Grok/ChatGPT selector-diagnosis drift found during that proof
+    is also closed in
+    [docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md)
+  - there is no active browser reliability exception unless a new concrete
+    mismatch is reproduced
 - parked lanes should not resume from inertia:
   - response-shape normalization is parked unless a new public routing or
     readback mismatch is reproduced
@@ -30,6 +40,99 @@ Current State:
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is
   also maintenance-only unless a fresh mismatch is reproduced
+- service/runner topology reassessment is closed in
+  [docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0026-2026-04-21-service-runner-topology-reassessment.md)
+- read-only runner topology/readiness is closed in
+  [docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0027-2026-04-21-runner-topology-readiness-status.md)
+  - `ExecutionServiceHost` owns `summarizeRunnerTopology()`
+  - `/status.runnerTopology` exposes bounded local-server runner readiness
+    without changing claim authority
+  - multi-runner scheduling, background worker pools, reassignment loops, and
+    parallel execution remain deferred
+- scheduler-authority preflight is closed in
+  [docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0028-2026-04-21-scheduler-authority-preflight.md)
+  - topology visibility and candidate ordering are not assignment authority
+  - `api serve` remains a local runner, not a fleet scheduler
+- read-only scheduler-authority evaluator is closed in
+  [docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0029-2026-04-21-read-only-scheduler-authority-evaluator.md)
+  - `evaluateStoredExecutionRunSchedulerAuthority(...)` returns deterministic
+    authority decisions with `mutationAllowed: false`
+  - no HTTP surface, scheduler mutation, worker loop, or automatic
+    reassignment was added
+- runtime inspection scheduler-authority readback is closed in
+  [docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0030-2026-04-21-runtime-inspection-scheduler-authority.md)
+  - `GET /v1/runtime-runs/inspect?...&authority=scheduler` exposes optional
+    read-only `schedulerAuthority`
+  - no scheduler mutation, worker loop, lease acquisition, or reassignment was
+    added
+- CLI runtime inspection scheduler-authority readback is closed in
+  [docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0031-2026-04-21-cli-runtime-inspection-scheduler-authority.md)
+  - `auracall api inspect-run ... --authority scheduler` renders the same
+    read-only evidence for operators
+  - no scheduler mutation, worker loop, lease acquisition, or reassignment was
+    added
+- scheduler mutation design is closed in
+  [docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0032-2026-04-21-scheduler-mutation-design.md)
+  - first mutation target is explicit single-run operator control:
+    `schedulerControl.action = "claim-local-run"`
+  - v1 is scoped to the server-local runner only
+  - no fleet scheduler, worker loop, non-local assignment, parallel execution,
+    new HTTP route, or browser dispatcher bypass is authorized
+- scheduler local-claim control is closed in
+  [docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0033-2026-04-21-scheduler-local-claim-control.md)
+  - `ExecutionServiceHost` now owns `schedulerControl.action = "claim-local-run"`
+  - existing `POST /status` maps the scheduler-control payload/result
+  - local claims and expired stale/missing-owner reassignments are allowed only
+    when read-only scheduler authority selects the server-local runner
+  - no fleet scheduler, worker loop, non-local assignment, parallel execution,
+    new HTTP route, or browser dispatcher bypass was added
+- scheduler roadmap checkpoint is closed in
+  [docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0034-2026-04-21-scheduler-roadmap-checkpoint.md)
+  - do not widen into fleet scheduling or background worker loops yet
+  - next bounded implementation target is local-owned active lease execution
+    through targeted drain
+  - `claim-local-run` remains explicit operator control; execution
+    follow-through should preserve existing service-host, stored-step, and
+    browser-dispatcher ownership boundaries
+- local-owned active lease drain is closed in
+  [docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0035-2026-04-21-local-owned-active-lease-drain.md)
+  - `runControl.action = "drain-run"` can now execute a runnable run whose
+    active lease is already owned by the configured server-local runner
+  - foreign active leases still skip
+  - existing-lease execution heartbeats and releases the same lease through the
+    stored-step executor path
+  - no scheduler loop, non-local assignment, new HTTP route, or browser
+    dispatcher bypass was added
+- scheduler local-control phase closeout is closed in
+  [docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0036-2026-04-21-scheduler-phase-closeout.md)
+  - keep the explicit operator workflow:
+    inspect scheduler authority, `claim-local-run`, then targeted `drain-run`
+    when immediate execution is desired
+  - do not add a `claim-and-drain-local-run` compound control now
+  - scheduler mutation work is paused unless a concrete operator workflow
+    shows that the two-step control is too noisy or error-prone
+- team-run background-drain parity is closed in
+  [docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0037-2026-04-21-team-run-background-drain-parity.md)
+  - `TeamRuntimeBridge` can now create a team runtime without draining it
+  - HTTP `POST /v1/team-runs` uses no-drain creation when `api serve`
+    background drain is enabled, then schedules the existing server-owned
+    drain loop
+  - synchronous one-request behavior remains when background drain is disabled
+  - no public input shape, scheduler mutation, multi-runner assignment, or
+    parallel team execution was added
+- service/runner roadmap checkpoint is closed in
+  [docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0038-2026-04-21-service-runner-roadmap-checkpoint.md)
+  - no fresh route-neutral runtime mutation was found still owned directly by
+    HTTP after Plans 0033-0037
+  - keep HTTP responsible for transport, listener lifecycle, timer state,
+    pause/resume control mapping, and response projection
+  - keep route-neutral runner lifecycle, queued drain, recovery, operator
+    controls, scheduler-local claim, and targeted drain under
+    `ExecutionServiceHost`
+  - pause service/runner architecture expansion until a concrete mismatch is
+    reproduced
+  - next action is integration hygiene: broaden validation, inspect the
+    accumulated dirty worktree by lane, and prepare a review/commit boundary
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 
@@ -389,6 +492,16 @@ Next recommendation:
   bounded CLI local-runner bridge
 
 Browser reliability maintenance note:
+- default-tenant account-health validation reproduced a generic browser-service
+  substrate issue that is now closed in Plan 0021:
+  - simultaneous or overlapping managed-profile operations can share the same
+    fixed DevTools port and contaminate tab/identity evidence
+  - read-only probes still need ownership because tab selection and live DOM
+    inspection depend on shared CDP state
+  - human-verification/manual-login flows need an exclusive operation boundary
+- active bounded follow-up:
+  - none; Plan 0022 closed the Grok/ChatGPT home/new-chat selector-diagnosis
+    drift without changing dispatcher behavior or prompt execution
 - current ChatGPT hardening/proof checkpoint is substantially better than it
   was:
   - mutation-side persistence/verification is hardened across root/project
@@ -466,12 +579,22 @@ Current checkpoint:
 - the response returns deterministic `taskRunSpecId`, `teamRunId`,
   `runtimeRunId`, status, and links for team inspection, runtime inspection,
   and response readback
+- MCP write parity is now live under
+  [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md)
+- `auracall-mcp` exposes `team_run`, which uses the same bounded input shape
+  and task/team/runtime execution path with explicit MCP provenance
+- the completed contract checkpoint is
+  [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md)
+  which selected the live flattened `TaskRunSpec` schema as the first public
+  full-spec compatibility target
+- prebuilt flattened `taskRunSpec` input is now live under
+  [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md)
+  for both HTTP `POST /v1/team-runs` and MCP `team_run`
 
 Current sequencing gate:
-- keep broader team execution writes paused beyond this first bounded HTTP
-  route:
-  - arbitrary prebuilt `taskRunSpec` JSON remains deferred
-  - MCP write parity remains deferred until the HTTP contract proves stable
+- keep broader team execution writes paused beyond the bounded HTTP and MCP
+  surfaces:
+  - sectioned public task-run-spec envelopes remain deferred
   - multi-runner/background-worker expansion remains out of scope
 
 Sequencing rule:
@@ -698,8 +821,12 @@ Safety note:
 
 ### Now
 
-- Primary active lane: service mode and runner orchestration beyond the current
-  single-host bounded local-runner bridge
+- Primary active lane checkpoint: service mode and runner orchestration is
+  paused after the current single-host bounded local-runner bridge reached a
+  coherent ownership checkpoint
+- Immediate next action: integration hygiene for the accumulated service/runner,
+  browser-maintenance, and public team-run write slices before selecting a new
+  primary implementation lane
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -754,6 +881,11 @@ See [docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md](/home/e
 
 Current focused reliability slice:
 - [docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0014-2026-04-14-browser-service-reattach-reliability.md)
+- [docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md) (closed)
+- [docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md) (closed)
+- [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md) (closed)
+- [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md) (closed)
+- [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

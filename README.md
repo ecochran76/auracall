@@ -137,16 +137,24 @@ Terminology note:
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
-    - request fields are `teamId`, `objective`, and optional `title`,
-      `promptAppend`, `structuredContext`, `responseFormat`, `maxTurns`, and
-      bounded `localActionPolicy`
-    - the server constructs exactly one `TaskRunSpec`, one `TeamRun`, and one
-      `sourceKind = team-run` runtime run through `TeamRuntimeBridge`
+    - request fields are either:
+      - compact fields: `teamId`, `objective`, and optional `title`,
+        `promptAppend`, `structuredContext`, `responseFormat`, `maxTurns`, and
+        bounded `localActionPolicy`
+      - a prebuilt flattened `taskRunSpec` validated with Aura-Call's live
+        `TaskRunSpec` schema
+    - the server constructs or accepts exactly one `TaskRunSpec`, one
+      `TeamRun`, and one `sourceKind = team-run` runtime run through
+      `TeamRuntimeBridge`
     - the response envelope is `object = "team_run"` with `taskRunSpec`,
       deterministic `execution` ids/status, and links for team inspection,
       runtime inspection, and `/v1/responses/{runtimeRunId}` readback
-    - arbitrary prebuilt `taskRunSpec` JSON, MCP write parity, background
-      worker pools, and parallel team execution remain out of scope
+    - when server background drain is enabled, creation returns after
+      persistence and the existing server-owned background drain advances the
+      team runtime; when background drain is disabled, the route keeps the
+      synchronous one-request behavior
+    - sectioned public task-run-spec envelopes, background worker pools, and
+      parallel team execution remain out of scope
   - startup recovery default source can be tuned with
     `--recover-runs-on-start-source <direct|team-run|all>`
     (`direct` by default)
@@ -195,6 +203,7 @@ Terminology note:
     - optional query:
       - `runnerId`
       - `probe=service-state`
+      - `authority=scheduler`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -224,6 +233,12 @@ Terminology note:
         - keep `serviceState` separate from:
           - runtime queue/lease state
           - `/status` server/runner health
+      - optional `schedulerAuthority` when explicitly requested with
+        `authority=scheduler`
+        - this is read-only scheduler evidence, not assignment authority
+        - returns the deterministic decision, reason, active lease posture,
+          candidates, selected runner evidence, future mutation label, and
+          `mutationAllowed = false`
       - `runtime.queueProjection` with:
         - `queueState`
         - `claimState`
@@ -310,11 +325,19 @@ Terminology note:
       - it applies to direct or team runs
       - it triggers one targeted host drain pass for that run
       - it is the intended post-resume follow-through path when operators want immediate execution instead of waiting for the ordinary background drain
+      - it can also execute a runnable run already leased by the configured
+        server-local runner, including after a successful scheduler local claim
     - `POST /status` now also accepts one bounded local-action request resolution action:
       - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
       - it only applies to currently `requested` local action records on direct or team runs
       - it updates the persisted local-action outcome summary used by `GET /v1/responses/{response_id}`
       - already-resolved requests are rejected cleanly instead of being overwritten
+    - `POST /status` now also accepts one bounded scheduler-control claim action:
+      - `{"schedulerControl":{"action":"claim-local-run","runId":"...","schedulerId":"operator:local-status"}}`
+      - it is gated by read-only scheduler authority and only claims or reassigns to the server-local runner
+      - it does not execute by itself; follow with targeted `drain-run` for
+        immediate execution through the existing local-owned lease
+      - fresh active leases, still-active lease owners, non-local selected runners, and affinity/capability blocks are rejected without mutation
     - recovery summary/detail now also surface bounded operator attention for
       stale-heartbeat and suspiciously-idle active-lease cases:
       - `recoverySummary.attention.staleHeartbeatInspectOnlyRunIds`
@@ -370,6 +393,17 @@ Terminology note:
     - `expiresAt`
     - `lastActivityAt`
     - `lastClaimedRunId`
+  - `/status` also reports read-only runner topology/readiness under
+    `runnerTopology`:
+    - `localExecutionOwnerRunnerId`
+    - `generatedAt`
+    - aggregate active/stale/fresh/expired/browser-capable runner counts
+    - bounded runner capability summaries for service ids, runtime profiles,
+      browser profiles, service-account ids, and browser capability
+    - `selectedAsLocalExecutionOwner` marks the runner this server may execute
+      through
+    - this is read-only capacity evidence; it does not grant scheduler,
+      reassignment, lease, or parallel execution authority
   - plain `/status` now also reports a compact direct-run local claim snapshot
     under `localClaimSummary` when a local runner is configured:
     - `sourceKind`
@@ -411,6 +445,9 @@ Terminology note:
     - and one bounded local-action request resolution action:
       - `{"localActionControl":{"action":"resolve-request","runId":"...","requestId":"...","resolution":"approved|rejected|cancelled"}}`
       - resolution is limited to currently `requested` direct-run or team-run local action records
+    - and one bounded scheduler-control claim action:
+      - `{"schedulerControl":{"action":"claim-local-run","runId":"...","schedulerId":"operator:local-status"}}`
+      - claims local-eligible runs or reassigns expired stale/missing-owner leases only to the server-local runner
   - `/status` now reports explicit development posture, route surface, and
     unauthenticated/local-only state, including the current AuraCall version
   - optional `X-AuraCall-*` execution headers for:
@@ -598,6 +635,8 @@ Terminology note:
 **MCP**
 - Run the stdio server via `auracall-mcp`.
 - Configure clients via [steipete/mcporter](https://github.com/steipete/mcporter) or `.mcp.json`; see [docs/mcp.md](docs/mcp.md) for connection examples.
+- MCP tools include `consult`, `sessions`, and bounded team execution through
+  `team_run`.
 ```bash
 npx -y auracall auracall-mcp
 ```

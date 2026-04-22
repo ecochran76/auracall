@@ -29,7 +29,17 @@ Lane: P01
   - `/v1/runtime-runs/inspect`
   - `/status/recovery/{run_id}`
   - aggregate `/status?recovery=true`
-- broader public team execution writes remain paused on HTTP/MCP surfaces
+- bounded public team execution writes are now live on HTTP and MCP:
+  - HTTP: `POST /v1/team-runs`
+  - MCP: `auracall-mcp` tool `team_run`
+- Plan 0024 reconciled public full-spec input:
+  - first public full-spec compatibility target is the live flattened
+    `TaskRunSpec` schema
+  - sectioned public envelopes remain deferred
+  - implementation should validate prebuilt specs with `TaskRunSpecSchema`
+    before execution
+- Plan 0025 implemented prebuilt flattened `taskRunSpec` acceptance for HTTP
+  and MCP while preserving compact create behavior
 - the first service/runner ownership increment beyond the bounded local-runner
   bridge is now live:
   - `ExecutionServiceHost` owns local runner registration, heartbeat refresh,
@@ -74,13 +84,49 @@ Lane: P01
   - handoff transfer payloads
   - provider/local-host artifact refs
   - persisted `response.output` item projection
-- next checkpoint:
+- closed public write checkpoints:
   - `0019-2026-04-20-public-team-execution-write-surface.md`
-  - define and then implement the first bounded HTTP team execution write
-    surface
-  - reuse the current task/team/runtime bridge instead of adding a route-only
-    execution model
-  - keep MCP write parity and multi-runner execution out of the first slice
+    - first bounded HTTP team execution write is live
+  - `0023-2026-04-21-mcp-team-run-write-parity.md`
+    - bounded MCP team execution write parity is live
+- next checkpoint:
+  - Plan 0026 reassessed the topology boundary after public HTTP/MCP
+    team-run writes and prebuilt `taskRunSpec` acceptance
+  - Plan 0027 added the read-only runner topology/readiness seam before any
+    scheduler work
+  - `ExecutionServiceHost` owns the route-neutral topology projection through
+    `summarizeRunnerTopology()`
+  - `api serve` projects that bounded readiness state through
+    `/status.runnerTopology` while preserving the current server-local runner
+    as execution owner
+  - Plan 0028 closed the scheduler-authority preflight:
+    - topology visibility is not assignment authority
+    - claim-candidate ordering is not assignment authority
+    - a local execution host is not fleet scheduler authority
+  - Plan 0029 added the read-only scheduler-authority evaluator:
+    - deterministic authority decisions
+    - `mutationAllowed: false`
+    - no assignment or reassignment mutation
+  - Plan 0030 exposed scheduler-authority evidence through read-only runtime
+    inspection:
+    - `GET /v1/runtime-runs/inspect?...&authority=scheduler`
+    - optional `inspection.schedulerAuthority`
+    - no lease acquisition, scheduler mutation, worker loop, or reassignment
+  - Plan 0031 exposed the same read-only evidence through CLI runtime
+    inspection:
+    - `auracall api inspect-run ... --authority scheduler`
+    - compact human formatter plus full JSON payload
+  - Plan 0032 closed scheduler mutation design:
+    - first mutation target is `schedulerControl.action = "claim-local-run"`
+    - v1 is explicit operator control under `ExecutionServiceHost`
+    - v1 is scoped to the server-local runner only
+    - no fleet scheduler, worker loop, non-local assignment, parallel
+      execution, new HTTP route, or browser dispatcher bypass
+  - next implementation should add only that bounded local scheduler-control
+    mutation path
+  - keep sectioned public task-run-spec envelopes deferred
+  - keep multi-runner execution, background worker pools, reassignment loops,
+    and parallel execution out until explicitly selected
 
 # Team Service Execution Plan
 

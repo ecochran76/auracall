@@ -94,6 +94,19 @@
       - `runner.expiresAt`
       - `runner.lastActivityAt`
       - `runner.lastClaimedRunId`
+    - current expected status also includes read-only runner topology:
+      - `runnerTopology.localExecutionOwnerRunnerId`
+      - `runnerTopology.generatedAt`
+      - `runnerTopology.metrics.totalRunnerCount`
+      - `runnerTopology.metrics.activeRunnerCount`
+      - `runnerTopology.metrics.staleRunnerCount`
+      - `runnerTopology.metrics.freshRunnerCount`
+      - `runnerTopology.metrics.expiredRunnerCount`
+      - `runnerTopology.metrics.browserCapableRunnerCount`
+      - `runnerTopology.runners[].runnerId`
+      - `runnerTopology.runners[].selectedAsLocalExecutionOwner`
+      - topology readback must not select claims, acquire leases, execute
+        steps, or reassign work to another runner
     - plain `/status` also includes a compact direct-run local claim snapshot:
       - `localClaimSummary.sourceKind = direct`
       - `localClaimSummary.runnerId`
@@ -114,6 +127,13 @@
       - if the local configured runner cannot safely claim that run, targeted
         drain should return `status = skipped` with
         `skipReason = claim-owner-unavailable`
+      - if the run is already leased by the configured server-local runner,
+        targeted drain should reuse that lease and execute one host pass
+    - claim one scheduler-authorized local run without executing it:
+      - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"schedulerControl":{"action":"claim-local-run","runId":"<response_id>","schedulerId":"operator:local-status"}}'`
+      - accepted only when scheduler authority selects the server-local runner
+      - follow with `runControl.action = "drain-run"` for immediate execution
+        through the existing local-owned lease
       - for bounded multi-pass drain accounting:
         - preserve repeated executions for the same run across passes
         - but count one reclaimed stale lease only once in
@@ -152,6 +172,9 @@
     - `GET /v1/runtime-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&runnerId=<runner_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&probe=service-state`
+    - `GET /v1/runtime-runs/inspect?runId=<run_id>&authority=scheduler`
+    - CLI equivalent for read-only scheduler evidence:
+      - `pnpm tsx bin/auracall.ts api inspect-run --run-id <run_id> --authority scheduler`
         - `GET /status/recovery/{run_id}`
     - resolve one pending local-action request on a direct or team run:
       - `curl -s http://127.0.0.1:8080/status -H 'Content-Type: application/json' -d '{"localActionControl":{"action":"resolve-request","runId":"<response_id>","requestId":"<request_id>","resolution":"approved|rejected|cancelled"}}'`
@@ -167,6 +190,9 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
   - create bounded team run:
     - `curl -s http://127.0.0.1:8080/v1/team-runs -H 'Content-Type: application/json' -d '{"teamId":"ops","objective":"Reply with one bounded team result.","responseFormat":"markdown","maxTurns":2}'`
+    - with background drain enabled, creation returns after persistence and
+      the server-owned background drain advances the run; poll the response
+      readback link for terminal output
   - read/inspect the team run:
     - copy `execution.teamRunId`, then run `curl "http://127.0.0.1:8080/v1/team-runs/inspect?teamRunId=<team_run_id>"`
     - copy `execution.runtimeRunId`, then run `curl "http://127.0.0.1:8080/v1/runtime-runs/inspect?runtimeRunId=<runtime_run_id>"`
@@ -209,6 +235,12 @@
           `unavailable` posture
         - Grok API-backed runtime profiles still return honest `unavailable`
           posture
+      - optional `schedulerAuthority` when explicitly requested with
+        `authority=scheduler`
+        - read-only authority evidence only
+        - returns decision, reason, active lease posture, candidates,
+          selected runner evidence, future mutation label, and
+          `mutationAllowed = false`
       - step-id buckets for running/waiting/deferred/terminal posture
       - bounded affinity posture
         - `requiredService`
@@ -266,6 +298,12 @@
       - requested request => approved/rejected/cancelled and reflected in later
         `metadata.executionSummary.localActionSummary`
       - already-resolved request => 409
+    - `POST /status` scheduler local claim is bounded to the server-local runner:
+      - local claimable run => active lease acquired for the server-local runner
+      - expired stale/missing-owner lease => old lease expired and new local
+        lease acquired
+      - fresh active lease, active owner, non-local selected runner, or blocked
+        affinity/capability => 409 with no mutation
     - when multiple persisted `step.localActionOutcomes.<stepId>` summaries
       exist on the same run, response readback should prefer the terminal
       step's summary instead of older step-local action summaries
@@ -1031,6 +1069,9 @@
 - Cache context list smoke (bounded + bannerless for automation): `pnpm tsx bin/auracall.ts cache context list --provider grok --limit 5 --json-only`
 - Cache context keyword search smoke: `pnpm tsx bin/auracall.ts cache context search "oracle" --provider grok --limit 5`.
 - Cache context semantic search smoke: `OPENAI_API_KEY=... pnpm tsx bin/auracall.ts cache context semantic-search "oracle" --provider grok --limit 5`.
+- Cache-only commands such as `cache export`, `cache context list`, and
+  `cache context get` should read provider cache state without resolving or
+  launching a live browser target.
 - Cache source catalog smoke: `pnpm tsx bin/auracall.ts cache sources list --provider grok --limit 10`.
 - Cache artifact catalog smoke: `pnpm tsx bin/auracall.ts cache artifacts list --provider grok --limit 10`.
 - Cache file catalog smoke: `pnpm tsx bin/auracall.ts cache files list --provider grok --limit 10`.
@@ -1796,5 +1837,14 @@
   - Post-MVP polish history is archived in [0021-2026-04-08-chatgpt-polish-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0021-2026-04-08-chatgpt-polish-plan.md).
   - Broader hostile-state hardening history is archived in [0020-2026-04-08-chatgpt-hardening-plan.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/legacy-archive/0020-2026-04-08-chatgpt-hardening-plan.md).
 - MCP focused: `pnpm test:mcp` (builds then stdio smoke via mcporter).
+- MCP team-run parity:
+  - `pnpm vitest run tests/mcp/teamRun.test.ts tests/mcp.schema.test.ts --maxWorkers 1`
+  - proves the `team_run` tool registration, bounded input/output schemas, and
+    MCP provenance handoff into the configured team-run executor.
+- Public prebuilt task-run-spec acceptance:
+  - `pnpm vitest run tests/http.responsesServer.test.ts tests/mcp/teamRun.test.ts tests/cli/teamRunCommand.test.ts tests/teams.schema.test.ts --maxWorkers 1`
+  - proves HTTP and MCP accept a prebuilt flattened `taskRunSpec`, reject
+    compact/prebuilt assignment conflicts, and keep compact create behavior
+    unchanged.
 - If you are debugging a raw direct-CDP setup instead of Aura-Call’s integrated Windows path, you can still pin `AURACALL_BROWSER_PORT` / `AURACALL_BROWSER_DEBUG_PORT` and use firewall hints from `scripts/test-browser.ts`. That is now a fallback/debug workflow, not the primary Windows setup.
 - Scoped browser runs can be smoke-tested by passing `--project-id` / `--conversation-id` to a browser command; they should not change default config behavior.
