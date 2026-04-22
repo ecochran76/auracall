@@ -13701,3 +13701,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `allowImportingTsExtensions`, while `pnpm run build` disables that option.
   Thin TypeScript wrappers under `scripts/` should use extensionless dynamic
   imports so they work with `tsx` and emitted-build typechecking.
+- 2026-04-22: Do not let validated local `main` stacks become hidden backlog.
+  In this repo, commit each coherent validated slice, push after green
+  integration checkpoints or before changing lanes, and treat `main` being
+  more than 10 commits ahead as a handoff risk unless there is a recorded
+  blocker.

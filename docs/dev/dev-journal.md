@@ -19478,3 +19478,18 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run test:mcp`
   - `pnpm run plans:audit -- --keep 43`
   - `git diff --check`
+
+## 2026-04-22 - Commit/push cadence policy tightening
+
+- Updated `docs/dev/policies/0013-commit-and-push-cadence.md` after the local
+  stack reached a large ahead count.
+- New policy posture:
+  - commit each coherent validated slice
+  - push after green integration checkpoints
+  - push before lane changes or operator handoff
+  - treat local `main` more than 10 commits ahead, or unpushed validated work
+    from a prior day, as a handoff risk
+  - record the exact blocker when push cannot happen
+- Validation target:
+  - `pnpm run plans:audit -- --keep 43`
+  - `git diff --check`

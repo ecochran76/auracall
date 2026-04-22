@@ -1269,3 +1269,21 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run test:mcp`
   - `pnpm run plans:audit -- --keep 43`
   - `git diff --check`
+
+## Turn 51 | 2026-04-22
+
+- Policy update:
+  `docs/dev/policies/0013-commit-and-push-cadence.md`
+- Goal: make commit/push cadence operational after the local stack grew large.
+- Change:
+  - commit validated slices by default, including docs-only policy/roadmap
+    slices
+  - push after green integration checkpoints, before changing lanes, before
+    handoff, and before ending a session with more than a small local-only stack
+  - treat local `main` being more than 10 commits ahead or carrying unpushed
+    validated work from a prior day as a handoff risk
+  - default posture: end-of-slice commit, end-of-turn push for shared-ready
+    commits, and exact blocker notes when push cannot happen
+- Verification target:
+  - `pnpm run plans:audit -- --keep 43`
+  - `git diff --check`
