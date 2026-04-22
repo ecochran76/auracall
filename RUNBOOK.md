@@ -1394,3 +1394,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `git diff --check`
   - installed runtime `/status` and `/status?runnerTopology=full` smoke on
     port 8099
+
+## Turn 56 | 2026-04-22
+
+- Closed drift checkpoint:
+  `docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md`
+- Opened implementation plan:
+  `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`
+- Trigger:
+  - installed-runtime parallel Gemini/Grok API image dogfood did not produce
+    images
+  - Gemini returned a text-only refusal through the current API path
+  - Grok used stale 4.1 canonicalization instead of current Grok 4.20
+- Change:
+  - added current `grok-4.20` known model key mapped to
+    `grok-4.20-reasoning`
+  - kept explicit `grok-4.1` as a legacy key
+  - changed plain Grok aliases and setup/wizard defaults to current Grok
+  - documented that Grok Imagine and full CLI/API/MCP media generation still
+    need the shared media-generation contract in Plan 0049
+- Verification target:
+  - targeted Grok/options/browser setup/OpenRouter/multimodel tests
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`

@@ -56,7 +56,7 @@ describe('OpenRouter helpers', () => {
   it('keeps first-party model ids unprefixed when OpenRouter is inactive', async () => {
     const openai = await resolveModelConfig('gpt-5.1');
     const claude = await resolveModelConfig('claude-3-haiku-20240307');
-    const grok = await resolveModelConfig('grok-4.1');
+    const grok = await resolveModelConfig('grok-4.20');
 
     expect(openai.apiModel ?? openai.model).toBe('gpt-5.1');
     expect(claude.apiModel ?? claude.model).toBe('claude-3-haiku-20240307');

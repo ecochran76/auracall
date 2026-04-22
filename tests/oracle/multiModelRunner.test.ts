@@ -140,7 +140,7 @@ describe('runMultiModelApiSession', () => {
 	      options: {},
 	    };
 
-    const models: ModelName[] = ['grok-4.1', 'gpt-5.1'];
+    const models: ModelName[] = ['grok-4.20', 'gpt-5.1'];
     const logBodies = new Map<string, string>();
 
     const store: SessionStore = {
@@ -202,7 +202,7 @@ describe('runMultiModelApiSession', () => {
     expect(runOracleImpl).toHaveBeenCalledTimes(models.length);
     expect(runOracleImpl.mock.calls.map(([opts]) => opts.model)).toEqual(models);
     expect(summary.fulfilled.map((r) => r.model)).toEqual(expect.arrayContaining(models));
-    expect(logBodies.get('grok-4.1')).toBeDefined();
+    expect(logBodies.get('grok-4.20')).toBeDefined();
     expect(logBodies.get('gpt-5.1')).toBeDefined();
   });
 

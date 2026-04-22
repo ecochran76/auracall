@@ -208,7 +208,7 @@ describe('resolveRunOptionsFromConfig', () => {
       model: 'grok',
       env,
     });
-    expect(runOptions.model).toBe('grok-4.1');
+    expect(runOptions.model).toBe('grok-4.20');
     expect(resolvedEngine).toBe('browser');
     expect(engineCoercedToApi).toBe(false);
   });

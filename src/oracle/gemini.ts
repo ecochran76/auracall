@@ -13,6 +13,7 @@ const MODEL_ID_MAP: Record<ModelName, string> = {
   'gpt-5.2-pro': 'gpt-5.2-pro',
   'claude-4.5-sonnet': 'claude-4.5-sonnet',
   'claude-4.1-opus': 'claude-4.1-opus',
+  'grok-4.20': 'grok-4.20',
   'grok-4.1': 'grok-4.1',
 };
 

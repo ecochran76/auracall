@@ -1923,7 +1923,7 @@ conversationFilesCommand
     const requestedModel = String(commandOptions.model ?? rootOptions.model ?? '').trim();
     const browserModel = requestedModel.toLowerCase().startsWith('grok-')
       ? normalizeModelOption(requestedModel)
-      : ('grok-4.1' as ModelName);
+      : ('grok-4.20' as ModelName);
     const resolvedBrowserConfig = resolveBrowserConfig(userConfig.browser, {
       auracallProfileName: userConfig.auracallProfile ?? null,
     });

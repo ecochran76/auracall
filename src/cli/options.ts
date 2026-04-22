@@ -168,7 +168,7 @@ export function resolveApiModel(modelValue: string): ModelName {
     return normalized as ModelName;
   }
   if (normalized.includes('grok')) {
-    return 'grok-4.1';
+    return resolveGrokModelAlias(normalized);
   }
   if (normalized.includes('claude') && normalized.includes('sonnet')) {
     return 'claude-4.5-sonnet';
@@ -219,7 +219,7 @@ export function inferModelFromLabel(modelValue: string): ModelName {
     return normalized as ModelName;
   }
   if (normalized.includes('grok')) {
-    return 'grok-4.1';
+    return resolveGrokModelAlias(normalized);
   }
   if (normalized.includes('claude') && normalized.includes('sonnet')) {
     return 'claude-4.5-sonnet';
@@ -273,4 +273,11 @@ export function inferModelFromLabel(modelValue: string): ModelName {
     return 'gpt-5.2-instant';
   }
   return 'gpt-5.2';
+}
+
+function resolveGrokModelAlias(normalized: string): ModelName {
+  if (normalized.includes('4.1') || normalized.includes('4-1') || normalized.includes('4_1')) {
+    return 'grok-4.1';
+  }
+  return 'grok-4.20';
 }

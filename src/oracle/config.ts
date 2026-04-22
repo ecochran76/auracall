@@ -151,6 +151,18 @@ export const MODEL_CONFIGS: Record<KnownModelName, ModelConfig> = {
     supportsBackground: false,
     supportsSearch: false,
   },
+  'grok-4.20': {
+    model: 'grok-4.20',
+    apiModel: 'grok-4.20-reasoning',
+    provider: 'xai',
+    tokenizer: countTokensGpt5Pro as TokenizerFn,
+    inputLimit: 2_000_000,
+    pricing: null,
+    reasoning: null,
+    supportsBackground: false,
+    supportsSearch: true,
+    searchToolType: 'web_search',
+  },
   'grok-4.1': {
     model: 'grok-4.1',
     apiModel: 'grok-4-1-fast-reasoning',

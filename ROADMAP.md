@@ -857,11 +857,16 @@ Safety note:
   runner topology readable in long-lived dogfood environments while preserving
   `?runnerTopology=full` for forensic debugging; defer publish/release work
   until the installed copy has carried normal use for a short period
+- Current provider-drift checkpoint:
+  - plain `grok` now resolves to current `grok-4.20` text support
+  - next bounded implementation target is first-class media generation across
+    CLI, local API, and MCP, tracked in
+    [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
 
 ### Soon
 
-- External control surfaces read-only parity and auth/audit review, after the
-  runner ownership seam is explicit
+- External control surfaces media-generation parity and auth/audit review,
+  after the bounded media contract is explicit
 - Agent orchestration and local actions, after handoff/artifact routing has a
   stable runner-owned transport boundary
 
@@ -873,7 +878,7 @@ Safety note:
 - Provider expansion:
   - full Gemini
   - Claude
-  - Grok image
+  - Grok Imagine image/video after the shared media contract lands
 - Multi-runner expansion and broader external control only after a concrete
   product requirement or reproduced ownership gap justifies reopening the
   service/runner lane
@@ -922,6 +927,8 @@ Current focused reliability slice:
 - [docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md) (closed)
 - [docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0046-2026-04-22-installed-runtime-dogfood.md) (closed)
 - [docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0047-2026-04-22-status-runner-topology-compaction.md) (closed)
+- [docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md) (closed)
+- [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md) (open)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).

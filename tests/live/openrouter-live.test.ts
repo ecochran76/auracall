@@ -226,10 +226,10 @@ async function loadCatalog(): Promise<Set<string>> {
 
 (shouldRunMixed ? describe : describe.skip)('Mixed OpenRouter + GPT + Grok multi-model', () => {
   test(
-    'gpt-5.1 + grok-4.1 (fast) mixed run',
+    'gpt-5.1 + grok-4.20 mixed run',
     async () => {
       const prompt = 'Reply with exactly "mixed router ok"';
-      const models = ['gpt-5.1', 'grok-4.1'] as const; // grok-4.1 maps to the fast reasoning variant
+      const models = ['gpt-5.1', 'grok-4.20'] as const; // grok-4.20 maps to the current reasoning variant
       await sessionStore.ensureStorage();
       const sessionMeta = await sessionStore.createSession(
         { prompt, model: models[0], models: models as unknown as string[], mode: 'api' },

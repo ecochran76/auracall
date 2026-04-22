@@ -1,14 +1,17 @@
-# Grok 4.1 (xAI) Support
+# Grok 4.20 (xAI) Support
 
-Status: **Stable** (January 2026)
+Status: **Maintenance** (April 2026)
 Owner: Aura-Call CLI
 
-- Model key: `grok-4.1` (mapped to API id `grok-4-1-fast-reasoning`). Alias: `grok`.
+- Current model key: `grok-4.20` (mapped to API id `grok-4.20-reasoning`). Alias: `grok`.
+- Legacy model key: `grok-4.1` remains accepted when explicitly requested.
 - Endpoint: defaults to `https://api.x.ai/v1` or `XAI_BASE_URL`. Uses the OpenAI **Responses API** surface.
 - Auth: `XAI_API_KEY`.
 - Background runs: **not supported** by the Grok API (requests with `background: true` are rejected). Aura-Call forces foreground streaming even if `--background` is set.
 - Search tools: Grok expects `web_search`; OpenAI’s `web_search_preview` is not accepted.
-- Pricing (preview): $0.20 / 1M input tokens, $0.50 / 1M output tokens; 2M token context.
+- Context: 2M token context for the current Grok 4.20 family.
+- Grok Imagine image/video generation is a separate API surface and is not yet
+  implemented in Aura-Call CLI/API/MCP media generation.
 
 ## Browser Automation
 
@@ -35,7 +38,7 @@ Aura-Call supports full browser automation for Grok, including manual login pers
     ```bash
     auracall "Quick question" --engine browser --model grok --browser-model-label Fast
     ```
-    Legacy aliases are normalized through the service registry, so older values like `Grok 4.1 Thinking` resolve to the closest current picker entry.
+    Legacy aliases are normalized through the service registry, so older values like `Grok 4.1 Thinking` resolve to the closest current picker entry while plain `grok` targets the current Grok 4.20 browser mode.
 
 -   **Project / Conversation Management:**
     List your available projects and conversations to find IDs:

@@ -128,7 +128,7 @@ describe('buildBrowserWizardConfigPatch', () => {
           browser: {},
           services: {
             grok: {
-              model: 'grok-4.1',
+              model: 'grok-4.20',
               manualLogin: true,
             },
           },
@@ -274,7 +274,7 @@ describe('mergeWizardConfig', () => {
       browser: {},
       services: {
         grok: {
-          model: 'grok-4.1',
+          model: 'grok-4.20',
           manualLogin: true,
         },
       },

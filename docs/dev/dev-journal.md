@@ -19593,3 +19593,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run plans:audit -- --keep 47`
   - `git diff --check`
   - installed runtime `/status` smoke
+
+## 2026-04-22 - Grok model drift and media-generation plan
+
+- Opened and closed
+  `docs/dev/plans/0048-2026-04-22-grok-model-drift-checkpoint.md`.
+- Opened
+  `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`.
+- Dogfood result:
+  - Gemini API text path did not produce an image for an image-generation
+    prompt.
+  - Grok API leg exposed stale Grok canonicalization.
+- Fixed plain `grok` / `Grok 4.2` labels to resolve to current `grok-4.20`,
+  mapped to `grok-4.20-reasoning`.
+- Kept explicit `grok-4.1` support for legacy/manual tests.
+- Recorded the larger product gap:
+  - Gemini `Create Image` should be a browser-service media operation, not a
+    one-off side path.
+  - Grok Imagine image/video generation is not implemented yet.
+  - CLI, local API, and MCP need one shared media-generation contract.
+- Validation target:
+  - targeted Grok/options/browser setup/OpenRouter/multimodel tests
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`

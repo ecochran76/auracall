@@ -48,7 +48,7 @@ describe('resolveSetupVerificationModel', () => {
         resolvedModel: 'gpt-5.2',
         modelSource: 'default',
       }),
-    ).toBe('grok-4.1');
+    ).toBe('grok-4.20');
   });
 
   test('keeps an explicit model when it matches the setup target', () => {
@@ -146,7 +146,7 @@ describe('createAuracallBrowserSetupContract', () => {
         },
         verification: {
           status: 'completed',
-          model: 'grok-4.1',
+          model: 'grok-4.20',
           prompt: 'ping',
           sessionId: 'session-123',
           error: null,
@@ -212,7 +212,7 @@ describe('createAuracallBrowserSetupContract', () => {
       },
       verification: {
         status: 'completed',
-        model: 'grok-4.1',
+        model: 'grok-4.20',
         prompt: 'ping',
         sessionId: 'session-123',
         error: null,

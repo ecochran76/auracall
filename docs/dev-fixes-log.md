@@ -13733,3 +13733,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   records. Plain `/status` should compact the topology list to local/fresh/active
   runners, keep all-runner counts in `runnerTopology.metrics`, and provide
   `?runnerTopology=full` for forensic debugging.
+- 2026-04-22: Treat provider model drift as a first-class product failure, not
+  just a failed live smoke. In this repo, Grok's browser registry already knew
+  `grok` / `grok-4.2` / `grok-4.20` belonged to current Heavy mode, but CLI/API
+  canonicalization still collapsed plain `grok` to legacy `grok-4.1`. Keep
+  explicit legacy keys available, but make plain provider aliases point at the
+  current provider model and record unimplemented media surfaces separately.

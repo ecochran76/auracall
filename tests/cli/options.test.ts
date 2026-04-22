@@ -170,8 +170,9 @@ describe('resolveApiModel', () => {
     expect(resolveApiModel('opus')).toBe('claude-4.1-opus');
     expect(resolveApiModel('CLAUDE')).toBe('claude-4.5-sonnet');
     expect(resolveApiModel('Gemini')).toBe('gemini-3-pro');
-    expect(resolveApiModel('grok')).toBe('grok-4.1');
+    expect(resolveApiModel('grok')).toBe('grok-4.20');
     expect(resolveApiModel('Grok 4.1')).toBe('grok-4.1');
+    expect(resolveApiModel('Grok 4.2')).toBe('grok-4.20');
   });
 
   test('rejects codex max until API is available', () => {
@@ -220,9 +221,10 @@ describe('inferModelFromLabel', () => {
   });
 
   test('infers Grok aliases', () => {
-    expect(inferModelFromLabel('grok')).toBe('grok-4.1');
+    expect(inferModelFromLabel('grok')).toBe('grok-4.20');
     expect(inferModelFromLabel('Grok 4.1')).toBe('grok-4.1');
     expect(inferModelFromLabel('Grok-4-1')).toBe('grok-4.1');
+    expect(inferModelFromLabel('Grok 4.2')).toBe('grok-4.20');
   });
 
   test('falls back to the current pro alias when label empty and to gpt-5.2 for other ambiguous strings', () => {

@@ -11,6 +11,7 @@ export type KnownModelName =
   | 'gemini-3-pro'
   | 'claude-4.5-sonnet'
   | 'claude-4.1-opus'
+  | 'grok-4.20'
   | 'grok-4.1';
 
 // ModelName now allows arbitrary strings so OpenRouter / custom IDs can pass through.

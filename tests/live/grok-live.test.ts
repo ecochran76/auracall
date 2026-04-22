@@ -17,13 +17,13 @@ if (!ENABLE_LIVE || !LIVE_API_KEY) {
 
   describe('Grok live smoke tests', () => {
     test(
-      'grok-4.1 streams a short completion',
+      'grok-4.20 streams a short completion',
       async () => {
         try {
           const result = await runOracle(
             {
-              prompt: 'Reply with "live grok 4.1 smoke" on one line.',
-              model: 'grok-4.1',
+              prompt: 'Reply with "live grok 4.20 smoke" on one line.',
+              model: 'grok-4.20',
               silent: true,
               background: false,
               heartbeatIntervalMs: 0,
@@ -35,12 +35,12 @@ if (!ENABLE_LIVE || !LIVE_API_KEY) {
             throw new Error('Expected live result');
           }
           const text = extractTextOutput(result.response).toLowerCase();
-          expect(text).toContain('live grok 4.1 smoke');
+          expect(text).toContain('live grok 4.20 smoke');
           expect(result.response.status ?? 'completed').toBe('completed');
         } catch (error) {
           const message = error instanceof Error ? error.message : String(error);
           if (/model .*does not exist|not .*access|no allowed providers|404/i.test(message)) {
-            // Key doesn’t have grok-4.1 access; treat as skipped to keep live suite green.
+            // Key doesn’t have grok-4.20 access; treat as skipped to keep live suite green.
             return;
           }
           throw error;

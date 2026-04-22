@@ -350,7 +350,7 @@ function defaultWizardModelForTarget(target: BrowserWizardTarget): string {
     case 'gemini':
       return 'gemini-3-pro';
     case 'grok':
-      return 'grok-4.1';
+      return 'grok-4.20';
     case 'chatgpt':
     default:
       return 'gpt-5.2';
