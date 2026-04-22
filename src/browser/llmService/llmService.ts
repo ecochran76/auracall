@@ -1335,7 +1335,7 @@ export abstract class LlmService {
     listOptions?: BrowserProviderListOptions;
     cacheResolve?: { prompt?: boolean; detect?: boolean };
   }): Promise<CachedConversationContextEntry[]> {
-    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
+    const listOptions = options?.listOptions ?? await this.buildListOptions(undefined, { ensurePort: false });
     const cacheContext = await this.resolveCacheContext(listOptions, options?.cacheResolve);
     return this.cacheStore.listConversationContexts(cacheContext);
   }
@@ -1352,7 +1352,7 @@ export abstract class LlmService {
     stale: boolean;
     context: ConversationContext;
   }> {
-    const listOptions = await this.buildListOptions(options?.listOptions, { ensurePort: false });
+    const listOptions = options?.listOptions ?? await this.buildListOptions(undefined, { ensurePort: false });
     const cacheContext = await this.resolveCacheContext(listOptions, options?.cacheResolve);
     const raw = selector.trim();
     if (!raw) {

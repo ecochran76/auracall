@@ -73,7 +73,7 @@ describe('runDryRunSummary', () => {
     expect(header?.[0]).toContain('browser mode');
     expect(log.mock.calls.some(([entry]) => String(entry).includes('Attachments to upload'))).toBe(true);
     expect(log.mock.calls.some(([entry]) => String(entry).includes('report.txt'))).toBe(true);
-    expect(log.mock.calls.some(([entry]) => String(entry).includes('Cookies: copy from Chrome'))).toBe(true);
+    expect(log.mock.calls.some(([entry]) => String(entry).includes('Cookies: copy from source browser profile'))).toBe(true);
   });
 
   test('logs inline cookie strategy', async () => {

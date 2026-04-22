@@ -33,6 +33,10 @@ class TestLlmService extends LlmService {
     return this.fixedCacheContext;
   }
 
+  protected override getProviderGuardSettings() {
+    return null;
+  }
+
   async listProjects(options?: BrowserProviderListOptions): Promise<[]> {
     if (this.provider.listProjects) {
       return (await this.provider.listProjects(options)) as [];

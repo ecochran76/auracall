@@ -18,6 +18,16 @@ function listenEphemeral(): Promise<net.Server & { port: number }> {
   });
 }
 
+function isPortBindable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const server = net.createServer();
+    server.once('error', () => resolve(false));
+    server.listen(port, '127.0.0.1', () => {
+      server.close(() => resolve(true));
+    });
+  });
+}
+
 describe('portSelection', () => {
   test('honors an available pinned port even when a range is configured', async () => {
     const server = await listenEphemeral();
@@ -58,12 +68,13 @@ describe('portSelection', () => {
     const server = await listenEphemeral();
     const logs: string[] = [];
     try {
+      const expected = (await isPortBindable(server.port + 1)) ? server.port + 1 : server.port + 2;
       const chosen = await pickAvailableDebugPort(
         server.port,
         (message) => logs.push(message),
         [server.port, server.port + 2],
       );
-      expect(chosen).toBe(server.port + 1);
+      expect(chosen).toBe(expected);
       expect(logs.length).toBe(0);
     } finally {
       await new Promise<void>((resolve) => server.close(() => resolve()));

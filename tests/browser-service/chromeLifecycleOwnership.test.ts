@@ -65,7 +65,9 @@ async function importChromeLifecycleWithMocks(options: {
     isDevToolsResponsive,
     findChromePidUsingUserDataDir: vi.fn(async () => options.existingProcess?.pid ?? null),
     findChromeProcessUsingUserDataDir,
+    findResponsiveWindowsDevToolsPortForUserDataDir: vi.fn(async () => options.existingProcess?.port ?? null),
     isChromeAlive: vi.fn(async () => true),
+    probeWindowsLocalDevToolsPort: vi.fn(async () => true),
     isProcessAlive: vi.fn(() => false),
   }));
   vi.doMock('../../packages/browser-service/src/windowsLoopbackRelay.js', () => ({
@@ -126,6 +128,8 @@ describe('chromeLifecycle ownership', () => {
 
   test('keeps shutdown ownership when re-adopting a live process started by the current run', async () => {
     process.env.WSL_DISTRO_NAME = 'Ubuntu';
+    const messages: string[] = [];
+    const userDataDir = '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/test/ownership-grok';
     const { chromeLifecycle, execFileMock, registerInstance } = await importChromeLifecycleWithMocks({
       registeredPid: null,
       existingProcess: {
@@ -134,7 +138,7 @@ describe('chromeLifecycle ownership', () => {
         commandLine:
           '"C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" ' +
           '--remote-debugging-port=45891 ' +
-          '--user-data-dir=C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\default\\grok about:blank',
+          '--user-data-dir=C:\\Users\\ecoch\\AppData\\Local\\AuraCall\\browser-profiles\\test\\ownership-grok about:blank',
       },
     });
 
@@ -143,8 +147,8 @@ describe('chromeLifecycle ownership', () => {
         chromePath: '/mnt/c/Program Files/Google/Chrome/Application/chrome.exe',
         chromeProfile: 'Default',
       } as never,
-      '/mnt/c/Users/ecoch/AppData/Local/AuraCall/browser-profiles/default/grok',
-      () => undefined,
+      userDataDir,
+      (message) => messages.push(message),
       {
         registryPath: '/tmp/auracall-browser-state.json',
         ownedPids: new Set([99999]),
@@ -152,7 +156,7 @@ describe('chromeLifecycle ownership', () => {
       },
     );
 
-    expect(chrome.pid).toBe(42345);
+    expect(chrome.pid, messages.join('\n')).toBe(42345);
     expect(registerInstance).toHaveBeenCalled();
     await chrome.kill();
     expect(execFileMock).toHaveBeenCalledWith(

@@ -56,11 +56,10 @@ export async function resolveCacheOperatorContext(input: {
   const llmService = createLlmService(input.provider, input.userConfig, {
     identityPrompt: input.identityPrompt,
   });
-  const listOptions = await llmService.buildListOptions(
+  const listOptions =
     input.listOptions ?? {
       configuredUrl: resolveProviderConfiguredUrl(input.userConfig, input.provider),
-    },
-  );
+    };
   const cacheContext = await llmService.resolveCacheContext(listOptions, {
     prompt: false,
     detect: false,
