@@ -5,6 +5,7 @@ import {
   formatChatgptBlockingSurfaceErrorForTest,
   logChatgptUnexpectedStateForTest,
   resolveBrowserRuntimeEntryContextForTest,
+  acquireBrowserExecutionOperationForTest,
   sanitizeThinkingTextForTest,
   shouldPreserveBrowserOnErrorForTest,
   shouldTreatChatgptAssistantResponseAsStaleForTest,
@@ -12,6 +13,7 @@ import {
 } from '../../src/browser/index.js';
 import { BrowserAutomationError } from '../../src/oracle/errors.js';
 import { setAuracallHomeDirOverrideForTest } from '../../src/auracallHome.js';
+import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
@@ -124,6 +126,39 @@ describe('browserMode exports', () => {
     expect(result.target).toBe('grok');
     expect(result.config.debugPort).toBe(45555);
     expect(result.logger.verbose).toBe(true);
+  });
+
+  test('browser execution operation refuses an active same-profile probe lock', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-browser-operation-'));
+    setAuracallHomeDirOverrideForTest(tempRoot);
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'grok');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(tempRoot, 'browser-operations'),
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      managedProfileDir,
+      serviceTarget: 'grok',
+      kind: 'doctor',
+      operationClass: 'exclusive-probe',
+      ownerPid: process.pid,
+    });
+
+    try {
+      await expect(
+        acquireBrowserExecutionOperationForTest({
+          managedProfileDir,
+          target: 'grok',
+          logger: () => undefined,
+        }),
+      ).rejects.toThrow(/Browser operation busy/);
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+      setAuracallHomeDirOverrideForTest(null);
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
   });
 
   test('retry affordance send failures stay explicit about no auto-click policy', () => {

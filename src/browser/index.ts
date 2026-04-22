@@ -106,6 +106,12 @@ import {
 } from './domDebug.js';
 import { classifyBrowserToolsBlockingState } from '../../packages/browser-service/src/browserTools.js';
 import {
+  createFileBackedBrowserOperationDispatcher,
+  formatBrowserOperationBusyResult,
+  type BrowserOperationAcquiredResult,
+} from '../../packages/browser-service/src/service/operationDispatcher.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
+import {
   readSimpleProviderGuardState,
   resolveSimpleProviderGuardProfileName,
   writeSimpleProviderGuardState,
@@ -217,6 +223,51 @@ async function prepareManagedBrowserProfileLaunch(options: {
     bootstrapCookiePath,
     allowDestructiveProfileRetryReset,
   };
+}
+
+async function acquireBrowserExecutionOperation(options: {
+  managedProfileDir: string | null | undefined;
+  target: 'chatgpt' | 'grok' | 'gemini';
+  logger: BrowserLogger;
+}): Promise<BrowserOperationAcquiredResult | null> {
+  if (!options.managedProfileDir) {
+    return null;
+  }
+  const dispatcher = createFileBackedBrowserOperationDispatcher({
+    lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+  });
+  const acquired = await dispatcher.acquire({
+    managedProfileDir: options.managedProfileDir,
+    serviceTarget: options.target,
+    kind: 'browser-execution',
+    operationClass: 'exclusive-mutating',
+    ownerCommand: 'browser-execution',
+  });
+  if (!acquired.acquired) {
+    throw new Error(formatBrowserOperationBusyResult(acquired));
+  }
+  options.logger(`[browser] operation dispatcher key: ${acquired.operation.key}`);
+  return acquired;
+}
+
+export const acquireBrowserExecutionOperationForTest = acquireBrowserExecutionOperation;
+
+async function withBrowserExecutionOperation<T>(
+  config: ReturnType<typeof resolveBrowserConfig>,
+  target: 'chatgpt' | 'grok' | 'gemini',
+  logger: BrowserLogger,
+  callback: () => Promise<T>,
+): Promise<T> {
+  const operation = await acquireBrowserExecutionOperation({
+    managedProfileDir: config.manualLoginProfileDir,
+    target,
+    logger,
+  });
+  try {
+    return await callback();
+  } finally {
+    await operation?.release();
+  }
 }
 
 function isCloudflareChallengeError(error: unknown): error is BrowserAutomationError {
@@ -899,10 +950,14 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     }
 
     if (target === 'grok') {
-      return runRemoteGrokBrowserMode(promptText, attachments, config, logger, options);
+      return withBrowserExecutionOperation(config, target, logger, () =>
+        runRemoteGrokBrowserMode(promptText, attachments, config, logger, options),
+      );
     }
 
-    return runRemoteBrowserMode(promptText, attachments, config, logger, options);
+    return withBrowserExecutionOperation(config, target, logger, () =>
+      runRemoteBrowserMode(promptText, attachments, config, logger, options),
+    );
   }
 
   if (target === 'grok') {
@@ -945,7 +1000,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
   const manualLogin = true;
   const {
     userDataDir,
-    defaultManagedProfileDir,
     chromeProfile,
     bootstrapCookiePath,
     allowDestructiveProfileRetryReset,
@@ -954,6 +1008,11 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     target,
     logger,
     auracallProfileName: options.config?.auracallProfileName ?? null,
+  });
+  const browserOperation = await acquireBrowserExecutionOperation({
+    managedProfileDir: userDataDir,
+    target,
+    logger,
   });
   await enforceChatgptBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
@@ -1519,7 +1578,6 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     await updateConversationHint('post-response', 15_000);
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
     if (baselineNormalized) {
-      const normalizedAnswer = normalizeForComparison(answer.text ?? '');
       const isBaseline = shouldTreatChatgptAssistantResponseAsStale({
         baselineText: baselineAssistantText,
         baselineMessageId: baselineAssistantMessageId,
@@ -1784,49 +1842,53 @@ export async function runBrowserMode(options: BrowserRunOptions): Promise<Browse
     );
   } finally {
     try {
-      if (!connectionClosedUnexpectedly) {
-        await client?.close();
+      try {
+        if (!connectionClosedUnexpectedly) {
+          await client?.close();
+        }
+      } catch {
+        // ignore
       }
-    } catch {
-      // ignore
-    }
-    removeDialogHandler?.();
-    removeTerminationHooks?.();
-    const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
-    if (!keepBrowserOpen) {
-      if (!connectionClosedUnexpectedly) {
-        try {
-          if (manualLogin) {
-            await gracefulShutdownChrome(chrome, client ?? null, logger);
-          } else {
-            await chrome.kill();
+      removeDialogHandler?.();
+      removeTerminationHooks?.();
+      const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
+      if (!keepBrowserOpen) {
+        if (!connectionClosedUnexpectedly) {
+          try {
+            if (manualLogin) {
+              await gracefulShutdownChrome(chrome, client ?? null, logger);
+            } else {
+              await chrome.kill();
+            }
+          } catch {
+            // ignore kill failures
           }
-        } catch {
-          // ignore kill failures
         }
-      }
-      if (manualLogin && !effectiveKeepBrowser) {
-        const shouldCleanup = await shouldCleanupManualLoginProfileState(
-          userDataDir,
-          logger.verbose ? logger : undefined,
-          {
-            connectionClosedUnexpectedly,
-            host: chromeHost,
-          },
-        );
-        if (shouldCleanup) {
-          // Preserve the persistent manual-login profile, but clear stale reattach hints.
-          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(() => undefined);
+        if (manualLogin && !effectiveKeepBrowser) {
+          const shouldCleanup = await shouldCleanupManualLoginProfileState(
+            userDataDir,
+            logger.verbose ? logger : undefined,
+            {
+              connectionClosedUnexpectedly,
+              host: chromeHost,
+            },
+          );
+          if (shouldCleanup) {
+            // Preserve the persistent manual-login profile, but clear stale reattach hints.
+            await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'never' }).catch(() => undefined);
+          }
+        } else {
+          await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
         }
-      } else {
-        await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+        if (!connectionClosedUnexpectedly) {
+          const totalSeconds = (Date.now() - startedAt) / 1000;
+          logger(`Cleanup ${runStatus} • ${totalSeconds.toFixed(1)}s total`);
+        }
+      } else if (!connectionClosedUnexpectedly) {
+        logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
       }
-      if (!connectionClosedUnexpectedly) {
-        const totalSeconds = (Date.now() - startedAt) / 1000;
-        logger(`Cleanup ${runStatus} • ${totalSeconds.toFixed(1)}s total`);
-      }
-    } else if (!connectionClosedUnexpectedly) {
-      logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
+    } finally {
+      await browserOperation?.release();
     }
   }
 }
@@ -2243,7 +2305,6 @@ async function runRemoteBrowserMode(
     );
     const baselineNormalized = baselineAssistantText ? normalizeForComparison(baselineAssistantText) : '';
     if (baselineNormalized) {
-      const normalizedAnswer = normalizeForComparison(answer.text ?? '');
       const isBaseline = shouldTreatChatgptAssistantResponseAsStale({
         baselineText: baselineAssistantText,
         baselineMessageId: baselineAssistantMessageId,
@@ -2913,7 +2974,6 @@ async function runGrokBrowserMode({
   const runtimeTarget = (config.target ?? 'grok') as 'grok';
   const {
     userDataDir,
-    defaultManagedProfileDir,
     chromeProfile,
     bootstrapCookiePath,
     allowDestructiveProfileRetryReset,
@@ -2922,6 +2982,11 @@ async function runGrokBrowserMode({
     target: runtimeTarget,
     logger,
     auracallProfileName,
+  });
+  const browserOperation = await acquireBrowserExecutionOperation({
+    managedProfileDir: userDataDir,
+    target: runtimeTarget,
+    logger,
   });
   await enforceGrokBrowserRateLimitGuard(config, logger, userDataDir);
   const onWindowsRetry = createWindowsManagedProfileRetryReset({
@@ -3267,40 +3332,44 @@ async function runGrokBrowserMode({
     const message = guardedError.message || 'Grok browser automation failed.';
     throw new BrowserAutomationError(message, { stage: 'execute-browser' }, guardedError);
   } finally {
-    const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
-    if (!keepBrowserOpen && chrome) {
-      try {
-        if (manualLogin) {
-          await gracefulShutdownChrome(chrome, client ?? null, logger);
-        } else {
-          await chrome.kill();
+    try {
+      const keepBrowserOpen = effectiveKeepBrowser || preserveBrowserOnError;
+      if (!keepBrowserOpen && chrome) {
+        try {
+          if (manualLogin) {
+            await gracefulShutdownChrome(chrome, client ?? null, logger);
+          } else {
+            await chrome.kill();
+          }
+        } catch {
+          // ignore
         }
+      }
+      if (manualLogin) {
+        if (!keepBrowserOpen) {
+          const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
+            connectionClosedUnexpectedly,
+          });
+          if (shouldCleanup) {
+            await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
+          }
+        }
+      } else {
+        if (!keepBrowserOpen) {
+          await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
+        }
+      }
+      removeTerminationHooks?.();
+      try {
+        await client?.close?.();
       } catch {
         // ignore
       }
-    }
-    if (manualLogin) {
-      if (!keepBrowserOpen) {
-        const shouldCleanup = await shouldCleanupManualLoginProfileState(userDataDir, logger, {
-          connectionClosedUnexpectedly,
-        });
-        if (shouldCleanup) {
-          await cleanupStaleProfileState(userDataDir, logger, { lockRemovalMode: 'if_recorded_pid_dead' });
-        }
+      if (keepBrowserOpen && !connectionClosedUnexpectedly && chrome) {
+        logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
       }
-    } else {
-      if (!keepBrowserOpen) {
-        await rm(userDataDir, { recursive: true, force: true }).catch(() => undefined);
-      }
-    }
-    removeTerminationHooks?.();
-    try {
-      await client?.close?.();
-    } catch {
-      // ignore
-    }
-    if (keepBrowserOpen && !connectionClosedUnexpectedly && chrome) {
-      logger(`Chrome left running on port ${chrome.port} with profile ${userDataDir}`);
+    } finally {
+      await browserOperation?.release();
     }
   }
 }

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
 import { runBrowserLogin } from '../../packages/browser-service/src/login.js';
+import { createBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 
 describe('browser-service runBrowserLogin', () => {
   afterEach(() => {
@@ -65,5 +66,46 @@ describe('browser-service runBrowserLogin', () => {
         display: ':0.0',
       }),
     );
+  });
+
+  it('blocks login launch when the managed browser profile already has an active operation', async () => {
+    const dispatcher = createBrowserOperationDispatcher({
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      managedProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+      serviceTarget: 'grok',
+      kind: 'doctor',
+      operationClass: 'exclusive-probe',
+      ownerPid: 123,
+    });
+    const launchManualLoginSession = vi.fn(async () => ({
+      chrome: {
+        pid: 4321,
+        host: '127.0.0.1',
+        port: 45000,
+        process: { unref: () => undefined },
+      },
+    }));
+
+    try {
+      await expect(
+        runBrowserLogin({
+          chromePath: '/usr/bin/google-chrome',
+          chromeProfile: 'Default',
+          manualLoginProfileDir: '/home/test/.auracall/browser-profiles/default/grok',
+          loginUrl: 'https://grok.com/',
+          loginLabel: 'grok',
+          preferCookieProfile: false,
+          operationDispatcher: dispatcher,
+          launchManualLoginSession,
+        }),
+      ).rejects.toThrow(/Browser operation busy/);
+      expect(launchManualLoginSession).not.toHaveBeenCalled();
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+    }
   });
 });

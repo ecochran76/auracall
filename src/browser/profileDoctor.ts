@@ -22,10 +22,15 @@ import {
 } from './profileStore.js';
 import {
   listInstancesWithLiveness,
-  pruneRegistry,
-  type BrowserInstance,
   type BrowserInstanceLiveness,
 } from '../../packages/browser-service/src/service/stateRegistry.js';
+import {
+  buildBrowserOperationKey,
+  createFileBackedBrowserOperationDispatcher,
+  formatBrowserOperationBusyResult,
+  type BrowserOperationKind,
+  type BrowserOperationRecord,
+} from '../../packages/browser-service/src/service/operationDispatcher.js';
 import type { BrowserToolsDoctorContract } from '../../packages/browser-service/src/browserTools.js';
 
 export type BrowserDoctorTarget = 'chatgpt' | 'grok' | 'gemini';
@@ -65,6 +70,7 @@ export interface BrowserDoctorReport {
   prunedRegistryEntries: number;
   prunedRegistryEntryReasons: Record<string, number>;
   warnings: string[];
+  operationDispatcherKey?: string;
 }
 
 export interface BrowserDoctorChromeAccountReport {
@@ -130,6 +136,7 @@ export interface AuracallBrowserDoctorContract {
   identityStatus: BrowserDoctorIdentityReport | null;
   featureStatus: BrowserDoctorFeatureReport | null;
   runtime: {
+    operation?: BrowserOperationRecord | null;
     browserTools: BrowserToolsDoctorContract | null;
     browserToolsError: string | null;
     selectorDiagnosis:
@@ -149,6 +156,7 @@ export interface AuracallBrowserFeaturesContract {
   target: BrowserDoctorTarget;
   featureStatus: BrowserDoctorFeatureReport | null;
   runtime: {
+    operation?: BrowserOperationRecord | null;
     browserTools: BrowserToolsDoctorContract | null;
     browserToolsError: string | null;
   };
@@ -162,6 +170,7 @@ export function createAuracallBrowserDoctorContract(
     featureStatus?: BrowserDoctorFeatureReport | null;
     browserTools?: BrowserToolsDoctorContract | null;
     browserToolsError?: string | null;
+    operation?: BrowserOperationRecord | null;
     selectorDiagnosis?:
       | {
           port: number;
@@ -181,6 +190,7 @@ export function createAuracallBrowserDoctorContract(
     identityStatus: input.identityStatus ?? null,
     featureStatus: input.featureStatus ?? null,
     runtime: {
+      operation: input.operation ?? null,
       browserTools: input.browserTools ?? null,
       browserToolsError: input.browserToolsError ?? null,
       selectorDiagnosis: input.selectorDiagnosis ?? null,
@@ -195,6 +205,7 @@ export function createAuracallBrowserFeaturesContract(
     featureStatus?: BrowserDoctorFeatureReport | null;
     browserTools?: BrowserToolsDoctorContract | null;
     browserToolsError?: string | null;
+    operation?: BrowserOperationRecord | null;
   },
   options: { generatedAt?: string } = {},
 ): AuracallBrowserFeaturesContract {
@@ -205,6 +216,7 @@ export function createAuracallBrowserFeaturesContract(
     target: input.target,
     featureStatus: input.featureStatus ?? null,
     runtime: {
+      operation: input.operation ?? null,
       browserTools: input.browserTools ?? null,
       browserToolsError: input.browserToolsError ?? null,
     },
@@ -226,6 +238,32 @@ export function resolveBrowserFeatureUrlContains(target: BrowserDoctorTarget): s
 
 export function isLoopbackBrowserHost(host: string | null | undefined): boolean {
   return host === '127.0.0.1' || host === '::1' || host === 'localhost';
+}
+
+export async function withBrowserProbeOperation<T>(
+  target: BrowserDoctorTarget,
+  localReport: Pick<BrowserDoctorReport, 'managedProfileDir'>,
+  kind: Extract<BrowserOperationKind, 'doctor' | 'features' | 'browser-tools'>,
+  callback: (operation: BrowserOperationRecord) => Promise<T>,
+): Promise<T> {
+  const dispatcher = createFileBackedBrowserOperationDispatcher({
+    lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+  });
+  const acquired = await dispatcher.acquire({
+    managedProfileDir: localReport.managedProfileDir,
+    serviceTarget: target,
+    kind,
+    operationClass: 'exclusive-probe',
+    ownerCommand: kind,
+  });
+  if (!acquired.acquired) {
+    throw new Error(formatBrowserOperationBusyResult(acquired));
+  }
+  try {
+    return await callback(acquired.operation);
+  } finally {
+    await acquired.release();
+  }
 }
 
 export async function collectBrowserFeatureRuntime(
@@ -305,6 +343,10 @@ export async function inspectBrowserDoctorState(
     launchProfile.managedProfileRoot ?? resolved.managedProfileRoot ?? null,
   );
   const managedProfileDir = managedLaunchContext.managedProfileDir;
+  const operationDispatcherKey = buildBrowserOperationKey({
+    managedProfileDir,
+    serviceTarget: target,
+  });
   const chromeProfile = managedLaunchContext.managedChromeProfile;
   const sourceCookiePath = managedLaunchContext.bootstrapCookiePath ?? null;
   const sourceProfile = inferSourceProfileFromCookiePath(sourceCookiePath);
@@ -402,6 +444,7 @@ export async function inspectBrowserDoctorState(
     prunedRegistryEntries,
     prunedRegistryEntryReasons,
     warnings,
+    operationDispatcherKey,
   };
 }
 

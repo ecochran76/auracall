@@ -8,6 +8,17 @@ Lane: P01
 - roadmap classification: maintenance-only unless a concrete reattach or
   registry-liveness mismatch blocks current behavior or the primary
   service/runner lane
+- a related but distinct CDP ownership mismatch was reproduced on 2026-04-21:
+  overlapping managed-profile operations can reuse a fixed DevTools endpoint
+  and contaminate tab/identity evidence even when registry liveness is
+  correctly classified
+- that ownership problem was intentionally split into the focused dispatcher
+  plan and is now closed:
+  - `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`
+- the selector-diagnosis drift found during that live proof is now closed:
+  - `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
+- no active browser-service reliability follow-up remains open from this
+  incident
 - this remains the live focused reliability slice under the canonical browser-service roadmap
 - the long-running browser-service roadmap is already canonical under:
   - `docs/dev/plans/0011-2026-04-14-browser-service-refactor-roadmap.md`
@@ -184,3 +195,15 @@ This track is complete enough when:
 - attach/reattach stays within the selected browser profile boundary
 - ambiguity is surfaced clearly instead of silently drift-resolved
 - focused tests and live smokes are green
+
+## Follow-on Boundary
+
+This plan owns registry liveness and attach/reattach ambiguity. It should not
+grow into CDP operation scheduling.
+
+Profile-scoped operation ownership belongs to
+`0021-2026-04-21-browser-operation-dispatcher.md`, which closed the first
+bounded goal to serialize or block managed-profile CDP operations before they
+can race on fixed ports, tab selection, login flows, or live provider probes.
+Provider selector-diagnosis drift found during that proof was closed in
+`0022-2026-04-21-provider-selector-diagnosis-hardening.md`.

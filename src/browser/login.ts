@@ -21,6 +21,7 @@ import {
   runBrowserLogin as runBrowserLoginCore,
   type BrowserLoginOptions as BrowserLoginCoreOptions,
 } from '../../packages/browser-service/src/login.js';
+import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 import type { DebugPortStrategy } from '../../packages/browser-service/src/types.js';
 
 export type LoginTarget = 'chatgpt' | 'gemini' | 'grok';
@@ -240,10 +241,14 @@ export async function runBrowserLogin(options: BrowserLoginOptions): Promise<voi
         logger: () => undefined,
       });
     },
-    debugPortStrategy,
+    debugPortStrategy: debugPortStrategy ?? 'auto',
     serviceTabLimit,
     blankTabLimit,
     collapseDisposableWindows,
+    operationDispatcher: createFileBackedBrowserOperationDispatcher({
+      lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+    }),
+    operationOwnerCommand: `login:${target}`,
     onCookiesExported: async (cookies) => {
       const auracallHome = getAuracallHomeDir();
       const scopedCookieOutput = resolveManagedProfileCookieExportPath(manualLoginProfileDir);

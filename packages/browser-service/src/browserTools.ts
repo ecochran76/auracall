@@ -10,6 +10,11 @@ import {
   type BrowserDomSearchMatch,
   type BrowserDomSearchOptions,
 } from './service/domSearch.js';
+import {
+  createFileBackedBrowserOperationDispatcher,
+  formatBrowserOperationBusyResult,
+  type BrowserOperationKind,
+} from './service/operationDispatcher.js';
 
 /** Utility type so TypeScript knows the async function constructor */
 type AsyncFunctionCtor = new (...args: string[]) => (...fnArgs: unknown[]) => Promise<unknown>;
@@ -25,6 +30,11 @@ export interface BrowserToolsPortResolverOptions {
 
 export interface BrowserToolsCliOptions {
   resolvePortOrLaunch: (options: BrowserToolsPortResolverOptions) => Promise<number>;
+  operationLockRoot?: string;
+  resolveOperationProfile?: (options: BrowserToolsPortResolverOptions) => Promise<{
+    managedProfileDir: string;
+    browserTarget: 'chatgpt' | 'gemini' | 'grok';
+  } | null>;
   argv?: string[];
   defaultChromeBin?: string;
   defaultProfileDir?: string;
@@ -1498,6 +1508,37 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     };
   };
 
+  const withManagedBrowserToolsOperation = async <T>(
+    resolverOptions: BrowserToolsPortResolverOptions,
+    callback: () => Promise<T>,
+  ): Promise<T> => {
+    if (resolverOptions.port || !options.operationLockRoot || !options.resolveOperationProfile) {
+      return callback();
+    }
+    const profile = await options.resolveOperationProfile(resolverOptions);
+    if (!profile) {
+      return callback();
+    }
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: options.operationLockRoot,
+    });
+    const acquired = await dispatcher.acquire({
+      managedProfileDir: profile.managedProfileDir,
+      serviceTarget: profile.browserTarget,
+      kind: 'browser-tools' satisfies BrowserOperationKind,
+      operationClass: 'exclusive-probe',
+      ownerCommand: 'browser-tools',
+    });
+    if (!acquired.acquired) {
+      throw new Error(formatBrowserOperationBusyResult(acquired));
+    }
+    try {
+      return await callback();
+    } finally {
+      await acquired.release();
+    }
+  };
+
   program
     .command('start')
     .description('Launch Chrome with remote debugging enabled.')
@@ -1506,8 +1547,11 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--profile-dir <path>', 'Directory for the temporary Chrome profile.')
     .option('--chrome-path <path>', 'Path to the Chrome binary.')
     .action(async (commandOptions) => {
-      const resolvedPort = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      console.log(`✓ Chrome listening on http://localhost:${resolvedPort}${commandOptions.profile ? ' (profile copied)' : ''}`);
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const resolvedPort = await options.resolvePortOrLaunch(resolverOptions);
+        console.log(`✓ Chrome listening on http://localhost:${resolvedPort}${commandOptions.profile ? ' (profile copied)' : ''}`);
+      });
     });
 
   program
@@ -1517,15 +1561,18 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const census = await collectBrowserToolsTabCensus(port, {
-        urlContains: commandOptions.urlContains as string | undefined,
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const census = await collectBrowserToolsTabCensus(port, {
+          urlContains: commandOptions.urlContains as string | undefined,
+        });
+        if (commandOptions.json) {
+          console.log(JSON.stringify(census, null, 2));
+          return;
+        }
+        printBrowserToolsTabCensus(census);
       });
-      if (commandOptions.json) {
-        console.log(JSON.stringify(census, null, 2));
-        return;
-      }
-      printBrowserToolsTabCensus(census);
     });
 
   program
@@ -1544,34 +1591,37 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--case-sensitive', 'Treat script-text tokens as case-sensitive.', false)
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const report = await collectBrowserToolsDoctorReport(port, {
-        urlContains: commandOptions.urlContains as string | undefined,
-        selectors: commandOptions.selector as string[],
-        scriptAny: commandOptions.scriptAny as string[],
-        scriptAll: commandOptions.scriptAll as string[],
-        storageAny: commandOptions.storageAny as string[],
-        storageAll: commandOptions.storageAll as string[],
-        cookieAny: commandOptions.cookieAny as string[],
-        cookieAll: commandOptions.cookieAll as string[],
-        scriptSelector: commandOptions.scriptSelector as string | undefined,
-        caseSensitive: Boolean(commandOptions.caseSensitive),
-      });
-      if (commandOptions.json) {
-        console.log(JSON.stringify(createBrowserToolsProbeContract(report), null, 2));
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const report = await collectBrowserToolsDoctorReport(port, {
+          urlContains: commandOptions.urlContains as string | undefined,
+          selectors: commandOptions.selector as string[],
+          scriptAny: commandOptions.scriptAny as string[],
+          scriptAll: commandOptions.scriptAll as string[],
+          storageAny: commandOptions.storageAny as string[],
+          storageAll: commandOptions.storageAll as string[],
+          cookieAny: commandOptions.cookieAny as string[],
+          cookieAll: commandOptions.cookieAll as string[],
+          scriptSelector: commandOptions.scriptSelector as string | undefined,
+          caseSensitive: Boolean(commandOptions.caseSensitive),
+        });
+        if (commandOptions.json) {
+          console.log(JSON.stringify(createBrowserToolsProbeContract(report), null, 2));
+          if (browserToolsReportRequiresManualClear(report)) {
+            process.exitCode = 1;
+          }
+          return;
+        }
+        if (!report.pageProbe) {
+          console.log('No selected page to probe.');
+          return;
+        }
+        printBrowserToolsPageProbe(report.pageProbe);
         if (browserToolsReportRequiresManualClear(report)) {
           process.exitCode = 1;
         }
-        return;
-      }
-      if (!report.pageProbe) {
-        console.log('No selected page to probe.');
-        return;
-      }
-      printBrowserToolsPageProbe(report.pageProbe);
-      if (browserToolsReportRequiresManualClear(report)) {
-        process.exitCode = 1;
-      }
+      });
     });
 
   program
@@ -1590,30 +1640,33 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--case-sensitive', 'Treat script-text tokens as case-sensitive.', false)
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const report = await collectBrowserToolsDoctorReport(port, {
-        urlContains: commandOptions.urlContains as string | undefined,
-        selectors: commandOptions.selector as string[],
-        scriptAny: commandOptions.scriptAny as string[],
-        scriptAll: commandOptions.scriptAll as string[],
-        storageAny: commandOptions.storageAny as string[],
-        storageAll: commandOptions.storageAll as string[],
-        cookieAny: commandOptions.cookieAny as string[],
-        cookieAll: commandOptions.cookieAll as string[],
-        scriptSelector: commandOptions.scriptSelector as string | undefined,
-        caseSensitive: Boolean(commandOptions.caseSensitive),
-      });
-      if (commandOptions.json) {
-        console.log(JSON.stringify(createBrowserToolsDoctorContract(report), null, 2));
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const report = await collectBrowserToolsDoctorReport(port, {
+          urlContains: commandOptions.urlContains as string | undefined,
+          selectors: commandOptions.selector as string[],
+          scriptAny: commandOptions.scriptAny as string[],
+          scriptAll: commandOptions.scriptAll as string[],
+          storageAny: commandOptions.storageAny as string[],
+          storageAll: commandOptions.storageAll as string[],
+          cookieAny: commandOptions.cookieAny as string[],
+          cookieAll: commandOptions.cookieAll as string[],
+          scriptSelector: commandOptions.scriptSelector as string | undefined,
+          caseSensitive: Boolean(commandOptions.caseSensitive),
+        });
+        if (commandOptions.json) {
+          console.log(JSON.stringify(createBrowserToolsDoctorContract(report), null, 2));
+          if (browserToolsReportRequiresManualClear(report)) {
+            process.exitCode = 1;
+          }
+          return;
+        }
+        printBrowserToolsDoctorReport(report);
         if (browserToolsReportRequiresManualClear(report)) {
           process.exitCode = 1;
         }
-        return;
-      }
-      printBrowserToolsDoctorReport(report);
-      if (browserToolsReportRequiresManualClear(report)) {
-        process.exitCode = 1;
-      }
+      });
     });
 
   program
@@ -1629,24 +1682,27 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--case-sensitive', 'Treat text normalization as case-sensitive.', false)
     .option('--json', 'Emit machine-readable JSON output.', false)
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
-      try {
-        const result = await collectBrowserToolsUiList(page, {
-          selector: commandOptions.selector as string | undefined,
-          visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
-          caseSensitive: Boolean(commandOptions.caseSensitive),
-          limitPerKind: commandOptions.limitPerKind as number,
-          maxScan: commandOptions.maxScan as number,
-        });
-        if (commandOptions.json) {
-          console.log(JSON.stringify(result, null, 2));
-          return;
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
+          const result = await collectBrowserToolsUiList(page, {
+            selector: commandOptions.selector as string | undefined,
+            visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
+            caseSensitive: Boolean(commandOptions.caseSensitive),
+            limitPerKind: commandOptions.limitPerKind as number,
+            maxScan: commandOptions.maxScan as number,
+          });
+          if (commandOptions.json) {
+            console.log(JSON.stringify(result, null, 2));
+            return;
+          }
+          printBrowserToolsUiList(result);
+        } finally {
+          await browser.disconnect();
         }
-        printBrowserToolsUiList(result);
-      } finally {
-        await browser.disconnect();
-      }
+      });
     });
 
   program
@@ -1677,32 +1733,35 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
         if (normalized === 'false') return false;
         throw new Error(`Expected "true" or "false", received "${value}".`);
       };
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
-      try {
-        const result = await collectBrowserToolsDomSearch(page, {
-          selector: commandOptions.selector as string | undefined,
-          text: commandOptions.text as string[],
-          ariaLabel: commandOptions.ariaLabel as string[],
-          role: commandOptions.role as string[],
-          dataTestId: commandOptions.dataTestid as string[] | undefined ?? commandOptions.dataTestId as string[] | undefined,
-          classIncludes: commandOptions.classIncludes as string[],
-          tag: commandOptions.tag as string[],
-          checked: parseBooleanOption(commandOptions.checked),
-          expanded: parseBooleanOption(commandOptions.expanded),
-          visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
-          caseSensitive: Boolean(commandOptions.caseSensitive),
-          limit: commandOptions.limit as number,
-          maxScan: commandOptions.maxScan as number,
-        });
-        if (commandOptions.json) {
-          console.log(JSON.stringify(result, null, 2));
-          return;
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
+          const result = await collectBrowserToolsDomSearch(page, {
+            selector: commandOptions.selector as string | undefined,
+            text: commandOptions.text as string[],
+            ariaLabel: commandOptions.ariaLabel as string[],
+            role: commandOptions.role as string[],
+            dataTestId: commandOptions.dataTestid as string[] | undefined ?? commandOptions.dataTestId as string[] | undefined,
+            classIncludes: commandOptions.classIncludes as string[],
+            tag: commandOptions.tag as string[],
+            checked: parseBooleanOption(commandOptions.checked),
+            expanded: parseBooleanOption(commandOptions.expanded),
+            visibleOnly: commandOptions.all ? false : Boolean(commandOptions.visibleOnly),
+            caseSensitive: Boolean(commandOptions.caseSensitive),
+            limit: commandOptions.limit as number,
+            maxScan: commandOptions.maxScan as number,
+          });
+          if (commandOptions.json) {
+            console.log(JSON.stringify(result, null, 2));
+            return;
+          }
+          printBrowserToolsDomSearch(result);
+        } finally {
+          await browser.disconnect();
         }
-        printBrowserToolsDomSearch(result);
-      } finally {
-        await browser.disconnect();
-      }
+      });
     });
 
   program
@@ -1711,25 +1770,28 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .option('--new', 'Open in a new tab.', false)
     .action(async (url: string, commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const browser = await connectBrowser(port);
-      try {
-        if (commandOptions.new) {
-          const page = await browser.newPage();
-          await page.goto(url, { waitUntil: 'domcontentloaded' });
-          console.log('✓ Opened in new tab:', url);
-        } else {
-          const pages = await browser.pages();
-          const page = pages.at(-1);
-          if (!page) {
-            throw new Error('No active tab found');
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const browser = await connectBrowser(port);
+        try {
+          if (commandOptions.new) {
+            const page = await browser.newPage();
+            await page.goto(url, { waitUntil: 'domcontentloaded' });
+            console.log('✓ Opened in new tab:', url);
+          } else {
+            const pages = await browser.pages();
+            const page = pages.at(-1);
+            if (!page) {
+              throw new Error('No active tab found');
+            }
+            await page.goto(url, { waitUntil: 'domcontentloaded' });
+            console.log('✓ Navigated current tab to:', url);
           }
-          await page.goto(url, { waitUntil: 'domcontentloaded' });
-          console.log('✓ Navigated current tab to:', url);
+        } finally {
+          await browser.disconnect();
         }
-      } finally {
-        await browser.disconnect();
-      }
+      });
     });
 
   program
@@ -1739,33 +1801,36 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--url-contains <value>', 'Prefer a tab whose URL contains this value.')
     .action(async (code: string[], commandOptions) => {
       const snippet = code.join(' ');
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
-      try {
-        const result = await page.evaluate((body) => {
-          const ASYNC_FN = Object.getPrototypeOf(async () => {}).constructor as AsyncFunctionCtor;
-          return new ASYNC_FN(`return (${body})`)();
-        }, snippet);
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
+          const result = await page.evaluate((body) => {
+            const ASYNC_FN = Object.getPrototypeOf(async () => {}).constructor as AsyncFunctionCtor;
+            return new ASYNC_FN(`return (${body})`)();
+          }, snippet);
 
-        if (Array.isArray(result)) {
-          result.forEach((entry, index) => {
-            if (index > 0) {
-              console.log('');
-            }
-            Object.entries(entry).forEach(([key, value]) => {
+          if (Array.isArray(result)) {
+            result.forEach((entry, index) => {
+              if (index > 0) {
+                console.log('');
+              }
+              Object.entries(entry).forEach(([key, value]) => {
+                console.log(`${key}: ${value}`);
+              });
+            });
+          } else if (typeof result === 'object' && result !== null) {
+            Object.entries(result).forEach(([key, value]) => {
               console.log(`${key}: ${value}`);
             });
-          });
-        } else if (typeof result === 'object' && result !== null) {
-          Object.entries(result).forEach(([key, value]) => {
-            console.log(`${key}: ${value}`);
-          });
-        } else {
-          console.log(result);
+          } else {
+            console.log(result);
+          }
+        } finally {
+          await browser.disconnect();
         }
-      } finally {
-        await browser.disconnect();
-      }
+      });
     });
 
   program
@@ -1773,19 +1838,22 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Capture the current viewport and print the temp PNG path.')
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port);
-      try {
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-        const filePath = path.join(
-          os.tmpdir(),
-          `screenshot-${timestamp}.png`,
-        ) as `${string}.png`;
-        await page.screenshot({ path: filePath });
-        console.log(filePath);
-      } finally {
-        await browser.disconnect();
-      }
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port);
+        try {
+          const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+          const filePath = path.join(
+            os.tmpdir(),
+            `screenshot-${timestamp}.png`,
+          ) as `${string}.png`;
+          await page.screenshot({ path: filePath });
+          console.log(filePath);
+        } finally {
+          await browser.disconnect();
+        }
+      });
     });
 
   program
@@ -1802,9 +1870,11 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .option('--timeout <ms>', 'Auto-cancel after N milliseconds.', (value) => Number.parseInt(value, 10))
     .action(async (messageParts: string[], commandOptions) => {
       const message = messageParts.join(' ');
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
-      try {
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port, { urlContains: commandOptions.urlContains as string | undefined });
+        try {
         const cycleValue = commandOptions.cycle;
         const normalizedCycle =
           typeof cycleValue === 'string'
@@ -2061,9 +2131,10 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
         } else {
           console.log(result);
         }
-      } finally {
-        await browser.disconnect();
-      }
+        } finally {
+          await browser.disconnect();
+        }
+      });
     });
 
   program
@@ -2071,14 +2142,17 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     .description('Dump cookies from the active tab as JSON.')
     .option('--port <number>', 'Debugger port (default: registry or spawned)', (value) => Number.parseInt(value, 10))
     .action(async (commandOptions) => {
-      const port = await options.resolvePortOrLaunch(withResolverOptions(commandOptions as Record<string, unknown>));
-      const { browser, page } = await getActivePage(port);
-      try {
-        const cookies = await page.cookies();
-        console.log(JSON.stringify(cookies, null, 2));
-      } finally {
-        await browser.disconnect();
-      }
+      const resolverOptions = withResolverOptions(commandOptions as Record<string, unknown>);
+      await withManagedBrowserToolsOperation(resolverOptions, async () => {
+        const port = await options.resolvePortOrLaunch(resolverOptions);
+        const { browser, page } = await getActivePage(port);
+        try {
+          const cookies = await page.cookies();
+          console.log(JSON.stringify(cookies, null, 2));
+        } finally {
+          await browser.disconnect();
+        }
+      });
     });
 
   program

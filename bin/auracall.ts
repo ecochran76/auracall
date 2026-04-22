@@ -146,6 +146,11 @@ import { LlmService, createLlmService } from '../src/browser/llmService/index.js
 import { resolveBrowserConfig } from '../src/browser/config.js';
 import { resolveManagedProfileDirForUserConfig } from '../src/browser/profileStore.js';
 import type { BrowserAttachment, BrowserLogger, BrowserRunOptions } from '../src/browser/types.js';
+import {
+  createFileBackedBrowserOperationDispatcher,
+  formatBrowserOperationBusyResult,
+  type BrowserOperationAcquiredResult,
+} from '../packages/browser-service/src/service/operationDispatcher.js';
 
 function collectTrimmedString(value: string, previous: string[] = []): string[] {
   const trimmed = value.trim();
@@ -3496,55 +3501,62 @@ program
       inspectBrowserDoctorIdentity,
       inspectBrowserDoctorFeatures,
       createAuracallBrowserDoctorContract,
+      withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, {
       target,
       pruneDeadRegistryEntries: Boolean(commandOptions.pruneBrowserState),
     });
-    const identityStatus = commandOptions.localOnly
-      ? null
-      : await inspectBrowserDoctorIdentity(userConfig, {
+    let operation: import('../packages/browser-service/src/service/operationDispatcher.js').BrowserOperationRecord | null = null;
+    let identityStatus: Awaited<ReturnType<typeof inspectBrowserDoctorIdentity>> | null = null;
+    let browserTools: Awaited<ReturnType<typeof collectBrowserFeatureRuntime>>['browserTools'] = null;
+    let browserToolsError: string | null = null;
+    let runtimeBlockingState: any = null;
+    let featureStatus: Awaited<ReturnType<typeof inspectBrowserDoctorFeatures>> | null = null;
+    let selectorDiagnosis: any = null;
+    let selectorDiagnosisError: string | null = null;
+
+    if (!commandOptions.localOnly) {
+      await withBrowserProbeOperation(target, localReport, 'doctor', async (activeOperation) => {
+        operation = activeOperation;
+        identityStatus = await inspectBrowserDoctorIdentity(userConfig, {
           target,
           localReport,
         });
-    let browserTools = null;
-    let browserToolsError: string | null = null;
-    if (commandOptions.json && !commandOptions.localOnly) {
-      const runtime = await collectBrowserFeatureRuntime(target, localReport);
-      browserTools = runtime.browserTools;
-      browserToolsError = runtime.browserToolsError;
-    }
-    const runtimeBlockingState = browserTools?.report?.pageProbe?.blockingState ?? null;
-    const featureStatus = commandOptions.localOnly
-      ? null
-      : await inspectBrowserDoctorFeatures(userConfig, {
+        if (commandOptions.json) {
+          const runtime = await collectBrowserFeatureRuntime(target, localReport);
+          browserTools = runtime.browserTools;
+          browserToolsError = runtime.browserToolsError;
+        }
+        runtimeBlockingState = browserTools?.report?.pageProbe?.blockingState ?? null;
+        featureStatus = await inspectBrowserDoctorFeatures(userConfig, {
           target,
           localReport,
           browserTools,
         });
 
-    if (commandOptions.json) {
-      let selectorDiagnosis = null;
-      let selectorDiagnosisError: string | null = null;
-
-      if (!commandOptions.localOnly && target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
-        try {
-          const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-          selectorDiagnosis = await client.diagnose({
-            basePath: process.cwd(),
-            saveSnapshot: Boolean(commandOptions.saveSnapshot),
-            quiet: true,
-          });
-        } catch (error) {
-          selectorDiagnosisError = error instanceof Error ? error.message : String(error);
+        if (target !== 'gemini' && !runtimeBlockingState?.requiresHuman) {
+          try {
+            const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
+            selectorDiagnosis = await client.diagnose({
+              basePath: process.cwd(),
+              saveSnapshot: Boolean(commandOptions.saveSnapshot),
+              quiet: Boolean(commandOptions.json),
+            });
+          } catch (error) {
+            selectorDiagnosisError = error instanceof Error ? error.message : String(error);
+          }
         }
-      }
+      });
+    }
 
+    if (commandOptions.json) {
       const contract = createAuracallBrowserDoctorContract({
         target,
         localReport,
         identityStatus,
         featureStatus,
+        operation,
         browserTools,
         browserToolsError,
         selectorDiagnosis,
@@ -3583,38 +3595,37 @@ program
       return;
     }
 
-    const client = await BrowserAutomationClient.fromConfig(userConfig, { target });
-    try {
-      const { report, port } = await client.diagnose({
-        basePath: process.cwd(),
-        saveSnapshot: Boolean(commandOptions.saveSnapshot),
-      });
+    if (selectorDiagnosisError) {
+      console.error(`Failed to connect or diagnose: ${selectorDiagnosisError}`);
+      process.exit(1);
+    }
 
-      console.log(`Diagnosed ${target} via port ${port}.`);
-      console.log(`\nDiagnosis for ${report.url}:`);
-      const tableData = report.checks.map((c) => ({
-        Component: c.name,
-        Status: c.matched ? '✅ PASS' : '❌ FAIL',
-        Matches: c.matchCount,
-        Selector: c.matchedSelector || c.selectors[0],
-      }));
+    if (!selectorDiagnosis) {
+      return;
+    }
+    const { report, port } = selectorDiagnosis;
 
-      if (process.stdout.isTTY) {
-        console.table(tableData);
-      } else {
-        console.log(JSON.stringify(tableData, null, 2));
-      }
+    console.log(`Diagnosed ${target} via port ${port}.`);
+    console.log(`\nDiagnosis for ${report.url}:`);
+    const tableData = report.checks.map((c: any) => ({
+      Component: c.name,
+      Status: c.matched ? '✅ PASS' : '❌ FAIL',
+      Matches: c.matchCount,
+      Selector: c.matchedSelector || c.selectors[0],
+    }));
 
-      if (report.snapshotPath) {
-        console.log(`\nSnapshot saved to: ${report.snapshotPath}`);
-      }
+    if (process.stdout.isTTY) {
+      console.table(tableData);
+    } else {
+      console.log(JSON.stringify(tableData, null, 2));
+    }
 
-      if (!report.allPassed) {
-        console.error('\nSome selectors failed to match. The UI structure may have changed.');
-        process.exit(1);
-      }
-    } catch (error) {
-      console.error(`Failed to connect or diagnose: ${error instanceof Error ? error.message : String(error)}`);
+    if (report.snapshotPath) {
+      console.log(`\nSnapshot saved to: ${report.snapshotPath}`);
+    }
+
+    if (!report.allPassed) {
+      console.error('\nSome selectors failed to match. The UI structure may have changed.');
       process.exit(1);
     }
   });
@@ -3646,19 +3657,30 @@ const featuresCommand = program
       createAuracallBrowserFeaturesContract,
       inspectBrowserDoctorState,
       inspectBrowserFeatures,
+      withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, { target });
-    const runtime = await collectBrowserFeatureRuntime(target, localReport);
-    const featureStatus = await inspectBrowserFeatures(userConfig, {
-      target,
-      localReport,
-      browserTools: runtime.browserTools,
+    let operation: import('../packages/browser-service/src/service/operationDispatcher.js').BrowserOperationRecord | null = null;
+    let runtime: Awaited<ReturnType<typeof collectBrowserFeatureRuntime>> = {
+      browserTools: null,
+      browserToolsError: null,
+    };
+    let featureStatus = null;
+    await withBrowserProbeOperation(target, localReport, 'features', async (activeOperation) => {
+      operation = activeOperation;
+      runtime = await collectBrowserFeatureRuntime(target, localReport);
+      featureStatus = await inspectBrowserFeatures(userConfig, {
+        target,
+        localReport,
+        browserTools: runtime.browserTools,
+      });
     });
 
     if (commandOptions.json) {
       const contract = createAuracallBrowserFeaturesContract({
         target,
         featureStatus,
+        operation,
         browserTools: runtime.browserTools,
         browserToolsError: runtime.browserToolsError,
       });
@@ -3707,13 +3729,23 @@ featuresCommand
       createAuracallBrowserFeaturesContract,
       inspectBrowserDoctorState,
       inspectBrowserFeatures,
+      withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, { target });
-    const runtime = await collectBrowserFeatureRuntime(target, localReport);
-    const featureStatus = await inspectBrowserFeatures(userConfig, {
-      target,
-      localReport,
-      browserTools: runtime.browserTools,
+    let operation: import('../packages/browser-service/src/service/operationDispatcher.js').BrowserOperationRecord | null = null;
+    let runtime: Awaited<ReturnType<typeof collectBrowserFeatureRuntime>> = {
+      browserTools: null,
+      browserToolsError: null,
+    };
+    let featureStatus = null;
+    await withBrowserProbeOperation(target, localReport, 'features', async (activeOperation) => {
+      operation = activeOperation;
+      runtime = await collectBrowserFeatureRuntime(target, localReport);
+      featureStatus = await inspectBrowserFeatures(userConfig, {
+        target,
+        localReport,
+        browserTools: runtime.browserTools,
+      });
     });
     const runtimeBlockingState = getRuntimeBlockingState(runtime.browserTools);
     if (runtimeBlockingState?.requiresHuman) {
@@ -3741,6 +3773,7 @@ featuresCommand
     const contract = createAuracallBrowserFeaturesContract({
       target,
       featureStatus,
+      operation,
       browserTools: runtime.browserTools,
       browserToolsError: runtime.browserToolsError,
     });
@@ -3795,13 +3828,23 @@ featuresCommand
       createAuracallBrowserFeaturesContract,
       inspectBrowserDoctorState,
       inspectBrowserFeatures,
+      withBrowserProbeOperation,
     } = await import('../src/browser/profileDoctor.js');
     const localReport = await inspectBrowserDoctorState(userConfig, { target });
-    const runtime = await collectBrowserFeatureRuntime(target, localReport);
-    const featureStatus = await inspectBrowserFeatures(userConfig, {
-      target,
-      localReport,
-      browserTools: runtime.browserTools,
+    let operation: import('../packages/browser-service/src/service/operationDispatcher.js').BrowserOperationRecord | null = null;
+    let runtime: Awaited<ReturnType<typeof collectBrowserFeatureRuntime>> = {
+      browserTools: null,
+      browserToolsError: null,
+    };
+    let featureStatus = null;
+    await withBrowserProbeOperation(target, localReport, 'features', async (activeOperation) => {
+      operation = activeOperation;
+      runtime = await collectBrowserFeatureRuntime(target, localReport);
+      featureStatus = await inspectBrowserFeatures(userConfig, {
+        target,
+        localReport,
+        browserTools: runtime.browserTools,
+      });
     });
     const runtimeBlockingState = getRuntimeBlockingState(runtime.browserTools);
     if (runtimeBlockingState?.requiresHuman) {
@@ -3829,6 +3872,7 @@ featuresCommand
     const current = createAuracallBrowserFeaturesContract({
       target,
       featureStatus,
+      operation,
       browserTools: runtime.browserTools,
       browserToolsError: runtime.browserToolsError,
     });
@@ -7111,6 +7155,26 @@ async function waitForSetupLoginConfirmation(target: 'chatgpt' | 'gemini' | 'gro
   }
 }
 
+async function acquireBrowserSetupOperation(options: {
+  target: 'chatgpt' | 'gemini' | 'grok';
+  manualLoginProfileDir: string;
+}): Promise<BrowserOperationAcquiredResult> {
+  const dispatcher = createFileBackedBrowserOperationDispatcher({
+    lockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+  });
+  const acquired = await dispatcher.acquire({
+    managedProfileDir: options.manualLoginProfileDir,
+    serviceTarget: options.target,
+    kind: 'setup',
+    operationClass: 'exclusive-human',
+    ownerCommand: 'setup',
+  });
+  if (!acquired.acquired) {
+    throw new Error(formatBrowserOperationBusyResult(acquired));
+  }
+  return acquired;
+}
+
 async function withStdoutRedirectedToStderr<T>(callback: () => Promise<T>): Promise<T> {
   const stdout = process.stdout as NodeJS.WriteStream & { write: typeof process.stdout.write };
   const originalWrite = stdout.write.bind(process.stdout);
@@ -7176,6 +7240,11 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
     fallbackTarget: userConfig.browser?.target ?? 'chatgpt',
   });
   const launchOptions = resolveBrowserLoginLaunchOptions(commandOptions, userConfig, target);
+  const setupOperation = await acquireBrowserSetupOperation({
+    target,
+    manualLoginProfileDir: launchOptions.manualLoginProfileDir,
+  });
+  try {
   const {
     inspectBrowserDoctorState,
     inspectBrowserDoctorIdentity,
@@ -7438,6 +7507,9 @@ async function runBrowserSetupCommand(commandOptions: SetupCommandOptions): Prom
 
   if (setupFailed) {
     process.exitCode = 1;
+  }
+  } finally {
+    await setupOperation.release();
   }
 }
 

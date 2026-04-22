@@ -602,6 +602,7 @@ describe('profileDoctor', () => {
           prunedRegistryEntries: 0,
           prunedRegistryEntryReasons: {},
           warnings: [],
+          operationDispatcherKey: 'managed-profile:/tmp/managed/default/grok::service:grok',
         },
       },
     );
@@ -651,6 +652,7 @@ describe('profileDoctor', () => {
           prunedRegistryEntries: 0,
           prunedRegistryEntryReasons: {},
           warnings: [],
+          operationDispatcherKey: 'managed-profile:/tmp/managed/default/grok::service:grok',
         },
       },
     );
@@ -821,8 +823,15 @@ describe('profileDoctor', () => {
           report: {
             url: 'https://grok.com/',
             providerId: 'grok',
+            surface: {
+              kind: 'non-conversation',
+              reason: 'no-conversation-route',
+              requiredChecks: [],
+              deferredChecks: [],
+            },
             checks: [],
             allPassed: true,
+            failedRequiredChecks: [],
           },
         },
       },
@@ -883,6 +892,7 @@ describe('profileDoctor', () => {
         reason: null,
       },
       runtime: {
+        operation: null,
         browserTools: {
           contract: 'browser-tools.doctor-report',
           version: 1,
@@ -917,8 +927,15 @@ describe('profileDoctor', () => {
           report: {
             url: 'https://grok.com/',
             providerId: 'grok',
+            surface: {
+              kind: 'non-conversation',
+              reason: 'no-conversation-route',
+              requiredChecks: [],
+              deferredChecks: [],
+            },
             checks: [],
             allPassed: true,
+            failedRequiredChecks: [],
           },
         },
         selectorDiagnosisError: null,
@@ -993,6 +1010,7 @@ describe('profileDoctor', () => {
         reason: null,
       },
       runtime: {
+        operation: null,
         browserTools: {
           contract: 'browser-tools.doctor-report',
           version: 1,

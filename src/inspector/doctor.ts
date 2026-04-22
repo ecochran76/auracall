@@ -10,14 +10,77 @@ export interface SelectorCheckResult {
   matched: boolean;
   matchCount: number;
   matchedSelector?: string;
+  requirement: 'required' | 'deferred';
+  deferredReason?: string;
+}
+
+export interface DiagnosisSurface {
+  kind: 'conversation' | 'non-conversation';
+  reason: string;
+  requiredChecks: string[];
+  deferredChecks: string[];
 }
 
 export interface DiagnosisReport {
   url: string;
   providerId: string;
+  surface: DiagnosisSurface;
   checks: SelectorCheckResult[];
   allPassed: boolean;
+  failedRequiredChecks: string[];
   snapshotPath?: string;
+}
+
+const CONVERSATION_OUTPUT_CHECKS = new Set(['assistantBubble', 'assistantRole', 'copyButton']);
+const PROMPT_DEPENDENT_CHECKS = new Set(['sendButton']);
+
+function classifyDiagnosisSurface(url: string, providerId: BrowserProviderConfig['id']): DiagnosisSurface {
+  let parsed: URL | null = null;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return {
+      kind: 'non-conversation',
+      reason: 'unparseable-url',
+      requiredChecks: [],
+      deferredChecks: [],
+    };
+  }
+
+  const path = parsed.pathname;
+  const isConversation =
+    path.includes('/c/') ||
+    (providerId === 'grok' && Boolean(parsed.searchParams.get('chat'))) ||
+    (providerId === 'gemini' && /^\/app\/[^/]+/.test(path));
+
+  return {
+    kind: isConversation ? 'conversation' : 'non-conversation',
+    reason: isConversation ? 'conversation-route' : 'no-conversation-route',
+    requiredChecks: [],
+    deferredChecks: [],
+  };
+}
+
+function classifySelectorRequirement(
+  surface: DiagnosisSurface,
+  checkName: string,
+): Pick<SelectorCheckResult, 'requirement' | 'deferredReason'> {
+  if (surface.kind === 'conversation') {
+    return { requirement: 'required' };
+  }
+  if (CONVERSATION_OUTPUT_CHECKS.has(checkName)) {
+    return {
+      requirement: 'deferred',
+      deferredReason: 'conversation-output-not-expected-on-current-surface',
+    };
+  }
+  if (PROMPT_DEPENDENT_CHECKS.has(checkName)) {
+    return {
+      requirement: 'deferred',
+      deferredReason: 'prompt-dependent-control-not-expected-before-input',
+    };
+  }
+  return { requirement: 'required' };
 }
 
 export async function diagnoseProvider(
@@ -35,7 +98,8 @@ export async function diagnoseProvider(
   const url = (urlResult.value as string) || 'unknown';
 
   const checks: SelectorCheckResult[] = [];
-  
+  const surface = classifyDiagnosisSurface(url, config.id);
+
   // Check each selector group (input, sendButton, etc.)
   for (const [key, selectors] of Object.entries(config.selectors)) {
     // We want to know if *any* selector in the list matches.
@@ -46,7 +110,7 @@ export async function diagnoseProvider(
     for (const selector of selectors) {
       const { result } = await client.Runtime.evaluate({
         expression: `document.querySelectorAll(${JSON.stringify(selector)}).length`,
-        returnByValue: true
+        returnByValue: true,
       });
       const count = (result.value as number) || 0;
       if (count > 0) {
@@ -55,16 +119,23 @@ export async function diagnoseProvider(
       }
     }
 
+    const requirement = classifySelectorRequirement(surface, key);
     checks.push({
       name: key,
       selectors,
       matched: groupMatchCount > 0,
       matchCount: groupMatchCount,
-      matchedSelector: bestSelector
+      matchedSelector: bestSelector,
+      ...requirement,
     });
   }
 
-  const allPassed = checks.every(c => c.matched);
+  surface.requiredChecks = checks.filter((check) => check.requirement === 'required').map((check) => check.name);
+  surface.deferredChecks = checks.filter((check) => check.requirement === 'deferred').map((check) => check.name);
+  const failedRequiredChecks = checks
+    .filter((check) => check.requirement === 'required' && !check.matched)
+    .map((check) => check.name);
+  const allPassed = failedRequiredChecks.length === 0;
   let snapshotPath: string | undefined;
 
   // If failures, capture a semantic snapshot
@@ -94,8 +165,10 @@ export async function diagnoseProvider(
   return {
     url,
     providerId: config.id,
+    surface,
     checks,
     allPassed,
-    snapshotPath
+    failedRequiredChecks,
+    snapshotPath,
   };
 }

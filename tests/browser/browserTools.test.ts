@@ -1,4 +1,7 @@
 import { describe, expect, test, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import {
   BROWSER_TOOLS_CONTRACT_VERSION,
   browserToolsReportRequiresManualClear,
@@ -14,6 +17,7 @@ import {
   summarizeBrowserToolsDoctorReport,
   summarizeBrowserToolsPageProbe,
 } from '../../packages/browser-service/src/browserTools.js';
+import { createFileBackedBrowserOperationDispatcher } from '../../packages/browser-service/src/service/operationDispatcher.js';
 
 describe('selectBrowserToolsPageIndex', () => {
   test('prefers explicit urlContains match over focused tab', () => {
@@ -793,6 +797,45 @@ describe('selectBrowserToolsPageIndex', () => {
         chromePath: undefined,
       }),
     );
+  });
+
+  test('browser-tools managed profile commands refuse an active dispatcher lock', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'browser-tools-operation-'));
+    const managedProfileDir = path.join(tempRoot, 'browser-profiles', 'default', 'grok');
+    const operationLockRoot = path.join(tempRoot, 'browser-operations');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: operationLockRoot,
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      managedProfileDir,
+      serviceTarget: 'grok',
+      kind: 'browser-execution',
+      operationClass: 'exclusive-mutating',
+      ownerPid: process.pid,
+    });
+    const resolvePortOrLaunch = vi.fn(async () => 45013);
+    const program = createBrowserToolsProgram({
+      resolvePortOrLaunch,
+      operationLockRoot,
+      resolveOperationProfile: async () => ({
+        managedProfileDir,
+        browserTarget: 'grok',
+      }),
+      argv: ['node', 'browser-tools', '--auracall-profile', 'default', '--browser-target', 'grok', 'start'],
+    });
+
+    try {
+      await expect(
+        program.parseAsync(['node', 'browser-tools', '--auracall-profile', 'default', '--browser-target', 'grok', 'start']),
+      ).rejects.toThrow(/Browser operation busy/);
+      expect(resolvePortOrLaunch).not.toHaveBeenCalled();
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
   });
 
   test('browser-tools search forwards AuraCall runtime profile and browser target to the resolver', async () => {

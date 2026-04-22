@@ -61,6 +61,7 @@ describe('Gemini browser login', () => {
       expect.objectContaining({
         loginLabel: 'gemini',
         exportCookies: true,
+        debugPortStrategy: 'auto',
         cookieExport: expect.objectContaining({
           requiredCookies: ['__Secure-1PSID', '__Secure-1PSIDTS'],
           signedOutProbe: expect.objectContaining({

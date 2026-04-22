@@ -7,6 +7,14 @@ Lane: P01
 
 - roadmap classification: maintenance-only unless a concrete browser-service
   substrate mismatch blocks current behavior or the primary service/runner lane
+- a concrete substrate mismatch was closed on 2026-04-21:
+  `docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`
+  now serializes managed-profile CDP ownership and has serial live proof for
+  default Grok/ChatGPT/Gemini profile separation
+- the selector-diagnosis drift reproduced during that live smoke is now closed:
+  - `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
+- no active browser-service reliability exception remains open unless a new
+  concrete mismatch is reproduced
 - this roadmap is still the live long-running browser-service architecture track referenced from the main roadmap
 - the browser-profile family subtrack is now canonical under:
   - `docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md`
@@ -59,6 +67,30 @@ Status: complete (CLI list/resolve flows now use `llmService`; model picker fall
 - Stabilize the browser-service public API and documentation.
 - Move remaining generic helpers out of Oracle into browser-service.
 - Add unit tests for browser-service core utilities.
+
+### Phase 7: Profile-scoped operation dispatch
+
+Status: closed through
+`docs/dev/plans/0021-2026-04-21-browser-operation-dispatcher.md`.
+
+- Route managed-profile CDP operations through one dispatcher key per managed
+  browser profile/service.
+- Serialize or explicitly block operations that would otherwise race on tab
+  selection, navigation, login, or live probing.
+- Treat login/human-verification flows as exclusive operations.
+- Keep this below the AuraCall runtime service/runner layer; do not turn it
+  into a broad multi-runner scheduler in this phase.
+
+### Phase 8: Provider selector diagnosis hardening
+
+Status: closed through
+`docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`.
+
+- Separate account/profile health from conversation-output readiness in
+  doctor selector diagnosis.
+- Treat healthy Grok and ChatGPT home/new-chat surfaces as valid doctor
+  outcomes when no assistant turn is expected.
+- Keep blocking-state detection and conversation-surface checks strict.
 
 ## Deliverables
 - `browserService` base class + supporting utilities.

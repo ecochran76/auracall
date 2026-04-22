@@ -10,6 +10,7 @@ export * from './service/profileDiscovery.js';
 export * from './service/portResolution.js';
 export * from './service/browserService.js';
 export * from './service/stateRegistry.js';
+export * from './service/operationDispatcher.js';
 export * from './service/instanceScanner.js';
 export * from './service/types.js';
 export * from './service/selectors.js';

@@ -94,8 +94,29 @@ async function resolvePortOrLaunch(options: BrowserToolsPortResolverOptions): Pr
   return chrome.port;
 }
 
+async function resolveOperationProfile(options: BrowserToolsPortResolverOptions): Promise<{
+  managedProfileDir: string;
+  browserTarget: 'chatgpt' | 'gemini' | 'grok';
+} | null> {
+  if (options.port) {
+    return null;
+  }
+  const resolvedConfig = await resolveConfig({
+    profile: options.auracallProfile,
+    browserTarget: options.browserTarget,
+  });
+  const browserTarget = (resolvedConfig.browser.target ?? options.browserTarget ?? 'chatgpt') as 'chatgpt' | 'gemini' | 'grok';
+  const managedProfileDir = resolveManagedProfileDirForUserConfig(
+    resolvedConfig.browser ? { ...resolvedConfig, browser: { ...resolvedConfig.browser, target: browserTarget } } : { ...resolvedConfig, browser: { target: browserTarget } },
+    browserTarget,
+  );
+  return { managedProfileDir, browserTarget };
+}
+
 await runBrowserToolsCli({
   resolvePortOrLaunch,
+  operationLockRoot: path.join(getAuracallHomeDir(), 'browser-operations'),
+  resolveOperationProfile,
   defaultChromeBin: DEFAULT_CHROME_BIN,
   defaultProfileDir: DEFAULT_PROFILE_DIR,
 });
