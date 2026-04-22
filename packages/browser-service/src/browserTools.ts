@@ -1537,22 +1537,29 @@ export function createBrowserToolsProgram(options: BrowserToolsCliOptions): Comm
     resolverOptions: BrowserToolsPortResolverOptions,
     callback: () => Promise<T>,
   ): Promise<T> => {
-    if (resolverOptions.port || !options.operationLockRoot || !options.resolveOperationProfile) {
+    if (!options.operationLockRoot) {
       return callback();
     }
-    const profile = await options.resolveOperationProfile(resolverOptions);
-    if (!profile) {
+    const profile = options.resolveOperationProfile
+      ? await options.resolveOperationProfile(resolverOptions)
+      : null;
+    const rawPort = resolverOptions.port && Number.isFinite(resolverOptions.port) && resolverOptions.port > 0
+      ? resolverOptions.port
+      : null;
+    if (!profile && !rawPort) {
       return callback();
     }
     const dispatcher = createFileBackedBrowserOperationDispatcher({
       lockRoot: options.operationLockRoot,
     });
     const acquired = await dispatcher.acquire({
-      managedProfileDir: profile.managedProfileDir,
-      serviceTarget: profile.browserTarget,
+      managedProfileDir: profile?.managedProfileDir,
+      serviceTarget: profile?.browserTarget,
+      rawDevTools: profile || !rawPort ? undefined : { host: '127.0.0.1', port: rawPort },
       kind: 'browser-tools' satisfies BrowserOperationKind,
       operationClass: 'exclusive-probe',
       ownerCommand: 'browser-tools',
+      devTools: rawPort ? { host: '127.0.0.1', port: rawPort } : undefined,
     });
     if (!acquired.acquired) {
       throw new Error(formatBrowserOperationBusyResult(acquired));

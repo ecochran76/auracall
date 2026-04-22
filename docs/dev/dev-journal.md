@@ -19372,3 +19372,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   routed through a managed browser-service surface.
 - Validation:
   - `pnpm vitest run tests/browser/browserTools.test.ts`
+
+## 2026-04-21 - Raw DevTools dispatcher fencing
+
+- Opened and closed
+  `docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md`.
+- Tightened browser-service ownership for explicit DevTools-port diagnostics:
+  - dispatcher keys now support raw endpoint locks such as
+    `devtools:127.0.0.1:45013`
+  - operation records preserve optional `rawDevTools` endpoint metadata
+  - `browser-tools --port <port>` acquires a port-scoped dispatcher lock before
+    resolving or connecting
+  - AuraCall-managed browser-tools commands still prefer the managed browser
+    profile key when profile/target context is available
+- Added regression coverage for raw endpoint key construction, raw endpoint
+  contention, and browser-tools refusing an active raw endpoint lock.
+- Remaining follow-up: legacy direct-CDP verification scripts under `scripts/`
+  are still unsafe/debug-only until routed through browser-service tooling or
+  fenced behind an explicit guard.
+- Validation:
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`

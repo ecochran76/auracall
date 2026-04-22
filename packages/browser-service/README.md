@@ -139,6 +139,10 @@ Inside Aura-Call, this is exposed through the thin compatibility wrapper:
 
 That wrapper adds Aura-Call-specific runtime-profile and managed-browser-profile
 resolution, but the generic DOM/page inspection behavior is package-owned.
+When an operation lock root is configured, `browser-tools` acquires dispatcher
+ownership for both managed browser profile commands and explicit raw
+DevTools-port commands. Port-only diagnostics use a raw endpoint key such as
+`devtools:127.0.0.1:45013`.
 
 ## Current anti-bot boundary
 

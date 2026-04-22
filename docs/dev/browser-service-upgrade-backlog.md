@@ -43,6 +43,10 @@ and concrete:
   ownership. Treat those as unsafe/debug-only until a follow-up slice either
   routes them through a managed browser-service command surface or fences them
   behind an explicit raw-CDP escape hatch.
+- Raw DevTools-port diagnostics through `browser-tools --port <port>` are now
+  fenced by the browser operation dispatcher with port-scoped keys. The
+  remaining bypass class is legacy direct-CDP verification scripts under
+  `scripts/`, not the normal browser-tools command surface.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

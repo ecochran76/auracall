@@ -18,6 +18,14 @@ describe("operationDispatcher (package)", () => {
 		expect(key).toBe(`managed-profile:${path.resolve("./.tmp/Profile")}::service:grok`);
 	});
 
+	test("builds stable raw DevTools endpoint operation keys", () => {
+		const key = buildBrowserOperationKey({
+			rawDevTools: { host: " LOCALHOST ", port: 45013 },
+		});
+
+		expect(key).toBe("devtools:localhost:45013");
+	});
+
 	test("serializes conflicting in-process operations for the same key", async () => {
 		const dispatcher = createBrowserOperationDispatcher({
 			isOwnerAlive: () => true,
@@ -138,6 +146,41 @@ describe("operationDispatcher (package)", () => {
 			}
 		} finally {
 			await rm(dir, { recursive: true, force: true });
+		}
+	});
+
+	test("serializes raw DevTools endpoint operations", async () => {
+		const dispatcher = createBrowserOperationDispatcher({
+			isOwnerAlive: () => true,
+		});
+
+		const first = await dispatcher.acquire({
+			rawDevTools: { host: "127.0.0.1", port: 45013 },
+			kind: "browser-tools",
+			operationClass: "exclusive-probe",
+			ownerPid: 300,
+			devTools: { host: "127.0.0.1", port: 45013 },
+		});
+		expect(first.acquired).toBe(true);
+
+		const second = await dispatcher.acquire({
+			rawDevTools: { host: "127.0.0.1", port: 45013 },
+			kind: "browser-execution",
+			operationClass: "exclusive-mutating",
+			ownerPid: 301,
+		});
+		expect(second.acquired).toBe(false);
+		if (!second.acquired) {
+			expect(second.key).toBe("devtools:127.0.0.1:45013");
+			expect(second.blockedBy).toMatchObject({
+				kind: "browser-tools",
+				serviceTarget: "raw-devtools",
+				rawDevTools: { host: "127.0.0.1", port: 45013 },
+			});
+		}
+
+		if (first.acquired) {
+			await first.release();
 		}
 	});
 });

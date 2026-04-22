@@ -1159,3 +1159,27 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - runner topology, scheduler authority, local claim, and local-owned drain
   - HTTP team-run background-drain parity
   - roadmap/runbook/journal/fixes-log reconciliation
+
+## Turn 46 | 2026-04-21
+
+- Closed implementation plan:
+  `docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md`
+- Goal: remove the normal raw DevTools port bypass from browser-service dev
+  tooling.
+- Change:
+  - operation dispatcher keys now support raw DevTools endpoints such as
+    `devtools:127.0.0.1:45013`
+  - browser operation records preserve optional `rawDevTools` endpoint metadata
+  - `browser-tools --port <port>` now acquires a port-scoped dispatcher lock
+    before resolving or connecting to the endpoint
+  - AuraCall-managed browser-tools commands still prefer the managed browser
+    profile dispatcher key when profile/target context is available
+- Remaining follow-up:
+  - legacy direct-CDP verification scripts under `scripts/` remain
+    unsafe/debug-only until routed through browser-service tooling or fenced
+    behind an explicit guard
+- Verification target:
+  - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserTools.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 39`
+  - `git diff --check`

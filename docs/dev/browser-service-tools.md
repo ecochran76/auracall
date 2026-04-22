@@ -380,6 +380,9 @@ Current active extraction plan:
 
 - `pnpm tsx scripts/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
   - Shows the live tab census for one DevTools browser instance.
+  - Explicit `--port` commands acquire a port-scoped browser operation
+    dispatcher lock; they are no longer a lock-free bypass around
+    browser-service ownership.
   - Includes the tab that `browser-tools` would select and why (`url-contains`,
     `focused`, `non-internal-page`, `last-page`).
   - Reports generic manual-clear blocking states, including hidden

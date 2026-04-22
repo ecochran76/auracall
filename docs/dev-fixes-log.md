@@ -13671,3 +13671,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   Gemini app tab looks healthy. `browser-tools` tab census entries should carry
   generic blocking-state classification, and manual-clear decisions should fail
   when any census tab requires human clearance.
+- 2026-04-21: Do not leave explicit `browser-tools --port` as a lock-free
+  browser-service bypass. In this repo, raw DevTools endpoint diagnostics still
+  select tabs, inspect DOM, inject scripts, and can mutate/focus shared browser
+  state. Give the operation dispatcher a raw endpoint key such as
+  `devtools:127.0.0.1:45013`, and acquire that key before port-only
+  browser-tools commands connect.

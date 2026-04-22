@@ -133,6 +133,14 @@ Current State:
     reproduced
   - next action is integration hygiene: broaden validation, inspect the
     accumulated dirty worktree by lane, and prepare a review/commit boundary
+- raw DevTools dispatcher fencing is closed in
+  [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md)
+  - `browser-tools --port <port>` now acquires a port-scoped dispatcher lock
+    instead of bypassing browser-service ownership
+  - managed-profile browser-tools commands still prefer the managed browser
+    profile dispatcher key when profile/target context is available
+  - legacy direct-CDP verification scripts remain unsafe/debug-only follow-up
+    work, not a normal browser access path
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 

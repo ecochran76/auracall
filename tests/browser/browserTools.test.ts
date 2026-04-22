@@ -923,6 +923,41 @@ describe('selectBrowserToolsPageIndex', () => {
     }
   });
 
+  test('browser-tools explicit port commands refuse an active raw DevTools lock', async () => {
+    const tempRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'browser-tools-raw-operation-'));
+    const operationLockRoot = path.join(tempRoot, 'browser-operations');
+    const dispatcher = createFileBackedBrowserOperationDispatcher({
+      lockRoot: operationLockRoot,
+      isOwnerAlive: () => true,
+    });
+    const active = await dispatcher.acquire({
+      rawDevTools: { host: '127.0.0.1', port: 45013 },
+      kind: 'browser-execution',
+      operationClass: 'exclusive-mutating',
+      ownerPid: process.pid,
+      devTools: { host: '127.0.0.1', port: 45013 },
+    });
+    const resolvePortOrLaunch = vi.fn(async () => 45013);
+    const program = createBrowserToolsProgram({
+      resolvePortOrLaunch,
+      operationLockRoot,
+      resolveOperationProfile: async () => null,
+      argv: ['node', 'browser-tools', 'tabs', '--port', '45013'],
+    });
+
+    try {
+      await expect(
+        program.parseAsync(['node', 'browser-tools', 'tabs', '--port', '45013']),
+      ).rejects.toThrow(/Browser operation busy/);
+      expect(resolvePortOrLaunch).not.toHaveBeenCalled();
+    } finally {
+      if (active.acquired) {
+        await active.release();
+      }
+      await fs.rm(tempRoot, { recursive: true, force: true });
+    }
+  });
+
   test('browser-tools search forwards AuraCall runtime profile and browser target to the resolver', async () => {
     const resolvePortOrLaunch = vi.fn(async () => 45013);
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);

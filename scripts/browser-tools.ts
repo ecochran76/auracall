@@ -98,7 +98,7 @@ async function resolveOperationProfile(options: BrowserToolsPortResolverOptions)
   managedProfileDir: string;
   browserTarget: 'chatgpt' | 'gemini' | 'grok';
 } | null> {
-  if (options.port) {
+  if (options.port && !options.auracallProfile && !options.browserTarget) {
     return null;
   }
   const resolvedConfig = await resolveConfig({

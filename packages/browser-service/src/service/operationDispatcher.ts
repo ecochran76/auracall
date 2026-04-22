@@ -19,8 +19,9 @@ export type BrowserOperationKind =
   | 'unknown';
 
 export interface BrowserOperationKeyInput {
-  managedProfileDir: string;
-  serviceTarget: string;
+  managedProfileDir?: string;
+  serviceTarget?: string;
+  rawDevTools?: BrowserOperationDevTools;
 }
 
 export interface BrowserOperationDevTools {
@@ -85,14 +86,28 @@ const BUSY_RECOVERY =
   'Wait for the active browser operation to finish, or close the stale browser/service process before retrying.';
 
 export function buildBrowserOperationKey(input: BrowserOperationKeyInput): string {
-  const managedProfileDir = path.resolve(input.managedProfileDir);
-  const serviceTarget = normalizeServiceTarget(input.serviceTarget);
+  if (input.managedProfileDir) {
+    const managedProfileDir = path.resolve(input.managedProfileDir);
+    const serviceTarget = normalizeServiceTarget(input.serviceTarget ?? 'unknown');
+    return `managed-profile:${managedProfileDir}::service:${serviceTarget}`;
+  }
+  if (input.rawDevTools?.port) {
+    const host = normalizeDevToolsHost(input.rawDevTools.host);
+    return `devtools:${host}:${input.rawDevTools.port}`;
+  }
+  const serviceTarget = normalizeServiceTarget(input.serviceTarget ?? 'unknown');
+  const managedProfileDir = path.resolve('unknown');
   return `managed-profile:${managedProfileDir}::service:${serviceTarget}`;
 }
 
 export function normalizeServiceTarget(serviceTarget: string): string {
   const normalized = serviceTarget.trim().toLowerCase();
   return normalized || 'unknown';
+}
+
+export function normalizeDevToolsHost(host: string | null | undefined): string {
+  const normalized = String(host ?? '').trim().toLowerCase();
+  return normalized || '127.0.0.1';
 }
 
 export function createBrowserOperationDispatcher(
@@ -263,8 +278,9 @@ function buildOperationRecord(
     key,
     kind: input.kind,
     operationClass: input.operationClass,
-    managedProfileDir: path.resolve(input.managedProfileDir),
-    serviceTarget: normalizeServiceTarget(input.serviceTarget),
+    managedProfileDir: input.managedProfileDir ? path.resolve(input.managedProfileDir) : undefined,
+    serviceTarget: normalizeServiceTarget(input.serviceTarget ?? (input.rawDevTools ? 'raw-devtools' : 'unknown')),
+    rawDevTools: input.rawDevTools,
     ownerPid: input.ownerPid ?? process.pid,
     ownerCommand: input.ownerCommand,
     startedAt: timestamp,
