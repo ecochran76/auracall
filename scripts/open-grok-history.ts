@@ -1,3 +1,5 @@
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import CDP from 'chrome-remote-interface';
 import type { Client } from 'chrome-remote-interface';
 

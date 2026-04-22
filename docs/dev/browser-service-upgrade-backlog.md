@@ -47,6 +47,10 @@ and concrete:
   fenced by the browser operation dispatcher with port-scoped keys. The
   remaining bypass class is legacy direct-CDP verification scripts under
   `scripts/`, not the normal browser-tools command surface.
+- Legacy direct-CDP TypeScript scripts under `scripts/` are now guarded by
+  `scripts/raw-devtools-guard.ts`. They remain usable for development with the
+  explicit escape hatches `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`, but
+  they are no longer silent browser-service bypasses.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

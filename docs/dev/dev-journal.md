@@ -19393,3 +19393,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser-service/operationDispatcher.test.ts tests/browser/browserTools.test.ts`
   - `pnpm run check`
+
+## 2026-04-22 - Direct CDP script guard
+
+- Opened and closed
+  `docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md`.
+- Added `scripts/raw-devtools-guard.ts` with two explicit escape hatches:
+  - `--allow-raw-cdp`
+  - `AURACALL_ALLOW_RAW_CDP=1`
+- Guarded all TypeScript scripts under `scripts/` that directly import
+  `chrome-remote-interface` or call `puppeteer.connect(...)`.
+- The guard consumes `--allow-raw-cdp` before script-specific positional
+  parsing, so development scripts keep their existing argument shapes.
+- Added unit coverage for flag consumption, env opt-in, and the default refusal
+  message.
+- Validation:
+  - `pnpm vitest run tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm run check`
+  - raw script refusal smoke:
+    `pnpm tsx scripts/test-remote-chrome.ts 127.0.0.1 1`
+  - source scan confirmed no direct-CDP TypeScript script under `scripts/`
+    lacks the guard import
+  - `pnpm run plans:audit -- --keep 40`
+  - `git diff --check`

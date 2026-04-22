@@ -389,6 +389,15 @@ Current active extraction plan:
     `google.com/sorry` tabs, at census level.
   - Use this before ad hoc `eval` when a run might be targeting the wrong tab.
 
+- Legacy direct-CDP scripts under `scripts/verify-*`, `scripts/inspector.ts`,
+  `scripts/open-grok-history.ts`, and similar development helpers are guarded
+  by default.
+  - Prefer `scripts/browser-tools.ts --port <port> ...` for normal diagnostics.
+  - When a legacy script is genuinely needed, pass `--allow-raw-cdp` or set
+    `AURACALL_ALLOW_RAW_CDP=1`.
+  - The guard consumes `--allow-raw-cdp` before the script parses positional
+    arguments.
+
 - `pnpm tsx scripts/browser-tools.ts probe --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--json]`
   - Collects structured generic probes from the selected page.
   - Reports document state, visible selector matches, script-text token presence,

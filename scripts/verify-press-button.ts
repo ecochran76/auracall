@@ -1,3 +1,5 @@
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import CDP from 'chrome-remote-interface';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 import { pressButton } from '../packages/browser-service/src/service/ui.js';

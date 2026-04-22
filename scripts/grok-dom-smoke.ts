@@ -1,4 +1,6 @@
 #!/usr/bin/env tsx
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import puppeteer from 'puppeteer-core';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 

@@ -13677,3 +13677,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   state. Give the operation dispatcher a raw endpoint key such as
   `devtools:127.0.0.1:45013`, and acquire that key before port-only
   browser-tools commands connect.
+- 2026-04-22: Keep legacy direct-CDP development scripts usable, but make the
+  bypass explicit. In this repo, `scripts/verify-*`, `scripts/inspector.ts`,
+  and similar helpers are useful for debugging, but direct
+  `chrome-remote-interface` or `puppeteer.connect(...)` use should not happen
+  accidentally. Guard those scripts with `scripts/raw-devtools-guard.ts` and
+  require either `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`; consume the
+  flag before positional argument parsing.

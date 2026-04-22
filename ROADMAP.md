@@ -139,8 +139,14 @@ Current State:
     instead of bypassing browser-service ownership
   - managed-profile browser-tools commands still prefer the managed browser
     profile dispatcher key when profile/target context is available
-  - legacy direct-CDP verification scripts remain unsafe/debug-only follow-up
-    work, not a normal browser access path
+  - legacy direct-CDP verification scripts remained follow-up work after this
+    slice
+- direct CDP script guarding is closed in
+  [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md)
+  - legacy direct-CDP scripts under `scripts/` now require
+    `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`
+  - the guard keeps those scripts usable for development while making raw CDP
+    an explicit escape hatch instead of an accidental browser-service bypass
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 

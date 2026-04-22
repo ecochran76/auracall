@@ -49,9 +49,8 @@ Closed: 2026-04-21
   when `--auracall-profile` or `--browser-target` gives enough context, and
   falls back to a raw endpoint key for plain port-only diagnostics.
 - Remaining direct-CDP scripts under `scripts/` were not rewritten in this
-  slice; treat them as legacy unsafe/debug-only paths until a follow-up ports
-  them to the browser-service command surface or fences them behind an explicit
-  raw-CDP guard.
+  slice; follow-up Plan 0040 fences them behind an explicit raw-CDP guard while
+  preserving development escape hatches.
 
 ## Validation
 

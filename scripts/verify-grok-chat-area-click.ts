@@ -1,3 +1,5 @@
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import CDP from 'chrome-remote-interface';
 import { resolveScriptBrowserTarget } from './browser-target.js';
 import { clickChatArea } from '../src/browser/providers/grokAdapter.js';

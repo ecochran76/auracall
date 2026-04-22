@@ -1,4 +1,6 @@
 #!/usr/bin/env npx tsx
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 /**
  * POC: Test connecting to remote Chrome instance
  *

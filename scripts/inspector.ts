@@ -1,3 +1,5 @@
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import { CRAWLER_SCRIPT } from '../src/inspector/crawler.js';
 import { highlightSelector } from '../src/inspector/highlight.js';
 import CDP from 'chrome-remote-interface';

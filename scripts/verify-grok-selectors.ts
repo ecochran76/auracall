@@ -1,3 +1,5 @@
+import { enforceRawDevToolsEscapeHatchForCli } from './raw-devtools-guard.js';
+enforceRawDevToolsEscapeHatchForCli();
 import CDP from 'chrome-remote-interface';
 import { resolveConfig } from '../src/schema/resolver.js';
 import { createLlmService } from '../src/browser/llmService/index.js';

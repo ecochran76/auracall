@@ -143,6 +143,9 @@ When an operation lock root is configured, `browser-tools` acquires dispatcher
 ownership for both managed browser profile commands and explicit raw
 DevTools-port commands. Port-only diagnostics use a raw endpoint key such as
 `devtools:127.0.0.1:45013`.
+Legacy direct-CDP development scripts in Aura-Call are guarded separately and
+require an explicit `--allow-raw-cdp` flag or `AURACALL_ALLOW_RAW_CDP=1` escape
+hatch.
 
 ## Current anti-bot boundary
 

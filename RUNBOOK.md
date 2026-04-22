@@ -1183,3 +1183,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 39`
   - `git diff --check`
+
+## Turn 47 | 2026-04-22
+
+- Closed implementation plan:
+  `docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md`
+- Goal: fence legacy direct-CDP development scripts while preserving explicit
+  escape hatches for debugging.
+- Change:
+  - added `scripts/raw-devtools-guard.ts`
+  - guarded all TypeScript scripts that directly import
+    `chrome-remote-interface` or call `puppeteer.connect(...)`
+  - scripts now require either `--allow-raw-cdp` or
+    `AURACALL_ALLOW_RAW_CDP=1` before making raw CDP connections
+  - the flag is consumed before positional argument parsing so existing script
+    arguments remain stable
+- Verification target:
+  - `pnpm vitest run tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 40`
+  - `git diff --check`
