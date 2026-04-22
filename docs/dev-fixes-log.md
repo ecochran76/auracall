@@ -13684,3 +13684,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   accidentally. Guard those scripts with `scripts/raw-devtools-guard.ts` and
   require either `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`; consume the
   flag before positional argument parsing.
+- 2026-04-22: Group browser-service-related scripts without moving
+  provider-dependent helpers into the browser-service package. In this repo,
+  many Grok verification scripts still import AuraCall provider modules, so
+  copying them into `packages/browser-service` would blur boundaries. Add thin
+  wrapper copies under `scripts/browser-service/`, keep root paths compatible,
+  and prefer the family path in new docs.

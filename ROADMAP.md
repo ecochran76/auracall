@@ -147,6 +147,13 @@ Current State:
     `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`
   - the guard keeps those scripts usable for development while making raw CDP
     an explicit escape hatch instead of an accidental browser-service bypass
+- browser-service script-family grouping is closed in
+  [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0041-2026-04-22-browser-service-script-family.md)
+  - browser-service-related development scripts now have thin wrapper copies
+    under `scripts/browser-service/`
+  - root script paths remain compatible
+  - provider-dependent Grok helpers were kept out of `packages/browser-service`
+    to preserve package boundaries
 
 Use [docs/dev/plans/0001-2026-04-14-execution.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0001-2026-04-14-execution.md) as the execution owner document for:
 

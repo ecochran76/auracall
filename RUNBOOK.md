@@ -1203,3 +1203,25 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 40`
   - `git diff --check`
+
+## Turn 48 | 2026-04-22
+
+- Closed implementation plan:
+  `docs/dev/plans/0041-2026-04-22-browser-service-script-family.md`
+- Goal: group browser-service-related scripts without breaking historical root
+  script paths.
+- Change:
+  - added `scripts/browser-service/` wrapper copies for generic browser tools,
+    launch/test helpers, and Grok/browser verification helpers
+  - retained all existing `scripts/<name>.ts` entrypoints for compatibility
+  - documented that provider-dependent Grok helpers stay outside
+    `packages/browser-service` because they import AuraCall app/provider code
+  - added wrapper-shape tests to keep the copied family as thin routing, not
+    duplicated implementation
+- Verification target:
+  - `pnpm vitest run tests/scripts/browserServiceWrappers.test.ts tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm run check`
+  - wrapper raw-CDP refusal smoke:
+    `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
+  - `pnpm run plans:audit -- --keep 41`
+  - `git diff --check`

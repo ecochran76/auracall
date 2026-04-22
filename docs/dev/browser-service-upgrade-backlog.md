@@ -51,6 +51,11 @@ and concrete:
   `scripts/raw-devtools-guard.ts`. They remain usable for development with the
   explicit escape hatches `--allow-raw-cdp` or `AURACALL_ALLOW_RAW_CDP=1`, but
   they are no longer silent browser-service bypasses.
+- Browser-service-related development scripts now have a discoverable wrapper
+  family under `scripts/browser-service/`. Keep root paths for compatibility,
+  but prefer the family path in new docs. Do not move provider-dependent Grok
+  helpers into `packages/browser-service` until they no longer import
+  AuraCall app/provider modules.
 
 ## Current DOM-drift repair plan (2026-03-28)
 

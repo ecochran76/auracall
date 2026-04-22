@@ -19416,3 +19416,27 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     lacks the guard import
   - `pnpm run plans:audit -- --keep 40`
   - `git diff --check`
+
+## 2026-04-22 - Browser-service script family
+
+- Opened and closed
+  `docs/dev/plans/0041-2026-04-22-browser-service-script-family.md`.
+- Copied browser-service-related development entrypoints into
+  `scripts/browser-service/` as thin wrappers around the existing root scripts.
+- Kept root script paths intact for compatibility.
+- Did not move Grok verification helpers into `packages/browser-service`
+  because many still import AuraCall app/provider modules from
+  `src/browser/providers`.
+- Added `scripts/browser-service/README.md` documenting the wrapper/copy
+  posture and the raw-CDP escape hatches.
+- Added wrapper-shape tests to ensure the copied family remains routing only
+  and does not duplicate implementation.
+- Updated package browser smoke scripts to use the browser-service family path;
+  `test:grok-smoke` explicitly sets `AURACALL_ALLOW_RAW_CDP=1`.
+- Validation target:
+  - `pnpm vitest run tests/scripts/browserServiceWrappers.test.ts tests/scripts/rawDevtoolsGuard.test.ts`
+  - `pnpm run check`
+  - wrapper raw-CDP refusal smoke:
+    `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
+  - `pnpm run plans:audit -- --keep 41`
+  - `git diff --check`

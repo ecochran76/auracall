@@ -9,6 +9,10 @@ The `browser-tools` DevTools helper CLI now lives in
 [`packages/browser-service/src/browserTools.ts`](/home/ecochran76/workspace.local/oracle/packages/browser-service/src/browserTools.ts).
 Keep Aura-Call-specific config/bootstrap logic in the thin compatibility wrapper
 [`scripts/browser-tools.ts`](/home/ecochran76/workspace.local/oracle/scripts/browser-tools.ts).
+Browser-service-related development entrypoints are also grouped under
+[`scripts/browser-service/`](/home/ecochran76/workspace.local/oracle/scripts/browser-service/README.md)
+as thin wrapper copies. Prefer the `scripts/browser-service/<name>.ts` paths in
+new docs; root `scripts/<name>.ts` paths remain compatible.
 When targeting managed Aura-Call sessions through that wrapper, prefer
 `--auracall-profile <name>` and `--browser-target <target>` so it resolves the
 same AuraCall runtime profile and managed browser profile that the real product
@@ -368,17 +372,17 @@ Current active extraction plan:
 
 ## Smoke helpers
 
-- `pnpm tsx scripts/browser-tools.ts --auracall-profile <name> --browser-target <target> start`
+- `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile <name> --browser-target <target> start`
   - Resolves the selected AuraCall runtime profile plus browser target before
     attaching or launching.
   - Prefer this over ad hoc launches when you want the same managed browser
     profile Aura-Call itself would use, for example:
-    - `pnpm tsx scripts/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
+    - `pnpm tsx scripts/browser-service/browser-tools.ts --auracall-profile wsl-chrome-2 --browser-target chatgpt start`
   - `start` no longer injects its own fallback `--profile-dir`; if you do not
     pass one explicitly, it now preserves the managed browser profile resolved
     from the selected AuraCall runtime profile.
 
-- `pnpm tsx scripts/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
+- `pnpm tsx scripts/browser-service/browser-tools.ts tabs --port <port> [--url-contains <text>] [--json]`
   - Shows the live tab census for one DevTools browser instance.
   - Explicit `--port` commands acquire a port-scoped browser operation
     dispatcher lock; they are no longer a lock-free bypass around
@@ -392,7 +396,7 @@ Current active extraction plan:
 - Legacy direct-CDP scripts under `scripts/verify-*`, `scripts/inspector.ts`,
   `scripts/open-grok-history.ts`, and similar development helpers are guarded
   by default.
-  - Prefer `scripts/browser-tools.ts --port <port> ...` for normal diagnostics.
+  - Prefer `scripts/browser-service/browser-tools.ts --port <port> ...` for normal diagnostics.
   - When a legacy script is genuinely needed, pass `--allow-raw-cdp` or set
     `AURACALL_ALLOW_RAW_CDP=1`.
   - The guard consumes `--allow-raw-cdp` before the script parses positional
