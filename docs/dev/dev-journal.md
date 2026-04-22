@@ -19519,3 +19519,37 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - narrow Grok CLI dogfood run returned `runtimeRunStatus = succeeded` and
     `finalOutputSummary = AURACALL_DOGFOOD_DEBUG_OK`
   - `pnpm run test:live:team:baseline`
+
+## 2026-04-22 - Repo dogfood and user runtime install
+
+- Opened and closed
+  `docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md`.
+- Repo dogfood result:
+  - `config show --team auracall-solo --json` resolved the solo team to
+    `auracall-grok-auto`, browser profile `default`, service `grok`
+  - `profile list --json` preserved all expected browser profiles and
+    AuraCall runtime profiles
+  - `status --hours 2 --limit 5` returned recent session state
+  - Grok doctor passed with identity `Eric C`, handle `@SwantonDoug`, and
+    required selector checks green
+  - ChatGPT doctor passed with identity `ecochran76@gmail.com`, current
+    feature probe, and required selector checks green
+  - Gemini doctor verified signed-in managed-profile state and had no active
+    Gemini DevTools session to inspect
+  - local `api serve --port 8098` reported active runner and background drain
+  - HTTP team-run create/readback completed with
+    `AURACALL_HTTP_DOGFOOD_OK`
+- Added `scripts/install-user-runtime.ts` and package script
+  `install:user-runtime`.
+- Added `docs/user-scoped-runtime.md` and linked it from `README.md`.
+- Validation target:
+  - repo dogfood commands listed in Plan 0045
+  - `pnpm run install:user-runtime -- --dry-run --skip-build --prefix /tmp/auracall-user-runtime-dry --bin-dir /tmp/auracall-user-runtime-bin`
+  - `pnpm run install:user-runtime`
+  - `~/.local/bin/auracall --version`
+  - `~/.local/bin/auracall config show --team auracall-solo --json`
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit -- --keep 45`
+  - `git diff --check`

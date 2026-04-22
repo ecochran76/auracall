@@ -17,6 +17,9 @@ Aura-Call bundles your prompt and files so another AI can answer with real conte
 
 Install globally: `npm install -g auracall`
 Homebrew: rename pending; use `npm install -g auracall` for now.
+Repo dogfood install: `pnpm run install:user-runtime` builds the current
+checkout into `~/.auracall/user-runtime` and writes user-owned wrappers under
+`~/.local/bin`; see `docs/user-scoped-runtime.md`.
 
 Requires Node 22+. Or use `npx -y auracall …` (or pnpx).
 

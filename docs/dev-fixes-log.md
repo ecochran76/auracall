@@ -13714,3 +13714,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `runtimeProfiles.default` that shadows browser-backed team profiles such as
   `auracall-grok-auto`. Write aliases to `profiles` for bridge-shaped configs
   and reserve `runtimeProfiles` for target-shaped configs.
+- 2026-04-22: Keep repo dogfood installs separate from release publishing.
+  In this repo, user-scoped runtime dogfooding should build and pack the
+  current checkout, then install that tarball into a user-owned prefix such as
+  `~/.auracall/user-runtime` with wrappers in `~/.local/bin`. This proves the
+  packaged runtime independently from the checkout without changing global npm
+  state, requiring sudo, or implying the build is ready for npm/Homebrew
+  release.

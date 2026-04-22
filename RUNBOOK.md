@@ -1287,3 +1287,63 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
 - Verification target:
   - `pnpm run plans:audit -- --keep 43`
   - `git diff --check`
+
+## Turn 52 | 2026-04-22
+
+- Closed implementation plan:
+  `docs/dev/plans/0044-2026-04-22-team-run-cli-resolver-shadow-fix.md`
+- Goal: fix repo-dogfood regression where `auracall teams run` returned a
+  planned runtime run without draining the browser-backed Grok step.
+- Finding:
+  - Commander supplied default `browserModelStrategy = select`
+  - transitional CLI service-alias mirroring created a partial target
+    `runtimeProfiles.default`
+  - target `runtimeProfiles` shadowed bridge `profiles`, so local-runner
+    capability projection did not see `auracall-grok-auto`
+- Change:
+  - transitional CLI service aliases now write into `runtimeProfiles` only for
+    target-shaped configs and into `profiles` for bridge-shaped configs
+  - added resolver coverage for bridge-shaped configs with Commander-style
+    browser defaults
+- Verification target:
+  - `pnpm vitest run tests/schema/resolver.test.ts tests/cli/teamRunCommand.test.ts`
+  - narrow Grok CLI dogfood run
+  - `pnpm run test:live:team:baseline`
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit -- --keep 44`
+  - `git diff --check`
+
+## Turn 53 | 2026-04-22
+
+- Closed implementation plan:
+  `docs/dev/plans/0045-2026-04-22-repo-dogfood-user-runtime-install.md`
+- Goal: do one more bounded repo dogfood pass, then add a user-scoped runtime
+  install path independent of the checkout.
+- Dogfood result:
+  - config/profile/session operator reads passed
+  - Grok and ChatGPT browser doctors passed with signed-in identities and
+    selector checks
+  - Gemini local doctor passed with signed-in managed-profile state and no
+    active Gemini DevTools session
+  - local API server status exposed the active local runner and background
+    drain
+  - HTTP team-run create/readback completed with
+    `AURACALL_HTTP_DOGFOOD_OK`
+- Change:
+  - added `pnpm run install:user-runtime`
+  - added `scripts/install-user-runtime.ts`
+  - added `docs/user-scoped-runtime.md`
+  - linked the repo dogfood install command from `README.md`
+- Verification target:
+  - repo dogfood commands listed in Plan 0045
+  - dry-run installer smoke
+  - real user-scoped install smoke
+  - installed `~/.local/bin/auracall --version`
+  - installed `~/.local/bin/auracall config show --team auracall-solo --json`
+  - `pnpm run check`
+  - `pnpm test`
+  - `pnpm run test:mcp`
+  - `pnpm run plans:audit -- --keep 45`
+  - `git diff --check`
