@@ -143,7 +143,10 @@ resolution, but the generic DOM/page inspection behavior is package-owned.
 ## Current anti-bot boundary
 
 The package now classifies blocking pages first-class through structured
-`blockingState` output in browser-tools page probes. Current generic coverage
+`blockingState` output in browser-tools page probes and tab-census entries.
+Manual-clear decisions must consider the full browser tab census, not only the
+selected page, because hidden tabs can preserve provider anti-bot redirects
+while another visible app tab still looks healthy. Current generic coverage
 includes:
 
 - Google `google.com/sorry`

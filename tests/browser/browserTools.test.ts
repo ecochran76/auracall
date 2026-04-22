@@ -773,6 +773,91 @@ describe('selectBrowserToolsPageIndex', () => {
     })).toBe(false);
   });
 
+  test('flags hidden census tabs that require manual clearance', () => {
+    const report = {
+      census: {
+        selectedIndex: 0,
+        selectedReason: 'url-contains' as const,
+        selectedTab: {
+          index: 0,
+          url: 'https://gemini.google.com/app',
+          focused: true,
+          title: 'Google Gemini',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          selected: true,
+          matchesUrlContains: true,
+          selectionReasons: ['url-contains' as const, 'focused' as const, 'non-internal-page' as const],
+          isBlank: false,
+          isBrowserInternal: false,
+        },
+        tabs: [
+          {
+            index: 0,
+            url: 'https://gemini.google.com/app',
+            focused: true,
+            title: 'Google Gemini',
+            readyState: 'complete',
+            visibilityState: 'visible',
+            selected: true,
+            matchesUrlContains: true,
+            selectionReasons: ['url-contains' as const, 'focused' as const, 'non-internal-page' as const],
+            isBlank: false,
+            isBrowserInternal: false,
+          },
+          {
+            index: 1,
+            url: 'https://www.google.com/sorry/index?continue=https://gemini.google.com/app',
+            focused: false,
+            title: 'About this page',
+            readyState: 'complete',
+            visibilityState: 'hidden',
+            selected: false,
+            matchesUrlContains: false,
+            selectionReasons: ['non-internal-page' as const, 'last-page' as const],
+            isBlank: false,
+            isBrowserInternal: false,
+            blockingState: {
+              kind: 'google-sorry' as const,
+              summary: 'Google unusual-traffic interstitial detected (google.com/sorry).',
+              requiresHuman: true,
+            },
+          },
+        ],
+        candidates: [],
+      },
+      pageProbe: {
+        document: {
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          scriptCount: 12,
+          bodyTextLength: 240,
+          visibleCounts: {
+            buttons: 2,
+            links: 1,
+            inputs: 0,
+            textareas: 1,
+            contenteditables: 0,
+          },
+        },
+        blockingState: null,
+        selectors: [],
+        storage: null,
+        cookies: null,
+        scriptText: null,
+      },
+      uiList: null,
+    };
+
+    expect(browserToolsReportRequiresManualClear(report)).toBe(true);
+    expect(summarizeBrowserToolsDoctorReport(report)).toContain(
+      'Blocking tabs: 1 manual-clear required',
+    );
+  });
+
   test('browser-tools start forwards AuraCall runtime profile and browser target to the resolver', async () => {
     const resolvePortOrLaunch = vi.fn(async () => 45013);
     const log = vi.spyOn(console, 'log').mockImplementation(() => undefined);

@@ -46,6 +46,7 @@ export interface BrowserToolsPageCandidate {
   title?: string | null;
   readyState?: string | null;
   visibilityState?: string | null;
+  blockingState?: BrowserToolsBlockingState | null;
 }
 
 export type BrowserToolsPageSelectionReason =
@@ -605,7 +606,14 @@ async function collectBrowserToolsPageCandidates(browser: Awaited<ReturnType<typ
       readyState = null;
       visibilityState = null;
     }
-    candidates.push({ url, focused, title, readyState, visibilityState });
+    candidates.push({
+      url,
+      focused,
+      title,
+      readyState,
+      visibilityState,
+      blockingState: classifyBrowserToolsBlockingState({ url, title }),
+    });
   }
   return candidates;
 }
@@ -661,6 +669,12 @@ function printBrowserToolsTabCensus(result: BrowserToolsTabCensusResult): void {
     console.log(`  readyState: ${tab.readyState ?? 'unknown'}`);
     console.log(`  visibilityState: ${tab.visibilityState ?? 'unknown'}`);
     console.log(`  selectionReasons: ${tab.selectionReasons.length ? tab.selectionReasons.join(', ') : '(none)'}`);
+    if (tab.blockingState) {
+      console.log(
+        `  blocking: ${tab.blockingState.kind} (${tab.blockingState.requiresHuman ? 'manual-clear required' : 'auto-recoverable'})`,
+      );
+      console.log(`    summary: ${tab.blockingState.summary}`);
+    }
   });
 }
 
@@ -1333,6 +1347,14 @@ export function summarizeBrowserToolsDoctorReport(report: BrowserToolsDoctorRepo
   } else {
     lines.push('No selected page to probe.');
   }
+  const blockingTabs = report.census.tabs.filter((tab) => tab.blockingState?.requiresHuman);
+  if (blockingTabs.length > 0) {
+    lines.push(`Blocking tabs: ${blockingTabs.length} manual-clear required`);
+    for (const tab of blockingTabs.slice(0, 5)) {
+      lines.push(`  tab ${tab.index + 1}: ${tab.blockingState?.kind} ${tab.url}`);
+      lines.push(`    summary: ${tab.blockingState?.summary}`);
+    }
+  }
   if (report.uiList) {
     lines.push(
       `UI list: menus=${report.uiList.summary.menus}, menuItems=${report.uiList.summary.menuItems}, switches=${report.uiList.summary.switches}, uploadCandidates=${report.uiList.summary.uploadCandidates}`,
@@ -1361,7 +1383,10 @@ export function createBrowserToolsProbeContract(
 export function browserToolsReportRequiresManualClear(
   report: BrowserToolsDoctorReport | null | undefined,
 ): boolean {
-  return Boolean(report?.pageProbe?.blockingState?.requiresHuman);
+  return Boolean(
+    report?.pageProbe?.blockingState?.requiresHuman ||
+    report?.census.tabs.some((tab) => tab.blockingState?.requiresHuman),
+  );
 }
 
 export function createBrowserToolsDoctorContract(

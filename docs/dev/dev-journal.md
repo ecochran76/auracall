@@ -19349,3 +19349,26 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Next action: have a human clear the hidden Gemini `google.com/sorry` tabs in
   the open default Gemini managed browser, then run one bounded Gemini smoke
   before relying on Gemini automation again.
+
+## 2026-04-21 - Browser-service Google Sorry census guard
+
+- Investigated why Gemini doctor selected a healthy visible
+  `https://gemini.google.com/app` tab while hidden `google.com/sorry` tabs
+  remained in the same managed browser profile.
+- Confirmed the gap was not missing Google Sorry classification; it was
+  selected-page-only enforcement:
+  - browser-tools and the Gemini adapter already classify `google.com/sorry`
+  - browser-tools doctor/probe only used the selected page probe for
+    manual-clear failure
+  - hidden sibling tabs were visible in the census but did not fail the report
+- Updated browser-tools tab census entries to carry generic blocking-state
+  evidence and updated manual-clear checks to fail when any census tab requires
+  human clearance.
+- Added a regression test for one healthy visible Gemini app tab plus one
+  hidden `google.com/sorry` tab.
+- Remaining architecture question: explicit raw `--port` diagnostics and
+  legacy verification scripts still bypass managed-profile dispatcher
+  ownership; those should be treated as unsafe/debug-only until fenced or
+  routed through a managed browser-service surface.
+- Validation:
+  - `pnpm vitest run tests/browser/browserTools.test.ts`

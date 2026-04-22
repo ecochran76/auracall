@@ -30,6 +30,20 @@ and concrete:
   signal
 - do not keep broadening anti-bot glue speculatively
 
+2026-04-21 follow-up:
+- `browser-tools` tab census entries now carry generic `blockingState`
+  classification from URL/title evidence.
+- Browser-tools manual-clear checks now fail if any census tab requires human
+  clearance, not only when the selected page probe is blocked.
+- This specifically guards persistent managed browser profiles where a hidden
+  Gemini `google.com/sorry` tab can coexist with a visible healthy
+  `gemini.google.com/app` tab.
+- Remaining ownership question: explicit raw DevTools-port diagnostics and
+  legacy verification scripts can still bypass managed-profile dispatcher
+  ownership. Treat those as unsafe/debug-only until a follow-up slice either
+  routes them through a managed browser-service command surface or fences them
+  behind an explicit raw-CDP escape hatch.
+
 ## Current DOM-drift repair plan (2026-03-28)
 
 This is the current follow-on plan from the Grok stabilization work. The main

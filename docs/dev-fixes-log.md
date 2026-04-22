@@ -13665,3 +13665,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   intended owners, do integration hygiene before opening another service/runner
   implementation slice. Keep HTTP responsible for transport/timer projection,
   not generic runtime mutation.
+- 2026-04-21: Treat generic browser anti-bot traps as browser-instance facts,
+  not selected-tab-only facts. In this repo, a persistent managed browser
+  profile can hold hidden `google.com/sorry` tabs while the selected visible
+  Gemini app tab looks healthy. `browser-tools` tab census entries should carry
+  generic blocking-state classification, and manual-clear decisions should fail
+  when any census tab requires human clearance.

@@ -382,6 +382,8 @@ Current active extraction plan:
   - Shows the live tab census for one DevTools browser instance.
   - Includes the tab that `browser-tools` would select and why (`url-contains`,
     `focused`, `non-internal-page`, `last-page`).
+  - Reports generic manual-clear blocking states, including hidden
+    `google.com/sorry` tabs, at census level.
   - Use this before ad hoc `eval` when a run might be targeting the wrong tab.
 
 - `pnpm tsx scripts/browser-tools.ts probe --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--json]`
@@ -395,6 +397,8 @@ Current active extraction plan:
 - `pnpm tsx scripts/browser-tools.ts doctor --port <port> [--url-contains <text>] [--selector <css>] [--script-any <token>] [--script-all <token>] [--storage-any <key>] [--storage-all <key>] [--cookie-any <name>] [--cookie-all <name>] [--json]`
   - Combines the tab census with the structured selected-page probes.
   - Use this as the first package-owned diagnosis surface before app-specific doctor logic.
+  - Fails manual-clear checks when either the selected page or any census tab is
+    on a generic blocking surface such as Google `google.com/sorry`.
   - `--json` emits a versioned envelope:
     - `contract: "browser-tools.doctor-report"`
     - `version: 1`
