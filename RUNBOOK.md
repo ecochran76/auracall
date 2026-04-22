@@ -1225,3 +1225,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
     `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
   - `pnpm run plans:audit -- --keep 41`
   - `git diff --check`
+
+## Turn 49 | 2026-04-22
+
+- Closed reconciliation plan:
+  `docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md`
+- Goal: align the open execution authorities after scheduler local-control,
+  service/runner ownership, and browser-service maintenance checkpoints all
+  closed.
+- Change:
+  - updated `0004` so it no longer names scheduler-control implementation as
+    the next action after Plans 0033-0036 already shipped that phase
+  - updated `0001` and ROADMAP to keep service/runner architecture expansion
+    paused unless a reproduced ownership/readback mismatch or new product
+    requirement justifies reopening it
+  - recorded the browser-service maintenance exception as closed through
+    Plans 0039-0041
+- Verification target:
+  - `pnpm run plans:audit -- --keep 42`
+  - `git diff --check`

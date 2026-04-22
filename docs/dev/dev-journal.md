@@ -19440,3 +19440,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `pnpm tsx scripts/browser-service/test-remote-chrome.ts 127.0.0.1 1`
   - `pnpm run plans:audit -- --keep 41`
   - `git diff --check`
+
+## 2026-04-22 - Open execution plan reconciliation
+
+- Opened and closed
+  `docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md`.
+- Reconciled the open execution authorities after the browser-service
+  maintenance exception and service/runner local-control phase both reached
+  closed checkpoints.
+- Updated `0004` so it no longer points at scheduler-control implementation as
+  the next action after Plans 0033-0036 already landed it.
+- Updated `0001`, ROADMAP, and RUNBOOK to keep the next move explicit:
+  reopen service/runner implementation only for a reproduced
+  ownership/readback mismatch or a new product requirement.
+- Validation target:
+  - `pnpm run plans:audit -- --keep 42`
+  - `git diff --check`

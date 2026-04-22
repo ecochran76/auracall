@@ -13690,3 +13690,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   copying them into `packages/browser-service` would blur boundaries. Add thin
   wrapper copies under `scripts/browser-service/`, keep root paths compatible,
   and prefer the family path in new docs.
+- 2026-04-22: Reconcile open governing plans after closing implementation
+  checkpoints. In this repo, an open authority such as 0004 can remain
+  governing while its older "next implementation" language becomes stale after
+  later closed plans ship the work. Before starting another slice, update the
+  open plan current-state notes so agents do not reopen scheduler-control,
+  service/runner, or browser-service work by inertia.

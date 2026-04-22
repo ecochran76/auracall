@@ -116,14 +116,19 @@ Lane: P01
     inspection:
     - `auracall api inspect-run ... --authority scheduler`
     - compact human formatter plus full JSON payload
-  - Plan 0032 closed scheduler mutation design:
-    - first mutation target is `schedulerControl.action = "claim-local-run"`
-    - v1 is explicit operator control under `ExecutionServiceHost`
-    - v1 is scoped to the server-local runner only
-    - no fleet scheduler, worker loop, non-local assignment, parallel
-      execution, new HTTP route, or browser dispatcher bypass
-  - next implementation should add only that bounded local scheduler-control
-    mutation path
+  - Plans 0033-0036 implemented and closed the bounded local
+    scheduler-control phase:
+    - `schedulerControl.action = "claim-local-run"` is explicit operator
+      control under `ExecutionServiceHost`
+    - `runControl.action = "drain-run"` can execute runs whose active lease is
+      already owned by the configured server-local runner
+    - `claim-and-drain-local-run`, fleet scheduling, worker loops, non-local
+      assignment, parallel execution, new HTTP routes, and browser dispatcher
+      bypass remain deferred
+  - Plan 0037 closed HTTP team-run background-drain parity
+  - Plan 0038 closed the service/runner roadmap checkpoint and paused further
+    service/runner architecture expansion until a concrete mismatch or new
+    product requirement is reproduced
   - keep sectioned public task-run-spec envelopes deferred
   - keep multi-runner execution, background worker pools, reassignment loops,
     and parallel execution out until explicitly selected

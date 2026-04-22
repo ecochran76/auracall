@@ -845,9 +845,9 @@ Safety note:
 - Primary active lane checkpoint: service mode and runner orchestration is
   paused after the current single-host bounded local-runner bridge reached a
   coherent ownership checkpoint
-- Immediate next action: integration hygiene for the accumulated service/runner,
-  browser-maintenance, and public team-run write slices before selecting a new
-  primary implementation lane
+- Immediate next action: reconcile and review the accumulated service/runner
+  and browser-service checkpoints before selecting any new primary
+  implementation lane
 - Supporting maintenance: bounded config/team-service corrections only when
   they are required to preserve the primary lane's existing semantics
 - Supporting maintenance: roadmap, runbook, and validation hygiene that keeps
@@ -869,8 +869,9 @@ Safety note:
   - full Gemini
   - Claude
   - Grok image
-- Broad public HTTP/MCP team execution writes and multi-runner expansion until
-  the service/runner ownership checkpoint is complete
+- Multi-runner expansion and broader external control only after a concrete
+  product requirement or reproduced ownership gap justifies reopening the
+  service/runner lane
 
 ### Service Volatility Externalization
 Status: parked
@@ -907,6 +908,10 @@ Current focused reliability slice:
 - [docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0023-2026-04-21-mcp-team-run-write-parity.md) (closed)
 - [docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0024-2026-04-21-taskrunspec-public-contract-reconciliation.md) (closed)
 - [docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0025-2026-04-21-prebuilt-taskrunspec-acceptance.md) (closed)
+- [docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0039-2026-04-21-raw-devtools-dispatcher-fencing.md) (closed)
+- [docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0040-2026-04-22-direct-cdp-script-guard.md) (closed)
+- [docs/dev/plans/0041-2026-04-22-browser-service-script-family.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0041-2026-04-22-browser-service-script-family.md) (closed)
+- [docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0042-2026-04-22-open-execution-plan-reconciliation.md) (closed)
 
 ### Browser Automation Drift Repairs
 See [docs/dev/browser-service-upgrade-backlog.md](/home/ecochran76/workspace.local/oracle/docs/dev/browser-service-upgrade-backlog.md).
