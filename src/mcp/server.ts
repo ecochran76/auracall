@@ -7,6 +7,7 @@ import { getCliVersion } from '../version.js';
 import { registerConsultTool } from './tools/consult.js';
 import { registerSessionsTool } from './tools/sessions.js';
 import { registerSessionResources } from './tools/sessionResources.js';
+import { registerTeamRunTool } from './tools/teamRun.js';
 
 export async function startMcpServer(): Promise<void> {
   const server = new McpServer(
@@ -22,6 +23,7 @@ export async function startMcpServer(): Promise<void> {
   );
 
   registerConsultTool(server);
+  registerTeamRunTool(server);
   registerSessionsTool(server);
   registerSessionResources(server);
 

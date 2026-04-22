@@ -14,11 +14,11 @@ import {
 import { createTeamRuntimeBridge, type TeamRuntimeBridge } from '../teams/runtimeBridge.js';
 import { buildBoundedTeamTaskRunSpec } from '../teams/taskRunSpecBuilder.js';
 import { buildTeamRunExecutionPayload, type TeamRunExecutionPayload } from '../teams/executionPayload.js';
+import { TaskRunSpecSchema } from '../teams/schema.js';
 import type { TaskRunSpec } from '../teams/types.js';
 import type {
   ExecutionRequest,
   ExecutionRequestExtensionHints,
-  ExecutionResponse,
 } from '../runtime/apiTypes.js';
 import {
   inspectRuntimeRun,
@@ -496,39 +496,41 @@ export async function createResponsesHttpServer(
       if (req.method === 'POST' && url.pathname === '/v1/team-runs') {
         const body = await readRequestBody(req);
         const payload = TeamRunCreateRequestSchema.parse(JSON.parse(body || '{}'));
-        const teamId = payload.teamId.trim();
+        const prebuiltTaskRunSpec = payload.taskRunSpec ?? null;
+        const teamId = (prebuiltTaskRunSpec?.teamId ?? payload.teamId ?? '').trim();
         const nowIso = now().toISOString();
         const suffix = createTeamRunIdSuffix();
-        const taskRunSpecId = `taskrun_${teamId}_${suffix}`;
         const teamRunId = `teamrun_${teamId}_${suffix}`;
-        const taskRunSpec = buildBoundedTeamTaskRunSpec({
-          nowIso,
-          taskRunSpecId,
-          teamId,
-          objective: payload.objective,
-          title: payload.title,
-          promptAppend: payload.promptAppend,
-          structuredContext: payload.structuredContext,
-          responseFormat: payload.responseFormat,
-          outputContract: payload.outputContract,
-          maxTurns: payload.maxTurns,
-          localActionPolicy: payload.localActionPolicy,
-          context: {
-            command: 'auracall api serve',
-          },
-          requestedBy: {
-            kind: 'api',
-            label: 'auracall api serve',
-          },
-          trigger: 'api',
-        });
+        const taskRunSpec =
+          prebuiltTaskRunSpec ??
+          buildBoundedTeamTaskRunSpec({
+            nowIso,
+            taskRunSpecId: `taskrun_${teamId}_${suffix}`,
+            teamId,
+            objective: payload.objective ?? '',
+            title: payload.title,
+            promptAppend: payload.promptAppend,
+            structuredContext: payload.structuredContext,
+            responseFormat: payload.responseFormat,
+            outputContract: payload.outputContract,
+            maxTurns: payload.maxTurns,
+            localActionPolicy: payload.localActionPolicy,
+            context: {
+              command: 'auracall api serve',
+            },
+            requestedBy: {
+              kind: 'api',
+              label: 'auracall api serve',
+            },
+            trigger: 'api',
+          });
         const bridgeResult = await teamRuntimeBridge.executeFromConfigTaskRunSpec({
           config: configuredRuntimeConfig ?? {},
           teamId,
           runId: teamRunId,
           createdAt: nowIso,
-          trigger: 'api',
-          requestedBy: 'auracall api serve',
+          trigger: prebuiltTaskRunSpec ? undefined : 'api',
+          requestedBy: prebuiltTaskRunSpec ? undefined : 'auracall api serve',
           taskRunSpec,
         });
         const execution = buildTeamRunExecutionPayload({
@@ -1079,9 +1081,9 @@ function createStartupRecoveryLog(
   return parts.join(' ');
 }
 
-const TeamRunCreateRequestSchema = z.object({
-  teamId: z.string().min(1),
-  objective: z.string().min(1),
+const CompactTeamRunCreateRequestSchema = z.object({
+  teamId: z.string().min(1).optional(),
+  objective: z.string().min(1).optional(),
   title: z.string().min(1).nullable().optional(),
   promptAppend: z.string().min(1).nullable().optional(),
   structuredContext: z.record(z.string(), z.unknown()).nullable().optional(),
@@ -1096,6 +1098,55 @@ const TeamRunCreateRequestSchema = z.object({
     })
     .nullable()
     .optional(),
+});
+
+const TeamRunCreateRequestSchema = CompactTeamRunCreateRequestSchema.extend({
+  taskRunSpec: TaskRunSpecSchema.optional(),
+}).superRefine((value, ctx) => {
+  if (!value.taskRunSpec) {
+    if (!value.teamId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'teamId is required when taskRunSpec is not provided',
+        path: ['teamId'],
+      });
+    }
+    if (!value.objective) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'objective is required when taskRunSpec is not provided',
+        path: ['objective'],
+      });
+    }
+    return;
+  }
+
+  if (value.teamId && value.teamId.trim() !== value.taskRunSpec.teamId) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'teamId must match taskRunSpec.teamId when both are provided',
+      path: ['teamId'],
+    });
+  }
+
+  const compactAssignmentFieldNames = [
+    'objective',
+    'title',
+    'promptAppend',
+    'structuredContext',
+    'responseFormat',
+    'outputContract',
+    'maxTurns',
+    'localActionPolicy',
+  ] as const;
+  const conflictingFields = compactAssignmentFieldNames.filter((field) => value[field] !== undefined);
+  if (conflictingFields.length > 0) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `taskRunSpec cannot be combined with compact assignment fields: ${conflictingFields.join(', ')}`,
+      path: ['taskRunSpec'],
+    });
+  }
 });
 
 const StatusControlRequestSchema = z.union([

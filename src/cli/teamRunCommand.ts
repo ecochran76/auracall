@@ -49,9 +49,14 @@ export interface ExecuteConfiguredTeamRunInput {
   outputContract?: TeamRunOutputContract | null;
   maxTurns?: number | null;
   localActionPolicy?: TeamRunCliLocalActionPolicyInput | null;
+  taskRunSpec?: TaskRunSpec | null;
   bridge?: TeamRuntimeBridge;
   now?: () => string;
   randomId?: () => string;
+  contextCommand?: string;
+  requestedBy?: TaskRunSpec['requestedBy'];
+  trigger?: TaskRunSpec['trigger'];
+  executionRequestedBy?: string;
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
 }
 
@@ -77,17 +82,20 @@ export function buildCliTaskRunSpec(input: {
   outputContract?: TeamRunOutputContract | null;
   maxTurns?: number | null;
   localActionPolicy?: TeamRunCliLocalActionPolicyInput | null;
+  contextCommand?: string;
+  requestedBy?: TaskRunSpec['requestedBy'];
+  trigger?: TaskRunSpec['trigger'];
 }): TaskRunSpec {
   return buildBoundedTeamTaskRunSpec({
     ...input,
     context: {
-      command: 'auracall teams run',
+      command: input.contextCommand ?? 'auracall teams run',
     },
-    requestedBy: {
+    requestedBy: input.requestedBy ?? {
       kind: 'cli',
       label: 'auracall teams run',
     },
-    trigger: 'cli',
+    trigger: input.trigger ?? 'cli',
   });
 }
 
@@ -251,19 +259,24 @@ export async function executeConfiguredTeamRun(
   const suffix = randomId.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'run';
   const taskRunSpecId = `taskrun_${teamId}_${suffix}`;
   const runId = `teamrun_${teamId}_${suffix}`;
-  const taskRunSpec = buildCliTaskRunSpec({
-    nowIso,
-    taskRunSpecId,
-    teamId,
-    objective: input.objective,
-    title: input.title,
-    promptAppend: input.promptAppend,
-    structuredContext: input.structuredContext,
-    responseFormat: input.responseFormat,
-    outputContract: input.outputContract,
-    maxTurns: input.maxTurns,
-    localActionPolicy: input.localActionPolicy,
-  });
+  const taskRunSpec =
+    input.taskRunSpec ??
+    buildCliTaskRunSpec({
+      nowIso,
+      taskRunSpecId,
+      teamId,
+      objective: input.objective,
+      title: input.title,
+      promptAppend: input.promptAppend,
+      structuredContext: input.structuredContext,
+      responseFormat: input.responseFormat,
+      outputContract: input.outputContract,
+      maxTurns: input.maxTurns,
+      localActionPolicy: input.localActionPolicy,
+      contextCommand: input.contextCommand,
+      requestedBy: input.requestedBy,
+      trigger: input.trigger,
+    });
   const configuredBridge = input.bridge;
   const registeredLocalRunner = configuredBridge
     ? null
@@ -357,25 +370,39 @@ export async function executeConfiguredTeamRun(
       };
     })();
 
+  const activeBridge = configuredBridge ?? registeredLocalRunner?.bridge;
+  if (!activeBridge) {
+    throw new Error('Team run execution bridge was not initialized.');
+  }
+
   const execution = async () =>
-    (configuredBridge ?? registeredLocalRunner!.bridge).executeFromConfigTaskRunSpec({
+    activeBridge.executeFromConfigTaskRunSpec({
       config: input.config,
-      teamId,
+      teamId: taskRunSpec.teamId,
       runId,
       createdAt: nowIso,
-      trigger: 'cli',
-      requestedBy: 'auracall teams run',
+      trigger: input.trigger ?? taskRunSpec.trigger,
+      requestedBy:
+        input.executionRequestedBy ??
+        input.requestedBy?.label ??
+        taskRunSpec.requestedBy?.label ??
+        taskRunSpec.requestedBy?.id ??
+        taskRunSpec.requestedBy?.kind ??
+        'auracall teams run',
       taskRunSpec,
     });
 
   const bridgeResult = configuredBridge
     ? await execution()
     : await (async () => {
-        await registeredLocalRunner!.registerRunner();
+        if (!registeredLocalRunner) {
+          throw new Error('Team run local runner was not initialized.');
+        }
+        await registeredLocalRunner.registerRunner();
         try {
           return await execution();
         } finally {
-          await registeredLocalRunner!.markRunnerStale();
+          await registeredLocalRunner.markRunnerStale();
         }
       })();
 
@@ -383,7 +410,7 @@ export async function executeConfiguredTeamRun(
     taskRunSpec,
     bridgeResult,
     payload: buildTeamRunCliExecutionPayload({
-      teamId,
+      teamId: taskRunSpec.teamId,
       bridgeResult,
       taskRunSpec,
     }),

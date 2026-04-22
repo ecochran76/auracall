@@ -26,6 +26,7 @@ import { createExecutionRunnerControl } from '../../src/runtime/runnersControl.j
 import { createExecutionServiceHost } from '../../src/runtime/serviceHost.js';
 import type { TaskRunSpecRecordStore } from '../../src/teams/store.js';
 import type { TeamRuntimeBridge } from '../../src/teams/runtimeBridge.js';
+import { createTaskRunSpec } from '../../src/teams/model.js';
 import { DEFAULT_TEAM_RUN_EXECUTION_POLICY } from '../../src/teams/types.js';
 import { AURACALL_STEP_OUTPUT_CONTRACT_VERSION } from '../../src/runtime/stepOutputContract.js';
 
@@ -102,6 +103,32 @@ describe('team run CLI helpers', () => {
       allowedCommands: ['node'],
       allowedCwdRoots: ['/repo'],
       resultReportingMode: 'summary-only',
+    });
+  });
+
+  it('can stamp non-CLI provenance for route-neutral team-run surfaces', () => {
+    const taskRunSpec = buildCliTaskRunSpec({
+      nowIso: '2026-04-21T20:00:00.000Z',
+      taskRunSpecId: 'taskrun_mcp_1',
+      teamId: 'auracall-solo',
+      objective: 'Produce a bounded MCP result.',
+      contextCommand: 'auracall-mcp team_run',
+      requestedBy: {
+        kind: 'mcp',
+        label: 'auracall-mcp team_run',
+      },
+      trigger: 'mcp',
+    });
+
+    expect(taskRunSpec).toMatchObject({
+      context: {
+        command: 'auracall-mcp team_run',
+      },
+      requestedBy: {
+        kind: 'mcp',
+        label: 'auracall-mcp team_run',
+      },
+      trigger: 'mcp',
     });
   });
 
@@ -215,6 +242,96 @@ describe('team run CLI helpers', () => {
       finalOutputSummary: 'bounded local runner pass completed',
       sharedStateStatus: 'succeeded',
       sharedStateNotes: ['run completed'],
+    });
+  });
+
+  it('executes a provided flattened taskRunSpec without rebuilding compact provenance', async () => {
+    const taskRunSpec = createTaskRunSpec({
+      id: 'taskrun_prebuilt_cli_1',
+      teamId: 'ops',
+      title: 'Prebuilt CLI helper task spec',
+      objective: 'Use the provided spec.',
+      createdAt: '2026-04-21T21:00:00.000Z',
+      requestedBy: {
+        kind: 'api',
+        label: 'external prebuilt caller',
+      },
+      trigger: 'api',
+    });
+    const bridge: TeamRuntimeBridge = {
+      async executeFromConfigTaskRunSpec(input) {
+        expect(input.taskRunSpec).toBe(taskRunSpec);
+        expect(input.teamId).toBe('ops');
+        expect(input.trigger).toBe('api');
+        expect(input.requestedBy).toBe('external prebuilt caller');
+        return {
+          teamPlan: {
+            teamRun: {
+              id: input.runId,
+              teamId: input.teamId,
+              taskRunSpecId: input.taskRunSpec.id,
+            },
+          } as never,
+          createdRuntimeRecord: {} as never,
+          finalRuntimeRecord: {
+            bundle: {
+              run: {
+                id: `${input.runId}:runtime`,
+                status: 'succeeded',
+              },
+              steps: [
+                {
+                  id: `${input.runId}:runtime:step:1`,
+                  order: 1,
+                  output: { summary: 'prebuilt spec completed' },
+                },
+              ],
+              sharedState: {
+                status: 'succeeded',
+                notes: [],
+              },
+            },
+          } as never,
+          executionSummary: {
+            teamRunId: input.runId,
+            taskRunSpecId: input.taskRunSpec.id,
+            runtimeRunId: `${input.runId}:runtime`,
+            runtimeSourceKind: 'team-run',
+            runtimeRunStatus: 'succeeded',
+            runtimeUpdatedAt: input.createdAt,
+            terminalStepCount: 1,
+            stepSummaries: [],
+          },
+          hostDrainResults: [],
+        } as never;
+      },
+      async executeFromConfig() {
+        throw new Error('not used');
+      },
+      async executeFromResolvedTeam() {
+        throw new Error('not used');
+      },
+      async executeFromResolvedTeamTaskRunSpec() {
+        throw new Error('not used');
+      },
+    };
+
+    const result = await executeConfiguredTeamRun({
+      config: {},
+      teamId: 'ignored-compact-team',
+      objective: 'Ignored compact objective.',
+      taskRunSpec,
+      bridge,
+      now: () => '2026-04-21T21:05:00.000Z',
+      randomId: () => 'prebuilt123',
+    });
+
+    expect(result.taskRunSpec).toBe(taskRunSpec);
+    expect(result.payload).toMatchObject({
+      teamId: 'ops',
+      taskRunSpecId: 'taskrun_prebuilt_cli_1',
+      runtimeRunStatus: 'succeeded',
+      finalOutputSummary: 'prebuilt spec completed',
     });
   });
 

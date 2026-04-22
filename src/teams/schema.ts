@@ -2,19 +2,12 @@ import { z } from 'zod';
 import type {
   TaskRunSpec,
   TaskRunSpecConstraints,
-  TaskRunSpecHumanRequiredOn,
   TaskRunSpecHumanInteractionPolicy,
   TaskRunSpecInputArtifact,
   TaskRunSpecOverrides,
   TaskRunSpecLocalActionPolicy,
   TaskRunSpecRequestedBy,
-  TaskRunSpecRequestedOutputDestination,
   TaskRunSpecRequestedOutput,
-  TaskRunSpecRequestedOutputFormat,
-  TaskRunSpecRequestedOutputKind,
-  TaskRunSpecLocalActionResultReportingMode,
-  TaskRunSpecInputArtifactKind,
-  TaskRunSpecTurnStopStatus,
   TaskRunSpecTurnPolicy,
   TeamRun,
   TeamRunArtifactRef,
@@ -39,7 +32,7 @@ import {
 
 export const TeamRunStatusSchema = z.enum(['planned', 'running', 'succeeded', 'failed', 'cancelled']);
 
-export const TeamRunTriggerSchema = z.enum(['cli', 'service', 'api', 'scheduled', 'internal']);
+export const TeamRunTriggerSchema = z.enum(['cli', 'service', 'api', 'mcp', 'scheduled', 'internal']);
 
 export const TeamRunExecutionModeSchema = z.enum(['sequential']);
 

@@ -13,6 +13,7 @@ import {
 import { resetLiveRuntimeRunServiceStateRegistryForTests } from '../src/runtime/liveServiceStateRegistry.js';
 import { createExecutionRuntimeControl } from '../src/runtime/control.js';
 import { writeTaskRunSpecStoredRecord } from '../src/teams/store.js';
+import { createTaskRunSpec } from '../src/teams/model.js';
 import { createExecutionRunnerControl } from '../src/runtime/runnersControl.js';
 import { createExecutionServiceHost } from '../src/runtime/serviceHost.js';
 import {
@@ -3548,6 +3549,132 @@ describe('http responses adapter', () => {
       const payload = (await response.json()) as { error: { type: string; message: string } };
       expect(payload.error.type).toBe('invalid_request_error');
       expect(payload.error.message).toContain('objective');
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('creates a team run from a prebuilt flattened taskRunSpec over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-prebuilt-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const taskRunSpec = createTaskRunSpec({
+      id: 'taskrun_ops_prebuilt_http',
+      teamId: 'ops',
+      title: 'Prebuilt HTTP task spec',
+      objective: 'Produce one prebuilt HTTP-created team result.',
+      createdAt: '2026-04-21T21:00:00.000Z',
+      requestedOutputs: [
+        {
+          kind: 'final-response',
+          label: 'final-response',
+          format: 'markdown',
+          required: true,
+          destination: 'response-body',
+        },
+      ],
+      requestedBy: {
+        kind: 'api',
+        label: 'external spec author',
+      },
+      trigger: 'api',
+    });
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        config: {
+          defaultRuntimeProfile: 'default',
+          browserProfiles: {
+            default: {},
+          },
+          runtimeProfiles: {
+            default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          },
+          agents: {
+            analyst: { runtimeProfile: 'default' },
+          },
+          teams: {
+            ops: { agents: ['analyst'] },
+          },
+        },
+        now: () => new Date('2026-04-21T21:05:00.000Z'),
+        executeStoredRunStep: async () => ({
+          output: {
+            summary: 'prebuilt http team run completed',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        }),
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: 'ops',
+          taskRunSpec,
+        }),
+      });
+
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as {
+        taskRunSpec: { id: string; title: string; requestedBy: { label: string } };
+        execution: { teamId: string; taskRunSpecId: string; runtimeRunStatus: string; finalOutputSummary: string | null };
+      };
+      expect(created).toMatchObject({
+        taskRunSpec: {
+          id: 'taskrun_ops_prebuilt_http',
+          title: 'Prebuilt HTTP task spec',
+          requestedBy: {
+            label: 'external spec author',
+          },
+        },
+        execution: {
+          teamId: 'ops',
+          taskRunSpecId: 'taskrun_ops_prebuilt_http',
+          runtimeRunStatus: 'succeeded',
+          finalOutputSummary: 'prebuilt http team run completed',
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('rejects compact assignment fields mixed with a prebuilt taskRunSpec over HTTP', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-prebuilt-conflict-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const taskRunSpec = createTaskRunSpec({
+      id: 'taskrun_ops_prebuilt_conflict',
+      teamId: 'ops',
+      title: 'Prebuilt conflict task spec',
+      objective: 'Use the prebuilt objective.',
+      createdAt: '2026-04-21T21:00:00.000Z',
+    });
+
+    const server = await createResponsesHttpServer({ host: '127.0.0.1', port: 0 });
+    try {
+      const response = await fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: 'ops',
+          objective: 'Conflicting compact objective.',
+          taskRunSpec,
+        }),
+      });
+
+      expect(response.status).toBe(400);
+      const payload = (await response.json()) as { error: { message: string; type: string } };
+      expect(payload.error.type).toBe('invalid_request_error');
+      expect(payload.error.message).toContain('compact assignment fields');
     } finally {
       await server.close();
     }

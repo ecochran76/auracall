@@ -1,6 +1,6 @@
 export type TeamRunStatus = 'planned' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
-export type TeamRunTrigger = 'cli' | 'service' | 'api' | 'scheduled' | 'internal';
+export type TeamRunTrigger = 'cli' | 'service' | 'api' | 'mcp' | 'scheduled' | 'internal';
 
 export type TeamRunExecutionMode = 'sequential';
 
