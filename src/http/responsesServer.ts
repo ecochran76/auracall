@@ -540,6 +540,9 @@ export async function createResponsesHttpServer(
           requestedBy: prebuiltTaskRunSpec ? undefined : 'auracall api serve',
           taskRunSpec,
         });
+        if (backgroundDrainIntervalMs > 0) {
+          scheduleBackgroundDrain(0);
+        }
         const execution = buildTeamRunExecutionPayload({
           teamId,
           bridgeResult,
@@ -731,6 +734,7 @@ export async function createResponsesHttpServer(
     control,
     host,
     now: () => now().toISOString(),
+    drainAfterCreate: backgroundDrainIntervalMs <= 0,
   });
   responsesService = createExecutionResponsesService({
     control,

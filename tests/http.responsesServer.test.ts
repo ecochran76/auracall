@@ -1275,6 +1275,29 @@ describe('http responses adapter', () => {
           },
           reclaimableRunIds: ['status_runner_scope_direct'],
         },
+        runnerTopology: {
+          localExecutionOwnerRunnerId: localRunnerId,
+          metrics: {
+            totalRunnerCount: 2,
+            activeRunnerCount: 2,
+            staleRunnerCount: 0,
+            freshRunnerCount: 2,
+            expiredRunnerCount: 0,
+            browserCapableRunnerCount: 1,
+          },
+          runners: expect.arrayContaining([
+            expect.objectContaining({
+              runnerId: localRunnerId,
+              selectedAsLocalExecutionOwner: true,
+              freshness: 'fresh',
+            }),
+            expect.objectContaining({
+              runnerId: 'runner:alternate-fresh',
+              selectedAsLocalExecutionOwner: false,
+              freshness: 'fresh',
+            }),
+          ]),
+        },
       });
 
       const alternateRunner = await runnersControl.readRunner('runner:alternate-fresh');
@@ -3724,6 +3747,133 @@ describe('http responses adapter', () => {
     }
   });
 
+  it('returns team-run create before execution when background drain is enabled', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-background-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    let allowCompletion = false;
+    const stepGate: { unblock?: () => void } = {};
+    type ResponseReadbackPayload = {
+      status: string;
+      output?: Array<{ content?: Array<{ text: string }> }>;
+    };
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0, backgroundDrainIntervalMs: 250 },
+      {
+        config: {
+          defaultRuntimeProfile: 'default',
+          browserProfiles: {
+            default: {},
+          },
+          runtimeProfiles: {
+            default: { browserProfile: 'default', defaultService: 'chatgpt' },
+          },
+          agents: {
+            analyst: { runtimeProfile: 'default' },
+          },
+          teams: {
+            ops: { agents: ['analyst'] },
+          },
+        },
+        now: () => new Date('2026-04-20T12:30:00.000Z'),
+        executeStoredRunStep: async () => {
+          if (!allowCompletion) {
+            await new Promise<void>((resolve) => {
+              stepGate.unblock = resolve;
+            });
+          }
+          return {
+            output: {
+              summary: 'background team run completed',
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            sharedState: {
+              structuredOutputs: [
+                {
+                  key: 'response.output',
+                  value: [
+                    {
+                      type: 'message',
+                      role: 'assistant',
+                      content: [{ type: 'output_text', text: 'background team run completed' }],
+                    },
+                  ],
+                },
+              ],
+            },
+          };
+        },
+      },
+    );
+
+    try {
+      const createPromise = fetch(`http://127.0.0.1:${server.port}/v1/team-runs`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          teamId: 'ops',
+          objective: 'Produce one background-drained team result.',
+          responseFormat: 'markdown',
+          maxTurns: 2,
+        }),
+      });
+      const createSettled = await Promise.race([
+        createPromise.then(() => 'resolved' as const),
+        new Promise<'pending'>((resolve) => setTimeout(() => resolve('pending'), 100)),
+      ]);
+      expect(createSettled).toBe('resolved');
+
+      const createResponse = await createPromise;
+      expect(createResponse.status).toBe(200);
+      const created = (await createResponse.json()) as {
+        execution: {
+          runtimeRunId: string;
+          runtimeRunStatus: string;
+          finalOutputSummary: string | null;
+          sharedStateStatus: string;
+        };
+        links: {
+          responseReadback: string;
+        };
+      };
+      expect(created.execution).toMatchObject({
+        runtimeRunStatus: 'planned',
+        finalOutputSummary: null,
+        sharedStateStatus: 'active',
+      });
+
+      allowCompletion = true;
+      stepGate.unblock?.();
+
+      let readBackPayload: ResponseReadbackPayload | null = null;
+      for (let attempt = 0; attempt < 20; attempt += 1) {
+        const readBack = await fetch(created.links.responseReadback);
+        expect(readBack.status).toBe(200);
+        readBackPayload = (await readBack.json()) as ResponseReadbackPayload;
+        if (readBackPayload?.status === 'completed') {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 25));
+      }
+
+      expect(readBackPayload).toMatchObject({
+        status: 'completed',
+        output: [
+          {
+            content: [{ text: 'background team run completed' }],
+          },
+        ],
+      });
+    } finally {
+      allowCompletion = true;
+      stepGate.unblock?.();
+      await server.close();
+    }
+  });
+
   it('rejects invalid team-run create request bodies over HTTP', async () => {
     const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-team-create-invalid-'));
     cleanup.push(tmp);
@@ -4443,7 +4593,7 @@ describe('http responses adapter', () => {
         `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&probe=service-state`,
       );
       expect(response.status).toBe(200);
-      const payload = (await response.json()) as Record<string, any>;
+      const payload = (await response.json()) as Record<string, unknown>;
       expect(payload).toMatchObject({
         inspection: {
           serviceState: {

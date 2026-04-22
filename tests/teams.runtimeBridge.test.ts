@@ -94,6 +94,70 @@ describe('team runtime bridge', () => {
     expect(result.finalRuntimeRecord.bundle.steps[1]?.status).toBe('succeeded');
   });
 
+  it('can create a team runtime without draining it', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-team-runtime-bridge-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    let executedStepCount = 0;
+    const bridge = createTeamRuntimeBridge({
+      now: () => '2026-04-09T12:02:00.000Z',
+      drainAfterCreate: false,
+      executeStoredRunStep: async () => {
+        executedStepCount += 1;
+        return {
+          output: {
+            summary: 'should not execute inline',
+            artifacts: [],
+            structuredData: {},
+            notes: [],
+          },
+        };
+      },
+    });
+
+    const result = await bridge.executeFromConfig({
+      config: {
+        defaultRuntimeProfile: 'default',
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: { browserProfile: 'default', defaultService: 'chatgpt' },
+        },
+        agents: {
+          analyst: { runtimeProfile: 'default' },
+        },
+        teams: {
+          ops: { agents: ['analyst'] },
+        },
+      },
+      teamId: 'ops',
+      runId: 'team_bridge_no_drain',
+      createdAt: '2026-04-09T12:02:00.000Z',
+      trigger: 'service',
+      entryPrompt: 'Create only.',
+    });
+
+    expect(executedStepCount).toBe(0);
+    expect(result.hostDrainResults).toEqual([]);
+    expect(result.createdRuntimeRecord.bundle.run.status).toBe('planned');
+    expect(result.finalRuntimeRecord.bundle.run.status).toBe('planned');
+    expect(result.executionSummary).toMatchObject({
+      teamRunId: 'team_bridge_no_drain',
+      runtimeRunId: 'team_bridge_no_drain',
+      runtimeRunStatus: 'planned',
+      terminalStepCount: 0,
+      stepSummaries: [
+        {
+          teamStepId: 'team_bridge_no_drain:step:1',
+          runtimeStepStatus: 'planned',
+          teamStepStatus: 'planned',
+        },
+      ],
+    });
+  });
+
   it('preserves fail-fast behavior when the first projected team step fails', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-team-runtime-bridge-'));
     cleanup.push(homeDir);

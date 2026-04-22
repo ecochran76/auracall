@@ -88,6 +88,7 @@ export interface TeamRuntimeBridgeDeps {
   control?: ExecutionRuntimeControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
   host?: ExecutionServiceHost;
+  drainAfterCreate?: boolean;
   now?: () => string;
   ownerId?: string;
   executeStoredRunStep?: ExecutionServiceHostDeps['executeStoredRunStep'];
@@ -106,6 +107,7 @@ export interface TeamRuntimeBridge {
 export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamRuntimeBridge {
   const control = deps.control ?? createExecutionRuntimeControl();
   const taskRunSpecStore = deps.taskRunSpecStore ?? createTaskRunSpecRecordStore();
+  const drainAfterCreate = deps.drainAfterCreate ?? true;
   const defaultHost =
     deps.host ??
     createExecutionServiceHost({
@@ -139,7 +141,7 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
           executeStoredRunStep: deps.executeStoredRunStep,
           executeLocalActionRequest: deps.executeLocalActionRequest,
         });
-      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
+      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore, drainAfterCreate });
     },
 
     async executeFromConfigTaskRunSpec(input) {
@@ -163,7 +165,7 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
           executeStoredRunStep: deps.executeStoredRunStep,
           executeLocalActionRequest: deps.executeLocalActionRequest,
         });
-      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore });
+      return executeTeamRuntimePlan({ control, host, teamPlan, taskRunSpecStore, drainAfterCreate });
     },
 
     async executeFromResolvedTeam(input) {
@@ -177,7 +179,7 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         entryPrompt: input.entryPrompt,
         initialInputs: input.initialInputs,
       });
-      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore });
+      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore, drainAfterCreate });
     },
 
     async executeFromResolvedTeamTaskRunSpec(input) {
@@ -190,7 +192,7 @@ export function createTeamRuntimeBridge(deps: TeamRuntimeBridgeDeps = {}): TeamR
         trigger: input.trigger,
         requestedBy: input.requestedBy,
       });
-      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore });
+      return executeTeamRuntimePlan({ control, host: defaultHost, teamPlan, taskRunSpecStore, drainAfterCreate });
     },
   };
 }
@@ -200,6 +202,7 @@ async function executeTeamRuntimePlan(input: {
   host: ExecutionServiceHost;
   teamPlan: TeamRunServicePlan;
   taskRunSpecStore: TaskRunSpecRecordStore;
+  drainAfterCreate: boolean;
 }): Promise<TeamRuntimeBridgeResult> {
   const persistedTaskRunSpecRecord = input.teamPlan.taskRunSpec
     ? await persistTaskRunSpec({ store: input.taskRunSpecStore, taskRunSpec: input.teamPlan.taskRunSpec })
@@ -214,12 +217,14 @@ async function executeTeamRuntimePlan(input: {
   });
 
   const createdRuntimeRecord = await input.control.createRun(runtimeBundle);
-  const hostDrainResult = await input.host.drainRunsUntilIdle({
-    runId: runtimeBundle.run.id,
-    maxRuns: 100,
-  });
-  const finalRuntimeRecord = hostDrainResult.drained.at(-1)?.record ?? createdRuntimeRecord;
-  const hostDrainResults = [hostDrainResult];
+  const hostDrainResult = input.drainAfterCreate
+    ? await input.host.drainRunsUntilIdle({
+        runId: runtimeBundle.run.id,
+        maxRuns: 100,
+      })
+    : null;
+  const finalRuntimeRecord = hostDrainResult?.drained.at(-1)?.record ?? createdRuntimeRecord;
+  const hostDrainResults = hostDrainResult ? [hostDrainResult] : [];
 
   return {
     teamPlan: input.teamPlan,
