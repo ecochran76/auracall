@@ -19317,3 +19317,35 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
 - Next action: split review/commit boundaries in dependency order, starting
   with the small policy/docs closeout contract.
+
+## 2026-04-21 - Default managed browser live smoke
+
+- Ran serial low-churn browser-service dispatcher smokes for the `default`
+  managed browser profile family.
+- Grok:
+  - launched `login --target grok --browser-keep-browser`
+  - `doctor --target grok --json` attached to the live managed profile
+  - confirmed signed-in Grok identity `Eric C` / `@SwantonDoug`
+  - selected `https://grok.com/`, no blocking state, and required selector
+    diagnosis passed
+- ChatGPT:
+  - launched `login --target chatgpt --browser-keep-browser`
+  - `doctor --target chatgpt --json` attached to the live managed profile
+  - confirmed signed-in ChatGPT identity `ecochran76@gmail.com`
+  - selected `https://chatgpt.com/`, no blocking state, feature probe returned
+    connected-tool evidence, and required selector diagnosis passed
+- Gemini:
+  - launched `login --target gemini --browser-keep-browser`
+  - `doctor --target gemini --json` attached to the live managed profile
+  - confirmed signed-in Gemini/Google identity `Eric Cochran`
+    / `ecochran76@gmail.com`
+  - selected `https://gemini.google.com/app` and returned Gemini feature
+    evidence
+  - found multiple hidden `google.com/sorry` tabs in the same managed profile,
+    so automation stopped per the Gemini anti-bot hard-stop policy
+- Dispatcher cleanup:
+  - `~/.auracall/browser-operations` had no remaining lock files after probes
+  - worktree remained clean before this journal note
+- Next action: have a human clear the hidden Gemini `google.com/sorry` tabs in
+  the open default Gemini managed browser, then run one bounded Gemini smoke
+  before relying on Gemini automation again.
