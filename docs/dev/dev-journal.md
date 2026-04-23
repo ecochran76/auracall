@@ -20273,3 +20273,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   evidence and derive a conversation id later while the active tab falls back to
   the root Gemini app, causing artifact polling against the submitted tab to
   miss the conversation content for the full timeout window.
+
+## 2026-04-23 - No post-submit navigation guard
+
+- Tightened the browser readback contract so `preserveActiveTab` now means
+  provider adapters must not navigate, reload, or reopen the owned tab during
+  post-submit readback/materialization.
+- ChatGPT read-context, conversation-file listing, and artifact materialization
+  now skip URL reopen/reload recovery and fail explicitly when the active tab
+  does not already show the expected conversation content.
+- Grok read-context and conversation-file listing now use the same rule:
+  preserve the owned tab and refuse conversation URL navigation during active
+  post-submit reads.
+- Gemini already honored no-navigation for active artifact read/materialization;
+  this slice extended the same guard to conversation-file downloads and
+  documented the cross-provider invariant.
+- Validation:
+  - `pnpm vitest run tests/browser/navigationPolicy.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/grokAdapter.test.ts tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts`
+  - `pnpm run check`

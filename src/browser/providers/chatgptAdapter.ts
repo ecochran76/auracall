@@ -5,6 +5,7 @@ import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../package
 import type { ChromeClient } from '../types.js';
 import { ChatgptFeatureSchema } from '../llmService/providers/schema.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
+import { providerNavigationAllowed } from './navigationPolicy.js';
 import type {
   Conversation,
   ConversationArtifact,
@@ -440,7 +441,7 @@ type ChatgptRecoveryDebugContext = {
 
 type ChatgptRecoveryActionResult = {
   action: 'dismiss-overlay' | 'close-dialog' | 'reload-page' | 'reopen-conversation' | 'reopen-list';
-  outcome: 'attempted' | 'failed';
+  outcome: 'attempted' | 'failed' | 'skipped';
   summary: string | null;
 };
 
@@ -928,8 +929,16 @@ function buildChatgptConversationReopen(
   client: ChromeClient,
   conversationId: string,
   projectId?: string | null,
+  options?: BrowserProviderListOptions,
 ): () => Promise<ChatgptRecoveryActionResult> {
   return async () => {
+    if (!providerNavigationAllowed(options)) {
+      return {
+        action: 'reopen-conversation',
+        outcome: 'skipped',
+        summary: `${conversationId}:navigation-forbidden`,
+      };
+    }
     try {
       await navigateToChatgptConversation(client, conversationId, projectId);
       return {
@@ -5373,6 +5382,7 @@ async function ensureChatgptConversationSurfaceReadyForRead(
   client: ChromeClient,
   conversationId: string,
   projectId?: string | null,
+  options?: BrowserProviderListOptions,
 ): Promise<void> {
   const waitForReady = async (description: string) => {
     return await waitForPredicate(
@@ -5384,6 +5394,13 @@ async function ensureChatgptConversationSurfaceReadyForRead(
       },
     );
   };
+  if (!providerNavigationAllowed(options)) {
+    const ready = await waitForReady(`ChatGPT active conversation ${conversationId} surface ready without navigation`);
+    if (ready.ok) {
+      return;
+    }
+    throw new Error(`ChatGPT active conversation content not found for ${conversationId}; refusing to navigate the active tab.`);
+  }
   await navigateToChatgptConversation(client, conversationId, projectId);
   let ready = await waitForReady(`ChatGPT conversation ${conversationId} surface ready`);
   if (ready.ok) {
@@ -5412,9 +5429,10 @@ async function readChatgptConversationContextWithClient(
   conversationId: string,
   projectId?: string | null,
   debugContext?: ChatgptRecoveryDebugContext,
+  options?: BrowserProviderListOptions,
 ): Promise<ConversationContext> {
   return withChatgptBlockingSurfaceRecovery(client, `readChatgptConversationContext:${conversationId}`, async () => {
-    await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId);
+    await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, projectId, options);
     let payload = await readChatgptConversationPayloadWithClient(client, conversationId, projectId).catch(() => null);
     await waitForPredicate(
       client.Runtime,
@@ -5526,7 +5544,7 @@ async function readChatgptConversationContextWithClient(
     };
   }, {
     debugContext,
-    reopen: buildChatgptConversationReopen(client, conversationId, projectId),
+    reopen: buildChatgptConversationReopen(client, conversationId, projectId, options),
   });
 }
 
@@ -6371,13 +6389,14 @@ async function materializeChatgptConversationArtifactWithClient(
   destDir: string,
   projectId?: string | null,
   debugContext?: ChatgptRecoveryDebugContext,
+  options?: BrowserProviderListOptions,
 ): Promise<FileRef | null> {
   const normalizedProjectId = normalizeChatgptProjectId(projectId);
   return withChatgptBlockingSurfaceRecovery(
     client,
     `materializeChatgptConversationArtifact:${conversationId}:${artifact.id}`,
     async () => {
-      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId);
+      await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId, options);
       if (artifact.kind === 'canvas') {
         const contentText = resolveChatgptCanvasArtifactContentText(
           artifact,
@@ -6582,7 +6601,7 @@ async function materializeChatgptConversationArtifactWithClient(
     },
     {
       debugContext,
-      reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId),
+      reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId, options),
     },
   );
 }
@@ -6651,7 +6670,8 @@ export function createChatgptAdapter(): Pick<
         if (!isRetryableConnectionError(error)) {
           throw error;
         }
-        const retryOptions = options ? { ...options, tabTargetId: undefined } : undefined;
+        const retryOptions =
+          options && providerNavigationAllowed(options) ? { ...options, tabTargetId: undefined } : options;
         return attempt(retryOptions);
       }
     },
@@ -6677,7 +6697,8 @@ export function createChatgptAdapter(): Pick<
         if (!isRetryableConnectionError(error)) {
           throw error;
         }
-        const retryOptions = options ? { ...options, tabTargetId: undefined } : undefined;
+        const retryOptions =
+          options && providerNavigationAllowed(options) ? { ...options, tabTargetId: undefined } : options;
         return attempt(retryOptions);
       }
     },
@@ -6701,6 +6722,7 @@ export function createChatgptAdapter(): Pick<
           conversationId,
           normalizedProjectId,
           debugContext,
+          options,
         );
       } finally {
         await client.close().catch(() => undefined);
@@ -6724,12 +6746,12 @@ export function createChatgptAdapter(): Pick<
           client,
           `listChatgptConversationFiles:${conversationId}`,
           async () => {
-            await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId);
+            await ensureChatgptConversationSurfaceReadyForRead(client, conversationId, normalizedProjectId, options);
             return await readVisibleChatgptConversationFilesWithClient(client, conversationId);
           },
           {
             debugContext,
-            reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId),
+            reopen: buildChatgptConversationReopen(client, conversationId, normalizedProjectId, options),
           },
         );
       } finally {
@@ -6762,6 +6784,7 @@ export function createChatgptAdapter(): Pick<
           destDir,
           normalizedProjectId,
           debugContext,
+          options,
         );
       } finally {
         await client.close().catch(() => undefined);

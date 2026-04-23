@@ -22,6 +22,7 @@ import {
   waitForPredicate,
 } from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
+import { providerNavigationAllowed } from './navigationPolicy.js';
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
@@ -3137,8 +3138,12 @@ async function downloadGeminiConversationFileWithClient(
   conversationId: string,
   fileId: string,
   destPath: string,
+  options: { allowNavigation?: boolean } = {},
 ): Promise<void> {
   if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
+    if (options.allowNavigation === false) {
+      throw new Error(`Gemini active conversation content not found for ${conversationId}; refusing to navigate the active tab.`);
+    }
     await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
   }
   const refreshed = await readGeminiConversationContextWithClient(client, conversationId);
@@ -6042,10 +6047,14 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        resolveGeminiConversationUrl(normalizedConversationId),
+        options?.preserveActiveTab
+          ? resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL)
+          : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
-        await downloadGeminiConversationFileWithClient(client, normalizedConversationId, fileId, destPath);
+        await downloadGeminiConversationFileWithClient(client, normalizedConversationId, fileId, destPath, {
+          allowNavigation: providerNavigationAllowed(options),
+        });
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

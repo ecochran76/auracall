@@ -3,6 +3,7 @@ import CDP from 'chrome-remote-interface';
 import type { Project, Conversation, ConversationContext, FileRef } from './domain.js';
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { ChromeClient } from '../types.js';
+import { providerNavigationAllowed } from './navigationPolicy.js';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
@@ -2308,17 +2309,18 @@ export function createGrokAdapter(): Pick<
         : await connectToGrokTab(options, targetUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
+        const allowNavigation = providerNavigationAllowed(options);
         if (cleanProjectId) {
-          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
           if (shouldNavigate) {
             await navigateToProject(client, targetUrl);
           }
         } else {
-          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
           if (shouldNavigate) {
             await navigateToConversation(client, targetUrl);
           }
-          if (!(await isValidConversationUrl(client))) {
+          if (allowNavigation && !(await isValidConversationUrl(client))) {
             throw new Error('Conversation URL is invalid or missing.');
           }
         }
@@ -2328,7 +2330,11 @@ export function createGrokAdapter(): Pick<
           requireResponse: true,
         });
         if (!ready.ok) {
-          throw new Error('Conversation content not found');
+          throw new Error(
+            allowNavigation
+              ? 'Conversation content not found'
+              : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
+          );
         }
 
         const evalResult = await client.Runtime.evaluate({
@@ -2557,17 +2563,18 @@ export function createGrokAdapter(): Pick<
         : await connectToGrokTab(options, targetUrl);
       const { client, targetId, shouldClose, host, port, usedExisting } = connection;
       try {
+        const allowNavigation = providerNavigationAllowed(options);
         if (cleanProjectId) {
-          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
           if (shouldNavigate) {
             await navigateToProject(client, targetUrl);
           }
         } else {
-          const shouldNavigate = !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
+          const shouldNavigate = allowNavigation && !(usedExisting && (await currentGrokUrlMatchesPreference(client, targetUrl)));
           if (shouldNavigate) {
             await navigateToConversation(client, targetUrl);
           }
-          if (!(await isValidConversationUrl(client))) {
+          if (allowNavigation && !(await isValidConversationUrl(client))) {
             throw new Error('Conversation URL is invalid or missing.');
           }
         }
@@ -2576,7 +2583,11 @@ export function createGrokAdapter(): Pick<
           requireResponse: false,
         });
         if (!ready.ok) {
-          throw new Error('Conversation content not found');
+          throw new Error(
+            allowNavigation
+              ? 'Conversation content not found'
+              : `Grok active conversation content not found for ${conversationId}; refusing to navigate the active tab.`,
+          );
         }
         return await readVisibleConversationFilesWithClient(client, conversationId);
       } finally {

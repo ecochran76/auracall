@@ -179,6 +179,10 @@ Terminology note:
     browser-backed media job to capture the selected provider target,
     document readiness, visible control counts, provider evidence, and a stored
     PNG screenshot path without re-invoking the provider.
+    Browser readback/materialization on a submitted tab now treats that tab as
+    the authority when `preserveActiveTab` is set: provider adapters reuse the
+    existing tab target and refuse post-submit navigation/reload/reopen
+    recovery on that tab.
     Gemini browser image runs now emit pre-submission milestones such as
     `browser_target_attached`, `gemini_surface_ready`, `capability_selected`,
     `composer_ready`, `prompt_inserted`, and `send_attempted` before the

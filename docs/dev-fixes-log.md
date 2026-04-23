@@ -40,6 +40,12 @@
   observation, keep ownership on the same browser tab and verify the
   conversation route/content stabilizes before long artifact polling.
 
+- 2026-04-23: Treat the submitted browser tab as the authority across providers.
+  In this repo, `preserveActiveTab` must forbid post-submit navigation, reload,
+  and reopen recovery on ChatGPT, Gemini, and Grok readback/materialization
+  paths. If the owned tab does not already expose the expected conversation
+  content, fail explicitly instead of trying to recover by URL.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

@@ -158,6 +158,11 @@ Current active plan:
     adapters can reopen a menu family, inspect selected-state from menu markup,
     and keep error hints scoped to the final containing menu without rebuilding
     that flow locally.
+  - provider-owned readback on a submitted tab now treats `preserveActiveTab`
+    as a no-post-submit-navigation guard across ChatGPT, Gemini, and Grok.
+    Keep future extraction focused on a reusable browser-service navigation
+    authority primitive only if another real workflow needs the same “reuse the
+    tab or fail” contract.
 
 ## New reusable learnings from the ChatGPT composer/add-on work (2026-03-28)
 
