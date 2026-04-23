@@ -64,13 +64,14 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
         completedAt: null,
         artifacts: [],
         timeline,
-        metadata: {
-          ...(request.metadata ?? {}),
-          source: request.source ?? null,
-          transport: request.transport ?? null,
-          count: request.count ?? null,
-          size: request.size ?? null,
-          aspectRatio: request.aspectRatio ?? null,
+          metadata: {
+            ...(request.metadata ?? {}),
+            source: request.source ?? null,
+            transport: request.transport ?? null,
+            runtimeProfile,
+            count: request.count ?? null,
+            size: request.size ?? null,
+            aspectRatio: request.aspectRatio ?? null,
         },
       };
       let currentResponse = runningResponse;
@@ -140,6 +141,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
             ...(capability ? { workbenchCapability: formatCapabilityMetadata(capability) } : {}),
             source: request.source ?? null,
             transport: request.transport ?? null,
+            runtimeProfile,
             count: request.count ?? null,
             size: request.size ?? null,
             aspectRatio: request.aspectRatio ?? null,

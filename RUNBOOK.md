@@ -1500,3 +1500,33 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 51`
   - `git diff --check`
+
+## Turn 61 | 2026-04-23
+
+- Opened and closed maintenance plan:
+  `docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md`
+- Trigger:
+  - dogfood showed direct Gemini response runs can complete through the
+    cookie/web-client path before runtime diagnostics can observe a managed
+    browser workbench
+  - Gemini browser media generation is the long-lived tab path with recorded
+    `tabTargetId`, so diagnostics belong on status polling too
+- Change:
+  - added `diagnostics=browser-state` to generic run status and
+    media-generation status
+  - added matching MCP input support for `run_status` and
+    `media_generation_status`
+  - media diagnostics prefer the provider `tabTargetId` from metadata or
+    prompt-submission timeline details
+- Verification target:
+  - `pnpm vitest run tests/mediaBrowserDiagnostics.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 52`
+  - guarded live Gemini browser media diagnostics smoke:
+    - `medgen_4bf95e87bb594929aa51578ca7a2564a` proved
+      `status?diagnostics=browser-state` can reach the Gemini browser family
+    - the first snapshot occurred before prompt submission and the media job
+      later failed with `media_generation_failed`, so the implementation now
+      requires a recorded `tabTargetId` before reporting observed media
+      browser diagnostics
+  - `git diff --check`

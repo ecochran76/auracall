@@ -13882,3 +13882,16 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   should provide selected target, document readiness, visible control counts,
   provider evidence, and a stored PNG screenshot path through browser-service
   ownership. Keep this read-only, active-run scoped, and navigation-free.
+- 2026-04-23: Put browser diagnostics on the status surfaces for media jobs,
+  not only runtime inspection. In this repo, direct Gemini response runs may
+  complete through the cookie/web-client path too quickly for active runtime
+  diagnostics, while Gemini browser media jobs keep the managed workbench tab
+  and record `tabTargetId`. `GET /v1/runs/{id}/status?diagnostics=browser-state`
+  and `GET /v1/media-generations/{id}/status?diagnostics=browser-state`
+  should expose bounded live browser evidence for active browser-backed media
+  jobs and return honest `unavailable` posture for terminal jobs.
+- 2026-04-23: Do not call media browser diagnostics observed before prompt
+  submission records a provider tab. In this repo, an early Gemini media status
+  poll can attach to the Gemini home page before the media executor has a
+  submitted `tabTargetId`; that proves browser reachability, not active media
+  state. Return `unavailable` until the media run records the submitted target.

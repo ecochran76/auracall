@@ -4,6 +4,7 @@ import {
   createMediaGenerationService,
   type MediaGenerationService,
 } from '../../media/service.js';
+import { probeMediaGenerationBrowserDiagnostics } from '../../media/browserDiagnostics.js';
 import { MediaGenerationRequestSchema } from '../../media/schema.js';
 import { summarizeMediaGenerationStatus } from '../../media/statusSummary.js';
 import type { MediaGenerationRequest, MediaGenerationResponse } from '../../media/types.js';
@@ -76,6 +77,7 @@ const mediaGenerationOutputShape = {
 
 const mediaGenerationStatusInputShape = {
   id: z.string().min(1),
+  diagnostics: z.enum(['browser-state']).optional(),
 } satisfies z.ZodRawShape;
 
 const mediaGenerationStatusArtifactShape = z.object({
@@ -105,6 +107,7 @@ const mediaGenerationStatusOutputShape = {
   timeline: z.array(mediaGenerationTimelineEventShape),
   artifactCount: z.number().int().nonnegative(),
   artifacts: z.array(mediaGenerationStatusArtifactShape),
+  browserDiagnostics: z.unknown().optional(),
   failure: z
     .object({
       code: z.string(),
@@ -177,7 +180,12 @@ export function createMediaGenerationStatusToolHandler(service: MediaGenerationS
     if (!response) {
       throw new Error(`Media generation "${payload.id}" not found.`);
     }
-    const summary = summarizeMediaGenerationStatus(response);
+    const summary = {
+      ...summarizeMediaGenerationStatus(response),
+      ...(payload.diagnostics === 'browser-state'
+        ? { browserDiagnostics: await probeMediaGenerationBrowserDiagnostics(response) }
+        : {}),
+    };
     const lastEvent = summary.lastEvent?.event ?? 'no timeline event';
     const line = `Media generation ${summary.id} is ${summary.status}; last event ${lastEvent}; artifacts ${summary.artifactCount}.`;
     return {

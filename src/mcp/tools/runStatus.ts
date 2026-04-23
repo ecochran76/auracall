@@ -1,11 +1,17 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import { createMediaGenerationService, type MediaGenerationService } from '../../media/service.js';
+import { probeMediaGenerationBrowserDiagnostics } from '../../media/browserDiagnostics.js';
 import { createExecutionResponsesService, type ExecutionResponsesService } from '../../runtime/responsesService.js';
+import {
+  createDefaultRuntimeRunBrowserDiagnosticsProbe,
+} from '../../http/responsesServer.js';
 import { readAuraCallRunStatus } from '../../runStatus.js';
+import { inspectRuntimeRun } from '../../runtime/inspection.js';
 
 const runStatusInputShape = {
   id: z.string().min(1),
+  diagnostics: z.enum(['browser-state']).optional(),
 } satisfies z.ZodRawShape;
 
 const runStatusArtifactShape = z.object({
@@ -41,6 +47,7 @@ const runStatusOutputShape = {
   steps: z.array(runStatusStepShape).optional(),
   artifactCount: z.number().int().nonnegative(),
   artifacts: z.array(runStatusArtifactShape),
+  browserDiagnostics: z.unknown().optional(),
   metadata: z.record(z.string(), z.unknown()),
   failure: z.unknown().nullable().optional(),
 } satisfies z.ZodRawShape;
@@ -79,6 +86,21 @@ export function createRunStatusToolHandler(deps: Required<RegisterRunStatusToolD
     });
     if (!status) {
       throw new Error(`Run "${payload.id}" not found.`);
+    }
+    if (payload.diagnostics === 'browser-state') {
+      if (status.kind === 'response') {
+        const inspection = await inspectRuntimeRun({
+          runId: status.id,
+          includeBrowserDiagnostics: true,
+          probeBrowserDiagnostics: createDefaultRuntimeRunBrowserDiagnosticsProbe(),
+        });
+        status.browserDiagnostics = inspection.browserDiagnostics;
+      } else {
+        const mediaGeneration = await deps.mediaGenerationService.readGeneration(status.id);
+        if (mediaGeneration) {
+          status.browserDiagnostics = await probeMediaGenerationBrowserDiagnostics(mediaGeneration);
+        }
+      }
     }
     const lastEvent = readLastEventLabel(status.lastEvent);
     return {

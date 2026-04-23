@@ -226,8 +226,13 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
     - for compact operator status, run
       `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>/status`
+    - while a browser-backed media job is still running, add
+      `?diagnostics=browser-state` to capture bounded live browser evidence
+      from the active provider target
     - for the generic run-status surface, run
       `curl http://127.0.0.1:8080/v1/runs/<media_generation_id>/status`
+    - the generic status route accepts the same
+      `?diagnostics=browser-state` switch for running browser-backed media jobs
     - CLI parity for the same durable status envelope:
       `pnpm tsx bin/auracall.ts run status <media_generation_id> --json`
     - inspect `timeline[]` for `running_persisted`, `executor_started`,
@@ -285,6 +290,10 @@
         - live, bounded, and run-scoped to the active step
         - includes target URL/title/id, document readiness, visible control
           counts, provider evidence, and a stored PNG screenshot path
+        - `GET /v1/runs/<id>/status?diagnostics=browser-state` and
+          `GET /v1/media-generations/<id>/status?diagnostics=browser-state`
+          expose the same bounded browser snapshot for active browser-backed
+          media jobs, using the media run's recorded `tabTargetId` when present
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - read-only authority evidence only

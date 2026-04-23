@@ -20130,3 +20130,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm run check`
   - `pnpm vitest run tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts tests/mcp.runtimeInspect.test.ts`
+
+## 2026-04-23 - Status browser diagnostics parity
+
+- Dogfood of `runtime-runs/inspect?...&diagnostics=browser-state` against a
+  direct Gemini response run showed the chat completed through the Gemini
+  cookie/web-client path before a managed-browser workbench target was
+  observable.
+- Added the same opt-in browser diagnostics to generic run status and
+  media-generation status so active Gemini browser media jobs can expose the
+  target/document/screenshot evidence operators actually need.
+- Media diagnostics now resolve the selected AuraCall runtime profile and
+  prefer the provider `tabTargetId` recorded at prompt submission.
+- Created and closed
+  `docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md`.
+- Validation:
+  - `pnpm run check`
+  - `pnpm vitest run tests/mediaBrowserDiagnostics.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.schema.test.ts`
+- Live dogfood:
+  - Direct Gemini response run `resp_c07a39badc3b40d0a5c47718024fcb94`
+    completed through the Gemini web-client path before active browser
+    diagnostics could attach.
+  - Gemini media run `medgen_4bf95e87bb594929aa51578ca7a2564a` returned an
+    early diagnostics snapshot while the job was running, but the target was
+    still Gemini home before prompt submission; the implementation now returns
+    `unavailable` until a media run records `tabTargetId`. The job later failed
+    with `media_generation_failed` and no `prompt_submitted` timeline event.

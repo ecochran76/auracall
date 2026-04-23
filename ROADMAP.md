@@ -51,6 +51,14 @@ Current State:
   - diagnostics complement `serviceState` with selected target, document,
     visible control counts, provider evidence, and a stored PNG screenshot
     path; they do not expose raw CDP or navigate provider pages
+- status browser diagnostics parity is closed in
+  [docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0052-2026-04-23-status-browser-diagnostics-parity.md)
+  - `GET /v1/runs/{id}/status?diagnostics=browser-state`,
+    `GET /v1/media-generations/{id}/status?diagnostics=browser-state`, MCP
+    `run_status`, and MCP `media_generation_status` now expose the same
+    bounded browser snapshot for active browser-backed media jobs
+  - media diagnostics prefer the Gemini prompt-submission `tabTargetId` when
+    present and return honest `unavailable` posture for terminal jobs
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

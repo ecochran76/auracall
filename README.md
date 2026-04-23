@@ -167,6 +167,10 @@ Terminology note:
     `GET /v1/media-generations/{media_generation_id}/status` for a compact
     status summary with the latest timeline event, artifact cache path, and
     materialization method.
+    Add `diagnostics=browser-state` to either status route during a running
+    browser-backed media job to capture the selected provider target,
+    document readiness, visible control counts, provider evidence, and a stored
+    PNG screenshot path without re-invoking the provider.
     Gemini image requests with `transport = browser` now check the matching
     workbench capability, select `Create image`, and materialize generated image
     artifacts through the managed browser path. Gemini music/video and Grok
@@ -286,6 +290,9 @@ Terminology note:
         - includes selected target URL/title/id, document readiness, visible
           control counts, provider evidence such as Gemini activity state, and
           a PNG screenshot path under AuraCall diagnostics storage
+        - generic run/media status also supports this switch for active
+          browser-backed media jobs and prefers the provider `tabTargetId`
+          recorded at prompt submission
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - this is read-only scheduler evidence, not assignment authority

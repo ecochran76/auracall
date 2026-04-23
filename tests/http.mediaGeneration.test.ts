@@ -116,6 +116,19 @@ describe('http media generation adapter', () => {
         },
       });
 
+      const diagnosticStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/media-generations/${created.id}/status?diagnostics=browser-state`,
+      );
+      expect(diagnosticStatusResponse.status).toBe(200);
+      await expect(diagnosticStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'media_generation_status',
+        browserDiagnostics: {
+          probeStatus: 'unavailable',
+          reason: `media generation ${created.id} is not actively running`,
+        },
+      });
+
       const runStatusResponse = await fetch(
         `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status`,
       );
@@ -135,6 +148,20 @@ describe('http media generation adapter', () => {
         ],
         lastEvent: {
           event: 'completed',
+        },
+      });
+
+      const diagnosticRunStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status?diagnostics=browser-state`,
+      );
+      expect(diagnosticRunStatusResponse.status).toBe(200);
+      await expect(diagnosticRunStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        browserDiagnostics: {
+          probeStatus: 'unavailable',
+          reason: `media generation ${created.id} is not actively running`,
         },
       });
     } finally {
@@ -160,9 +187,9 @@ describe('http media generation adapter', () => {
       >;
       expect(status.routes.mediaGenerationsCreate).toBe('/v1/media-generations');
       expect(status.routes.mediaGenerationsStatusTemplate).toBe(
-        '/v1/media-generations/{media_generation_id}/status',
+        '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
       );
-      expect(status.routes.runStatusTemplate).toBe('/v1/runs/{run_id}/status');
+      expect(status.routes.runStatusTemplate).toBe('/v1/runs/{run_id}/status[?diagnostics=browser-state]');
     } finally {
       await server.close();
     }

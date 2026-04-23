@@ -2,6 +2,7 @@ import type { MediaGenerationService } from './media/service.js';
 import { summarizeMediaGenerationStatus, type MediaGenerationStatusSummary } from './media/statusSummary.js';
 import type { ExecutionResponsesService } from './runtime/responsesService.js';
 import type { ExecutionResponse, ExecutionResponseStatus } from './runtime/apiTypes.js';
+import type { RuntimeRunInspectionBrowserDiagnosticsSummary } from './runtime/inspection.js';
 
 export type AuraCallRunStatusKind = 'response' | 'media_generation';
 
@@ -38,6 +39,7 @@ export interface AuraCallRunStatus {
   steps?: AuraCallRunStatusStepSummary[];
   artifactCount: number;
   artifacts: AuraCallRunStatusArtifactSummary[];
+  browserDiagnostics?: RuntimeRunInspectionBrowserDiagnosticsSummary;
   metadata: Record<string, unknown>;
   failure?: unknown | null;
 }

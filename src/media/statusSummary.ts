@@ -36,6 +36,7 @@ export interface MediaGenerationStatusSummary {
   metadata: {
     source?: unknown;
     transport?: unknown;
+    runtimeProfile?: unknown;
     conversationId?: unknown;
     tabTargetId?: unknown;
     capabilityId?: unknown;
@@ -87,6 +88,7 @@ function summarizeMetadata(metadata: Record<string, unknown> | null): MediaGener
   return {
     source: metadata?.source ?? null,
     transport: metadata?.transport ?? null,
+    runtimeProfile: metadata?.runtimeProfile ?? null,
     conversationId: metadata?.conversationId ?? null,
     tabTargetId: metadata?.tabTargetId ?? null,
     capabilityId: metadata?.capabilityId ?? null,

@@ -22,6 +22,8 @@ import type {
 } from '../runtime/apiTypes.js';
 import {
   inspectRuntimeRun,
+  type InspectRuntimeRunInput,
+  type RuntimeRunInspectionBrowserDiagnosticsSummary,
   type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
   type RuntimeRunInspectionServiceStateProbeResult,
   type ProbeRuntimeRunBrowserDiagnosticsInput,
@@ -73,6 +75,7 @@ import {
   type MediaGenerationServiceDeps,
 } from '../media/service.js';
 import { createGeminiBrowserMediaGenerationExecutor } from '../media/geminiBrowserExecutor.js';
+import { probeMediaGenerationBrowserDiagnostics } from '../media/browserDiagnostics.js';
 import type { MediaGenerationRequest } from '../media/types.js';
 import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
 import {
@@ -82,6 +85,7 @@ import {
 import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
 import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/geminiDiscovery.js';
 import { readAuraCallRunStatus } from '../runStatus.js';
+import type { AuraCallRunStatus } from '../runStatus.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -111,6 +115,7 @@ export interface ResponsesHttpServerDeps {
   probeRuntimeRunBrowserDiagnostics?: (
     input: ProbeRuntimeRunBrowserDiagnosticsInput,
   ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
+  probeMediaGenerationBrowserDiagnostics?: typeof probeMediaGenerationBrowserDiagnostics;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -261,6 +266,8 @@ export async function createResponsesHttpServer(
     catalog: deps.workbenchCapabilityCatalog,
     discoverCapabilities: deps.discoverWorkbenchCapabilities,
   });
+  const probeMediaGenerationBrowserDiagnosticsImpl =
+    deps.probeMediaGenerationBrowserDiagnostics ?? probeMediaGenerationBrowserDiagnostics;
   const mediaGenerationService = createMediaGenerationService({
     now,
     executor:
@@ -658,6 +665,7 @@ export async function createResponsesHttpServer(
 
       const runStatusId = matchRunStatusRoute(url.pathname);
       if (req.method === 'GET' && runStatusId) {
+        const runStatusQuery = parseRunStatusQuery(url.searchParams);
         const response = await readAuraCallRunStatus(runStatusId, {
           responsesService,
           mediaGenerationService,
@@ -671,12 +679,25 @@ export async function createResponsesHttpServer(
           } satisfies HttpErrorPayload);
           return;
         }
+        if (runStatusQuery.diagnostics === 'browser-state') {
+          response.browserDiagnostics = await readRunStatusBrowserDiagnostics({
+            status: response,
+            responsesService,
+            mediaGenerationService,
+            probeRuntimeRunBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
+            probeMediaGenerationBrowserDiagnostics: probeMediaGenerationBrowserDiagnosticsImpl,
+            control,
+            runnersControl,
+            createRunAffinity,
+          });
+        }
         sendJson(res, 200, response);
         return;
       }
 
       const mediaGenerationStatusId = matchMediaGenerationStatusRoute(url.pathname);
       if (req.method === 'GET' && mediaGenerationStatusId) {
+        const runStatusQuery = parseRunStatusQuery(url.searchParams);
         const response = await mediaGenerationService.readGeneration(mediaGenerationStatusId);
         if (!response) {
           sendJson(res, 404, {
@@ -687,7 +708,15 @@ export async function createResponsesHttpServer(
           } satisfies HttpErrorPayload);
           return;
         }
-        sendJson(res, 200, summarizeMediaGenerationStatus(response));
+        const summary = summarizeMediaGenerationStatus(response);
+        if (runStatusQuery.diagnostics === 'browser-state') {
+          sendJson(res, 200, {
+            ...summary,
+            browserDiagnostics: await probeMediaGenerationBrowserDiagnosticsImpl(response),
+          });
+          return;
+        }
+        sendJson(res, 200, summary);
         return;
       }
 
@@ -1184,8 +1213,8 @@ function createHttpStatusResponse(input: {
       responsesGetTemplate: '/v1/responses/{response_id}',
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
-      mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status',
-      runStatusTemplate: '/v1/runs/{run_id}/status',
+      mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status[?diagnostics=browser-state]',
+      runStatusTemplate: '/v1/runs/{run_id}/status[?diagnostics=browser-state]',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}',
     },
@@ -1462,6 +1491,10 @@ interface ParsedRuntimeInspectionQuery {
   diagnostics?: 'browser-state';
 }
 
+interface ParsedRunStatusQuery {
+  diagnostics?: 'browser-state';
+}
+
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
   const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
   const parsed = z
@@ -1571,6 +1604,65 @@ function parseWorkbenchCapabilityQuery(searchParams: URLSearchParams) {
 
 function createTeamRunIdSuffix(): string {
   return randomUUID().replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 12) || 'run';
+}
+
+function parseRunStatusQuery(searchParams: URLSearchParams): ParsedRunStatusQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('diagnostics')) {
+    raw.diagnostics = searchParams.get('diagnostics');
+  }
+  return z.object({
+    diagnostics: z.enum(['browser-state']).optional(),
+  }).parse(raw);
+}
+
+async function readRunStatusBrowserDiagnostics(input: {
+  status: AuraCallRunStatus;
+  responsesService: ReturnType<typeof createExecutionResponsesService>;
+  mediaGenerationService: ReturnType<typeof createMediaGenerationService>;
+  probeRuntimeRunBrowserDiagnostics: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
+  probeMediaGenerationBrowserDiagnostics: typeof probeMediaGenerationBrowserDiagnostics;
+  control: ExecutionRuntimeControlContract;
+  runnersControl: ExecutionRunnerControlContract;
+  createRunAffinity: InspectRuntimeRunInput['createRunAffinity'];
+}): Promise<RuntimeRunInspectionBrowserDiagnosticsSummary> {
+  if (input.status.kind === 'response') {
+    const inspection = await inspectRuntimeRun({
+      runId: input.status.id,
+      includeBrowserDiagnostics: true,
+      probeBrowserDiagnostics: input.probeRuntimeRunBrowserDiagnostics,
+      control: input.control,
+      runnersControl: input.runnersControl,
+      createRunAffinity: input.createRunAffinity,
+    });
+    return inspection.browserDiagnostics ?? createUnavailableRunStatusBrowserDiagnostics(
+      `runtime run ${input.status.id} did not return browser diagnostics`,
+    );
+  }
+
+  const mediaGeneration = await input.mediaGenerationService.readGeneration(input.status.id);
+  if (!mediaGeneration) {
+    return createUnavailableRunStatusBrowserDiagnostics(`media generation ${input.status.id} was not found`);
+  }
+  return input.probeMediaGenerationBrowserDiagnostics(mediaGeneration);
+}
+
+function createUnavailableRunStatusBrowserDiagnostics(
+  reason: string,
+): NonNullable<RuntimeRunInspectionPayload['browserDiagnostics']> {
+  return {
+    probeStatus: 'unavailable',
+    service: null,
+    ownerStepId: null,
+    observedAt: null,
+    source: null,
+    reason,
+    target: null,
+    document: null,
+    visibleCounts: null,
+    providerEvidence: null,
+    screenshot: null,
+  };
 }
 
 function createTeamRunCreateLinks(input: {

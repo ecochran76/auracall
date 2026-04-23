@@ -31,6 +31,7 @@ export async function probeBrowserRunDiagnostics(
     service: BrowserDiagnosticsService;
     runId: string;
     stepId: string;
+    preferredTargetId?: string | null;
   },
   deps: BrowserRunDiagnosticsDeps = {},
 ): Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null> {
@@ -43,7 +44,7 @@ export async function probeBrowserRunDiagnostics(
   });
   const port = target.port;
   const host = target.host ?? '127.0.0.1';
-  const targetId = resolveTargetId(target.tab);
+  const targetId = input.preferredTargetId ?? resolveTargetId(target.tab);
   if (!port || !targetId) {
     return null;
   }

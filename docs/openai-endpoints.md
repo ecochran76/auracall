@@ -211,6 +211,9 @@ Current limits:
         - bounded live browser evidence for the active step only
         - includes target URL/title/id, document readiness, visible control
           counts, provider evidence, and a stored PNG screenshot path
+        - generic run/media status also supports this switch for active
+          browser-backed media jobs and prefers the provider `tabTargetId`
+          recorded at prompt submission
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - read-only authority evidence only

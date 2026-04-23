@@ -173,5 +173,22 @@ describe('mcp media_generation tool', () => {
         ],
       },
     });
+
+    const diagnosticResult = await handler({
+      id: 'medgen_status_1',
+      diagnostics: 'browser-state',
+    });
+
+    expect(diagnosticResult).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'medgen_status_1',
+        object: 'media_generation_status',
+        browserDiagnostics: {
+          probeStatus: 'unavailable',
+          reason: 'media generation medgen_status_1 is not actively running',
+        },
+      },
+    });
   });
 });

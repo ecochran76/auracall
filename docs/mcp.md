@@ -19,12 +19,15 @@
 - Provenance: compact MCP-created runs are stamped with `trigger = "mcp"` and `requestedBy.kind = "mcp"`; prebuilt `taskRunSpec` inputs preserve their validated provenance.
 
 ### `run_status`
-- Inputs: `id` for a response/runtime run or media generation.
+- Inputs: `id` for a response/runtime run or media generation; optional
+  `diagnostics: "browser-state"`.
 - Behavior: returns `object = "auracall_run_status"` with a compact status
   envelope across normal response chats, team-runtime chats, and media
   generations. It includes current status, latest event, step summaries when
   available, artifact count, artifact cache path/URI, materialization method,
   provider/runtime metadata, and failure details.
+- `diagnostics = "browser-state"` adds bounded live browser evidence when the
+  run is active and browser-backed.
 - Use this as the default operator polling tool when the run type may vary.
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
@@ -49,10 +52,14 @@
 - Provenance: MCP-created media requests are stamped with `source = "mcp"` in the structured response metadata.
 
 ### `media_generation_status`
-- Inputs: `id` for a stored media generation.
+- Inputs: `id` for a stored media generation; optional
+  `diagnostics: "browser-state"`.
 - Behavior: returns `object = "media_generation_status"` with current status,
   latest timeline event, full timeline, artifact count, artifact cache path,
   materialization method, and failure details when present.
+- `diagnostics = "browser-state"` adds bounded live browser evidence for a
+  running browser-backed media job, using the recorded provider `tabTargetId`
+  when present.
 - Use this for polling a long-running media request without re-invoking the
   provider or inspecting raw JSON.
 

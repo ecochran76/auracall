@@ -134,5 +134,23 @@ describe('mcp run_status tool', () => {
         },
       },
     });
+
+    const diagnosticResult = await handler({
+      id: 'medgen_status_1',
+      diagnostics: 'browser-state',
+    });
+
+    expect(diagnosticResult).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'medgen_status_1',
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        browserDiagnostics: {
+          probeStatus: 'unavailable',
+          reason: 'media generation medgen_status_1 is not actively running',
+        },
+      },
+    });
   });
 });
