@@ -152,7 +152,9 @@ Terminology note:
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,
     and `runtimeProfile=<name>`. Static entries report conservative
-    `unknown` or `account_gated` availability until live discovery is wired.
+    `unknown` or `account_gated` availability. When served with the configured
+    runtime, `provider=gemini` can merge live browser feature-signature
+    evidence from the managed Gemini browser profile.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

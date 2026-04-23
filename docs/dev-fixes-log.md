@@ -13765,3 +13765,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   surface should be read-only and conservative: static catalog entries use
   `unknown` or `account_gated` availability until live discovery proves the
   current account state.
+- 2026-04-23: Reuse provider feature signatures for read-only capability
+  discovery before adding new DOM scrapers. In this repo, Gemini already has a
+  browser-owned feature-signature probe that opens the tool drawer and records
+  observed modes. Map that signature into `workbench_capability_report`
+  overrides so API callers can see `available` Gemini media/research/canvas
+  options without invoking a provider tool.

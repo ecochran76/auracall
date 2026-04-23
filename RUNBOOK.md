@@ -1461,3 +1461,23 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## Turn 59 | 2026-04-23
+
+- Continued implementation plan:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Goal: add live read-only Gemini capability reporting without introducing a
+  second Gemini DOM scraper.
+- Change:
+  - added Gemini feature-signature to workbench-capability mapping
+  - added static Gemini Canvas capability
+  - wired configured `api serve` discovery so
+    `GET /v1/workbench-capabilities?provider=gemini` can merge live managed
+    browser evidence
+  - kept unfiltered reports static/cheap to avoid launching every provider
+- Verification target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/mcp.schema.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

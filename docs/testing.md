@@ -201,6 +201,9 @@
       to narrow the report
     - static entries are intentionally conservative until live browser/provider
       discovery proves current account availability
+    - with the configured `api serve` runtime, `provider=gemini` can merge
+      read-only Gemini feature-signature evidence from the managed browser
+      profile; unfiltered reports remain static/cheap
   - create/read media-generation contract record:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
     - the same contract accepts `mediaType = music|video`; Gemini music may

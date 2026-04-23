@@ -19683,3 +19683,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Gemini live capability mapping
+
+- Added a Gemini workbench discovery mapper that translates the existing
+  read-only Gemini feature signature into available workbench capabilities.
+- `api serve` now wires live Gemini capability discovery for
+  `GET /v1/workbench-capabilities?provider=gemini`; unfiltered reports remain
+  static/cheap.
+- Mapped Gemini modes:
+  - `Create image`
+  - `Create music`
+  - `Create video`
+  - `Canvas`
+  - `Deep research`
+- Validation target:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts tests/mcp.workbenchCapabilities.test.ts tests/mcp.schema.test.ts tests/browser/geminiAdapter.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

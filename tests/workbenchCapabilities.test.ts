@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
+import { deriveGeminiWorkbenchCapabilitiesFromFeatureSignature } from '../src/workbench/geminiDiscovery.js';
 
 describe('workbench capability service', () => {
   it('reports static workbench capabilities with bounded availability summary', async () => {
@@ -14,14 +15,15 @@ describe('workbench capability service', () => {
       generatedAt: '2026-04-23T12:00:00.000Z',
       provider: 'gemini',
       summary: {
-        total: 4,
+        total: 5,
         available: 0,
         accountGated: 0,
-        unknown: 4,
+        unknown: 5,
         blocked: 0,
       },
     });
     expect(report.capabilities.map((capability) => capability.id)).toEqual([
+      'gemini.canvas',
       'gemini.media.create_image',
       'gemini.media.create_music',
       'gemini.media.create_video',
@@ -67,5 +69,39 @@ describe('workbench capability service', () => {
       providerLabels: ['Create image', 'Create Image', 'Image creation'],
     });
     expect(report.summary.available).toBe(1);
+  });
+
+  it('derives available Gemini capabilities from a live feature signature', () => {
+    const capabilities = deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
+      JSON.stringify({
+        detector: 'gemini-feature-probe-v1',
+        modes: ['Create image', 'Create music', 'Canvas', 'Deep research'],
+      }),
+      '2026-04-23T12:00:00.000Z',
+    );
+
+    expect(capabilities).toMatchObject([
+      {
+        id: 'gemini.canvas',
+        provider: 'gemini',
+        availability: 'available',
+        source: 'browser_discovery',
+      },
+      {
+        id: 'gemini.media.create_image',
+        availability: 'available',
+      },
+      {
+        id: 'gemini.media.create_music',
+        availability: 'available',
+        output: {
+          artifactTypes: ['music', 'video/mp4'],
+        },
+      },
+      {
+        id: 'gemini.research.deep_research',
+        availability: 'available',
+      },
+    ]);
   });
 });

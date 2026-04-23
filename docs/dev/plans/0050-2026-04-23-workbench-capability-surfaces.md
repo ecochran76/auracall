@@ -37,6 +37,9 @@ a stable first-class adapter.
   - local API: `GET /v1/workbench-capabilities`
   - MCP tool: `workbench_capabilities`
   - shared schema/service/catalog with conservative availability projection
+- Gemini browser-backed discovery now maps the existing read-only
+  feature-signature probe into available workbench capabilities when
+  `api serve` handles `provider=gemini` reports.
 
 ## Target Contract
 
@@ -56,7 +59,7 @@ a stable first-class adapter.
   - [x] local API read/list surface
   - [x] MCP read/list tool or resource
   - CLI inspection command
-  - browser-service discovery adapter for provider-visible tools
+  - [x] Gemini browser-service discovery adapter for provider-visible tools
 - Add a capability-invocation path only after discovery/readback is stable:
   - request references capability id, provider, runtime profile, and optional
     provider-specific arguments
@@ -90,6 +93,9 @@ a stable first-class adapter.
 - Gemini media generation can map `image|music|video` requests to discovered
   `Create image|Create music|Create video` capabilities where the browser path
   is used.
+- [x] Gemini feature-signature discovery maps visible `Create image`, `Create
+  music`, `Create video`, Canvas, and Deep Research modes into available
+  workbench capabilities.
 - Deep Research is represented as a capability for ChatGPT and Gemini without
   claiming full automation until a provider-backed smoke proves request,
   completion, and artifact/readback behavior.
@@ -104,6 +110,7 @@ a stable first-class adapter.
 - [x] Fake-provider API/MCP tests for capability listing.
 - Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.
+- [x] Unit tests for Gemini feature-signature to workbench-capability mapping.
 - Live discovery smoke only on signed-in managed browser profiles and never
   after a `google.com/sorry`, CAPTCHA, or similar blocking page is detected.
 - Provider-backed invocation smokes stay opt-in per capability because Deep

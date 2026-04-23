@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
-import { loadUserConfig } from '../config.js';
+import { loadUserConfig, type ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
@@ -72,6 +72,7 @@ import {
   type WorkbenchCapabilityServiceDeps,
 } from '../workbench/service.js';
 import { WorkbenchCapabilityReportRequestSchema } from '../workbench/schema.js';
+import { createBrowserWorkbenchCapabilityDiscovery } from '../workbench/geminiDiscovery.js';
 
 export interface ResponsesHttpServerOptions {
   host?: string;
@@ -897,6 +898,9 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
         (async (_request, context) => configuredStoredStepExecutor(context)),
       probeRuntimeRunServiceState:
         overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
+      discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
+        loadedConfig.config as ResolvedUserConfig,
+      ),
     },
   );
   const host = options.host ?? '127.0.0.1';
