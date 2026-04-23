@@ -19945,3 +19945,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   fetched provider blob.
 - Validation:
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts`
+
+## 2026-04-23 - Gemini timeline live smoke green
+
+- Ran one supervised local API Gemini browser image smoke after timeline
+  persistence landed:
+  - request id: `medgen_ef56c1911ddd4c4ebf9b17ea885d90a5`
+  - prompt: `Generate an image of an asphalt secret agent`
+  - status: `succeeded`
+  - conversation id: `3543f8378a674997`
+  - tab target id: `DB8964C63D8371F02E22CE2F667B4550`
+  - artifact: `Generated image 1.png`
+  - path:
+    `/home/ecochran76/.auracall/runtime/media-generations/medgen_ef56c1911ddd4c4ebf9b17ea885d90a5/artifacts/Generated image 1.png`
+  - materialization: `visible-image-screenshot`
+  - artifact poll count: `1`
+  - completed at: `2026-04-23T03:45:22.951Z`
+- Timeline readback retained:
+  `running_persisted -> capability_discovered -> executor_started -> prompt_submitted -> artifact_poll -> image_visible -> artifact_materialized -> completed`.
+- Artifact metadata still records the provider blob URL separately from the
+  local cache method; this run cached a PNG screenshot fallback, not fetched
+  blob bytes.

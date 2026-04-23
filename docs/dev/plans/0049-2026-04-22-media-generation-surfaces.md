@@ -75,6 +75,12 @@ helpers.
   records service-level milestones plus provider progress such as Gemini prompt
   submission, artifact polls, visible image detection, materialization, and
   terminal completion/failure.
+- A supervised local API Gemini browser image smoke after timeline persistence
+  succeeded:
+  `medgen_ef56c1911ddd4c4ebf9b17ea885d90a5` persisted
+  `Generated image 1.png` via `visible-image-screenshot` from conversation
+  `3543f8378a674997` after one artifact poll. The final readback retained the
+  full processing timeline and completed at `2026-04-23T03:45:22.951Z`.
 
 ## Target Contract
 
@@ -168,6 +174,7 @@ helpers.
   smokes on the same managed browser profile; the next acceptance smoke should
   be one manually observed request from a clean idle `/app` tab.
 - Latest supervised local API Gemini image smoke passed on 2026-04-23 with a
-  persisted image artifact and no media-generation failure.
+  persisted image artifact, no media-generation failure, and full timeline
+  readback through terminal completion.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
