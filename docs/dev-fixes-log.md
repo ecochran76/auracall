@@ -46,6 +46,18 @@
   paths. If the owned tab does not already expose the expected conversation
   content, fail explicitly instead of trying to recover by URL.
 
+- 2026-04-23: Keep Gemini post-submit milestones and confirmed prompt results
+  separate. In this repo, `submitted_state_observed` is only early evidence that
+  submit/generation started on the owned tab; `prompt_submitted` should still be
+  emitted from the later confirmed prompt result so operators keep the best
+  available conversation id and URL.
+
+- 2026-04-23: Gemini no-navigation readback failures must include active-tab
+  continuity evidence. In this repo, when active-tab readback fails we need the
+  current `href`, `pathname`, derived conversation id, title, and body-text
+  size in the error to distinguish same-tab root drift from silent tab rebinding
+  or stale conversation assumptions.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

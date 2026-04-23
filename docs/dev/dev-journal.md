@@ -20291,3 +20291,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/navigationPolicy.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/grokAdapter.test.ts tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini tab continuity evidence
+
+- Tightened Gemini media timeline semantics so `submitted_state_observed` stays
+  an early provider progress milestone and `prompt_submitted` is always emitted
+  from the final prompt result with the best available conversation id, tab
+  target, and URL.
+- Gemini no-navigation readback failures now attach active-tab continuity
+  evidence in the error text, including current `href`, `pathname`, derived
+  conversation id, document title, and body-text length.
+- Gemini active artifact read, artifact materialization, and conversation-file
+  download now explicitly fail if AuraCall ever rebinds to a different target id
+  than the submitted tab target.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/navigationPolicy.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/grokAdapter.test.ts`
+  - `pnpm run check`

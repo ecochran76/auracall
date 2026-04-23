@@ -49,14 +49,10 @@ async function executeGeminiBrowserMediaGeneration(
   }
 
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'gemini' });
-  let promptSubmittedTimelineRecorded = false;
   const emitPromptProgress = async (event: BrowserProviderPromptProgressEvent): Promise<void> => {
     const timelineEvent = mapGeminiPromptProgressToTimelineEvent(event);
     if (!timelineEvent) {
       return;
-    }
-    if (timelineEvent.event === 'prompt_submitted') {
-      promptSubmittedTimelineRecorded = true;
     }
     await input.emitTimeline?.(timelineEvent);
   };
@@ -70,17 +66,15 @@ async function executeGeminiBrowserMediaGeneration(
   });
   const conversationId = normalizeNonEmpty(promptResult.conversationId) ?? extractGeminiConversationId(promptResult.url);
   const tabTargetId = normalizeNonEmpty(promptResult.tabTargetId);
-  if (!promptSubmittedTimelineRecorded) {
-    await input.emitTimeline?.({
-      event: 'prompt_submitted',
-      details: {
-        capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
-        conversationId: conversationId ?? null,
-        tabTargetId: tabTargetId ?? null,
-        url: promptResult.url ?? null,
-      },
-    });
-  }
+  await input.emitTimeline?.({
+    event: 'prompt_submitted',
+    details: {
+      capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+      conversationId: conversationId ?? null,
+      tabTargetId: tabTargetId ?? null,
+      url: promptResult.url ?? null,
+    },
+  });
   if (!conversationId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
@@ -176,18 +170,6 @@ async function executeGeminiBrowserMediaGeneration(
 function mapGeminiPromptProgressToTimelineEvent(
   event: BrowserProviderPromptProgressEvent,
 ): Omit<MediaGenerationTimelineEvent, 'at'> | null {
-  if (event.phase === 'submitted_state_observed') {
-    const details = normalizeTimelineProgressDetails(event.details);
-    return {
-      event: 'prompt_submitted',
-      details: {
-        capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
-        ...details,
-        url: normalizeNonEmpty(details.href) ?? null,
-        tabTargetId: normalizeNonEmpty(details.targetId) ?? null,
-      },
-    };
-  }
   return {
     event: event.phase,
     details: normalizeTimelineProgressDetails(event.details),

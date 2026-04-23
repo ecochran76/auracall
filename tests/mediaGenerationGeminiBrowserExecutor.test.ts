@@ -155,6 +155,7 @@ describe('Gemini browser media generation executor', () => {
     });
     expect(timelineEvents).toEqual([
       'browser_target_attached',
+      'submitted_state_observed',
       'prompt_submitted',
       'artifact_poll',
       'image_visible',
@@ -249,7 +250,12 @@ describe('Gemini browser media generation executor', () => {
       url: 'https://gemini.google.com/app/gemini-conversation-timeout',
       tabTargetId: 'gemini-tab-timeout',
     });
-    browserClient.readActiveConversationArtifacts.mockResolvedValue([]);
+    browserClient.readActiveConversationArtifacts.mockRejectedValue(
+      new Error(
+        'Gemini conversation content not found on the active tab for gemini-conversation-timeout. ' +
+          'activeState={"href":"https://gemini.google.com/app","title":"Gemini","pathname":"/app","conversationId":null,"bodyTextLength":165}',
+      ),
+    );
 
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
     const resultPromise = executor({
@@ -273,6 +279,7 @@ describe('Gemini browser media generation executor', () => {
       details: {
         conversationId: 'gemini-conversation-timeout',
         timeoutMs: 30_000,
+        lastReadbackError: expect.stringContaining('activeState='),
       },
     });
     await vi.advanceTimersByTimeAsync(30_001);

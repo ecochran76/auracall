@@ -1571,6 +1571,42 @@ async function isGeminiConversationSurfaceAlreadyReady(
   return ready.result?.value === true;
 }
 
+async function readGeminiActiveTabState(
+  Runtime: ChromeClient['Runtime'],
+): Promise<{
+  href: string;
+  title: string;
+  pathname: string;
+  conversationId: string | null;
+  bodyTextLength: number;
+}> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const bodyText = String(document.body?.innerText || '').replace(/\\s+/g, ' ').trim();
+      const match = location.pathname.match(/^\\/app\\/([^/?#]+)/i);
+      return {
+        href: location.href,
+        title: document.title || '',
+        pathname: location.pathname || '',
+        conversationId: match?.[1] ?? null,
+        bodyTextLength: bodyText.length,
+      };
+    })()`,
+    returnByValue: true,
+  }).catch(() => ({ result: { value: null } }));
+  const value = isRecord(result?.value) ? result.value : {};
+  return {
+    href: normalizeWhitespace(typeof value.href === 'string' ? value.href : ''),
+    title: normalizeWhitespace(typeof value.title === 'string' ? value.title : ''),
+    pathname: normalizeWhitespace(typeof value.pathname === 'string' ? value.pathname : ''),
+    conversationId:
+      typeof value.conversationId === 'string' && value.conversationId.trim().length > 0
+        ? value.conversationId.trim()
+        : null,
+    bodyTextLength: typeof value.bodyTextLength === 'number' && Number.isFinite(value.bodyTextLength) ? value.bodyTextLength : 0,
+  };
+}
+
 async function collectGeminiConversationSurfaceState(
   Runtime: ChromeClient['Runtime'],
   phase: string,
@@ -3451,7 +3487,11 @@ async function readGeminiConversationContextWithClient(
         },
       );
       if (!ready.ok) {
-        throw new Error(`Gemini conversation content not found on the active tab for ${conversationId}.`);
+        const activeState = await readGeminiActiveTabState(client.Runtime);
+        throw new Error(
+          `Gemini conversation content not found on the active tab for ${conversationId}. ` +
+            `activeState=${JSON.stringify(activeState)}`,
+        );
       }
     } else {
       await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
@@ -3480,7 +3520,8 @@ async function readGeminiConversationContextWithClient(
     },
   );
   if (!ready.ok) {
-    throw new Error(`Gemini conversation content not found for ${conversationId}.`);
+    const activeState = await readGeminiActiveTabState(client.Runtime);
+    throw new Error(`Gemini conversation content not found for ${conversationId}. activeState=${JSON.stringify(activeState)}`);
   }
   await waitForPredicate(
     client.Runtime,
@@ -5990,6 +6031,11 @@ export function createGeminiAdapter(): Pick<
         options.tabUrl ?? options.configuredUrl ?? GEMINI_APP_URL,
       );
       try {
+        if (options.tabTargetId && targetId && targetId !== options.tabTargetId) {
+          throw new Error(
+            `Gemini active artifact read rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+          );
+        }
         const context = await readGeminiConversationContextWithClient(client, normalizedConversationId, {
           allowNavigation: false,
         });
@@ -6019,6 +6065,11 @@ export function createGeminiAdapter(): Pick<
           : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
+          throw new Error(
+            `Gemini artifact materialization rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+          );
+        }
         return await materializeGeminiConversationArtifactWithClient(
           client,
           normalizedConversationId,
@@ -6052,6 +6103,11 @@ export function createGeminiAdapter(): Pick<
           : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
+        if (options?.tabTargetId && targetId && targetId !== options.tabTargetId) {
+          throw new Error(
+            `Gemini conversation file download rebound to target ${targetId} instead of submitted target ${options.tabTargetId}.`,
+          );
+        }
         await downloadGeminiConversationFileWithClient(client, normalizedConversationId, fileId, destPath, {
           allowNavigation: providerNavigationAllowed(options),
         });
