@@ -164,10 +164,12 @@ Terminology note:
   - `POST /v1/media-generations` accepts the shared media-generation contract
     for `provider = gemini|grok`, `mediaType = image|music|video`, prompt,
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
-    metadata. The route persists request/readback records with a `timeline[]`
-    showing processing milestones such as capability discovery, prompt
-    submission, artifact polling, materialization, and terminal completion.
-    Operators can poll the generic
+    metadata. By default the route waits for terminal completion; add
+    `?wait=false` or JSON `"wait": false` to return a running media id
+    immediately for polling. The route persists request/readback records with a
+    `timeline[]` showing processing milestones such as capability discovery,
+    prompt submission, artifact polling, materialization, and terminal
+    completion. Operators can poll the generic
     `GET /v1/runs/{run_id}/status` surface for response/team chats and media
     jobs. Media jobs also retain the narrower
     `GET /v1/media-generations/{media_generation_id}/status` for a compact

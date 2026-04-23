@@ -47,8 +47,8 @@
   DevTools access.
 
 ### `media_generation`
-- Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, and metadata.
-- Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. The tool surface is live now; provider-backed Gemini/Grok execution remains gated until the media adapters are wired.
+- Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, `wait`, and metadata.
+- Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. `wait = false` returns a running media id immediately so callers can poll `media_generation_status` or `run_status` while browser execution is active. Provider execution may still fail when the requested provider capability is unavailable or unsupported.
 - Provenance: MCP-created media requests are stamped with `source = "mcp"` in the structured response metadata.
 
 ### `media_generation_status`

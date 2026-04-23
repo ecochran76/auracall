@@ -26,6 +26,7 @@ export interface MediaGenerationServiceDeps {
 
 export interface MediaGenerationService {
   createGeneration(request: MediaGenerationRequest): Promise<MediaGenerationResponse>;
+  createGenerationAsync?(request: MediaGenerationRequest): Promise<MediaGenerationResponse>;
   readGeneration(id: string): Promise<MediaGenerationResponse | null>;
 }
 
@@ -39,142 +40,14 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
 
   return {
     async createGeneration(input) {
-      const request = MediaGenerationRequestSchema.parse(input);
-      const id = generateId();
-      const createdAt = now().toISOString();
-      const timeline: MediaGenerationTimelineEvent[] = [
-        {
-          event: 'running_persisted',
-          at: createdAt,
-          details: {
-            status: 'running',
-          },
-        },
-      ];
-      const runningResponse: MediaGenerationResponse = {
-        id,
-        object: 'media_generation',
-        status: 'running',
-        provider: request.provider,
-        mediaType: request.mediaType,
-        model: request.model ?? null,
-        prompt: request.prompt,
-        createdAt,
-        updatedAt: createdAt,
-        completedAt: null,
-        artifacts: [],
-        timeline,
-          metadata: {
-            ...(request.metadata ?? {}),
-            source: request.source ?? null,
-            transport: request.transport ?? null,
-            runtimeProfile,
-            count: request.count ?? null,
-            size: request.size ?? null,
-            aspectRatio: request.aspectRatio ?? null,
-        },
-      };
-      let currentResponse = runningResponse;
-      const persistTimelineEvent = async (
-        event: Omit<MediaGenerationTimelineEvent, 'at'> & { at?: string },
-      ): Promise<void> => {
-        const at = event.at ?? now().toISOString();
-        timeline.push({
-          event: event.event,
-          at,
-          details: normalizeTimelineDetails(event.details),
-        });
-        currentResponse = MediaGenerationResponseSchema.parse({
-          ...currentResponse,
-          updatedAt: at,
-          timeline: [...timeline],
-        } satisfies MediaGenerationResponse);
-        await store.writeResponse(currentResponse, { persistedAt: at });
-      };
-      await store.ensureStorage();
-      await store.writeResponse(runningResponse, { persistedAt: createdAt });
-      await fs.mkdir(store.getArtifactDir(id), { recursive: true });
+      const context = await initializeGeneration(input);
+      return executeGeneration(context);
+    },
 
-      try {
-        const capability = await resolveMediaGenerationCapability(request, capabilityReporter, runtimeProfile);
-        if (capability) {
-          await persistTimelineEvent({
-            event: 'capability_discovered',
-            details: formatCapabilityMetadata(capability),
-          });
-        }
-        await persistTimelineEvent({
-          event: 'executor_started',
-          details: {
-            provider: request.provider,
-            mediaType: request.mediaType,
-            transport: request.transport ?? null,
-          },
-        });
-        const result = await executor({
-          request,
-          id,
-          createdAt,
-          artifactDir: store.getArtifactDir(id),
-          emitTimeline: persistTimelineEvent,
-        });
-        const completedAt = now().toISOString();
-        timeline.push({
-          event: 'completed',
-          at: completedAt,
-          details: {
-            status: 'succeeded',
-            artifactCount: result.artifacts.length,
-          },
-        });
-        const response = MediaGenerationResponseSchema.parse({
-          ...runningResponse,
-          status: 'succeeded',
-          model: result.model ?? runningResponse.model,
-          updatedAt: completedAt,
-          completedAt,
-          artifacts: result.artifacts,
-          timeline,
-          metadata: {
-            ...(runningResponse.metadata ?? {}),
-            ...(result.metadata ?? {}),
-            ...(capability ? { workbenchCapability: formatCapabilityMetadata(capability) } : {}),
-            source: request.source ?? null,
-            transport: request.transport ?? null,
-            runtimeProfile,
-            count: request.count ?? null,
-            size: request.size ?? null,
-            aspectRatio: request.aspectRatio ?? null,
-          },
-          failure: null,
-        } satisfies MediaGenerationResponse);
-        currentResponse = response;
-        await store.writeResponse(response, { persistedAt: completedAt });
-        return response;
-      } catch (error) {
-        const completedAt = now().toISOString();
-        const failure = createMediaGenerationFailure(error);
-        timeline.push({
-          event: 'failed',
-          at: completedAt,
-          details: {
-            status: 'failed',
-            code: failure.code,
-            message: failure.message,
-          },
-        });
-        const response = MediaGenerationResponseSchema.parse({
-          ...runningResponse,
-          status: 'failed',
-          updatedAt: completedAt,
-          completedAt,
-          timeline,
-          failure,
-        } satisfies MediaGenerationResponse);
-        currentResponse = response;
-        await store.writeResponse(response, { persistedAt: completedAt });
-        return response;
-      }
+    async createGenerationAsync(input) {
+      const context = await initializeGeneration(input);
+      void executeGeneration(context);
+      return context.runningResponse;
     },
 
     async readGeneration(id) {
@@ -182,6 +55,161 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
       return record?.response ?? null;
     },
   };
+
+  async function initializeGeneration(input: MediaGenerationRequest) {
+    const request = MediaGenerationRequestSchema.parse(input);
+    const id = generateId();
+    const createdAt = now().toISOString();
+    const timeline: MediaGenerationTimelineEvent[] = [
+      {
+        event: 'running_persisted',
+        at: createdAt,
+        details: {
+          status: 'running',
+        },
+      },
+    ];
+    const runningResponse: MediaGenerationResponse = {
+      id,
+      object: 'media_generation',
+      status: 'running',
+      provider: request.provider,
+      mediaType: request.mediaType,
+      model: request.model ?? null,
+      prompt: request.prompt,
+      createdAt,
+      updatedAt: createdAt,
+      completedAt: null,
+      artifacts: [],
+      timeline,
+      metadata: {
+        ...(request.metadata ?? {}),
+        source: request.source ?? null,
+        transport: request.transport ?? null,
+        runtimeProfile,
+        count: request.count ?? null,
+        size: request.size ?? null,
+        aspectRatio: request.aspectRatio ?? null,
+      },
+    };
+    let currentResponse = runningResponse;
+    const persistTimelineEvent = async (
+      event: Omit<MediaGenerationTimelineEvent, 'at'> & { at?: string },
+    ): Promise<void> => {
+      const at = event.at ?? now().toISOString();
+      timeline.push({
+        event: event.event,
+        at,
+        details: normalizeTimelineDetails(event.details),
+      });
+      currentResponse = MediaGenerationResponseSchema.parse({
+        ...currentResponse,
+        updatedAt: at,
+        timeline: [...timeline],
+      } satisfies MediaGenerationResponse);
+      await store.writeResponse(currentResponse, { persistedAt: at });
+    };
+    await store.ensureStorage();
+    await store.writeResponse(runningResponse, { persistedAt: createdAt });
+    await fs.mkdir(store.getArtifactDir(id), { recursive: true });
+    return {
+      request,
+      id,
+      createdAt,
+      timeline,
+      runningResponse,
+      persistTimelineEvent,
+    };
+  }
+
+  async function executeGeneration(context: Awaited<ReturnType<typeof initializeGeneration>>) {
+    const {
+      request,
+      id,
+      createdAt,
+      timeline,
+      runningResponse,
+      persistTimelineEvent,
+    } = context;
+    try {
+      const capability = await resolveMediaGenerationCapability(request, capabilityReporter, runtimeProfile);
+      if (capability) {
+        await persistTimelineEvent({
+          event: 'capability_discovered',
+          details: formatCapabilityMetadata(capability),
+        });
+      }
+      await persistTimelineEvent({
+        event: 'executor_started',
+        details: {
+          provider: request.provider,
+          mediaType: request.mediaType,
+          transport: request.transport ?? null,
+        },
+      });
+      const result = await executor({
+        request,
+        id,
+        createdAt,
+        artifactDir: store.getArtifactDir(id),
+        emitTimeline: persistTimelineEvent,
+      });
+      const completedAt = now().toISOString();
+      timeline.push({
+        event: 'completed',
+        at: completedAt,
+        details: {
+          status: 'succeeded',
+          artifactCount: result.artifacts.length,
+        },
+      });
+      const response = MediaGenerationResponseSchema.parse({
+        ...runningResponse,
+        status: 'succeeded',
+        model: result.model ?? runningResponse.model,
+        updatedAt: completedAt,
+        completedAt,
+        artifacts: result.artifacts,
+        timeline,
+        metadata: {
+          ...(runningResponse.metadata ?? {}),
+          ...(result.metadata ?? {}),
+          ...(capability ? { workbenchCapability: formatCapabilityMetadata(capability) } : {}),
+          source: request.source ?? null,
+          transport: request.transport ?? null,
+          runtimeProfile,
+          count: request.count ?? null,
+          size: request.size ?? null,
+          aspectRatio: request.aspectRatio ?? null,
+        },
+        failure: null,
+      } satisfies MediaGenerationResponse);
+      await store.writeResponse(response, { persistedAt: completedAt });
+      return response;
+    } catch (error) {
+      const completedAt = now().toISOString();
+      const failure = createMediaGenerationFailure(error);
+      timeline.push({
+        event: 'failed',
+        at: completedAt,
+        details: {
+          status: 'failed',
+          code: failure.code,
+          message: failure.message,
+        },
+      });
+      const response = MediaGenerationResponseSchema.parse({
+        ...runningResponse,
+        status: 'failed',
+        updatedAt: completedAt,
+        completedAt,
+        timeline,
+        failure,
+      } satisfies MediaGenerationResponse);
+      await store.writeResponse(response, { persistedAt: completedAt });
+      return response;
+    }
+  }
 }
 
 export async function defaultMediaGenerationExecutor(): Promise<never> {

@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as delay } from 'node:timers/promises';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createResponsesHttpServer } from '../src/http/responsesServer.js';
@@ -195,6 +196,119 @@ describe('http media generation adapter', () => {
     }
   });
 
+  it('can create a media generation asynchronously and poll it through run status', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-media-generation-async-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let finishExecutor: () => void = () => {};
+    const executorFinished = new Promise<void>((resolve) => {
+      finishExecutor = resolve;
+    });
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-22T12:00:00.000Z'),
+        mediaGenerationExecutor: async ({ artifactDir, emitTimeline }) => {
+          await emitTimeline?.({
+            event: 'prompt_submitted',
+            details: {
+              conversationId: 'async-conversation',
+              tabTargetId: 'async-tab-target',
+              url: 'https://gemini.google.com/app/async-conversation',
+            },
+          });
+          await executorFinished;
+          const filePath = path.join(artifactDir, 'async-agent.png');
+          await fs.writeFile(filePath, Buffer.from('fake async image bytes'));
+          return {
+            model: 'fake-gemini-image',
+            artifacts: [
+              {
+                id: 'artifact_async_1',
+                type: 'image',
+                mimeType: 'image/png',
+                fileName: 'async-agent.png',
+                path: filePath,
+                uri: `file://${filePath}`,
+              },
+            ],
+          };
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/media-generations?wait=false`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image of an asphalt secret agent',
+          aspectRatio: '1:1',
+        }),
+      });
+
+      expect(createResponse.status).toBe(202);
+      const created = (await createResponse.json()) as Record<string, unknown>;
+      expect(created).toMatchObject({
+        object: 'media_generation',
+        status: 'running',
+        metadata: {
+          source: 'api',
+          aspectRatio: '1:1',
+        },
+      });
+
+      const runningStatus = await waitForMediaTimelineEvent(server.port, String(created.id), 'prompt_submitted');
+      expect(runningStatus).toMatchObject({
+        id: created.id,
+        object: 'media_generation_status',
+        status: 'running',
+        lastEvent: {
+          event: 'prompt_submitted',
+          details: {
+            tabTargetId: 'async-tab-target',
+          },
+        },
+        metadata: {
+          source: 'api',
+        },
+      });
+
+      const runStatusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runs/${created.id}/status`,
+      );
+      expect(runStatusResponse.status).toBe(200);
+      await expect(runStatusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'auracall_run_status',
+        kind: 'media_generation',
+        status: 'running',
+        lastEvent: {
+          event: 'prompt_submitted',
+        },
+      });
+
+      finishExecutor();
+      const completedStatus = await waitForMediaTimelineEvent(server.port, String(created.id), 'completed');
+      expect(completedStatus).toMatchObject({
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'artifact_async_1',
+            fileName: 'async-agent.png',
+            path: expect.stringContaining('async-agent.png'),
+          },
+        ],
+      });
+    } finally {
+      finishExecutor();
+      await server.close();
+    }
+  });
+
   it('checks workbench capability availability before Gemini browser media execution', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-media-capability-'));
     cleanup.push(homeDir);
@@ -244,3 +358,19 @@ describe('http media generation adapter', () => {
     }
   });
 });
+
+async function waitForMediaTimelineEvent(port: number, id: string, event: string): Promise<Record<string, unknown>> {
+  for (let attempt = 0; attempt < 20; attempt += 1) {
+    const response = await fetch(`http://127.0.0.1:${port}/v1/media-generations/${id}/status`);
+    const body = await response.json();
+    expect(response.status, JSON.stringify(body)).toBe(200);
+    const status = body as Record<string, unknown> & {
+      timeline?: Array<{ event?: string }>;
+    };
+    if (status.timeline?.some((entry) => entry.event === event)) {
+      return status;
+    }
+    await delay(25);
+  }
+  throw new Error(`Timed out waiting for media generation ${id} timeline event ${event}`);
+}

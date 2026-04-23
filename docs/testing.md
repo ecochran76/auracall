@@ -221,10 +221,12 @@
       profile; unfiltered reports remain static/cheap
   - create/read media-generation contract record:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
+    - for active polling, request async creation:
+      `curl -s "http://127.0.0.1:8080/v1/media-generations?wait=false" -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
     - the same contract accepts `mediaType = music|video`; Gemini music may
       still materialize over a video transport artifact
-    - until provider adapters are wired, default execution returns a persisted
-      `failed` response with `failure.code = media_provider_not_implemented`
+    - unsupported provider/media combinations return a persisted `failed`
+      response with a provider-specific `failure.code`
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
     - for compact operator status, run
       `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>/status`

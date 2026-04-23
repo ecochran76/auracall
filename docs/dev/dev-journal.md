@@ -20188,3 +20188,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   early enough to poll active `browser-state` diagnostics. The first external
   status poll after creation returned terminal `unavailable` diagnostics as
   designed.
+
+## 2026-04-23 - Async media generation creation
+
+- Added opt-in async media creation so API callers can use
+  `POST /v1/media-generations?wait=false` or JSON `"wait": false` to receive a
+  running media generation id immediately.
+- Added the same `wait: false` option to MCP `media_generation`, returning a
+  running structured response that can be polled through
+  `media_generation_status` or generic `run_status`.
+- Refactored the shared media service so synchronous and asynchronous creation
+  use the same durable timeline and artifact materialization path.
+- Validation:
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`

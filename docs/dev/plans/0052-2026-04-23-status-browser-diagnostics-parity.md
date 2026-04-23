@@ -95,3 +95,7 @@ records `tabTargetId`, so status diagnostics need to work there too.
   poll active browser diagnostics. Add an asynchronous media creation mode, or
   otherwise return an early run id, before treating active media diagnostics as
   dogfooded end to end.
+- Fixed in the async media slice: `POST /v1/media-generations?wait=false`,
+  JSON `"wait": false`, and MCP `media_generation` `wait: false` now return a
+  running media generation id immediately while the existing shared executor
+  path continues in the background.

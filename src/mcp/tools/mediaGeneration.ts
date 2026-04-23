@@ -19,6 +19,7 @@ const mediaGenerationInputShape = {
   size: z.string().min(1).nullable().optional(),
   aspectRatio: z.string().min(1).nullable().optional(),
   outputDir: z.string().min(1).nullable().optional(),
+  wait: z.boolean().optional(),
   metadata: z.record(z.string(), z.unknown()).nullable().optional(),
 } satisfies z.ZodRawShape;
 
@@ -159,10 +160,18 @@ export function createMediaGenerationToolHandler(service: MediaGenerationService
       ...(input as MediaGenerationRequest),
       source: 'mcp',
     });
-    const result = await service.createGeneration(payload);
+    const wait = typeof (input as { wait?: unknown })?.wait === 'boolean'
+      ? (input as { wait?: boolean }).wait
+      : true;
+    const result =
+      !wait && service.createGenerationAsync
+        ? await service.createGenerationAsync(payload)
+        : await service.createGeneration(payload);
     const line =
       result.status === 'succeeded'
         ? `Media generation ${result.id} succeeded with ${result.artifacts.length} artifact(s).`
+        : result.status === 'running'
+          ? `Media generation ${result.id} is running. Poll media_generation_status for updates.`
         : `Media generation ${result.id} ${result.status}: ${result.failure?.message ?? 'no failure details'}`;
     return {
       isError: result.status === 'failed',

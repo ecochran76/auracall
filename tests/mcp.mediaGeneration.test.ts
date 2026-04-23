@@ -105,6 +105,66 @@ describe('mcp media_generation tool', () => {
     });
   });
 
+  it('can return an asynchronous media generation id for status polling', async () => {
+    let asyncInvoked = false;
+    const handler = createMediaGenerationToolHandler({
+      createGeneration: async () => {
+        throw new Error('sync path should not run');
+      },
+      createGenerationAsync: async (request) => {
+        asyncInvoked = true;
+        return {
+          id: 'medgen_mcp_async_1',
+          object: 'media_generation',
+          status: 'running',
+          provider: request.provider,
+          mediaType: request.mediaType,
+          prompt: request.prompt,
+          createdAt: '2026-04-22T12:00:00.000Z',
+          updatedAt: '2026-04-22T12:00:00.000Z',
+          completedAt: null,
+          artifacts: [],
+          timeline: [
+            {
+              event: 'running_persisted',
+              at: '2026-04-22T12:00:00.000Z',
+              details: {
+                status: 'running',
+              },
+            },
+          ],
+          metadata: {
+            source: request.source,
+          },
+        };
+      },
+      readGeneration: async () => null,
+    });
+
+    const result = await handler({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      transport: 'browser',
+      wait: false,
+    });
+
+    expect(asyncInvoked).toBe(true);
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'medgen_mcp_async_1',
+        object: 'media_generation',
+        status: 'running',
+        provider: 'gemini',
+        mediaType: 'image',
+        metadata: {
+          source: 'mcp',
+        },
+      },
+    });
+  });
+
   it('reads media generation status through the MCP status tool', async () => {
     const handler = createMediaGenerationStatusToolHandler({
       createGeneration: async () => {

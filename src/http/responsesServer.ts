@@ -657,12 +657,18 @@ export async function createResponsesHttpServer(
 
       if (req.method === 'POST' && url.pathname === '/v1/media-generations') {
         const body = await readRequestBody(req);
-        const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest;
-        const response = await mediaGenerationService.createGeneration({
+        const parsedBody = JSON.parse(body || '{}') as MediaGenerationRequest & { wait?: unknown };
+        const mediaRequest = {
           ...parsedBody,
           source: parsedBody.source ?? 'api',
-        });
-        sendJson(res, response.status === 'failed' ? 502 : 200, response);
+        };
+        const createQuery = parseMediaGenerationCreateQuery(url.searchParams);
+        const wait = resolveMediaGenerationWait(createQuery, parsedBody);
+        const response =
+          !wait && mediaGenerationService.createGenerationAsync
+            ? await mediaGenerationService.createGenerationAsync(mediaRequest)
+            : await mediaGenerationService.createGeneration(mediaRequest);
+        sendJson(res, wait && response.status === 'failed' ? 502 : wait ? 200 : 202, response);
         return;
       }
 
@@ -1502,6 +1508,10 @@ interface ParsedRunStatusQuery {
   diagnostics?: 'browser-state';
 }
 
+interface ParsedMediaGenerationCreateQuery {
+  wait?: boolean;
+}
+
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
   const raw: Record<string, string> = Object.fromEntries(searchParams.entries());
   const parsed = z
@@ -1621,6 +1631,33 @@ function parseRunStatusQuery(searchParams: URLSearchParams): ParsedRunStatusQuer
   return z.object({
     diagnostics: z.enum(['browser-state']).optional(),
   }).parse(raw);
+}
+
+function parseMediaGenerationCreateQuery(searchParams: URLSearchParams): ParsedMediaGenerationCreateQuery {
+  const raw: Record<string, unknown> = {};
+  if (searchParams.has('wait')) {
+    raw.wait = searchParams.get('wait');
+  }
+  return z.object({
+    wait: z
+      .enum(['0', '1', 'true', 'false'])
+      .transform((value) => value === '1' || value.toLowerCase() === 'true')
+      .optional(),
+  }).parse(raw);
+}
+
+function resolveMediaGenerationWait(
+  query: ParsedMediaGenerationCreateQuery,
+  body: { wait?: unknown },
+): boolean {
+  if (typeof query.wait === 'boolean') return query.wait;
+  if (typeof body.wait === 'boolean') return body.wait;
+  if (typeof body.wait === 'string') {
+    const normalized = body.wait.trim().toLowerCase();
+    if (normalized === 'false' || normalized === '0') return false;
+    if (normalized === 'true' || normalized === '1') return true;
+  }
+  return true;
 }
 
 async function readRunStatusBrowserDiagnostics(input: {

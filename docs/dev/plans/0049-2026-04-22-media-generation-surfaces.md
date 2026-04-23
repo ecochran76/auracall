@@ -86,6 +86,9 @@ helpers.
   tool `media_generation_status`. Both surfaces report current status, latest
   timeline event, artifact cache path, and materialization method without
   creating a new provider request.
+- API and MCP media creation now support opt-in async creation with
+  `wait=false`, returning a running media generation id while the same durable
+  executor path continues in the background.
 - The broader operator contract is now run-scoped rather than media-scoped:
   local API `GET /v1/runs/{run_id}/status` and MCP `run_status` return a shared
   compact envelope for response/team chats and media generations. Media-specific

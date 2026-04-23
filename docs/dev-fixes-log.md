@@ -12,6 +12,11 @@
   asynchronous creation mode or equivalent early id return before expecting API
   callers to poll active `browser-state` diagnostics during media execution.
 
+- 2026-04-23: Keep async media creation on the same service path as synchronous
+  creation. In this repo, `wait=false` should only change when the caller gets
+  the id; capability discovery, prompt submission, artifact polling, timeline
+  persistence, failure handling, and cache materialization must stay shared.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with
