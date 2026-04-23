@@ -183,6 +183,57 @@ describe('probeGeminiBrowserServiceState', () => {
     });
   });
 
+  it('returns thinking when Gemini exposes the active avatar spinner', async () => {
+    const runtime = createRuntime([
+      { blocked: false, loginRequired: false },
+      {
+        historyText: 'Generate an image of an asphalt secret agent',
+        promptText: '',
+        sendReady: false,
+        hasPendingBlob: false,
+        hasRemoveButton: false,
+        hasActiveAvatarSpinner: true,
+        hasGeneratedMedia: false,
+        hasStopControl: true,
+        isGenerating: true,
+      },
+    ]);
+
+    const result = await probeGeminiBrowserServiceState(
+      {
+        auracallProfile: 'auracall-gemini-pro',
+        services: {
+          gemini: {
+            url: 'https://gemini.google.com/app',
+          },
+        },
+      } as never,
+      { prompt: 'Generate an image of an asphalt secret agent' },
+      {
+        createBrowserService: () =>
+          ({
+            resolveServiceTarget: async () => ({
+              host: '127.0.0.1',
+              port: 9222,
+              tab: { targetId: 'gemini-tab-1' },
+            }),
+          }) as never,
+        connectToTarget: async () =>
+          ({
+            Runtime: runtime,
+            close: async () => undefined,
+          }) as never,
+      },
+    );
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'provider-adapter',
+      evidenceRef: 'gemini-active-avatar-spinner',
+      confidence: 'high',
+    });
+  });
+
   it('returns response-incoming when answer text is visible before Gemini looks complete', async () => {
     const runtime = createRuntime([
       { blocked: false, loginRequired: false },
@@ -228,6 +279,58 @@ describe('probeGeminiBrowserServiceState', () => {
       source: 'provider-adapter',
       evidenceRef: 'gemini-native-answer-visible',
       confidence: 'high',
+    });
+  });
+
+  it('does not treat a stale Gemini stop control as active once media is visible', async () => {
+    const runtime = createRuntime([
+      { blocked: false, loginRequired: false },
+      {
+        historyText:
+          'Generate an image of an asphalt secret agent A rendered asphalt secret agent image is visible.',
+        promptText: '',
+        sendReady: true,
+        hasPendingBlob: false,
+        hasRemoveButton: false,
+        hasActiveAvatarSpinner: false,
+        hasGeneratedMedia: true,
+        hasStopControl: true,
+        isGenerating: false,
+      },
+    ]);
+
+    const result = await probeGeminiBrowserServiceState(
+      {
+        auracallProfile: 'auracall-gemini-pro',
+        services: {
+          gemini: {
+            url: 'https://gemini.google.com/app',
+          },
+        },
+      } as never,
+      { prompt: 'Generate an image of an asphalt secret agent' },
+      {
+        createBrowserService: () =>
+          ({
+            resolveServiceTarget: async () => ({
+              host: '127.0.0.1',
+              port: 9222,
+              tab: { targetId: 'gemini-tab-1' },
+            }),
+          }) as never,
+        connectToTarget: async () =>
+          ({
+            Runtime: runtime,
+            close: async () => undefined,
+          }) as never,
+      },
+    );
+
+    expect(result).toMatchObject({
+      state: 'response-complete',
+      source: 'provider-adapter',
+      evidenceRef: 'gemini-native-response-finished',
+      confidence: 'medium',
     });
   });
 

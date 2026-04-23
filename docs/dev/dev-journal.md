@@ -20009,3 +20009,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   need to know the run type before polling.
 - Validation:
   - `pnpm vitest run tests/cli.runStatusCommand.test.ts`
+
+## 2026-04-23 - LLM service-state evidence centralization
+
+- Added a shared LLM service-state observation helper so ChatGPT, Gemini, and
+  Grok probes construct the same `RuntimeRunInspectionServiceStateProbeResult`
+  envelope while keeping provider-specific evidence refs and DOM rules in the
+  provider probe.
+- Extended Gemini live service-state evidence with the same spinner semantics
+  learned during media generation: visible lottie/avatar spinner is active
+  `thinking`, while a stale `Stop response`/cancel control no longer blocks
+  `response-complete` once generated media is visible.
+- Validation:
+  - `pnpm vitest run tests/browser/liveServiceState.test.ts`

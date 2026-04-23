@@ -173,3 +173,11 @@ Current evidence:
 - richer Gemini/Grok quality work was evaluated on the existing
   `serviceState` seam
 - `/status` and durable review-ledger ownership remain unchanged
+
+## Post-Close Maintenance Notes
+
+- 2026-04-23: The service-state probe now centralizes shared LLM observation
+  construction while keeping provider-specific DOM evidence in provider
+  adapters. Gemini's active lottie/avatar spinner is a high-confidence
+  `thinking` signal, and a visible `Stop response`/cancel control is treated as
+  stale once generated media is visible.

@@ -13850,3 +13850,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   MCP client. `auracall run status <id> --json` should read the same
   `auracall_run_status` envelope as `GET /v1/runs/{run_id}/status` and MCP
   `run_status`, not a separate CLI-only summary model.
+- 2026-04-23: Centralize the LLM service-state envelope, not provider DOM
+  heuristics. In this repo, ChatGPT/Gemini/Grok should all return the same
+  bounded `serviceState` shape, but provider-specific probes own the evidence:
+  ChatGPT placeholder/stop controls, Gemini prompt history plus lottie/avatar
+  spinner and stale stop-control handling, and Grok assistant/toast snapshots.

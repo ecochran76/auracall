@@ -4,6 +4,12 @@ import { BrowserService } from './service/browserService.js';
 import { connectToChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
 import { readAssistantSnapshot } from './actions/assistantResponse.js';
 import { readGrokAssistantSnapshotForRuntime } from './actions/grok.js';
+import {
+  createLlmHardStopObservation,
+  createLlmServiceStateObservation,
+  createLlmUnknownObservation,
+  resolveVisibleAnswerServiceState,
+} from './llmServiceState.js';
 import type { RuntimeRunInspectionServiceStateProbeResult } from '../runtime/inspection.js';
 
 const CHATGPT_HOME_URL = 'https://chatgpt.com/';
@@ -59,32 +65,27 @@ export async function probeChatgptBrowserServiceState(
     }
     const thinkingText = await readChatgptThinkingStatus(Runtime);
     if (thinkingText) {
-      return {
+      return createLlmServiceStateObservation({
+        service: 'chatgpt',
         state: 'thinking',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
         evidenceRef: thinkingText === 'Thinking' ? 'chatgpt-placeholder-turn' : 'chatgpt-thinking-status',
         confidence: 'high',
-      };
+      });
     }
     const snapshot = await readAssistantSnapshot(Runtime);
     if (!snapshot?.text?.trim()) {
-      return {
-        state: 'unknown',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
+      return createLlmUnknownObservation({
+        service: 'chatgpt',
         evidenceRef: 'chatgpt-live-probe-no-signal',
-        confidence: 'low',
-      };
+      });
     }
     const stopVisible = await isChatgptStopButtonVisible(Runtime);
-    return {
-      state: stopVisible ? 'response-incoming' : 'response-complete',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
-      evidenceRef: stopVisible ? 'chatgpt-streaming-visible' : 'chatgpt-response-finished',
-      confidence: stopVisible ? 'high' : 'medium',
-    };
+    return resolveVisibleAnswerServiceState({
+      service: 'chatgpt',
+      isComplete: !stopVisible,
+      incomingEvidenceRef: 'chatgpt-streaming-visible',
+      completeEvidenceRef: 'chatgpt-response-finished',
+    });
   } finally {
     await client.close().catch(() => undefined);
   }
@@ -134,33 +135,42 @@ export async function probeGeminiBrowserServiceState(
         geminiState.sendReady &&
         geminiState.promptText.length === 0 &&
         !geminiState.hasPendingBlob &&
-        !geminiState.hasRemoveButton;
-      return {
-        state: likelyComplete ? 'response-complete' : 'response-incoming',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
-        evidenceRef: likelyComplete ? 'gemini-native-response-finished' : 'gemini-native-answer-visible',
-        confidence: likelyComplete ? 'medium' : 'high',
-      };
+        !geminiState.hasRemoveButton &&
+        !geminiState.isGenerating;
+      return resolveVisibleAnswerServiceState({
+        service: 'gemini',
+        isComplete: likelyComplete,
+        incomingEvidenceRef: geminiState.hasActiveAvatarSpinner
+          ? 'gemini-active-avatar-spinner'
+          : 'gemini-native-answer-visible',
+        completeEvidenceRef: 'gemini-native-response-finished',
+      });
+    }
+
+    if (geminiState.hasActiveAvatarSpinner || (geminiState.hasStopControl && !geminiState.hasGeneratedMedia)) {
+      return createLlmServiceStateObservation({
+        service: 'gemini',
+        state: 'thinking',
+        evidenceRef: geminiState.hasActiveAvatarSpinner
+          ? 'gemini-active-avatar-spinner'
+          : 'gemini-stop-control-without-media',
+        confidence: geminiState.hasActiveAvatarSpinner ? 'high' : 'medium',
+      });
     }
 
     if (normalizedPrompt && isGeminiPromptCommitted({ historyText: geminiState.historyText, prompt: normalizedPrompt })) {
-      return {
+      return createLlmServiceStateObservation({
+        service: 'gemini',
         state: 'thinking',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
         evidenceRef: 'gemini-native-prompt-committed',
         confidence: 'medium',
-      };
+      });
     }
 
-    return {
-      state: 'unknown',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
+    return createLlmUnknownObservation({
+      service: 'gemini',
       evidenceRef: 'gemini-live-probe-no-signal',
-      confidence: 'low',
-    };
+    });
   } finally {
     await client.close().catch(() => undefined);
   }
@@ -197,30 +207,25 @@ export async function probeGrokBrowserServiceState(
     }
     const snapshot = await readGrokAssistantSnapshotForRuntime(Runtime);
     if (snapshot.toastText && isGrokRateLimitToastText(snapshot.toastText)) {
-      return {
+      return createLlmServiceStateObservation({
+        service: 'grok',
         state: 'provider-error',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
         evidenceRef: 'grok-rate-limit-toast',
         confidence: 'high',
-      };
+      });
     }
     if ((snapshot.lastMarkdown || snapshot.lastText).trim().length > 0) {
-      return {
+      return createLlmServiceStateObservation({
+        service: 'grok',
         state: 'response-incoming',
-        source: 'provider-adapter',
-        observedAt: new Date().toISOString(),
         evidenceRef: 'grok-assistant-visible',
         confidence: 'high',
-      };
+      });
     }
-    return {
-      state: 'unknown',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
+    return createLlmUnknownObservation({
+      service: 'grok',
       evidenceRef: 'grok-live-probe-no-signal',
-      confidence: 'low',
-    };
+    });
   } finally {
     await client.close().catch(() => undefined);
   }
@@ -251,22 +256,18 @@ async function readChatgptHardStopState(
   });
   const value = result?.value as { hasCaptcha?: boolean; loginRequired?: boolean } | undefined;
   if (value?.hasCaptcha) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'chatgpt',
       state: 'captcha-or-human-verification',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'chatgpt-human-verification-page',
-      confidence: 'high',
-    };
+    });
   }
   if (value?.loginRequired) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'chatgpt',
       state: 'login-required',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'chatgpt-login-surface',
-      confidence: 'high',
-    };
+    });
   }
   return null;
 }
@@ -307,22 +308,18 @@ async function readGeminiHardStopState(
   });
   const value = result?.value as { blocked?: boolean; loginRequired?: boolean } | undefined;
   if (value?.blocked) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'gemini',
       state: 'captcha-or-human-verification',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'gemini-human-verification-page',
-      confidence: 'high',
-    };
+    });
   }
   if (value?.loginRequired) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'gemini',
       state: 'login-required',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'gemini-login-surface',
-      confidence: 'high',
-    };
+    });
   }
   return null;
 }
@@ -360,22 +357,18 @@ async function readGrokHardStopState(
   });
   const value = result?.value as { blocked?: boolean; loginRequired?: boolean } | undefined;
   if (value?.blocked) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'grok',
       state: 'captcha-or-human-verification',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'grok-human-verification-page',
-      confidence: 'high',
-    };
+    });
   }
   if (value?.loginRequired) {
-    return {
+    return createLlmHardStopObservation({
+      service: 'grok',
       state: 'login-required',
-      source: 'provider-adapter',
-      observedAt: new Date().toISOString(),
       evidenceRef: 'grok-login-surface',
-      confidence: 'high',
-    };
+    });
   }
   return null;
 }
@@ -398,6 +391,10 @@ async function readGeminiProbeState(
   sendReady: boolean;
   hasPendingBlob: boolean;
   hasRemoveButton: boolean;
+  hasActiveAvatarSpinner: boolean;
+  hasGeneratedMedia: boolean;
+  hasStopControl: boolean;
+  isGenerating: boolean;
 }> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
@@ -414,6 +411,33 @@ async function readGeminiProbeState(
       const hasRemoveButton = Array.from(document.querySelectorAll('button,[role="button"]')).some((el) =>
         String(el.getAttribute('aria-label') ?? '').toLowerCase().includes('remove file'),
       );
+      const hasActiveAvatarSpinner = Array.from(document.querySelectorAll(
+        'model-response .avatar_primary_animation.is-gpi-avatar, model-response [lottie-animation].avatar_primary_animation, model-response .avatar_primary_model.is-gpi-avatar'
+      )).some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      const hasGeneratedMedia = Array.from(document.querySelectorAll(
+        'model-response img.image, model-response img.loaded, model-response button[data-test-id="download-generated-image-button"], model-response video'
+      )).some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(node);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      });
+      const hasStopControl = Array.from(document.querySelectorAll('button')).some((el) => {
+        if (!(el instanceof HTMLElement)) return false;
+        const style = window.getComputedStyle(el);
+        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+        const rect = el.getBoundingClientRect();
+        if (rect.width <= 0 || rect.height <= 0) return false;
+        const label = normalize(\`\${el.getAttribute('aria-label') || ''} \${el.textContent || ''}\`).toLowerCase();
+        return label.includes('stop') || label.includes('cancel generation');
+      });
       const sendReady = (() => {
         if (!(send instanceof HTMLElement)) return false;
         const style = window.getComputedStyle(send);
@@ -431,6 +455,10 @@ async function readGeminiProbeState(
         sendReady,
         hasPendingBlob,
         hasRemoveButton,
+        hasActiveAvatarSpinner,
+        hasGeneratedMedia,
+        hasStopControl,
+        isGenerating: hasActiveAvatarSpinner || (hasStopControl && !hasGeneratedMedia),
       };
     })()`,
     returnByValue: true,
@@ -442,6 +470,10 @@ async function readGeminiProbeState(
     sendReady: Boolean(value.sendReady),
     hasPendingBlob: Boolean(value.hasPendingBlob),
     hasRemoveButton: Boolean(value.hasRemoveButton),
+    hasActiveAvatarSpinner: Boolean(value.hasActiveAvatarSpinner),
+    hasGeneratedMedia: Boolean(value.hasGeneratedMedia),
+    hasStopControl: Boolean(value.hasStopControl),
+    isGenerating: Boolean(value.isGenerating),
   };
 }
 
