@@ -19837,3 +19837,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini media spinner generation signal
+
+- Operator DOM inspection identified Gemini's active media spinner as the
+  visible lottie avatar:
+  - `.avatar_primary_animation.is-gpi-avatar`
+  - `[lottie-animation].avatar_primary_animation`
+- Tightened Gemini prompt-state generation detection:
+  - a visible avatar spinner now counts as active generation
+  - a `Stop response` / cancel control only counts as active while no generated
+    media is visible
+  - rendered images/videos/download buttons clear stale-stop false positives
+- This matches the observed Gemini failure where the image rendered and Gemini
+  displayed `You stopped this response`, but the workbench still showed a stale
+  stop button until refresh.
+- Validation target:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+  - `pnpm run check`

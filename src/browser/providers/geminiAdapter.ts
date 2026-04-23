@@ -2084,14 +2084,19 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
           assistantTexts.push(text);
         }
       }
-      const sendButtons = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
-      const isGenerating = Array.from(document.querySelectorAll('button'))
+      const hasActiveAvatarSpinner = Array.from(document.querySelectorAll(
+        'model-response .avatar_primary_animation.is-gpi-avatar, model-response [lottie-animation].avatar_primary_animation, model-response .avatar_primary_model.is-gpi-avatar'
+      )).some((node) => visible(node));
+      const hasGeneratedMedia = Array.from(document.querySelectorAll(
+        'model-response img.image, model-response img.loaded, model-response button[data-test-id="download-generated-image-button"], model-response video'
+      )).some((node) => visible(node));
+      const hasStopControl = Array.from(document.querySelectorAll('button'))
         .some((button) => {
           if (!(button instanceof HTMLButtonElement) || !visible(button)) return false;
           const label = normalize(button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
-          if (sendButtons.some((selector) => button.matches(selector))) return false;
           return label.includes('stop') || label.includes('cancel generation');
         });
+      const isGenerating = hasActiveAvatarSpinner || (hasStopControl && !hasGeneratedMedia);
       const match = location.pathname.match(/^\\/app\\/([^/?#]+)/i);
       return {
         href: location.href,

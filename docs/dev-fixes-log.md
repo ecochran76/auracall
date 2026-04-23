@@ -13808,3 +13808,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   refresh to `/app/<id>` can move the browser away from the active workbench.
   Media readback should preserve the active tab, treat missing context as a
   transient poll miss, and only navigate in normal conversation readback paths.
+- 2026-04-23: Use Gemini's active avatar spinner as the stronger generation
+  signal for media runs. In this repo, `Stop response` can remain visible after
+  an interrupted image response has already rendered. Count the lottie avatar
+  spinner as active generation, but treat stop/cancel controls as stale when
+  generated media is already visible.

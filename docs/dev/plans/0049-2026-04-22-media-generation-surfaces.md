@@ -48,6 +48,9 @@ helpers.
   the response. Refreshing the page restores the composer. Media artifact
   polling now preserves the active tab instead of navigating on every poll, so
   readback does not move away from an in-progress image-generation surface.
+- Active Gemini media generation is now keyed to the visible lottie avatar
+  spinner, with stop/cancel controls treated as stale once generated media is
+  visible.
 
 ## Target Contract
 
