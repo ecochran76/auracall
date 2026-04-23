@@ -86,6 +86,23 @@ describe('media browser diagnostics', () => {
               hasActiveAvatarSpinner: true,
               isGenerating: true,
             },
+            browserMutations: {
+              total: 1,
+              items: [
+                {
+                  id: 'mutation-media-1',
+                  phase: 'complete',
+                  kind: 'navigate',
+                  source: 'provider:gemini:navigate-conversation-surface',
+                  at: '2026-04-23T15:00:04.500Z',
+                  requestedUrl: 'https://gemini.google.com/app/gemini-media-conversation-1',
+                  fromUrl: 'https://gemini.google.com/app',
+                  toUrl: 'https://gemini.google.com/app/gemini-media-conversation-1',
+                  targetId: 'gemini-media-tab-1',
+                  outcome: 'succeeded',
+                },
+              ],
+            },
             screenshot: {
               path: '/tmp/gemini-media-diag.png',
               mimeType: 'image/png',
@@ -105,6 +122,15 @@ describe('media browser diagnostics', () => {
       },
       providerEvidence: {
         hasActiveAvatarSpinner: true,
+      },
+      browserMutations: {
+        total: 1,
+        items: [
+          {
+            id: 'mutation-media-1',
+            source: 'provider:gemini:navigate-conversation-surface',
+          },
+        ],
       },
       screenshot: {
         path: '/tmp/gemini-media-diag.png',

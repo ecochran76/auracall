@@ -400,6 +400,8 @@ export abstract class LlmService {
       tabTargetId: overrides.tabTargetId ?? target?.tab?.targetId,
       tabUrl: overrides.tabUrl ?? target?.tab?.url ?? undefined,
       browserService: this.browserService,
+      mutationAudit: overrides.mutationAudit ?? this.browserService.getMutationAuditSink?.(),
+      mutationSourcePrefix: overrides.mutationSourcePrefix ?? `provider:${this.providerId}`,
     };
   }
 

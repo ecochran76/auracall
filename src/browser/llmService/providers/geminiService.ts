@@ -54,8 +54,11 @@ export class GeminiService extends LlmService {
     )) as Conversation[];
   }
 
-  async runPrompt(input: PromptInput, _options?: BrowserProviderListOptions): Promise<PromptResult> {
-    return this.runPlannedPrompt(input);
+  async runPrompt(input: PromptInput, options?: BrowserProviderListOptions): Promise<PromptResult> {
+    return this.runPlannedPrompt({
+      ...input,
+      listOptions: options ?? input.listOptions,
+    });
   }
 
   async renameConversation(

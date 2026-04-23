@@ -232,7 +232,8 @@
       `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>/status`
     - while a browser-backed media job is still running, add
       `?diagnostics=browser-state` to capture bounded live browser evidence
-      from the active provider target
+      from the active provider target, including recent Aura-Call browser
+      mutation records when present
     - for the generic run-status surface, run
       `curl http://127.0.0.1:8080/v1/runs/<media_generation_id>/status`
     - the generic status route accepts the same
@@ -293,7 +294,8 @@
         `diagnostics=browser-state`
         - live, bounded, and run-scoped to the active step
         - includes target URL/title/id, document readiness, visible control
-          counts, provider evidence, and a stored PNG screenshot path
+          counts, provider evidence, recent browser mutation records, and a
+          stored PNG screenshot path
         - `GET /v1/runs/<id>/status?diagnostics=browser-state` and
           `GET /v1/media-generations/<id>/status?diagnostics=browser-state`
           expose the same bounded browser snapshot for active browser-backed

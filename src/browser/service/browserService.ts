@@ -31,6 +31,11 @@ import {
   BrowserService as BrowserServiceCore,
   type BrowserServiceDependencies,
 } from '../../../packages/browser-service/src/service/browserService.js';
+import {
+  createInMemoryBrowserMutationLog,
+  type BrowserMutationAuditSink,
+  type BrowserMutationRecord,
+} from '../../../packages/browser-service/src/service/mutationDispatcher.js';
 
 type ServiceTargetMatchOptions = {
   serviceId: 'chatgpt' | 'grok' | 'gemini';
@@ -49,9 +54,11 @@ export type ServiceTargetResolution = {
 };
 
 export class BrowserService extends BrowserServiceCore {
+  private static readonly mutationLogs = new Map<string, ReturnType<typeof createInMemoryBrowserMutationLog>>();
   private readonly registryPath: string;
   private readonly userConfig: ResolvedUserConfig;
   private readonly serviceTarget: BrowserProfileTarget;
+  private readonly mutationLogKey: string;
   private constructor(userConfig: ResolvedUserConfig, target: BrowserProfileTarget) {
     const { resolvedConfig } = resolveUserBrowserLaunchContext(userConfig, target);
     const registryPath = path.join(getAuracallHomeDir(), 'browser-state.json');
@@ -64,6 +71,7 @@ export class BrowserService extends BrowserServiceCore {
     this.registryPath = registryPath;
     this.userConfig = userConfig;
     this.serviceTarget = target;
+    this.mutationLogKey = resolveMutationLogKey(userConfig, target);
   }
 
   static fromConfig(
@@ -75,6 +83,18 @@ export class BrowserService extends BrowserServiceCore {
 
   override getConfig(): ResolvedBrowserConfig {
     return super.getConfig() as ResolvedBrowserConfig;
+  }
+
+  getMutationAuditSink(): BrowserMutationAuditSink {
+    return this.getMutationLog().record;
+  }
+
+  listRecentBrowserMutations(limit = 20): BrowserMutationRecord[] {
+    const normalizedLimit = Number.isFinite(limit) ? Math.max(0, Math.trunc(limit)) : 20;
+    if (normalizedLimit <= 0) {
+      return [];
+    }
+    return this.getMutationLog().list().slice(-normalizedLimit);
   }
 
   async resolveServiceTarget(
@@ -193,6 +213,22 @@ export class BrowserService extends BrowserServiceCore {
       target,
     });
   }
+
+  private getMutationLog(): ReturnType<typeof createInMemoryBrowserMutationLog> {
+    let log = BrowserService.mutationLogs.get(this.mutationLogKey);
+    if (!log) {
+      log = createInMemoryBrowserMutationLog();
+      BrowserService.mutationLogs.set(this.mutationLogKey, log);
+    }
+    return log;
+  }
+}
+
+function resolveMutationLogKey(userConfig: ResolvedUserConfig, target: BrowserProfileTarget): string {
+  const runtimeProfile = typeof userConfig.auracallProfile === 'string' && userConfig.auracallProfile.trim()
+    ? userConfig.auracallProfile.trim()
+    : 'default';
+  return `auracall-runtime-profile:${runtimeProfile}::service:${target}`;
 }
 
 function createConfiguredUrlMatcher(

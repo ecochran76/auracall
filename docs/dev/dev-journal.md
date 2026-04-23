@@ -20367,3 +20367,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/navigationPolicy.test.ts tests/browser/chatgptAdapter.test.ts tests/browser/grokAdapter.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Browser mutation diagnostics readback
+
+- Added service-scoped browser mutation history on the app-level
+  `BrowserService`, keyed by AuraCall runtime profile and target service.
+- LLM provider list options now automatically attach the service mutation audit
+  sink, so Gemini/ChatGPT/Grok provider navigation, reload, and open-reuse
+  events can be read back without provider-local plumbing.
+- Runtime and media browser diagnostics now include
+  `browserMutations.total/items` when `diagnostics=browser-state` is requested,
+  giving API/MCP callers attribution for recent Aura-Call browser mutations.
+- Fixed Gemini `runPrompt(..., options)` to preserve provider list options so
+  browser media calls do not silently drop mutation-audit context.
+- Validation:
+  - `pnpm vitest run tests/browser/browserService.test.ts tests/mediaBrowserDiagnostics.test.ts tests/runtime.inspection.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/browser/llmServiceFiles.test.ts tests/browser/mutationAudit.test.ts tests/browser-service/ui.test.ts tests/browser-service/chromeTargetReuse.test.ts tests/cli/runtimeInspectionCommand.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 53`
+  - `git diff --check`

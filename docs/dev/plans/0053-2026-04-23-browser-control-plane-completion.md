@@ -37,13 +37,15 @@ What already exists:
 - provider-level `preserveActiveTab` / no-post-submit-navigation protections
   across ChatGPT, Gemini, and Grok
 - bounded browser diagnostics on runtime/media status surfaces
+- browser-service-owned bounded mutation history for the selected AuraCall
+  runtime profile and service, surfaced through opt-in browser diagnostics
 
 What remains unresolved:
 
-- browser mutation authority is still split across several layers
-- navigation audit now exists for two core substrate primitives, but mutation
-  authority is not yet forced through one dispatcher-owned path
-- reload actions are not yet forced through one dispatcher-owned path
+- browser mutation authority is still split across legacy browser flows
+- navigation/reload/open-reuse audit now exists for core substrate/provider
+  primitives, but mutation authority is not yet forced through one
+  dispatcher-owned path everywhere
 - target reuse/open can still navigate reused tabs below the provider layer
 - provider and legacy flows can still issue direct CDP page mutations without a
   central audit trail
@@ -191,9 +193,12 @@ Status:
   - audit records for `reloadAndSettle(...)`
   - audit records for `openOrReuseChromeTarget(...)`
   - pass-through audit support from `connectToRemoteChrome(...)`
-- still remaining in Slice 1:
   - browser-service-owned accessor for recent mutation history
-  - first runtime/browser-service consumer of those mutation records
+  - runtime/media browser diagnostics read back those mutation records when
+    `diagnostics=browser-state` is requested
+- still remaining in Slice 1:
+  - enforcement that all managed-profile mutations must enter through the
+    dispatcher-owned API rather than direct CDP calls
 
 ### Slice 2 | Provider adoption
 

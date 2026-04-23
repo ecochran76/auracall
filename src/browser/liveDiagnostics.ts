@@ -5,6 +5,7 @@ import { getAuracallHomeDir } from '../auracallHome.js';
 import type { RuntimeRunInspectionBrowserDiagnosticsProbeResult } from '../runtime/inspection.js';
 import type { ExecutionRunnerServiceId } from '../runtime/types.js';
 import { connectToChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
+import type { BrowserMutationRecord } from '../../packages/browser-service/src/service/mutationDispatcher.js';
 import { BrowserService } from './service/browserService.js';
 import type { ChromeClient } from './types.js';
 import {
@@ -60,6 +61,7 @@ export async function probeBrowserRunDiagnostics(
     await Page.enable().catch(() => undefined);
     const pageState = await readPageDiagnostics(Runtime, input.service);
     const screenshot = await captureDiagnosticsScreenshot(client, input);
+    const browserMutations = summarizeBrowserMutations(browserService.listRecentBrowserMutations?.(20) ?? []);
     return {
       service: input.service,
       ownerStepId: input.stepId,
@@ -75,11 +77,22 @@ export async function probeBrowserRunDiagnostics(
       document: pageState.document,
       visibleCounts: pageState.visibleCounts,
       providerEvidence: pageState.providerEvidence,
+      browserMutations,
       screenshot,
     };
   } finally {
     await client.close().catch(() => undefined);
   }
+}
+
+function summarizeBrowserMutations(
+  items: BrowserMutationRecord[],
+): RuntimeRunInspectionBrowserDiagnosticsProbeResult['browserMutations'] {
+  const records = Array.isArray(items) ? items : [];
+  return {
+    total: records.length,
+    items: records,
+  };
 }
 
 async function readPageDiagnostics(

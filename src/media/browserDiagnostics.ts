@@ -106,6 +106,7 @@ function formatObservedMediaBrowserDiagnostics(
     document: observed.document,
     visibleCounts: observed.visibleCounts,
     providerEvidence: observed.providerEvidence ?? null,
+    browserMutations: observed.browserMutations ?? null,
     screenshot: observed.screenshot ?? null,
   };
 }

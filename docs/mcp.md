@@ -27,7 +27,9 @@
   available, artifact count, artifact cache path/URI, materialization method,
   provider/runtime metadata, and failure details.
 - `diagnostics = "browser-state"` adds bounded live browser evidence when the
-  run is active and browser-backed.
+  run is active and browser-backed, including recent browser mutation records
+  when Aura-Call has recorded navigation/reload/open-reuse activity for the
+  selected runtime profile and service.
 - Use this as the default operator polling tool when the run type may vary.
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
@@ -41,8 +43,8 @@
   `GET /v1/runtime-runs/inspect`. `probe = "service-state"` adds live
   provider state for the active step. `diagnostics = "browser-state"` adds a
   bounded browser snapshot for the active step: selected target URL/title/id,
-  document readiness, visible control counts, provider evidence, and a stored
-  PNG screenshot path.
+  document readiness, visible control counts, provider evidence, recent
+  browser mutation records, and a stored PNG screenshot path.
 - This is read-only and does not expose raw JavaScript evaluation or unfenced
   DevTools access.
 
@@ -59,7 +61,8 @@
   materialization method, and failure details when present.
 - `diagnostics = "browser-state"` adds bounded live browser evidence for a
   running browser-backed media job, using the recorded provider `tabTargetId`
-  when present.
+  when present. The same diagnostics payload includes recent browser mutation
+  records when available.
 - Use this for polling a long-running media request without re-invoking the
   provider or inspecting raw JSON.
 

@@ -102,6 +102,15 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
         `  - Visible counts: buttons=${payload.browserDiagnostics.visibleCounts.buttons}, links=${payload.browserDiagnostics.visibleCounts.links}, modelResponses=${payload.browserDiagnostics.visibleCounts.modelResponses}`,
       );
     }
+    if (payload.browserDiagnostics.browserMutations) {
+      const latestMutation = payload.browserDiagnostics.browserMutations.items.at(-1);
+      lines.push(`  - Browser mutations: ${payload.browserDiagnostics.browserMutations.total}`);
+      if (latestMutation) {
+        lines.push(
+          `  - Latest browser mutation: ${latestMutation.kind} ${latestMutation.phase} from ${latestMutation.source}`,
+        );
+      }
+    }
     if (payload.browserDiagnostics.screenshot) {
       lines.push(`  - Screenshot: ${payload.browserDiagnostics.screenshot.path}`);
       lines.push(`  - Screenshot bytes: ${payload.browserDiagnostics.screenshot.bytes}`);

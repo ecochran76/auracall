@@ -217,7 +217,8 @@ Current limits:
         `diagnostics=browser-state`
         - bounded live browser evidence for the active step only
         - includes target URL/title/id, document readiness, visible control
-          counts, provider evidence, and a stored PNG screenshot path
+          counts, provider evidence, recent browser mutation records, and a
+          stored PNG screenshot path
         - generic run/media status also supports this switch for active
           browser-backed media jobs and prefers the provider `tabTargetId`
           recorded at prompt submission

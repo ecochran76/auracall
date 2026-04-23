@@ -74,11 +74,41 @@ vi.mock('../../src/browser/manualLogin.js', () => ({
 
 describe('BrowserService resolveServiceTarget', () => {
   const baseConfig = {
+    auracallProfile: 'browser-service-test',
     browser: {
       manualLoginProfileDir: '/tmp/profile',
       chromeProfile: 'Default',
     },
   } as unknown as ResolvedUserConfig;
+
+  test('keeps a bounded service-scoped browser mutation history', async () => {
+    const service = BrowserService.fromConfig(baseConfig, 'gemini');
+    await service.getMutationAuditSink()({
+      id: 'mutation-1',
+      phase: 'start',
+      kind: 'navigate',
+      source: 'test:navigate',
+      at: '2026-04-23T17:00:00.000Z',
+      requestedUrl: 'https://gemini.google.com/app',
+      fromUrl: 'about:blank',
+      toUrl: null,
+      targetId: 'gemini-tab',
+      reason: null,
+    });
+
+    const sameService = BrowserService.fromConfig(baseConfig, 'gemini');
+    expect(sameService.listRecentBrowserMutations()).toEqual([
+      expect.objectContaining({
+        id: 'mutation-1',
+        kind: 'navigate',
+        source: 'test:navigate',
+        targetId: 'gemini-tab',
+      }),
+    ]);
+
+    const otherService = BrowserService.fromConfig(baseConfig, 'grok');
+    expect(otherService.listRecentBrowserMutations()).toEqual([]);
+  });
 
   test('matches ChatGPT tabs by domain', async () => {
     loggerMessages.length = 0;

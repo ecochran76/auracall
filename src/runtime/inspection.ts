@@ -17,6 +17,7 @@ import type {
 } from './types.js';
 import type { ExecutionRunnerStoredRecord } from './runnersStore.js';
 import type { ExecutionRunStoredRecord } from './store.js';
+import type { BrowserMutationRecord } from '../../packages/browser-service/src/service/mutationDispatcher.js';
 
 export interface InspectRuntimeRunInput {
   runId?: string | null;
@@ -112,6 +113,10 @@ export interface RuntimeRunInspectionBrowserDiagnosticsSummary {
     modelResponses: number;
   } | null;
   providerEvidence: Record<string, unknown> | null;
+  browserMutations?: {
+    total: number;
+    items: BrowserMutationRecord[];
+  } | null;
   screenshot: {
     path: string;
     mimeType: 'image/png';
@@ -128,6 +133,7 @@ export interface RuntimeRunInspectionBrowserDiagnosticsProbeResult {
   document: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['document']>;
   visibleCounts: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['visibleCounts']>;
   providerEvidence?: Record<string, unknown> | null;
+  browserMutations?: RuntimeRunInspectionBrowserDiagnosticsSummary['browserMutations'];
   screenshot?: RuntimeRunInspectionBrowserDiagnosticsSummary['screenshot'];
 }
 
@@ -414,6 +420,7 @@ async function inspectRuntimeRunBrowserDiagnostics(input: {
     document: observed.document,
     visibleCounts: observed.visibleCounts,
     providerEvidence: observed.providerEvidence ?? null,
+    browserMutations: observed.browserMutations ?? null,
     screenshot: observed.screenshot ?? null,
   };
 }

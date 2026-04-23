@@ -13989,3 +13989,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   browser flows. Adding package-owned mutation audit records there produces
   immediate attribution across existing callers and reduces the migration to a
   bounded follow-on instead of another repo-wide blind audit.
+- 2026-04-23: Mutation audit is not useful if it is callback-only. In this
+  repo, browser diagnostics need to answer what Aura-Call last did to the
+  selected managed browser profile, even when the caller is only polling API or
+  MCP status. Keep a bounded browser-service mutation history per AuraCall
+  runtime profile/service and expose it through `diagnostics=browser-state`.

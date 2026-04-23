@@ -1,4 +1,5 @@
 import type { ResolvedBrowserConfig, ChromeClient } from '../types.js';
+import type { BrowserMutationAuditSink, BrowserMutationRecord } from './mutationDispatcher.js';
 
 export type BrowserProfileIdentity = {
   profilePath: string;
@@ -50,6 +51,8 @@ export type CredentialHint = {
 
 export type BrowserServiceHandle = {
   getConfig(): BrowserServiceConfig;
+  getMutationAuditSink?(): BrowserMutationAuditSink;
+  listRecentBrowserMutations?(limit?: number): BrowserMutationRecord[];
   resolveDevToolsTarget(options?: {
     host?: string;
     port?: number;

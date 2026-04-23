@@ -113,6 +113,11 @@ Current active extraction plan:
     navigation, reload, location-assign, and target-open-or-reuse actions.
   - `createInMemoryBrowserMutationLog(...)` gives tests or future runtime
     diagnostics a bounded in-memory history surface.
+  - The app-level `BrowserService` now keeps a bounded service-scoped mutation
+    history per AuraCall runtime profile and target service. Runtime/media
+    browser diagnostics include those recent records as
+    `browserDiagnostics.browserMutations` when `diagnostics=browser-state` is
+    requested.
   - This is distinct from `operationDispatcher`: `operationDispatcher`
     serializes ownership, while `mutationDispatcher` records which browser
     mutation AuraCall attempted under that ownership.
