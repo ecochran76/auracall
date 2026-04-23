@@ -20022,3 +20022,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   `response-complete` once generated media is visible.
 - Validation:
   - `pnpm vitest run tests/browser/liveServiceState.test.ts`
+
+## 2026-04-23 - Gemini activity evidence helper
+
+- Extracted Gemini activity evidence into a provider-owned helper shared by
+  media prompt readback and live service-state probing.
+- The shared helper owns the lottie/avatar spinner, generated media, stale
+  stop-control, and `isGenerating` calculation so Gemini text/media paths do
+  not diverge.
+- Validation:
+  - `pnpm vitest run tests/browser/liveServiceState.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts`
+  - `pnpm run check`

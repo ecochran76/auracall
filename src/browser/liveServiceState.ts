@@ -10,6 +10,11 @@ import {
   createLlmUnknownObservation,
   resolveVisibleAnswerServiceState,
 } from './llmServiceState.js';
+import {
+  buildGeminiActivityEvidenceExpression,
+  coerceGeminiActivityEvidence,
+  type GeminiActivityEvidence,
+} from './providers/geminiEvidence.js';
 import type { RuntimeRunInspectionServiceStateProbeResult } from '../runtime/inspection.js';
 
 const CHATGPT_HOME_URL = 'https://chatgpt.com/';
@@ -391,11 +396,7 @@ async function readGeminiProbeState(
   sendReady: boolean;
   hasPendingBlob: boolean;
   hasRemoveButton: boolean;
-  hasActiveAvatarSpinner: boolean;
-  hasGeneratedMedia: boolean;
-  hasStopControl: boolean;
-  isGenerating: boolean;
-}> {
+} & GeminiActivityEvidence> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
@@ -411,33 +412,7 @@ async function readGeminiProbeState(
       const hasRemoveButton = Array.from(document.querySelectorAll('button,[role="button"]')).some((el) =>
         String(el.getAttribute('aria-label') ?? '').toLowerCase().includes('remove file'),
       );
-      const hasActiveAvatarSpinner = Array.from(document.querySelectorAll(
-        'model-response .avatar_primary_animation.is-gpi-avatar, model-response [lottie-animation].avatar_primary_animation, model-response .avatar_primary_model.is-gpi-avatar'
-      )).some((node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      });
-      const hasGeneratedMedia = Array.from(document.querySelectorAll(
-        'model-response img.image, model-response img.loaded, model-response button[data-test-id="download-generated-image-button"], model-response video'
-      )).some((node) => {
-        if (!(node instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(node);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        const rect = node.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      });
-      const hasStopControl = Array.from(document.querySelectorAll('button')).some((el) => {
-        if (!(el instanceof HTMLElement)) return false;
-        const style = window.getComputedStyle(el);
-        if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
-        const rect = el.getBoundingClientRect();
-        if (rect.width <= 0 || rect.height <= 0) return false;
-        const label = normalize(\`\${el.getAttribute('aria-label') || ''} \${el.textContent || ''}\`).toLowerCase();
-        return label.includes('stop') || label.includes('cancel generation');
-      });
+      const activityEvidence = ${buildGeminiActivityEvidenceExpression()};
       const sendReady = (() => {
         if (!(send instanceof HTMLElement)) return false;
         const style = window.getComputedStyle(send);
@@ -455,25 +430,20 @@ async function readGeminiProbeState(
         sendReady,
         hasPendingBlob,
         hasRemoveButton,
-        hasActiveAvatarSpinner,
-        hasGeneratedMedia,
-        hasStopControl,
-        isGenerating: hasActiveAvatarSpinner || (hasStopControl && !hasGeneratedMedia),
+        ...activityEvidence,
       };
     })()`,
     returnByValue: true,
   });
   const value = (result?.value ?? {}) as Record<string, unknown>;
+  const activityEvidence = coerceGeminiActivityEvidence(value);
   return {
     historyText: typeof value.historyText === 'string' ? value.historyText : '',
     promptText: typeof value.promptText === 'string' ? value.promptText : '',
     sendReady: Boolean(value.sendReady),
     hasPendingBlob: Boolean(value.hasPendingBlob),
     hasRemoveButton: Boolean(value.hasRemoveButton),
-    hasActiveAvatarSpinner: Boolean(value.hasActiveAvatarSpinner),
-    hasGeneratedMedia: Boolean(value.hasGeneratedMedia),
-    hasStopControl: Boolean(value.hasStopControl),
-    isGenerating: Boolean(value.isGenerating),
+    ...activityEvidence,
   };
 }
 

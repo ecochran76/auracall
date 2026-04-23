@@ -181,3 +181,7 @@ Current evidence:
   adapters. Gemini's active lottie/avatar spinner is a high-confidence
   `thinking` signal, and a visible `Stop response`/cancel control is treated as
   stale once generated media is visible.
+- 2026-04-23: Gemini activity evidence selectors now live in a single
+  provider-owned helper shared by service-state probing and media prompt
+  readback, so spinner/media/stop-control semantics do not drift between text
+  and media workflows.

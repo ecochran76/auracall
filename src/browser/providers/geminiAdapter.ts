@@ -8,6 +8,11 @@ import {
   type BrowserDomSearchMatch,
   type BrowserDomSearchOptions,
 } from '../../../packages/browser-service/src/service/domSearch.js';
+import {
+  buildGeminiActivityEvidenceExpression,
+  coerceGeminiActivityEvidence,
+  type GeminiActivityEvidence,
+} from './geminiEvidence.js';
 import type { BrowserToolsUiListResult } from '../../../packages/browser-service/src/browserTools.js';
 import {
   navigateAndSettle,
@@ -2115,9 +2120,7 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
   composerText: string;
   userTexts: string[];
   assistantTexts: string[];
-  isGenerating: boolean;
-  hasGeneratedMedia: boolean;
-}> {
+} & GeminiActivityEvidence> {
   const { result } = await Runtime.evaluate({
     expression: `(() => {
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim();
@@ -2194,19 +2197,7 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
           assistantTexts.push(text);
         }
       }
-      const hasActiveAvatarSpinner = Array.from(document.querySelectorAll(
-        'model-response .avatar_primary_animation.is-gpi-avatar, model-response [lottie-animation].avatar_primary_animation, model-response .avatar_primary_model.is-gpi-avatar'
-      )).some((node) => visible(node));
-      const hasGeneratedMedia = Array.from(document.querySelectorAll(
-        'model-response img.image, model-response img.loaded, model-response button[data-test-id="download-generated-image-button"], model-response video'
-      )).some((node) => visible(node));
-      const hasStopControl = Array.from(document.querySelectorAll('button'))
-        .some((button) => {
-          if (!(button instanceof HTMLButtonElement) || !visible(button)) return false;
-          const label = normalize(button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
-          return label.includes('stop') || label.includes('cancel generation');
-        });
-      const isGenerating = hasActiveAvatarSpinner || (hasStopControl && !hasGeneratedMedia);
+      const activityEvidence = ${buildGeminiActivityEvidenceExpression()};
       const match = location.pathname.match(/^\\/app\\/([^/?#]+)/i);
       return {
         href: location.href,
@@ -2214,8 +2205,7 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
         composerText,
         userTexts,
         assistantTexts,
-        isGenerating,
-        hasGeneratedMedia,
+        ...activityEvidence,
       };
     })()`,
     returnByValue: true,
@@ -2226,17 +2216,15 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
     composerText?: string;
     userTexts?: string[];
     assistantTexts?: string[];
-    isGenerating?: boolean;
-    hasGeneratedMedia?: boolean;
   };
+  const activityEvidence = coerceGeminiActivityEvidence(value);
   return {
     href: typeof value.href === 'string' ? value.href : '',
     conversationId: typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId : null,
     composerText: typeof value.composerText === 'string' ? normalizePromptText(value.composerText) : '',
     userTexts: Array.isArray(value.userTexts) ? value.userTexts.map((entry) => sanitizeGeminiUserText(entry)) : [],
     assistantTexts: Array.isArray(value.assistantTexts) ? value.assistantTexts.map((entry) => normalizeWhitespace(entry)) : [],
-    isGenerating: Boolean(value.isGenerating),
-    hasGeneratedMedia: Boolean(value.hasGeneratedMedia),
+    ...activityEvidence,
   };
 }
 
