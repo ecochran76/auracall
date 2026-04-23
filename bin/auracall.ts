@@ -971,8 +971,23 @@ apiCommand
       throw new Error('Invalid --authority value. Use scheduler.');
     },
   )
+  .option(
+    '--diagnostics <browser-state>',
+    'Optionally request one bounded browser diagnostic snapshot. Current value: browser-state.',
+    (value) => {
+      if (value === 'browser-state') {
+        return value;
+      }
+      throw new Error('Invalid --diagnostics value. Use browser-state.');
+    },
+  )
   .option('--json', 'Emit machine-readable JSON output.', false)
   .action(async (commandOptions) => {
+    const includeServiceState = commandOptions.probe === 'service-state';
+    const includeBrowserDiagnostics = commandOptions.diagnostics === 'browser-state';
+    const defaultProbeFactories = includeServiceState || includeBrowserDiagnostics
+      ? await import('../src/http/responsesServer.js')
+      : null;
     const payload = await inspectConfiguredRuntimeRun({
       runId: commandOptions.runId,
       runtimeRunId:
@@ -991,12 +1006,19 @@ apiCommand
         typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
           ? commandOptions.runnerId.trim()
           : null,
-      includeServiceState: commandOptions.probe === 'service-state',
+      includeServiceState,
+      includeBrowserDiagnostics,
       includeSchedulerAuthority: commandOptions.authority === 'scheduler',
       schedulerAuthorityLocalRunnerId:
         typeof commandOptions.runnerId === 'string' && commandOptions.runnerId.trim().length > 0
           ? commandOptions.runnerId.trim()
           : null,
+      probeServiceState: includeServiceState && defaultProbeFactories
+        ? defaultProbeFactories.createDefaultRuntimeRunServiceStateProbe()
+        : undefined,
+      probeBrowserDiagnostics: includeBrowserDiagnostics && defaultProbeFactories
+        ? defaultProbeFactories.createDefaultRuntimeRunBrowserDiagnosticsProbe()
+        : undefined,
     });
 
     if (commandOptions.json) {

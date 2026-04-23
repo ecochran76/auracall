@@ -179,6 +179,7 @@
     - `GET /v1/runtime-runs/inspect?taskRunSpecId=<task_run_spec_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&runnerId=<runner_id>`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&probe=service-state`
+    - `GET /v1/runtime-runs/inspect?runId=<run_id>&diagnostics=browser-state`
     - `GET /v1/runtime-runs/inspect?runId=<run_id>&authority=scheduler`
     - CLI equivalent for read-only scheduler evidence:
       - `pnpm tsx bin/auracall.ts api inspect-run --run-id <run_id> --authority scheduler`
@@ -279,6 +280,11 @@
           `unavailable` posture
         - Grok API-backed runtime profiles still return honest `unavailable`
           posture
+      - optional `browserDiagnostics` when explicitly requested with
+        `diagnostics=browser-state`
+        - live, bounded, and run-scoped to the active step
+        - includes target URL/title/id, document readiness, visible control
+          counts, provider evidence, and a stored PNG screenshot path
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - read-only authority evidence only

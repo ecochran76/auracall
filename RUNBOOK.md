@@ -1481,3 +1481,22 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## Turn 60 | 2026-04-23
+
+- Opened and closed maintenance plan:
+  `docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md`
+- Trigger:
+  - live provider status debugging needs the selected target, DOM state, and
+    screenshot while a chat is executing, without raw CDP escape hatches or
+    page churn
+- Change:
+  - added opt-in runtime browser diagnostics to HTTP, CLI, and MCP runtime
+    inspection
+  - diagnostics are active-run only and report target URL/title/id, document
+    readiness, visible control counts, provider evidence, and stored PNG path
+- Verification target:
+  - `pnpm vitest run tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts tests/mcp.runtimeInspect.test.ts`
+  - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 51`
+  - `git diff --check`

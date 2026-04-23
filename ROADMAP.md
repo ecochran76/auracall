@@ -43,6 +43,14 @@ Current State:
     owns the more general discovery/invocation model for rapidly changing
     chat-workbench capabilities such as Deep Research, ChatGPT apps,
     ChatGPT business-plan skills, Gemini media tools, and provider add-ons
+- runtime browser diagnostics are closed in
+  [docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md)
+  - `GET /v1/runtime-runs/inspect?...&diagnostics=browser-state`, CLI
+    `api inspect-run --diagnostics browser-state`, and MCP `runtime_inspect`
+    expose the same bounded active-run browser snapshot
+  - diagnostics complement `serviceState` with selected target, document,
+    visible control counts, provider evidence, and a stored PNG screenshot
+    path; they do not expose raw CDP or navigate provider pages
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

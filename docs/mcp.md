@@ -29,6 +29,20 @@
 - CLI parity: `auracall run status <id> --json` reads the same durable status
   envelope from local storage.
 
+### `runtime_inspect`
+- Inputs: one runtime lookup key, `runId`, `runtimeRunId`, `teamRunId`, or
+  `taskRunSpecId`; optional `runnerId`; optional `probe: "service-state"`;
+  optional `diagnostics: "browser-state"`.
+- Behavior: returns `object = "runtime_run_inspection"` with the same bounded
+  runtime queue/lease projection exposed by
+  `GET /v1/runtime-runs/inspect`. `probe = "service-state"` adds live
+  provider state for the active step. `diagnostics = "browser-state"` adds a
+  bounded browser snapshot for the active step: selected target URL/title/id,
+  document readiness, visible control counts, provider evidence, and a stored
+  PNG screenshot path.
+- This is read-only and does not expose raw JavaScript evaluation or unfenced
+  DevTools access.
+
 ### `media_generation`
 - Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, and metadata.
 - Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. The tool surface is live now; provider-backed Gemini/Grok execution remains gated until the media adapters are wired.

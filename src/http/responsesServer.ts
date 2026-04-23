@@ -22,7 +22,9 @@ import type {
 } from '../runtime/apiTypes.js';
 import {
   inspectRuntimeRun,
+  type RuntimeRunInspectionBrowserDiagnosticsProbeResult,
   type RuntimeRunInspectionServiceStateProbeResult,
+  type ProbeRuntimeRunBrowserDiagnosticsInput,
   type ProbeRuntimeRunServiceStateInput,
   RuntimeRunInspectionError,
   type RuntimeRunInspectionPayload,
@@ -63,6 +65,10 @@ import {
   probeGrokBrowserServiceState,
 } from '../browser/liveServiceState.js';
 import {
+  probeBrowserRunDiagnostics,
+  type BrowserDiagnosticsService,
+} from '../browser/liveDiagnostics.js';
+import {
   createMediaGenerationService,
   type MediaGenerationServiceDeps,
 } from '../media/service.js';
@@ -102,6 +108,9 @@ export interface ResponsesHttpServerDeps {
   probeRuntimeRunServiceState?: (
     input: ProbeRuntimeRunServiceStateInput,
   ) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
+  probeRuntimeRunBrowserDiagnostics?: (
+    input: ProbeRuntimeRunBrowserDiagnosticsInput,
+  ) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
 }
 
 export interface ResponsesHttpServerInstance {
@@ -119,6 +128,7 @@ export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
   listenPublic?: boolean;
   executeStoredRunStep?: ResponsesHttpServerDeps['executeStoredRunStep'];
   probeRuntimeRunServiceState?: ResponsesHttpServerDeps['probeRuntimeRunServiceState'];
+  probeRuntimeRunBrowserDiagnostics?: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
 }
 
 interface HttpErrorPayload {
@@ -444,9 +454,11 @@ export async function createResponsesHttpServer(
             taskRunSpecId: url.searchParams.get('taskRunSpecId'),
             runnerId: url.searchParams.get('runnerId'),
             includeServiceState: runtimeInspectQuery.probe === 'service-state',
+            includeBrowserDiagnostics: runtimeInspectQuery.diagnostics === 'browser-state',
             includeSchedulerAuthority: runtimeInspectQuery.authority === 'scheduler',
             schedulerAuthorityLocalRunnerId: url.searchParams.get('runnerId') ?? runnerState.id,
             probeServiceState: deps.probeRuntimeRunServiceState,
+            probeBrowserDiagnostics: deps.probeRuntimeRunBrowserDiagnostics,
             control,
             runnersControl,
             createRunAffinity,
@@ -946,6 +958,8 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
         (async (_request, context) => configuredStoredStepExecutor(context)),
       probeRuntimeRunServiceState:
         overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
+      probeRuntimeRunBrowserDiagnostics:
+        options.probeRuntimeRunBrowserDiagnostics ?? createDefaultRuntimeRunBrowserDiagnosticsProbe(),
       discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
         loadedConfig.config as ResolvedUserConfig,
       ),
@@ -1070,6 +1084,51 @@ export function createDefaultRuntimeRunServiceStateProbe(
   };
 }
 
+type DefaultRuntimeRunBrowserDiagnosticsProbeDeps = {
+  resolveConfigImpl?: typeof resolveConfig;
+  probeBrowserRunDiagnosticsImpl?: typeof probeBrowserRunDiagnostics;
+  cwd?: string;
+  env?: NodeJS.ProcessEnv;
+};
+
+export function createDefaultRuntimeRunBrowserDiagnosticsProbe(
+  deps: DefaultRuntimeRunBrowserDiagnosticsProbeDeps = {},
+): ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'] {
+  const resolveConfigImpl = deps.resolveConfigImpl ?? resolveConfig;
+  const probeBrowserRunDiagnosticsImpl = deps.probeBrowserRunDiagnosticsImpl ?? probeBrowserRunDiagnostics;
+  const cwd = deps.cwd ?? process.cwd();
+  const env = deps.env ?? process.env;
+
+  return async ({ inspection, step }) => {
+    if (step.service !== 'chatgpt' && step.service !== 'gemini' && step.service !== 'grok') {
+      return null;
+    }
+    const runtimeProfileId =
+      typeof step.runtimeProfileId === 'string' && step.runtimeProfileId.trim().length > 0
+        ? step.runtimeProfileId.trim()
+        : null;
+    const resolvedConfig = await resolveConfigImpl(
+      runtimeProfileId ? { profile: runtimeProfileId } : {},
+      cwd,
+      env,
+    );
+
+    if (runtimeProfileId && resolvedConfig.auracallProfile !== runtimeProfileId) {
+      return null;
+    }
+
+    if (resolvedConfig.engine !== 'browser') {
+      return null;
+    }
+
+    return probeBrowserRunDiagnosticsImpl(resolvedConfig, {
+      service: step.service as BrowserDiagnosticsService,
+      runId: inspection.record.runId,
+      stepId: step.id,
+    });
+  };
+}
+
 export function assertResponsesHostAllowed(host: string | undefined, listenPublic: boolean): void {
   if (listenPublic || isLoopbackHost(host ?? '127.0.0.1')) {
     return;
@@ -1119,7 +1178,7 @@ function createHttpStatusResponse(input: {
       teamRunInspection:
         '/v1/team-runs/inspect?taskRunSpecId={task_run_spec_id}|teamRunId={team_run_id}|runtimeRunId={runtime_run_id}',
       runtimeRunInspection:
-        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&authority=scheduler]',
+        '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
       models: '/v1/models',
       responsesCreate: '/v1/responses',
       responsesGetTemplate: '/v1/responses/{response_id}',
@@ -1400,6 +1459,7 @@ interface ParsedStatusQuery {
 interface ParsedRuntimeInspectionQuery {
   probe?: 'service-state';
   authority?: 'scheduler';
+  diagnostics?: 'browser-state';
 }
 
 function parseStatusQuery(searchParams: URLSearchParams): ParsedStatusQuery {
@@ -1480,11 +1540,13 @@ function parseRuntimeInspectionQuery(searchParams: URLSearchParams): ParsedRunti
   const parsed = z.object({
     probe: z.enum(['service-state']).optional(),
     authority: z.enum(['scheduler']).optional(),
+    diagnostics: z.enum(['browser-state']).optional(),
   }).parse(raw);
 
   return {
     probe: parsed.probe,
     authority: parsed.authority,
+    diagnostics: parsed.diagnostics,
   };
 }
 

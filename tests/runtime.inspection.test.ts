@@ -326,6 +326,141 @@ describe('runtime inspection', () => {
     });
   });
 
+  it('returns an opt-in browser diagnostics summary for an active running step', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-browser-diagnostics-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_inspect_browser_diagnostics';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-23T18:00:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe browser diagnostics.',
+          initialInputs: {
+            model: 'gemini-3-pro',
+            runtimeProfile: 'auracall-gemini-pro',
+            service: 'gemini',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'api-responses',
+            runtimeProfileId: 'auracall-gemini-pro',
+            browserProfileId: 'default',
+            service: 'gemini',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe browser diagnostics.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+
+    const payload = await inspectRuntimeRun({
+      runId,
+      includeBrowserDiagnostics: true,
+      control,
+      probeBrowserDiagnostics: async ({ step }) => ({
+        service: step.service,
+        ownerStepId: step.id,
+        observedAt: '2026-04-23T18:00:05.000Z',
+        source: 'browser-service',
+        target: {
+          host: '127.0.0.1',
+          port: 9222,
+          targetId: 'gemini-tab-1',
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+        },
+        document: {
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          bodyTextLength: 500,
+        },
+        visibleCounts: {
+          buttons: 12,
+          links: 3,
+          inputs: 0,
+          textareas: 0,
+          contenteditables: 1,
+          modelResponses: 1,
+        },
+        providerEvidence: {
+          hasActiveAvatarSpinner: true,
+          hasGeneratedMedia: false,
+          hasStopControl: true,
+          isGenerating: true,
+        },
+        screenshot: {
+          path: '/tmp/gemini-diagnostics.png',
+          mimeType: 'image/png',
+          bytes: 1024,
+        },
+      }),
+    });
+
+    expect(payload.browserDiagnostics).toMatchObject({
+      probeStatus: 'observed',
+      service: 'gemini',
+      ownerStepId: stepId,
+      observedAt: '2026-04-23T18:00:05.000Z',
+      source: 'browser-service',
+      reason: null,
+      target: {
+        targetId: 'gemini-tab-1',
+        url: 'https://gemini.google.com/app',
+      },
+      providerEvidence: {
+        hasActiveAvatarSpinner: true,
+        isGenerating: true,
+      },
+      screenshot: {
+        path: '/tmp/gemini-diagnostics.png',
+        bytes: 1024,
+      },
+    });
+  });
+
   it('resolves task-run-spec runtime inspection against team-run sources only', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-runtime-inspection-task-spec-team-only-'));
     cleanup.push(homeDir);

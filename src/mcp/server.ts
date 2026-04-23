@@ -11,6 +11,7 @@ import { registerTeamRunTool } from './tools/teamRun.js';
 import { registerMediaGenerationTool } from './tools/mediaGeneration.js';
 import { registerWorkbenchCapabilitiesTool } from './tools/workbenchCapabilities.js';
 import { registerRunStatusTool } from './tools/runStatus.js';
+import { registerRuntimeInspectTool } from './tools/runtimeInspect.js';
 
 export async function startMcpServer(): Promise<void> {
   const server = new McpServer(
@@ -28,6 +29,7 @@ export async function startMcpServer(): Promise<void> {
   registerConsultTool(server);
   registerTeamRunTool(server);
   registerRunStatusTool(server);
+  registerRuntimeInspectTool(server);
   registerMediaGenerationTool(server);
   registerWorkbenchCapabilitiesTool(server);
   registerSessionsTool(server);

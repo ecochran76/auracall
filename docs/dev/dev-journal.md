@@ -20116,3 +20116,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/browser/geminiEvidence.test.ts tests/browser/liveServiceState.test.ts tests/http.responsesServer.test.ts -t "Gemini|service-state|service state"`
   - `pnpm vitest run tests/browser/geminiEvidence.test.ts tests/browser/liveServiceState.test.ts tests/http.responsesServer.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Runtime browser diagnostics surface
+
+- Added opt-in active-run browser diagnostics to runtime inspection so API,
+  CLI, and MCP callers can capture bounded target/document/screenshot evidence
+  without opening raw CDP access.
+- The diagnostics path resolves browser targets through browser-service
+  ownership and returns selected target URL/title/id, document readiness,
+  visible control counts, provider evidence, and a stored PNG screenshot path.
+- Created and closed
+  `docs/dev/plans/0051-2026-04-23-runtime-browser-diagnostics.md`.
+- Validation:
+  - `pnpm run check`
+  - `pnpm vitest run tests/runtime.inspection.test.ts tests/http.responsesServer.test.ts tests/cli/runtimeInspectionCommand.test.ts tests/mcp.runtimeInspect.test.ts`

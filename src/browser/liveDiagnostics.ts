@@ -1,0 +1,216 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type { ResolvedUserConfig } from '../config.js';
+import { getAuracallHomeDir } from '../auracallHome.js';
+import type { RuntimeRunInspectionBrowserDiagnosticsProbeResult } from '../runtime/inspection.js';
+import type { ExecutionRunnerServiceId } from '../runtime/types.js';
+import { connectToChromeTarget } from '../../packages/browser-service/src/chromeLifecycle.js';
+import { BrowserService } from './service/browserService.js';
+import type { ChromeClient } from './types.js';
+import {
+  buildGeminiActivityEvidenceExpression,
+  coerceGeminiActivityEvidence,
+} from './providers/geminiEvidence.js';
+
+const SERVICE_HOME_URLS: Record<Extract<ExecutionRunnerServiceId, 'chatgpt' | 'gemini' | 'grok'>, string> = {
+  chatgpt: 'https://chatgpt.com/',
+  gemini: 'https://gemini.google.com/app',
+  grok: 'https://grok.com/',
+};
+
+export type BrowserDiagnosticsService = keyof typeof SERVICE_HOME_URLS;
+
+type BrowserRunDiagnosticsDeps = {
+  createBrowserService?: (userConfig: ResolvedUserConfig, service: BrowserDiagnosticsService) => BrowserService;
+  connectToTarget?: typeof connectToChromeTarget;
+};
+
+export async function probeBrowserRunDiagnostics(
+  userConfig: ResolvedUserConfig,
+  input: {
+    service: BrowserDiagnosticsService;
+    runId: string;
+    stepId: string;
+  },
+  deps: BrowserRunDiagnosticsDeps = {},
+): Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null> {
+  const browserService =
+    deps.createBrowserService?.(userConfig, input.service) ?? BrowserService.fromConfig(userConfig, input.service);
+  const target = await browserService.resolveServiceTarget({
+    serviceId: input.service,
+    configuredUrl: userConfig.services?.[input.service]?.url ?? SERVICE_HOME_URLS[input.service],
+    ensurePort: true,
+  });
+  const port = target.port;
+  const host = target.host ?? '127.0.0.1';
+  const targetId = resolveTargetId(target.tab);
+  if (!port || !targetId) {
+    return null;
+  }
+
+  const client = await (deps.connectToTarget ?? connectToChromeTarget)({
+    host,
+    port,
+    target: targetId,
+  });
+  try {
+    const { Runtime, Page } = client;
+    await Runtime.enable();
+    await Page.enable().catch(() => undefined);
+    const pageState = await readPageDiagnostics(Runtime, input.service);
+    const screenshot = await captureDiagnosticsScreenshot(client, input);
+    return {
+      service: input.service,
+      ownerStepId: input.stepId,
+      observedAt: new Date().toISOString(),
+      source: 'browser-service',
+      target: {
+        host,
+        port,
+        targetId,
+        url: target.tab?.url ?? pageState.document.url,
+        title: target.tab?.title ?? pageState.document.title,
+      },
+      document: pageState.document,
+      visibleCounts: pageState.visibleCounts,
+      providerEvidence: pageState.providerEvidence,
+      screenshot,
+    };
+  } finally {
+    await client.close().catch(() => undefined);
+  }
+}
+
+async function readPageDiagnostics(
+  Runtime: ChromeClient['Runtime'],
+  service: BrowserDiagnosticsService,
+): Promise<{
+  document: RuntimeRunInspectionBrowserDiagnosticsProbeResult['document'];
+  visibleCounts: RuntimeRunInspectionBrowserDiagnosticsProbeResult['visibleCounts'];
+  providerEvidence: Record<string, unknown> | null;
+}> {
+  const expression = buildPageDiagnosticsExpression(service);
+  const { result } = await Runtime.evaluate({ expression, returnByValue: true });
+  const value = result?.value && typeof result.value === 'object'
+    ? (result.value as Record<string, unknown>)
+    : {};
+  return {
+    document: coerceDocumentDiagnostics(value.document),
+    visibleCounts: coerceVisibleCounts(value.visibleCounts),
+    providerEvidence: coerceProviderEvidence(value.providerEvidence),
+  };
+}
+
+function buildPageDiagnosticsExpression(service: BrowserDiagnosticsService): string {
+  const providerExpression = service === 'gemini' ? buildGeminiActivityEvidenceExpression() : 'null';
+  return `(() => {
+    const visible = (node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      const style = window.getComputedStyle(node);
+      if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+      const rect = node.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0;
+    };
+    const countVisible = (selector) => Array.from(document.querySelectorAll(selector)).filter((node) => visible(node)).length;
+    const providerEvidence = ${providerExpression};
+    return {
+      document: {
+        url: location.href,
+        title: document.title,
+        readyState: document.readyState,
+        visibilityState: document.visibilityState,
+        focused: document.hasFocus(),
+        bodyTextLength: document.body?.innerText?.length ?? 0,
+      },
+      visibleCounts: {
+        buttons: countVisible('button'),
+        links: countVisible('a[href]'),
+        inputs: countVisible('input'),
+        textareas: countVisible('textarea'),
+        contenteditables: countVisible('[contenteditable="true"]'),
+        modelResponses: countVisible('model-response'),
+      },
+      providerEvidence,
+    };
+  })()`;
+}
+
+async function captureDiagnosticsScreenshot(
+  client: ChromeClient,
+  input: {
+    service: BrowserDiagnosticsService;
+    runId: string;
+    stepId: string;
+  },
+): Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult['screenshot']> {
+  const screenshot = await client.Page.captureScreenshot({ format: 'png' }).catch(() => null);
+  if (!screenshot || typeof screenshot.data !== 'string' || screenshot.data.length === 0) {
+    return null;
+  }
+  const bytes = Buffer.from(screenshot.data, 'base64');
+  const dir = path.join(getAuracallHomeDir(), 'diagnostics', 'browser-state');
+  await fs.mkdir(dir, { recursive: true });
+  const safeRunId = sanitizePathToken(input.runId);
+  const safeStepId = sanitizePathToken(input.stepId);
+  const filePath = path.join(dir, `${new Date().toISOString().replace(/[:.]/g, '-')}-${input.service}-${safeRunId}-${safeStepId}.png`);
+  await fs.writeFile(filePath, bytes);
+  return {
+    path: filePath,
+    mimeType: 'image/png',
+    bytes: bytes.length,
+  };
+}
+
+function coerceDocumentDiagnostics(value: unknown): RuntimeRunInspectionBrowserDiagnosticsProbeResult['document'] {
+  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    url: asString(record.url),
+    title: asString(record.title),
+    readyState: asString(record.readyState),
+    visibilityState: asString(record.visibilityState),
+    focused: typeof record.focused === 'boolean' ? record.focused : null,
+    bodyTextLength: typeof record.bodyTextLength === 'number' ? record.bodyTextLength : null,
+  };
+}
+
+function coerceVisibleCounts(value: unknown): RuntimeRunInspectionBrowserDiagnosticsProbeResult['visibleCounts'] {
+  const record = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    buttons: asCount(record.buttons),
+    links: asCount(record.links),
+    inputs: asCount(record.inputs),
+    textareas: asCount(record.textareas),
+    contenteditables: asCount(record.contenteditables),
+    modelResponses: asCount(record.modelResponses),
+  };
+}
+
+function coerceProviderEvidence(value: unknown): Record<string, unknown> | null {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  const record = value as Record<string, unknown>;
+  if ('hasActiveAvatarSpinner' in record || 'hasGeneratedMedia' in record || 'hasStopControl' in record) {
+    return coerceGeminiActivityEvidence(record) as unknown as Record<string, unknown>;
+  }
+  return { ...record };
+}
+
+function resolveTargetId(tab: { targetId?: string; id?: string } | null | undefined): string | null {
+  if (!tab) return null;
+  if (typeof tab.targetId === 'string' && tab.targetId.length > 0) return tab.targetId;
+  if (typeof tab.id === 'string' && tab.id.length > 0) return tab.id;
+  return null;
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' ? value : null;
+}
+
+function asCount(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
+}
+
+function sanitizePathToken(value: string): string {
+  return value.replace(/[^a-zA-Z0-9_.-]+/g, '_').slice(0, 80);
+}

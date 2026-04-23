@@ -13875,3 +13875,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   a general Gemini active-chat signal, so runtime inspection should surface
   `gemini-active-avatar-spinner` as high-confidence provider-owned `thinking`
   instead of masking it behind `gemini-web-request-started`.
+- 2026-04-23: Give operators bounded run-scoped browser diagnostics instead of
+  ad hoc CDP debugging for live provider-state mismatches. In this repo,
+  `GET /v1/runtime-runs/inspect?...&diagnostics=browser-state`, CLI
+  `api inspect-run --diagnostics browser-state`, and MCP `runtime_inspect`
+  should provide selected target, document readiness, visible control counts,
+  provider evidence, and a stored PNG screenshot path through browser-service
+  ownership. Keep this read-only, active-run scoped, and navigation-free.

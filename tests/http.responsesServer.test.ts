@@ -1217,7 +1217,7 @@ describe('http responses adapter', () => {
         routes: {
           recoveryDetailTemplate: '/status/recovery/{run_id}',
           runtimeRunInspection:
-            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&authority=scheduler]',
+            '/v1/runtime-runs/inspect?runId={run_id}|teamRunId={team_run_id}|taskRunSpecId={task_run_spec_id}|runtimeRunId={runtime_run_id}[&runnerId={runner_id}][&probe=service-state][&diagnostics=browser-state][&authority=scheduler]',
           responsesGetTemplate: '/v1/responses/{response_id}',
         },
         executionHints: {
@@ -4837,6 +4837,154 @@ describe('http responses adapter', () => {
             evidenceRef: 'chatgpt-placeholder-turn',
             confidence: 'high',
             reason: null,
+          },
+        },
+      });
+    } finally {
+      await server.close();
+    }
+  });
+
+  it('returns observed browser diagnostics over HTTP when the live probe is configured', async () => {
+    const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-runtime-inspect-browser-diagnostics-'));
+    cleanup.push(tmp);
+    setAuracallHomeDirOverrideForTest(tmp);
+
+    const control = createExecutionRuntimeControl();
+    const runId = 'runtime_http_browser_diagnostics_observed';
+    const stepId = `${runId}:step:1`;
+    const createdAt = '2026-04-23T18:25:00.000Z';
+
+    await control.createRun(
+      createExecutionRunRecordBundle({
+        run: createExecutionRun({
+          id: runId,
+          sourceKind: 'direct',
+          sourceId: null,
+          status: 'running',
+          createdAt,
+          updatedAt: createdAt,
+          trigger: 'api',
+          requestedBy: null,
+          entryPrompt: 'Probe browser diagnostics.',
+          initialInputs: {
+            model: 'gemini-3-pro',
+            runtimeProfile: 'auracall-gemini-pro',
+            service: 'gemini',
+          },
+          sharedStateId: `${runId}:state`,
+          stepIds: [stepId],
+          policy: DEFAULT_TEAM_RUN_EXECUTION_POLICY,
+        }),
+        steps: [
+          createExecutionRunStep({
+            id: stepId,
+            runId,
+            agentId: 'agent:inspect-browser-diagnostics',
+            runtimeProfileId: 'auracall-gemini-pro',
+            browserProfileId: 'default',
+            service: 'gemini',
+            kind: 'prompt',
+            status: 'running',
+            order: 1,
+            dependsOnStepIds: [],
+            input: {
+              prompt: 'Probe browser diagnostics.',
+              handoffIds: [],
+              artifacts: [],
+              structuredData: {},
+              notes: [],
+            },
+            startedAt: createdAt,
+          }),
+        ],
+        sharedState: createExecutionRunSharedState({
+          id: `${runId}:state`,
+          runId,
+          status: 'active',
+          artifacts: [],
+          structuredOutputs: [],
+          notes: [],
+          history: [],
+          lastUpdatedAt: createdAt,
+        }),
+        events: [],
+      }),
+    );
+
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        control,
+        probeRuntimeRunBrowserDiagnostics: async ({ step }) => ({
+          service: step.service,
+          ownerStepId: step.id,
+          observedAt: '2026-04-23T18:25:04.000Z',
+          source: 'browser-service',
+          target: {
+            host: '127.0.0.1',
+            port: 9222,
+            targetId: 'gemini-tab-http',
+            url: 'https://gemini.google.com/app',
+            title: 'Google Gemini',
+          },
+          document: {
+            url: 'https://gemini.google.com/app',
+            title: 'Google Gemini',
+            readyState: 'complete',
+            visibilityState: 'visible',
+            focused: true,
+            bodyTextLength: 700,
+          },
+          visibleCounts: {
+            buttons: 10,
+            links: 2,
+            inputs: 0,
+            textareas: 0,
+            contenteditables: 1,
+            modelResponses: 1,
+          },
+          providerEvidence: {
+            hasActiveAvatarSpinner: true,
+            hasStopControl: true,
+            hasGeneratedMedia: false,
+            isGenerating: true,
+          },
+          screenshot: {
+            path: '/tmp/gemini-http-diagnostics.png',
+            mimeType: 'image/png',
+            bytes: 2048,
+          },
+        }),
+      },
+    );
+    try {
+      const response = await fetch(
+        `http://127.0.0.1:${server.port}/v1/runtime-runs/inspect?runId=${runId}&diagnostics=browser-state`,
+      );
+      expect(response.status).toBe(200);
+      const payload = (await response.json()) as Record<string, any>;
+      expect(payload).toMatchObject({
+        inspection: {
+          browserDiagnostics: {
+            probeStatus: 'observed',
+            service: 'gemini',
+            ownerStepId: stepId,
+            observedAt: '2026-04-23T18:25:04.000Z',
+            source: 'browser-service',
+            reason: null,
+            target: {
+              targetId: 'gemini-tab-http',
+              url: 'https://gemini.google.com/app',
+            },
+            providerEvidence: {
+              hasActiveAvatarSpinner: true,
+              isGenerating: true,
+            },
+            screenshot: {
+              path: '/tmp/gemini-http-diagnostics.png',
+              bytes: 2048,
+            },
           },
         },
       });

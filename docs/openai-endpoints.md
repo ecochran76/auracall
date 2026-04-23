@@ -179,6 +179,7 @@ Current limits:
     - optional:
       - `runnerId`
       - `probe=service-state`
+      - `diagnostics=browser-state`
       - `authority=scheduler`
     - returns:
       - `resolvedBy`
@@ -205,6 +206,11 @@ Current limits:
         - Grok API-backed runtime profiles still return honest `unavailable`
           posture on this seam
         - keep it separate from queue/lease posture and `/status`
+      - optional `browserDiagnostics` when explicitly requested with
+        `diagnostics=browser-state`
+        - bounded live browser evidence for the active step only
+        - includes target URL/title/id, document readiness, visible control
+          counts, provider evidence, and a stored PNG screenshot path
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - read-only authority evidence only

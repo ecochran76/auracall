@@ -26,9 +26,11 @@ export interface InspectRuntimeRunInput {
   runnerId?: string | null;
   now?: string | null;
   includeServiceState?: boolean;
+  includeBrowserDiagnostics?: boolean;
   includeSchedulerAuthority?: boolean;
   schedulerAuthorityLocalRunnerId?: string | null;
   probeServiceState?: (input: ProbeRuntimeRunServiceStateInput) => Promise<RuntimeRunInspectionServiceStateProbeResult | null>;
+  probeBrowserDiagnostics?: (input: ProbeRuntimeRunBrowserDiagnosticsInput) => Promise<RuntimeRunInspectionBrowserDiagnosticsProbeResult | null>;
   control?: ExecutionRuntimeControlContract;
   runnersControl?: ExecutionRunnerControlContract;
   taskRunSpecStore?: TaskRunSpecRecordStore;
@@ -63,6 +65,12 @@ export interface ProbeRuntimeRunServiceStateInput {
   step: ExecutionRunStep;
 }
 
+export interface ProbeRuntimeRunBrowserDiagnosticsInput {
+  inspection: ExecutionRunInspection;
+  runner: ExecutionRunnerStoredRecord | null;
+  step: ExecutionRunStep;
+}
+
 export interface RuntimeRunInspectionServiceStateProbeResult {
   service?: NonNullable<ExecutionRunStep['service']> | null;
   ownerStepId?: string | null;
@@ -71,6 +79,56 @@ export interface RuntimeRunInspectionServiceStateProbeResult {
   observedAt: string;
   evidenceRef?: string | null;
   confidence: 'low' | 'medium' | 'high';
+}
+
+export interface RuntimeRunInspectionBrowserDiagnosticsSummary {
+  probeStatus: 'observed' | 'unavailable';
+  service: NonNullable<ExecutionRunStep['service']> | null;
+  ownerStepId: string | null;
+  observedAt: string | null;
+  source: 'browser-service' | null;
+  reason: string | null;
+  target: {
+    host: string | null;
+    port: number | null;
+    targetId: string | null;
+    url: string | null;
+    title: string | null;
+  } | null;
+  document: {
+    url: string | null;
+    title: string | null;
+    readyState: string | null;
+    visibilityState: string | null;
+    focused: boolean | null;
+    bodyTextLength: number | null;
+  } | null;
+  visibleCounts: {
+    buttons: number;
+    links: number;
+    inputs: number;
+    textareas: number;
+    contenteditables: number;
+    modelResponses: number;
+  } | null;
+  providerEvidence: Record<string, unknown> | null;
+  screenshot: {
+    path: string;
+    mimeType: 'image/png';
+    bytes: number;
+  } | null;
+}
+
+export interface RuntimeRunInspectionBrowserDiagnosticsProbeResult {
+  service?: NonNullable<ExecutionRunStep['service']> | null;
+  ownerStepId?: string | null;
+  observedAt: string;
+  source: 'browser-service';
+  target: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['target']>;
+  document: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['document']>;
+  visibleCounts: NonNullable<RuntimeRunInspectionBrowserDiagnosticsSummary['visibleCounts']>;
+  providerEvidence?: Record<string, unknown> | null;
+  screenshot?: RuntimeRunInspectionBrowserDiagnosticsSummary['screenshot'];
 }
 
 export interface RuntimeRunInspectionRunnerSummary {
@@ -110,6 +168,7 @@ export interface RuntimeRunInspectionPayload {
   runtime: RuntimeRunInspectionRuntimeSummary;
   runner: RuntimeRunInspectionRunnerSummary | null;
   serviceState?: RuntimeRunInspectionServiceStateSummary;
+  browserDiagnostics?: RuntimeRunInspectionBrowserDiagnosticsSummary;
   schedulerAuthority?: ExecutionRunSchedulerAuthorityEvaluation | null;
 }
 
@@ -227,6 +286,13 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
         probeServiceState: input.probeServiceState,
       })
     : undefined;
+  const browserDiagnostics = input.includeBrowserDiagnostics
+    ? await inspectRuntimeRunBrowserDiagnostics({
+        inspection: runtimeInspection,
+        runner: selectedRunner?.runner ?? null,
+        probeBrowserDiagnostics: input.probeBrowserDiagnostics,
+      })
+    : undefined;
   const schedulerAuthority = input.includeSchedulerAuthority
     ? await evaluateStoredExecutionRunSchedulerAuthority(
         {
@@ -277,7 +343,98 @@ export async function inspectRuntimeRun(input: InspectRuntimeRunInput): Promise<
         }
       : null,
     serviceState,
+    browserDiagnostics,
     schedulerAuthority,
+  };
+}
+
+async function inspectRuntimeRunBrowserDiagnostics(input: {
+  inspection: ExecutionRunInspection;
+  runner: ExecutionRunnerStoredRecord | null;
+  probeBrowserDiagnostics: InspectRuntimeRunInput['probeBrowserDiagnostics'];
+}): Promise<RuntimeRunInspectionBrowserDiagnosticsSummary> {
+  if (input.inspection.record.bundle.run.status !== 'running') {
+    return createUnavailableBrowserDiagnostics({
+      reason: `runtime run ${input.inspection.record.runId} is not actively running`,
+    });
+  }
+
+  const runningStepId = input.inspection.dispatchPlan.runningStepIds[0] ?? null;
+  if (!runningStepId) {
+    return createUnavailableBrowserDiagnostics({
+      reason: `runtime run ${input.inspection.record.runId} has no running step to diagnose`,
+    });
+  }
+
+  const runningStep = input.inspection.record.bundle.steps.find((step) => step.id === runningStepId) ?? null;
+  if (!runningStep) {
+    return createUnavailableBrowserDiagnostics({
+      ownerStepId: runningStepId,
+      reason: `running step ${runningStepId} was not found in the stored execution bundle`,
+    });
+  }
+
+  if (!runningStep.service) {
+    return createUnavailableBrowserDiagnostics({
+      ownerStepId: runningStep.id,
+      reason: `running step ${runningStep.id} does not declare a browser-diagnostic service`,
+    });
+  }
+
+  if (!input.probeBrowserDiagnostics) {
+    return createUnavailableBrowserDiagnostics({
+      service: runningStep.service,
+      ownerStepId: runningStep.id,
+      reason: `browser diagnostics probe is not configured for ${runningStep.service}`,
+    });
+  }
+
+  const observed = await input.probeBrowserDiagnostics({
+    inspection: input.inspection,
+    runner: input.runner,
+    step: runningStep,
+  });
+
+  if (!observed) {
+    return createUnavailableBrowserDiagnostics({
+      service: runningStep.service,
+      ownerStepId: runningStep.id,
+      reason: `browser diagnostics probe returned no live state for ${runningStep.service}`,
+    });
+  }
+
+  return {
+    probeStatus: 'observed',
+    service: observed.service ?? runningStep.service,
+    ownerStepId: observed.ownerStepId ?? runningStep.id,
+    observedAt: observed.observedAt,
+    source: observed.source,
+    reason: null,
+    target: observed.target,
+    document: observed.document,
+    visibleCounts: observed.visibleCounts,
+    providerEvidence: observed.providerEvidence ?? null,
+    screenshot: observed.screenshot ?? null,
+  };
+}
+
+function createUnavailableBrowserDiagnostics(input: {
+  service?: NonNullable<ExecutionRunStep['service']> | null;
+  ownerStepId?: string | null;
+  reason: string;
+}): RuntimeRunInspectionBrowserDiagnosticsSummary {
+  return {
+    probeStatus: 'unavailable',
+    service: input.service ?? null,
+    ownerStepId: input.ownerStepId ?? null,
+    observedAt: null,
+    source: null,
+    reason: input.reason,
+    target: null,
+    document: null,
+    visibleCounts: null,
+    providerEvidence: null,
+    screenshot: null,
   };
 }
 

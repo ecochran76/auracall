@@ -469,6 +469,103 @@ describe('runtime inspection CLI helpers', () => {
     expect(rendered).toContain('Evidence ref: chatgpt-streaming-visible');
   });
 
+  it('formats opt-in browser diagnostics output for operators', () => {
+    const rendered = formatRuntimeRunInspectionPayload({
+      resolvedBy: 'run-id',
+      queryId: 'runtime_cli_browser_diag_1',
+      queryRunId: 'runtime_cli_browser_diag_1',
+      matchingRuntimeRunCount: 1,
+      matchingRuntimeRunIds: ['runtime_cli_browser_diag_1'],
+      taskRunSpecSummary: null,
+      runtime: {
+        runId: 'runtime_cli_browser_diag_1',
+        teamRunId: null,
+        taskRunSpecId: null,
+        sourceKind: 'direct',
+        runStatus: 'running',
+        updatedAt: '2026-04-23T18:10:00.000Z',
+        queueProjection: {
+          runId: 'runtime_cli_browser_diag_1',
+          sourceKind: 'direct',
+          runStatus: 'running',
+          createdAt: '2026-04-23T18:00:00.000Z',
+          updatedAt: '2026-04-23T18:10:00.000Z',
+          queueState: 'active-lease',
+          claimState: 'held-by-lease',
+          nextRunnableStepId: null,
+          runningStepIds: ['runtime_cli_browser_diag_1:step:1'],
+          waitingStepIds: [],
+          deferredStepIds: [],
+          blockedStepIds: [],
+          blockedByFailureStepIds: [],
+          terminalStepIds: [],
+          missingDependencyStepIds: [],
+          activeLeaseId: 'runtime_cli_browser_diag_1:lease:1',
+          activeLeaseOwnerId: 'runner:browser-diag',
+          affinity: {
+            status: 'not-evaluated',
+            reason: null,
+            requiredService: 'gemini',
+            requiredServiceAccountId: null,
+            browserRequired: true,
+            requiredRuntimeProfileId: 'auracall-gemini-pro',
+            requiredBrowserProfileId: 'default',
+            hostRequirement: 'any',
+            requiredHostId: null,
+            eligibilityNote: null,
+          },
+        },
+      },
+      runner: null,
+      browserDiagnostics: {
+        probeStatus: 'observed',
+        service: 'gemini',
+        ownerStepId: 'runtime_cli_browser_diag_1:step:1',
+        observedAt: '2026-04-23T18:10:03.000Z',
+        source: 'browser-service',
+        reason: null,
+        target: {
+          host: '127.0.0.1',
+          port: 9222,
+          targetId: 'gemini-tab-1',
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+        },
+        document: {
+          url: 'https://gemini.google.com/app',
+          title: 'Google Gemini',
+          readyState: 'complete',
+          visibilityState: 'visible',
+          focused: true,
+          bodyTextLength: 700,
+        },
+        visibleCounts: {
+          buttons: 10,
+          links: 2,
+          inputs: 0,
+          textareas: 0,
+          contenteditables: 1,
+          modelResponses: 1,
+        },
+        providerEvidence: {
+          hasActiveAvatarSpinner: true,
+          isGenerating: true,
+        },
+        screenshot: {
+          path: '/tmp/gemini-cli-diagnostics.png',
+          mimeType: 'image/png',
+          bytes: 2048,
+        },
+      },
+    });
+
+    expect(rendered).toContain('Browser diagnostics:');
+    expect(rendered).toContain('Probe status: observed');
+    expect(rendered).toContain('Target: https://gemini.google.com/app');
+    expect(rendered).toContain('Visible counts: buttons=10, links=2, modelResponses=1');
+    expect(rendered).toContain('Screenshot: /tmp/gemini-cli-diagnostics.png');
+  });
+
   it('formats opt-in scheduler authority output for operators', () => {
     const rendered = formatRuntimeRunInspectionPayload({
       resolvedBy: 'run-id',

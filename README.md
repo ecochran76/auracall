@@ -244,10 +244,11 @@ Terminology note:
       - `runtimeRunId`
       - `teamRunId`
       - `taskRunSpecId`
-    - optional query:
-      - `runnerId`
-      - `probe=service-state`
-      - `authority=scheduler`
+      - optional query:
+        - `runnerId`
+        - `probe=service-state`
+        - `diagnostics=browser-state`
+        - `authority=scheduler`
     - returns:
       - `resolvedBy`
       - `queryId`
@@ -278,6 +279,13 @@ Terminology note:
         - keep `serviceState` separate from:
           - runtime queue/lease state
           - `/status` server/runner health
+      - optional `browserDiagnostics` when explicitly requested with
+        `diagnostics=browser-state`
+        - this is a bounded live browser snapshot for the active running step,
+          not raw CDP access
+        - includes selected target URL/title/id, document readiness, visible
+          control counts, provider evidence such as Gemini activity state, and
+          a PNG screenshot path under AuraCall diagnostics storage
       - optional `schedulerAuthority` when explicitly requested with
         `authority=scheduler`
         - this is read-only scheduler evidence, not assignment authority

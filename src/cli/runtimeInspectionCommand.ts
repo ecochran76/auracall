@@ -80,6 +80,34 @@ export function formatRuntimeRunInspectionPayload(payload: RuntimeRunInspectionP
     lines.push(`  - Reason: ${payload.serviceState.reason ?? '(none)'}`);
   }
 
+  if (payload.browserDiagnostics) {
+    lines.push('- Browser diagnostics:');
+    lines.push(`  - Probe status: ${payload.browserDiagnostics.probeStatus}`);
+    lines.push(`  - Service: ${payload.browserDiagnostics.service ?? '(none)'}`);
+    lines.push(`  - Owner step: ${payload.browserDiagnostics.ownerStepId ?? '(none)'}`);
+    lines.push(`  - Observed at: ${payload.browserDiagnostics.observedAt ?? '(none)'}`);
+    lines.push(`  - Source: ${payload.browserDiagnostics.source ?? '(none)'}`);
+    lines.push(`  - Reason: ${payload.browserDiagnostics.reason ?? '(none)'}`);
+    if (payload.browserDiagnostics.target) {
+      lines.push(`  - Target: ${payload.browserDiagnostics.target.url ?? '(none)'}`);
+      lines.push(`  - Target id: ${payload.browserDiagnostics.target.targetId ?? '(none)'}`);
+    }
+    if (payload.browserDiagnostics.document) {
+      lines.push(`  - Document title: ${payload.browserDiagnostics.document.title ?? '(none)'}`);
+      lines.push(`  - Ready state: ${payload.browserDiagnostics.document.readyState ?? '(none)'}`);
+      lines.push(`  - Visibility: ${payload.browserDiagnostics.document.visibilityState ?? '(none)'}`);
+    }
+    if (payload.browserDiagnostics.visibleCounts) {
+      lines.push(
+        `  - Visible counts: buttons=${payload.browserDiagnostics.visibleCounts.buttons}, links=${payload.browserDiagnostics.visibleCounts.links}, modelResponses=${payload.browserDiagnostics.visibleCounts.modelResponses}`,
+      );
+    }
+    if (payload.browserDiagnostics.screenshot) {
+      lines.push(`  - Screenshot: ${payload.browserDiagnostics.screenshot.path}`);
+      lines.push(`  - Screenshot bytes: ${payload.browserDiagnostics.screenshot.bytes}`);
+    }
+  }
+
   if (payload.schedulerAuthority) {
     lines.push('- Scheduler authority:');
     lines.push(`  - Decision: ${payload.schedulerAuthority.decision}`);
