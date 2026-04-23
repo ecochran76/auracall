@@ -13771,3 +13771,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   observed modes. Map that signature into `workbench_capability_report`
   overrides so API callers can see `available` Gemini media/research/canvas
   options without invoking a provider tool.
+- 2026-04-23: Give volatile provider capability discovery a no-browser CLI
+  escape hatch. In this repo, operators and calling services need a quick
+  `auracall capabilities --target gemini --json` view before invocation, but
+  debugging blocked or changing browser profiles also needs
+  `auracall capabilities --target gemini --static --json` so capability schema
+  and catalog behavior can be inspected without attaching to Chrome.

@@ -197,6 +197,9 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`
+    - `auracall capabilities --target gemini --json`
+    - `auracall capabilities --target gemini --static --json` for a no-browser
+      catalog check
     - use `category=research|media|canvas|connector|skill|app|search|file|other`
       to narrow the report
     - static entries are intentionally conservative until live browser/provider

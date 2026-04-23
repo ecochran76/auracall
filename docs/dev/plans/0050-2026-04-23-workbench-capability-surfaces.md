@@ -58,7 +58,7 @@ a stable first-class adapter.
 - Add a capability-discovery path before broad invocation:
   - [x] local API read/list surface
   - [x] MCP read/list tool or resource
-  - CLI inspection command
+  - [x] CLI inspection command
   - [x] Gemini browser-service discovery adapter for provider-visible tools
 - Add a capability-invocation path only after discovery/readback is stable:
   - request references capability id, provider, runtime profile, and optional
@@ -88,7 +88,7 @@ a stable first-class adapter.
 - [x] Local API can list observed/configured workbench capabilities for at least
   ChatGPT and Gemini with explicit availability/status fields.
 - [x] MCP exposes the same capability list in a bounded schema.
-- CLI can inspect one provider/runtime profile and report visible workbench
+- [x] CLI can inspect one provider/runtime profile and report visible workbench
   capabilities without invoking them.
 - Gemini media generation can map `image|music|video` requests to discovered
   `Create image|Create music|Create video` capabilities where the browser path
@@ -107,6 +107,7 @@ a stable first-class adapter.
 ## Validation Plan
 
 - [x] Unit tests for capability schema, normalization, and availability projection.
+- [x] Unit/static CLI smoke for `auracall capabilities --target gemini --static --json`.
 - [x] Fake-provider API/MCP tests for capability listing.
 - Browser-provider tests for Gemini tool drawer labels and ChatGPT composer
   add-on/app/skill labels using captured DOM fixtures or bounded selectors.

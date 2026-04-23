@@ -96,6 +96,13 @@ import {
   formatRuntimeRunInspectionPayload,
   inspectConfiguredRuntimeRun,
 } from '../src/cli/runtimeInspectionCommand.js';
+import {
+  buildWorkbenchCapabilityReportForCli,
+  formatWorkbenchCapabilityReport,
+  normalizeWorkbenchCapabilityProvider,
+} from '../src/cli/workbenchCapabilitiesCommand.js';
+import { createWorkbenchCapabilityService } from '../src/workbench/service.js';
+import { createBrowserWorkbenchCapabilityDiscovery } from '../src/workbench/geminiDiscovery.js';
 import { performSessionRun } from '../src/cli/sessionRunner.js';
 import type { BrowserSessionRunnerDeps } from '../src/browser/sessionRunner.js';
 import { isMediaFile } from '../src/browser/prompt.js';
@@ -3643,6 +3650,60 @@ program
       console.error('\nSome selectors failed to match. The UI structure may have changed.');
       process.exit(1);
     }
+  });
+
+program
+  .command('capabilities')
+  .description('Report current provider workbench capabilities for CLI/API/MCP planning.')
+  .option('--target <chatgpt|grok|gemini>', 'Choose which provider to inspect (chatgpt, grok, or gemini).')
+  .option('--provider <chatgpt|grok|gemini>', 'Alias for --target.')
+  .option(
+    '--category <category>',
+    'Filter by category: research, media, canvas, connector, skill, app, search, file, or other.',
+  )
+  .option('--available-only', 'Hide blocked and not-visible capabilities.', false)
+  .option('--static', 'Use the static catalog only; do not attach to a managed browser.', false)
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async function (this: Command) {
+    const commandOptions = {
+      ...(program.opts?.() ?? {}),
+      ...(typeof this.opts === 'function' ? this.opts() : {}),
+    } as OptionValues;
+    const cliOptions = { ...(program.opts?.() ?? {}), ...commandOptions };
+    const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
+    const selectedProvider = normalizeWorkbenchCapabilityProvider(commandOptions.provider ?? commandOptions.target);
+    const shouldUseBrowserDiscovery = !commandOptions.static && selectedProvider === 'gemini';
+    let reporter = createWorkbenchCapabilityService();
+
+    if (shouldUseBrowserDiscovery) {
+      const {
+        inspectBrowserDoctorState,
+        withBrowserProbeOperation,
+      } = await import('../src/browser/profileDoctor.js');
+      const localReport = await inspectBrowserDoctorState(userConfig, { target: 'gemini' });
+      reporter = createWorkbenchCapabilityService({
+        discoverCapabilities: async (request) => {
+          let capabilities: Awaited<ReturnType<ReturnType<typeof createBrowserWorkbenchCapabilityDiscovery>>> = [];
+          await withBrowserProbeOperation('gemini', localReport, 'features', async () => {
+            capabilities = await createBrowserWorkbenchCapabilityDiscovery(userConfig)(request);
+          });
+          return capabilities;
+        },
+      });
+    }
+
+    const report = await buildWorkbenchCapabilityReportForCli(reporter, {
+      provider: selectedProvider,
+      category: commandOptions.category,
+      availableOnly: commandOptions.availableOnly,
+      runtimeProfile: userConfig.auracallProfile ?? 'default',
+    });
+
+    if (commandOptions.json) {
+      console.log(JSON.stringify(report, null, 2));
+      return;
+    }
+    console.log(formatWorkbenchCapabilityReport(report));
   });
 
 const featuresCommand = program

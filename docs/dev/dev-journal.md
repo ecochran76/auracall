@@ -19703,3 +19703,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Workbench capability CLI inspection
+
+- Added `auracall capabilities` as the operator CLI surface for read-only
+  workbench capability discovery.
+- The command supports:
+  - `--target/--provider <chatgpt|gemini|grok>`
+  - `--category <research|media|canvas|connector|skill|app|search|file|other>`
+  - `--available-only`
+  - `--static`
+  - `--json`
+- `--target gemini` uses the existing browser probe operation wrapper around
+  live Gemini feature-signature discovery; `--static` skips browser attachment
+  and reports the conservative catalog only.
+- Validation target:
+  - `pnpm vitest run tests/cli/workbenchCapabilitiesCommand.test.ts tests/workbenchCapabilities.test.ts`
+  - `pnpm tsx bin/auracall.ts capabilities --target gemini --static --json`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

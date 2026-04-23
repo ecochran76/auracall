@@ -55,6 +55,10 @@ auracall doctor --target grok --json
 # Machine-readable live browser feature discovery
 auracall features --target gemini --json
 
+# Workbench capability discovery before invoking volatile provider tools
+auracall capabilities --target gemini --json
+auracall capabilities --target gemini --static --json
+
 # Save and diff live feature snapshots
 auracall features snapshot --target gemini --json
 auracall features diff --target gemini --json
@@ -154,7 +158,9 @@ Terminology note:
     and `runtimeProfile=<name>`. Static entries report conservative
     `unknown` or `account_gated` availability. When served with the configured
     runtime, `provider=gemini` can merge live browser feature-signature
-    evidence from the managed Gemini browser profile.
+    evidence from the managed Gemini browser profile. The matching CLI surface
+    is `auracall capabilities --target gemini --json`; add `--static` to skip
+    browser attachment during debugging.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,
