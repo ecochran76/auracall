@@ -69,6 +69,8 @@
     - keep it for wider opt-in live coverage, not for the small default target
 - Local `api serve` smoke:
   - terminal 1: `pnpm tsx bin/auracall.ts api serve --port 8080`
+    - non-default runtime profile: `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api serve --port 8080`
+    - startup logs should include `Active AuraCall runtime profile: <name>`
   - optional startup-recovery tuning:
     - disable startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --no-recover-runs-on-start`
     - cap startup recovery: `pnpm tsx bin/auracall.ts api serve --port 8080 --recover-runs-on-start-max 25`

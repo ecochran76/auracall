@@ -12404,6 +12404,83 @@ describe('http responses adapter', () => {
     expect(capLog).toBeUndefined();
   });
 
+  it('resolves cli-selected runtime profile before serving media generations', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-profile-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    await fs.writeFile(
+      path.join(homeDir, 'config.json'),
+      JSON.stringify({
+        version: 3,
+        model: 'gpt-5.2',
+        defaultRuntimeProfile: 'default',
+        browser: {},
+        browserProfiles: {
+          default: {},
+        },
+        runtimeProfiles: {
+          default: {
+            browserProfile: 'default',
+            defaultService: 'chatgpt',
+          },
+          work: {
+            browserProfile: 'default',
+            defaultService: 'gemini',
+          },
+        },
+      }),
+    );
+
+    const logs: string[] = [];
+    let resolvePort: (port: number) => void = () => {};
+    const portPromise = new Promise<number>((resolve) => {
+      resolvePort = resolve;
+    });
+    const servePromise = serveResponsesHttp({
+      host: '127.0.0.1',
+      port: 0,
+      cliOptions: { profile: 'work' },
+      recoverRunsOnStart: false,
+      logger: (message) => {
+        logs.push(message);
+        const match = /AuraCall responses server bound on 127\.0\.0\.1:(\d+)/.exec(message);
+        if (match) {
+          resolvePort(Number(match[1]));
+        }
+      },
+      mediaGenerationExecutor: async () => ({
+        model: 'fake-gemini-image',
+        artifacts: [],
+      }),
+    });
+
+    try {
+      const port = await portPromise;
+      const response = await fetch(`http://127.0.0.1:${port}/v1/media-generations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image of an asphalt secret agent',
+        }),
+      });
+
+      expect(response.status).toBe(200);
+      await expect(response.json()).resolves.toMatchObject({
+        object: 'media_generation',
+        status: 'succeeded',
+        metadata: {
+          runtimeProfile: 'work',
+        },
+      });
+      expect(logs).toContain('Active AuraCall runtime profile: work');
+    } finally {
+      process.emit('SIGINT');
+      await servePromise;
+    }
+  });
+
   it('forwards startup recovery cap to serveResponsesHttp', async () => {
     const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-serve-cap-'));
     cleanup.push(homeDir);

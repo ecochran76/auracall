@@ -933,9 +933,11 @@ apiCommand
   )
   .action(async (commandOptions) => {
     const { serveResponsesHttp } = await import('../src/http/responsesServer.js');
+    const parentOptions = program.opts?.() ?? {};
     await serveResponsesHttp({
       host: commandOptions.host,
       port: commandOptions.port,
+      cliOptions: { ...parentOptions, ...commandOptions },
       listenPublic: Boolean(commandOptions.listenPublic),
       recoverRunsOnStart: Boolean(commandOptions.recoverRunsOnStart),
       recoverRunsOnStartMaxRuns: commandOptions.recoverRunsOnStartMax,

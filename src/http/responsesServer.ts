@@ -1,9 +1,10 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
 import { z, ZodError } from 'zod';
+import type { OptionValues } from 'commander';
 import { MODEL_CONFIGS } from '../oracle/config.js';
 import { getCliVersion } from '../version.js';
-import { loadUserConfig, type ResolvedUserConfig } from '../config.js';
+import type { ResolvedUserConfig } from '../config.js';
 import { resolveConfig } from '../schema/resolver.js';
 import { resolveHostLocalActionExecutionPolicy } from '../config/model.js';
 import {
@@ -131,7 +132,9 @@ interface ServerOwnedDrainOptions {
 
 export interface ServeResponsesHttpOptions extends ResponsesHttpServerOptions {
   listenPublic?: boolean;
+  cliOptions?: OptionValues;
   executeStoredRunStep?: ResponsesHttpServerDeps['executeStoredRunStep'];
+  mediaGenerationExecutor?: ResponsesHttpServerDeps['mediaGenerationExecutor'];
   probeRuntimeRunServiceState?: ResponsesHttpServerDeps['probeRuntimeRunServiceState'];
   probeRuntimeRunBrowserDiagnostics?: ResponsesHttpServerDeps['probeRuntimeRunBrowserDiagnostics'];
 }
@@ -958,13 +961,15 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   const logger = options.logger ?? console.log;
   const {
     listenPublic: _unusedListenPublic,
+    cliOptions: _unusedCliOptions,
     executeStoredRunStep: overrideExecuteStoredRunStep,
+    mediaGenerationExecutor: overrideMediaGenerationExecutor,
     probeRuntimeRunServiceState: overrideProbeRuntimeRunServiceState,
     ...serverOptions
   } = options;
-  const loadedConfig = await loadUserConfig(process.cwd());
+  const resolvedUserConfig = await resolveConfig(options.cliOptions ?? {}, process.cwd(), process.env);
   const configuredStoredStepExecutor = createConfiguredStoredStepExecutor(
-    loadedConfig.config as Record<string, unknown>,
+    resolvedUserConfig as Record<string, unknown>,
   );
   if (!configuredStoredStepExecutor) {
     throw new Error('Configured stored-step executor was not created for api serve.');
@@ -977,20 +982,21 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
       backgroundDrainIntervalMs: serverOptions.backgroundDrainIntervalMs ?? 250,
     },
     {
-      config: loadedConfig.config as Record<string, unknown>,
+      config: resolvedUserConfig as Record<string, unknown>,
       now: () => new Date(),
       localActionExecutionPolicy: resolveHostLocalActionExecutionPolicy(
-        loadedConfig.config as Record<string, unknown>,
+        resolvedUserConfig as Record<string, unknown>,
       ),
       executeStoredRunStep:
         overrideExecuteStoredRunStep ??
         (async (_request, context) => configuredStoredStepExecutor(context)),
+      mediaGenerationExecutor: overrideMediaGenerationExecutor,
       probeRuntimeRunServiceState:
         overrideProbeRuntimeRunServiceState ?? createDefaultRuntimeRunServiceStateProbe(),
       probeRuntimeRunBrowserDiagnostics:
         options.probeRuntimeRunBrowserDiagnostics ?? createDefaultRuntimeRunBrowserDiagnosticsProbe(),
       discoverWorkbenchCapabilities: createBrowserWorkbenchCapabilityDiscovery(
-        loadedConfig.config as ResolvedUserConfig,
+        resolvedUserConfig as ResolvedUserConfig,
       ),
     },
   );
@@ -1004,6 +1010,7 @@ export async function serveResponsesHttp(options: ServeResponsesHttpOptions = {}
   } else {
     logger(`Warning: ${host} is not loopback. This server is still unauthenticated and intended for local development only.`);
   }
+  logger(`Active AuraCall runtime profile: ${resolvedUserConfig.auracallProfile ?? 'default'}`);
   logger(
     'Endpoints: GET /status, GET /status/recovery/{run_id}, POST /v1/team-runs, GET /v1/team-runs/inspect, GET /v1/runtime-runs/inspect, GET /v1/models, GET /v1/workbench-capabilities, POST /v1/responses, GET /v1/responses/{response_id}, POST /v1/media-generations, GET /v1/media-generations/{media_generation_id}',
   );

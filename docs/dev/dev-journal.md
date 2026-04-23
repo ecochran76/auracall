@@ -20156,3 +20156,15 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     still Gemini home before prompt submission; the implementation now returns
     `unavailable` until a media run records `tabTargetId`. The job later failed
     with `media_generation_failed` and no `prompt_submitted` timeline event.
+
+## 2026-04-23 - API serve runtime profile propagation
+
+- Follow-up Gemini media dogfood showed `api serve` media jobs still persisted
+  `runtimeProfile: "default"` even when the server was started for
+  `auracall-gemini-pro`.
+- Fixed `api serve` to forward CLI options into config resolution before
+  constructing HTTP, workbench, runtime, and media services.
+- Startup logs now print the active AuraCall runtime profile so operators can
+  catch profile mismatch before live browser work begins.
+- Validation:
+  - `pnpm vitest run tests/http.responsesServer.test.ts -t "cli-selected runtime profile|startup recovery"`

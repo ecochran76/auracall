@@ -77,7 +77,14 @@ records `tabTargetId`, so status diagnostics need to work there too.
 
 ## Follow-Up
 
-- Rerun one guarded Gemini browser image request with the AuraCall runtime
-  profile passed as a global option before `api serve`, then require a
+- A follow-up dogfood run exposed that `api serve` loaded raw config and did
+  not apply the selected AuraCall runtime profile before constructing HTTP,
+  workbench, and media services; media records therefore persisted
+  `runtimeProfile: "default"` even when the server was started for
+  `auracall-gemini-pro`.
+- Fixed in the follow-up slice: `api serve` now forwards CLI options into
+  config resolution and logs the active AuraCall runtime profile at startup.
+- Rerun one guarded Gemini browser image request with
+  `auracall --profile auracall-gemini-pro api serve ...`, then require a
   `prompt_submitted` timeline event before accepting the diagnostics snapshot
   as active-tab proof.

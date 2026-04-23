@@ -16,6 +16,13 @@ OpenAI-compatible runtime surfaces:
 auracall api serve --port 8080
 ```
 
+Use the global profile option before `api serve` when the local API should run
+against a non-default AuraCall runtime profile:
+
+```bash
+auracall --profile auracall-gemini-pro api serve --port 8080
+```
+
 Non-loopback bind is blocked by default. To opt into an unauthenticated public
 bind intentionally:
 

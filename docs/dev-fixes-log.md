@@ -1,3 +1,10 @@
+- 2026-04-23: `api serve` must resolve the selected AuraCall runtime profile
+  before constructing HTTP, workbench, runtime, or media services. Loading raw
+  config inside the server bypasses global CLI flags such as `--profile` and
+  can send browser/media jobs to the wrong managed browser profile while still
+  appearing healthy. Forward CLI options into `resolveConfig()` and log the
+  active AuraCall runtime profile at startup.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

@@ -66,6 +66,9 @@ auracall features diff --target gemini --json
 # Local dev-only OpenAI-compatible responses server
 auracall api serve --port 8080
 
+# Serve against a non-default AuraCall runtime profile
+auracall --profile auracall-gemini-pro api serve --port 8080
+
 # Probe the local dev server posture
 curl http://127.0.0.1:8080/status
 
@@ -133,7 +136,10 @@ Terminology note:
   the same `auracall_run_status` envelope as API `GET /v1/runs/{run_id}/status`
   and MCP `run_status`.
 - A bounded local OpenAI-compatible responses adapter is available for
-  development through `auracall api serve`. Current endpoints are:
+  development through `auracall api serve`. Start it with
+  `auracall --profile <name> api serve` to bind response, runtime, workbench,
+  and media behavior to a non-default AuraCall runtime profile. Current
+  endpoints are:
   - `GET /status`
   - `GET /status/recovery/{run_id}`
   - `POST /v1/team-runs`
