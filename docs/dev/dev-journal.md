@@ -20070,6 +20070,25 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `ownerStepId = resp_15552bf3e6af4376ac22952bf1f2ea8b:step:1`
   - terminal inspection returned `probeStatus = unavailable` with reason
     `runtime run ... is not actively running`
+
+## 2026-04-23 - ChatGPT live service-state smoke
+
+- Ran the matching bounded live `api serve` status-sensing smoke on port
+  `8099` with `--no-recover-runs-on-start`, using the `wsl-chrome-2`
+  AuraCall runtime profile and one active runtime-inspection
+  `probe=service-state` loop.
+- ChatGPT run `resp_ab11f2f8b46b4f1f9e4edd6d27b512e5`:
+  - early active inspection returned `state = unknown`,
+    `source = provider-adapter`, `evidenceRef = chatgpt-live-probe-no-signal`,
+    and `confidence = low` before a stable provider signal appeared
+  - repeated active inspections then observed `state = thinking`,
+    `source = provider-adapter`, `evidenceRef = chatgpt-thinking-status`,
+    `confidence = high`, and
+    `ownerStepId = resp_ab11f2f8b46b4f1f9e4edd6d27b512e5:step:1`
+  - the same run briefly observed `state = response-incoming`,
+    `evidenceRef = chatgpt-streaming-visible`, and `confidence = high`
+  - terminal inspection returned `probeStatus = unavailable` with reason
+    `runtime run ... is not actively running`
 - Grok run `resp_4f5665eaf5da46dd9896f000aa642905`:
   - repeated active inspections observed `state = thinking`,
     `source = browser-service`, `evidenceRef = grok-prompt-submitted`,
