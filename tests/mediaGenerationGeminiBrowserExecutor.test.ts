@@ -184,6 +184,17 @@ describe('Gemini browser media generation executor', () => {
       },
     });
     expect(browserClient.getConversationContext).toHaveBeenCalledTimes(2);
+    expect(browserClient.getConversationContext).toHaveBeenNthCalledWith(
+      1,
+      'gemini-conversation-2',
+      expect.objectContaining({
+        refresh: true,
+        listOptions: expect.objectContaining({
+          preserveActiveTab: true,
+          tabUrl: 'https://gemini.google.com/app/gemini-conversation-2',
+        }),
+      }),
+    );
   });
 
   it('reports a media-specific timeout when submitted Gemini image artifacts never appear', async () => {

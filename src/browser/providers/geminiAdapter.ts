@@ -2141,6 +2141,16 @@ function geminiPromptWasSubmitted(
   return normalizePromptText(state.composerText).length === 0;
 }
 
+function geminiPromptVisibleInUserHistory(
+  state: { userTexts: string[] },
+  prompt: string,
+): boolean {
+  const normalizedPrompt = sanitizeGeminiUserText(prompt);
+  return state.userTexts
+    .map((entry) => sanitizeGeminiUserText(entry))
+    .some((entry) => entry && (entry === normalizedPrompt || entry.includes(normalizedPrompt)));
+}
+
 async function waitForGeminiPromptSubmit(
   Runtime: ChromeClient['Runtime'],
   baseline: { href: string; conversationId: string | null; userTexts?: string[] },
@@ -2204,13 +2214,14 @@ async function waitForGeminiSubmittedPromptResult(
   Runtime: ChromeClient['Runtime'],
   baseline: { href: string; conversationId: string | null },
   initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
+  prompt: string,
   timeoutMs: number,
 ): Promise<BrowserProviderPromptResult> {
   const deadline = Date.now() + timeoutMs;
   let state = initialState;
   while (Date.now() < deadline) {
     const conversationId = state.conversationId ?? baseline.conversationId;
-    if (conversationId) {
+    if (conversationId && (state.isGenerating || geminiPromptVisibleInUserHistory(state, prompt))) {
       return {
         text: '',
         conversationId,
@@ -3217,9 +3228,36 @@ async function waitForGeminiPromptResponse(
 async function readGeminiConversationContextWithClient(
   client: Pick<ChromeClient, 'Runtime' | 'Page'>,
   conversationId: string,
+  options: { allowNavigation?: boolean } = {},
 ): Promise<GeminiConversationContextProbe> {
   if (!(await isGeminiConversationSurfaceAlreadyReady(client, conversationId))) {
-    await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+    if (options.allowNavigation === false) {
+      const ready = await waitForPredicate(
+        client.Runtime,
+        `(() => {
+          const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+          if (location.pathname !== ${JSON.stringify(`/app/${conversationId}`)}) return null;
+          const hasUser = Array.from(document.querySelectorAll('user-query, user-query-content'))
+            .some((node) => visible(node));
+          const hasAssistant = Array.from(document.querySelectorAll(
+            'structured-content-container.model-response-text, structured-content-container, message-content, .response-content, model-response, model-response video, model-response img.image, model-response img.loaded'
+          )).some((node) => visible(node));
+          const hasCanvas = Array.from(document.querySelectorAll(
+            '[data-test-id="container"], [data-test-id="artifact-text"], immersive-panel, .ProseMirror[aria-label="Canvas editor"]'
+          )).some((node) => visible(node));
+          return hasUser || hasAssistant || hasCanvas ? { ready: true } : null;
+        })()`,
+        {
+          timeoutMs: 10_000,
+          description: `Gemini active conversation content ready for ${conversationId}`,
+        },
+      );
+      if (!ready.ok) {
+        throw new Error(`Gemini conversation content not found on the active tab for ${conversationId}.`);
+      }
+    } else {
+      await navigateToGeminiConversationSurface(client, resolveGeminiConversationUrl(conversationId));
+    }
   }
   const ready = await waitForPredicate(
     client.Runtime,
@@ -5604,7 +5642,13 @@ export function createGeminiAdapter(): Pick<
         await setGeminiPrompt(client, input.prompt);
         const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt);
         if (input.completionMode === 'prompt_submitted') {
-          return await waitForGeminiSubmittedPromptResult(client.Runtime, baseline, submittedState, 15_000);
+          return await waitForGeminiSubmittedPromptResult(
+            client.Runtime,
+            baseline,
+            submittedState,
+            input.prompt,
+            15_000,
+          );
         }
         return await waitForGeminiPromptResponse(
           client.Runtime,
@@ -5650,10 +5694,14 @@ export function createGeminiAdapter(): Pick<
       }
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
         options,
-        resolveGeminiConversationUrl(normalizedConversationId),
+        options?.preserveActiveTab
+          ? resolveGeminiConfiguredUrl(options?.configuredUrl, GEMINI_APP_URL)
+          : resolveGeminiConversationUrl(normalizedConversationId),
       );
       try {
-        return await readGeminiConversationContextWithClient(client, normalizedConversationId);
+        return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
+          allowNavigation: options?.preserveActiveTab !== true,
+        });
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

@@ -43,6 +43,11 @@ helpers.
   artifacts under the media-generation executor. Missing artifacts now fail as
   `media_generation_provider_timeout` instead of the generic assistant-text
   timeout.
+- Follow-up live smoke showed Gemini can leave the workbench in a stale
+  `Stop response` state even after rendering the image and after the user stops
+  the response. Refreshing the page restores the composer. Media artifact
+  polling now preserves the active tab instead of navigating on every poll, so
+  readback does not move away from an in-progress image-generation surface.
 
 ## Target Contract
 

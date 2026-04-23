@@ -19818,3 +19818,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini media active-tab readback fix
+
+- Live operator observation clarified the previous smoke failure:
+  - the image rendered successfully
+  - Gemini displayed `You stopped this response`
+  - the workbench still exposed a stale `Stop response` button until page
+    refresh
+  - the next API smoke submitted a new request, then readback navigation moved
+    away from the active generation surface
+- Added `preserveActiveTab` to browser provider list options and used it for
+  Gemini browser media artifact polling.
+- Gemini conversation context readback now has a no-navigation mode for active
+  media runs. If content is not yet ready on the active tab, polling records a
+  transient readback error and keeps waiting until the media timeout instead of
+  navigating away from the submitted generation.
+- Validation target:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+  - `pnpm run check`

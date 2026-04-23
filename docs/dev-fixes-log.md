@@ -13802,3 +13802,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   completion, then poll refreshed conversation context for generated artifacts
   and report `media_generation_provider_timeout` when the provider never exposes
   the expected media.
+- 2026-04-23: Do not navigate away from Gemini's active media-generation tab
+  during artifact polling. In this repo, a Gemini image can render while the
+  composer remains in a stale `Stop response` state, and a forced context
+  refresh to `/app/<id>` can move the browser away from the active workbench.
+  Media readback should preserve the active tab, treat missing context as a
+  transient poll miss, and only navigate in normal conversation readback paths.

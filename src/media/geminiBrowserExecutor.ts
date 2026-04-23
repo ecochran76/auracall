@@ -64,9 +64,10 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
-  const { imageArtifacts, pollCount } = await waitForGeminiImageArtifacts(
+  const { imageArtifacts, pollCount, lastReadbackError } = await waitForGeminiImageArtifacts(
     client,
     conversationId,
+    promptResult.url ?? resolveGeminiConversationUrl(conversationId),
     request.metadata,
     timeoutMs,
   );
@@ -78,6 +79,7 @@ async function executeGeminiBrowserMediaGeneration(
         conversationId,
         timeoutMs,
         pollCount,
+        lastReadbackError,
       },
     );
   }
@@ -117,20 +119,34 @@ async function executeGeminiBrowserMediaGeneration(
 async function waitForGeminiImageArtifacts(
   client: BrowserAutomationClient,
   conversationId: string,
+  tabUrl: string,
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
-): Promise<{ imageArtifacts: ConversationArtifact[]; pollCount: number }> {
+): Promise<{ imageArtifacts: ConversationArtifact[]; pollCount: number; lastReadbackError?: string | null }> {
   const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
   const deadline = Date.now() + timeoutMs;
   let pollCount = 0;
   let lastArtifacts: ConversationArtifact[] = [];
+  let lastReadbackError: string | null = null;
   while (Date.now() <= deadline) {
     pollCount += 1;
-    const context = await client.getConversationContext(conversationId, { refresh: true });
-    lastArtifacts = context.artifacts ?? [];
-    const imageArtifacts = lastArtifacts.filter(isImageArtifact);
-    if (imageArtifacts.length > 0) {
-      return { imageArtifacts, pollCount };
+    try {
+      const context = await client.getConversationContext(conversationId, {
+        refresh: true,
+        listOptions: {
+          configuredUrl: tabUrl,
+          tabUrl,
+          preserveActiveTab: true,
+        },
+      });
+      lastReadbackError = null;
+      lastArtifacts = context.artifacts ?? [];
+      const imageArtifacts = lastArtifacts.filter(isImageArtifact);
+      if (imageArtifacts.length > 0) {
+        return { imageArtifacts, pollCount, lastReadbackError };
+      }
+    } catch (error) {
+      lastReadbackError = error instanceof Error ? error.message : String(error);
     }
     const remainingMs = deadline - Date.now();
     if (remainingMs <= 0) {
@@ -138,7 +154,11 @@ async function waitForGeminiImageArtifacts(
     }
     await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
   }
-  return { imageArtifacts: lastArtifacts.filter(isImageArtifact), pollCount };
+  return { imageArtifacts: lastArtifacts.filter(isImageArtifact), pollCount, lastReadbackError };
+}
+
+function resolveGeminiConversationUrl(conversationId: string): string {
+  return `https://gemini.google.com/app/${encodeURIComponent(conversationId)}`;
 }
 
 function resolveMediaTimeoutMs(mediaType: MediaGenerationType, metadata: Record<string, unknown> | null | undefined): number {

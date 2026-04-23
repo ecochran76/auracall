@@ -38,6 +38,7 @@ export interface BrowserProviderListOptions {
   includeHistory?: boolean;
   historyLimit?: number;
   historySince?: string;
+  preserveActiveTab?: boolean;
   browserService?: import('../service/types.js').BrowserServiceHandle;
   modelLabel?: string;
 }
