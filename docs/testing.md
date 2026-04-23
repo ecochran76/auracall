@@ -269,8 +269,9 @@
         - current default live probe coverage is:
           - ChatGPT on the managed browser path
           - Gemini on browser-backed runtime profiles only
-            - active browser-backed Gemini runs prefer executor-owned transient
-              `thinking` state before DOM/page fallback
+            - active browser-backed Gemini runs prefer provider-owned
+              lottie/avatar spinner evidence when visible, then fall back to
+              executor-owned transient `thinking`
           - Grok on browser-backed runtime profiles only
             - active browser-backed Grok runs prefer executor-owned transient
               `thinking` state before DOM/page fallback

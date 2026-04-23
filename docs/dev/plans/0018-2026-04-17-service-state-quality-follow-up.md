@@ -11,13 +11,18 @@ Lane: P01
   - Gemini on browser-backed runtime profiles
   - Grok on browser-backed runtime profiles
 - the provider-breadth checkpoint is complete:
-  - active browser-backed Gemini and Grok runs can surface executor-owned
-    `thinking`
+  - active browser-backed Gemini runs can surface provider-owned
+    lottie/avatar spinner `thinking`, with executor-owned `thinking` as a
+    fallback when the page signal is absent
+  - active browser-backed Grok runs can surface executor-owned `thinking`
   - terminal runs still return honest `unavailable`
 - the remaining gap is quality, not coverage:
   - ChatGPT already exposes richer live mid-turn progression on the seam
-  - Gemini and Grok still rely primarily on executor-owned `thinking` during
-    active runs unless provider-owned page evidence becomes visible
+  - Gemini now has a general provider-owned spinner signal for active work, but
+    still lacks a repeatable `response-incoming` / `response-complete` text
+    signal on this machine/profile
+  - Grok still relies primarily on executor-owned `thinking` during active runs
+    unless provider-owned page evidence becomes visible
 
 ## Purpose
 
@@ -118,7 +123,9 @@ Current evidence:
 - conclusion for this checkpoint:
   - do not invent richer Gemini states from generic heuristics on this
     machine/profile
-  - keep executor-owned `thinking` as the honest active fallback
+  - prefer the provider-owned lottie/avatar spinner as high-confidence
+    `thinking` when visible, and keep executor-owned `thinking` as the honest
+    active fallback
 
 ### Slice 3: Grok richer mid-turn states on the existing seam
 
@@ -192,3 +199,7 @@ Current evidence:
   provider-owned helper shared by browser-run passive observations and
   service-state probing, completing the provider evidence centralization pass
   across ChatGPT, Gemini, and Grok.
+- 2026-04-23: Gemini's lottie/avatar spinner is a general active-chat signal,
+  not a media-only signal. Runtime inspection now lets provider-owned Gemini
+  spinner evidence override the executor-owned `gemini-web-request-started`
+  fallback when the live page exposes it.

@@ -20096,3 +20096,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
     `ownerStepId = resp_4f5665eaf5da46dd9896f000aa642905:step:1`
   - terminal inspection returned `probeStatus = unavailable` with reason
     `runtime run ... is not actively running`
+
+## 2026-04-23 - Gemini spinner precedence correction
+
+- Corrected the Gemini service-state precedence after confirming the
+  lottie/avatar spinner is a general active-chat signal, not only a media
+  signal.
+- Runtime inspection now probes Gemini provider page evidence before falling
+  back to executor-owned `gemini-web-request-started`, so visible
+  `gemini-active-avatar-spinner` can surface as high-confidence
+  provider-owned `thinking`.
+- Broadened the Gemini activity selector expression to include the direct
+  visible lottie/avatar classes seen in live Gemini chats.
+- Follow-up live Gemini run `resp_e93274a5a2bd4809b644ae2914101d2c` on port
+  `8100` still returned the executor-owned fallback
+  `gemini-web-request-started`; that proves the fallback remains intact, but
+  not that the selected probe target exposed the spinner during that run.
+- Validation:
+  - `pnpm vitest run tests/browser/geminiEvidence.test.ts tests/browser/liveServiceState.test.ts tests/http.responsesServer.test.ts -t "Gemini|service-state|service state"`
+  - `pnpm vitest run tests/browser/geminiEvidence.test.ts tests/browser/liveServiceState.test.ts tests/http.responsesServer.test.ts`
+  - `pnpm run check`

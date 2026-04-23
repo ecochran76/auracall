@@ -13870,3 +13870,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   live service-state probing both need the same placeholder-turn precedence,
   thinking-status sanitization, and stop-button selector semantics; centralize
   those provider rules instead of maintaining parallel copies.
+- 2026-04-23: Prefer Gemini provider-owned spinner evidence over executor
+  fallback when both are available. In this repo, the lottie/avatar spinner is
+  a general Gemini active-chat signal, so runtime inspection should surface
+  `gemini-active-avatar-spinner` as high-confidence provider-owned `thinking`
+  instead of masking it behind `gemini-web-request-started`.

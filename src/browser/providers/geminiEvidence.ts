@@ -16,7 +16,13 @@ export function buildGeminiActivityEvidenceExpression(): string {
       return rect.width > 0 && rect.height > 0;
     };
     const hasActiveAvatarSpinner = Array.from(document.querySelectorAll(
-      'model-response .avatar_primary_animation.is-gpi-avatar, model-response [lottie-animation].avatar_primary_animation, model-response .avatar_primary_model.is-gpi-avatar'
+      [
+        'model-response .avatar_primary_animation.is-gpi-avatar',
+        'model-response [lottie-animation].avatar_primary_animation',
+        'model-response .avatar_primary_model.is-gpi-avatar',
+        '[lottie-animation].avatar_primary_animation.is-gpi-avatar',
+        '.avatar_primary_model.is-gpi-avatar .avatar_primary_animation',
+      ].join(', ')
     )).some((node) => visible(node));
     const hasGeneratedMedia = Array.from(document.querySelectorAll(
       'model-response img.image, model-response img.loaded, model-response button.image-button, model-response button[data-test-id="download-generated-image-button"], model-response video'

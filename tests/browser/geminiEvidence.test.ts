@@ -36,6 +36,7 @@ describe('Gemini activity evidence helpers', () => {
     const expression = buildGeminiActivityEvidenceExpression();
 
     expect(expression).toContain('avatar_primary_animation.is-gpi-avatar');
+    expect(expression).toContain('[lottie-animation].avatar_primary_animation.is-gpi-avatar');
     expect(expression).toContain('download-generated-image-button');
     expect(expression).toContain('cancel generation');
   });

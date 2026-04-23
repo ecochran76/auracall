@@ -4951,7 +4951,7 @@ describe('http responses adapter', () => {
     });
   });
 
-  it('prefers transient Gemini executor-owned live state before DOM probing', async () => {
+  it('falls back to transient Gemini executor-owned live state when DOM probing has no signal', async () => {
     const probe = createDefaultRuntimeRunServiceStateProbe({
       readLiveRuntimeRunServiceStateImpl: () => ({
         service: 'gemini',
@@ -4962,9 +4962,25 @@ describe('http responses adapter', () => {
         evidenceRef: 'gemini-web-request-started',
         confidence: 'medium',
       }),
-      probeGeminiBrowserServiceStateImpl: async () => {
-        throw new Error('should not fall back to Gemini DOM probe when live executor state exists');
-      },
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'auracall-gemini-pro',
+          engine: 'browser',
+          services: {
+            gemini: {
+              url: 'https://gemini.google.com/app',
+            },
+          },
+        }) as never,
+      probeGeminiBrowserServiceStateImpl: async () => ({
+        service: 'gemini',
+        ownerStepId: null,
+        state: 'unknown',
+        source: 'provider-adapter',
+        observedAt: '2026-04-17T01:30:01.000Z',
+        evidenceRef: 'gemini-live-probe-no-signal',
+        confidence: 'low',
+      }),
     });
     if (!probe) {
       throw new Error('expected default runtime run service-state probe');
@@ -4992,6 +5008,66 @@ describe('http responses adapter', () => {
       source: 'browser-service',
       evidenceRef: 'gemini-web-request-started',
       confidence: 'medium',
+    });
+  });
+
+  it('prefers provider-owned Gemini spinner state over transient thinking when visible', async () => {
+    const probe = createDefaultRuntimeRunServiceStateProbe({
+      readLiveRuntimeRunServiceStateImpl: () => ({
+        service: 'gemini',
+        ownerStepId: 'step-gemini-live-2',
+        state: 'thinking',
+        source: 'browser-service',
+        observedAt: '2026-04-17T01:33:00.000Z',
+        evidenceRef: 'gemini-web-request-started',
+        confidence: 'medium',
+      }),
+      resolveConfigImpl: async () =>
+        ({
+          auracallProfile: 'auracall-gemini-pro',
+          engine: 'browser',
+          services: {
+            gemini: {
+              url: 'https://gemini.google.com/app',
+            },
+          },
+        }) as never,
+      probeGeminiBrowserServiceStateImpl: async () => ({
+        service: 'gemini',
+        ownerStepId: null,
+        state: 'thinking',
+        source: 'provider-adapter',
+        observedAt: '2026-04-17T01:33:02.000Z',
+        evidenceRef: 'gemini-active-avatar-spinner',
+        confidence: 'high',
+      }),
+    });
+    if (!probe) {
+      throw new Error('expected default runtime run service-state probe');
+    }
+
+    const result = await probe({
+      inspection: {
+        record: {
+          runId: 'runtime_gemini_live_2',
+        },
+      } as never,
+      runner: null,
+      step: {
+        id: 'step-gemini-live-2',
+        service: 'gemini',
+        runtimeProfileId: 'auracall-gemini-pro',
+        input: {
+          prompt: 'Reply exactly with AURACALL_GEMINI_LIVE_STATE_OK',
+        },
+      } as never,
+    });
+
+    expect(result).toMatchObject({
+      state: 'thinking',
+      source: 'provider-adapter',
+      evidenceRef: 'gemini-active-avatar-spinner',
+      confidence: 'high',
     });
   });
 

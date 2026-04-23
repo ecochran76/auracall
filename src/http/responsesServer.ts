@@ -1021,9 +1021,6 @@ export function createDefaultRuntimeRunServiceStateProbe(
           stepId: step.id,
           service: step.service,
         });
-        if (transientLiveState && step.service === 'gemini') {
-          return transientLiveState;
-        }
       }
     }
 
@@ -1050,9 +1047,16 @@ export function createDefaultRuntimeRunServiceStateProbe(
     }
 
     if (step.service === 'gemini') {
-      return probeGeminiBrowserServiceStateImpl(resolvedConfig, {
+      const geminiState = await probeGeminiBrowserServiceStateImpl(resolvedConfig, {
         prompt: typeof step.input?.prompt === 'string' ? step.input.prompt : null,
       });
+      if (geminiState && geminiState.state !== 'unknown') {
+        return geminiState;
+      }
+      if (transientLiveState) {
+        return transientLiveState;
+      }
+      return geminiState;
     }
 
     const grokState = await probeGrokBrowserServiceStateImpl(resolvedConfig);
