@@ -20058,3 +20058,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/chatgptEvidence.test.ts tests/browser/liveServiceState.test.ts tests/browser/browserModeExports.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini/Grok live service-state smoke
+
+- Ran bounded live `api serve` status-sensing smokes on port `8098` with
+  `--no-recover-runs-on-start`, using one active runtime-inspection
+  `probe=service-state` loop per provider.
+- Gemini run `resp_15552bf3e6af4376ac22952bf1f2ea8b`:
+  - active inspection observed `state = thinking`, `source = browser-service`,
+    `evidenceRef = gemini-web-request-started`, `confidence = medium`, and
+    `ownerStepId = resp_15552bf3e6af4376ac22952bf1f2ea8b:step:1`
+  - terminal inspection returned `probeStatus = unavailable` with reason
+    `runtime run ... is not actively running`
+- Grok run `resp_4f5665eaf5da46dd9896f000aa642905`:
+  - repeated active inspections observed `state = thinking`,
+    `source = browser-service`, `evidenceRef = grok-prompt-submitted`,
+    `confidence = medium`, and
+    `ownerStepId = resp_4f5665eaf5da46dd9896f000aa642905:step:1`
+  - terminal inspection returned `probeStatus = unavailable` with reason
+    `runtime run ... is not actively running`
