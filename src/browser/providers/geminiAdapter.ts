@@ -24,6 +24,7 @@ import {
   waitForDownloadCapture,
 } from '../service/ui.js';
 import type { ChromeClient } from '../types.js';
+import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
 import type {
   BrowserProvider,
@@ -985,6 +986,8 @@ async function connectToGeminiTab(
       host,
       reusePolicy: 'same-origin',
       compatibleHosts: GEMINI_COMPATIBLE_HOSTS,
+      mutationAudit: resolveMutationAudit(options),
+      mutationSource: resolveMutationSource(options, 'provider:gemini', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -996,6 +999,7 @@ async function connectToGeminiTab(
   }
   const client = await connectToChromeTarget({ host, port, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  annotateClientMutationContext(client, options, 'provider:gemini');
   return { client, targetId, shouldClose, host, port, usedExisting };
 }
 
@@ -1458,6 +1462,8 @@ async function navigateToGeminiCreatePage(client: Pick<ChromeClient, 'Page' | 'R
     readyDescription: 'Gemini Gem create surface',
     timeoutMs: 20_000,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-create-page'),
   });
   if (!settled.ok) {
     throw new Error(`Gemini Gem create page did not become ready: ${settled.reason ?? settled.phase}`);
@@ -1473,6 +1479,8 @@ async function navigateToGeminiGemsViewPage(client: Pick<ChromeClient, 'Page' | 
     readyDescription: 'Gemini Gem manager surface',
     timeoutMs: 20_000,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-gems-view-page'),
   });
   if (!settled.ok) {
     throw new Error(`Gemini Gem manager page did not become ready: ${settled.reason ?? settled.phase}`);
@@ -1491,6 +1499,8 @@ async function navigateToGeminiEditPage(
     readyDescription: `Gemini Gem edit surface for ${projectId}`,
     timeoutMs: 20_000,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-edit-page'),
   });
   if (!settled.ok) {
     throw new Error(`Gemini Gem edit page did not become ready: ${settled.reason ?? settled.phase}`);
@@ -1511,6 +1521,8 @@ async function navigateToGeminiConversationSurface(
     readyDescription: 'Gemini conversation surface',
     timeoutMs: 20_000,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:gemini', 'navigate-conversation-surface'),
   });
   if (settled.ok) {
     return;
@@ -1779,6 +1791,8 @@ async function validateGeminiConversationUrlWithClient(
     readyDescription: `Gemini conversation document ready for ${conversationId}`,
     timeoutMs: 12_000,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:gemini', 'validate-conversation-url'),
   });
   if (!settled.ok) {
     throw new Error('Conversation URL is invalid or missing.');

@@ -203,6 +203,25 @@ Status:
   `Page.reload(...)`, and URL-assignment fallbacks
 - keep provider-specific readiness predicates local
 
+Status:
+
+- partial implementation landed on 2026-04-23
+- current scope completed:
+  - provider option surface now carries `mutationAudit` and
+    `mutationSourcePrefix`
+  - Gemini/ChatGPT/Grok tab-connect helpers now pass mutation audit context
+    into `openOrReuseChromeTarget(...)`
+  - connected provider clients now retain mutation context for later helper
+    calls
+  - Gemini/ChatGPT/Grok shared route-settle helpers now emit provider-owned
+    mutation sources through `navigateAndSettle(...)`
+- still remaining in Slice 2:
+  - central reload wrapper adoption
+  - direct provider-local `Page.navigate(...)` and `Page.reload(...)`
+    elimination or fencing
+  - provider paths that still mutate outside `openOrReuseChromeTarget(...)` /
+    `navigateAndSettle(...)`
+
 ### Slice 3 | Legacy browser flow adoption
 
 - route `src/browser/index.ts`, `src/browser/actions/*`,

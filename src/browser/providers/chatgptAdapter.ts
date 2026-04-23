@@ -6,6 +6,7 @@ import type { ChromeClient } from '../types.js';
 import { ChatgptFeatureSchema } from '../llmService/providers/schema.js';
 import { transferAttachmentViaDataTransfer } from '../actions/attachmentDataTransfer.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
+import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
 import type {
   Conversation,
   ConversationArtifact,
@@ -2872,6 +2873,8 @@ async function connectToChatgptTab(
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
+      mutationAudit: resolveMutationAudit(options),
+      mutationSource: resolveMutationSource(options, 'provider:chatgpt', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -2884,6 +2887,7 @@ async function connectToChatgptTab(
   }
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  annotateClientMutationContext(client, options, 'provider:chatgpt');
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
   await dismissCreateProjectDialogIfOpen(client.Runtime).catch(() => undefined);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
@@ -2978,6 +2982,8 @@ async function navigateToChatgptUrl(client: ChromeClient, url: string, projectId
     fallbackToLocationAssign: true,
     timeoutMs: 10_000,
     fallbackTimeoutMs: 10_000,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'navigate-url'),
   });
   if (projectId && !settled.ok) {
     throw new Error(settled.reason || `ChatGPT project ${projectId} did not settle`);
@@ -2994,6 +3000,8 @@ async function openProjectSourcesTab(client: ChromeClient, projectId: string): P
     fallbackToLocationAssign: true,
     timeoutMs: 10_000,
     fallbackTimeoutMs: 10_000,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'open-project-sources-tab'),
   });
   if (!settled.ok) {
     throw new Error(settled.reason || `ChatGPT project sources route did not settle for ${projectId}`);
@@ -4309,6 +4317,8 @@ async function navigateToChatgptConversation(
     fallbackToLocationAssign: true,
     timeoutMs: 15_000,
     fallbackTimeoutMs: 10_000,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'navigate-conversation'),
   });
   if (!settled.ok) {
     throw new Error(settled.reason || `ChatGPT conversation ${conversationId} did not settle`);
@@ -7252,6 +7262,8 @@ export function createChatgptAdapter(): Pick<
             }
           })()`,
           routeDescription: 'ChatGPT home route ready after project delete',
+          mutationAudit: resolveMutationAudit(client),
+          mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'post-delete-home-route'),
         });
         await ensureChatgptSidebarOpen(client);
         const remainingProjects = await scrapeChatgptProjects(client);

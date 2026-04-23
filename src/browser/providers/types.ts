@@ -1,3 +1,4 @@
+import type { BrowserMutationAuditSink } from '../../../packages/browser-service/src/service/mutationDispatcher.js';
 import type { ConversationArtifact, FileRef, Project, ProjectMemoryMode } from './domain.js';
 
 export type SelectorList = readonly string[];
@@ -41,6 +42,8 @@ export interface BrowserProviderListOptions {
   preserveActiveTab?: boolean;
   browserService?: import('../service/types.js').BrowserServiceHandle;
   modelLabel?: string;
+  mutationAudit?: BrowserMutationAuditSink;
+  mutationSourcePrefix?: string;
 }
 
 export interface ProviderUserIdentity {

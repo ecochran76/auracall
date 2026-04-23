@@ -27,9 +27,17 @@
     - `navigateAndSettle(...)` mutation records
     - `openOrReuseChromeTarget(...)` mutation records
     - `connectToRemoteChrome(...)` audit pass-through
+  - second code checkpoint is now partially in code:
+    - provider option surface carries mutation audit context
+    - Gemini/ChatGPT/Grok open-reuse helpers now emit provider-owned mutation
+      sources
+    - connected provider clients retain mutation context for later
+      route-settle helpers
   - next code checkpoint:
-    - add the central reload wrapper and first consumer/readback surface for
-      recent mutation records
+    - add the central reload wrapper
+    - move remaining direct provider `Page.navigate(...)` / `Page.reload(...)`
+      paths behind the control plane
+    - add the first consumer/readback surface for recent mutation records
 
 ## 2026-04-23 - Gemini generated-image download materialization
 

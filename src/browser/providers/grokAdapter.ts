@@ -4,6 +4,7 @@ import type { Project, Conversation, ConversationContext, FileRef } from './doma
 import type { BrowserProvider, BrowserProviderListOptions, ProviderUserIdentity } from './types.js';
 import type { ChromeClient } from '../types.js';
 import { providerNavigationAllowed } from './navigationPolicy.js';
+import { annotateClientMutationContext, resolveMutationAudit, resolveMutationSource } from './mutationAudit.js';
 import { connectToChromeTarget, openOrReuseChromeTarget } from '../../../packages/browser-service/src/chromeLifecycle.js';
 import {
   detectGrokSignedInIdentity,
@@ -2680,6 +2681,8 @@ async function connectToGrokTab(
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
+      mutationAudit: resolveMutationAudit(options),
+      mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab'),
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -2697,6 +2700,8 @@ async function connectToGrokTab(
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
+      mutationAudit: resolveMutationAudit(options),
+      mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-tab-fallback'),
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -2708,6 +2713,7 @@ async function connectToGrokTab(
   }
   const client = await connectToChromeTarget({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  annotateClientMutationContext(client, options, 'provider:grok');
   setClientSuppressFocus(client, tabPolicy.suppressFocus);
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
@@ -3299,6 +3305,8 @@ async function navigateToGrokFiles(client: ChromeClient, url: string): Promise<v
     readyExpression: grokFilesPageReadyExpression(),
     readyDescription: 'Grok files page ready',
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'navigate-files'),
   });
   if (!settled.ok) {
     if (settled.phase === 'route') {
@@ -4396,6 +4404,8 @@ async function connectToGrokProjectTab(
       blankTabLimit: tabPolicy.blankTabLimit,
       collapseDisposableWindows: tabPolicy.collapseDisposableWindows,
       suppressFocus: tabPolicy.suppressFocus,
+      mutationAudit: resolveMutationAudit(options),
+      mutationSource: resolveMutationSource(options, 'provider:grok', 'connect-project-tab'),
     });
     targetInfo = opened.target ?? undefined;
     shouldClose = !opened.reused;
@@ -4407,6 +4417,7 @@ async function connectToGrokProjectTab(
   }
   const client = await CDP({ host, port: resolvedPort, target: targetId });
   await Promise.all([client.Page.enable(), client.Runtime.enable()]);
+  annotateClientMutationContext(client as ChromeClient, options, 'provider:grok');
   return { client, targetId, shouldClose, host, port: resolvedPort, usedExisting };
 }
 
@@ -4595,6 +4606,8 @@ async function navigateToProject(client: ChromeClient, url: string): Promise<voi
     routeExpression: grokUrlSettleExpression(url),
     routeDescription: `Grok route ${url}`,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'navigate-project'),
   });
   if (!settled.ok) {
     throw new Error(`Grok page did not navigate to ${url}`);
@@ -4614,6 +4627,8 @@ async function navigateToConversation(client: ChromeClient, url: string): Promis
     routeExpression: grokUrlSettleExpression(url),
     routeDescription: `Grok conversation route ${url}`,
     fallbackToLocationAssign: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'navigate-conversation'),
   });
   if (!settled.ok) {
     throw new Error(`Grok conversation did not navigate to ${url}`);

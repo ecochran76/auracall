@@ -58,6 +58,13 @@
   size in the error to distinguish same-tab root drift from silent tab rebinding
   or stale conversation assumptions.
 
+- 2026-04-23: Browser mutation audit must attach to provider clients, not only
+  provider options. In this repo, many route helpers intentionally accept
+  narrowed `Pick<ChromeClient, ...>` handles, so provider adoption should stamp
+  mutation context onto the connected client once and let later
+  `navigateAndSettle(...)` calls read that context without threading a full
+  options object through every helper.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with
