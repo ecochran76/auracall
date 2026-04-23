@@ -11,6 +11,11 @@ import {
   resolveVisibleAnswerServiceState,
 } from './llmServiceState.js';
 import {
+  buildChatgptStopControlVisibleExpression,
+  buildChatgptThinkingStatusExpression,
+  classifyChatgptThinkingText,
+} from './providers/chatgptEvidence.js';
+import {
   buildGeminiActivityEvidenceExpression,
   coerceGeminiActivityEvidence,
   type GeminiActivityEvidence,
@@ -69,12 +74,12 @@ export async function probeChatgptBrowserServiceState(
     if (hardStop) {
       return hardStop;
     }
-    const thinkingText = await readChatgptThinkingStatus(Runtime);
-    if (thinkingText) {
+    const thinkingEvidence = await readChatgptThinkingEvidence(Runtime);
+    if (thinkingEvidence) {
       return createLlmServiceStateObservation({
         service: 'chatgpt',
         state: 'thinking',
-        evidenceRef: thinkingText === 'Thinking' ? 'chatgpt-placeholder-turn' : 'chatgpt-thinking-status',
+        evidenceRef: thinkingEvidence.evidenceRef,
         confidence: 'high',
       });
     }
@@ -380,14 +385,15 @@ async function readGrokHardStopState(
   return null;
 }
 
-async function readChatgptThinkingStatus(Runtime: ChromeClient['Runtime']): Promise<string | null> {
+async function readChatgptThinkingEvidence(
+  Runtime: ChromeClient['Runtime'],
+): Promise<ReturnType<typeof classifyChatgptThinkingText>> {
   const { result } = await Runtime.evaluate({
-    expression: buildThinkingStatusExpression(),
+    expression: buildChatgptThinkingStatusExpression(),
     returnByValue: true,
   });
   const value = typeof result?.value === 'string' ? result.value.trim() : '';
-  const sanitized = sanitizeThinkingText(value);
-  return sanitized || null;
+  return classifyChatgptThinkingText(value);
 }
 
 async function readGeminiProbeState(
@@ -451,7 +457,7 @@ async function readGeminiProbeState(
 
 async function isChatgptStopButtonVisible(Runtime: ChromeClient['Runtime']): Promise<boolean> {
   const { result } = await Runtime.evaluate({
-    expression: `Boolean(document.querySelector('button[data-testid="stop-button"], button[aria-label*="Stop"], button[aria-label*="stop"]'))`,
+    expression: buildChatgptStopControlVisibleExpression(),
     returnByValue: true,
   });
   return Boolean(result?.value);
@@ -465,100 +471,6 @@ function resolveTargetId(tab: { targetId?: string; id?: string } | null | undefi
     return tab.id.trim();
   }
   return null;
-}
-
-function sanitizeThinkingText(raw: string): string {
-  if (!raw) {
-    return '';
-  }
-  const trimmed = raw.trim();
-  const normalized = trimmed.replace(/\s+/g, ' ');
-  const lower = normalized.toLowerCase();
-  const placeholderPattern = /^chatgpt said:\s*thinking\s*$/i;
-  if (placeholderPattern.test(normalized)) {
-    return 'Thinking';
-  }
-  if (lower.startsWith('you said:') || lower.includes('### file:')) {
-    return '';
-  }
-  if (lower.includes('thinking')) {
-    return 'Thinking';
-  }
-  if (lower.includes('reasoning')) {
-    return 'Reasoning';
-  }
-  if (lower.includes('clarifying')) {
-    return 'Clarifying';
-  }
-  if (lower.includes('planning')) {
-    return 'Planning';
-  }
-  if (lower.includes('drafting')) {
-    return 'Drafting';
-  }
-  if (lower.includes('summarizing')) {
-    return 'Summarizing';
-  }
-  return '';
-}
-
-function buildThinkingStatusExpression(): string {
-  const selectors = [
-    'span.loading-shimmer',
-    'span.flex.items-center.gap-1.truncate.text-start.align-middle.text-token-text-tertiary',
-    '[data-testid*="thinking"]',
-    '[data-testid*="reasoning"]',
-    '[role="status"]',
-    '[aria-live="polite"]',
-  ];
-  const keywords = ['pro thinking', 'thinking', 'reasoning', 'clarifying', 'planning', 'drafting', 'summarizing'];
-  const selectorLiteral = JSON.stringify(selectors);
-  const keywordsLiteral = JSON.stringify(keywords);
-  return `(() => {
-    const selectors = ${selectorLiteral};
-    const keywords = ${keywordsLiteral};
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-    const isVisible = (node) => {
-      if (!(node instanceof Element)) return false;
-      const rect = node.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return false;
-      const style = window.getComputedStyle(node);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-    };
-    const nodes = new Set();
-    for (const selector of selectors) {
-      document.querySelectorAll(selector).forEach((node) => nodes.add(node));
-    }
-    document.querySelectorAll('[data-testid]').forEach((node) => nodes.add(node));
-    const assistantTurns = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], [data-turn="assistant"]'));
-    const lastAssistantTurn = assistantTurns.length > 0 ? assistantTurns[assistantTurns.length - 1] : null;
-    if (lastAssistantTurn instanceof HTMLElement && isVisible(lastAssistantTurn)) {
-      const assistantText = normalize(lastAssistantTurn.textContent || '');
-      if (/^chatgpt said:\\s*thinking\\s*$/i.test(assistantText)) {
-        return assistantText;
-      }
-    }
-    for (const node of nodes) {
-      if (!(node instanceof HTMLElement)) continue;
-      if (!isVisible(node)) continue;
-      const text = normalize(node.textContent || '');
-      if (!text) continue;
-      const classLabel = (node.className || '').toLowerCase();
-      const dataLabel = ((node.getAttribute('data-testid') || '') + ' ' + (node.getAttribute('aria-label') || '')).toLowerCase();
-      const normalizedText = text.toLowerCase();
-      const matches = keywords.some((keyword) =>
-        normalizedText.includes(keyword) || classLabel.includes(keyword) || dataLabel.includes(keyword)
-      );
-      if (matches) {
-        const shimmerChild = node.querySelector('span.flex.items-center.gap-1.truncate.text-start.align-middle.text-token-text-tertiary');
-        if (shimmerChild?.textContent?.trim()) {
-          return shimmerChild.textContent.trim();
-        }
-        return text.trim();
-      }
-    }
-    return null;
-  })()`;
 }
 
 function normalizeGeminiWhitespace(value: string): string {

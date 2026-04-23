@@ -20044,3 +20044,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/browser/grokEvidence.test.ts tests/browser/liveServiceState.test.ts tests/browser/grokActions.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - ChatGPT evidence helper
+
+- Extracted ChatGPT thinking-status sanitization, placeholder-turn evidence,
+  thinking DOM expression, and stop-control expression into a provider-owned
+  helper shared by browser-run passive observations and live service-state
+  probing.
+- This completes the current provider evidence centralization pass:
+  - shared LLM service-state envelope
+  - provider-owned ChatGPT/Gemini/Grok evidence helpers
+  - live probes that map provider evidence into the shared envelope
+- Validation:
+  - `pnpm vitest run tests/browser/chatgptEvidence.test.ts tests/browser/liveServiceState.test.ts tests/browser/browserModeExports.test.ts`
+  - `pnpm run check`

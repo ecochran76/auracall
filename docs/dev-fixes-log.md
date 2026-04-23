@@ -13865,3 +13865,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   and future Grok media/Imagine work should share the same rate-limit
   classification and assistant-visible signal instead of duplicating toast
   regexes or markdown/text checks.
+- 2026-04-23: Keep ChatGPT thinking and stop-control evidence in one
+  provider-owned helper. In this repo, browser-run passive observations and
+  live service-state probing both need the same placeholder-turn precedence,
+  thinking-status sanitization, and stop-button selector semantics; centralize
+  those provider rules instead of maintaining parallel copies.

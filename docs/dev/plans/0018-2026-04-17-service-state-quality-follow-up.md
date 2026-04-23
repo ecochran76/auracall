@@ -188,3 +188,7 @@ Current evidence:
 - 2026-04-23: Grok assistant/rate-limit evidence now lives in a provider-owned
   helper shared by response waiting and service-state probing, keeping
   visible-answer and provider-error semantics ready for future Grok media work.
+- 2026-04-23: ChatGPT thinking and stop-control evidence now lives in a
+  provider-owned helper shared by browser-run passive observations and
+  service-state probing, completing the provider evidence centralization pass
+  across ChatGPT, Gemini, and Grok.

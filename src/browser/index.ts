@@ -63,6 +63,10 @@ import { estimateTokenCount, withRetries, delay } from './utils.js';
 import { formatElapsed } from '../oracle/format.js';
 import { CHATGPT_URL, CONVERSATION_TURN_SELECTOR, DEFAULT_MODEL_STRATEGY } from './constants.js';
 import { classifyChatgptBlockingSurfaceProbe } from './providers/chatgptAdapter.js';
+import {
+  buildChatgptThinkingStatusExpression,
+  sanitizeChatgptThinkingText,
+} from './providers/chatgptEvidence.js';
 import { resolveGrokConversationUrl, resolveGrokProjectUrl } from './providers/grokAdapter.js';
 import { resolveCompatibleHostsForUrl } from './urlFamilies.js';
 import type { LaunchedChrome } from 'chrome-launcher';
@@ -3375,58 +3379,15 @@ async function runGrokBrowserMode({
 }
 
 async function readThinkingStatus(Runtime: ChromeClient['Runtime']): Promise<string | null> {
-  const expression = buildThinkingStatusExpression();
+  const expression = buildChatgptThinkingStatusExpression();
   try {
     const { result } = await Runtime.evaluate({ expression, returnByValue: true });
     const value = typeof result.value === 'string' ? result.value.trim() : '';
-    const sanitized = sanitizeThinkingText(value);
+    const sanitized = sanitizeChatgptThinkingText(value);
     return sanitized || null;
   } catch {
     return null;
   }
-}
-
-function sanitizeThinkingText(raw: string): string {
-  if (!raw) {
-    return '';
-  }
-  const trimmed = raw.trim();
-  const normalized = trimmed.replace(/\s+/g, ' ');
-  const lower = normalized.toLowerCase();
-  const placeholderPattern = /^chatgpt said:\s*thinking\s*$/i;
-  if (placeholderPattern.test(normalized)) {
-    return 'Thinking';
-  }
-  if (lower.startsWith('you said:') || lower.includes('### file:')) {
-    return '';
-  }
-  const prefixPattern = /^(pro thinking)\s*[•:\-–—]*\s*/i;
-  if (prefixPattern.test(normalized)) {
-    const remainder = normalized.replace(prefixPattern, '').trim();
-    return remainder || 'Thinking';
-  }
-  if (lower.includes('thinking')) {
-    return 'Thinking';
-  }
-  if (lower.includes('reasoning')) {
-    return 'Reasoning';
-  }
-  if (lower.includes('clarifying')) {
-    return 'Clarifying';
-  }
-  if (lower.includes('planning')) {
-    return 'Planning';
-  }
-  if (lower.includes('drafting')) {
-    return 'Drafting';
-  }
-  if (lower.includes('summarizing')) {
-    return 'Summarizing';
-  }
-  if (normalized.length > 80) {
-    return '';
-  }
-  return normalized;
 }
 
 async function gracefulShutdownChrome(
@@ -3480,78 +3441,10 @@ function extractConversationIdFromUrl(url: string): string | undefined {
   return match?.[1];
 }
 
-function buildThinkingStatusExpression(): string {
-  const selectors = [
-    'span.loading-shimmer',
-    'span.flex.items-center.gap-1.truncate.text-start.align-middle.text-token-text-tertiary',
-    '[data-testid*="thinking"]',
-    '[data-testid*="reasoning"]',
-    '[role="status"]',
-    '[aria-live="polite"]',
-  ];
-  const keywords = ['pro thinking', 'thinking', 'reasoning', 'clarifying', 'planning', 'drafting', 'summarizing'];
-  const selectorLiteral = JSON.stringify(selectors);
-  const keywordsLiteral = JSON.stringify(keywords);
-  return `(() => {
-    const selectors = ${selectorLiteral};
-    const keywords = ${keywordsLiteral};
-    const normalize = (value) => String(value || '').replace(/\\s+/g, ' ').trim();
-    const isVisible = (node) => {
-      if (!(node instanceof Element)) return false;
-      const rect = node.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return false;
-      const style = window.getComputedStyle(node);
-      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
-    };
-    const nodes = new Set();
-    for (const selector of selectors) {
-      document.querySelectorAll(selector).forEach((node) => nodes.add(node));
-    }
-    document.querySelectorAll('[data-testid]').forEach((node) => nodes.add(node));
-    const assistantTurns = Array.from(document.querySelectorAll('[data-message-author-role="assistant"], [data-turn="assistant"]'));
-    const lastAssistantTurn = assistantTurns.length > 0 ? assistantTurns[assistantTurns.length - 1] : null;
-    if (lastAssistantTurn instanceof HTMLElement && isVisible(lastAssistantTurn)) {
-      const assistantText = normalize(lastAssistantTurn.textContent || '');
-      if (/^chatgpt said:\\s*thinking\\s*$/i.test(assistantText)) {
-        return assistantText;
-      }
-    }
-    for (const node of nodes) {
-      if (!(node instanceof HTMLElement)) {
-        continue;
-      }
-      if (!isVisible(node)) {
-        continue;
-      }
-      const text = normalize(node.textContent || '');
-      if (!text) {
-        continue;
-      }
-      const classLabel = (node.className || '').toLowerCase();
-      const dataLabel = ((node.getAttribute('data-testid') || '') + ' ' + (node.getAttribute('aria-label') || ''))
-        .toLowerCase();
-      const normalizedText = text.toLowerCase();
-      const matches = keywords.some((keyword) =>
-        normalizedText.includes(keyword) || classLabel.includes(keyword) || dataLabel.includes(keyword)
-      );
-      if (matches) {
-        const shimmerChild = node.querySelector(
-          'span.flex.items-center.gap-1.truncate.text-start.align-middle.text-token-text-tertiary',
-        );
-        if (shimmerChild?.textContent?.trim()) {
-          return shimmerChild.textContent.trim();
-        }
-        return text.trim();
-      }
-    }
-    return null;
-  })()`;
-}
-
 export function sanitizeThinkingTextForTest(raw: string): string {
-  return sanitizeThinkingText(raw);
+  return sanitizeChatgptThinkingText(raw);
 }
 
 export function buildThinkingStatusExpressionForTest(): string {
-  return buildThinkingStatusExpression();
+  return buildChatgptThinkingStatusExpression();
 }
