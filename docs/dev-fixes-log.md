@@ -13845,3 +13845,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   for response chats, team-runtime chats, and media jobs. Keep media-specific
   readback as a helper, but make `GET /v1/runs/{run_id}/status` and MCP
   `run_status` the route-neutral status contract.
+- 2026-04-23: Keep CLI/API/MCP polling parity for durable run status. In this
+  repo, operators may be dogfooding from the repo without a running local API or
+  MCP client. `auracall run status <id> --json` should read the same
+  `auracall_run_status` envelope as `GET /v1/runs/{run_id}/status` and MCP
+  `run_status`, not a separate CLI-only summary model.

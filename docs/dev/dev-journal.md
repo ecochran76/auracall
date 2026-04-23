@@ -19998,3 +19998,14 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "creates and retrieves persisted bounded responses" tests/http.mediaGeneration.test.ts tests/mcp.runStatus.test.ts`
   - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - CLI run-status parity
+
+- Added `auracall run status <id>` with `--json` so local operators can read
+  the same generic `auracall_run_status` envelope already exposed through API
+  and MCP.
+- The CLI path uses the shared durable run-status reader and falls through from
+  response/team-runtime records to media-generation records, so callers do not
+  need to know the run type before polling.
+- Validation:
+  - `pnpm vitest run tests/cli.runStatusCommand.test.ts`

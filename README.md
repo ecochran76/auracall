@@ -85,6 +85,9 @@ auracall --engine browser --model gemini-3-pro --prompt "a cute robot holding a 
 auracall status --hours 72
 auracall session <id> --render
 
+# Generic persisted run status for response/team/media runs
+auracall run status <id> --json
+
 # TUI (interactive, only for humans)
 auracall tui
 ```
@@ -125,6 +128,10 @@ Terminology note:
 **CLI**
 - API mode expects API keys in your environment: `OPENAI_API_KEY` (GPT-5.x), `GEMINI_API_KEY` (Gemini 3 Pro), `ANTHROPIC_API_KEY` (Claude Sonnet 4.5 / Opus 4.1), `XAI_API_KEY` (Grok 4.20).
 - Gemini browser mode uses Chrome cookies instead of an API key—just be logged into `gemini.google.com` in Chrome (no Python/venv required).
+- Operators can poll any persisted response/team/media run from the CLI with
+  `auracall run status <id>` or `auracall run status <id> --json`; this uses
+  the same `auracall_run_status` envelope as API `GET /v1/runs/{run_id}/status`
+  and MCP `run_status`.
 - A bounded local OpenAI-compatible responses adapter is available for
   development through `auracall api serve`. Current endpoints are:
   - `GET /status`

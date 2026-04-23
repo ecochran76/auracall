@@ -96,6 +96,7 @@ import {
   formatRuntimeRunInspectionPayload,
   inspectConfiguredRuntimeRun,
 } from '../src/cli/runtimeInspectionCommand.js';
+import { formatRunStatusCli, readRunStatusForCli } from '../src/cli/runStatusCommand.js';
 import {
   buildWorkbenchCapabilityReportForCli,
   formatWorkbenchCapabilityReport,
@@ -8366,6 +8367,31 @@ const sessionCommand = program
     const cliOptions = program.opts?.() ?? {};
     const userConfig = await resolveConfig(cliOptions, process.cwd(), process.env);
     await handleSessionCommand(sessionId, cmd, undefined, userConfig);
+  });
+
+const runCommand = program
+  .command('run')
+  .description('Inspect persisted Aura-Call runs.');
+
+runCommand
+  .command('status <id>')
+  .description('Read compact status for a response or media-generation run.')
+  .option('--json', 'Emit machine-readable JSON output.', false)
+  .action(async (id: string, commandOptions: { json?: boolean }) => {
+    const normalizedId = id.trim();
+    const status = await readRunStatusForCli(normalizedId);
+    if (!status) {
+      console.error(`Run ${normalizedId} was not found.`);
+      process.exitCode = 1;
+      return;
+    }
+
+    if (commandOptions.json) {
+      console.log(JSON.stringify(status, null, 2));
+      return;
+    }
+
+    console.log(formatRunStatusCli(status));
   });
 
 const statusCommand = program

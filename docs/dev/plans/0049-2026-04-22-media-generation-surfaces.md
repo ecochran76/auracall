@@ -90,6 +90,8 @@ helpers.
   local API `GET /v1/runs/{run_id}/status` and MCP `run_status` return a shared
   compact envelope for response/team chats and media generations. Media-specific
   status remains a narrow helper, not the primary cross-run polling surface.
+- CLI now has matching generic readback through `auracall run status <id>` and
+  `--json`, backed by the same durable run-status reader as API/MCP.
 
 ## Target Contract
 
@@ -115,6 +117,8 @@ helpers.
   without parsing the full media-generation response or touching the browser.
 - Keep the generic status envelope route-neutral so future chat surfaces do not
   invent separate status contracts.
+- Expose the same generic status envelope through CLI for local operators and
+  scripts that are not using API/MCP.
 - Use
   [0050 Workbench Capability Surfaces](0050-2026-04-23-workbench-capability-surfaces.md)
   as the discovery/availability layer for provider workbench tools; keep this
@@ -168,6 +172,8 @@ helpers.
   without re-invoking the provider.
 - [x] Operators can check generic response/team chat and media run status
   through one API/MCP status envelope.
+- [x] Operators can check the same generic response/team chat and media run
+  status through CLI.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
@@ -188,6 +194,8 @@ helpers.
   browser executor progress events.
 - [x] HTTP and MCP tests for compact media-generation status readback.
 - [x] HTTP and MCP tests for generic run-status readback across response and
+  media runs.
+- [x] CLI helper coverage for generic run-status readback across response and
   media runs.
 - Live Gemini image smoke only after managed-profile state is clear of
   `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image

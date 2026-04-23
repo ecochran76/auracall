@@ -26,6 +26,8 @@
   available, artifact count, artifact cache path/URI, materialization method,
   provider/runtime metadata, and failure details.
 - Use this as the default operator polling tool when the run type may vary.
+- CLI parity: `auracall run status <id> --json` reads the same durable status
+  envelope from local storage.
 
 ### `media_generation`
 - Inputs: `provider: "gemini" | "grok"`, `mediaType: "image" | "music" | "video"`, `prompt`, and optional `model`, `transport`, `count`, `size`, `aspectRatio`, `outputDir`, and metadata.
