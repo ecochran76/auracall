@@ -65,6 +65,7 @@ export interface BrowserProviderPromptResult {
   text: string;
   conversationId?: string | null;
   url?: string | null;
+  tabTargetId?: string | null;
 }
 
 export interface BrowserProvider {
@@ -134,6 +135,10 @@ export interface BrowserProvider {
     projectId?: string,
     options?: BrowserProviderListOptions,
   ) => Promise<unknown>;
+  readActiveConversationArtifacts?: (
+    conversationId: string,
+    options?: BrowserProviderListOptions,
+  ) => Promise<ConversationArtifact[]>;
   runPrompt?: (
     input: BrowserProviderPromptInput,
     options?: BrowserProviderListOptions,

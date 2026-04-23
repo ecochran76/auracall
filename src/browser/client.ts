@@ -113,6 +113,17 @@ export class BrowserAutomationClient {
     return this.llmService.getConversationContext(conversationId, options);
   }
 
+  async readActiveConversationArtifacts(
+    conversationId: string,
+    options?: BrowserProviderListOptions,
+  ): Promise<ConversationArtifact[]> {
+    if (!this.provider.readActiveConversationArtifacts) {
+      throw new Error(`Active conversation artifact read is not supported for ${this.target}.`);
+    }
+    const listOptions = await this.llmService.buildListOptions(options, { ensurePort: true });
+    return this.provider.readActiveConversationArtifacts(conversationId, listOptions);
+  }
+
   async materializeConversationArtifact(
     conversationId: string,
     artifact: ConversationArtifact,

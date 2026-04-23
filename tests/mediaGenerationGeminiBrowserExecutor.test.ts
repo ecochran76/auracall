@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const browserClient = {
   runPrompt: vi.fn(),
   getConversationContext: vi.fn(),
+  readActiveConversationArtifacts: vi.fn(),
   materializeConversationArtifact: vi.fn(),
 };
 
@@ -29,24 +30,20 @@ describe('Gemini browser media generation executor', () => {
       text: 'Done',
       conversationId: 'gemini-conversation-1',
       url: 'https://gemini.google.com/app/gemini-conversation-1',
+      tabTargetId: 'gemini-tab-1',
     });
-    browserClient.getConversationContext.mockResolvedValueOnce({
-      provider: 'gemini',
-      conversationId: 'gemini-conversation-1',
-      messages: [{ role: 'assistant', text: 'Done' }],
-      artifacts: [
-        {
-          id: 'artifact-image-1',
-          title: 'Generated image 1',
-          kind: 'image',
-          uri: 'blob:https://gemini.google.com/image-1',
-          metadata: {
-            width: 1024,
-            height: 1024,
-          },
+    browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
+      {
+        id: 'artifact-image-1',
+        title: 'Generated image 1',
+        kind: 'image',
+        uri: 'blob:https://gemini.google.com/image-1',
+        metadata: {
+          width: 1024,
+          height: 1024,
         },
-      ],
-    });
+      },
+    ]);
     browserClient.materializeConversationArtifact.mockResolvedValueOnce({
       id: 'artifact-image-1',
       name: 'generated.png',
@@ -91,8 +88,19 @@ describe('Gemini browser media generation executor', () => {
         listOptions: {
           configuredUrl: 'https://gemini.google.com/app/gemini-conversation-1',
           tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+          tabTargetId: 'gemini-tab-1',
           preserveActiveTab: true,
         },
+      },
+    );
+    expect(browserClient.getConversationContext).not.toHaveBeenCalled();
+    expect(browserClient.readActiveConversationArtifacts).toHaveBeenCalledWith(
+      'gemini-conversation-1',
+      {
+        configuredUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+        tabTargetId: 'gemini-tab-1',
+        preserveActiveTab: true,
       },
     );
     expect(result).toMatchObject({
@@ -117,6 +125,7 @@ describe('Gemini browser media generation executor', () => {
       metadata: {
         executor: 'gemini-browser',
         conversationId: 'gemini-conversation-1',
+        tabTargetId: 'gemini-tab-1',
         capabilityId: 'gemini.media.create_image',
         generatedArtifactCount: 1,
         artifactPollCount: 1,
@@ -132,30 +141,18 @@ describe('Gemini browser media generation executor', () => {
       text: '',
       conversationId: 'gemini-conversation-2',
       url: 'https://gemini.google.com/app/gemini-conversation-2',
+      tabTargetId: 'gemini-tab-2',
     });
-    browserClient.getConversationContext
-      .mockResolvedValueOnce({
-        provider: 'gemini',
-        conversationId: 'gemini-conversation-2',
-        messages: [{ role: 'user', text: 'Generate an image' }],
-        artifacts: [],
-      })
-      .mockResolvedValueOnce({
-        provider: 'gemini',
-        conversationId: 'gemini-conversation-2',
-        messages: [
-          { role: 'user', text: 'Generate an image' },
-          { role: 'assistant', text: '' },
-        ],
-        artifacts: [
-          {
-            id: 'artifact-image-2',
-            title: 'Generated image 1',
-            kind: 'image',
-            uri: 'blob:https://gemini.google.com/image-2',
-          },
-        ],
-      });
+    browserClient.readActiveConversationArtifacts
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([
+        {
+          id: 'artifact-image-2',
+          title: 'Generated image 1',
+          kind: 'image',
+          uri: 'blob:https://gemini.google.com/image-2',
+        },
+      ]);
     browserClient.materializeConversationArtifact.mockResolvedValueOnce({
       id: 'artifact-image-2',
       name: 'generated.png',
@@ -190,17 +187,16 @@ describe('Gemini browser media generation executor', () => {
         artifactPollCount: 2,
       },
     });
-    expect(browserClient.getConversationContext).toHaveBeenCalledTimes(2);
-    expect(browserClient.getConversationContext).toHaveBeenNthCalledWith(
+    expect(browserClient.getConversationContext).not.toHaveBeenCalled();
+    expect(browserClient.readActiveConversationArtifacts).toHaveBeenNthCalledWith(
       1,
       'gemini-conversation-2',
-      expect.objectContaining({
-        refresh: true,
-        listOptions: expect.objectContaining({
-          preserveActiveTab: true,
-          tabUrl: 'https://gemini.google.com/app/gemini-conversation-2',
-        }),
-      }),
+      {
+        configuredUrl: 'https://gemini.google.com/app/gemini-conversation-2',
+        tabUrl: 'https://gemini.google.com/app/gemini-conversation-2',
+        tabTargetId: 'gemini-tab-2',
+        preserveActiveTab: true,
+      },
     );
   });
 
@@ -211,13 +207,9 @@ describe('Gemini browser media generation executor', () => {
       text: '',
       conversationId: 'gemini-conversation-timeout',
       url: 'https://gemini.google.com/app/gemini-conversation-timeout',
+      tabTargetId: 'gemini-tab-timeout',
     });
-    browserClient.getConversationContext.mockResolvedValue({
-      provider: 'gemini',
-      conversationId: 'gemini-conversation-timeout',
-      messages: [{ role: 'user', text: 'Generate an image' }],
-      artifacts: [],
-    });
+    browserClient.readActiveConversationArtifacts.mockResolvedValue([]);
 
     const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
     const resultPromise = executor({
@@ -245,6 +237,39 @@ describe('Gemini browser media generation executor', () => {
     });
     await vi.advanceTimersByTimeAsync(30_001);
     await assertion;
+    expect(browserClient.getConversationContext).not.toHaveBeenCalled();
+  });
+
+  it('fails instead of falling back to URL readback when the submitted tab id is missing', async () => {
+    const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
+    browserClient.runPrompt.mockResolvedValueOnce({
+      text: '',
+      conversationId: 'gemini-conversation-missing-tab',
+      url: 'https://gemini.google.com/app/gemini-conversation-missing-tab',
+    });
+
+    const executor = createGeminiBrowserMediaGenerationExecutor({} as never);
+
+    await expect(
+      executor({
+        id: 'medgen_test',
+        createdAt: '2026-04-23T12:00:00.000Z',
+        artifactDir: '/tmp/auracall-media-artifacts',
+        request: {
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image',
+          transport: 'browser',
+        },
+      }),
+    ).rejects.toMatchObject({
+      code: 'media_generation_readback_failed',
+      details: {
+        conversationId: 'gemini-conversation-missing-tab',
+      },
+    });
+    expect(browserClient.getConversationContext).not.toHaveBeenCalled();
+    expect(browserClient.readActiveConversationArtifacts).not.toHaveBeenCalled();
   });
 
   it('fails before prompt submission for non-image Gemini browser media', async () => {

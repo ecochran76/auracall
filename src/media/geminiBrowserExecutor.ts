@@ -54,6 +54,7 @@ async function executeGeminiBrowserMediaGeneration(
     timeoutMs,
   });
   const conversationId = normalizeNonEmpty(promptResult.conversationId) ?? extractGeminiConversationId(promptResult.url);
+  const tabTargetId = normalizeNonEmpty(promptResult.tabTargetId);
   if (!conversationId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
@@ -63,10 +64,21 @@ async function executeGeminiBrowserMediaGeneration(
       },
     );
   }
+  if (!tabTargetId) {
+    throw new MediaGenerationExecutionError(
+      'media_generation_readback_failed',
+      'Gemini browser image generation completed without a submitted tab target id for no-navigation artifact readback.',
+      {
+        conversationId,
+        url: promptResult.url ?? null,
+      },
+    );
+  }
 
   const { imageArtifacts, pollCount, lastReadbackError } = await waitForGeminiImageArtifacts(
     client,
     conversationId,
+    tabTargetId,
     promptResult.url ?? resolveGeminiConversationUrl(conversationId),
     request.metadata,
     timeoutMs,
@@ -91,6 +103,7 @@ async function executeGeminiBrowserMediaGeneration(
       listOptions: {
         configuredUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
         tabUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+        tabTargetId,
         preserveActiveTab: true,
       },
     });
@@ -115,6 +128,7 @@ async function executeGeminiBrowserMediaGeneration(
       executor: 'gemini-browser',
       conversationId,
       tabUrl: promptResult.url ?? null,
+      tabTargetId,
       capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
       generatedArtifactCount: imageArtifacts.length,
       artifactPollCount: pollCount,
@@ -125,6 +139,7 @@ async function executeGeminiBrowserMediaGeneration(
 async function waitForGeminiImageArtifacts(
   client: BrowserAutomationClient,
   conversationId: string,
+  tabTargetId: string,
   tabUrl: string,
   metadata: Record<string, unknown> | null | undefined,
   timeoutMs: number,
@@ -137,16 +152,13 @@ async function waitForGeminiImageArtifacts(
   while (Date.now() <= deadline) {
     pollCount += 1;
     try {
-      const context = await client.getConversationContext(conversationId, {
-        refresh: true,
-        listOptions: {
-          configuredUrl: tabUrl,
-          tabUrl,
-          preserveActiveTab: true,
-        },
+      lastArtifacts = await client.readActiveConversationArtifacts(conversationId, {
+        configuredUrl: tabUrl,
+        tabUrl,
+        tabTargetId,
+        preserveActiveTab: true,
       });
       lastReadbackError = null;
-      lastArtifacts = context.artifacts ?? [];
       const imageArtifacts = lastArtifacts.filter(isImageArtifact);
       if (imageArtifacts.length > 0) {
         return { imageArtifacts, pollCount, lastReadbackError };

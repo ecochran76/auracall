@@ -5740,6 +5740,7 @@ export function createGeminiAdapter(): Pick<
   | 'listProjectFiles'
   | 'downloadConversationFile'
   | 'materializeConversationArtifact'
+  | 'readActiveConversationArtifacts'
   | 'readConversationContext'
   | 'renameConversation'
   | 'renameProject'
@@ -5824,29 +5825,33 @@ export function createGeminiAdapter(): Pick<
         await setGeminiPrompt(client, input.prompt);
         const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt);
         if (input.completionMode === 'prompt_submitted') {
+          let result: BrowserProviderPromptResult;
           if (input.capabilityId === 'gemini.media.create_image') {
-            return await waitForGeminiSubmittedMediaPromptResult(
+            result = await waitForGeminiSubmittedMediaPromptResult(
               client.Runtime,
               baseline,
               submittedState,
               input.prompt,
               input.timeoutMs ?? 300_000,
             );
+          } else {
+            result = await waitForGeminiSubmittedPromptResult(
+              client.Runtime,
+              baseline,
+              submittedState,
+              input.prompt,
+              15_000,
+            );
           }
-          return await waitForGeminiSubmittedPromptResult(
-            client.Runtime,
-            baseline,
-            submittedState,
-            input.prompt,
-            15_000,
-          );
+          return { ...result, tabTargetId: targetId ?? null };
         }
-        return await waitForGeminiPromptResponse(
+        const result = await waitForGeminiPromptResponse(
           client.Runtime,
           baseline,
           input.prompt,
           Math.max(30_000, input.timeoutMs ?? 90_000),
         );
+        return { ...result, tabTargetId: targetId ?? null };
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {
@@ -5893,6 +5898,33 @@ export function createGeminiAdapter(): Pick<
         return await readGeminiConversationContextWithClient(client, normalizedConversationId, {
           allowNavigation: options?.preserveActiveTab !== true,
         });
+      } finally {
+        await client.close().catch(() => undefined);
+        if (shouldClose && targetId) {
+          await CDP.Close({ host, port, id: targetId }).catch(() => undefined);
+        }
+      }
+    },
+    async readActiveConversationArtifacts(
+      conversationId: string,
+      options?: BrowserProviderListOptions,
+    ): Promise<ConversationArtifact[]> {
+      const normalizedConversationId = normalizeGeminiConversationId(conversationId);
+      if (!normalizedConversationId) {
+        throw new Error(`Invalid Gemini conversation id: ${conversationId}`);
+      }
+      if (!options?.tabTargetId) {
+        throw new Error('Gemini active artifact read requires the submitted tab target id.');
+      }
+      const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(
+        options,
+        options.tabUrl ?? options.configuredUrl ?? GEMINI_APP_URL,
+      );
+      try {
+        const context = await readGeminiConversationContextWithClient(client, normalizedConversationId, {
+          allowNavigation: false,
+        });
+        return normalizeGeminiConversationArtifacts(context.artifacts);
       } finally {
         await client.close().catch(() => undefined);
         if (shouldClose && targetId) {

@@ -13821,3 +13821,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   visible generated media, preserve the active tab through materialization, and
   use visible-image screenshot capture as a fallback when provider binary fetch
   fails.
+- 2026-04-23: Do not use general Gemini conversation readback for active media
+  polling. In this repo, even a `preserveActiveTab` read can still reconnect by
+  URL and hit same-origin target reuse before the provider-level
+  `allowNavigation: false` guard. Active Gemini media runs should carry the
+  submitted `tabTargetId`, require it for artifact polling, read artifacts from
+  that exact tab only, and fail rather than falling back to URL-based
+  readback.

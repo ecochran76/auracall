@@ -19884,3 +19884,29 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini media no-navigation readback audit/fix
+
+- Audited the remaining post-submit Gemini image-generation churn before
+  running more live smokes.
+- Confirmed the previous path still had navigation-capable seams:
+  - media artifact polling called general `getConversationContext`
+  - URL-based target resolution could reuse a same-origin tab and navigate it
+    before `allowNavigation: false` was reached
+  - materialization was not pinned to the exact submitted tab target id
+- Added a no-navigation media readback path:
+  - Gemini prompt results now carry the submitted `tabTargetId`
+  - Gemini browser media execution requires that tab target id before artifact
+    polling
+  - artifact polling now calls active-tab artifact reading instead of
+    conversation-context refresh
+  - active artifact reads require the submitted tab target id and use
+    `allowNavigation: false`
+  - materialization receives the same tab target id so it reconnects to the
+    submitted tab directly
+- Added regression coverage that fails if Gemini browser media polling falls
+  back to `getConversationContext`, and fails when a submitted tab target id is
+  missing instead of reconnecting by URL.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/workbenchCapabilities.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+  - `pnpm run check`

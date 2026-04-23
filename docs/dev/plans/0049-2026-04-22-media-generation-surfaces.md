@@ -59,6 +59,12 @@ helpers.
   generated media before readback, preserves the active tab through
   materialization, refuses navigation during active media materialization, and
   can fall back to screenshot capture of the visible generated image.
+- A follow-up audit confirmed `preserveActiveTab` was not enough by itself
+  because URL-based target resolution could still navigate a same-origin tab
+  before provider-level no-navigation guards ran. Gemini browser image
+  execution now requires the submitted tab target id, polls active-tab
+  artifacts directly instead of refreshing conversation context, and passes the
+  same tab target id into materialization.
 
 ## Target Contract
 
@@ -120,6 +126,8 @@ helpers.
   than generic assistant text after prompt submission.
 - [x] Gemini browser image execution avoids re-navigation after prompt
   submission while the generated image is visible on the active tab.
+- [x] Gemini browser image artifact polling is pinned to the submitted tab
+  target id and does not use general conversation-context refresh.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
