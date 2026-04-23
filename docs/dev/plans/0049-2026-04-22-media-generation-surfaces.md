@@ -34,7 +34,10 @@ helpers.
   resolved AuraCall runtime profile: it selects `Create image`, submits the
   prompt through the managed Gemini provider adapter, reads generated image
   artifacts from the conversation, and materializes them under the
-  media-generation artifact directory. Live smoke remains pending.
+  media-generation artifact directory. A first live API smoke proved capability
+  discovery, tool selection, and prompt submission, but Gemini remained in an
+  active `Stop response` state until the media-generation timeout, so artifact
+  completion/readback is still pending.
 
 ## Target Contract
 
@@ -89,6 +92,9 @@ helpers.
   same contract and service handler.
 - [x] Gemini image generation selects the explicit `Create Image` tool path when
   using the browser surface.
+- [x] Gemini browser image prompt submission is guarded by post-submit evidence
+  and fallback submit paths, so stale composer clicks fail fast instead of
+  waiting for a generic text response.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
@@ -106,6 +112,8 @@ helpers.
 - [x] Local API smoke for create/readback on a fake provider.
 - [x] MCP smoke for the same fake provider path.
 - Live Gemini image smoke only after managed-profile state is clear of
-  `google.com/sorry` or captcha pages.
+  `google.com/sorry` or captcha pages; latest live smoke reached a real Gemini
+  conversation without those blockers but timed out while Gemini was still
+  generating.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.

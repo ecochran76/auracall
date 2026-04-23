@@ -13788,3 +13788,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   execution should carry a capability id into the provider adapter, select
   `Create image` from Gemini's tools drawer, then read and materialize
   conversation artifacts into the media-generation artifact directory.
+- 2026-04-23: Treat Gemini workbench submission as a separate live contract from
+  text-response extraction. In this repo, the live Gemini drawer can label a row
+  `Create image New`, can expose drawer rows while `aria-expanded` is false,
+  and can ignore a coordinate send-button click while leaving the prompt in the
+  composer. Normalize transient row badges, trust visible drawer rows, and prove
+  prompt submission with post-submit evidence plus DOM-click/Enter fallbacks
+  before waiting for response or media readback.

@@ -19765,3 +19765,36 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Gemini browser image live smoke hardening
+
+- Ran a live local API Gemini browser image smoke for:
+  - provider `gemini`
+  - `mediaType = image`
+  - `transport = browser`
+  - prompt `Generate an image of an asphalt secret agent`
+- Preflight capability discovery reported Gemini `Create image`, `Create
+  music`, and `Create video` as available for the default managed browser
+  profile.
+- The first live attempts exposed two Gemini workbench UI drifts:
+  - tool rows can render as `Create image New`
+  - the tools drawer rows can be visible even while the tools button reports
+    `aria-expanded = false`
+- Hardened Gemini workbench selection for those cases.
+- The next live attempt proved tool selection and prompt insertion but left the
+  prompt in the composer after a send-button click. Hardened Gemini submit with
+  post-submit evidence plus pointer-click, DOM-click, and Enter-key fallback
+  paths.
+- Latest live API smoke reached a real Gemini conversation
+  `https://gemini.google.com/app/b20b17cc16d34e08` without `google.com/sorry`
+  or captcha blockers, but Gemini remained in `Stop response` past the
+  media-generation timeout. The response was stopped once through
+  `browser-tools` to leave the profile idle.
+- Validation target:
+  - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`
+  - local API live smoke command above, currently failing at long-running Gemini
+    generation timeout rather than capability selection or submit

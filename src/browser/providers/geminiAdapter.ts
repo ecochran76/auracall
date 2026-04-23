@@ -424,14 +424,6 @@ function buildGeminiDomSearchHasMatchesExpression(options: BrowserDomSearchOptio
 }
 
 async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolean> {
-  const buttonSearch = await runGeminiDomSearch(client.Runtime, {
-    classIncludes: ['toolbox-drawer-button'],
-    text: ['Tools'],
-    tag: ['button'],
-    visibleOnly: true,
-    limit: 10,
-  }).catch(() => ({ totalScanned: 0, matched: [] }));
-  const hasExpandedToolsButton = buttonSearch.matched.some((match) => match.expanded === true);
   const existingRows = await runGeminiDomSearch(client.Runtime, {
     classIncludes: ['toolbox-drawer-item-list-button'],
     role: ['menuitemcheckbox'],
@@ -439,7 +431,7 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
     limit: 50,
     maxScan: 10_000,
   }).catch(() => ({ totalScanned: 0, matched: [] }));
-  if (hasExpandedToolsButton && existingRows.matched.length > 0) {
+  if (existingRows.matched.length > 0) {
     return true;
   }
   const programmaticOpen = await client.Runtime.evaluate({
@@ -447,13 +439,17 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
       const normalize = (value) => String(value ?? '').replace(/\\s+/g, ' ').trim().toLowerCase();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
       const candidates = Array.from(document.querySelectorAll(${JSON.stringify(GEMINI_TOOLS_BUTTON_SELECTORS.join(','))}));
-      const button = candidates.find((candidate) => {
+      const matched = candidates.find((candidate) => {
         if (!(candidate instanceof HTMLElement)) return false;
         if (!visible(candidate)) return false;
         const label = normalize(candidate.textContent || candidate.getAttribute('aria-label') || '');
         return label === 'tools';
       });
+      const button = matched instanceof HTMLElement
+        ? (matched.matches('button') ? matched : matched.closest('button'))
+        : null;
       if (!(button instanceof HTMLElement)) return false;
+      if (!visible(button)) return false;
       button.scrollIntoView({ block: 'center', inline: 'center' });
       button.click();
       return true;
@@ -520,6 +516,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
           .toLowerCase()
           .replace(/^[^\\p{L}\\p{N}]+/gu, '')
           .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+          .replace(/(?:\\s+new)+$/gu, '')
           .replace(/\\s+/g, ' ')
           .trim();
       const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
@@ -559,6 +556,7 @@ async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityI
             .toLowerCase()
             .replace(/^[^\\p{L}\\p{N}]+/gu, '')
             .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+            .replace(/(?:\\s+new)+$/gu, '')
             .replace(/\\s+/g, ' ')
             .trim();
         const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
@@ -1933,9 +1931,80 @@ async function clickGeminiSendButton(client: Pick<ChromeClient, 'Runtime' | 'Inp
   });
 }
 
+async function clickGeminiSendButtonDom(Runtime: ChromeClient['Runtime']): Promise<boolean> {
+  const { result } = await Runtime.evaluate({
+    expression: `(() => {
+      const selectors = ${JSON.stringify(GEMINI_SEND_BUTTON_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => {
+          if (!(node instanceof HTMLElement) || !visible(node)) return false;
+          const button = node.matches('button') ? node : node.closest('button');
+          if (button instanceof HTMLButtonElement && button.disabled) return false;
+          if (button instanceof HTMLElement && button.getAttribute('aria-disabled') === 'true') return false;
+          return true;
+        });
+      if (!(target instanceof HTMLElement)) return false;
+      const button = target.matches('button') ? target : target.closest('button');
+      const clickTarget = button instanceof HTMLElement ? button : target;
+      clickTarget.scrollIntoView({ block: 'center', inline: 'center' });
+      clickTarget.click();
+      return true;
+    })()`,
+    returnByValue: true,
+  });
+  return Boolean(result?.value);
+}
+
+async function pressGeminiComposerEnter(client: Pick<ChromeClient, 'Runtime' | 'Input'>): Promise<boolean> {
+  const { result } = await client.Runtime.evaluate({
+    expression: `(() => {
+      const selectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
+      const visible = (node) => {
+        if (!(node instanceof Element)) return false;
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0;
+      };
+      const target = selectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node));
+      if (!(target instanceof HTMLElement)) return false;
+      target.scrollIntoView({ block: 'center', inline: 'center' });
+      target.focus();
+      return document.activeElement === target || target.contains(document.activeElement);
+    })()`,
+    returnByValue: true,
+  });
+  if (!result?.value) {
+    return false;
+  }
+  await client.Input.dispatchKeyEvent({
+    type: 'keyDown',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+  });
+  await client.Input.dispatchKeyEvent({
+    type: 'keyUp',
+    key: 'Enter',
+    code: 'Enter',
+    windowsVirtualKeyCode: 13,
+    nativeVirtualKeyCode: 13,
+  });
+  return true;
+}
+
 async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<{
   href: string;
   conversationId: string | null;
+  composerText: string;
+  userTexts: string[];
   assistantTexts: string[];
   isGenerating: boolean;
 }> {
@@ -1951,6 +2020,28 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
         document.querySelector('[data-test-id="chat-history-container"]') ||
         document.querySelector('main') ||
         document.body;
+      const composerSelectors = ${JSON.stringify(GEMINI_PROMPT_INPUT_SELECTORS)};
+      const composer = composerSelectors
+        .flatMap((selector) => Array.from(document.querySelectorAll(selector)))
+        .find((node) => visible(node));
+      let composerText = '';
+      if (composer instanceof HTMLTextAreaElement || composer instanceof HTMLInputElement) {
+        composerText = normalize(composer.value || '');
+      } else if (composer instanceof HTMLElement && composer.isContentEditable) {
+        composerText = normalize(composer.innerText || composer.textContent || '');
+      }
+      const userTexts = [];
+      const seenUsers = new Set();
+      const userNodes = root
+        ? Array.from(root.querySelectorAll('user-query, user-query-content, [data-test-id="user-query"], [data-test-id="user-query-content"]'))
+        : [];
+      for (const node of userNodes) {
+        if (!(node instanceof HTMLElement) || !visible(node)) continue;
+        const text = normalize(node.innerText || node.textContent || '');
+        if (text.length < 3 || seenUsers.has(text)) continue;
+        seenUsers.add(text);
+        userTexts.push(text);
+      }
       const assistantTexts = [];
       const seen = new Set();
       const responseSelectors = [
@@ -2005,6 +2096,8 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
       return {
         href: location.href,
         conversationId: match?.[1] ?? null,
+        composerText,
+        userTexts,
         assistantTexts,
         isGenerating,
       };
@@ -2014,15 +2107,97 @@ async function readGeminiPromptState(Runtime: ChromeClient['Runtime']): Promise<
   const value = (result?.value ?? {}) as {
     href?: string;
     conversationId?: string | null;
+    composerText?: string;
+    userTexts?: string[];
     assistantTexts?: string[];
     isGenerating?: boolean;
   };
   return {
     href: typeof value.href === 'string' ? value.href : '',
     conversationId: typeof value.conversationId === 'string' && value.conversationId.trim() ? value.conversationId : null,
+    composerText: typeof value.composerText === 'string' ? normalizePromptText(value.composerText) : '',
+    userTexts: Array.isArray(value.userTexts) ? value.userTexts.map((entry) => sanitizeGeminiUserText(entry)) : [],
     assistantTexts: Array.isArray(value.assistantTexts) ? value.assistantTexts.map((entry) => normalizeWhitespace(entry)) : [],
     isGenerating: Boolean(value.isGenerating),
   };
+}
+
+function geminiPromptWasSubmitted(
+  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+  state: { href: string; conversationId: string | null; composerText: string; userTexts: string[]; isGenerating: boolean },
+  prompt: string,
+): boolean {
+  if (state.isGenerating) return true;
+  if (state.conversationId && state.conversationId !== baseline.conversationId) return true;
+  if (state.href && state.href !== baseline.href && /^https:\/\/gemini\.google\.com\/app\/[^/?#]+/i.test(state.href)) return true;
+
+  const normalizedPrompt = sanitizeGeminiUserText(prompt);
+  const baselineUsers = new Set((baseline.userTexts ?? []).map((entry) => sanitizeGeminiUserText(entry)));
+  const submittedUserText = state.userTexts
+    .map((entry) => sanitizeGeminiUserText(entry))
+    .find((entry) => entry && !baselineUsers.has(entry) && (entry === normalizedPrompt || entry.includes(normalizedPrompt)));
+  if (submittedUserText) return true;
+
+  return normalizePromptText(state.composerText).length === 0;
+}
+
+async function waitForGeminiPromptSubmit(
+  Runtime: ChromeClient['Runtime'],
+  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+  prompt: string,
+  timeoutMs: number,
+): Promise<{ submitted: boolean; state: Awaited<ReturnType<typeof readGeminiPromptState>> }> {
+  const deadline = Date.now() + timeoutMs;
+  let state = await readGeminiPromptState(Runtime);
+  while (Date.now() < deadline) {
+    state = await readGeminiPromptState(Runtime);
+    if (geminiPromptWasSubmitted(baseline, state, prompt)) {
+      return { submitted: true, state };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+  return { submitted: false, state };
+}
+
+async function submitGeminiPromptWithFallback(
+  client: Pick<ChromeClient, 'Runtime' | 'Input'>,
+  baseline: { href: string; conversationId: string | null; userTexts?: string[] },
+  prompt: string,
+): Promise<void> {
+  const attempts: Array<{ name: string; run: () => Promise<boolean> }> = [
+    {
+      name: 'pointer click',
+      run: async () => {
+        await clickGeminiSendButton(client);
+        return true;
+      },
+    },
+    {
+      name: 'DOM click',
+      run: () => clickGeminiSendButtonDom(client.Runtime),
+    },
+    {
+      name: 'Enter key',
+      run: () => pressGeminiComposerEnter(client),
+    },
+  ];
+  let lastState = await readGeminiPromptState(client.Runtime);
+  const attempted: string[] = [];
+  for (const attempt of attempts) {
+    attempted.push(attempt.name);
+    const ran = await attempt.run().catch(() => false);
+    if (!ran) continue;
+    const result = await waitForGeminiPromptSubmit(client.Runtime, baseline, prompt, 10_000);
+    lastState = result.state;
+    if (result.submitted) {
+      return;
+    }
+  }
+  const composerPreview = normalizePromptText(lastState.composerText).slice(0, 120);
+  throw new Error(
+    `Gemini prompt did not submit after ${attempted.join(', ')}. ` +
+      `composerText=${JSON.stringify(composerPreview)} isGenerating=${lastState.isGenerating}`,
+  );
 }
 
 export function selectNewestGeminiAssistantText(
@@ -5404,7 +5579,7 @@ export function createGeminiAdapter(): Pick<
         await selectGeminiWorkbenchCapability(client, input.capabilityId);
         const baseline = await readGeminiPromptState(client.Runtime);
         await setGeminiPrompt(client, input.prompt);
-        await clickGeminiSendButton(client);
+        await submitGeminiPromptWithFallback(client, baseline, input.prompt);
         return await waitForGeminiPromptResponse(
           client.Runtime,
           baseline,
