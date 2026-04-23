@@ -1,5 +1,26 @@
 # RUNBOOK
 
+## Turn 53 | 2026-04-23
+
+- Active browser reliability exception:
+  `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+- Reason:
+  - reproduced Gemini browser-media runs proved the earlier dispatcher work was
+    necessary but not sufficient
+  - managed-profile mutation authority is still split across browser-service
+    helpers, provider adapters, and legacy browser flows
+- Codebase audit inventory recorded in Plan 0053:
+  - direct `Page.navigate(...)` call sites: `7`
+  - direct `Page.reload(...)` call sites: `5`
+  - explicit `location.assign(...)` call sites: `1`
+  - explicit `location.href =` / `window.location` mutation call sites: `6`
+  - `openOrReuseChromeTarget(...)` call sites: `9`
+  - `navigateAndSettle(...)` call sites: `13`
+- Next checkpoint:
+  - route managed-profile navigation/reload/target-reuse mutation intent
+    through one browser-service-owned control plane with mutation audit
+    records before doing more provider-local browser hardening
+
 ## Turn 1 | 2026-04-14
 
 - Active plan: `docs/dev/plans/0001-2026-04-14-execution.md`

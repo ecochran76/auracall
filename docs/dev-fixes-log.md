@@ -13962,3 +13962,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   succeeds. Generated-image materialization should click that provider-owned
   control on the active submitted tab, prefer captured href or download harvest,
   and keep `img.src` fetch plus screenshot capture as bounded fallbacks.
+- 2026-04-23: Do not stop browser dispatcher work at profile-scoped operation
+  locking. In this repo, the earlier dispatcher slice proved same-profile CDP
+  ownership, but browser mutation authority still remained split across
+  browser-service helpers, provider adapters, and legacy browser flows.
+  Finishing the control plane requires routing navigation, reload, target
+  reuse/open navigation, and in-page location mutation through one
+  browser-service-owned mutation API with audit records.

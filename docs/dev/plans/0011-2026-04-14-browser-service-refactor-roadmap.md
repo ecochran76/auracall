@@ -13,8 +13,11 @@ Lane: P01
   default Grok/ChatGPT/Gemini profile separation
 - the selector-diagnosis drift reproduced during that live smoke is now closed:
   - `docs/dev/plans/0022-2026-04-21-provider-selector-diagnosis-hardening.md`
-- no active browser-service reliability exception remains open unless a new
-  concrete mismatch is reproduced
+- a new concrete browser-service reliability mismatch is now open:
+  - `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+  - current gap: mutation authority is still split across browser-service
+    helpers, provider adapters, and legacy browser flows, so the earlier
+    operation dispatcher is not yet the full browser control plane
 - this roadmap is still the live long-running browser-service architecture track referenced from the main roadmap
 - the browser-profile family subtrack is now canonical under:
   - `docs/dev/plans/0008-2026-04-14-browser-profile-family-refactor.md`
@@ -91,6 +94,18 @@ Status: closed through
 - Treat healthy Grok and ChatGPT home/new-chat surfaces as valid doctor
   outcomes when no assistant turn is expected.
 - Keep blocking-state detection and conversation-surface checks strict.
+
+### Phase 9: Mutation control-plane completion
+
+Status: open through
+`docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`.
+
+- Finish the browser-service dispatcher boundary so managed-profile browser
+  mutations route through one browser-service-owned control plane.
+- Centralize navigation, reload, target reuse/open navigation, and related
+  mutation audit logging.
+- Reduce provider adapters and legacy browser flows to declaring mutation
+  intent instead of issuing direct page mutations.
 
 ## Deliverables
 - `browserService` base class + supporting utilities.

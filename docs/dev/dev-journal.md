@@ -1,3 +1,30 @@
+## 2026-04-23 - Browser control-plane completion audit
+
+- Current focus:
+  - reassess the browser dispatcher/control-plane lane after reproduced Gemini
+    root-page fallback during browser media runs
+- Progress:
+  - reviewed canonical roadmap, browser-service roadmap, and the closed
+    dispatcher plan
+  - completed a codebase audit of remaining mutation authority split points
+    across browser-service helpers, provider adapters, and legacy browser
+    flows
+  - opened
+    `docs/dev/plans/0053-2026-04-23-browser-control-plane-completion.md`
+    as the new active browser reliability exception
+  - updated `ROADMAP.md`, `RUNBOOK.md`, and the browser-service roadmap so the
+    reopened lane is now canonical
+- Audit inventory:
+  - `Page.navigate(...)`: 7
+  - `Page.reload(...)`: 5
+  - `location.assign(...)`: 1
+  - `location.href =` / `window.location` mutation sites: 6
+  - `openOrReuseChromeTarget(...)`: 9
+  - `navigateAndSettle(...)`: 13
+- Next checkpoint:
+  - implement the first browser-service mutation-dispatcher slice and start
+    migrating provider/legacy mutation paths to that control plane
+
 ## 2026-04-23 - Gemini generated-image download materialization
 
 - Current focus:
