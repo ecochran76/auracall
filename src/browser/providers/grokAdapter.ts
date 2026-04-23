@@ -2819,7 +2819,14 @@ async function openCreateProjectModalWithClient(client: ChromeClient): Promise<v
   }
   let revealed = await tryRevealCreateButton();
   if (!revealed.ok) {
-    await client.Page.navigate({ url: GROK_HOME_URL });
+    await navigateAndSettle(client, {
+      url: GROK_HOME_URL,
+      timeoutMs: 15_000,
+      routeExpression: grokUrlSettleExpression(GROK_HOME_URL),
+      routeDescription: 'Grok home route',
+      mutationAudit: resolveMutationAudit(client),
+      mutationSource: resolveMutationSource(client, 'provider:grok', 'create-project-home-fallback'),
+    });
     await waitForDocumentReady(client, 15_000);
     await ensureMainSidebarOpen(client, { logPrefix: 'browser-project-create' });
     await closeHistoryDialog(client);
@@ -6067,7 +6074,14 @@ async function ensureProjectPage(client: ChromeClient, projectId?: string): Prom
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   const fallbackUrl = resolveGrokProjectConversationsUrl(projectId);
-  await client.Page.navigate({ url: fallbackUrl });
+  await navigateAndSettle(client, {
+    url: fallbackUrl,
+    timeoutMs: 10_000,
+    routeExpression: grokUrlSettleExpression(fallbackUrl),
+    routeDescription: `Grok project conversation fallback route ${fallbackUrl}`,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:grok', 'project-conversation-click-fallback'),
+  });
   const secondaryDeadline = Date.now() + 10_000;
   while (Date.now() < secondaryDeadline) {
     const { result } = await client.Runtime.evaluate({

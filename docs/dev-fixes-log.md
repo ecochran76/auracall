@@ -65,6 +65,13 @@
   `navigateAndSettle(...)` calls read that context without threading a full
   options object through every helper.
 
+- 2026-04-23: Provider reload recovery is still a browser mutation and needs
+  the same audit path as navigation. In this repo, ChatGPT recovery flows used
+  raw `Page.reload(...)` after the provider client had already been stamped
+  with mutation context. Route those through a browser-service
+  `reloadAndSettle(...)` helper so post-failure diagnostics can attribute
+  refreshes the same way they attribute navigations.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

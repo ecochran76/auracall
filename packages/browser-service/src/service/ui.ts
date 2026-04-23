@@ -553,6 +553,23 @@ export type NavigateAndSettleResult = {
   ready?: WaitForPredicateResult;
 };
 
+export type ReloadAndSettleOptions = WaitForPredicateOptions & {
+  ignoreCache?: boolean;
+  waitForDocumentReady?: boolean;
+  documentReadyStates?: Array<'loading' | 'interactive' | 'complete'>;
+  requireVisibleDocument?: boolean;
+  fallbackToLocationReload?: boolean;
+  mutationAudit?: BrowserMutationAuditSink;
+  mutationSource?: string;
+};
+
+export type ReloadAndSettleResult = {
+  ok: boolean;
+  fallbackUsed: boolean;
+  reason?: string;
+  documentReady?: WaitForPredicateResult;
+};
+
 export type CollectUiDiagnosticsOptions = {
   rootSelectors?: readonly string[];
   dialogSelectors?: readonly string[];
@@ -1152,6 +1169,82 @@ export async function navigateAndSettle(
     await audit.complete({
       outcome: 'failed',
       toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : options.url,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+export async function reloadAndSettle(
+  client: Pick<ChromeClient, 'Page' | 'Runtime'>,
+  options: ReloadAndSettleOptions = {},
+): Promise<ReloadAndSettleResult> {
+  const mutationSource = options.mutationSource ?? 'browser-service:reloadAndSettle';
+  const mutationAudit = options.mutationAudit;
+  const fromUrl = mutationAudit ? await readLocationHrefForAudit(client.Runtime) : null;
+  const audit = beginBrowserMutation(mutationAudit, {
+    kind: 'reload',
+    source: mutationSource,
+    requestedUrl: fromUrl,
+    fromUrl,
+  });
+
+  const evaluateReady = async (fallbackUsed: boolean): Promise<ReloadAndSettleResult> => {
+    if (options.waitForDocumentReady === false) {
+      return { ok: true, fallbackUsed };
+    }
+    const documentReady = await waitForDocumentReady(client.Runtime, {
+      timeoutMs: options.timeoutMs,
+      pollMs: options.pollMs,
+      states: options.documentReadyStates,
+      requireVisible: options.requireVisibleDocument,
+      description: options.description ?? 'document ready after reload',
+    });
+    if (!documentReady.ok) {
+      return {
+        ok: false,
+        fallbackUsed,
+        documentReady,
+        reason: `${documentReady.description ?? 'document ready'} did not settle`,
+      };
+    }
+    return { ok: true, fallbackUsed, documentReady };
+  };
+
+  try {
+    try {
+      await client.Page.reload({ ignoreCache: options.ignoreCache });
+    } catch (error) {
+      if (!options.fallbackToLocationReload) {
+        throw error;
+      }
+      await client.Runtime.evaluate({
+        expression: 'location.reload()',
+        awaitPromise: false,
+      }).catch(() => undefined);
+      const fallback = await evaluateReady(true);
+      await audit.complete({
+        outcome: fallback.ok ? 'succeeded' : 'failed',
+        toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
+        fallbackUsed: true,
+        reason: 'location-reload-fallback',
+        error: fallback.ok ? null : fallback.reason ?? null,
+      });
+      return fallback;
+    }
+
+    const primary = await evaluateReady(false);
+    await audit.complete({
+      outcome: primary.ok ? 'succeeded' : 'failed',
+      toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
+      fallbackUsed: false,
+      error: primary.ok ? null : primary.reason ?? null,
+    });
+    return primary;
+  } catch (error) {
+    await audit.complete({
+      outcome: 'failed',
+      toUrl: mutationAudit ? await readLocationHrefForAudit(client.Runtime) : fromUrl,
       error: error instanceof Error ? error.message : String(error),
     });
     throw error;

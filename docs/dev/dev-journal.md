@@ -33,11 +33,12 @@
       sources
     - connected provider clients retain mutation context for later
       route-settle helpers
+    - `reloadAndSettle(...)` now emits reload mutation records
+    - ChatGPT reload recovery paths and Grok fallback navigation paths now use
+      browser-service mutation-audited helpers
   - next code checkpoint:
-    - add the central reload wrapper
-    - move remaining direct provider `Page.navigate(...)` / `Page.reload(...)`
-      paths behind the control plane
     - add the first consumer/readback surface for recent mutation records
+    - migrate or fence legacy non-provider direct mutation paths
 
 ## 2026-04-23 - Gemini generated-image download materialization
 

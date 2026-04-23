@@ -100,6 +100,13 @@ Current active extraction plan:
   - Prefer this over ad hoc `Page.navigate(...)` + `waitForDocumentReady(...)`
     + retry logic when the page can route asynchronously.
 
+- `reloadAndSettle({ Page, Runtime }, options)`
+  - Shared reload primitive for provider recovery flows.
+  - Combines `Page.reload(...)`, optional document-ready wait, optional
+    `location.reload()` fallback, and bounded mutation audit records.
+  - Prefer this over provider-local `Page.reload(...)` calls when a browser
+    recovery path intentionally refreshes the active page.
+
 - `service/mutationDispatcher.ts`
   - Package-owned mutation audit substrate for the browser control-plane lane.
   - `beginBrowserMutation(...)` emits bounded `start` / `complete` records for

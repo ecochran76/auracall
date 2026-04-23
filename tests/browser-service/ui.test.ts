@@ -23,6 +23,7 @@ import {
   openSubmenu,
   openSurface,
   pressButton,
+  reloadAndSettle,
   selectNestedMenuPath,
   selectMenuItem,
   submitInlineRename,
@@ -1185,6 +1186,53 @@ describe('browser-service ui wait helpers', () => {
         source: 'test:navigate',
         requestedUrl: 'https://grok.com/files',
         toUrl: 'https://grok.com/files',
+        outcome: 'succeeded',
+        fallbackUsed: false,
+      }),
+    ]);
+  });
+
+  test('reloadAndSettle records bounded mutation audit events', async () => {
+    const mutationLog = createInMemoryBrowserMutationLog();
+    const runtime = {
+      evaluate: vi.fn(async (options: { expression: string }) => {
+        if (options.expression === 'location.href') {
+          return { result: { value: 'https://chatgpt.com/c/123' } };
+        }
+        if (options.expression.includes('document.readyState')) {
+          return { result: { value: { readyState: 'complete', visibilityState: 'visible' } } };
+        }
+        return { result: { value: null } };
+      }),
+    };
+    const Page = {
+      reload: vi.fn(async () => undefined),
+    };
+
+    const result = await reloadAndSettle({ Page: Page as never, Runtime: runtime as never }, {
+      ignoreCache: true,
+      timeoutMs: 50,
+      pollMs: 1,
+      mutationAudit: mutationLog.record,
+      mutationSource: 'test:reload',
+    });
+
+    expect(result.ok).toBe(true);
+    expect(Page.reload).toHaveBeenCalledWith({ ignoreCache: true });
+    expect(mutationLog.list()).toEqual([
+      expect.objectContaining({
+        phase: 'start',
+        kind: 'reload',
+        source: 'test:reload',
+        requestedUrl: 'https://chatgpt.com/c/123',
+        fromUrl: 'https://chatgpt.com/c/123',
+      }),
+      expect.objectContaining({
+        phase: 'complete',
+        kind: 'reload',
+        source: 'test:reload',
+        requestedUrl: 'https://chatgpt.com/c/123',
+        toUrl: 'https://chatgpt.com/c/123',
         outcome: 'succeeded',
         fallbackUsed: false,
       }),

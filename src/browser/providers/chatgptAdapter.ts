@@ -32,6 +32,7 @@ import {
   openMenu,
   openSurface,
   pressButton,
+  reloadAndSettle,
   selectMenuItem,
   setInputValue,
   submitInlineRename,
@@ -762,11 +763,12 @@ async function recoverVisibleChatgptBlockingSurfaceWithClient(
   }
   if (resolved.kind !== 'rate-limit') {
     try {
-      await client.Page.reload({ ignoreCache: true }).catch(async () => {
-        await client.Runtime.evaluate({
-          expression: 'location.reload()',
-          awaitPromise: false,
-        }).catch(() => undefined);
+      await reloadAndSettle(client, {
+        ignoreCache: true,
+        waitForDocumentReady: false,
+        fallbackToLocationReload: true,
+        mutationAudit: resolveMutationAudit(client),
+        mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'recover-blocking-surface-reload'),
       });
       return {
         action: 'reload-page',
@@ -2093,7 +2095,12 @@ async function readChatgptConversationPayloadWithClient(
       });
     });
   });
-  await client.Page.reload({ ignoreCache: true }).catch(() => undefined);
+  await reloadAndSettle(client, {
+    ignoreCache: true,
+    waitForDocumentReady: false,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'fetch-conversation-api-payload-reload'),
+  }).catch(() => undefined);
   const response = await bodyPromise;
   return parsePayloadBody(response?.body, response?.base64Encoded ?? false);
 }
@@ -3134,7 +3141,12 @@ async function assertProjectSourceStillPresent(
 }
 
 async function reloadProjectSourcesTab(client: ChromeClient, projectId: string): Promise<void> {
-  await client.Page.reload({ ignoreCache: true });
+  await reloadAndSettle(client, {
+    ignoreCache: true,
+    waitForDocumentReady: false,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'reload-project-sources-tab'),
+  });
   const ready = await waitForPredicate(
     client.Runtime,
     buildProjectSourcesReadyExpression(projectId),
@@ -3901,7 +3913,12 @@ async function openProjectSettingsPanel(client: ChromeClient, projectId: string)
         }
       }
     }
-    await client.Page.reload({ ignoreCache: false }).catch(() => undefined);
+    await reloadAndSettle(client, {
+      ignoreCache: false,
+      waitForDocumentReady: false,
+      mutationAudit: resolveMutationAudit(client),
+      mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'project-hydration-retry-reload'),
+    }).catch(() => undefined);
     await sleep(1_000 + attempt * 750);
   }
   if (!routeReady?.ok) {
@@ -5416,11 +5433,12 @@ async function ensureChatgptConversationSurfaceReadyForRead(
   if (ready.ok) {
     return;
   }
-  await client.Page.reload({ ignoreCache: true }).catch(async () => {
-    await client.Runtime.evaluate({
-      expression: 'location.reload()',
-      returnByValue: true,
-    }).catch(() => undefined);
+  await reloadAndSettle(client, {
+    ignoreCache: true,
+    waitForDocumentReady: false,
+    fallbackToLocationReload: true,
+    mutationAudit: resolveMutationAudit(client),
+    mutationSource: resolveMutationSource(client, 'provider:chatgpt', 'conversation-readiness-reload'),
   });
   ready = await waitForReady(`ChatGPT conversation ${conversationId} surface ready after reload`);
   if (ready.ok) {

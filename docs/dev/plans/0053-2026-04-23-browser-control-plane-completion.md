@@ -188,10 +188,10 @@ Status:
 - current scope completed:
   - package-owned mutation audit primitive
   - audit records for `navigateAndSettle(...)`
+  - audit records for `reloadAndSettle(...)`
   - audit records for `openOrReuseChromeTarget(...)`
   - pass-through audit support from `connectToRemoteChrome(...)`
 - still remaining in Slice 1:
-  - central reload wrapper
   - browser-service-owned accessor for recent mutation history
   - first runtime/browser-service consumer of those mutation records
 
@@ -215,12 +215,14 @@ Status:
     calls
   - Gemini/ChatGPT/Grok shared route-settle helpers now emit provider-owned
     mutation sources through `navigateAndSettle(...)`
+  - ChatGPT reload recovery paths now emit provider-owned mutation sources
+    through `reloadAndSettle(...)`
+  - Grok provider-local fallback navigations now emit provider-owned mutation
+    sources through `navigateAndSettle(...)`
 - still remaining in Slice 2:
-  - central reload wrapper adoption
-  - direct provider-local `Page.navigate(...)` and `Page.reload(...)`
-    elimination or fencing
   - provider paths that still mutate outside `openOrReuseChromeTarget(...)` /
     `navigateAndSettle(...)`
+    / `reloadAndSettle(...)`
 
 ### Slice 3 | Legacy browser flow adoption
 
