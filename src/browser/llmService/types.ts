@@ -59,6 +59,7 @@ export type PromptPlan = {
 export type PromptInput = {
   prompt: string;
   capabilityId?: string | null;
+  completionMode?: 'assistant_response' | 'prompt_submitted';
   configuredUrl?: string | null;
   projectId?: string | null;
   projectName?: string | null;

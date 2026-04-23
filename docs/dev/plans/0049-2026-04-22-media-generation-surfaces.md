@@ -38,6 +38,11 @@ helpers.
   discovery, tool selection, and prompt submission, but Gemini remained in an
   active `Stop response` state until the media-generation timeout, so artifact
   completion/readback is still pending.
+- Gemini browser image execution now uses prompt-submission completion for the
+  generic prompt path, then polls refreshed conversation context for image
+  artifacts under the media-generation executor. Missing artifacts now fail as
+  `media_generation_provider_timeout` instead of the generic assistant-text
+  timeout.
 
 ## Target Contract
 
@@ -95,6 +100,8 @@ helpers.
 - [x] Gemini browser image prompt submission is guarded by post-submit evidence
   and fallback submit paths, so stale composer clicks fail fast instead of
   waiting for a generic text response.
+- [x] Gemini browser image execution waits on image artifact evidence rather
+  than generic assistant text after prompt submission.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench

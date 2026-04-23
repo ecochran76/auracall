@@ -2163,7 +2163,7 @@ async function submitGeminiPromptWithFallback(
   client: Pick<ChromeClient, 'Runtime' | 'Input'>,
   baseline: { href: string; conversationId: string | null; userTexts?: string[] },
   prompt: string,
-): Promise<void> {
+): Promise<Awaited<ReturnType<typeof readGeminiPromptState>>> {
   const attempts: Array<{ name: string; run: () => Promise<boolean> }> = [
     {
       name: 'pointer click',
@@ -2190,7 +2190,7 @@ async function submitGeminiPromptWithFallback(
     const result = await waitForGeminiPromptSubmit(client.Runtime, baseline, prompt, 10_000);
     lastState = result.state;
     if (result.submitted) {
-      return;
+      return lastState;
     }
   }
   const composerPreview = normalizePromptText(lastState.composerText).slice(0, 120);
@@ -2198,6 +2198,29 @@ async function submitGeminiPromptWithFallback(
     `Gemini prompt did not submit after ${attempted.join(', ')}. ` +
       `composerText=${JSON.stringify(composerPreview)} isGenerating=${lastState.isGenerating}`,
   );
+}
+
+async function waitForGeminiSubmittedPromptResult(
+  Runtime: ChromeClient['Runtime'],
+  baseline: { href: string; conversationId: string | null },
+  initialState: Awaited<ReturnType<typeof readGeminiPromptState>>,
+  timeoutMs: number,
+): Promise<BrowserProviderPromptResult> {
+  const deadline = Date.now() + timeoutMs;
+  let state = initialState;
+  while (Date.now() < deadline) {
+    const conversationId = state.conversationId ?? baseline.conversationId;
+    if (conversationId) {
+      return {
+        text: '',
+        conversationId,
+        url: state.href || baseline.href,
+      };
+    }
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    state = await readGeminiPromptState(Runtime);
+  }
+  throw new Error('Gemini prompt submitted, but no conversation id became available for readback.');
 }
 
 export function selectNewestGeminiAssistantText(
@@ -5579,7 +5602,10 @@ export function createGeminiAdapter(): Pick<
         await selectGeminiWorkbenchCapability(client, input.capabilityId);
         const baseline = await readGeminiPromptState(client.Runtime);
         await setGeminiPrompt(client, input.prompt);
-        await submitGeminiPromptWithFallback(client, baseline, input.prompt);
+        const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt);
+        if (input.completionMode === 'prompt_submitted') {
+          return await waitForGeminiSubmittedPromptResult(client.Runtime, baseline, submittedState, 15_000);
+        }
         return await waitForGeminiPromptResponse(
           client.Runtime,
           baseline,

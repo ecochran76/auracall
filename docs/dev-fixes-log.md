@@ -13795,3 +13795,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   composer. Normalize transient row badges, trust visible drawer rows, and prove
   prompt submission with post-submit evidence plus DOM-click/Enter fallbacks
   before waiting for response or media readback.
+- 2026-04-23: Do not make Gemini browser media generation wait for assistant
+  text before looking for media. In this repo, `Create image` can submit
+  correctly and still remain in a long-running media generation state with no
+  useful text completion. Let media callers request prompt-submission
+  completion, then poll refreshed conversation context for generated artifacts
+  and report `media_generation_provider_timeout` when the provider never exposes
+  the expected media.

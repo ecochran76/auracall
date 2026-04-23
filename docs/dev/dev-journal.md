@@ -19798,3 +19798,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `git diff --check`
   - local API live smoke command above, currently failing at long-running Gemini
     generation timeout rather than capability selection or submit
+
+## 2026-04-23 - Gemini browser media artifact-first wait
+
+- Added `completionMode = "prompt_submitted"` to the browser prompt contract so
+  provider adapters can return after verified prompt submission instead of
+  forcing every caller through generic assistant-text waiting.
+- Wired Gemini browser image media execution to:
+  - select and submit `gemini.media.create_image`
+  - return with the submitted conversation id
+  - poll refreshed conversation context for generated image artifacts
+  - fail with `media_generation_provider_timeout` when artifacts never appear
+- Added unit coverage for immediate artifact readback, delayed artifact polling,
+  and provider-timeout behavior.
+- Deferred a new live media request because the current Gemini managed-profile
+  tab still exposes a visible `Stop response` control after the previous
+  long-running generation. Do not stack a new browser media request until that
+  active provider state is cleared.
+- Validation target:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+  - `pnpm run check`

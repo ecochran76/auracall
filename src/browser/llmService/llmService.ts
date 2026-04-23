@@ -1181,6 +1181,7 @@ export abstract class LlmService {
           {
             prompt: input.prompt,
             capabilityId: input.capabilityId,
+            completionMode: input.completionMode,
             targetUrl: plan.targetUrl,
             projectId: plan.projectId,
             conversationId: plan.conversationId,

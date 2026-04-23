@@ -53,6 +53,7 @@ export interface ProviderUserIdentity {
 export interface BrowserProviderPromptInput {
   prompt: string;
   capabilityId?: string | null;
+  completionMode?: 'assistant_response' | 'prompt_submitted';
   projectId?: string | null;
   conversationId?: string | null;
   targetUrl?: string | null;

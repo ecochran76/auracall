@@ -21,6 +21,7 @@ async function executeGeminiBrowserMediaGeneration(
   userConfig: ResolvedUserConfig,
 ): Promise<{ artifacts: MediaGenerationArtifact[]; model?: string | null; metadata?: Record<string, unknown> | null }> {
   const { request } = input;
+  const timeoutMs = resolveMediaTimeoutMs(request.mediaType, request.metadata);
   if (request.provider !== 'gemini' || request.transport !== 'browser') {
     throw new MediaGenerationExecutionError(
       'media_provider_not_implemented',
@@ -48,8 +49,9 @@ async function executeGeminiBrowserMediaGeneration(
   const promptResult = await client.runPrompt({
     prompt: request.prompt,
     capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+    completionMode: 'prompt_submitted',
     noProject: true,
-    timeoutMs: resolveMediaTimeoutMs(request.mediaType, request.metadata),
+    timeoutMs,
   });
   const conversationId = normalizeNonEmpty(promptResult.conversationId) ?? extractGeminiConversationId(promptResult.url);
   if (!conversationId) {
@@ -62,15 +64,20 @@ async function executeGeminiBrowserMediaGeneration(
     );
   }
 
-  const context = await client.getConversationContext(conversationId, { refresh: true });
-  const imageArtifacts = (context.artifacts ?? []).filter(isImageArtifact);
+  const { imageArtifacts, pollCount } = await waitForGeminiImageArtifacts(
+    client,
+    conversationId,
+    request.metadata,
+    timeoutMs,
+  );
   if (imageArtifacts.length === 0) {
     throw new MediaGenerationExecutionError(
-      'media_generation_no_artifacts',
-      'Gemini browser image generation did not expose a generated image artifact.',
+      'media_generation_provider_timeout',
+      'Gemini browser image generation submitted successfully, but no generated image artifact appeared before the timeout.',
       {
         conversationId,
-        artifactCount: context.artifacts?.length ?? 0,
+        timeoutMs,
+        pollCount,
       },
     );
   }
@@ -102,8 +109,36 @@ async function executeGeminiBrowserMediaGeneration(
       tabUrl: promptResult.url ?? null,
       capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
       generatedArtifactCount: imageArtifacts.length,
+      artifactPollCount: pollCount,
     },
   };
+}
+
+async function waitForGeminiImageArtifacts(
+  client: BrowserAutomationClient,
+  conversationId: string,
+  metadata: Record<string, unknown> | null | undefined,
+  timeoutMs: number,
+): Promise<{ imageArtifacts: ConversationArtifact[]; pollCount: number }> {
+  const pollIntervalMs = resolveArtifactPollIntervalMs(metadata);
+  const deadline = Date.now() + timeoutMs;
+  let pollCount = 0;
+  let lastArtifacts: ConversationArtifact[] = [];
+  while (Date.now() <= deadline) {
+    pollCount += 1;
+    const context = await client.getConversationContext(conversationId, { refresh: true });
+    lastArtifacts = context.artifacts ?? [];
+    const imageArtifacts = lastArtifacts.filter(isImageArtifact);
+    if (imageArtifacts.length > 0) {
+      return { imageArtifacts, pollCount };
+    }
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      break;
+    }
+    await new Promise((resolve) => setTimeout(resolve, Math.min(pollIntervalMs, remainingMs)));
+  }
+  return { imageArtifacts: lastArtifacts.filter(isImageArtifact), pollCount };
 }
 
 function resolveMediaTimeoutMs(mediaType: MediaGenerationType, metadata: Record<string, unknown> | null | undefined): number {
@@ -112,6 +147,14 @@ function resolveMediaTimeoutMs(mediaType: MediaGenerationType, metadata: Record<
     return Math.max(30_000, Math.min(candidate, 600_000));
   }
   return mediaType === 'image' ? 300_000 : 600_000;
+}
+
+function resolveArtifactPollIntervalMs(metadata: Record<string, unknown> | null | undefined): number {
+  const candidate = metadata?.artifactPollIntervalMs;
+  if (typeof candidate === 'number' && Number.isFinite(candidate)) {
+    return Math.max(250, Math.min(candidate, 30_000));
+  }
+  return 5_000;
 }
 
 function isImageArtifact(artifact: ConversationArtifact): boolean {
