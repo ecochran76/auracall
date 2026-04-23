@@ -30,6 +30,11 @@ helpers.
   `Create image`, `Create music`, or `Create video` capability reports fail
   durably with `media_capability_unavailable` instead of attempting tool
   selection.
+- Gemini browser image execution is wired for local API runs backed by a
+  resolved AuraCall runtime profile: it selects `Create image`, submits the
+  prompt through the managed Gemini provider adapter, reads generated image
+  artifacts from the conversation, and materializes them under the
+  media-generation artifact directory. Live smoke remains pending.
 
 ## Target Contract
 
@@ -82,7 +87,7 @@ helpers.
   artifact metadata through an injected fake executor.
 - [x] MCP exposes equivalent media generation execution for agents through the
   same contract and service handler.
-- Gemini image generation selects the explicit `Create Image` tool path when
+- [x] Gemini image generation selects the explicit `Create Image` tool path when
   using the browser surface.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.

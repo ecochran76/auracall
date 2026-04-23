@@ -967,6 +967,32 @@ export abstract class LlmService {
     return { artifacts, files: materialized, manifestPath };
   }
 
+  async materializeConversationArtifact(
+    conversationId: string,
+    artifact: ConversationArtifact,
+    destDir: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef | null> {
+    if (!this.provider.materializeConversationArtifact) {
+      throw new Error(`Conversation artifact fetch is not supported for ${this.providerId}.`);
+    }
+    const listOptions = this.scopeConversationListOptions(
+      await this.buildListOptions(options?.listOptions, { ensurePort: true }),
+      options?.projectId,
+    );
+    return this.withRetry(
+      () =>
+        this.provider.materializeConversationArtifact?.(
+          conversationId,
+          artifact,
+          destDir,
+          options?.projectId,
+          listOptions,
+        ) as Promise<FileRef | null>,
+      { action: 'materializeConversationArtifact' },
+    );
+  }
+
   async materializeConversationFiles(
     conversationId: string,
     options?: { projectId?: string; listOptions?: BrowserProviderListOptions; refresh?: boolean },
@@ -1154,6 +1180,7 @@ export abstract class LlmService {
         this.provider.runPrompt?.(
           {
             prompt: input.prompt,
+            capabilityId: input.capabilityId,
             targetUrl: plan.targetUrl,
             projectId: plan.projectId,
             conversationId: plan.conversationId,

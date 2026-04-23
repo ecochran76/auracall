@@ -43,6 +43,9 @@ a stable first-class adapter.
 - Media generation now uses the workbench capability model as a browser-path
   preflight for Gemini `image|music|video` requests; non-available capability
   reports fail before provider tool selection.
+- Gemini image execution now carries the selected capability into the managed
+  provider prompt path as `gemini.media.create_image`; music/video remain
+  modeled and gated until their provider adapter paths are implemented.
 
 ## Target Contract
 

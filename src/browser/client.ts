@@ -10,6 +10,7 @@ import { createLlmService } from './llmService/index.js';
 import type { LlmService } from './llmService/llmService.js';
 import { BrowserAutomationClientCore } from '../../packages/browser-service/src/client.js';
 import type { PromptInput, PromptResult } from './llmService/types.js';
+import type { ConversationArtifact, ConversationContext, FileRef } from './providers/domain.js';
 
 export class BrowserAutomationClient {
   readonly target: 'chatgpt' | 'gemini' | 'grok';
@@ -98,6 +99,27 @@ export class BrowserAutomationClient {
     options?: BrowserProviderListOptions,
   ): Promise<PromptResult> {
     return this.llmService.runPrompt(input, options);
+  }
+
+  async getConversationContext(
+    conversationId: string,
+    options?: {
+      projectId?: string;
+      refresh?: boolean;
+      cacheOnly?: boolean;
+      listOptions?: BrowserProviderListOptions;
+    },
+  ): Promise<ConversationContext> {
+    return this.llmService.getConversationContext(conversationId, options);
+  }
+
+  async materializeConversationArtifact(
+    conversationId: string,
+    artifact: ConversationArtifact,
+    destDir: string,
+    options?: { projectId?: string; listOptions?: BrowserProviderListOptions },
+  ): Promise<FileRef | null> {
+    return this.llmService.materializeConversationArtifact(conversationId, artifact, destDir, options);
   }
 
   async connectDevTools(): Promise<{ client: ChromeClient; port: number }> {

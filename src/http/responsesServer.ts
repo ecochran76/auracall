@@ -66,6 +66,7 @@ import {
   createMediaGenerationService,
   type MediaGenerationServiceDeps,
 } from '../media/service.js';
+import { createGeminiBrowserMediaGenerationExecutor } from '../media/geminiBrowserExecutor.js';
 import type { MediaGenerationRequest } from '../media/types.js';
 import {
   createWorkbenchCapabilityService,
@@ -240,6 +241,7 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const configuredRuntimeConfig = deps.config;
+  const resolvedUserConfig = asResolvedUserConfig(configuredRuntimeConfig);
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
@@ -247,11 +249,13 @@ export async function createResponsesHttpServer(
   });
   const mediaGenerationService = createMediaGenerationService({
     now,
-    executor: deps.mediaGenerationExecutor,
+    executor:
+      deps.mediaGenerationExecutor ??
+      (resolvedUserConfig ? createGeminiBrowserMediaGenerationExecutor(resolvedUserConfig) : undefined),
     capabilityReporter: workbenchCapabilityService,
     runtimeProfile:
-      typeof configuredRuntimeConfig?.auracallProfile === 'string'
-        ? configuredRuntimeConfig.auracallProfile
+      typeof resolvedUserConfig?.auracallProfile === 'string'
+        ? resolvedUserConfig.auracallProfile
         : null,
   });
   const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
@@ -1517,6 +1521,17 @@ function extractExecutionRequestHintsFromHeaders(
 function readSingleHeader(value: string | string[] | undefined): string | null {
   if (Array.isArray(value)) return value[0] ?? null;
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : null;
+}
+
+function asResolvedUserConfig(value: Record<string, unknown> | undefined): ResolvedUserConfig | null {
+  if (!value || typeof value.model !== 'string') {
+    return null;
+  }
+  const browser = value.browser;
+  if (!browser || typeof browser !== 'object' || Array.isArray(browser)) {
+    return null;
+  }
+  return value as ResolvedUserConfig;
 }
 
 function isLoopbackHost(host: string): boolean {

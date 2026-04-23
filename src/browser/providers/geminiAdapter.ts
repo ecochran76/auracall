@@ -493,6 +493,100 @@ async function ensureGeminiToolsDrawerOpen(client: ChromeClient): Promise<boolea
   return rows.matched.length > 0;
 }
 
+async function selectGeminiWorkbenchCapability(client: ChromeClient, capabilityId: string | null | undefined): Promise<void> {
+  const normalizedCapabilityId = normalizeWhitespace(capabilityId ?? '');
+  if (!normalizedCapabilityId) {
+    return;
+  }
+  const labelByCapabilityId: Record<string, string> = {
+    'gemini.media.create_image': 'create image',
+  };
+  const targetLabel = labelByCapabilityId[normalizedCapabilityId];
+  if (!targetLabel) {
+    throw new Error(`Gemini prompt capability ${normalizedCapabilityId} is not supported by the browser adapter yet.`);
+  }
+  const opened = await ensureGeminiToolsDrawerOpen(client);
+  if (!opened) {
+    throw new Error('Gemini tools drawer did not open before capability selection.');
+  }
+  const selected = await client.Runtime.evaluate({
+    expression: `(() => {
+      const targetLabel = ${JSON.stringify(targetLabel)};
+      const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
+      const normalize = (value) =>
+        String(value ?? '')
+          .replace(/\\s+/g, ' ')
+          .trim()
+          .toLowerCase()
+          .replace(/^[^\\p{L}\\p{N}]+/gu, '')
+          .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+          .replace(/\\s+/g, ' ')
+          .trim();
+      const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+      for (const selector of rowSelectors) {
+        for (const row of Array.from(document.querySelectorAll(selector))) {
+          if (!(row instanceof HTMLElement) || !visible(row)) continue;
+          const label = normalize(row.getAttribute('aria-label') || row.textContent || '');
+          if (label !== targetLabel) continue;
+          if (row.getAttribute('aria-checked') === 'true') {
+            return { selected: true, alreadySelected: true, label };
+          }
+          row.scrollIntoView({ block: 'center', inline: 'center' });
+          const touchTarget = row.querySelector('.mat-mdc-button-touch-target');
+          const clickTarget = touchTarget instanceof HTMLElement ? touchTarget : row;
+          clickTarget.click();
+          return { selected: true, alreadySelected: false, label };
+        }
+      }
+      return { selected: false, alreadySelected: false, label: targetLabel };
+    })()`,
+    returnByValue: true,
+  });
+  const payload = selected.result?.value as { selected?: boolean; alreadySelected?: boolean; label?: string } | undefined;
+  if (!payload?.selected) {
+    throw new Error(`Gemini workbench capability ${normalizedCapabilityId} was not visible in the tools drawer.`);
+  }
+  if (!payload.alreadySelected) {
+    await waitForPredicate(
+      client.Runtime,
+      `(() => {
+        const targetLabel = ${JSON.stringify(targetLabel)};
+        const rowSelectors = ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)};
+        const normalize = (value) =>
+          String(value ?? '')
+            .replace(/\\s+/g, ' ')
+            .trim()
+            .toLowerCase()
+            .replace(/^[^\\p{L}\\p{N}]+/gu, '')
+            .replace(/[^\\p{L}\\p{N}\\s]+/gu, ' ')
+            .replace(/\\s+/g, ' ')
+            .trim();
+        const visible = (node) => node instanceof Element && node.getBoundingClientRect().width > 0 && node.getBoundingClientRect().height > 0;
+        return ${JSON.stringify(GEMINI_TOOLS_DRAWER_ROW_SELECTORS)}.some((selector) =>
+          Array.from(document.querySelectorAll(selector)).some((row) =>
+            row instanceof HTMLElement &&
+            visible(row) &&
+            normalize(row.getAttribute('aria-label') || row.textContent || '') === targetLabel &&
+            row.getAttribute('aria-checked') === 'true'
+          )
+        );
+      })()`,
+      {
+        timeoutMs: 2_000,
+        description: `Gemini capability ${normalizedCapabilityId} selection`,
+      },
+    ).catch(() => undefined);
+  }
+  await client.Runtime.evaluate({
+    expression: `(() => {
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keyup', { key: 'Escape', bubbles: true }));
+      return true;
+    })()`,
+    returnByValue: true,
+  }).catch(() => undefined);
+}
+
 function guessMimeType(filePath: string): string {
   const ext = path.extname(filePath).toLowerCase();
   switch (ext) {
@@ -5307,6 +5401,7 @@ export function createGeminiAdapter(): Pick<
       try {
         await navigateToGeminiConversationSurface(client, targetUrl);
         await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
+        await selectGeminiWorkbenchCapability(client, input.capabilityId);
         const baseline = await readGeminiPromptState(client.Runtime);
         await setGeminiPrompt(client, input.prompt);
         await clickGeminiSendButton(client);

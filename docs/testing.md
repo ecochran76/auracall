@@ -195,9 +195,9 @@
     - `curl -s http://127.0.0.1:8080/v1/responses -H 'Content-Type: application/json' -d '{"model":"gpt-5.2","input":"Reply exactly with: local api smoke"}'`
   - read it back:
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
-  - create a browser-transport Gemini media request only after capability
-    discovery reports the matching media capability as `available`; otherwise
-    expect a durable `media_capability_unavailable` failure:
+  - create a browser-transport Gemini image request only after capability
+    discovery reports `gemini.media.create_image` as `available`; the local API
+    then selects `Create image` and materializes generated image artifacts:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","transport":"browser","prompt":"Generate an image of an asphalt secret agent"}'`
   - list workbench capabilities for service discovery:
     - `curl -s "http://127.0.0.1:8080/v1/workbench-capabilities?provider=gemini"`

@@ -58,6 +58,7 @@ export type PromptPlan = {
 
 export type PromptInput = {
   prompt: string;
+  capabilityId?: string | null;
   configuredUrl?: string | null;
   projectId?: string | null;
   projectName?: string | null;

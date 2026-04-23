@@ -19744,3 +19744,24 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Gemini browser image media executor
+
+- Added a Gemini browser media-generation executor for `provider = gemini`,
+  `mediaType = image`, `transport = browser`.
+- The executor:
+  - submits through `BrowserAutomationClient.runPrompt`
+  - carries `capabilityId = gemini.media.create_image`
+  - reads generated image artifacts from the resulting Gemini conversation
+  - materializes artifacts into the media-generation artifact directory
+- Extended the managed Gemini adapter so prompt execution can select
+  `Create image` from the tools drawer before submitting.
+- Local API now uses this executor when `api serve` has a resolved AuraCall
+  runtime profile and no test executor is injected.
+- Gemini music/video and Grok Imagine remain explicitly gated.
+- Validation target:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/browser/geminiAdapter.test.ts tests/browser/llmServiceFiles.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

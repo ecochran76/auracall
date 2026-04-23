@@ -13783,3 +13783,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   `media_generation` request explicitly selects `transport = browser`, check
   the matching workbench capability first and fail durably with
   `media_capability_unavailable` unless discovery reports `available`.
+- 2026-04-23: Keep Gemini image generation on the managed browser/provider
+  path, not the older cookie-only web helper. In this repo, browser media
+  execution should carry a capability id into the provider adapter, select
+  `Create image` from Gemini's tools drawer, then read and materialize
+  conversation artifacts into the media-generation artifact directory.
