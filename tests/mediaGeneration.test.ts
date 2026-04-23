@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { setAuracallHomeDirOverrideForTest } from '../src/auracallHome.js';
 import { createMediaGenerationService } from '../src/media/service.js';
+import type { WorkbenchCapabilityReporter } from '../src/workbench/types.js';
 
 describe('media generation service', () => {
   const cleanup: string[] = [];
@@ -170,4 +171,132 @@ describe('media generation service', () => {
       ],
     });
   });
+
+  it('checks Gemini browser media capability before invoking the executor', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-capability-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let invoked = false;
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-22T12:00:00.000Z'),
+      generateId: () => 'medgen_capability_1',
+      capabilityReporter: createCapabilityReporter('available'),
+      runtimeProfile: 'default',
+      executor: async () => {
+        invoked = true;
+        return {
+          model: 'gemini-browser',
+          artifacts: [
+            {
+              id: 'artifact_capability_1',
+              type: 'image',
+              mimeType: 'image/png',
+            },
+          ],
+        };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      source: 'api',
+      transport: 'browser',
+    });
+
+    expect(invoked).toBe(true);
+    expect(created).toMatchObject({
+      status: 'succeeded',
+      metadata: {
+        transport: 'browser',
+        workbenchCapability: {
+          id: 'gemini.media.create_image',
+          availability: 'available',
+          source: 'test_fixture',
+        },
+      },
+    });
+  });
+
+  it('fails Gemini browser media generation when the matching capability is not available', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-capability-miss-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let invoked = false;
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-22T12:00:00.000Z'),
+      generateId: () => 'medgen_capability_miss_1',
+      capabilityReporter: createCapabilityReporter('unknown'),
+      runtimeProfile: 'default',
+      executor: async () => {
+        invoked = true;
+        return { artifacts: [] };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'gemini',
+      mediaType: 'image',
+      prompt: 'Generate an image of an asphalt secret agent',
+      source: 'api',
+      transport: 'browser',
+    });
+
+    expect(invoked).toBe(false);
+    expect(created).toMatchObject({
+      id: 'medgen_capability_miss_1',
+      status: 'failed',
+      provider: 'gemini',
+      mediaType: 'image',
+      failure: {
+        code: 'media_capability_unavailable',
+        details: {
+          capabilityId: 'gemini.media.create_image',
+          availability: 'unknown',
+          runtimeProfile: 'default',
+          transport: 'browser',
+        },
+      },
+    });
+    await expect(service.readGeneration('medgen_capability_miss_1')).resolves.toEqual(created);
+  });
 });
+
+function createCapabilityReporter(availability: 'available' | 'unknown'): WorkbenchCapabilityReporter {
+  return {
+    async listCapabilities(request) {
+      return {
+        object: 'workbench_capability_report',
+        generatedAt: '2026-04-22T12:00:00.000Z',
+        provider: request?.provider ?? 'gemini',
+        category: request?.category ?? 'media',
+        runtimeProfile: request?.runtimeProfile ?? null,
+        capabilities: [
+          {
+            id: 'gemini.media.create_image',
+            provider: 'gemini',
+            providerLabels: ['Create image'],
+            category: 'media',
+            invocationMode: 'tool_drawer_selection',
+            surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
+            availability,
+            stability: 'observed',
+            requiredInputs: [{ name: 'prompt', required: true }],
+            output: { artifactTypes: ['image'] },
+            safety: {},
+            observedAt: '2026-04-22T12:00:00.000Z',
+            source: 'test_fixture',
+          },
+        ],
+        summary: {
+          total: 1,
+          available: availability === 'available' ? 1 : 0,
+          accountGated: 0,
+          unknown: availability === 'unknown' ? 1 : 0,
+          blocked: 0,
+        },
+      };
+    },
+  };
+}

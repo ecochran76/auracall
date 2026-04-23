@@ -240,14 +240,19 @@ export async function createResponsesHttpServer(
   const recoverRunsOnStartSourceKind = options.recoverRunsOnStartSourceKind ?? 'direct';
   const backgroundDrainIntervalMs = Math.max(0, options.backgroundDrainIntervalMs ?? 0);
   const configuredRuntimeConfig = deps.config;
-  const mediaGenerationService = createMediaGenerationService({
-    now,
-    executor: deps.mediaGenerationExecutor,
-  });
   const workbenchCapabilityService = createWorkbenchCapabilityService({
     now,
     catalog: deps.workbenchCapabilityCatalog,
     discoverCapabilities: deps.discoverWorkbenchCapabilities,
+  });
+  const mediaGenerationService = createMediaGenerationService({
+    now,
+    executor: deps.mediaGenerationExecutor,
+    capabilityReporter: workbenchCapabilityService,
+    runtimeProfile:
+      typeof configuredRuntimeConfig?.auracallProfile === 'string'
+        ? configuredRuntimeConfig.auracallProfile
+        : null,
   });
   const localRunnerCapabilitySummary = createLocalRunnerCapabilitySummary(configuredRuntimeConfig);
   const createRunAffinity = configuredRuntimeConfig

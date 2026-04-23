@@ -19724,3 +19724,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 50`
   - `git diff --check`
+
+## 2026-04-23 - Gemini browser media capability preflight
+
+- Wired `media_generation` service execution to accept an optional workbench
+  capability reporter.
+- Gemini requests with `transport: "browser"` now map:
+  - `image` -> `gemini.media.create_image`
+  - `music` -> `gemini.media.create_music`
+  - `video` -> `gemini.media.create_video`
+- Browser-transport Gemini media requests fail with
+  `media_capability_unavailable` before executor invocation unless the matching
+  capability is currently `available`.
+- Successful browser-transport runs record the selected capability under
+  `metadata.workbenchCapability`.
+- Validation target:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/workbenchCapabilities.test.ts tests/http.workbenchCapabilities.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

@@ -40,6 +40,9 @@ a stable first-class adapter.
 - Gemini browser-backed discovery now maps the existing read-only
   feature-signature probe into available workbench capabilities when
   `api serve` handles `provider=gemini` reports.
+- Media generation now uses the workbench capability model as a browser-path
+  preflight for Gemini `image|music|video` requests; non-available capability
+  reports fail before provider tool selection.
 
 ## Target Contract
 
@@ -90,7 +93,7 @@ a stable first-class adapter.
 - [x] MCP exposes the same capability list in a bounded schema.
 - [x] CLI can inspect one provider/runtime profile and report visible workbench
   capabilities without invoking them.
-- Gemini media generation can map `image|music|video` requests to discovered
+- [x] Gemini media generation can map `image|music|video` requests to discovered
   `Create image|Create music|Create video` capabilities where the browser path
   is used.
 - [x] Gemini feature-signature discovery maps visible `Create image`, `Create

@@ -151,7 +151,9 @@ Terminology note:
     optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
     metadata. The route persists request/readback records now;
     provider-backed Gemini/Grok media execution is still gated until the
-    adapters are wired.
+    adapters are wired. Gemini requests with `transport = browser` now check
+    the matching workbench capability first and fail with
+    `media_capability_unavailable` unless discovery reports `available`.
   - `GET /v1/workbench-capabilities` reports currently known or discovered
     provider workbench capabilities for regular service discovery. Filter with
     `provider=chatgpt|gemini|grok`, `category=research|media|canvas|connector|skill|app|search|file|other`,

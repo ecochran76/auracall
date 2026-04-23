@@ -13777,3 +13777,9 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   debugging blocked or changing browser profiles also needs
   `auracall capabilities --target gemini --static --json` so capability schema
   and catalog behavior can be inspected without attaching to Chrome.
+- 2026-04-23: Do not let browser media generation bypass capability discovery.
+  In this repo, Gemini `Create image`, `Create music`, and `Create video` are
+  volatile workbench tools, not guaranteed API features. When a
+  `media_generation` request explicitly selects `transport = browser`, check
+  the matching workbench capability first and fail durably with
+  `media_capability_unavailable` unless discovery reports `available`.

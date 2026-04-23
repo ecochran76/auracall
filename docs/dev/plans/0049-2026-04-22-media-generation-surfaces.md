@@ -25,6 +25,11 @@ helpers.
 - The local `api serve` and MCP surfaces now expose the shared durable
   media-generation request/response contract and fake-provider test seams.
   Provider-backed Gemini/Grok execution is still gated on adapter wiring.
+- Gemini browser-transport media requests now consult workbench capability
+  discovery before executor invocation. Unknown, blocked, or not-visible
+  `Create image`, `Create music`, or `Create video` capability reports fail
+  durably with `media_capability_unavailable` instead of attempting tool
+  selection.
 
 ## Target Contract
 
@@ -81,6 +86,8 @@ helpers.
   using the browser surface.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
+- [x] Gemini browser media requests are gated by the matching workbench
+  capability availability before tool selection/execution.
 - Grok Imagine implementation is either green for image generation or remains
   explicitly gated with a provider/API credential blocker.
 - Docs state which provider/media combinations are implemented, gated, or not

@@ -10,13 +10,17 @@ import type {
   MediaGenerationFailure,
   MediaGenerationRequest,
   MediaGenerationResponse,
+  MediaGenerationType,
 } from './types.js';
+import type { WorkbenchCapability, WorkbenchCapabilityReporter } from '../workbench/types.js';
 
 export interface MediaGenerationServiceDeps {
   now?: () => Date;
   generateId?: () => string;
   store?: MediaGenerationRecordStore;
   executor?: MediaGenerationExecutor;
+  capabilityReporter?: WorkbenchCapabilityReporter | null;
+  runtimeProfile?: string | null;
 }
 
 export interface MediaGenerationService {
@@ -29,6 +33,8 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
   const generateId = deps.generateId ?? (() => `medgen_${randomUUID().replace(/-/g, '')}`);
   const store = deps.store ?? createMediaGenerationRecordStore();
   const executor = deps.executor ?? defaultMediaGenerationExecutor;
+  const capabilityReporter = deps.capabilityReporter ?? null;
+  const runtimeProfile = deps.runtimeProfile ?? null;
 
   return {
     async createGeneration(input) {
@@ -61,6 +67,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
       await fs.mkdir(store.getArtifactDir(id), { recursive: true });
 
       try {
+        const capability = await resolveMediaGenerationCapability(request, capabilityReporter, runtimeProfile);
         const result = await executor({
           request,
           id,
@@ -78,6 +85,7 @@ export function createMediaGenerationService(deps: MediaGenerationServiceDeps = 
           metadata: {
             ...(runningResponse.metadata ?? {}),
             ...(result.metadata ?? {}),
+            ...(capability ? { workbenchCapability: formatCapabilityMetadata(capability) } : {}),
             source: request.source ?? null,
             transport: request.transport ?? null,
             count: request.count ?? null,
@@ -115,6 +123,56 @@ export async function defaultMediaGenerationExecutor(): Promise<never> {
     'media_provider_not_implemented',
     'Media generation provider execution is not implemented yet. The API/MCP contract is available for adapter wiring.',
   );
+}
+
+const GEMINI_MEDIA_CAPABILITY_IDS: Record<MediaGenerationType, string> = {
+  image: 'gemini.media.create_image',
+  music: 'gemini.media.create_music',
+  video: 'gemini.media.create_video',
+};
+
+async function resolveMediaGenerationCapability(
+  request: MediaGenerationRequest,
+  reporter: WorkbenchCapabilityReporter | null,
+  runtimeProfile: string | null,
+): Promise<WorkbenchCapability | null> {
+  if (!reporter || request.provider !== 'gemini' || request.transport !== 'browser') {
+    return null;
+  }
+  const capabilityId = GEMINI_MEDIA_CAPABILITY_IDS[request.mediaType];
+  const report = await reporter.listCapabilities({
+    provider: 'gemini',
+    category: 'media',
+    runtimeProfile,
+    includeUnavailable: true,
+  });
+  const capability = report.capabilities.find((entry) => entry.id === capabilityId) ?? null;
+  if (capability?.availability === 'available') {
+    return capability;
+  }
+  throw new MediaGenerationExecutionError(
+    'media_capability_unavailable',
+    `Gemini browser ${request.mediaType} generation requires ${capabilityId}, but the capability is ${capability?.availability ?? 'not_visible'}. Run auracall capabilities --target gemini --json to inspect the current workbench state.`,
+    {
+      capabilityId,
+      availability: capability?.availability ?? 'not_visible',
+      providerLabels: capability?.providerLabels ?? [],
+      source: capability?.source ?? null,
+      observedAt: capability?.observedAt ?? null,
+      runtimeProfile,
+      transport: request.transport,
+    },
+  );
+}
+
+function formatCapabilityMetadata(capability: WorkbenchCapability): Record<string, unknown> {
+  return {
+    id: capability.id,
+    availability: capability.availability,
+    providerLabels: capability.providerLabels,
+    source: capability.source,
+    observedAt: capability.observedAt ?? null,
+  };
 }
 
 export class MediaGenerationExecutionError extends Error {

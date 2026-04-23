@@ -99,4 +99,53 @@ describe('http media generation adapter', () => {
       await server.close();
     }
   });
+
+  it('checks workbench capability availability before Gemini browser media execution', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-http-media-capability-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    let invoked = false;
+    const server = await createResponsesHttpServer(
+      { host: '127.0.0.1', port: 0 },
+      {
+        now: () => new Date('2026-04-22T12:00:00.000Z'),
+        mediaGenerationExecutor: async () => {
+          invoked = true;
+          return { artifacts: [] };
+        },
+      },
+    );
+
+    try {
+      const createResponse = await fetch(`http://127.0.0.1:${server.port}/v1/media-generations`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          provider: 'gemini',
+          mediaType: 'image',
+          prompt: 'Generate an image of an asphalt secret agent',
+          transport: 'browser',
+        }),
+      });
+
+      expect(createResponse.status).toBe(502);
+      await expect(createResponse.json()).resolves.toMatchObject({
+        object: 'media_generation',
+        status: 'failed',
+        provider: 'gemini',
+        mediaType: 'image',
+        failure: {
+          code: 'media_capability_unavailable',
+          details: {
+            capabilityId: 'gemini.media.create_image',
+            availability: 'unknown',
+            transport: 'browser',
+          },
+        },
+      });
+      expect(invoked).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
 });
