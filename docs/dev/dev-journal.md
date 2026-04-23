@@ -19910,3 +19910,22 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation:
   - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/browser/geminiAdapter.test.ts tests/workbenchCapabilities.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini image live smoke green
+
+- Ran one supervised local API Gemini browser image smoke after the
+  no-navigation readback slice:
+  - request id: `medgen_422d7585aa8544ba86c8c8bcf17c03cc`
+  - prompt: `Generate an image of an asphalt secret agent`
+  - status: `succeeded`
+  - conversation id: `10b7e2a15e2dd77c`
+  - tab target id: `DB8964C63D8371F02E22CE2F667B4550`
+  - artifact: `Generated image 1.png`
+  - path:
+    `/home/ecochran76/.auracall/runtime/media-generations/medgen_422d7585aa8544ba86c8c8bcf17c03cc/artifacts/Generated image 1.png`
+  - materialization: `visible-image-screenshot`
+  - artifact poll count: `2`
+- This proves the local API `POST /v1/media-generations` Gemini browser image
+  path can select the workbench image capability, wait on the submitted tab,
+  detect the rendered image, and persist a local artifact without failing
+  binary fetch.

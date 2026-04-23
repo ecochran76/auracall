@@ -65,6 +65,11 @@ helpers.
   execution now requires the submitted tab target id, polls active-tab
   artifacts directly instead of refreshing conversation context, and passes the
   same tab target id into materialization.
+- The first supervised local API Gemini browser image smoke after the
+  no-navigation readback change succeeded:
+  `medgen_422d7585aa8544ba86c8c8bcf17c03cc` persisted
+  `Generated image 1.png` via `visible-image-screenshot` from conversation
+  `10b7e2a15e2dd77c` after two artifact polls.
 
 ## Target Contract
 
@@ -148,5 +153,7 @@ helpers.
   `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image
   smokes on the same managed browser profile; the next acceptance smoke should
   be one manually observed request from a clean idle `/app` tab.
+- Latest supervised local API Gemini image smoke passed on 2026-04-23 with a
+  persisted image artifact and no media-generation failure.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.
