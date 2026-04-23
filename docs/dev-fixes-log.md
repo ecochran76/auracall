@@ -5,6 +5,13 @@
   appearing healthy. Forward CLI options into `resolveConfig()` and log the
   active AuraCall runtime profile at startup.
 
+- 2026-04-23: Active media diagnostics need an early observable run id. In this
+  repo, `POST /v1/media-generations` can successfully drive Gemini, record
+  `prompt_submitted`, observe image artifacts, and cache the screenshot-backed
+  PNG, but the HTTP request blocks until terminal completion. Add an
+  asynchronous creation mode or equivalent early id return before expecting API
+  callers to poll active `browser-state` diagnostics during media execution.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

@@ -84,7 +84,14 @@ records `tabTargetId`, so status diagnostics need to work there too.
   `auracall-gemini-pro`.
 - Fixed in the follow-up slice: `api serve` now forwards CLI options into
   config resolution and logs the active AuraCall runtime profile at startup.
-- Rerun one guarded Gemini browser image request with
-  `auracall --profile auracall-gemini-pro api serve ...`, then require a
-  `prompt_submitted` timeline event before accepting the diagnostics snapshot
-  as active-tab proof.
+- Follow-up Gemini browser image request
+  `medgen_f14a94a6274747df9a930668bb10be01` succeeded under
+  `auracall-gemini-pro`, recorded `prompt_submitted` with tab target
+  `ED89E3B649CD075F611779CF0C348E2A`, observed the generated image on the
+  second artifact poll, and cached
+  `/home/ecochran76/.auracall/runtime/media-generations/medgen_f14a94a6274747df9a930668bb10be01/artifacts/Generated image 1.png`.
+- Remaining follow-up: `POST /v1/media-generations` blocks until terminal
+  completion, so external callers do not receive the run id early enough to
+  poll active browser diagnostics. Add an asynchronous media creation mode, or
+  otherwise return an early run id, before treating active media diagnostics as
+  dogfooded end to end.

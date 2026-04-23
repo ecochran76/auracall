@@ -20168,3 +20168,23 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   catch profile mismatch before live browser work begins.
 - Validation:
   - `pnpm vitest run tests/http.responsesServer.test.ts -t "cli-selected runtime profile|startup recovery"`
+
+## 2026-04-23 - Gemini media profile dogfood after api serve fix
+
+- Ran one guarded live Gemini image request through
+  `pnpm tsx bin/auracall.ts --profile auracall-gemini-pro api serve --port 8104 --no-recover-runs-on-start`.
+- Startup log correctly reported
+  `Active AuraCall runtime profile: auracall-gemini-pro`.
+- Media generation `medgen_f14a94a6274747df9a930668bb10be01` succeeded:
+  - `prompt_submitted` recorded conversation `89adf31d3c667497` and tab target
+    `ED89E3B649CD075F611779CF0C348E2A`
+  - two artifact polls observed the generated image
+  - artifact cached at
+    `/home/ecochran76/.auracall/runtime/media-generations/medgen_f14a94a6274747df9a930668bb10be01/artifacts/Generated image 1.png`
+  - artifact materialization used `visible-image-screenshot`
+  - media metadata persisted `runtimeProfile: "auracall-gemini-pro"`
+- Finding: `POST /v1/media-generations` currently blocks until terminal
+  completion, so normal API callers do not receive the media generation id
+  early enough to poll active `browser-state` diagnostics. The first external
+  status poll after creation returned terminal `unavailable` diagnostics as
+  designed.
