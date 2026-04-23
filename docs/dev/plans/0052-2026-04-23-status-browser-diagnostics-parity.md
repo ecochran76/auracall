@@ -105,3 +105,9 @@ records `tabTargetId`, so status diagnostics need to work there too.
   `executor_started` and before `prompt_submitted`. Add a pre-submission stall
   guard before expecting active `browser-state` diagnostics to be captured
   reliably during every Gemini media run.
+- Fixed in the pre-submission visibility slice: Gemini browser media prompt
+  execution now emits provider-owned prompt-progress milestones from tab
+  attachment through send attempts, and media status diagnostics can use the
+  early attached target before `prompt_submitted`. `prompt_submitted` now means
+  Aura-Call observed a submitted Gemini prompt state; generated image waiting is
+  owned by the artifact polling phase.

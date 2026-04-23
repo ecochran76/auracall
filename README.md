@@ -179,6 +179,11 @@ Terminology note:
     browser-backed media job to capture the selected provider target,
     document readiness, visible control counts, provider evidence, and a stored
     PNG screenshot path without re-invoking the provider.
+    Gemini browser image runs now emit pre-submission milestones such as
+    `browser_target_attached`, `gemini_surface_ready`, `capability_selected`,
+    `composer_ready`, `prompt_inserted`, and `send_attempted` before the
+    terminal `prompt_submitted`/artifact-polling sequence, so operators can
+    distinguish a healthy managed browser from a stuck provider interaction.
     Gemini image requests with `transport = browser` now check the matching
     workbench capability, select `Create image`, and materialize generated image
     artifacts through the managed browser path. Gemini music/video and Grok

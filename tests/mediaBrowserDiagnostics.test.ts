@@ -136,7 +136,88 @@ describe('media browser diagnostics', () => {
     });
   });
 
-  it('does not treat a pre-submission media run as an observed browser target', async () => {
+  it('uses an attached pre-submission media target for browser diagnostics', async () => {
+    const diagnostics = await probeMediaGenerationBrowserDiagnostics(
+      {
+        id: 'medgen_presubmit_target_diag_1',
+        object: 'media_generation',
+        status: 'running',
+        provider: 'gemini',
+        mediaType: 'image',
+        prompt: 'Generate an image.',
+        createdAt: '2026-04-23T15:00:00.000Z',
+        updatedAt: '2026-04-23T15:00:01.000Z',
+        completedAt: null,
+        artifacts: [],
+        metadata: {
+          transport: 'browser',
+          runtimeProfile: 'auracall-gemini-pro',
+        },
+        timeline: [
+          {
+            event: 'browser_target_attached',
+            at: '2026-04-23T15:00:01.000Z',
+            details: {
+              targetId: 'gemini-presubmit-tab-1',
+            },
+          },
+        ],
+      },
+      {
+        resolveConfigImpl: async () =>
+          ({
+            auracallProfile: 'auracall-gemini-pro',
+            engine: 'browser',
+          }) as never,
+        probeBrowserRunDiagnosticsImpl: async (_config, input) => {
+          expect(input.preferredTargetId).toBe('gemini-presubmit-tab-1');
+          return {
+            service: 'gemini',
+            ownerStepId: 'medgen_presubmit_target_diag_1:media',
+            observedAt: '2026-04-23T15:00:02.000Z',
+            source: 'browser-service',
+            target: {
+              host: '127.0.0.1',
+              port: 9222,
+              targetId: 'gemini-presubmit-tab-1',
+              url: 'https://gemini.google.com/app',
+              title: 'Google Gemini',
+            },
+            document: {
+              url: 'https://gemini.google.com/app',
+              title: 'Google Gemini',
+              readyState: 'complete',
+              visibilityState: 'visible',
+              focused: true,
+              bodyTextLength: 1000,
+            },
+            visibleCounts: {
+              buttons: 10,
+              links: 2,
+              inputs: 0,
+              textareas: 1,
+              contenteditables: 1,
+              modelResponses: 0,
+            },
+            providerEvidence: {
+              isGenerating: false,
+            },
+            screenshot: null,
+          };
+        },
+      },
+    );
+
+    expect(diagnostics).toMatchObject({
+      probeStatus: 'observed',
+      service: 'gemini',
+      target: {
+        targetId: 'gemini-presubmit-tab-1',
+      },
+    });
+  });
+
+  it('does not treat a pre-submission media run without target identity as observed', async () => {
     const diagnostics = await probeMediaGenerationBrowserDiagnostics(
       {
         id: 'medgen_presubmit_diag_1',
@@ -176,7 +257,7 @@ describe('media browser diagnostics', () => {
       probeStatus: 'unavailable',
       service: 'gemini',
       ownerStepId: 'medgen_presubmit_diag_1:media',
-      reason: 'media generation medgen_presubmit_diag_1 has no submitted browser tab target yet',
+      reason: 'media generation medgen_presubmit_diag_1 has no browser tab target yet',
     });
   });
 });

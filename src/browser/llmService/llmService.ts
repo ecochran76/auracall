@@ -1186,6 +1186,7 @@ export abstract class LlmService {
             projectId: plan.projectId,
             conversationId: plan.conversationId,
             timeoutMs: input.timeoutMs,
+            onProgress: input.onProgress,
           },
           this.scopeConversationListOptions(listOptions, plan.projectId ?? undefined),
         ) as Promise<PromptResult>,

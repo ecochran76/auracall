@@ -26,11 +26,28 @@ describe('Gemini browser media generation executor', () => {
     const { createGeminiBrowserMediaGenerationExecutor } = await import('../src/media/geminiBrowserExecutor.js');
     const artifactDir = '/tmp/auracall-media-artifacts';
     const filePath = path.join(artifactDir, 'generated.png');
-    browserClient.runPrompt.mockResolvedValueOnce({
-      text: 'Done',
-      conversationId: 'gemini-conversation-1',
-      url: 'https://gemini.google.com/app/gemini-conversation-1',
-      tabTargetId: 'gemini-tab-1',
+    browserClient.runPrompt.mockImplementationOnce(async (input) => {
+      await input.onProgress?.({
+        phase: 'browser_target_attached',
+        details: {
+          targetId: 'gemini-tab-1',
+        },
+      });
+      await input.onProgress?.({
+        phase: 'submitted_state_observed',
+        details: {
+          conversationId: 'gemini-conversation-1',
+          targetId: 'gemini-tab-1',
+          href: 'https://gemini.google.com/app/gemini-conversation-1',
+          isGenerating: true,
+        },
+      });
+      return {
+        text: 'Done',
+        conversationId: 'gemini-conversation-1',
+        url: 'https://gemini.google.com/app/gemini-conversation-1',
+        tabTargetId: 'gemini-tab-1',
+      };
     });
     browserClient.readActiveConversationArtifacts.mockResolvedValueOnce([
       {
@@ -77,13 +94,14 @@ describe('Gemini browser media generation executor', () => {
     });
 
     expect(fromConfig).toHaveBeenCalledWith({}, { target: 'gemini' });
-    expect(browserClient.runPrompt).toHaveBeenCalledWith({
+    expect(browserClient.runPrompt).toHaveBeenCalledWith(expect.objectContaining({
       prompt: 'Generate an image of an asphalt secret agent',
       capabilityId: 'gemini.media.create_image',
       completionMode: 'prompt_submitted',
       noProject: true,
       timeoutMs: 300000,
-    });
+      onProgress: expect.any(Function),
+    }));
     expect(browserClient.materializeConversationArtifact).toHaveBeenCalledWith(
       'gemini-conversation-1',
       expect.objectContaining({ id: 'artifact-image-1' }),
@@ -136,6 +154,7 @@ describe('Gemini browser media generation executor', () => {
       },
     });
     expect(timelineEvents).toEqual([
+      'browser_target_attached',
       'prompt_submitted',
       'artifact_poll',
       'image_visible',

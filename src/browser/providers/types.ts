@@ -59,6 +59,7 @@ export interface BrowserProviderPromptInput {
   conversationId?: string | null;
   targetUrl?: string | null;
   timeoutMs?: number | null;
+  onProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void> | void;
 }
 
 export interface BrowserProviderPromptResult {
@@ -66,6 +67,20 @@ export interface BrowserProviderPromptResult {
   conversationId?: string | null;
   url?: string | null;
   tabTargetId?: string | null;
+}
+
+export type BrowserProviderPromptProgressPhase =
+  | 'browser_target_attached'
+  | 'gemini_surface_ready'
+  | 'capability_selected'
+  | 'composer_ready'
+  | 'prompt_inserted'
+  | 'send_attempted'
+  | 'submitted_state_observed';
+
+export interface BrowserProviderPromptProgressEvent {
+  phase: BrowserProviderPromptProgressPhase;
+  details?: Record<string, unknown> | null;
 }
 
 export interface BrowserProvider {

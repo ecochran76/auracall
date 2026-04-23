@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { BrowserAutomationClient } from '../browser/client.js';
+import type { BrowserProviderPromptProgressEvent } from '../browser/providers/types.js';
 import type { ConversationArtifact, FileRef } from '../browser/providers/domain.js';
 import type { ResolvedUserConfig } from '../config.js';
 import type {
@@ -7,6 +8,7 @@ import type {
   MediaGenerationExecutor,
   MediaGenerationExecutorInput,
   MediaGenerationTimelineEmitter,
+  MediaGenerationTimelineEvent,
   MediaGenerationType,
 } from './types.js';
 import { MediaGenerationExecutionError } from './service.js';
@@ -47,24 +49,38 @@ async function executeGeminiBrowserMediaGeneration(
   }
 
   const client = await BrowserAutomationClient.fromConfig(userConfig, { target: 'gemini' });
+  let promptSubmittedTimelineRecorded = false;
+  const emitPromptProgress = async (event: BrowserProviderPromptProgressEvent): Promise<void> => {
+    const timelineEvent = mapGeminiPromptProgressToTimelineEvent(event);
+    if (!timelineEvent) {
+      return;
+    }
+    if (timelineEvent.event === 'prompt_submitted') {
+      promptSubmittedTimelineRecorded = true;
+    }
+    await input.emitTimeline?.(timelineEvent);
+  };
   const promptResult = await client.runPrompt({
     prompt: request.prompt,
     capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
     completionMode: 'prompt_submitted',
     noProject: true,
     timeoutMs,
+    onProgress: emitPromptProgress,
   });
   const conversationId = normalizeNonEmpty(promptResult.conversationId) ?? extractGeminiConversationId(promptResult.url);
   const tabTargetId = normalizeNonEmpty(promptResult.tabTargetId);
-  await input.emitTimeline?.({
-    event: 'prompt_submitted',
-    details: {
-      capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
-      conversationId: conversationId ?? null,
-      tabTargetId: tabTargetId ?? null,
-      url: promptResult.url ?? null,
-    },
-  });
+  if (!promptSubmittedTimelineRecorded) {
+    await input.emitTimeline?.({
+      event: 'prompt_submitted',
+      details: {
+        capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+        conversationId: conversationId ?? null,
+        tabTargetId: tabTargetId ?? null,
+        url: promptResult.url ?? null,
+      },
+    });
+  }
   if (!conversationId) {
     throw new MediaGenerationExecutionError(
       'media_generation_readback_failed',
@@ -155,6 +171,41 @@ async function executeGeminiBrowserMediaGeneration(
       artifactPollCount: pollCount,
     },
   };
+}
+
+function mapGeminiPromptProgressToTimelineEvent(
+  event: BrowserProviderPromptProgressEvent,
+): Omit<MediaGenerationTimelineEvent, 'at'> | null {
+  if (event.phase === 'submitted_state_observed') {
+    const details = normalizeTimelineProgressDetails(event.details);
+    return {
+      event: 'prompt_submitted',
+      details: {
+        capabilityId: GEMINI_IMAGE_CAPABILITY_ID,
+        ...details,
+        url: normalizeNonEmpty(details.href) ?? null,
+        tabTargetId: normalizeNonEmpty(details.targetId) ?? null,
+      },
+    };
+  }
+  return {
+    event: event.phase,
+    details: normalizeTimelineProgressDetails(event.details),
+  };
+}
+
+function normalizeTimelineProgressDetails(details: Record<string, unknown> | null | undefined): Record<string, unknown> {
+  if (!details || typeof details !== 'object') {
+    return {};
+  }
+  const normalized = { ...details };
+  if (!normalizeNonEmpty(normalized.tabTargetId)) {
+    const targetId = normalizeNonEmpty(normalized.targetId);
+    if (targetId) {
+      normalized.tabTargetId = targetId;
+    }
+  }
+  return normalized;
 }
 
 async function waitForGeminiImageArtifacts(
@@ -274,7 +325,7 @@ function mapGeminiFileToMediaArtifact(
   };
 }
 
-function normalizeNonEmpty(value: string | null | undefined): string | null {
+function normalizeNonEmpty(value: unknown): string | null {
   const trimmed = typeof value === 'string' ? value.trim() : '';
   return trimmed.length > 0 ? trimmed : null;
 }

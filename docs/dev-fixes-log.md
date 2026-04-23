@@ -24,6 +24,14 @@
   should persist a bounded diagnostic/failure event when prompt submission does
   not complete within the expected window.
 
+- 2026-04-23: Do not make `prompt_submitted` wait for generated Gemini media.
+  In this repo, Gemini browser media needs two separate operator states:
+  submitted prompt state and generated artifact visibility. Emit provider-owned
+  pre-submission progress from tab attachment through send attempts, record
+  `prompt_submitted` when Gemini shows submitted-state evidence, and leave
+  image visibility to artifact polling so status diagnostics can inspect the
+  exact browser tab during stalled provider interactions.
+
 - 2026-04-21: Public prebuilt `taskRunSpec` input should mean the live
   flattened schema only. In this repo, HTTP `POST /v1/team-runs` and MCP
   `team_run` may now accept `{ taskRunSpec }`, but must validate with

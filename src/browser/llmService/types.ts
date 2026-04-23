@@ -1,6 +1,7 @@
 import type {
   BrowserProvider,
   BrowserProviderListOptions,
+  BrowserProviderPromptProgressEvent,
   BrowserProviderPromptResult,
   ProviderUserIdentity,
 } from '../providers/types.js';
@@ -71,4 +72,5 @@ export type PromptInput = {
   forceConversationRefresh?: boolean;
   timeoutMs?: number | null;
   listOptions?: BrowserProviderListOptions;
+  onProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void> | void;
 };

@@ -20221,3 +20221,21 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   media executor still needs a pre-submission stall guard or diagnostic event
   for cases where it gets stuck after `executor_started` and before
   `prompt_submitted`.
+
+## 2026-04-23 - Gemini media pre-submission status visibility
+
+- Added provider prompt-progress callbacks through the LLM service path and
+  wired the Gemini adapter to emit milestones for target attachment, Gemini
+  surface readiness, capability selection, composer readiness, prompt
+  insertion, send attempts, and submitted-state observation.
+- Changed Gemini browser media `completionMode = "prompt_submitted"` semantics
+  so `prompt_submitted` records the submitted prompt state instead of waiting
+  for generated media to become visible. Generated image waiting remains in the
+  media executor artifact-polling phase.
+- Media browser diagnostics can now use an early attached Gemini target id from
+  the media timeline, so a running job can expose DOM/screenshot state even
+  when it is stuck before final prompt submission readback.
+- Validation:
+  - `pnpm vitest run tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/mediaBrowserDiagnostics.test.ts`
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mcp.runStatus.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`

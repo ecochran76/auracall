@@ -26,6 +26,7 @@ import type {
   BrowserProvider,
   BrowserProviderListOptions,
   BrowserProviderPromptInput,
+  BrowserProviderPromptProgressEvent,
   BrowserProviderPromptResult,
   ProviderUserIdentity,
 } from './types.js';
@@ -2279,6 +2280,7 @@ async function submitGeminiPromptWithFallback(
   client: Pick<ChromeClient, 'Runtime' | 'Input'>,
   baseline: { href: string; conversationId: string | null; userTexts?: string[] },
   prompt: string,
+  emitProgress?: (event: BrowserProviderPromptProgressEvent) => Promise<void>,
 ): Promise<Awaited<ReturnType<typeof readGeminiPromptState>>> {
   const attempts: Array<{ name: string; run: () => Promise<boolean> }> = [
     {
@@ -2299,12 +2301,33 @@ async function submitGeminiPromptWithFallback(
   ];
   let lastState = await readGeminiPromptState(client.Runtime);
   const attempted: string[] = [];
-  for (const attempt of attempts) {
+  for (const [index, attempt] of attempts.entries()) {
     attempted.push(attempt.name);
     const ran = await attempt.run().catch(() => false);
+    await emitProgress?.({
+      phase: 'send_attempted',
+      details: {
+        method: attempt.name,
+        attempt: index + 1,
+        ran,
+      },
+    });
     if (!ran) continue;
     const result = await waitForGeminiPromptSubmit(client.Runtime, baseline, prompt, 10_000);
     lastState = result.state;
+    await emitProgress?.({
+      phase: 'send_attempted',
+      details: {
+        method: attempt.name,
+        attempt: index + 1,
+        ran,
+        submitted: result.submitted,
+        href: lastState.href || null,
+        conversationId: lastState.conversationId ?? null,
+        isGenerating: lastState.isGenerating,
+        hasGeneratedMedia: lastState.hasGeneratedMedia,
+      },
+    });
     if (result.submitted) {
       return lastState;
     }
@@ -2352,7 +2375,7 @@ async function waitForGeminiSubmittedMediaPromptResult(
   while (Date.now() < deadline) {
     const conversationId = state.conversationId ?? baseline.conversationId;
     const promptVisible = geminiPromptVisibleInUserHistory(state, prompt);
-    if (conversationId && state.hasGeneratedMedia && (promptVisible || state.href !== baseline.href)) {
+    if (conversationId && (state.isGenerating || promptVisible || state.href !== baseline.href)) {
       return {
         text: '',
         conversationId,
@@ -2362,7 +2385,7 @@ async function waitForGeminiSubmittedMediaPromptResult(
     await new Promise((resolve) => setTimeout(resolve, 1_000));
     state = await readGeminiPromptState(Runtime);
   }
-  throw new Error('Gemini media prompt submitted, but no generated media became visible before the timeout.');
+  throw new Error('Gemini media prompt submitted, but no conversation id became available for readback.');
 }
 
 export function selectNewestGeminiAssistantText(
@@ -5805,13 +5828,66 @@ export function createGeminiAdapter(): Pick<
     ): Promise<BrowserProviderPromptResult> {
       const targetUrl = resolveGeminiConfiguredUrl(input.targetUrl ?? options?.configuredUrl, GEMINI_APP_URL);
       const { client, targetId, shouldClose, host, port } = await connectToGeminiTab(options, targetUrl);
+      const emitProgress = async (event: BrowserProviderPromptProgressEvent) => {
+        await input.onProgress?.(event);
+      };
       try {
+        await emitProgress({
+          phase: 'browser_target_attached',
+          details: {
+            targetId: targetId ?? null,
+            host,
+            port,
+            targetUrl,
+          },
+        });
         await navigateToGeminiConversationSurface(client, targetUrl);
+        await emitProgress({
+          phase: 'gemini_surface_ready',
+          details: {
+            targetId: targetId ?? null,
+            targetUrl,
+          },
+        });
         await dismissGeminiPreciseLocationDialog(client.Runtime).catch(() => undefined);
         await selectGeminiWorkbenchCapability(client, input.capabilityId);
+        await emitProgress({
+          phase: 'capability_selected',
+          details: {
+            capabilityId: input.capabilityId ?? null,
+            targetId: targetId ?? null,
+          },
+        });
         const baseline = await readGeminiPromptState(client.Runtime);
+        await emitProgress({
+          phase: 'composer_ready',
+          details: {
+            href: baseline.href || null,
+            conversationId: baseline.conversationId ?? null,
+            targetId: targetId ?? null,
+            isGenerating: baseline.isGenerating,
+            hasGeneratedMedia: baseline.hasGeneratedMedia,
+          },
+        });
         await setGeminiPrompt(client, input.prompt);
-        const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt);
+        await emitProgress({
+          phase: 'prompt_inserted',
+          details: {
+            targetId: targetId ?? null,
+            promptLength: input.prompt.length,
+          },
+        });
+        const submittedState = await submitGeminiPromptWithFallback(client, baseline, input.prompt, emitProgress);
+        await emitProgress({
+          phase: 'submitted_state_observed',
+          details: {
+            href: submittedState.href || null,
+            conversationId: submittedState.conversationId ?? null,
+            targetId: targetId ?? null,
+            isGenerating: submittedState.isGenerating,
+            hasGeneratedMedia: submittedState.hasGeneratedMedia,
+          },
+        });
         if (input.completionMode === 'prompt_submitted') {
           let result: BrowserProviderPromptResult;
           if (input.capabilityId === 'gemini.media.create_image') {

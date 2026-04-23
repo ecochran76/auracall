@@ -67,7 +67,7 @@ export async function probeMediaGenerationBrowserDiagnostics(
     return createUnavailableMediaBrowserDiagnostics({
       service: response.provider,
       ownerStepId: `${response.id}:media`,
-      reason: `media generation ${response.id} has no submitted browser tab target yet`,
+      reason: `media generation ${response.id} has no browser tab target yet`,
     });
   }
 
@@ -131,7 +131,11 @@ function createUnavailableMediaBrowserDiagnostics(input: {
 }
 
 function resolveTabTargetId(response: MediaGenerationResponse): string | null {
-  return stringOrNull(response.metadata?.tabTargetId) ?? stringOrNull(readTimelineDetail(response.timeline, 'tabTargetId'));
+  return (
+    stringOrNull(response.metadata?.tabTargetId) ??
+    stringOrNull(readTimelineDetail(response.timeline, 'tabTargetId')) ??
+    stringOrNull(readTimelineDetail(response.timeline, 'targetId'))
+  );
 }
 
 function readTimelineDetail(
