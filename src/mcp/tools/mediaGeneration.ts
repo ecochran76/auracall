@@ -9,7 +9,7 @@ import type { MediaGenerationRequest, MediaGenerationResponse } from '../../medi
 
 const mediaGenerationInputShape = {
   provider: z.enum(['gemini', 'grok']),
-  mediaType: z.enum(['image', 'video']),
+  mediaType: z.enum(['image', 'music', 'video']),
   prompt: z.string().min(1),
   model: z.string().min(1).nullable().optional(),
   transport: z.enum(['api', 'browser', 'auto']).nullable().optional(),
@@ -22,7 +22,7 @@ const mediaGenerationInputShape = {
 
 const mediaGenerationArtifactShape = z.object({
   id: z.string(),
-  type: z.enum(['image', 'video']),
+  type: z.enum(['image', 'music', 'video']),
   mimeType: z.string().nullable().optional(),
   fileName: z.string().nullable().optional(),
   path: z.string().nullable().optional(),
@@ -38,7 +38,7 @@ const mediaGenerationOutputShape = {
   object: z.literal('media_generation'),
   status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
   provider: z.enum(['gemini', 'grok']),
-  mediaType: z.enum(['image', 'video']),
+  mediaType: z.enum(['image', 'music', 'video']),
   model: z.string().nullable().optional(),
   prompt: z.string(),
   createdAt: z.string(),
@@ -70,7 +70,7 @@ export function registerMediaGenerationTool(
     {
       title: 'Generate Aura-Call media',
       description:
-        'Create one Aura-Call media generation request through the shared Gemini/Grok image/video contract. Provider adapters may fail until wired.',
+        'Create one Aura-Call media generation request through the shared Gemini/Grok image/music/video contract. Provider adapters may fail until wired.',
       inputSchema: mediaGenerationInputShape,
       outputSchema: mediaGenerationOutputShape,
     },

@@ -19623,7 +19623,8 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Continued
   `docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md`.
 - Added a shared media-generation schema/service/store for `gemini|grok` and
-  `image|video`, persisted under `~/.auracall/runtime/media-generations`.
+  `image|music|video`, persisted under
+  `~/.auracall/runtime/media-generations`.
 - Added local API routes:
   - `POST /v1/media-generations`
   - `GET /v1/media-generations/{media_generation_id}`
@@ -19635,5 +19636,19 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm vitest run tests/mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts`
   - `pnpm run check`
+  - `pnpm run plans:audit -- --keep 49`
+  - `git diff --check`
+
+## 2026-04-22 - Media contract music correction
+
+- Corrected Plan 0049 and the shared media-generation contract to include
+  `mediaType = music` alongside `image|video`.
+- Preserved the distinction between semantic media type and transport artifact:
+  Gemini music may materialize as `video/mp4`, but request/readback should still
+  say `music`.
+- Validation target:
+  - `pnpm vitest run tests/mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/http.mediaGeneration.test.ts tests/mcp.schema.test.ts`
+  - `pnpm run check`
+  - `pnpm run build`
   - `pnpm run plans:audit -- --keep 49`
   - `git diff --check`

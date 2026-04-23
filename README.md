@@ -142,10 +142,11 @@ Terminology note:
     - direct browser-backed runs now use the same configured stored-step
       executor path as normal Aura-Call runtime execution
   - `POST /v1/media-generations` accepts the shared media-generation contract
-    for `provider = gemini|grok`, `mediaType = image|video`, prompt, optional
-    `model`, `transport`, `count`, `size`, `aspectRatio`, and metadata. The
-    route persists request/readback records now; provider-backed Gemini/Grok
-    media execution is still gated until the adapters are wired.
+    for `provider = gemini|grok`, `mediaType = image|music|video`, prompt,
+    optional `model`, `transport`, `count`, `size`, `aspectRatio`, and
+    metadata. The route persists request/readback records now;
+    provider-backed Gemini/Grok media execution is still gated until the
+    adapters are wired.
   - `POST /v1/team-runs` creates one bounded task-backed team execution:
     - request fields are either:
       - compact fields: `teamId`, `objective`, and optional `title`,

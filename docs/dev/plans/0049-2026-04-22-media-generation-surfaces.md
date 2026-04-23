@@ -5,7 +5,7 @@ Lane: P01
 
 ## Scope
 
-Implement first-class image/video generation across Aura-Call's operator
+Implement first-class image/music/video generation across Aura-Call's operator
 surfaces instead of treating provider media tools as ad hoc browser-only
 helpers.
 
@@ -13,6 +13,9 @@ helpers.
 
 - Gemini has a browser `--generate-image <file>` path that drives Gemini web
   and saves the first generated image.
+- Gemini also exposes generated music and video surfaces; music can render
+  through a video transport artifact, so the public contract must model
+  `music` separately from `video`.
 - Gemini's web UI exposes a `Create Image` tool in the tool drawer; Aura-Call
   does not yet have a reusable browser-service media operation that selects the
   tool drawer explicitly and reports media artifacts through the runtime.
@@ -27,7 +30,7 @@ helpers.
 
 - Add one route-neutral media request contract that can represent:
   - provider: `gemini` or `grok`
-  - media type: `image` initially, `video` once Grok Imagine video is added
+  - media type: `image`, `music`, or `video`
   - prompt
   - aspect ratio / size / count when supported
   - output artifact destination
@@ -42,8 +45,8 @@ helpers.
 - Keep provider-specific mechanics in provider adapters:
   - Gemini API adapter uses an image-capable model/configuration and persists
     returned inline image data or generated image URLs.
-  - Gemini browser adapter selects `Create Image` in the tool drawer before
-    submitting image prompts.
+  - Gemini browser adapter selects the matching tool drawer mode (`Create
+    Image`, `Create music`, or `Create video`) before submitting media prompts.
   - Grok adapter/API client owns Grok Imagine image/video specifics.
 
 ## Non-Goals
@@ -61,6 +64,8 @@ helpers.
 
 - CLI can request one Gemini image and save it through the shared media
   contract.
+- Gemini music/video requests stay representable through the same contract,
+  with music allowed to persist a `video/mp4` transport artifact.
 - Gemini API image generation works when the configured API key/model supports
   image output, with browser `Create Image` retained as a separate provider
   path.
@@ -70,6 +75,8 @@ helpers.
   same contract and service handler.
 - Gemini image generation selects the explicit `Create Image` tool path when
   using the browser surface.
+- Gemini music/video generation selects the explicit tool path when those
+  browser adapter paths are implemented.
 - Grok Imagine implementation is either green for image generation or remains
   explicitly gated with a provider/API credential blocker.
 - Docs state which provider/media combinations are implemented, gated, or not

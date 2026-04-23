@@ -13746,3 +13746,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   persist records under runtime ownership, and let unwired providers fail
   durably with `media_provider_not_implemented` until Gemini image and Grok
   Imagine adapters are implemented and live-smoked.
+- 2026-04-22: Model media semantics separately from transport format. In this
+  repo, Gemini can generate music and video, and historical browser artifact
+  extraction shows music may arrive via a `video/mp4` player/download. Keep the
+  media request/readback enum at semantic values (`image`, `music`, `video`)
+  instead of collapsing Gemini music into video because of its transport.

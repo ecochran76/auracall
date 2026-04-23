@@ -115,4 +115,59 @@ describe('media generation service', () => {
     });
     await expect(service.readGeneration('medgen_failure_1')).resolves.toEqual(created);
   });
+
+  it('accepts Gemini music generation requests in the shared contract', async () => {
+    const homeDir = await fs.mkdtemp(path.join(os.tmpdir(), 'auracall-media-generation-music-'));
+    cleanup.push(homeDir);
+    setAuracallHomeDirOverrideForTest(homeDir);
+    const service = createMediaGenerationService({
+      now: () => new Date('2026-04-22T12:00:00.000Z'),
+      generateId: () => 'medgen_music_1',
+      executor: async ({ artifactDir }) => {
+        const filePath = path.join(artifactDir, 'track.mp4');
+        await fs.writeFile(filePath, Buffer.from('fake music bytes'));
+        return {
+          model: 'fake-gemini-music',
+          artifacts: [
+            {
+              id: 'artifact_music_1',
+              type: 'music',
+              mimeType: 'video/mp4',
+              fileName: 'track.mp4',
+              path: filePath,
+              durationSeconds: 12,
+              metadata: {
+                transportMediaType: 'video',
+              },
+            },
+          ],
+        };
+      },
+    });
+
+    const created = await service.createGeneration({
+      provider: 'gemini',
+      mediaType: 'music',
+      prompt: 'Create a short spy theme for an asphalt secret agent',
+      source: 'api',
+    });
+
+    expect(created).toMatchObject({
+      id: 'medgen_music_1',
+      status: 'succeeded',
+      provider: 'gemini',
+      mediaType: 'music',
+      artifacts: [
+        {
+          id: 'artifact_music_1',
+          type: 'music',
+          mimeType: 'video/mp4',
+          durationSeconds: 12,
+          metadata: {
+            transportMediaType: 'video',
+          },
+        },
+      ],
+    });
+  });
 });

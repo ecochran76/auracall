@@ -9,7 +9,7 @@ import type {
 
 export const MediaGenerationProviderSchema = z.enum(['gemini', 'grok']);
 
-export const MediaGenerationTypeSchema = z.enum(['image', 'video']);
+export const MediaGenerationTypeSchema = z.enum(['image', 'music', 'video']);
 
 export const MediaGenerationTransportSchema = z.enum(['api', 'browser', 'auto']);
 

@@ -197,6 +197,8 @@
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/responses/<response_id>`
   - create/read media-generation contract record:
     - `curl -s http://127.0.0.1:8080/v1/media-generations -H 'Content-Type: application/json' -d '{"provider":"gemini","mediaType":"image","prompt":"Generate an image of an asphalt secret agent","aspectRatio":"1:1"}'`
+    - the same contract accepts `mediaType = music|video`; Gemini music may
+      still materialize over a video transport artifact
     - until provider adapters are wired, default execution returns a persisted
       `failed` response with `failure.code = media_provider_not_implemented`
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`

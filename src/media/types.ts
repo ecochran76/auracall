@@ -1,6 +1,6 @@
 export type MediaGenerationProvider = 'gemini' | 'grok';
 
-export type MediaGenerationType = 'image' | 'video';
+export type MediaGenerationType = 'image' | 'music' | 'video';
 
 export type MediaGenerationTransport = 'api' | 'browser' | 'auto';
 
