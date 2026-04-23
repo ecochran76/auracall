@@ -19966,3 +19966,17 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Artifact metadata still records the provider blob URL separately from the
   local cache method; this run cached a PNG screenshot fallback, not fetched
   blob bytes.
+
+## 2026-04-23 - Media-generation status readback
+
+- Added compact media-generation status readback for operators:
+  - API: `GET /v1/media-generations/{media_generation_id}/status`
+  - MCP: `media_generation_status`
+- Both surfaces use a shared status summary builder over the durable
+  media-generation record and return current status, latest timeline event,
+  full timeline, artifact count, artifact cache path, materialization method,
+  provider run metadata, and failure details.
+- This lets operators and calling services poll a long-running media request
+  without re-invoking Gemini/Grok or inspecting raw record JSON.
+- Validation:
+  - `pnpm vitest run tests/http.mediaGeneration.test.ts tests/mcp.mediaGeneration.test.ts tests/mediaGeneration.test.ts`

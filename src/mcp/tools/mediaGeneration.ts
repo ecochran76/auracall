@@ -5,6 +5,7 @@ import {
   type MediaGenerationService,
 } from '../../media/service.js';
 import { MediaGenerationRequestSchema } from '../../media/schema.js';
+import { summarizeMediaGenerationStatus } from '../../media/statusSummary.js';
 import type { MediaGenerationRequest, MediaGenerationResponse } from '../../media/types.js';
 
 const mediaGenerationInputShape = {
@@ -73,6 +74,48 @@ const mediaGenerationOutputShape = {
     .optional(),
 } satisfies z.ZodRawShape;
 
+const mediaGenerationStatusInputShape = {
+  id: z.string().min(1),
+} satisfies z.ZodRawShape;
+
+const mediaGenerationStatusArtifactShape = z.object({
+  id: z.string(),
+  type: z.enum(['image', 'music', 'video']),
+  fileName: z.string().nullable().optional(),
+  path: z.string().nullable().optional(),
+  uri: z.string().nullable().optional(),
+  mimeType: z.string().nullable().optional(),
+  width: z.number().nullable().optional(),
+  height: z.number().nullable().optional(),
+  durationSeconds: z.number().nullable().optional(),
+  materialization: z.string().nullable().optional(),
+  remoteUrl: z.string().nullable().optional(),
+});
+
+const mediaGenerationStatusOutputShape = {
+  id: z.string(),
+  object: z.literal('media_generation_status'),
+  status: z.enum(['queued', 'running', 'succeeded', 'failed', 'cancelled']),
+  provider: z.enum(['gemini', 'grok']),
+  mediaType: z.enum(['image', 'music', 'video']),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+  completedAt: z.string().nullable().optional(),
+  lastEvent: mediaGenerationTimelineEventShape.nullable().optional(),
+  timeline: z.array(mediaGenerationTimelineEventShape),
+  artifactCount: z.number().int().nonnegative(),
+  artifacts: z.array(mediaGenerationStatusArtifactShape),
+  failure: z
+    .object({
+      code: z.string(),
+      message: z.string(),
+      details: z.record(z.string(), z.unknown()).nullable().optional(),
+    })
+    .nullable()
+    .optional(),
+  metadata: z.record(z.string(), z.unknown()),
+} satisfies z.ZodRawShape;
+
 export interface RegisterMediaGenerationToolDeps {
   service?: MediaGenerationService;
 }
@@ -93,6 +136,17 @@ export function registerMediaGenerationTool(
     },
     createMediaGenerationToolHandler(service),
   );
+  server.registerTool(
+    'media_generation_status',
+    {
+      title: 'Read Aura-Call media generation status',
+      description:
+        'Read the current status, timeline, artifact cache path, and materialization method for one Aura-Call media generation.',
+      inputSchema: mediaGenerationStatusInputShape,
+      outputSchema: mediaGenerationStatusOutputShape,
+    },
+    createMediaGenerationStatusToolHandler(service),
+  );
 }
 
 export function createMediaGenerationToolHandler(service: MediaGenerationService) {
@@ -111,6 +165,25 @@ export function createMediaGenerationToolHandler(service: MediaGenerationService
       isError: result.status === 'failed',
       content: textContent(line),
       structuredContent: result as MediaGenerationResponse & Record<string, unknown>,
+    };
+  };
+}
+
+export function createMediaGenerationStatusToolHandler(service: MediaGenerationService) {
+  return async (input: unknown) => {
+    const textContent = (text: string) => [{ type: 'text' as const, text }];
+    const payload = z.object(mediaGenerationStatusInputShape).parse(input);
+    const response = await service.readGeneration(payload.id);
+    if (!response) {
+      throw new Error(`Media generation "${payload.id}" not found.`);
+    }
+    const summary = summarizeMediaGenerationStatus(response);
+    const lastEvent = summary.lastEvent?.event ?? 'no timeline event';
+    const line = `Media generation ${summary.id} is ${summary.status}; last event ${lastEvent}; artifacts ${summary.artifactCount}.`;
+    return {
+      isError: summary.status === 'failed',
+      content: textContent(line),
+      structuredContent: summary as typeof summary & Record<string, unknown>,
     };
   };
 }

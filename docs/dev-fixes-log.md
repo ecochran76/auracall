@@ -13835,3 +13835,8 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   the prompt, observed artifact polls, saw the image, materialized the file, and
   completed. Store these milestones in `media_generation.timeline[]` and keep
   the artifact metadata as the source of truth for the materialization method.
+- 2026-04-23: Media-generation status must be readable without another provider
+  call. In this repo, operators and calling services should poll the durable
+  media-generation record through API or MCP and receive a compact status
+  summary with latest timeline event, artifact cache path, and materialization
+  method instead of scraping raw JSON or re-opening the browser.

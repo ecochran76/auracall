@@ -68,6 +68,7 @@ import {
 } from '../media/service.js';
 import { createGeminiBrowserMediaGenerationExecutor } from '../media/geminiBrowserExecutor.js';
 import type { MediaGenerationRequest } from '../media/types.js';
+import { summarizeMediaGenerationStatus } from '../media/statusSummary.js';
 import {
   createWorkbenchCapabilityService,
   type WorkbenchCapabilityServiceDeps,
@@ -186,6 +187,7 @@ interface HttpStatusResponse {
     responsesGetTemplate: string;
     mediaGenerationsCreate: string;
     mediaGenerationsGetTemplate: string;
+    mediaGenerationsStatusTemplate: string;
     workbenchCapabilitiesList: string;
   };
   compatibility: {
@@ -640,6 +642,22 @@ export async function createResponsesHttpServer(
         return;
       }
 
+      const mediaGenerationStatusId = matchMediaGenerationStatusRoute(url.pathname);
+      if (req.method === 'GET' && mediaGenerationStatusId) {
+        const response = await mediaGenerationService.readGeneration(mediaGenerationStatusId);
+        if (!response) {
+          sendJson(res, 404, {
+            error: {
+              message: `Media generation ${mediaGenerationStatusId} was not found`,
+              type: 'not_found_error',
+            },
+          } satisfies HttpErrorPayload);
+          return;
+        }
+        sendJson(res, 200, summarizeMediaGenerationStatus(response));
+        return;
+      }
+
       const mediaGenerationId = matchMediaGenerationRoute(url.pathname);
       if (req.method === 'GET' && mediaGenerationId) {
         const response = await mediaGenerationService.readGeneration(mediaGenerationId);
@@ -1082,6 +1100,7 @@ function createHttpStatusResponse(input: {
       responsesGetTemplate: '/v1/responses/{response_id}',
       mediaGenerationsCreate: '/v1/media-generations',
       mediaGenerationsGetTemplate: '/v1/media-generations/{media_generation_id}',
+      mediaGenerationsStatusTemplate: '/v1/media-generations/{media_generation_id}/status',
       workbenchCapabilitiesList:
         '/v1/workbench-capabilities?provider={chatgpt|gemini|grok}&category={category}',
     },
@@ -1546,6 +1565,11 @@ function matchResponseRoute(pathname: string): string | null {
 
 function matchMediaGenerationRoute(pathname: string): string | null {
   const match = /^\/v1\/media-generations\/([^/]+)$/.exec(pathname);
+  return match?.[1] ?? null;
+}
+
+function matchMediaGenerationStatusRoute(pathname: string): string | null {
+  const match = /^\/v1\/media-generations\/([^/]+)\/status$/.exec(pathname);
   return match?.[1] ?? null;
 }
 

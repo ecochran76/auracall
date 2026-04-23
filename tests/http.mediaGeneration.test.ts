@@ -80,6 +80,41 @@ describe('http media generation adapter', () => {
       );
       expect(readResponse.status).toBe(200);
       await expect(readResponse.json()).resolves.toEqual(created);
+
+      const statusResponse = await fetch(
+        `http://127.0.0.1:${server.port}/v1/media-generations/${created.id}/status`,
+      );
+      expect(statusResponse.status).toBe(200);
+      await expect(statusResponse.json()).resolves.toMatchObject({
+        id: created.id,
+        object: 'media_generation_status',
+        status: 'succeeded',
+        artifactCount: 1,
+        artifacts: [
+          {
+            id: 'artifact_http_1',
+            fileName: 'asphalt-agent.png',
+            path: expect.stringContaining('asphalt-agent.png'),
+          },
+        ],
+        timeline: [
+          {
+            event: 'running_persisted',
+          },
+          {
+            event: 'executor_started',
+          },
+          {
+            event: 'completed',
+          },
+        ],
+        lastEvent: {
+          event: 'completed',
+        },
+        metadata: {
+          source: 'api',
+        },
+      });
     } finally {
       await server.close();
     }
@@ -93,8 +128,14 @@ describe('http media generation adapter', () => {
 
     try {
       const response = await fetch(`http://127.0.0.1:${server.port}/status`);
-      const status = (await response.json()) as Record<string, { mediaGenerationsCreate?: string }>;
+      const status = (await response.json()) as Record<
+        string,
+        { mediaGenerationsCreate?: string; mediaGenerationsStatusTemplate?: string }
+      >;
       expect(status.routes.mediaGenerationsCreate).toBe('/v1/media-generations');
+      expect(status.routes.mediaGenerationsStatusTemplate).toBe(
+        '/v1/media-generations/{media_generation_id}/status',
+      );
     } finally {
       await server.close();
     }

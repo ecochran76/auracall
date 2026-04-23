@@ -138,6 +138,7 @@ Terminology note:
   - `GET /v1/responses/{response_id}`
   - `POST /v1/media-generations`
   - `GET /v1/media-generations/{media_generation_id}`
+  - `GET /v1/media-generations/{media_generation_id}/status`
 - Current API boundary for that local server:
   - loopback by default; non-loopback requires `--listen-public`
   - runtime-backed create/read with one bounded local execution pass for direct runs
@@ -152,6 +153,10 @@ Terminology note:
     metadata. The route persists request/readback records with a `timeline[]`
     showing processing milestones such as capability discovery, prompt
     submission, artifact polling, materialization, and terminal completion.
+    Operators can poll
+    `GET /v1/media-generations/{media_generation_id}/status` for a compact
+    status summary with the latest timeline event, artifact cache path, and
+    materialization method.
     Gemini image requests with `transport = browser` now check the matching
     workbench capability, select `Create image`, and materialize generated image
     artifacts through the managed browser path. Gemini music/video and Grok
@@ -665,7 +670,8 @@ Terminology note:
 - Run the stdio server via `auracall-mcp`.
 - Configure clients via [steipete/mcporter](https://github.com/steipete/mcporter) or `.mcp.json`; see [docs/mcp.md](docs/mcp.md) for connection examples.
 - MCP tools include `consult`, `sessions`, bounded team execution through
-  `team_run`, the shared media contract through `media_generation`, and
+  `team_run`, the shared media contract through `media_generation`, media run
+  status readback through `media_generation_status`, and
   routine provider workbench discovery through `workbench_capabilities`.
 ```bash
 npx -y auracall auracall-mcp

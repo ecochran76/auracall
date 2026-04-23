@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { createMediaGenerationToolHandler } from '../src/mcp/tools/mediaGeneration.js';
+import {
+  createMediaGenerationStatusToolHandler,
+  createMediaGenerationToolHandler,
+} from '../src/mcp/tools/mediaGeneration.js';
 
 describe('mcp media_generation tool', () => {
   it('routes requests through the shared media generation service contract', async () => {
@@ -96,6 +99,76 @@ describe('mcp media_generation tool', () => {
             id: 'artifact_mcp_music_1',
             type: 'music',
             mimeType: 'video/mp4',
+          },
+        ],
+      },
+    });
+  });
+
+  it('reads media generation status through the MCP status tool', async () => {
+    const handler = createMediaGenerationStatusToolHandler({
+      createGeneration: async () => {
+        throw new Error('not used');
+      },
+      readGeneration: async (id) => ({
+        id,
+        object: 'media_generation',
+        status: 'succeeded',
+        provider: 'gemini',
+        mediaType: 'image',
+        prompt: 'Generate an image of an asphalt secret agent',
+        createdAt: '2026-04-23T03:44:32.561Z',
+        updatedAt: '2026-04-23T03:45:22.951Z',
+        completedAt: '2026-04-23T03:45:22.951Z',
+        artifacts: [
+          {
+            id: 'artifact_status_1',
+            type: 'image',
+            mimeType: 'image/png',
+            fileName: 'Generated image 1.png',
+            path: '/tmp/Generated image 1.png',
+            metadata: {
+              materialization: 'visible-image-screenshot',
+              remoteUrl: 'blob:https://gemini.google.com/status',
+            },
+          },
+        ],
+        timeline: [
+          {
+            event: 'running_persisted',
+            at: '2026-04-23T03:44:32.561Z',
+          },
+          {
+            event: 'completed',
+            at: '2026-04-23T03:45:22.951Z',
+            details: {
+              status: 'succeeded',
+              artifactCount: 1,
+            },
+          },
+        ],
+      }),
+    });
+
+    const result = await handler({ id: 'medgen_status_1' });
+
+    expect(result).toMatchObject({
+      isError: false,
+      structuredContent: {
+        id: 'medgen_status_1',
+        object: 'media_generation_status',
+        status: 'succeeded',
+        artifactCount: 1,
+        lastEvent: {
+          event: 'completed',
+        },
+        artifacts: [
+          {
+            id: 'artifact_status_1',
+            fileName: 'Generated image 1.png',
+            path: '/tmp/Generated image 1.png',
+            materialization: 'visible-image-screenshot',
+            remoteUrl: 'blob:https://gemini.google.com/status',
           },
         ],
       },

@@ -219,6 +219,8 @@
     - until provider adapters are wired, default execution returns a persisted
       `failed` response with `failure.code = media_provider_not_implemented`
     - copy the returned `id`, then run `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>`
+    - for compact operator status, run
+      `curl http://127.0.0.1:8080/v1/media-generations/<media_generation_id>/status`
     - inspect `timeline[]` for `running_persisted`, `executor_started`,
       provider-specific progress, and terminal `completed|failed` evidence
   - create bounded team run:

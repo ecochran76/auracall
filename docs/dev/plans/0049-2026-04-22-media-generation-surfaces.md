@@ -81,6 +81,11 @@ helpers.
   `Generated image 1.png` via `visible-image-screenshot` from conversation
   `3543f8378a674997` after one artifact poll. The final readback retained the
   full processing timeline and completed at `2026-04-23T03:45:22.951Z`.
+- Operators can now read a compact media-generation status summary through
+  local API `GET /v1/media-generations/{media_generation_id}/status` and MCP
+  tool `media_generation_status`. Both surfaces report current status, latest
+  timeline event, artifact cache path, and materialization method without
+  creating a new provider request.
 
 ## Target Contract
 
@@ -102,6 +107,8 @@ helpers.
   MCP callers can see whether Aura-Call is running, waiting on provider
   artifacts, materializing, completed, or failed without inspecting browser
   state directly.
+- Expose compact status readback on API and MCP so operators can poll a run
+  without parsing the full media-generation response or touching the browser.
 - Use
   [0050 Workbench Capability Surfaces](0050-2026-04-23-workbench-capability-surfaces.md)
   as the discovery/availability layer for provider workbench tools; keep this
@@ -151,6 +158,8 @@ helpers.
 - [x] Media-generation readback includes a persisted processing timeline with
   prompt submission, artifact polling, materialization, and terminal state
   evidence.
+- [x] Operators can check media-generation run status through API and MCP
+  without re-invoking the provider.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
@@ -169,6 +178,7 @@ helpers.
 - [x] MCP smoke for the same fake provider path.
 - [x] Unit coverage for media-generation timeline persistence and Gemini
   browser executor progress events.
+- [x] HTTP and MCP tests for compact media-generation status readback.
 - Live Gemini image smoke only after managed-profile state is clear of
   `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image
   smokes on the same managed browser profile; the next acceptance smoke should

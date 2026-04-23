@@ -23,6 +23,14 @@
 - Behavior: creates one request through Aura-Call's shared media-generation contract and returns `object = "media_generation"` with durable artifact metadata. The tool surface is live now; provider-backed Gemini/Grok execution remains gated until the media adapters are wired.
 - Provenance: MCP-created media requests are stamped with `source = "mcp"` in the structured response metadata.
 
+### `media_generation_status`
+- Inputs: `id` for a stored media generation.
+- Behavior: returns `object = "media_generation_status"` with current status,
+  latest timeline event, full timeline, artifact count, artifact cache path,
+  materialization method, and failure details when present.
+- Use this for polling a long-running media request without re-invoking the
+  provider or inspecting raw JSON.
+
 ### `workbench_capabilities`
 - Inputs: optional `provider: "chatgpt" | "gemini" | "grok"`, optional `category: "research" | "media" | "canvas" | "connector" | "skill" | "app" | "search" | "file" | "other"`, optional `runtimeProfile`, and optional `includeUnavailable`.
 - Behavior: returns `object = "workbench_capability_report"` with known or discovered provider workbench capabilities, provider labels, invocation modes, surfaces, availability, stability, required inputs, output expectations, and safety flags. This is read-only discovery and does not click provider tools.
