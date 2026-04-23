@@ -87,6 +87,13 @@ describe('Gemini browser media generation executor', () => {
       'gemini-conversation-1',
       expect.objectContaining({ id: 'artifact-image-1' }),
       artifactDir,
+      {
+        listOptions: {
+          configuredUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+          tabUrl: 'https://gemini.google.com/app/gemini-conversation-1',
+          preserveActiveTab: true,
+        },
+      },
     );
     expect(result).toMatchObject({
       model: null,

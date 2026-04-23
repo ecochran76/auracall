@@ -13813,3 +13813,11 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   an interrupted image response has already rendered. Count the lottie avatar
   spinner as active generation, but treat stop/cancel controls as stale when
   generated media is already visible.
+- 2026-04-23: Keep Gemini media generation on the active rendered tab until
+  artifacts are safely captured. In this repo, Gemini can expose renamed media
+  rows (`Images`, `Videos`, `Music`), render an image before artifact binary
+  fetch succeeds, and cancel or lose a fresh image chat if automation
+  re-navigates immediately after submission. Browser media runs should wait for
+  visible generated media, preserve the active tab through materialization, and
+  use visible-image screenshot capture as a fallback when provider binary fetch
+  fails.

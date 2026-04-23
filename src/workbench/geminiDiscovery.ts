@@ -20,6 +20,12 @@ const GEMINI_MODE_TO_CAPABILITY: Record<string, Pick<WorkbenchCapability, 'id' |
     output: { artifactTypes: ['image'] },
     safety: {},
   },
+  images: {
+    id: 'gemini.media.create_image',
+    category: 'media',
+    output: { artifactTypes: ['image'] },
+    safety: {},
+  },
   'create music': {
     id: 'gemini.media.create_music',
     category: 'media',
@@ -29,7 +35,22 @@ const GEMINI_MODE_TO_CAPABILITY: Record<string, Pick<WorkbenchCapability, 'id' |
     },
     safety: { mayTakeMinutes: true },
   },
+  music: {
+    id: 'gemini.media.create_music',
+    category: 'media',
+    output: {
+      artifactTypes: ['music', 'video/mp4'],
+      description: 'Gemini music can render through a video transport artifact.',
+    },
+    safety: { mayTakeMinutes: true },
+  },
   'create video': {
+    id: 'gemini.media.create_video',
+    category: 'media',
+    output: { artifactTypes: ['video'] },
+    safety: { mayTakeMinutes: true, maySpendCredits: true },
+  },
+  videos: {
     id: 'gemini.media.create_video',
     category: 'media',
     output: { artifactTypes: ['video'] },

@@ -46,6 +46,9 @@ a stable first-class adapter.
 - Gemini image execution now carries the selected capability into the managed
   provider prompt path as `gemini.media.create_image`; music/video remain
   modeled and gated until their provider adapter paths are implemented.
+- Gemini live discovery now treats current renamed media rows (`Images`,
+  `Videos`, `Music`) as aliases for the existing
+  `gemini.media.create_image|create_video|create_music` capability ids.
 
 ## Target Contract
 
@@ -99,8 +102,8 @@ a stable first-class adapter.
 - [x] Gemini media generation can map `image|music|video` requests to discovered
   `Create image|Create music|Create video` capabilities where the browser path
   is used.
-- [x] Gemini feature-signature discovery maps visible `Create image`, `Create
-  music`, `Create video`, Canvas, and Deep Research modes into available
+- [x] Gemini feature-signature discovery maps visible `Create image`/`Images`,
+  `Create music`/`Music`, `Create video`/`Videos`, Canvas, and Deep Research modes into available
   workbench capabilities.
 - Deep Research is represented as a capability for ChatGPT and Gemini without
   claiming full automation until a provider-backed smoke proves request,

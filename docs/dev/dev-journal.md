@@ -19855,3 +19855,32 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
 - Validation target:
   - `pnpm vitest run tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
   - `pnpm run check`
+
+## 2026-04-23 - Gemini media active-tab materialization hardening
+
+- Live API smokes exposed additional Gemini media drift:
+  - the tools drawer can expose `Images`, `Videos`, and `Music` rows instead of
+    `Create image`, `Create video`, and `Create music`
+  - the root `/app` zero-state cards can select `Create image` without opening
+    the drawer
+  - image prompts can render successfully, then fail during artifact binary
+    fetch/materialization
+  - re-navigating after prompt submission can cancel or lose a just-created
+    Gemini image chat and increases anti-bot pressure
+- Hardened Gemini image media execution to:
+  - recognize the renamed media rows in feature discovery and capability
+    gating
+  - select the root zero-state `Create image` card when present, with drawer
+    selection retained as fallback
+  - wait for generated media to be visible before returning from the
+    prompt-submitted path for Gemini image runs
+  - pass `preserveActiveTab` through media materialization and refuse navigation
+    during active media materialization
+  - fall back to active-page screenshot capture when Gemini exposes a visible
+    generated image but binary fetch fails
+- Do not run repeated live Gemini image smokes back-to-back on the same managed
+  browser profile. The next live smoke should be one manually observed request
+  from a clean idle `/app` tab.
+- Validation:
+  - `pnpm vitest run tests/workbenchCapabilities.test.ts tests/browser/geminiAdapter.test.ts tests/mediaGenerationGeminiBrowserExecutor.test.ts tests/http.mediaGeneration.test.ts tests/mediaGeneration.test.ts`
+  - `pnpm run check`

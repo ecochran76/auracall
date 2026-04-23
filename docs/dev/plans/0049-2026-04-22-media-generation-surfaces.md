@@ -51,6 +51,14 @@ helpers.
 - Active Gemini media generation is now keyed to the visible lottie avatar
   spinner, with stop/cancel controls treated as stale once generated media is
   visible.
+- Follow-up live smokes showed additional churn after prompt submission:
+  renamed Gemini media rows (`Images`, `Videos`, `Music`), zero-state
+  `Create image` selection on `/app`, successful image render followed by
+  binary-fetch failure, and navigation/materialization paths that could cancel
+  a fresh image chat. Gemini browser image execution now waits for visible
+  generated media before readback, preserves the active tab through
+  materialization, refuses navigation during active media materialization, and
+  can fall back to screenshot capture of the visible generated image.
 
 ## Target Contract
 
@@ -110,6 +118,8 @@ helpers.
   waiting for a generic text response.
 - [x] Gemini browser image execution waits on image artifact evidence rather
   than generic assistant text after prompt submission.
+- [x] Gemini browser image execution avoids re-navigation after prompt
+  submission while the generated image is visible on the active tab.
 - Gemini music/video generation selects the explicit tool path when those
   browser adapter paths are implemented.
 - [x] Gemini browser media requests are gated by the matching workbench
@@ -127,8 +137,8 @@ helpers.
 - [x] Local API smoke for create/readback on a fake provider.
 - [x] MCP smoke for the same fake provider path.
 - Live Gemini image smoke only after managed-profile state is clear of
-  `google.com/sorry` or captcha pages; latest live smoke reached a real Gemini
-  conversation without those blockers but timed out while Gemini was still
-  generating.
+  `google.com/sorry` or captcha pages. Avoid repeated back-to-back Gemini image
+  smokes on the same managed browser profile; the next acceptance smoke should
+  be one manually observed request from a clean idle `/app` tab.
 - Live Grok Imagine smoke only with a configured `XAI_API_KEY` or validated
   browser account path that exposes Imagine.

@@ -66,7 +66,7 @@ describe('workbench capability service', () => {
       id: 'gemini.media.create_image',
       availability: 'available',
       source: 'browser_discovery',
-      providerLabels: ['Create image', 'Create Image', 'Image creation'],
+      providerLabels: ['Create image', 'Create Image', 'Images', 'Image creation'],
     });
     expect(report.summary.available).toBe(1);
   });
@@ -75,33 +75,40 @@ describe('workbench capability service', () => {
     const capabilities = deriveGeminiWorkbenchCapabilitiesFromFeatureSignature(
       JSON.stringify({
         detector: 'gemini-feature-probe-v1',
-        modes: ['Create image', 'Create music', 'Canvas', 'Deep research'],
+        modes: ['Images', 'Music', 'Videos', 'Canvas', 'Deep research'],
       }),
       '2026-04-23T12:00:00.000Z',
     );
 
-    expect(capabilities).toMatchObject([
-      {
+    expect(capabilities).toEqual(expect.arrayContaining([
+      expect.objectContaining({
         id: 'gemini.canvas',
         provider: 'gemini',
         availability: 'available',
         source: 'browser_discovery',
-      },
-      {
+      }),
+      expect.objectContaining({
         id: 'gemini.media.create_image',
         availability: 'available',
-      },
-      {
+        providerLabels: ['Images'],
+      }),
+      expect.objectContaining({
         id: 'gemini.media.create_music',
         availability: 'available',
-        output: {
+        providerLabels: ['Music'],
+        output: expect.objectContaining({
           artifactTypes: ['music', 'video/mp4'],
-        },
-      },
-      {
+        }),
+      }),
+      expect.objectContaining({
+        id: 'gemini.media.create_video',
+        availability: 'available',
+        providerLabels: ['Videos'],
+      }),
+      expect.objectContaining({
         id: 'gemini.research.deep_research',
         availability: 'available',
-      },
-    ]);
+      }),
+    ]));
   });
 });

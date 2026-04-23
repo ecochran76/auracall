@@ -12,7 +12,7 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
   {
     id: 'gemini.media.create_image',
     provider: 'gemini',
-    providerLabels: ['Create image', 'Create Image'],
+    providerLabels: ['Create image', 'Create Image', 'Images'],
     category: 'media',
     invocationMode: 'tool_drawer_selection',
     surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
@@ -26,7 +26,7 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
   {
     id: 'gemini.media.create_music',
     provider: 'gemini',
-    providerLabels: ['Create music', 'Create Music'],
+    providerLabels: ['Create music', 'Create Music', 'Music'],
     category: 'media',
     invocationMode: 'tool_drawer_selection',
     surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],
@@ -43,7 +43,7 @@ export const STATIC_WORKBENCH_CAPABILITY_CATALOG: WorkbenchCapability[] = [
   {
     id: 'gemini.media.create_video',
     provider: 'gemini',
-    providerLabels: ['Create video', 'Create Video'],
+    providerLabels: ['Create video', 'Create Video', 'Videos'],
     category: 'media',
     invocationMode: 'tool_drawer_selection',
     surfaces: ['browser_service', 'cli', 'local_api', 'mcp'],

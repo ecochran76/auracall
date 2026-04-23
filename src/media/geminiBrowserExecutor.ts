@@ -87,7 +87,13 @@ async function executeGeminiBrowserMediaGeneration(
   const requestedCount = Math.max(1, Math.min(request.count ?? 1, imageArtifacts.length));
   const materialized: MediaGenerationArtifact[] = [];
   for (const artifact of imageArtifacts.slice(0, requestedCount)) {
-    const file = await client.materializeConversationArtifact(conversationId, artifact, input.artifactDir);
+    const file = await client.materializeConversationArtifact(conversationId, artifact, input.artifactDir, {
+      listOptions: {
+        configuredUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+        tabUrl: promptResult.url ?? resolveGeminiConversationUrl(conversationId),
+        preserveActiveTab: true,
+      },
+    });
     if (!file) continue;
     materialized.push(mapGeminiFileToMediaArtifact(file, artifact, request.mediaType, materialized.length + 1));
   }
