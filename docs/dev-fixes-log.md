@@ -13751,3 +13751,10 @@ This log captures notable fixes, what broke, why, and how we verified the repair
   extraction shows music may arrive via a `video/mp4` player/download. Keep the
   media request/readback enum at semantic values (`image`, `music`, `video`)
   instead of collapsing Gemini music into video because of its transport.
+- 2026-04-23: Do not treat rapidly changing provider workbench capabilities as
+  permanent one-off CLI/API/MCP flags. In this repo, Deep Research, Gemini
+  media tools, ChatGPT apps/connectors, ChatGPT business-plan skills, and other
+  provider add-ons are account-tier and rollout dependent. Add a
+  provider-neutral workbench capability discovery/availability model first,
+  then layer invocation on top only after readback and gating semantics are
+  explicit.

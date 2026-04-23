@@ -36,6 +36,13 @@ Current State:
     provider-owned evidence seam appears
   - config/browser/provider work stays bounded maintenance or side-track work
     until explicitly selected as the primary lane
+- open provider-capability follow-through:
+  - [docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0049-2026-04-22-media-generation-surfaces.md)
+    owns the first-class media-generation resource for image/music/video
+  - [docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md](/home/ecochran76/workspace.local/oracle/docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md)
+    owns the more general discovery/invocation model for rapidly changing
+    chat-workbench capabilities such as Deep Research, ChatGPT apps,
+    ChatGPT business-plan skills, Gemini media tools, and provider add-ons
 - the bounded `0004` operator-facing claimant/readback hardening sub-lane is
   now maintenance-only unless a new concrete mismatch is demonstrated
 - the narrower `api serve` server-local-runner ownership/readback checkpoint is

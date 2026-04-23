@@ -1418,3 +1418,26 @@ DISPLAY=:0.0 ORACLE_NO_BANNER=1 NODE_NO_WARNINGS=1 pnpm tsx bin/auracall.ts file
   - `pnpm run check`
   - `pnpm run plans:audit -- --keep 49`
   - `git diff --check`
+
+## Turn 57 | 2026-04-23
+
+- Opened planning slice:
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`
+- Trigger:
+  - Gemini and ChatGPT expose fast-changing chat-workbench capabilities that
+    do not fit the narrow media-generation contract.
+  - Gemini and ChatGPT both expose Deep Research-style tools.
+  - ChatGPT exposes apps/connectors broadly and skills on business-plan
+    accounts.
+  - Gemini exposes media tools such as image/music/video through the tool
+    drawer.
+- Decision:
+  - keep `media_generation` as the simple first-class resource for common
+    image/music/video requests
+  - add a separate provider-neutral workbench capability model for discovery,
+    availability, account gating, and eventual invocation
+  - do discovery/readback before broad invocation, because provider toolsets
+    are account-tier, region, UI, and rollout dependent
+- Verification target:
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

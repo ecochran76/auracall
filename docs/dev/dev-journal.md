@@ -19652,3 +19652,16 @@ Log ongoing progress, current focus, and problems/solutions. Keep entries brief 
   - `pnpm run build`
   - `pnpm run plans:audit -- --keep 49`
   - `git diff --check`
+
+## 2026-04-23 - Workbench capability planning
+
+- Opened
+  `docs/dev/plans/0050-2026-04-23-workbench-capability-surfaces.md`.
+- Separated first-class media generation from the broader problem of rapidly
+  changing provider workbench capabilities.
+- New capability plan covers discovery/availability/readback for Deep Research,
+  Gemini media tools, ChatGPT apps/connectors, ChatGPT business-plan skills,
+  and future provider add-ons.
+- Validation target:
+  - `pnpm run plans:audit -- --keep 50`
+  - `git diff --check`

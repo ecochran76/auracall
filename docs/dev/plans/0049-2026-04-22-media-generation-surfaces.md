@@ -42,6 +42,10 @@ helpers.
 - Extend MCP with the same bounded media request/readback surface.
 - Persist media artifacts and metadata under the existing runtime/session
   ownership model so readback is possible after the generating process exits.
+- Use
+  [0050 Workbench Capability Surfaces](0050-2026-04-23-workbench-capability-surfaces.md)
+  as the discovery/availability layer for provider workbench tools; keep this
+  plan focused on the simpler first-class media-generation resource.
 - Keep provider-specific mechanics in provider adapters:
   - Gemini API adapter uses an image-capable model/configuration and persists
     returned inline image data or generated image URLs.
